@@ -1,0 +1,1264 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Toktar/VerityAPI/1.0.0
+info:
+  version: "1.0.0"
+  title: verity-api
+  description: The REST API for Verity server
+paths:
+  '/api/{domainDID}/write-schema/0.6/{threadId}':
+    post:
+      tags:
+        - WriteSchema
+      operationId: writeSchema
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteSchemaRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/WriteSchemaResponse'
+              responses:
+                '200':
+                  description: OK
+  '/api/{domainDID}/write-cred-def/0.6/{threadId}':
+    post:
+      tags:
+        - WriteCredDef
+      operationId: writeCredDef
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WriteCredDefRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/WriteCredDefResponse'
+              responses:
+                '202':
+                  description: OK
+  '/api/{domainDID}/update-configs/0.6/{threadId}':
+    get:
+      tags:
+        - UpdateConfigs
+      description: returns user's configs
+      operationId: getStatusUpdateConfigs
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      responses:
+        '200':
+          description: User configs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateConfigsResponse'
+    post:
+      tags:
+        - UpdateConfigs
+      operationId: updateConfigs
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConfigsRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/UpdateConfigsResponse'
+              responses:
+                '202':
+                  description: OK
+
+  '/api/{domainDID}/connecting/0.6/{threadId}':
+    get:
+      tags:
+        - Connecting
+      description: returns connecting data
+      operationId: getConnectingData
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectingStatusResponse'
+    post:
+      tags:
+        - Connecting
+      operationId: connecting
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectingRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      oneOf:
+                        - $ref: '#/components/schemas/ConnectingReqResponse'
+                        - $ref: '#/components/schemas/ConnectingRequestAccepted'
+              responses:
+                '200':
+                  description: OK
+
+  '/api/{domainDID}/issue-credential/0.6/{threadId}':
+    get:
+      tags:
+        - IssueCredential
+      description: get credantial status
+      operationId: getStatus
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        - in: query
+          name: '~for_relationship'
+          required: true
+          description: pairwise did
+          schema:
+            type: string
+            example: 3kDecNDa33qAsFv5Th7juC
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCredentialStatusReport'
+
+    post:
+      tags:
+        - IssueCredential
+      operationId: issueCredential
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SendOffer'
+                - $ref: '#/components/schemas/IssueCredential'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      oneOf:
+                        - $ref: '#/components/schemas/AskAccept'
+              responses:
+                '200':
+                  description: OK
+  '/api/{domainDID}/present-proof/0.6/{threadId}':
+    get:
+      tags:
+        - PresentProof
+      description: Get present proof status
+      operationId: getPresentProofStatus
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresentProofStatusReport'
+    post:
+      tags:
+        - PresentProof
+      description: Present proof protocol
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresentProofRequest'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/AskAccept'
+              responses:
+                '200':
+                  description: OK
+  '/api/{domainDID}/committedanswer/1.0/{threadId}':
+    get:
+      tags:
+        - CommittedAnswer
+      description: Get question status
+      operationId: committedAnswer
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        - in: query
+          name: '~for_relationship'
+          required: true
+          description: pairwise did
+          schema:
+            type: string
+            example: 3kDecNDa33qAsFv5Th7juC
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionStatusReportResult'
+    post:
+      tags:
+        - CommittedAnswer
+      description: Ask question
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskQuestion'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/AnswerGiven'
+              responses:
+                '200':
+                  description: OK
+  '/api/{domainDID}/issuer-setup/0.6/{threadId}':
+    post:
+      tags:
+        - IssuerSetup
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CreateIssuer'
+                - $ref: '#/components/schemas/CurrentPublicIdentifier'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      oneOf:
+                        - $ref: '#/components/schemas/CreateIssuerCreated'
+                        - $ref: '#/components/schemas/PublicIdentifier'
+              responses:
+                '200':
+                  description: OK
+  '/api/{domainDID}/configs/0.6/':
+    post:
+      tags:
+        - UpdateEndpoint
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: domainDID
+          in: path
+          required: true
+          schema:
+            type: string
+            example: VntEDhbvXepaPyU3uxq2eP
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEndpoint'
+      responses:
+        '202':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Accepted
+      callbacks:
+        respose to client:
+          '{$clientEndpointFromConnectionData}':
+            post:
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/UpdateEndpointResult'
+              responses:
+                '200':
+                  description: OK
+components:
+  securitySchemes:
+    ApiKeyAuth:        # arbitrary name for the security scheme
+      type: apiKey
+      in: header       # can be "header", "query" or "cookie"
+      name: X-API-KEY
+  schemas:
+    UpdateConfigsRequest:
+      type: object
+      required:
+        - '@type'
+        - configs
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/update-configs/0.6/update'
+        '@id':
+          type: string
+          description: random id
+          format: uuid
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfigDetail'
+    UpdateConfigsResponse:
+      type: object
+      required:
+        - '@type'
+        - configs
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/update-configs/0.6/status-report'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfigDetail'
+    ConfigDetail:
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'logoUrl'
+        value:
+          type: string
+          example: 'http://example.com/logo.ico'
+
+    WriteSchemaRequest:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write'
+        '@id':
+          type: string
+          description: random id
+          format: uuid
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        name:
+          type: string
+          description: name of schema
+          example: license
+        version:
+          type: string
+          description: version of schema
+          example: 0.1
+        attrNames:
+          type: array
+          items:
+            type: string
+          description: attributes of schema
+          example: [license_num, name]
+    WriteSchemaResponse:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/write-schema/0.6/status-report'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        schemaId:
+          type: string
+          example: 39YBdt6BLWLJAUPA8NvwDX:2:license:0.1
+    WriteCredDefRequest:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/write-cred-def/0.6/write'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        name:
+          type: string
+          description: name of cred def
+          example: cred_name1
+        tag:
+          type: string
+          example: tag
+        schemaId:
+          type: string
+          description: schema id of schema to be used
+          example: 39YBdt6BLWLJAUPA8NvwDX:2:license:0.1
+        revocationDetails:
+          $ref: '#/components/schemas/RevocationDetails'
+    RevocationDetails:
+      type: object
+      properties:
+        support_revocation:
+          type: boolean
+          example: false
+        tails_file:
+          type: string
+          description: required if `support_revocation` is true
+        max_creds:
+          type: integer
+          description: required if `support_revocation` is true
+    WriteCredDefResponse:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/write-cred-def/0.6/status-report'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        credDefId:
+          type: string
+          example: 39YBdt6BLWLJAUPA8NvwDX:3:CL:55:tag
+
+    ConnectingRequest:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/connecting/0.6/CREATE_CONNECTION'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        sourceId:
+          type: string
+          format: uuid
+          description: can be random uuid
+          example: 7d045e6d-dd32-428b-95c3-29313f5fd61c
+        includePublicDID:
+          type: boolean
+          description: should invite include public DID
+          example: false
+
+    ConnectingReqResponse:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/connecting/0.6/CONN_REQUEST_RESP'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        urlToInviteDetail:
+          type: string
+          example: 'localhost:9003/agency/invite/3kDecNDa33qAsFv5Th7juC?uid=cee13682-acb4-4690-a985-97d1958423a9'
+        urlToInviteDetailEncoded:
+          type: string
+          example: 'localhost%3A9003%2Fagency%2Finvite%2F3kDecNDa33qAsFv5Th7juC%3Fuid%3Dcee13682-acb4-4690-a985-97d1958423a9'
+        sourceId:
+          type: string
+          format: uid
+          example: 9b0e7996-3882-474f-916a-68b7da5a15ab
+        inviteDetail:
+          $ref: '#/components/schemas/InviteDetail'
+
+    ConnectingRequestAccepted:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/connecting/0.6/CONN_REQ_ACCEPTED'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        '@msg':
+          $ref: '#/components/schemas/ConnectingRequestAcceptedMsg'
+
+    ConnectingRequestAcceptedMsg:
+      type: object
+      properties:
+        senderDetail:
+          $ref: '#/components/schemas/SenderDetail'
+
+    InviteDetail:
+      type: object
+      properties:
+        statusMsg:
+          type: string
+          example: message created
+        connReqId:
+          type: string
+          format: uid
+          example: cee13682-acb4-4690-a985-97d1958423a9
+        targetName:
+          type: string
+          example: there
+        version:
+          type: string
+          example: 2.0
+        statusCode:
+          type: string
+          example: MS-101
+        senderDetail:
+          $ref: '#/components/schemas/SenderDetail'
+        senderAgencyDetail:
+          $ref: '#/components/schemas/SenderAgencyDetail'
+
+    SenderDetail:
+      type: object
+      properties:
+        name:
+          type: string
+          example: name1
+        verKey:
+          type: string
+          example: 2VnCSfAPT29kQsHgXjAhcMYJomUGHvQ6Ws5Hkwt3D3QZ
+        DID:
+          type: string
+          example: 3kDecNDa33qAsFv5Th7juC
+        logoUrl:
+          type: string
+          example: /logo_url.ico
+
+    SenderAgencyDetail:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          example: localhost:9003/agency/msg
+        verKey:
+          type: string
+          example: ETLgZKeQEKxBW7gXA6FBn7nBwYhXFoogZLCCn5EeRSQV
+        DID:
+          type: string
+          example: Rgj7LVEonrMzcRC1rhkx76
+
+
+    PresentProofStatusReport:
+      type: object
+      description: You must provide the same threadId as received in ask-accept msg.
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/present-proof/0.6/status-report'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+
+    SendOffer:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issue-credential/0.6/send-offer'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        '~for_relationship':
+          type: string
+          description: pairwise did
+          example: YBXSwfA9GFgkb9xDeDvMUf
+        name:
+          type: string
+          description: name of credential
+          example: credName
+        credDefId:
+          type: string
+          description: id of credential definition used
+          example: KwgzAuJxWTZMJwfN7pbX6P:3:CL:104:tag
+        credentialValues:
+          type: object
+          description: JSON, key-value pairs of credential values
+          additionalProperties:
+            type: string
+            example:
+              license_num: '123'
+              name: Bob
+        price:
+          type: string
+          description: price of credential
+          example: 0
+
+    IssueCredential:
+      type: object
+      description: You must provide the same threadId as received in ask-accept msg.
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issue-credential/0.6/issue-credential'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        '~for_relationship':
+          type: string
+          description: pairwise did
+          example: YBXSwfA9GFgkb9xDeDvMUf
+    AskAccept:
+      type: object
+      description: You must provide the same threadId as received in ask-accept msg.
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issue-credential/0.6/ask-accept'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        credOffer:
+          $ref: '#/components/schemas/CredOffer'
+    CredOffer:
+      type: object
+      properties:
+        libindy_cred_req:
+          $ref: '#/components/schemas/LibindyCredReq'
+        libindy_cred_req_meta:
+          $ref: '#/components/schemas/LibindyCredReqMeta'
+        cred_def_id:
+          type: string
+          example: TUWeK6bhVKqQ3TASQuRB3A:3:CL:29:tag
+        tid:
+          type: string
+        to_did:
+          type: string
+          example: Wjpy5ta9Cyu6J4nGeydJZz
+        from_did:
+          type: string
+          example: BC8TifwEz1rSSfYyHkeJfR
+        version:
+          type: string
+          example: 0.1
+        mid:
+          type: string
+        msg_ref_id:
+          type: string
+    LibindyCredReq:
+      type: object
+    LibindyCredReqMeta:
+      type: object
+    IssueCredentialStatusReport:
+      type: object
+      properties:
+        'result':
+          $ref: '#/components/schemas/IssueCredentialStatusReportResult'
+        'status':
+          type: string
+          example: OK
+    IssueCredentialStatusReportResult:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issue-credential/0.6/status-report'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        status:
+          type: string
+          example: 'Initialized'
+
+    PresentProofRequest:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/present-proof/0.6/request'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        name:
+          type: string
+          description: name of proof
+          example: proof-request-1
+        proofAttrs:
+          type: array
+          description: array of proof attributes
+          items:
+            $ref: '#/components/schemas/ProofAttr'
+        proofPredicates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProofPredicate'
+        revocationInterval:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevocationInterval'
+    ProofAttr:
+      type: object
+      properties:
+        name:
+          type: string
+          example: license_num
+        restrictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Restriction'
+        non_revoked:
+          $ref: '#/components/schemas/RevocationInterval'
+    Restriction:
+      type: object
+      properties:
+        issuer_did:
+          type: string
+          example: KwgzAuJxWTZMJwfN7pbX6P
+    RevocationInterval:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: timestamp
+          example: 1587674566
+        to:
+          type: string
+          format: date-time
+          description: timestamp
+          example: 1587674566
+    ProofPredicate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: name of predicate
+        p_type:
+          type: string
+          description: type of predicate
+        p_value:
+          type: integer
+          description: value of predicate
+        restrictions:
+          type: object
+    ProofResult:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/present-proof/0.6/proof-result'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        requestedProof:
+          $ref: '#/components/schemas/RequestedProof'
+        status:
+          type: string
+          example: ProofValidated
+    RequestedProof:
+      type: object
+      properties:
+        selfAttestedAttrs:
+          type: object
+        revealedAttrs:
+          type: object
+        predicates:
+          type: object
+        unrevealedAttrs:
+          type: object
+        identifiers:
+          type: object
+          additionalProperties:
+            type: string
+            example:
+              schemaId: TUWeK6bhVKqQ3TASQuRB3A:2:license:0.1
+              credDefId: TUWeK6bhVKqQ3TASQuRB3A:3:CL:29:tag
+    CurrentPublicIdentifier:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/current-public-identifier'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+    PublicIdentifier:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/public-identifier'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        verKey:
+          type: string
+          example: FRuXtyFNy7fZotLpa6ud7T18xafYu2wwUYQa4YNoi2Yu
+        did:
+          type: string
+          example: TUWeK6bhVKqQ3TASQuRB3A
+    CreateIssuer:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/create'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+    CreateIssuerCreated:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/public-identifier-created'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        identifier:
+          $ref: '#/components/schemas/Identifier'
+    Identifier:
+      type: object
+      properties:
+        verKey:
+          type: string
+          example: FRuXtyFNy7fZotLpa6ud7T18xafYu2wwUYQa4YNoi2Yu
+        did:
+          type: string
+          example: TUWeK6bhVKqQ3TASQuRB3A
+
+    AskQuestion:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/ask-question'
+        '@id':
+          type: string
+          format: uuid
+          description: random id
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        '~for_relationship':
+          type: string
+          description: pairwise did
+          example: YBXSwfA9GFgkb9xDeDvMUf
+        text:
+          type: string
+          description: text of question
+          example: To be or to not be?
+        detail:
+          type: string
+          description: question description
+          example: The second classic philosophical questions
+        valid_responses:
+          type: array
+          description: valid responses
+          items:
+            type: string
+          example: ['be','not be']
+        signature_required:
+          type: boolean
+          description: is signed response required
+          example: true
+    AnswerGiven:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/answer-given'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        valid_signature:
+          type: boolean
+          example: true
+        valid_answer:
+          type: boolean
+          example: true
+        not_expired:
+          type: boolean
+          example: true
+        answer:
+          type: string
+          example: be
+    QuestionStatusReport:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/QuestionStatusReportResult'
+        status:
+          type: string
+          example: OK
+    QuestionStatusReportResult:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/status-report'
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        status:
+          type: string
+          example: AnswerReceived
+        answer:
+          $ref: '#/components/schemas/AnswerData'
+    AnswerData:
+      type: object
+      properties:
+        valid_signature:
+          type: boolean
+          example: true
+        valid_answer:
+          type: boolean
+          example: true
+        not_expired:
+          type: boolean
+          example: true
+        answer:
+          type: string
+          example: be
+    ConnectingStatusResponse:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/ConnectingStatus'
+        status:
+          type: string
+          example: OK
+    ConnectingStatus:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: did:sov:123456789abcdefghi1234;spec/connecting/0.6/status-report
+        '~thread':
+          $ref: '#/components/schemas/Thread'
+        status:
+          type: string
+          example: ConnectionAccepted
+    UpdateEndpoint:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: did:sov:123456789abcdefghi1234;spec/configs/0.6/UPDATE_COM_METHOD
+        'comMethod':
+          $ref: '#/components/schemas/UpdateEndpointMethod'
+    UpdateEndpointMethod:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Webhook id
+          example: webhook
+        value:
+          type: string
+          example: http://localhost:6001
+        type:
+          type: integer
+          description: Webhook type
+          example: 2
+    UpdateEndpointResult:
+      type: object
+      properties:
+        '@type':
+          type: string
+          example: did:sov:123456789abcdefghi1234;spec/configs/0.6/COM_METHOD_UPDATED
+        id:
+          type: string
+          description: Webhook id
+          example: webhook
+    Thread:
+      type: object
+      properties:
+        thid:
+          type: string
+          example: ccfc6db3-44a2-499f-b7b8-29cb74140111

@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.tokenizer;
+
+message SetRoster {
+    int32 requester = 1;
+    int32 tokenizer = 2;
+}
+
+message RequestedToken {
+    option (scalapb.message).extends = "TokenizerEvt";
+    SetRoster setter = 1;
+}
+
+message Token {
+    string sponseeId = 1;
+    string sponsorId = 2;
+    string nonce = 3;
+    string timestamp = 4;
+    string sig = 5;
+    string sponsorVerKey = 6;
+}
+
+message CreatedToken {
+    option (scalapb.message).extends = "TokenizerEvt";
+    SetRoster setter = 1;
+    Token token = 2;
+}
+
+message ReceivedToken {
+    option (scalapb.message).extends = "TokenizerEvt";
+    Token token = 1;
+}
+
+message Failed {
+    option (scalapb.message).extends = "TokenizerEvt";
+    string err = 1;
+}

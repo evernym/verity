@@ -1,0 +1,22 @@
+#!/bin/bash -e
+
+# Default to a relative path if not passed in as an argument
+CI_PROJECT_DIR="/src/agency"
+
+if [ "$#" -eq 1 ]; then
+  CI_PROJECT_DIR=$1
+elif [ "$#" -gt 1 ]; then
+  echo "Usage: docker-static-code-analysis [CI_PROJECT_DIR]"
+  echo "       CI_PROJECT_DIR is optional and defaults to ${CI_PROJECT_DIR}"
+  exit 1
+fi
+
+echo "Begin static code analysis inside docker..."
+echo "CI_PROJECT_DIR = >${CI_PROJECT_DIR}<"
+
+cd ${CI_PROJECT_DIR}
+
+sbt scapegoat
+
+echo "See the contents of the scapegoat-report directories for results:"
+echo "  verity/target/scala-*/scapegoat-report"

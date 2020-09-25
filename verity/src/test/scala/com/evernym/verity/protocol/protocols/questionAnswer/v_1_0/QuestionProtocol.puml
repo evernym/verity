@@ -1,0 +1,81 @@
+@startuml Question Protocol
+
+entity QuestionerDriver
+actor Questioner
+collections EventQueue
+actor Responder
+entity ResponderDriver
+
+
+note left of QuestionerDriver
+
+Question(
+    questionText: String,
+    questionDetail: Option[String],
+    nonce: Nonce,
+    signatureRequired: Boolean,
+    validResponses: Vector[{test: String},..],
+    `~timing`: Option[{outTime: String}]
+)
+end note
+
+note right of ResponderDriver
+SignatureData(
+    `@type`: MsgType,
+     signature: Signature,
+     sigData: String,
+     signers: Vector[VerKey]
+)
+Answer(
+    response: String,
+    `response~sig`: Option[SignatureData],
+    `~timing`: Option[{outTime: String}]
+)
+end note
+
+par2
+
+  hnote over Questioner: State(Uninitialized)
+  Questioner -> Questioner: Ctl(Init)
+  Questioner -> EventQueue: Any(Initialized)
+  hnote over Questioner: State(Initialized)
+else
+  hnote over Responder: State(Uninitialized)
+  Responder -> Responder: Ctl(Init)
+  Responder -> EventQueue: Any(Initialized)
+  hnote over Responder: State(Initialized)
+end
+QuestionerDriver -> Questioner: Ctl(AskQuestion(\n   question: Question\n))
+Questioner -> EventQueue: Any(MyRole)
+
+Questioner -> Responder: Msg(Question(...)
+Questioner -> EventQueue: Any(QuestionSent)
+hnote over Questioner: State(SentQuestion)
+Responder -> EventQueue: Any(LearnedRole)
+Responder -> EventQueue: Any(QuestionReceived)
+hnote over Responder: State(SendingQuestion)
+
+hnote over ResponderDriver: Asks for signature on \n"valid_responses" field
+hnote over ResponderDriver:
+Responder -> ResponderDriver: Decision(AnswerQuestion(\n    question: Question\n)
+ResponderDriver -> Responder: Ctl(Respond(\n   response: Answer\n))
+Responder -> Questioner: Msg(Answer(...))
+Responder -> EventQueue: Any(Questioned)
+hnote over Responder: State(Responded)
+
+Questioner -> EventQueue: Any(AnswerReceived)
+hnote over Questioner: State(VerifyingSignature)
+Questioner -> QuestionerDriver: ValidateSignature(\n    SignatureData\n)
+alt ValidSig
+    QuestionerDriver -> Questioner: SignatureResult(answer, true)
+else
+    QuestionerDriver -> Questioner: SignatureResult(answer, false)
+end
+
+Questioner -> EventQueue: Any(Answered(\n  response,\n  hasValidSig\n))
+hnote over Questioner: State(AnswerDelivered(\n  response: String,\n  hasValidSig: Boolean\n))
+
+Questioner -> QuestionerDriver: Answer(\n  response,\n  hasValidSig\n)
+
+@enduml
+

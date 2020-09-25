@@ -1,0 +1,498 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor;
+
+message TransformedEvent {
+    int32 transformationId = 1;
+    int32 eventCode = 2;
+    bytes data = 3;
+};
+//
+// We need this Event for already existing events
+// on our servers. This is the old class that was
+// serialized by java serialization. Should not be
+// used for new events and only exists for
+// deserialization.
+//
+message TransformedMultiEvents {
+    repeated TransformedEvent events = 1;
+};
+
+//note: earlier this class name was TransformedMultiEvents when it was not using protobuf serializer
+//now we want to make sure this event uses protobuf serializer so changed the class name a little bit
+//so that existing persisted class TransformedMultiEvents will still try to use java serializer during deserialization
+//and newly persisted class TransformedMultiEvent will be mapped to use protobuf for serialization/deserialization purposes.
+message TransformedMultiEvent {
+    repeated TransformedEvent events = 1;
+};
+
+message KeyCreated {
+    string forDID = 1;
+};
+
+message SignedUp {
+    string dummyField = 1 ;
+};
+
+message OwnerSetForAgent {
+    string ownerDID = 1;
+    string agentDID = 2;
+};
+
+message RecoveryKeyAdded {
+    string verKey = 1;
+}
+
+message RequesterKeyAdded {
+    string verKey = 1;
+}
+
+message AgentKeyCreated {
+    string forDID = 1;
+};
+
+message AgentDetailSet {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string forDID = 1;
+    string agentKeyDID = 2;
+};
+
+message AgentCreated {
+    string forDID = 1;
+    string agentKeyDID = 2;
+};
+
+message ComMethodPackaging {
+    string pkgType = 1;
+    repeated string recipientKeys = 2;
+}
+
+message ComMethodUpdated {
+    string id = 1;
+    int32 typ = 2;
+    string value = 3;
+    ComMethodPackaging packaging = 4;
+}
+
+message ComMethodDeleted {
+    string id = 1;
+    string value = 2;
+    string reason = 3;
+}
+
+message ConnStatusUpdated {
+    string statusCode = 1;
+}
+
+message AgentKeyDlgProofSet {
+    string DID = 1 [(scalapb.field).scala_name = "DID"];
+    string delegatedKey = 2;
+    string signature = 3;
+}
+
+message TheirAgentKeyDlgProofSet {
+    string DID = 1 [(scalapb.field).scala_name = "DID"];
+    string delegatedKey = 2;
+    string signature = 3;
+}
+
+message TheirAgencyIdentitySet {
+    string DID = 1 [(scalapb.field).scala_name = "DID"];
+    string verKey = 2;
+    string endpoint = 3;
+}
+
+message TheirAgentDetailSet {
+    string DID = 1 [(scalapb.field).scala_name = "DID"];
+    string agentKeyDID = 2;
+}
+
+message MsgReceivedOrdersDetail {
+    string from = 1;
+    int32 order = 2;
+}
+
+message MsgThreadDetail {
+    string id = 1;
+    string parentId = 2;
+    int32 senderOrder = 3;
+    repeated MsgReceivedOrdersDetail receivedOrders = 4;
+}
+
+message MsgCreated {
+    string uid = 1;
+    string typ = 2;
+    string senderDID = 3;
+    string statusCode = 4;
+    uint64 creationTimeInMillis = 5;
+    uint64 lastUpdatedTimeInMillis = 6;
+    string refMsgId = 7;
+    //string msgFamilyDetail = 8;
+    MsgThreadDetail thread = 9;
+    bool sendMsg = 10;
+}
+
+message PayloadContext {
+    string msgType = 1;
+    string msgPackVersion = 2;
+}
+
+message MsgPayloadStored {
+    string uid = 1;
+    bytes payload = 2;
+    PayloadContext payloadContext = 3;
+}
+
+message MsgDetailAdded {
+    string uid = 1;
+    string name = 2;
+    string value = 3;
+}
+
+message MsgAnswered {
+    string uid = 1;
+    string statusCode = 2;
+    string refMsgId = 3;
+    uint64 lastUpdatedTimeInMillis = 4;
+}
+
+message MsgStatusUpdated {
+    string uid = 1;
+    string statusCode = 2;
+    uint64 lastUpdatedTimeInMillis = 3;
+}
+
+message MsgDeliveryStatusUpdated {
+    string uid = 1;
+    string to = 2;
+    string statusCode = 3;
+    string statusDetail = 4;
+    uint64 lastUpdatedTimeInMillis = 5;
+    int32 failedAttemptCount = 6;
+}
+
+//AgencyAgentBase Events
+
+message EndpointSet {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string dummyField = 1;
+}
+
+//KeyValueMapper Events
+
+message MappingAdded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string key = 1;
+    string value = 2;
+}
+
+//RoutingAgentBase Events
+
+message RouteSet {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string forDID = 1;
+    int32 actorTypeId = 2;
+    string address = 3;
+}
+
+//UserAgentBase Events
+message OwnerDIDSet {
+    string ownerDID = 1;
+}
+
+//UserAgentCommon Events
+message ConfigUpdated {
+    string name = 1;
+    string value = 2;
+    uint64 lastUpdatedDateTimeInMillis = 3;
+}
+
+message ConfigRemoved {
+    string name = 1;
+}
+
+message TokenToActorItemMappingAdded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string actorEntityId = 1;
+    string uid = 2;
+    string regionTypeName = 3;
+}
+
+message CallerBlocked {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus";
+    string callerId = 1;
+    uint64 blockFrom = 2;
+    uint64 blockPeriod = 3;
+}
+
+message CallerResourceBlocked {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus";
+    string callerId = 1;
+    string resourceName = 2;
+    uint64 blockFrom = 3;
+    uint64 blockPeriod = 4;
+}
+
+message CallerUnblocked {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus";
+    string callerId = 1;
+    uint64 unblockFrom = 2;
+    uint64 unblockPeriod = 3;
+}
+
+message CallerResourceUnblocked {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus";
+    string callerId = 1;
+    string resourceName = 2;
+    uint64 unblockFrom = 3;
+    uint64 unblockPeriod = 4;
+}
+
+message RouteMigrated {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string forDID = 1;
+    string toBucketId = 2;
+}
+
+message ResourceBucketUsageUpdated {
+    int32 resourceType = 1;
+    string resourceName = 2;
+    int32 bucketId = 3;
+    int32 count = 4;
+    uint64 startDateTime = 5;
+    uint64 endDateTime = 6;
+}
+
+message ResourceUsageLimitUpdated {
+    string resourceName = 1;
+    int32 bucketId = 2;
+    int32 newLimit = 3;
+}
+
+message ResourceUsageCounterUpdated {
+    string resourceName = 1;
+    int32 bucketId = 2;
+    int32 newCounter = 3;
+}
+
+message CallerWarned {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus";
+    string callerId = 1;
+    uint64 warnFrom = 2;
+    uint64 warnPeriod = 3;
+}
+
+message CallerResourceWarned {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus";
+    string callerId = 1;
+    string resourceName = 2;
+    uint64 warnFrom = 3;
+    uint64 warnPeriod = 4;
+}
+
+message CallerUnwarned {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus";
+    string callerId = 1;
+    uint64 unwarnFrom = 2;
+    uint64 unwarnPeriod = 3;
+}
+
+message CallerResourceUnwarned {
+    option (scalapb.message).extends = "com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus";
+    string callerId = 1;
+    string resourceName = 2;
+    uint64 unwarnFrom = 3;
+    uint64 unwarnPeriod = 4;
+}
+
+message ItemUpdated {
+    string id = 1;
+    int32 status = 2;
+    string detail = 3;
+    bool isFromMigration = 4;
+    uint64 creationTimeInMillis = 5;
+}
+
+message MigrationStarted {
+    string toContainerEntityId = 1;
+    uint64 time = 2;
+}
+
+message ItemMigrated {
+    string itemId = 1;
+    string toContainerEntityId = 2;
+}
+
+message MigrationFinished {
+    string toContainerEntityId = 1;
+    uint64 time = 2;
+}
+
+message MigrationCompletedByContainer {
+    string entityId = 1;
+    uint64 time = 2;
+    bool isStorageCleaned = 3;
+}
+
+message MigratedContainerStorageCleaned {
+    string entityId = 1;
+}
+
+message ItemContainerConfigSet {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string itemType = 1;
+    int32 versionId = 2;
+    string managerEntityId = 3;
+    string ownerVerKey = 4;
+    bool migrateItemsToNextLinkedContainer = 5;
+    bool migrateItemsToLatestVersionedContainers = 6;
+}
+
+message ItemContainerPrevIdUpdated {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string id = 1;
+}
+
+message ItemContainerNextIdUpdated {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string id = 1;
+}
+
+message ConnectionCompleted {
+    string theirAgencyDID = 1;
+    string theirEdgeDID = 2;
+    string theirAgentDID = 3;
+    string theirAgentDIDVerKey = 4;
+    string theirAgentKeyDlgProofSignature = 5;
+}
+
+message TheirDidDocDetail {
+    string pairwiseDID = 5;
+    string agencyDID = 1;
+    string agentKeyDID = 2;
+    string agentVerKey = 3;
+    string agentKeyDlgProofSignature = 4;
+}
+
+message TheirProvisionalDidDocDetail {
+    string did = 1;
+    string verKey = 2;
+    string endpoint = 3;
+    repeated string routingKeys = 4;
+}
+
+message ConnectionStatusUpdated {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    bool reqReceived = 1;
+    string answerStatusCode = 2;
+    TheirDidDocDetail theirDidDocDetail = 3;
+    TheirProvisionalDidDocDetail theirProvisionalDidDocDetail = 4;
+}
+
+message MsgExpirationTimeUpdated {
+    string msgType = 1;
+    int32 timeInSeconds = 2;
+}
+
+message ParameterStored {
+    string name = 1;
+    string value = 2;
+}
+
+message ProtocolInitialized {
+    repeated ParameterStored parameters = 1;
+}
+
+message ProtocolObserverAdded {
+    int32 typeId = 1;
+    string jsonDetail = 2;
+}
+
+message ProtocolIdDetailSet {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string msgFamilyName = 1;
+    string msgFamilyVersion = 2;
+    string pinstId = 3;
+}
+
+message ReceivedOrder {
+    string from = 1;
+    int32 order = 2;
+}
+
+message ThreadContextStored {
+    string pinstId = 1;
+    string threadId = 3;
+    string msgPackVersion = 2;
+    string msgTypeFormatVersion = 5;            //NOTE: helps determining agent msg "@type" value
+    bool usesGenMsgWrapper = 6;                 //NOTE: this is for legacy agent msgs till we support them
+    bool usesBundledMsgWrapper = 7;             //NOTE: this is for legacy agent bundled msgs till we support them
+    //bool isFirstProtoMsgExchanged = 8;        deprecated
+}
+
+//legacy, should not be used anymore
+message FirstProtoMsgSent {
+    string pinstId = 1;
+}
+
+message ProtoMsgSenderOrderIncremented {
+    string pinstId = 1;
+}
+
+message ProtoMsgReceivedOrderIncremented {
+    string pinstId = 1;
+    string fromPartiId = 2;
+}
+
+message InitParamWallet {
+    string name = 1;
+    string value = 2;
+}
+
+message InitializedWallet {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.protocols.walletBackup.BackupEvt";
+    repeated InitParamWallet parameters = 1;
+}
+
+message SegmentedStateStored {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string key = 1;
+    int32 eventCode = 2;
+    bytes data = 3;
+}
+
+message StorageInfo {
+    string endpoint = 1;
+    string type = 2;
+}
+
+message StorageReferenceStored {
+    string id = 1;
+    int32 eventCode = 2;
+    StorageInfo storageInfo = 3;
+}
+
+message PublicIdentityStored {
+    string DID = 1 [(scalapb.field).scala_name = "DID"];
+    string verKey = 2 [(scalapb.field).scala_name = "verKey"];
+}
+
+message TheirDidUpdated {
+    string did = 1;
+}
+
+message SponsorAssigned {
+    string id = 1;
+}
+
+message RecordingAgentActivity {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
+    string domainId = 1;
+    string timestamp = 2;
+    string sponsorId = 3;
+    string activityType = 4;
+    string metricKey = 5;
+}

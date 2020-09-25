@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor;
+
+message TestEventAddData1 {
+    int32 id = 1;
+    int32 seqNo = 2;
+    string detail = 3;
+    bytes bytesField = 4;
+};
+
+message TestEventAddData2 {
+    int32 id = 1;                   //unchanged
+    int32 seqNo = 2;                //unchanged
+    string description = 3;         //renamed from 'detail' to 'description'
+    //bytes bytesField = 4;         //removed
+    string name = 5;                //added new field
+};
+
+message TestEventDataAdded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string did = 1;
+    string data = 2;
+}
+
+message TestItemRemoved {
+    string name = 1;
+}

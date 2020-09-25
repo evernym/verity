@@ -1,0 +1,159 @@
+@startuml
+skinparam class {
+    BackgroundColor<<focus>> PaleGreen
+    BorderColor<<focus>> Black
+    BackgroundColor<<sys>> Tomato
+    BorderColor<<sys>> Black
+}
+class com.evernym.verity.actor.agent.user.UserAgent <<focus>>
+interface com.evernym.verity.actor.agent.user.UserAgentCommon
+interface com.evernym.verity.actor.persistence.AgentPersistentActor
+interface com.evernym.verity.actor.persistence.BasePersistentActor
+abstract class PersistentActor <<sys>>
+interface com.evernym.verity.actor.persistence.EventPersistenceEncryption
+interface com.evernym.verity.actor.persistence.ActorCommon
+class com.evernym.verity.actor.metrics.ActorMetrics
+interface com.evernym.verity.actor.HasActorMsgScheduler
+interface com.evernym.verity.protocol.protocols.HasAppConfig
+interface com.evernym.verity.actor.persistence.HasActorResponseTimeout
+interface com.evernym.verity.actor.persistence.DeleteMsgCallbackHandler
+abstract class Stash <<sys>>
+interface com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
+interface com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
+interface com.evernym.verity.actor.agent.AgentCommon
+interface com.evernym.verity.actor.agent.AgentIdentity
+interface com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
+interface com.evernym.verity.actor.agent.HasSetRoute
+interface com.evernym.verity.actor.agent.state.HasAgentStateBase
+interface com.evernym.verity.actor.agent.state.HasThreadContexts
+interface com.evernym.verity.actor.agent.state.HasOtherAuthedKeys
+interface com.evernym.verity.actor.agent.state.HasProtocolInstances
+interface com.evernym.verity.actor.agent.state.HasAgencyDID
+interface com.evernym.verity.actor.agent.state.HasAgentWalletSeed
+interface com.evernym.verity.protocol.protocols.HasAgentWallet
+interface com.evernym.verity.protocol.protocols.HasWallet
+interface com.evernym.verity.actor.agent.ActorLaunchesProtocol
+interface com.evernym.verity.protocol.engine.LaunchesProtocol
+interface com.evernym.verity.protocol.engine.HasLogger
+interface com.evernym.verity.actor.agent.ProtocolEngineExceptionHandler
+interface com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
+interface com.evernym.verity.actor.agent.msghandler.outgoing.AgentOutgoingMsgHandler
+interface com.evernym.verity.actor.agent.msghandler.outgoing.SendOutgoingMsg
+interface com.evernym.verity.msg_tracer.MsgTraceProvider
+class com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
+class com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker
+interface com.evernym.verity.actor.persistence.BaseNonPersistentActor
+abstract class Actor <<sys>>
+interface com.evernym.verity.msg_tracer.HasAsyncReqContext
+interface com.evernym.verity.actor.agent.state.HasOwnerDetail
+interface com.evernym.verity.actor.ShardRegionFromActorContext
+interface com.evernym.verity.actor.ShardRegionCommon
+interface com.evernym.verity.actor.ShardRegionNames
+interface com.evernym.verity.actor.HasShardRegionNames
+interface com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentCommon
+interface com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForStoredMsgs
+interface com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
+interface com.evernym.verity.push_notification.PushNotifMsgBuilder
+interface com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
+class com.evernym.verity.actor.agent.user.UserAgentPairwise <<focus>>
+interface com.evernym.verity.actor.agent.msgsender.AgentMsgSender
+interface com.evernym.verity.protocol.protocols.HasGeneralCache
+interface com.evernym.verity.actor.agent.state.UsesConfigs
+interface com.evernym.verity.actor.agent.state.PairwiseConnState
+interface com.evernym.verity.actor.agent.state.HasPairwiseConnectionState
+abstract class MsgDeliveryResultHandler <<sys>>
+interface com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentPairwise
+interface com.evernym.verity.actor.agent.state.HasAgentDetail
+interface com.evernym.verity.actor.agent.user.FailedMsgRetrier
+class com.evernym.verity.actor.agent.agency.AgencyAgent <<focus>>
+interface com.evernym.verity.actor.agent.agency.AgencyAgentCommon
+interface com.evernym.verity.actor.agent.agency.RelationshipMigration
+interface com.evernym.verity.actor.agent.agency.AgencySealedMsgHandler
+interface com.evernym.verity.actor.agent.state.HasRelationshipState
+class com.evernym.verity.actor.agent.agency.AgencyAgentPairwise <<focus>>
+
+com.evernym.verity.actor.agent.user.UserAgent -up-|> com.evernym.verity.actor.agent.user.UserAgentCommon
+com.evernym.verity.actor.agent.user.UserAgent --* com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
+com.evernym.verity.actor.agent.user.UserAgentCommon -up-|> com.evernym.verity.actor.persistence.AgentPersistentActor
+com.evernym.verity.actor.agent.user.UserAgentCommon --* com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
+com.evernym.verity.actor.agent.user.UserAgentCommon --* com.evernym.verity.actor.agent.state.HasOwnerDetail
+com.evernym.verity.actor.agent.user.UserAgentCommon -down-* com.evernym.verity.actor.ShardRegionFromActorContext
+com.evernym.verity.actor.agent.user.UserAgentCommon --* com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentCommon
+com.evernym.verity.actor.persistence.AgentPersistentActor -up-|> com.evernym.verity.actor.persistence.BasePersistentActor
+com.evernym.verity.actor.persistence.AgentPersistentActor -* com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
+com.evernym.verity.actor.persistence.AgentPersistentActor --* com.evernym.verity.protocol.protocols.HasAppConfig
+com.evernym.verity.actor.persistence.BasePersistentActor -up-|> .PersistentActor
+com.evernym.verity.actor.persistence.BasePersistentActor -* com.evernym.verity.actor.persistence.EventPersistenceEncryption
+com.evernym.verity.actor.persistence.BasePersistentActor -* com.evernym.verity.actor.persistence.ActorCommon
+com.evernym.verity.actor.persistence.BasePersistentActor -* com.evernym.verity.actor.persistence.HasActorResponseTimeout
+com.evernym.verity.actor.persistence.BasePersistentActor -* com.evernym.verity.actor.persistence.DeleteMsgCallbackHandler
+com.evernym.verity.actor.persistence.BasePersistentActor -down-* .Stash
+com.evernym.verity.actor.persistence.ActorCommon -up-|> com.evernym.verity.actor.metrics.ActorMetrics
+com.evernym.verity.actor.persistence.ActorCommon -down-* com.evernym.verity.actor.HasActorMsgScheduler
+com.evernym.verity.actor.persistence.ActorCommon --* com.evernym.verity.protocol.protocols.HasAppConfig
+com.evernym.verity.actor.persistence.DefaultPersistenceEncryption -up-|> com.evernym.verity.actor.persistence.EventPersistenceEncryption
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler -up-|> com.evernym.verity.actor.agent.AgentCommon
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler -down-* com.evernym.verity.actor.agent.ActorLaunchesProtocol
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler -down-* com.evernym.verity.actor.agent.ProtocolEngineExceptionHandler
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler --* com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler --* com.evernym.verity.actor.agent.msghandler.outgoing.AgentOutgoingMsgHandler
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler -down-* com.evernym.verity.msg_tracer.MsgTraceProvider
+com.evernym.verity.actor.agent.msghandler.AgentMsgHandler -down-* com.evernym.verity.protocol.engine.HasLogger
+com.evernym.verity.actor.agent.AgentCommon -up-|> com.evernym.verity.actor.agent.AgentIdentity
+com.evernym.verity.actor.agent.AgentCommon --* com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
+com.evernym.verity.actor.agent.AgentCommon -* com.evernym.verity.actor.agent.HasSetRoute
+com.evernym.verity.actor.agent.AgentCommon --* com.evernym.verity.actor.agent.state.HasAgentStateBase
+com.evernym.verity.actor.agent.AgentCommon --* com.evernym.verity.protocol.protocols.HasAgentWallet
+com.evernym.verity.actor.agent.state.HasAgentStateBase -up-|> com.evernym.verity.actor.agent.state.HasThreadContexts
+com.evernym.verity.actor.agent.state.HasAgentStateBase -* com.evernym.verity.actor.agent.state.HasOtherAuthedKeys
+com.evernym.verity.actor.agent.state.HasAgentStateBase -* com.evernym.verity.actor.agent.state.HasProtocolInstances
+com.evernym.verity.actor.agent.state.HasAgentStateBase -* com.evernym.verity.actor.agent.state.HasAgencyDID
+com.evernym.verity.actor.agent.state.HasAgentStateBase -* com.evernym.verity.actor.agent.state.HasAgentWalletSeed
+com.evernym.verity.protocol.protocols.HasAgentWallet -up-|> com.evernym.verity.protocol.protocols.HasWallet
+com.evernym.verity.actor.agent.ActorLaunchesProtocol -up-|> com.evernym.verity.protocol.engine.LaunchesProtocol
+com.evernym.verity.actor.agent.ActorLaunchesProtocol --* com.evernym.verity.protocol.engine.HasLogger
+com.evernym.verity.actor.agent.msghandler.outgoing.AgentOutgoingMsgHandler -up-|> com.evernym.verity.actor.agent.msghandler.outgoing.SendOutgoingMsg
+com.evernym.verity.msg_tracer.MsgTraceProvider -up-|> com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
+com.evernym.verity.msg_tracer.MsgTraceProvider --* com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker
+com.evernym.verity.msg_tracer.MsgTraceProvider --* com.evernym.verity.actor.persistence.HasActorResponseTimeout
+com.evernym.verity.msg_tracer.MsgTraceProvider -* com.evernym.verity.msg_tracer.HasAsyncReqContext
+com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker -up-|> com.evernym.verity.actor.persistence.BaseNonPersistentActor
+com.evernym.verity.actor.persistence.BaseNonPersistentActor -up-|> .Actor
+com.evernym.verity.actor.persistence.BaseNonPersistentActor -* com.evernym.verity.actor.persistence.ActorCommon
+com.evernym.verity.actor.persistence.BaseNonPersistentActor -* com.evernym.verity.actor.persistence.HasActorResponseTimeout
+com.evernym.verity.actor.ShardRegionFromActorContext -up-|> com.evernym.verity.actor.ShardRegionCommon
+com.evernym.verity.actor.ShardRegionCommon -up-|> com.evernym.verity.actor.ShardRegionNames
+com.evernym.verity.actor.ShardRegionNames -up-|> com.evernym.verity.actor.HasShardRegionNames
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentCommon -up-|> com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForStoredMsgs
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentCommon -* com.evernym.verity.actor.agent.msghandler.outgoing.SendOutgoingMsg
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForStoredMsgs -up-|> com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForStoredMsgs -down-* com.evernym.verity.push_notification.PushNotifMsgBuilder
+com.evernym.verity.push_notification.PushNotifMsgBuilder -up-|> com.evernym.verity.protocol.protocols.HasAppConfig
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent -up-|> com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentCommon
+com.evernym.verity.actor.agent.user.UserAgentPairwise -up-|> com.evernym.verity.actor.agent.user.UserAgentCommon
+com.evernym.verity.actor.agent.user.UserAgentPairwise --* com.evernym.verity.actor.agent.msgsender.AgentMsgSender
+com.evernym.verity.actor.agent.user.UserAgentPairwise --* com.evernym.verity.actor.agent.state.UsesConfigs
+com.evernym.verity.actor.agent.user.UserAgentPairwise --* com.evernym.verity.actor.agent.state.PairwiseConnState
+com.evernym.verity.actor.agent.user.UserAgentPairwise -down-* .MsgDeliveryResultHandler
+com.evernym.verity.actor.agent.user.UserAgentPairwise --* com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentPairwise
+com.evernym.verity.actor.agent.user.UserAgentPairwise -* com.evernym.verity.actor.agent.user.FailedMsgRetrier
+com.evernym.verity.actor.agent.msgsender.AgentMsgSender -up-|> com.evernym.verity.protocol.protocols.HasGeneralCache
+com.evernym.verity.actor.agent.msgsender.AgentMsgSender -down-* com.evernym.verity.protocol.engine.HasLogger
+com.evernym.verity.actor.agent.state.UsesConfigs -up-|> com.evernym.verity.protocol.protocols.HasAppConfig
+com.evernym.verity.actor.agent.state.PairwiseConnState -up-|> com.evernym.verity.actor.agent.state.HasPairwiseConnectionState
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentPairwise -up-|> com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentCommon
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentPairwise -down-* com.evernym.verity.actor.agent.state.HasOwnerDetail
+com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgentPairwise -down-* com.evernym.verity.actor.agent.state.HasAgentDetail
+com.evernym.verity.actor.agent.agency.AgencyAgent -up-|> com.evernym.verity.actor.agent.agency.AgencyAgentCommon
+com.evernym.verity.actor.agent.agency.AgencyAgent -* com.evernym.verity.actor.agent.agency.AgencySealedMsgHandler
+com.evernym.verity.actor.agent.agency.AgencyAgent --* com.evernym.verity.actor.agent.state.HasRelationshipState
+com.evernym.verity.actor.agent.agency.AgencyAgentCommon -up-|> com.evernym.verity.actor.persistence.AgentPersistentActor
+com.evernym.verity.actor.agent.agency.AgencyAgentCommon -* com.evernym.verity.actor.agent.agency.RelationshipMigration
+com.evernym.verity.actor.agent.agency.AgencyAgentCommon --* com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
+com.evernym.verity.actor.agent.agency.AgencyAgentCommon -down-* com.evernym.verity.actor.ShardRegionFromActorContext
+com.evernym.verity.actor.agent.agency.AgencyAgentCommon --* com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
+com.evernym.verity.actor.agent.agency.AgencySealedMsgHandler -up-|> com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
+com.evernym.verity.actor.agent.agency.AgencyAgentPairwise -up-|> com.evernym.verity.actor.agent.agency.AgencyAgentCommon
+com.evernym.verity.actor.agent.agency.AgencyAgentPairwise --* com.evernym.verity.actor.agent.state.HasOwnerDetail
+
+@enduml

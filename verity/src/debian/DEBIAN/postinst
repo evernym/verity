@@ -1,0 +1,77 @@
+#!/bin/sh
+
+USER=verity-application
+
+moveDirectory() {
+  VERITY_DIR=$1
+  CONSUMER_DIR=$2
+  ENTERPRISE_DIR=$3
+
+    if [ -d $CONSUMER_DIR ] && [ -d $ENTERPRISE_DIR ] ; then
+      echo "Detected both '$CONSUMER_DIR'  and '$ENTERPRISE_DIR'"
+      echo "Unable to continue, requires manual clean-up"
+      exit 1
+    elif [ -d $CONSUMER_DIR ]; then
+      echo "Detected '$CONSUMER_DIR'"
+      echo "Moving it to '$VERITY_DIR'"
+      mv $CONSUMER_DIR $VERITY_DIR
+    elif [ -d $ENTERPRISE_DIR ]; then
+      echo "Detected '$ENTERPRISE_DIR'"
+      echo "Moving it to '$VERITY_DIR'"
+      mv $ENTERPRISE_DIR $VERITY_DIR
+    else
+      mkdir -p $VERITY_DIR
+      chown -R "$USER" $VERITY_DIR
+    fi
+}
+
+onInstallOrUpgrade() {
+  systemctl daemon-reload
+}
+
+onPackageInstall() {
+  if id "consumer-agent" >/dev/null 2>&1 && id "enterprise-agent" >/dev/null 2>&1 ; then
+    echo "Detected both 'consumer-agent'  and 'enterprise-agent' users"
+    echo "Unable to continue, requires manual clean-up"
+    exit 1
+  elif id "consumer-agent" >/dev/null 2>&1; then
+    echo "Detected 'consumer-agent' user"
+    echo "Renaming to '$USER'"
+    usermod -l $USER consumer-agent
+    usermod -d "/var/lib/$USER" -m $USER
+  elif id "enterprise-agent" >/dev/null 2>&1; then
+    echo "Detected 'enterprise-agent' user"
+    echo "Renaming to '$USER'"
+    usermod -l $USER enterprise-agent
+    usermod -d "/var/lib/$USER" -m $USER
+  else
+    adduser --quiet --system --shell /bin/false "$USER" --home /var/lib/"$USER"
+  fi
+
+  mkdir -p "/etc/verity/"
+  chown -R "$USER" "/etc/verity/"
+
+  moveDirectory "/var/lib/$USER" '/var/lib/consumer-agent' '/var/lib/enterprise-agent'
+  moveDirectory "/etc/verity/$USER" '/etc/agency/consumer-agent' '/etc/agency/enterprise-agent'
+  moveDirectory "/var/log/$USER" '/var/log/consumer-agent' '/var/log/enterprise-agent'
+
+  TARGET_CONF_DIR=/etc/verity/"$USER"
+  if [ -z "$(ls -A "$TARGET_CONF_DIR")" ]; then
+    cp /usr/share/verity/"$USER"/*.*  "$TARGET_CONF_DIR"/.
+  fi
+
+  onInstallOrUpgrade
+}
+
+onPackageUpgrade() {
+  oldVersion=$1
+  onInstallOrUpgrade
+}
+
+case "$1" in
+  configure)
+    case "$2" in
+        "") onPackageInstall;;
+        *) onPackageUpgrade "$2" ;;
+    esac
+esac

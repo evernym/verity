@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor;
+
+message TransformedState {
+    int32 transformationId = 1;
+    int32 stateCode = 2;
+    bytes data = 3;
+};
+
+message BucketDetail {
+    int32 id = 1;
+    int32 usedCount = 2;
+    uint64 startDateTime = 3;
+    uint64 endDateTime = 4;
+}
+
+message ResourceBucket {
+    string name = 1;
+    int32 type = 2;
+    repeated BucketDetail buckets = 3;
+}
+
+message ResourceUsageState {
+    option (scalapb.message).extends = "com.evernym.verity.actor.State";
+    repeated ResourceBucket resourceBuckets = 1;
+}
+
+message ItemManagerState {
+    option (scalapb.message).extends = "com.evernym.verity.actor.State";
+    string itemType = 1;
+    string ownerVerKey = 2;
+    int32 totalEverAllocatedContainers = 3;
+    string headContainerEntityId = 4;
+    string tailContainerEntityId = 5;
+    bool migrateItemsToNextLinkedContainer = 6;
+    bool migrateItemsToLatestVersionedContainers = 7;
+}

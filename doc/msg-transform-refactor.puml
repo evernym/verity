@@ -1,0 +1,91 @@
+@startuml
+participant "some\nother\nagent" as soa
+actor "Verity\nInstance\nAdministrator" as admin
+participant "Protocol\nLauncher\n(e.g., agent)" as pl
+participant "message\nextraction\nlibrary" as mel
+participant "Protocol\nContainer" as pc
+participant "Protocol base" as pb
+participant "Protocol" as p
+
+== Protocol Registration ==
+
+note over pl
+TODO: add flows for protocol registration
+
+should include a reference to a ProtoDef, as well as a an anonymous function
+that generates the Driver for that protocol. The protocol container runs that
+anon func and uses it for Notifications. Need to diagram this.
+
+note: Protocols should be completely self contained. No other code is necessary
+to be in place for a protocol to be loaded and run in Verity. The test of
+this is being able to drop a compiled protocol into a directory on the
+server running Verity, and Verity can dynamically load it.
+
+end note
+
+== incoming msg ==
+autonumber
+soa -> pl: packed msg
+pl -> mel: packed msg
+pl <- mel: <b>(MsgPackVersion, ThreadId, <i>AgentMsgType</i>, native msg)\n<i>AgentMsgType</i> = (MsgFamilyName, MsgFamilyVersion, MsgName)
+alt if incoming msg expects a synchronous response
+pl -> pl: creates or computes a unique MsgId (could even be a sequence number)
+pl -> pl: store sender id with that msg Id (Map[MsgId, ActorRef])
+else
+soa <- pl: OK
+end alt
+pl -> pl: compute pinstId
+pl -> pl: stores in Map(PinstId -> (ThreadId, MsgPackVersion, MsgFamilyVersion))
+pl -> pl: determine which protocol supports the AgentMsgType
+pl -> pl: computes protocol id using threadId as a factor
+pl -> pc: (native msg, msgId, sender participant id)
+pc -> pb: (native msg, msgId, sender participant id)
+pb -> pb: sets currentMsgId
+pb -> pb: computes sender role from participant id and roster
+pb -> p: (native msg, sender role)
+p -> p: any processing it wants
+
+newpage
+
+== outgoing msg ==
+autonumber
+pb <- p: (native msg, recipient role)
+pb <- pb: computes recipient participant id
+pc <- pb: ( native msg, \nmsgId, \nsender participant id, \nrecipient participant id )
+pc <- pc: computes actorRef from recipient and sender
+pl <- pc: (native msg, pinstId, msgId, sender participant id, recipient participant id)\nmay not be the original launcher\n(needs security review)
+pl <- pl: lookup MsgPackVersion from pinstId
+pl -> mel: (native message, MsgPackVersion, crypto keys)
+pl <- mel: packed msg
+alt if there is a waiting sender for msgId
+soa <- pl : send msg to that sender
+else recipient has an endpoint
+soa <- pl: packed msg
+else recipient has a push-enabled device
+pl <- pl: store msg
+soa <- pl: push notification
+soa -> pl: GET_MESSAGES
+soa <- pl: MESSAGES(packed msg)
+end alt
+
+
+note over soa,p
+PROTOCOL RULES:
+    protocols only ever receive and transmit simple native objects (case classes)
+        no encryption/decryption, packing/unpacking
+    protocols are built TDD, which means they are tested with SimpleProtocolContainer (see TicTacToe)
+
+end note
+note over soa,p
+
+  //TODO MsgPackVersion AND ThreadId can be used for formatting and thread management
+  // to start with, we can just have a map of pinstId -> (ThreadId, MsgPackVersion, MsgFamilyVersion) stored in the agent
+  // when the first message comes in, we establish the (ThreadId, MsgPackVersion, MsgFamilyVersion) for pinstId
+  // when we want to respond to, use the same stored map to know which MsgPackVersion and/or MsgFamilyVersion and/or ThreadId should be used
+
+
+  //TODO map threadId to Protocol Instance
+  // to start with, a simple map threadId -> protocol instance
+  // add threadId to protocol (probably in a base class)
+end note
+@enduml

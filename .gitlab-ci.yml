@@ -1,0 +1,270 @@
+image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:252d39db
+
+variables:
+  MASTER_PROJECT_ID: "327"
+  indyNodeVersion: "1.12.3"
+  sovtokenVersion: "1.0.8"
+
+.on-master: # job always runs for 'master', otherwise it manual
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master" && $CI_PROJECT_ID == $MASTER_PROJECT_ID'
+      when: always
+    - when: manual
+
+.for-master: # job always runs for 'master' or merge requests to 'master', otherwise it manual
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master" && $CI_PROJECT_ID == $MASTER_PROJECT_ID'
+      when: always
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master" && $CI_PROJECT_ID == $MASTER_PROJECT_ID'
+    - when: manual
+
+stages:
+  - check
+#  - compile
+  - test
+  - package
+  - publish
+
+license-data-check:
+  stage: check
+  script: ./devops/license-date-check.sh
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  tags:
+    - docker-machine
+
+.test:
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.sbt/
+      - $CI_PROJECT_DIR/.ivy2/
+  stage: test
+  before_script:
+    - mkdir -p $CI_PROJECT_DIR/.sbt && cp -r ~/.sbt/* $CI_PROJECT_DIR/.sbt/.
+  tags:
+    - docker-machine
+    - compute-xlarge
+
+# compile:
+#   extends: .test
+#   script:
+#     - sbt clean compile test:compile
+#   stage: compile
+#   artifacts:
+#     name: "$CI_JOB_NAME"
+#     expire_in: '5 hrs'
+#     paths:
+#       - target
+#       - project/target
+#       - project/project/target
+#       - verity/target
+
+unit-test:
+  extends: .test
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  script:
+    - devops/scripts/test/docker-unit-tests $CI_PROJECT_DIR
+
+.static-analysis: # This test don't work and is currently not providing value
+  extends: .test
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - verity/target/scala-*/scapegoat-report
+  script:
+    - devops/scripts/test/docker-static-code-analysis $CI_PROJECT_DIR
+  allow_failure: true # Eventually this will be removed and we will have a zero error/warning policy
+
+.integration:
+  extends: .test
+  variables:
+    # For the integration tests to set up a usable bucket
+    WALLET_BACKUP_BUCKET: "evernym-wallet-backup"
+    WALLET_BACKUP_S3_ENDPOINT: "http://s3server:8000"
+    # These are used by the s3 service in .intergration jobs
+    REMOTE_MANAGEMENT_DISABLE: 1
+    ENDPOINT: "s3server"
+    TAA_ENABLE: "true"
+    MESSAGE_PROGRESS_TRACKING_ENABLED: "true"
+    # For MYSQL docker container service
+    MYSQL_ROOT_PASSWORD: "root"
+    MYSQL_DATABASE: "wallet"
+    MYSQL_USER: "msuser"
+    MYSQL_PASSWORD: "mspassword"
+    # For yourls service
+    YOURLS_SITE: "http://yourls"
+    YOURLS_USER: "yourlsuser"
+    YOURLS_PASS: "yourlspass"
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - integration-tests/target/scalatest-runs
+    when: always
+  script:
+    - devops/scripts/test/retrieve-genesis-txn
+    - devops/scripts/s3server/s3_init.sh
+    - devops/scripts/yourls/yourls_init.sh
+    - devops/scripts/test/docker-integration-tests $CI_PROJECT_DIR
+  services:
+    - name: $EVERNYM_REGISTRY_HOST/dev/containers/indy-pool:${indyNodeVersion}_${sovtokenVersion}
+      alias: indy-pool
+    - name: $EVERNYM_REGISTRY_HOST/dev/containers/verity-mysql-wallet:288429c3
+      alias: mysql
+    - name: $EVERNYM_REGISTRY_HOST/dev/containers/verity-dynamodb:20b4ceda
+      alias: dynamodb
+    - name: zenko/cloudserver
+      alias: s3server # use endpoint_url value of http://s3server:8000
+      entrypoint: [ '/usr/src/app/docker-entrypoint.sh' ]
+      command: [ 'yarn', 'start', 'mem_backend' ]
+    - name: $EVERNYM_REGISTRY_HOST/dev/containers/yourls-mysql:2283cd0c
+      alias: yourls
+
+legacy:
+  extends: .integration
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  variables:
+    TEST_SCENARIOS: "scenario1, scenario3"
+    TEST_TYPE: "Legacy"
+
+legacy-with-restart:
+  extends: .integration
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  variables:
+    TEST_SCENARIOS: "scenario2"
+    TEST_TYPE: "Legacy"
+
+integration:
+  extends: .integration
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Integration"
+
+# I'm disabling these tests. They need maintenance since we dropped 0.6 protocols that I did not have time before_script:
+# since we have coverage else were and for the things we did not have coverage for were for POC features.
+.protocols:
+  extends: .integration
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Protocols"
+
+.package-common:
+  stage: package
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - verity/target/*.deb
+    when: always
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.sbt/
+      - $CI_PROJECT_DIR/.ivy2/
+  script:
+    - cd $CI_PROJECT_DIR
+    - sbt assembly
+    - sbt debian:packageBin
+  tags:
+    - docker-machine
+    - compute-xlarge
+
+package:
+  extends: .package-common
+  only:
+    refs:
+      - master@dev/agency
+
+package-manual:
+  extends: .package-common
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  when: manual
+
+.publish-common:
+  stage: publish
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.sbt/
+      - $CI_PROJECT_DIR/.ivy2/
+  script:
+    - cd $CI_PROJECT_DIR
+    - export debianPackage=`ls verity/target/verity-application_*.deb`
+    - curl -u $KRK_USERNAME:$KRK_PASSWORD --fail -X POST https://$KRK_HOST/repo/$KRK_DEV_REPO/upload -F file=@$debianPackage --cacert "$EVERNYM_CERTIFICATE"
+  tags:
+    - docker-machine
+
+publish:
+  extends: .publish-common
+  dependencies:
+    - package
+  only:
+    refs:
+      - master@dev/agency
+
+publish-manual:
+  extends: .publish-common
+  dependencies:
+    - package-manual
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  when: manual
+
+.publish-tests-common:
+  stage: publish
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.sbt/
+      - $CI_PROJECT_DIR/.ivy2/
+  script:
+    - cd $CI_PROJECT_DIR
+    - sbt "integrationTests/publish"
+  tags:
+    - docker-machine
+    - compute-xlarge
+
+publish-tests:
+  extends: .publish-tests-common
+  only:
+    refs:
+      - master@dev/agency
+
+publish-tests-manual:
+  extends: .publish-tests-common
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  when: manual

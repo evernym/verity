@@ -1,0 +1,7 @@
+#
+# Attribution to 3rd party code in this code base
+#
+
+file: verity/src/main/scala/com/evernym/verity/util/Base58Util.scala
+from: https://github.com/input-output-hk/scrypto
+license: CC0 1.0 Universal

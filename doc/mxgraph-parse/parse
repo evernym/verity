@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+import sys
+import xml.etree.ElementTree as ET
+
+def main(argv):
+    ''' Parses a mxgraph xml file, which is the file format you get when you 
+        select File -> Export as -> XML and uncheck "compressed" while in a 
+        diagrams.net (drawio) diagram.
+    '''
+    xml_file = get_file_arg(argv)
+    root = ET.parse(xml_file).getroot()
+
+    nodes = extract_nodes(root)
+    edges = extract_edges(root, nodes)
+
+    for frm, to in edges:
+        print(frm + ' -> ' + to)
+
+def extract_nodes(root):
+    ''' Returns a dict mapping node ids to node values (the text in a node).
+        Also removes whitespace in node values, allowing for whitespace to be added 
+        in the node items in the graph for readabily.
+    '''
+    nodes_1 = list(root.findall("diagram/mxGraphModel/root/mxCell[@value]"))
+    node_pred = lambda n: n.attrib.get('source') == None and len(n.attrib.get('value')) > 0
+    nodes_2 = filter(node_pred, nodes_1)
+    # remove all whitespace, which allows us to insert whitespace 
+    remove_ws = lambda s: "".join(s.split())
+    node_to_id_value_tuple = lambda n: (n.attrib.get('id'), remove_ws(n.attrib.get('value'))) 
+    # dict of id's to values (trait names)
+    return dict(map(node_to_id_value_tuple, nodes_2))
+
+def extract_edges(root, nodes):
+    ''' Returns a list of tuples (source, target), where each tuple represents 
+        a line in the graph. Source and Target are node values (the text in the 
+        node).
+    '''
+    edge_ids = list(root.findall("diagram/mxGraphModel/root/mxCell[@edge='1']"))
+    return map(lambda x:(nodes[x.attrib['source']], nodes[x.attrib['target']]), edge_ids)
+
+def get_file_arg(argv):
+    if len(argv) == 0:
+        print('Error: argument missing (requires an xml file as an argument)')
+        sys.exit(-1)
+    elif len(argv) > 1:
+        print('Error: too many arguments (requires an xml file as an argument)')
+        sys.exit(-2)
+    return argv[0]
+
+if __name__ == "__main__":
+   main(sys.argv[1:])

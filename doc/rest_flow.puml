@@ -1,0 +1,10 @@
+@startuml
+
+title Calls in the "rest" Flow
+
+autonumber 1
+note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\nREST message.
+AgentMsgRouter --> AgentMsgRouter
+note over AgentMsgRouter #ffffff: routeRestMsg( )
+
+@enduml

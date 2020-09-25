@@ -1,0 +1,129 @@
+#!/bin/bash -e
+
+# Get the SCRIPT_DIR in a way that works for both linux and mac
+# readlink behaves differently on linux and mac. The following does not work on
+# mac: script_dir=`dirname $(readlink -f $0)`
+# https://stackoverflow.com/questions/1055671/how-can-i-get-the-behavior-of-gnus-readlink-f-on-a-mac
+SOURCE=$0
+while [ -h "$SOURCE" ]; do
+  TARGET="$(readlink "$SOURCE")"
+  if [[ $SOURCE == /* ]]; then
+    SOURCE="$TARGET"
+  else
+    SCRIPT_DIR="$( dirname "$SOURCE" )"
+    SOURCE="$SCRIPT_DIR/$TARGET"
+  fi
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# Default to a relative path if not passed in as an argument
+CI_PROJECT_DIR="${SCRIPT_DIR}/../../.."
+
+if [ "$#" -eq 1 ]; then
+  CI_PROJECT_DIR=$1
+elif [ "$#" -lt 1 ]; then
+  echo "Usage: docker-integration-tests [CI_PROJECT_DIR]"
+  echo "       CI_PROJECT_DIR is optional and defaults to ${CI_PROJECT_DIR}"
+fi
+
+taa_enabled=${TAA_ENABLE:-true}
+message_progress_tracking_enabled=${MESSAGE_PROGRESS_TRACKING_ENABLED:-true}
+yourls_site=${YOURLS_SITE:-http://yourls}
+
+echo "Begin running integration tests inside docker..."
+echo "CI_PROJECT_DIR = >${CI_PROJECT_DIR}<"
+echo "TAA_ENABLED = >${taa_enabled}<"
+echo "MESSAGE_PROGRESS_TRACKING_ENABLED= >${message_progress_tracking_enabled}<"
+
+repeat_until_ready()
+{
+  cmd="$1"
+  shift
+  args=( "$@" )
+  attempt_counter=0
+  max_attempts=5
+  until $cmd "${args[@]}"; do
+  if [ ${attempt_counter} -eq ${max_attempts} ];then
+    echo "Max attempts reached"
+    exit 1
+  fi
+  echo "Attempting connection... failed."
+  attempt_counter=$(($attempt_counter+1))
+  sleep 5
+done
+}
+
+echo "Testing pool connection..."
+echo "Waiting until ledger on indy-pool is ready..."
+repeat_until_ready nc -vz indy-pool 9701
+echo "indy-pool is ready..."
+
+echo "Testing mysql connection..."
+echo "Waiting until mysql on indy-pool is ready..."
+repeat_until_ready mysql -u"msuser" -p"mspassword" -h"mysql" -P3306  -D wallet -e "select * from wallets;"
+echo "Connection to mysql on port 3306 was successful!"
+mysql -u"msuser" -p"mspassword" -h"mysql" -P3306  -D wallet -e "show tables;"
+
+echo "Testing dynamodb connection..."
+echo "Ensure dynamodb tables are created..."
+aws_output=$(aws configure get output || true)
+aws_region=$(aws configure get region || true)
+aws_access_key_id=$(aws configure get aws_access_key_id || true)
+aws_secret_access_key=$(aws configure get aws_secret_access_key || true)
+aws configure set output text
+aws configure set region none
+aws configure set aws_access_key_id none
+aws configure set aws_secret_access_key none
+if [ $(aws dynamodb list-tables --endpoint-url http://dynamodb:8000 | wc -l) -eq 6 ]; then 
+  aws configure set output "${aws_output}"
+  aws configure set region "${aws_region}"
+  aws configure set aws_access_key_id "${aws_access_key_id}"
+  aws configure set aws_secret_access_key "${aws_secret_access_key}"
+  echo "Connection to dynamodb on port 8000 was successful. All tables exist!"
+
+  echo "Wait until dynamodb port is open..."
+  repeat_until_ready nc -vz dynamodb 8000
+  echo "dynamodb is ready..."
+else
+  exit 1
+fi
+
+# TODO: figure out how to start with a clean DynamoDB, MySQL, and Ledger instance. For now, require user to recreate
+#       container instances.
+echo "set env variables to work with docker container names instead of localhost..."
+export WALLET_STORAGE_READ_HOST_IP='mysql'
+export WALLET_STORAGE_WRITE_HOST_IP='mysql'
+export DYNAMODB_ENDPOINT='dynamodb:8000'
+export LIB_INDY_LEDGER_TAA_ENABLED=$taa_enabled
+export LIB_INDY_LEDGER_TAA_AUTO_ACCEPT=$taa_enabled
+export MESSAGE_PROGRESS_TRACKING_ENABLED=$message_progress_tracking_enabled
+export YOURLS_API_URL=${yourls_site}/yourls-api.php
+
+pushd ${CI_PROJECT_DIR}
+
+testType=${TEST_TYPE:-"Integration"}
+echo "Begin running integration tests... TEST_TYPE=$testType"
+if [[ "$testType" == "Protocols" ]]
+then
+  echo "Running protocol Connecting integration tests..."
+  sbt "verity/multi-jvm:testOnly com.evernym.verity.integration.Connecting"
+  echo "Running protocol TicTacToe integration tests..."
+  sbt "verity/multi-jvm:testOnly com.evernym.verity.integration.TicTacToe"
+fi
+
+if [[ "$testType" == "Legacy" ]]
+then
+    echo "Running $testType e2e API integration tests..."
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.ApiFlowSpec"
+fi
+
+if [[ "$testType" == "Integration" ]]
+then
+    echo "Running $testType e2e API integration tests..."
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Integration"
+fi
+
+echo "Done running integration tests..."
+popd
+
+echo "Done running integration tests inside docker..."

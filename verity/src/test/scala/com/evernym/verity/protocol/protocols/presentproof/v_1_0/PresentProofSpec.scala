@@ -1,0 +1,549 @@
+package com.evernym.verity.protocol.protocols.presentproof.v_1_0
+
+import com.evernym.verity.protocol.engine.{AnonCredRequests, DID, LedgerAccess, Nonce, WalletAccess, WalletAccessTest}
+import com.evernym.verity.protocol.protocols.issueCredential.common.IssueCredentialSpecBase
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
+import com.evernym.verity.protocol.testkit.DSL.{signal, state}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.testkit.BasicFixtureSpec
+
+import scala.util.Try
+
+class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
+  with IssueCredentialSpecBase
+  with BasicFixtureSpec {
+    import PresentProofSpec._
+
+    val restriction1: RestrictionsV1 = RestrictionsV1(Some("NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0"),
+      None,
+      None,
+      None,
+      None,
+      None)
+
+    val requestedAttr1: ProofAttribute = ProofAttribute(
+      Some("test"),
+      None,
+      Some(List(restriction1)),
+      None,
+      self_attest_allowed = false
+    )
+
+  val selfAttest1: ProofAttribute = generateAttr(name=Some("attest1"), selfAttestedAllowed=true)
+
+  val selfAttest2: ProofAttribute = generateAttr(name=Some("attest2"), selfAttestedAllowed=true)
+
+  val invalidAttr: ProofAttribute = ProofAttribute(
+      Some("test"),
+      Some(List("test", "test2")),
+      Some(List(restriction1)),
+      None,
+      self_attest_allowed = false
+    )
+
+  val reqWithPredicate: Ctl.Request = genReq(
+    "",
+    Some(List(selfAttest1, selfAttest2)),
+    Some(List(ProofPredicate("a", "b", 2, None, None)))
+  )
+
+  val allSelfAttestProofReq: Ctl.Request = genReq("", Some(List(selfAttest1, selfAttest2)))
+
+  val reqWithRestriction: Ctl.Request = genReq("", Some(List(requestedAttr1)))
+
+  val reqWithSelfAttestAndRestrictions: Ctl.Request = genReq("", Some(List(selfAttest1, selfAttest2, requestedAttr1)))
+
+  "Present Proof Protocol" - {
+    "indy proof object" - {
+      "should validate self attested values" in {_ =>
+        // Passes with all self attested
+        assert(allowsAllSelfAttested(allSelfAttestProofReq))
+
+        // Fails with predicate
+        assert(!allowsAllSelfAttested(reqWithPredicate))
+
+        // Fails with both proof request restrictions and self attest
+        assert(!allowsAllSelfAttested(reqWithSelfAttestAndRestrictions))
+
+        // Fails with only proof request restrictions
+        assert(!allowsAllSelfAttested(reqWithRestriction))
+      }
+     }
+
+    "verifier start protocol" - {
+      "should handle happy path" in { f =>
+
+        val (verifier, prover) = indyAccessMocks(f)
+
+        var nonce: Option[Nonce] = None
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ Ctl.Request(
+          "",
+          Some(List(requestedAttr1)),
+          None,
+          None
+        )
+
+        verifier.role shouldBe Role.Verifier
+        verifier.expectAs(state[States.RequestSent]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          nonce = Some(s.data.requests.head.nonce)
+        }
+
+        // Prover should receive request and approve it
+        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
+          msg.proof_request.nonce shouldBe nonce.value
+        }
+        prover.role shouldBe Role.Prover
+        prover.expectAs(state[States.RequestReceived]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          s.data.requests.head.nonce shouldBe nonce.value
+        }
+        prover ~ Ctl.AcceptRequest()
+
+        // Verifier should receive presentation and verify it
+        verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
+          msg.verification_result shouldBe VerificationResults.ProofValidated
+          msg.requested_presentation should not be null
+        }
+
+        verifier.expectAs(state[States.Complete]) { s =>
+          s.data.presentation should not be None
+          s.data.presentedAttributes should not be None
+          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
+          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
+        }
+
+        // Prover should be in Presented state
+        prover.expectAs(state[States.Presented]) {s =>
+          s.data.presentation should not be None
+          s.data.presentationAcknowledged shouldBe true
+        }
+
+        verifier ~ Ctl.Status()
+        verifier.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results.value shouldBe an[PresentationResult]
+          s.status shouldBe "Complete"
+        }
+
+        prover ~ Ctl.Status()
+        prover.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results shouldBe None
+          s.status shouldBe "Presented"
+        }
+      }
+
+      "should handle all self attested - real wallet access" in { f =>
+        val (verifier, prover) = indyAccessMocks(f, wa=WalletAccessTest.walletAccess())
+
+        var nonce: Option[Nonce] = None
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ allSelfAttestProofReq
+
+        verifier.role shouldBe Role.Verifier
+        verifier.expectAs(state[States.RequestSent]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          nonce = Some(s.data.requests.head.nonce)
+        }
+
+        // Prover should receive request and approve it
+        var selfAttestOptions: List[String] = List()
+        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
+          selfAttestOptions = msg.proof_request.selfAttestOptions
+          assert(msg.proof_request.allowsAllSelfAttested)
+          assert(selfAttestOptions.size == 2)
+          msg.proof_request.nonce shouldBe nonce.value
+        }
+
+        prover.role shouldBe Role.Prover
+        prover.expectAs(state[States.RequestReceived]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          s.data.requests.head.nonce shouldBe nonce.value
+        }
+        val selfAttestedAttrs = selfAttestOptions.map(x => x -> "test data").toMap
+        prover ~ Ctl.AcceptRequest(selfAttestedAttrs)
+
+        // Verifier should receive presentation and verify it
+        verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
+          msg.verification_result shouldBe VerificationResults.ProofValidated
+          msg.requested_presentation should not be null
+        }
+
+        verifier.expectAs(state[States.Complete]) { s =>
+          s.data.presentation should not be None
+          s.data.presentedAttributes should not be None
+          s.data.presentedAttributes.value.self_attested_attrs.size shouldBe 2
+          s.data.presentedAttributes.value.revealed_attrs shouldBe empty
+          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
+        }
+
+        // Prover should be in Presented state
+        prover.expectAs(state[States.Presented]) {s =>
+          s.data.presentation should not be None
+          s.data.presentationAcknowledged shouldBe true
+        }
+
+        verifier ~ Ctl.Status()
+        verifier.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results.value shouldBe an[PresentationResult]
+          s.status shouldBe "Complete"
+        }
+
+        prover ~ Ctl.Status()
+        prover.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results shouldBe None
+          s.status shouldBe "Presented"
+        }
+      }
+
+      "should fail with unexpected self attested" in {f =>
+        val (verifier, prover) = indyAccessMocks(f, wa=WalletAccessTest.walletAccess())
+
+        var nonce: Option[Nonce] = None
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ reqWithRestriction
+
+        verifier.role shouldBe Role.Verifier
+        verifier.expectAs(state[States.RequestSent]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          nonce = Some(s.data.requests.head.nonce)
+        }
+
+        // Prover should receive request and approve it
+        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
+          assert(!msg.proof_request.allowsAllSelfAttested)
+          msg.proof_request.nonce shouldBe nonce.value
+        }
+
+        prover.role shouldBe Role.Prover
+        prover.expectAs(state[States.RequestReceived]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          s.data.requests.head.nonce shouldBe nonce.value
+        }
+
+        prover ~ Ctl.AcceptRequest(Map("invalid self attest" -> "invalid"))
+
+        // Verifier should receive presentation and verify it
+        prover.expectAs( signal[Sig.ProblemReport]) { msg =>
+          msg.description.bestDescription() shouldBe Some("Ledger assets unavailable -- No ledger identifiers were included with the Presentation")
+        }
+      }
+
+      "should pass when prover provides credential when verifier allows self attested" in { f =>
+        val (verifier, prover) = indyAccessMocks(f)
+
+        var nonce: Option[Nonce] = None
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ reqWithSelfAttestAndRestrictions
+
+        verifier.role shouldBe Role.Verifier
+        verifier.expectAs(state[States.RequestSent]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          nonce = Some(s.data.requests.head.nonce)
+        }
+
+        // Prover should receive request and approve it
+        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
+          msg.proof_request.nonce shouldBe nonce.value
+        }
+
+        prover.role shouldBe Role.Prover
+        prover.expectAs(state[States.RequestReceived]){ s =>
+          s.data.requests should not be empty
+          s.data.requests should have size 1
+          s.data.requests.head.nonce shouldBe nonce.value
+        }
+
+        // Possibility of self attested but uses mocked credentials instead
+        prover ~ Ctl.AcceptRequest(Map.empty)
+
+        // Verifier should receive presentation and verify it
+        verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
+          msg.verification_result shouldBe VerificationResults.ProofValidated
+          msg.requested_presentation should not be null
+        }
+
+        verifier.expectAs(state[States.Complete]) { s =>
+          s.data.presentation should not be None
+          s.data.presentedAttributes should not be None
+          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
+          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
+        }
+
+        // Prover should be in Presented state
+        prover.expectAs(state[States.Presented]) {s =>
+          s.data.presentation should not be None
+          s.data.presentationAcknowledged shouldBe true
+        }
+
+        verifier ~ Ctl.Status()
+        verifier.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results.value shouldBe an[PresentationResult]
+          s.status shouldBe "Complete"
+        }
+
+        prover ~ Ctl.Status()
+        prover.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results shouldBe None
+          s.status shouldBe "Presented"
+        }
+
+      }
+
+      "should handle rejection by prover" in { f =>
+        val (verifier, prover) = indyAccessMocks(f)
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ Ctl.Request(
+          "",
+          Some(List(requestedAttr1)),
+          None,
+          None
+        )
+
+        prover ~ Ctl.Reject(Some("Because I said so"))
+
+        prover.expectAs(state[States.Rejected]) { s =>
+          s.whoRejected shouldBe Role.Prover
+          s.reasonGiven.value shouldBe "Because I said so"
+        }
+
+        verifier.expectAs(signal[Sig.ProblemReport]){ s =>
+          s.resolveDescription should include ("Because I said so")
+        }
+
+        verifier.expectAs(state[States.Rejected]) { s =>
+          s.whoRejected shouldBe Role.Prover
+          s.reasonGiven.value shouldBe "Because I said so"
+        }
+
+      }
+
+      "should handle error cases" - {
+        "Ledger Assets are not available for verifier" in { f =>
+          val (verifier, prover) = indyAccessMocks(f)
+
+          verifier ledgerAccess MockableLedgerAccess(false)
+
+          // Verifier starts protocol
+          (verifier engage prover) ~ Ctl.Request(
+            "",
+            Some(List(requestedAttr1)),
+            None,
+            None
+          )
+
+          prover ~ Ctl.AcceptRequest()
+
+          verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
+            msg.verification_result shouldBe VerificationResults.ProofUndefined
+            msg.requested_presentation should not be null
+          }
+
+          verifier.expectAs(state[States.Complete]) { s =>
+            // Even though ledger access is not available, the
+            // presentation should be received and recorded
+            s.data.presentation should not be None
+            s.data.presentedAttributes should not be None
+            s.data.verificationResults.value shouldBe VerificationResults.ProofUndefined
+          }
+
+          prover.expectAs(state[States.Presented]) { s =>
+            s.data.presentation should not be None
+            // Even though ledger access is not available, the
+            // presentation should be Acknowledged
+            s.data.presentationAcknowledged shouldBe true
+          }
+
+        }
+
+        "Correctness check fails" in { f =>
+          val (verifier, prover) = indyAccessMocks(f)
+
+          // This will return an new raw value for `name` attr
+          prover walletAccess MockableWalletAccess(invalidEncoding)
+
+          // Verifier starts protocol
+          (verifier engage prover) ~ reqWithRestriction
+
+          prover ~ Ctl.AcceptRequest()
+
+          verifier.expectAs(state[States.Complete]) { s =>
+            // the correctness check should catch the invalid encoding don't match the raw value
+            s.data.verificationResults.value shouldBe VerificationResults.ProofInvalid
+          }
+        }
+
+        "Proof verification fails" in { f =>
+          val (verifier, prover) = indyAccessMocks(f)
+
+          // All proofs verifications will return false
+          verifier walletAccess MockableWalletAccess(invalidProof)
+
+          // Verifier starts protocol
+          (verifier engage prover) ~ reqWithRestriction
+
+          prover ~ Ctl.AcceptRequest()
+
+          verifier.expectAs(state[States.Complete]) { s =>
+            // the verification of the proof is false
+            s.data.verificationResults.value shouldBe VerificationResults.ProofInvalid
+          }
+        }
+
+        "Invalid Request signals Problem Report" in { f =>
+          val (verifier, prover) = indyAccessMocks(f)
+
+          // Verifier starts protocol
+          (verifier engage prover) ~ Ctl.Request(
+            "",
+            Some(List(invalidAttr)),
+            None,
+            None
+          )
+
+          verifier expect signal[Sig.ProblemReport]
+
+        }
+      }
+    }
+
+
+  }
+
+  def indyAccessMocks(f: FixtureParam, wa: WalletAccess=MockableWalletAccess(), la: LedgerAccess=MockableLedgerAccess()):
+  (TestEnvir, TestEnvir) = {
+    val (verifier, prover) = (f.alice, f.bob)
+
+    verifier ledgerAccess la
+    prover ledgerAccess la
+
+    verifier walletAccess wa
+    prover walletAccess wa
+
+    (verifier, prover)
+  }
+
+  def generateAttr(name: Option[String]=None,
+                   names: Option[List[String]]=None,
+                   restrictions: Option[List[RestrictionsV1]]=None,
+                   nonRevoked: Option[RevocationInterval] = None,
+                   selfAttestedAllowed: Boolean = false): ProofAttribute =
+    ProofAttribute(name, names, restrictions, nonRevoked, selfAttestedAllowed)
+
+  def allowsAllSelfAttested(req: Ctl.Request): Boolean =
+    ProofRequestUtil.requestToProofRequest(req).get.allowsAllSelfAttested
+
+  def genReq(name: String,
+             proof_attrs: Option[List[ProofAttribute]],
+             proof_predicates: Option[List[ProofPredicate]]=None,
+             revocation_interval: Option[RevocationInterval]=None): Ctl.Request =
+    Ctl.Request(name, proof_attrs, proof_predicates, revocation_interval)
+
+}
+//MockableAnonCredRequests.basic
+object PresentProofSpec {
+  import com.evernym.verity.protocol.testkit.MockableAnonCredRequests.basic
+  val invalidEncoding: AnonCredRequests = new AnonCredRequests {
+    override def createSchema(issuerDID:  DID,
+                              name:  String,
+                              version:  String,
+                              data:  String): Try[(String, String)] =
+      basic.createSchema(issuerDID, name, version, data)
+
+    override def createCredDef(issuerDID:  DID,
+                               schemaJson:  String,
+                               tag:  String,
+                               sigType:  Option[String],
+                               revocationDetails:  Option[String]): Try[(String, String)] =
+      basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)
+
+    override def createCredOffer(a1: String): Try[String] = basic.createCredOffer(a1)
+    override def createCredReq(a1: String, a2: DID, a3: String, a4: String): Try[String] =
+      basic.createCredReq(a1, a2, a3, a4)
+    override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int): Try[String] =
+      basic.createCred(a1, a2, a3, a4, a5)
+    override def credentialsForProofReq(a1: String): Try[String] = basic.credentialsForProofReq(a1)
+    override def verifyProof(a1: String, a2: String, a3: String, a4: String, a5: String, a6: String): Try[Boolean] =
+      basic.verifyProof(a1, a2, a3, a4, a5, a6)
+    override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String): Try[String] = Try(
+      // changes raw value of attr1_referent 'Alex' to 'Mark'
+      """{
+        |   "proof":{},
+        |   "requested_proof":{
+        |      "revealed_attrs":{
+        |         "attr1_referent":{
+        |            "sub_proof_index":0,
+        |            "raw":"Mark",
+        |            "encoded":"99262857098057710338306967609588410025648622308394250666849665532448612202874"
+        |         }
+        |      },
+        |      "self_attested_attrs":{
+        |         "attr3_referent":"8-800-300"
+        |      },
+        |      "unrevealed_attrs":{
+        |         "attr2_referent":{
+        |            "sub_proof_index":0
+        |         }
+        |      },
+        |      "predicates":{
+        |         "predicate1_referent":{
+        |            "sub_proof_index":0
+        |         }
+        |      }
+        |   },
+        |   "identifiers":[
+        |      {
+        |         "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+        |         "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+        |         "rev_reg_id":null,
+        |         "timestamp":null
+        |      }
+        |   ]
+        |}""".stripMargin
+    )
+  }
+
+  val invalidProof: AnonCredRequests = new AnonCredRequests {
+    override def createSchema(issuerDID:  DID,
+                              name:  String,
+                              version:  String,
+                              data:  String): Try[(String, String)] =
+      basic.createSchema(issuerDID, name, version, data)
+
+    override def createCredDef(issuerDID:  DID,
+                               schemaJson:  String,
+                               tag:  String,
+                               sigType:  Option[String],
+                               revocationDetails:  Option[String]): Try[(String, String)] =
+      basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)
+
+    override def createCredOffer(a1: String): Try[String] = basic.createCredOffer(a1)
+    override def createCredReq(a1: String, a2: DID, a3: String, a4: String): Try[String] =
+      basic.createCredReq(a1, a2, a3, a4)
+    override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int): Try[String] =
+      basic.createCred(a1, a2, a3, a4, a5)
+    override def credentialsForProofReq(a1: String): Try[String] = basic.credentialsForProofReq(a1)
+    override def verifyProof(a1: String, a2: String, a3: String, a4: String, a5: String, a6: String): Try[Boolean] =
+      Try(false)
+    override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String): Try[String] =
+      basic.createProof(a1, a2, a3, a4, a5)
+  }
+}

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol;
+
+message SetDomainId {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string domainId = 1;
+}
+
+//Note: this is not used any more kept for backward compatibility
+message SetPinstId {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string pinstId = 1;
+}

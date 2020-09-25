@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5;
+
+message PairwiseDIDSet {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+    string fromDID = 1;
+    string pairwiseDID = 2;
+};
+
+message RequesterPartiSet {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+    string id = 1;
+}
+
+message ProvisioningInitiaterPartiSet {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+    string id = 1;
+}
+
+message PairwiseEndpointSet {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+    string provisionerParticipantId = 1;
+};
+
+message SignedUp {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+}
+
+message AgentPairwiseKeyCreated {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+    string pairwiseDID = 1;
+    string pairwiseVerKey = 2;
+}
+
+message UserAgentCreated {
+    option (scalapb.message).extends = "AgentProvisioningEvt";
+}

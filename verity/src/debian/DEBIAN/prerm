@@ -1,0 +1,10 @@
+#!/bin/sh
+
+systemctl_exists() {
+  [ "$(systemctl list-unit-files "${1}*" | wc -l)" -gt 3 ]
+}
+
+if systemctl_exists verity-application ; then
+  systemctl stop verity-application
+  systemctl disable verity-application
+fi

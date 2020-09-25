@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor.agent.msgrouter;
+
+message StatusUpdated {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string agentRouteStoreEntityId= 1;
+    int32 totalRoutes = 2;
+    int32 processedRoutes = 3;
+}
+
+message RouteProcessed {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string routeId = 1;
+}

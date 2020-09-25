@@ -1,0 +1,78 @@
+@startuml
+
+Title Protocol for TrustPing (Aries RFC 48)
+
+skinparam sequenceArrowThickness 2
+
+box <font color=CornflowerBlue>Sender
+  participant "Controller" as c1
+  participant "Protocol Instance" as p1
+end box
+
+
+box <font color=CornflowerBlue>Receiver
+  participant "Protocol Instance" as p2
+  participant "Controller" as c2
+end box
+
+note over c1,c2 #white
+    <b>Visual Cues:
+    *All messages are <b>bolded</b>.
+    *Participants are assigned roles early in the protocol lifecycle.
+    **Participants are not represented directly, rather as Protocol Roles.
+    *Protocol Roles are indicated with <b><font color=cornflowerblue>Cornflower Blue text</font></b>.
+    *Protocol messages are indicated with bolded text and <b><font color=red>Red lines</font></b>.
+    *Control messages are indicated with bolded text and <b><font color=blue>Blue lines</font></b>.
+    *Signal messages are indicated with bolded text and <b><font color=darkorange>Dark Orange lines</font></b>.
+    *Events are indicated with bolded text and <b><font color=green>Green self-arrows</font></b>.
+    *States are indicated with <b><font color=purple>Purple text</font></b> as results of events.
+    **Events result in state changes; the only way a state change happens is with an event.
+    **This is indicated with a thick arrow from event to state (<b>Event</b> ⮕ <b><font color=purple>State</font></b>).end note
+end note
+
+autonumber
+
+c1 [#blue]-> p1: <b>Ping</b>(comment: str, response_requested: bool\nexpires_time: Option[str], delay_milli: Option[int])
+p1 [#green]-> p1: <b>SentPing ⮕ <font color=purple>Pinged\nmy role: <b><font color=CornflowerBlue>Sender\ntheir role: <b><font color=CornflowerBlue>Receiver
+p1 [#red]-> p2: <b>Ping</b>(~timing {out_time, expires_time, delay_milli}, comment, response_requested)
+c1 <-[#darkorange] p1: <b>SentPing</b>
+p2 [#green]-> p2: <b>ReceivedPing ⮕ <font color=purple>Pinged(received_time)\nmy role: <b><font color=CornflowerBlue>Receiver\ntheir role: <b><font color=CornflowerBlue>Sender
+c2 <-[#darkorange] p2: <b>ReceivedPing</b>(ping_msg: Ping)
+
+alt if response_requested is false
+
+note over c2,p2 #pink
+End of protocol here
+end note
+
+end alt 
+
+note over c1,c2
+Assuming response_requested is true
+Assuming receiver wants to respond
+end note
+
+alt if current time is less than ~timing.expires_time
+
+c2 [#blue]-> p2: <b>Respond</b>(comment: str)
+p2 [#green]-> p2: <b>PreparedToRespond ⮕ <font color=purple>Prepared
+note right of p2 #lightsteelblue
+  The ping response expects a wait of ~timing.delay milliseconds after it was received.
+  So wait for (current_time - received_time).milliseconds - ~timing.delay milliseconds. 
+  If the result is <= 0, send immediately.
+end note
+
+p2 [#green]-> p2: <b>SentPingResponse ⮕ <font color=purple>Responded
+p1 <-[#red] p2: <b>PingResponse</b>(~timing {in_time, out_time}, comment)
+c2 <-[#darkorange] p2: <b>SentPingResponse</b>
+p1 [#green]-> p1: <b>ReceivedPingResponse ⮕ <font color=purple>Responded
+c1 <-[#darkorange] p1: <b>ReceivedPingResponse</b>(ping_resp: PingResponse)
+
+else message has already expired
+note over p2,c2
+Do nothing
+end note
+
+end alt
+
+@enduml

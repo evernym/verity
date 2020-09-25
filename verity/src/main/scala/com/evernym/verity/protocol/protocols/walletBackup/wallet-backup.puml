@@ -1,0 +1,101 @@
+@startuml
+
+
+box "Alice" #EEEBDC
+    actor Alice as A
+    participant "Connect.Me" as CM
+    participant "New Connect.Me" as NCM
+end box
+
+    participant "Dead Drop Protocol" as DD
+    participant "Evernym's Agent" as EA
+    participant "Alice's Cloud Agent" as CA
+box "Wallet Backup Protocol Container" #lightgreen
+    participant "Driver" as WBD #lightblue
+    participant "Protocol" as WB #lightblue
+end box
+
+== Backup ==
+autonumber
+note over CM
+    Initial cloud backup is triggered by Alice.
+    All subsequent backups are triggered automatically
+    based on a configured interval.
+end note
+
+alt if first time/manual
+    A -> CM: wants to backup\nwallet to the cloud
+else else automatic trigger
+    CM -> CM: Trigger cloud backup\nbased on timer
+end alt
+
+note over CM
+**Assumptions: **
+1. Alice has a passphrase
+2. Alice has a Ed25519 keypair (Sk, Vk) that can be generated deterministically from the passphrase
+3. Curve25519(S, Pk) is generated from ed25519(Vk, Sk)
+4. Connection between Alice and the Cloud Agent
+end note
+
+note over CM
+Vk: public key generated from pass phrase.
+DeadDropAddress: Hash( Vk | Hash(Sig(Namespace)) )
+CloudAddress: Self DID
+end note
+newpage
+
+
+CM -> CA: WALLET_BACKUP_INIT\n( <color: red> Vk, DeadDropAddress, CloudAddress)
+CA -> WB: WALLET_BACKUP_INIT\n( <color: Red> Vk, DeadDropAddress, CloudAddress)
+WBD <- WB: RegisterRecoveryKey(Vk)\n as alternate edge
+CA <- WBD: RegisterRecoveryKey(vk)\n as alternate edge
+CA -> CA: cloud registers wallet backup encryption Vk \nas a known participant on UserAgent. \n(Similar to multiple devices or multiple sdks)
+CA -> WBD: VkRegisterAck
+WBD -> WB: VkRegisterAck ctl message
+note over WBD, EA
+DeadDropInit is passed from WBD to EA
+end note
+WBD <- WB: DeadDropInit\n(DeadDropAddress, Enc(CloudAddress)
+EA <- WBD: DeadDropInit\n(DeadDropAddress, Enc(CloudAddress)
+WBD -> WB: DeadDropInitAck
+
+CM <- WB: WALLED_BACKUP_INIT_ACK( <color: red>)
+
+loop
+    CM -> WB: BACKUP( <color: red> Enc(wallet) )
+    CM <- WB: BACKUP_ACK(  )
+end loop
+
+newpage
+== Wallet Recovery: <color: red>Agent Discovery/Beacon/Dead-drop? ==
+autonumber
+
+A <-- CM: lose phone
+destroy CM
+create NCM
+A -> NCM: new phone
+
+note over DD, EA
+Restore User Agent
+end note
+
+NCM -[#purple]> EA: <color:purple>RETRIEVE_DEAD_DROP\n(DeadDropAddress, Signature)
+create DD
+EA -[#purple]> DD: <color:purple>RETRIEVE_DEAD_DROP\n(DeadDropAddress, Signature)
+alt if validSignature +
+    DD -[#purple]> DD:Decrypt AuthCrypt payload,\nextract the Address and Alice's Vk, \nand authenticates against Vk <color:purple>
+    DD -[#purple]> DD:verifies address is owned by vk \n(by Deaddrop address == H(vk)) \n// privacy protection plus some read spam prevention <color:purple>
+    DD -[#purple]> DD:retrieves encrypted payload using Hash( Vk ) <color:purple>
+    NCM <[#purple]- DD:AuthCrypt(DEAD_DROP_PAYLOAD\n(<color: red>Enc(CloudAddress)) <color:purple>
+else
+    NCM <- DD: REJECT
+end alt
+
+NCM -> CA: AuthCrypt(RESTORE_BACKUP( <color: red>Vk))
+CA -> CA: Checks Vk and finds its the \nVK of the wallet backup participant
+CA -> CA: Decrypt with wallet backup \n participant keys
+NCM <- CA: RESTORE_BACKUP_RESP\n( <color: red>Enc(wallet))
+
+
+
+@enduml

@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.presentproof.v_1_0;
+
+message Init {
+    option (scalapb.message).extends = "Event";
+}
+
+message MyRole {
+    option (scalapb.message).extends = "Event";
+    int32 roleNum = 1;
+}
+
+message Participants {
+    option (scalapb.message).extends = "Event";
+    string selfId = 1;
+    string otherId = 2;
+}
+
+message RequestGiven {
+    option (scalapb.message).extends = "Event";
+    string requestRaw = 1;
+}
+
+message RequestUsed {
+    option (scalapb.message).extends = "Event";
+    string requestRaw = 1;
+}
+
+message PresentationUsed {
+    option (scalapb.message).extends = "Event";
+    string presentation = 1;
+}
+
+message PresentationGiven {
+    option (scalapb.message).extends = "Event";
+    string presentation = 1;
+}
+
+message PresentationAck {
+    option (scalapb.message).extends = "Event";
+    string status = 1;
+}
+
+message AttributesGiven {
+    option (scalapb.message).extends = "Event";
+    string attributesPresented = 1;
+}
+
+message ResultsOfVerification {
+    option (scalapb.message).extends = "Event";
+    string results = 1;
+}
+
+message Rejection {
+    option (scalapb.message).extends = "Event";
+    int32 role = 1;
+    string reason = 2;
+}

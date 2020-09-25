@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.urlmapper;
+
+//UrlMapper Events
+message UrlAdded{
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string url = 1;
+}

@@ -1,0 +1,21 @@
+@startuml
+
+Title Protocol for OutOfBand
+
+box Inviter
+participant "VerityClient1" as c1
+participant "VerityServer1" as s1
+end box
+box Invitee
+participant "VerityServer2" as s2
+participant "VerityClient2" as c2
+end box
+
+
+c1 [#blue]-> c2: <b>Invitation</b>
+c2 -> s2: <b>reuse</b>
+s2 -> s1: <b>out-of-band/%VER/handshake-reuse</b>
+s1 -> s2: <b>out-of-band/%VER/handshake-reuse-accepted</b>
+s1 -> c1: <b>connection-reused</b>
+s2 -> c2: <b>connection-reused</b>
+@enduml

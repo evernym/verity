@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.connections.v_1_0;
+
+message InitParam {
+    string name = 1;
+    string value = 2;
+}
+
+message Initialized {
+    option (scalapb.message).extends = "Event";
+    repeated InitParam params = 1;
+}
+
+message PreparedWithDID {
+    option (scalapb.message).extends = "Event";
+    string did = 1;
+    string label = 2;
+}
+
+message PreparedWithKey {
+    option (scalapb.message).extends = "Event";
+    string label = 1;
+    string serviceEndpoint = 2;
+    repeated string recipientKeys = 3;
+    repeated string routingKeys = 4;
+}
+
+message InvitedWithDID {
+    option (scalapb.message).extends = "Event";
+    PreparedWithDID invitation = 1;
+    int32 status = 2;
+}
+
+message InvitedWithKey {
+    option (scalapb.message).extends = "Event";
+    PreparedWithKey invitation = 1;
+    int32 status = 2;
+}
+
+message ProvisionalRelationship {
+    string did = 1;
+    string verKey = 2;
+    string endpoint = 3;
+    repeated string theirVerKeys = 4;
+    repeated string theirRoutingKeys = 5;
+    string theirEndpoint = 6;
+}
+
+message InviteAccepted {
+    option (scalapb.message).extends = "Event";
+    ProvisionalRelationship provRel = 1;
+    string label = 2;
+}
+
+message RequestSent {
+    option (scalapb.message).extends = "Event";
+    ProvisionalRelationship provRel = 1;
+}
+
+message Relationship {
+    string myDid = 1;
+    string myVerKey = 2;
+    string myEndpoint = 3;
+
+    string theirDid = 4;
+    string theirVerKey = 5;
+    string theirEndpoint = 6;
+    repeated string theirRoutingKeys = 7;
+}
+
+message RequestReceived {
+    option (scalapb.message).extends = "Event";
+    Relationship rel = 1;
+}
+
+message ResponseSent {
+    option (scalapb.message).extends = "Event";
+    Relationship rel = 1;
+}
+
+message ResponseReceived {
+    option (scalapb.message).extends = "Event";
+    Relationship rel = 1;
+}
+
+message AckSent {
+    option (scalapb.message).extends = "Event";
+}
+
+message AckReceived {
+    option (scalapb.message).extends = "Event";
+}

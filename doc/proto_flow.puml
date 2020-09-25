@@ -1,0 +1,50 @@
+@startuml
+
+title Calls in the "proto" Flow
+
+autonumber 1
+note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReq( ) -- Packed msg\narrives.
+PackedMsgEndpointHandler --> PackedMsgEndpointHandler
+note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReqForOctetStreamContentType( )\n-- Detect binary content.
+PackedMsgEndpointHandler -> AgencyPackedMsgHandler
+note over AgencyPackedMsgHandler #ffffff: processPackedMsg( ) -- Decrypt and check\nmessage type.
+AgencyPackedMsgHandler --> AgencyPackedMsgHandler
+note over AgencyPackedMsgHandler #ffffff: handleFwdMsg( ) -- Called after seeing\n"Forward" in plaintext.
+AgencyPackedMsgHandler -> AgentMsgRouter
+note over AgentMsgRouter #ffffff: routePackedMsg( ) -- Find route to\nrelevant actor, send inner msg.
+AgentMsgRouter -> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: handlePackedMsg( ) -- Receive and\ndecrypt.
+AgentIncomingMsgHandler --> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: handleAgentMsgWrapper( ) -- Same as fwd\ntill here. Now, begin protocol handling.
+AgentIncomingMsgHandler --> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: extractMsgAndSendToProtocol( ) -- add\ncontext to actor if sender expects sync\nresponse.
+
+group 100: pairwise
+autonumber 101
+AgentIncomingMsgHandler --> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: extractMsgAndSendToProtocol( ) -- Handle\nmsg for specific connection.
+AgentIncomingMsgHandler -> AgentMsgRouter
+end
+
+autonumber 9
+note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\ninternal message.
+AgentMsgRouter -> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: sendGenericRespOrPrepareForAsyncResponse( )\n-- send 200 OK
+AgentIncomingMsgHandler -> AgentMsgRouter
+note over AgentMsgRouter #ffffff: routeInternalMsg( )
+AgentMsgRouter -> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: handleMsgForRel( )
+AgentIncomingMsgHandler --> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: sendTypedMsgToProtocol( )
+AgentIncomingMsgHandler -> ActorLaunchesProtocol
+note over ActorLaunchesProtocol #ffffff: tellProtocol( ) -- Message given to\nprotocol subsystem.
+ActorLaunchesProtocol -> ActorProtocolContainer
+note over ActorProtocolContainer #ffffff: pinstId( )
+ActorProtocolContainer --> ActorProtocolContainer
+note over ActorProtocolContainer #ffffff: protocolReceiveCommand( ) -- Route\nmessage to appropriate protocol handler.
+ActorProtocolContainer -> ProtocolContext
+note over ProtocolContext #ffffff: submit( )
+ProtocolContext --> ProtocolContext
+note over ProtocolContext #ffffff: processNextInboxMsg( )
+
+@enduml

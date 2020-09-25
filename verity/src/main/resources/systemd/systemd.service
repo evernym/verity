@@ -1,0 +1,18 @@
+[Unit]
+Description=Evernym's Verity Application
+Requires=network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=verity-application
+WorkingDirectory=/var/lib/verity-application
+Environment="JAVA_OPTS="
+SuccessExitStatus=143
+#EnvironmentFile=
+ExecStart=/usr/bin/java -javaagent:/usr/lib/verity-application/kanela-agent.jar -cp "/etc/verity/verity-application:/usr/lib/verity-application/verity-application-assembly.jar" com.evernym.verity.Main
+Restart=on-failure
+TimeoutStopSec=6min
+
+[Install]
+WantedBy=multi-user.target

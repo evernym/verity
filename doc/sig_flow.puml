@@ -1,0 +1,12 @@
+@startuml
+
+title Calls in the "sig" Flow
+
+autonumber 1
+note over AgentIncomingMsgHandler #ffffff: handleSignalMsgFromDriver( )
+AgentIncomingMsgHandler -> AgentMsgRouter
+note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\ninternal message.
+AgentMsgRouter --> AgentMsgRouter
+note over AgentMsgRouter #ffffff: routeInternalMsg( )
+
+@enduml

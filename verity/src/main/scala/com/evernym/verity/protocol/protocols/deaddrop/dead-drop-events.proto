@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.deaddrop;
+
+message InitParamEvt {
+    string name = 1;
+    string value = 2;
+}
+
+message Initialized {
+    option (scalapb.message).extends = "DeadDropEvt";
+    repeated InitParamEvt parameters = 1;
+}
+
+message Role {
+    option (scalapb.message).extends = "Role";
+    oneof sealed_value {
+        Persister persister = 1;
+        Retriever retriever = 2;
+    }
+}
+
+message Persister {
+}
+
+message Retriever {
+}
+
+message RoleSet {
+    option (scalapb.message).extends = "DeadDropEvt";
+    Role role = 1;
+}
+
+message Item {
+    option (scalapb.message).extends = "DeadDropEvt";
+    string address = 1;
+    bytes data = 2;
+}
+
+message ItemRetrieved {
+    option (scalapb.message).extends = "DeadDropEvt";
+    Item item = 1;
+}
+

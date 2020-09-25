@@ -1,0 +1,53 @@
+<configuration>
+
+    <!-- TODO: configure below properties as per need/environment -->
+    <property name="logFileBaseFolderPath" value="/tmp" />
+    <property name="rollingFileNamePrefix" value="${logFileBaseFolderPath}/verity" />
+    <property name="appStateRollingFileNamePrefix" value="${logFileBaseFolderPath}/app-states" />
+    <timestamp key="timestamp" datePattern="yyyy-MM-dd_HH:mm:ss"/>
+    <!-- configure above property as per need/environment -->
+
+    <appender name="ROLLING-GENERAL" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${rollingFileNamePrefix}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- rollover daily -->
+            <fileNamePattern>${rollingFileNamePrefix}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <!-- each file should be at most 100MB, keep 60 days worth of history, but at most 20GB -->
+            <maxFileSize>5MB</maxFileSize>
+            <maxHistory>5</maxHistory>
+            <!-- TODO: if you want to put any cap on total log file sizes you can use totalSizeCap-->
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="com.evernym.verity.LogLayout" />
+        </encoder>
+    </appender>
+
+    <appender name="ROLLING-APP-STATE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${appStateRollingFileNamePrefix}-${timestamp}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- rollover daily -->
+            <fileNamePattern>${appStateRollingFileNamePrefix}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <!-- each file should be at most 100MB, keep 60 days worth of history, but at most 20GB -->
+            <maxFileSize>5MB</maxFileSize>
+            <maxHistory>5</maxHistory>
+            <!-- TODO: if you want to put any cap on total log file sizes you can use totalSizeCap-->
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="com.evernym.verity.LogLayout" />
+        </encoder>
+    </appender>
+
+    <logger name="AppStateManager" level="INFO" additivity="false">
+        <appender-ref ref="ROLLING-APP-STATE"/>
+        <appender-ref ref="ROLLING-GENERAL"/>
+    </logger>
+
+    <root level="WARN">
+        <appender-ref ref="ROLLING-GENERAL"/>
+    </root>
+
+    <turboFilter class="com.evernym.verity.IgnoreLoggerFilter">
+        <LoggerNameContains>DynamoDBClient, DynamoDBJournal</LoggerNameContains>
+    </turboFilter>
+
+</configuration>

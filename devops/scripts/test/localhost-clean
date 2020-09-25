@@ -1,0 +1,121 @@
+#!/bin/bash -e
+
+usage()
+{
+    echo "usage: install.sh [[--taa true|false] | [--help]]"
+    exit 1
+}
+
+# NOTE: Must have a clean environment each time integration tests are run. This script ensures a clean setup on
+#       localhost.
+
+# Get the SCRIPT_DIR in a way that works for both linux and mac
+# readlink behaves differently on linux and mac. The following does not work on
+# mac: script_dir=`dirname $(readlink -f $0)`
+# https://stackoverflow.com/questions/1055671/how-can-i-get-the-behavior-of-gnus-readlink-f-on-a-mac
+SOURCE=$0
+while [ -h "$SOURCE" ]; do
+  TARGET="$(readlink "$SOURCE")"
+  if [[ $SOURCE == /* ]]; then
+    SOURCE="$TARGET"
+  else
+    SCRIPT_DIR="$( dirname "$SOURCE" )"
+    SOURCE="$SCRIPT_DIR/$TARGET"
+  fi
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+echo "SCRIPT_DIR: ${SCRIPT_DIR}"
+
+taa_enabled=true
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -t | --taa )           shift
+                                taa_enabled=$1
+                                ;;
+        -h | --help )           usage
+                                exit
+                                ;;
+        * )                     usage
+                                exit 1
+    esac
+    shift
+done
+
+echo "Begin clean setup on localhost..."
+
+if [[ "$taa_enabled" != "true" && "$taa_enabled" != "false" ]]; then
+  echo "Invalid value for -t|--taa option: $taa_enabled. Must be true|false."
+  usage
+fi
+
+# ledger/install.sh stops, removes, builds, and then runs agency_indy_pool_ledger
+echo "Clean the ledger..."
+echo "LIB_INDY_LEDGER_TAA_ENABLED=$taa_enabled"
+# ledger/clean-setup.sh stops, removes, and then runs agency_indy_pool_ledger. It does NOT attempt to build/rebuild
+LIB_INDY_LEDGER_TAA_ENABLED=$taa_enabled $SCRIPT_DIR/../ledger/install.sh
+
+echo "Clean DynamoDB..."
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+  # Linux
+  $SCRIPT_DIR/../dynamodb/clean-setup.sh
+else
+  echo "Unsupported OSTYPE=${OSTYPE}..."
+  exit -1
+fi
+echo "Clean MySQL wallet..."
+$SCRIPT_DIR/../wallet-storage-mysql/clean-setup.sh
+
+echo "Removing integration-tests/src/test/*.log files..."
+rm -f ${SCRIPT_DIR}/../../../integration-tests/src/test/*.log
+
+echo "Make sure configuration (.conf files) is setup for localhost..."
+echo "Begin reverting configuration from use with docker to use localhost..."
+#sed -i 's/jar_version = \"\\(.*\\)\"/jar_version = \"1.$BUILD_NUMBER\"/' build.sbt
+echo "Done reverting configuration from use with docker to use localhost..."
+
+until nc -vz localhost 9701
+do
+  echo "Wait until ledger on indy-pool is ready..."
+  sleep 2
+done
+echo "indy-pool is ready..."
+
+echo "Testing mysql connection..."
+until mysql -u"msuser" -p"mspassword" -h"localhost" -P3306  -D wallet -e "select * from wallets;"
+do
+  echo "Wait until mysql on indy-pool is ready..."
+  sleep 2
+done
+echo "Connection to localhost on port 3306 was successful!"
+mysql -u"msuser" -p"mspassword" -h"localhost" -P3306  -D wallet -e "show tables;"
+
+echo "Testing dynamodb connection..."
+
+# Wait until tables exist
+echo "Ensure dynamodb tables are created..."
+tries=0
+sleepseconds=2
+maxtries=10
+aws configure set output text
+aws configure set region none
+aws configure set aws_access_key_id none
+aws configure set aws_secret_access_key none
+until [ $(aws dynamodb list-tables --endpoint-url http://localhost:8000 | wc -l) -eq 6 ]
+do
+  tries=$((tries+1))
+  if [ $tries -eq $maxtries ]
+  then
+    echo "Failed to create tables within $(($sleepseconds * $maxtries)) seconds..."
+    exit -1
+  fi
+  echo "Waiting for dynamodb tables to be created..."
+  sleep $sleepseconds
+done
+aws configure set output "${aws_output}"
+aws configure set region "${aws_region}"
+aws configure set aws_access_key_id "${aws_access_key_id}"
+aws configure set aws_secret_access_key "${aws_secret_access_key}"
+echo "Connection to localhost on port 8000 was successful. All tables exist!"
+
+echo "End clean setup on localhost..."

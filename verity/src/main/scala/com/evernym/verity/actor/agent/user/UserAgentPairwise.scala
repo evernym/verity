@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
+import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.constants.Constants._
@@ -51,6 +52,8 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.metrics.ActivityTracker
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.ShortenInvite
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
@@ -82,7 +85,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       with OwnerDetail
       with HasConnectionStatus
       with MsgAndDeliveryState
+      with AgentActivityTracker
       with Configs {
+    override val activityTracker: Option[ActorRef] =
+      Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
     override lazy val msgDeliveryState: Option[MsgDeliveryState] = Option(
       new MsgDeliveryState(maxRetryCount, retryEligibilityCriteriaProvider)
     )

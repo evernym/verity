@@ -8,7 +8,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentActorContext}
 import com.evernym.verity.actor.agent.agency.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SetupCreateKeyEndpoint, SetupEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, PayloadMetadata, ProcessSendSignalMsg, SendSignalMsg}
@@ -45,6 +45,8 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.metrics.ActivityTracker
+import com.evernym.verity.config.ConfigUtil
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -69,7 +71,10 @@ class UserAgent(val agentActorContext: AgentActorContext)
       with RelationshipAgents
       with MsgAndDeliveryState
       with OptSponsorId
+      with AgentActivityTracker
       with Configs {
+    override val activityTracker: Option[ActorRef] =
+      Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
     override type RelationshipType = SelfRelationship
     override def initialRel: SelfRelationship = SelfRelationship.empty
     override def updatedWithNewMyDidDoc(didDoc: DidDoc): SelfRelationship =

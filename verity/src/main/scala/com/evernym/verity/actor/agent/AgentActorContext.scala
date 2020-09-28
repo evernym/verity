@@ -57,8 +57,6 @@ trait AgentActorContext extends ActorContext {
 
   lazy val smsSvc: SMSSender = _smsSender
 
-  lazy val activityTracker: AgentActivityTracker.type = AgentActivityTracker
-
   lazy val util: UtilBase = Util
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
@@ -91,16 +89,6 @@ trait AgentActorContext extends ActorContext {
         case e: Exception => Left(new SmsSendingFailedException(Option(e.toString)))
       }
     }
-  }
-
-  object AgentActivityTracker {
-    def track(msgType: String, domainId: String, sponsorId: Option[String]=None): Unit =
-      tracker ! AgentActivity(domainId, TimeUtil.nowDateString, sponsorId.getOrElse(""), msgType)
-
-    def setWindows(windows: ActivityWindow): Unit = tracker ! windows
-
-    lazy val tracker: ActorRef =
-      system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker")
   }
 }
 

@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
-import com.evernym.verity.actor.agent.{AgentIdentity, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentIdentity, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
 import com.evernym.verity.actor.agent.state.OptSponsorId
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
@@ -31,7 +31,10 @@ import scala.util.{Failure, Success, Try}
 
 
 trait AgentOutgoingMsgHandler
-  extends SendOutgoingMsg with OptSponsorId with AgentIdentity { this: AgentMsgHandler with AgentPersistentActor  =>
+  extends SendOutgoingMsg
+    with OptSponsorId
+    with AgentIdentity
+    with AgentActivityTracker { this: AgentMsgHandler with AgentPersistentActor  =>
 
   lazy val defaultSelfRecipKeys = Set(KeyInfo(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
 
@@ -196,7 +199,7 @@ trait AgentOutgoingMsgHandler
    * @tparam A
    */
   def handleOutgoingMsg[A](agentJsonMsg: AgentJsonMsg, threadContext: ThreadContextDetail, mc: OutgoingMsgContext): Unit = {
-    agentActorContext.activityTracker.track(agentJsonMsg.msgType.msgName, domainId, sponsorId)
+    trackAgentActivity(agentJsonMsg.msgType.msgName, domainId, sponsorId)
 
     val agentJsonStr = if (threadContext.usesLegacyGenMsgWrapper) {
       AgentMsgPackagingUtil.buildPayloadWrapperMsg(agentJsonMsg.jsonStr, wrapperMsgType = agentJsonMsg.msgType.msgName)

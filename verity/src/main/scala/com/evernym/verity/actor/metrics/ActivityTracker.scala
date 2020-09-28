@@ -75,6 +75,7 @@ class ActivityTracker(override val appConfig: AppConfig, var activityWindows: Ac
   }
 
   def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
+    appConfig.logger.info(s"recording new agent activity: $activity, key: ${window.metricKey}")
     MetricsWriter.gaugeApi.incrementWithTags(window.metricKey, agentTags(window, activity))
     val recording = RecordingAgentActivity(
       activity.domainId,

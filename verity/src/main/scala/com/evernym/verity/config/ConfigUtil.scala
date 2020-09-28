@@ -1,6 +1,8 @@
 package com.evernym.verity.config
 
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.actor.metrics.{ActiveWindowRules,
+  ActivityWindow, CalendarMonth, VariableDuration, ActiveRelationships, ActiveUsers, Behavior}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
@@ -14,6 +16,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 object ConfigUtil {
@@ -126,5 +129,25 @@ object ConfigUtil {
         specific.getOrElse(default)
       case _ => default
     }
+  }
+
+  private def _activity(config: AppConfig, key: String, behavior: Behavior): Set[ActiveWindowRules] = {
+    if (config.getConfigBooleanReq(s"$key.enabled")) {
+      val windows = config.getConfigListOfStringReq(s"$key.time-windows")
+        .map(x => ActiveWindowRules(VariableDuration(Duration(x)), behavior))
+
+      val monthly =
+        if (config.getConfigBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))
+        else Set.empty
+
+      (windows ++ monthly).toSet
+    } else Set.empty
+  }
+
+  def findActivityWindow(config: AppConfig): ActivityWindow = {
+    val au = _activity(config, ACTIVE_USER_METRIC, ActiveUsers)
+    val ar = _activity(config, ACTIVE_RELATIONSHIP_METRIC, ActiveRelationships)
+
+    ActivityWindow(au ++ ar)
   }
 }

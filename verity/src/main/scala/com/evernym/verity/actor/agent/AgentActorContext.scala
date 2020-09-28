@@ -6,11 +6,14 @@ import akka.util.Timeout
 import com.evernym.verity.Exceptions.{HandledErrorException, SmsSendingFailedException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
+import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow, AgentActivity}
+import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.{ActorContext, TokenToActorItemMapperProvider}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache._
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper, ConfigUtil}
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.{HttpRemoteMsgSendingSvc, RemoteMsgSendingSvc}
@@ -54,6 +57,8 @@ trait AgentActorContext extends ActorContext {
 
   lazy val smsSvc: SMSSender = _smsSender
 
+  lazy val activityTracker: AgentActivityTracker.type = AgentActivityTracker
+
   lazy val util: UtilBase = Util
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
@@ -88,6 +93,15 @@ trait AgentActorContext extends ActorContext {
     }
   }
 
+  object AgentActivityTracker {
+    def track(msgType: String, domainId: String, sponsorId: Option[String]=None): Unit =
+      tracker ! AgentActivity(domainId, TimeUtil.nowDateString, sponsorId.getOrElse(""), msgType)
+
+    def setWindows(windows: ActivityWindow): Unit = tracker ! windows
+
+    lazy val tracker: ActorRef =
+      system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker")
+  }
 }
 
 

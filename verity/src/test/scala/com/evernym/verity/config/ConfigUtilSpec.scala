@@ -1,9 +1,10 @@
 package com.evernym.verity.config
 
+import com.evernym.verity.actor.metrics.{ActiveWindowRules, VariableDuration, ActiveRelationships, ActiveUsers, CalendarMonth}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import com.evernym.verity.testkit.BasicSpec
-
+import scala.concurrent.duration.Duration
 
 class ConfigUtilSpec extends BasicSpec {
   "lastKeySegment" - {
@@ -70,6 +71,42 @@ class ConfigUtilSpec extends BasicSpec {
         testConfig
       )
       specificConfig2 shouldBe "https://connectme.app.link?t=#{token}"
+    }
+
+    "findActivityWindow" - {
+      val activityConfig = ConfigFactory.parseString(
+        """
+          |verity {
+          |   metrics {
+          |     activity-tracking {
+          |       active-user {
+          |          time-windows = ["3 d", "30 day", "20 min"]
+          |          monthly-window = false
+          |          enabled = true
+          |       }
+          |
+          |       active-relationships {
+          |         time-windows = []
+          |         monthly-window = true
+          |         enabled = true
+          |       }
+          |     }
+          |   }
+          | }
+          |""".stripMargin)
+
+      "should find activity window" in {
+        val testConfig = new TestAppConfig(Some(activityConfig), true)
+        val windows = ConfigUtil.findActivityWindow(testConfig)
+        assert(windows.windows.size == 4)
+        val expectedWindows = Set(
+          ActiveWindowRules(VariableDuration(Duration("3 d")), ActiveUsers),
+          ActiveWindowRules(VariableDuration(Duration("30 day")), ActiveUsers),
+          ActiveWindowRules(VariableDuration(Duration("20 min")), ActiveUsers),
+          ActiveWindowRules(CalendarMonth, ActiveRelationships),
+        )
+        assert(windows.windows == expectedWindows)
+      }
     }
   }
 }

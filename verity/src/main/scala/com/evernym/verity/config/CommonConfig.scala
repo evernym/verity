@@ -182,6 +182,9 @@ trait CommonConfig {
   val METRICS_ENABLED = s"$METRICS.enabled"
   val METRICS_UTIL_FILTERS = s"$METRICS.util.filters"
   val RESET_METRICS_NAME_SUFFIX = s"$METRICS.reset-metrics-suffix"
+  private val ACTIVITY_TRACKING = s"$METRICS.activity-tracking"
+  val ACTIVE_USER_METRIC = s"$ACTIVITY_TRACKING.active-user"
+  val ACTIVE_RELATIONSHIP_METRIC = s"$ACTIVITY_TRACKING.active-relationships"
 
   private val METRICS_TARGET  = s"$METRICS.target"
   val METRICS_TARGET_AKKA_SYSTEM = s"$METRICS_TARGET.akka-system"

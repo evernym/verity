@@ -2,11 +2,9 @@ package com.evernym.verity.util
 
 import java.time.zone.ZoneRulesException
 import java.time.{DateTimeException, Instant, ZoneId, ZonedDateTime}
-import java.util.Calendar
 
 import com.evernym.verity.constants.Constants.UTC
 import com.evernym.verity.Exceptions.InvalidValueException
-import jdk.internal.dynalink.linker.ConversionComparator.Comparison
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._

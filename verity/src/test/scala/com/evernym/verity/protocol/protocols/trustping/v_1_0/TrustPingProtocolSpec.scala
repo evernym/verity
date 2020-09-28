@@ -52,6 +52,8 @@ class TrustPingProtocolSpec extends TestsProtocolsImpl(TrustPingDefinition) with
         s.receiver ~ Ctl.SendResponse(Some("test-response-comment"))
         s.receiver expect state[State.SentResponded]
 
+        val sentResponse = s.receiver expect signal[Sig.SentResponse]
+        sentResponse.relationship shouldBe s.receiver.did_!
 
         s.sender.expectAs(signal[Sig.ReceivedResponse]) { msg =>
           msg.resp.comment.value shouldBe "test-response-comment"
@@ -80,6 +82,8 @@ class TrustPingProtocolSpec extends TestsProtocolsImpl(TrustPingDefinition) with
         s.receiver ~ Ctl.SendResponse(Some("test-response-comment"))
         s.receiver expect state[State.SentResponded]
 
+        val sentResponse = s.receiver expect signal[Sig.SentResponse]
+        sentResponse.relationship shouldBe s.receiver.did_!
 
         s.sender expect state[State.SentPing]
 

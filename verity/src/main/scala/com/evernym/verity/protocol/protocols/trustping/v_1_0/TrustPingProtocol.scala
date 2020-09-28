@@ -106,7 +106,9 @@ class TrustPingProtocol(implicit val ctx: ProtocolContextApi[TrustPingProtocol, 
 
     if(d > 0) Thread.sleep(d)
 
-    if(s.msg.response_requested.getOrElse(true)) {
+    val responseRequested = s.msg.response_requested.getOrElse(true)
+
+    if(responseRequested) {
       val respEvt = ResponseEvt(m.comment.getOrElse(""), None)
       val resp = Msg.Response(m.comment, None)
       send(resp)
@@ -116,7 +118,7 @@ class TrustPingProtocol(implicit val ctx: ProtocolContextApi[TrustPingProtocol, 
       apply(SentResponse(None))
     }
 
-    signal(Sig.SentResponse(s.msg.response_requested.getOrElse(true)))
+    signal(Sig.SentResponse(responseRequested, ctx.getRoster.selfId_!))
   }
 }
 

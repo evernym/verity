@@ -98,6 +98,6 @@ sealed trait Signal
 
 object Sig {
   case class ReceivedPing(ping: Msg.Ping) extends Signal
-  case class SentResponse(responseSent: Boolean) extends Signal
+  case class SentResponse(responseSent: Boolean, relationship: DID) extends Signal
   case class ReceivedResponse(resp: Msg.Response) extends Signal
 }

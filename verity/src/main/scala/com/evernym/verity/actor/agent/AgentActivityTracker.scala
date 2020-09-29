@@ -11,5 +11,5 @@ trait AgentActivityTracker {
   def setWindows(windows: ActivityWindow): Unit =
     activityTracker.foreach(at => at ! windows)
 
-  val activityTracker: Option[ActorRef]=None
+  lazy val activityTracker: Option[ActorRef]=None
 }

@@ -57,6 +57,7 @@ import scala.util.{Failure, Left, Success}
 class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
     with HasPublicIdentity
+    with AgentActivityTracker
     with MsgNotifierForUserAgent {
 
   type StateType = State
@@ -71,15 +72,15 @@ class UserAgent(val agentActorContext: AgentActorContext)
       with RelationshipAgents
       with MsgAndDeliveryState
       with OptSponsorId
-      with AgentActivityTracker
       with Configs {
-    override val activityTracker: Option[ActorRef] =
-      Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
     override type RelationshipType = SelfRelationship
     override def initialRel: SelfRelationship = SelfRelationship.empty
     override def updatedWithNewMyDidDoc(didDoc: DidDoc): SelfRelationship =
       relationship.copy(myDidDoc = Option(didDoc))
   }
+
+  override lazy val activityTracker: Option[ActorRef] =
+    Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 

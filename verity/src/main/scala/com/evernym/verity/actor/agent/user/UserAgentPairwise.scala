@@ -73,6 +73,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
+    with AgentActivityTracker
     with FailedMsgRetrier {
 
   type StateType = State
@@ -85,10 +86,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       with OwnerDetail
       with HasConnectionStatus
       with MsgAndDeliveryState
-      with AgentActivityTracker
       with Configs {
-    override val activityTracker: Option[ActorRef] =
-      Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
     override lazy val msgDeliveryState: Option[MsgDeliveryState] = Option(
       new MsgDeliveryState(maxRetryCount, retryEligibilityCriteriaProvider)
     )
@@ -99,6 +97,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       relationship.copy(myDidDoc = Option(didDoc))
   }
 
+  override lazy val activityTracker: Option[ActorRef] =
+    Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
   def relationshipState: PairwiseRelationship = state.relationship
   def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)
 

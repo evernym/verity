@@ -338,14 +338,16 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
 
     def prepareCreateInviteMsgWithVersion(msgTypeVersion: String,
                                           connId: String, includeSendMsg: Boolean = false,
+                                          includePublicDID: Boolean = false,
                                           ph: Option[String] = None): PackedMsg = {
-      preparePackedRequestForAgent(buildCoreCreateInviteMsgWithVersion(msgTypeVersion, connId, ph,
-        includeSendMsg))
+      preparePackedRequestForAgent(
+        buildCoreCreateInviteMsgWithVersion(msgTypeVersion, connId, ph, includeSendMsg, includePublicDID)
+      )
     }
 
-    def prepareCreateInviteMsg(connId: String, includeSendMsg: Boolean = false,
+    def prepareCreateInviteMsg(connId: String, includeSendMsg: Boolean = false, includePublicDID: Boolean = false,
                                        ph: Option[String] = None): PackedMsg = {
-      prepareCreateInviteMsgWithVersion(MTV_1_0, connId, includeSendMsg, ph)
+      prepareCreateInviteMsgWithVersion(MTV_1_0, connId, includeSendMsg, includePublicDID, ph)
     }
 
     def prepareCreateInviteMsgForAgencyWithVersion(msgTypeVersion: String, connId: String,

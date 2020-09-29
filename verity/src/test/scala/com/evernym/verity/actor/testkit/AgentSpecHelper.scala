@@ -106,8 +106,8 @@ trait AgentSpecHelper
     }
   }
 
-  def expectInviteDetail(connReqId: String) = expectMsgPF() {
-    case InviteDetail(`connReqId`, _, _, _, _, _, _) =>
+  def expectInviteDetail(connReqId: String): InviteDetail = expectMsgPF() {
+    case inv @ InviteDetail(`connReqId`, _, _, _, _, _, _) => inv
   }
 
   lazy val aa: agentRegion = agentRegion(agencyAgentEntityId, agencyAgentRegion)

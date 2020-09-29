@@ -188,7 +188,7 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
           msgs += mdsu.uid -> updated
         }
         msgDeliveryStatus -= mdsu.uid
-        msgDetails -= mdsu.uid
+//        msgDetails -= mdsu.uid
       } else {
         val emds = msgDeliveryStatus.getOrElse(mdsu.uid, Map.empty)
         val newMds = MsgDeliveryStatus(mdsu.statusCode, Evt.getOptionFromValue(mdsu.statusDetail),

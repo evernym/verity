@@ -165,7 +165,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
     "when sent CREATE_MSG (conn req) msg after setting required configs" - {
       "should respond with MSG_CREATED with invitation detail" in {
-        val msg = prepareCreateInviteMsg(connId1, includeSendMsg = true, Some(phoneNo))
+        val msg = prepareCreateInviteMsg(connId1, includeSendMsg = true, includePublicDID = true, Some(phoneNo))
         uap ! wrapAsPackedMsgParam(msg)
         val pm = expectMsgType[PackedMsg]
         assert(checkCreateInviteResponse(pm, connId))
@@ -174,6 +174,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
         inviteDetail.senderDetail.name.contains(edgeAgentName) shouldBe true
         inviteDetail.senderDetail.logoUrl.contains(edgeAgentLogoUrl) shouldBe true
+        inviteDetail.senderDetail.publicDID.isDefined shouldBe true
       }
     }
 
@@ -206,7 +207,8 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
     "when sent GetInviteDetail with valid msg uid" - {
       "should respond with invite detail" in {
         uap ! GetInviteDetail_MFV_0_5(inviteDetail.connReqId)
-        expectInviteDetail(inviteDetail.connReqId)
+        val inv = expectInviteDetail(inviteDetail.connReqId)
+        inv shouldBe inviteDetail.copy(statusCode = MSG_STATUS_SENT.statusCode, statusMsg = MSG_STATUS_SENT.statusMsg)
       }
     }
   }

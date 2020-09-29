@@ -188,7 +188,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
               val msgId = MsgUtil.newMsgId
               // flow diagram: fwd.edge, step 9 -- store outgoing msg.
               storeOutgoingMsg(OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
-                msgId, fwdMsg.fwdMsgType.getOrElse("unknown"), ParticipantUtil.DID(selfParticipantId), None)
+                msgId, "unknown", ParticipantUtil.DID(selfParticipantId), None)
               sendStoredMsgToEdge(msgId)
               sender ! Done
             }

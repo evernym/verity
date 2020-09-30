@@ -103,7 +103,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   override lazy val activityTracker: Option[ActorRef] =
     Some(system.actorOf(
       ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)),
-      name=s"pairwise-activity-tracker-$domainId"
+      name=s"pairwise-activity-tracker-${myPairwiseVerKey}"
     ))
   def relationshipState: PairwiseRelationship = state.relationship
   def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)

@@ -162,6 +162,10 @@ trait UtilBase {
     nph
   }
 
+  // E.164 international standard format
+  // Format: +[Country code (1-3 digits)][Subscriber number (max 12 digits)]
+  def isPhoneNumberInValidFormat(num: String): Boolean = num.matches("^\\+\\d{8,15}$")
+
   def camelToDashSeparated(name: String): String = "[A-Z\\d]".r.replaceAllIn(name, {m =>
     "-" + m.group(0).toLowerCase
   })

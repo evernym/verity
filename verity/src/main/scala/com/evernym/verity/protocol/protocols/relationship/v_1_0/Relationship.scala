@@ -10,6 +10,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCodes._
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.Util.isPhoneNumberInValidFormat
 import org.json.JSONObject
 
 
@@ -54,8 +55,23 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
   }
 
   def handleCreateKey(st: State.Initialized, m: Ctl.Create): Unit = {
-    ctx.apply(CreatingPairwiseKey(m.label.getOrElse(st.label), m.logoUrl.getOrElse(st.logoUrl), m.phoneNumber.getOrElse("")))
-    ctx.signal(Signal.CreatePairwiseKey())
+    if (checkPhoneNumberValidOrNotProvided(m.phoneNumber)) {
+      ctx.apply(CreatingPairwiseKey(m.label.getOrElse(st.label), m.logoUrl.getOrElse(st.logoUrl), m.phoneNumber.getOrElse("")))
+      ctx.signal(Signal.CreatePairwiseKey())
+    } else {
+      ctx.signal(Signal.buildProblemReport(
+        "Phone number provided is not in valid international format.",
+        invalidPhoneNumberFormat
+      ))
+    }
+  }
+
+  def checkPhoneNumberValidOrNotProvided(phoneNumber: Option[String]): Boolean = {
+    // if phone number is provided, it should have valid format.
+    phoneNumber match {
+      case Some(phoneNumber) => isPhoneNumberInValidFormat(phoneNumber)
+      case None => true
+    }
   }
 
   def handleKeyCreated(st: State.KeyCreationInProgress, m: Ctl.KeyCreated): Unit = {

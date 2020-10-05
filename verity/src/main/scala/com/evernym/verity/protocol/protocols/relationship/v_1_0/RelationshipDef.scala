@@ -28,5 +28,6 @@ object ProblemReportCodes {
   val shorteningFailed = "shortening-failed"
   val smsSendingFailed = "sms-sending-failed"
   val noPhoneNumberDefined = "no-phone-number-defined"
+  val invalidPhoneNumberFormat = "invalid-phone-number-format"
   val unexpectedMessage = "unexpected-message"
 }

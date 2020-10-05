@@ -34,6 +34,7 @@ class RelationshipProtocolSpec
   val publicDID = "publicDID"
   val labelStr = "label"
   val label: Option[String] = Option(labelStr)
+  val logo: Option[String] = Option("http://example.com/logo.png")
 
   override val defaultInitParams = Map(
     AGENCY_DID_VER_KEY -> defAgencyVerkey,
@@ -64,18 +65,134 @@ class RelationshipProtocolSpec
   }
 
   "Requester creating new relationship" - {
-    implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg = controllerProvider)
-    val provisioner = setup("provisioner")
+    "with label only" - {
+      "protocol transitioning to Created state" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
 
-    "protocol transitioning to Created state" in { _ =>
-      (requester engage provisioner) ~ Create(label, None)
+        (requester engage provisioner) ~ Create(label, None)
 
-      val pkc = requester expect signal[Signal.Created]
-      pkc.did shouldBe newIdentity.DID
-      pkc.verKey shouldBe newIdentity.verKey
-      requester.state shouldBe a[State.Created]
+        val pkc = requester expect signal[Signal.Created]
+        pkc.did shouldBe newIdentity.DID
+        pkc.verKey shouldBe newIdentity.verKey
+        requester.state shouldBe a[State.Created]
+      }
+    }
+
+    "with label and logo" - {
+      "protocol transitioning to Created state" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo)
+
+        val pkc = requester expect signal[Signal.Created]
+        pkc.did shouldBe newIdentity.DID
+        pkc.verKey shouldBe newIdentity.verKey
+        requester.state shouldBe a[State.Created]
+      }
+    }
+
+    "with label and logo and valid phone number" - {
+      "protocol transitioning to Created state" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some(phoneNo))
+
+        val pkc = requester expect signal[Signal.Created]
+        pkc.did shouldBe newIdentity.DID
+        pkc.verKey shouldBe newIdentity.verKey
+        requester.state shouldBe a[State.Created]
+      }
+    }
+
+    "with phone number in national format" - {
+      "protocol sending problem report" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some("4045943696"))
+
+        val pr = requester expect signal[Signal.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.invalidPhoneNumberFormat
+        requester.state shouldBe a[State.Initialized]
+      }
+    }
+
+    "with too short phone number in international format" - {
+      "protocol sending problem report" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some("+140459"))
+
+        val pr = requester expect signal[Signal.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.invalidPhoneNumberFormat
+        requester.state shouldBe a[State.Initialized]
+      }
+    }
+
+    "with phone number with spaces" - {
+      "protocol sending problem report" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some("+1 404 5943696"))
+
+        val pr = requester expect signal[Signal.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.invalidPhoneNumberFormat
+        requester.state shouldBe a[State.Initialized]
+      }
+    }
+
+    "with phone number with dashes" - {
+      "protocol sending problem report" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some("+1-404-5943696"))
+
+        val pr = requester expect signal[Signal.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.invalidPhoneNumberFormat
+        requester.state shouldBe a[State.Initialized]
+      }
+    }
+
+    "with phone number with parentheses" - {
+      "protocol sending problem report" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some("+1(404)5943696"))
+
+        val pr = requester expect signal[Signal.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.invalidPhoneNumberFormat
+        requester.state shouldBe a[State.Initialized]
+      }
+    }
+
+    "with phone number with letters" - {
+      "protocol sending problem report" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, logo, Some("+1404myPhone"))
+
+        val pr = requester expect signal[Signal.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.invalidPhoneNumberFormat
+        requester.state shouldBe a[State.Initialized]
+      }
     }
   }
 
@@ -688,7 +805,7 @@ class RelationshipProtocolSpec
 
   "Requester asking to prepare SMS invitation" - {
     val shortUrl = "shortUrl"
-    val phoneNo = Option("123456")
+    val validPhoneNo = Option("+18011234567")
 
     "when phone number is not given in create" - {
       "problem report is generated" in { _ =>
@@ -712,7 +829,7 @@ class RelationshipProtocolSpec
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
-        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        (requester engage provisioner) ~ Create(label, None, validPhoneNo)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
@@ -743,7 +860,7 @@ class RelationshipProtocolSpec
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
-        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        (requester engage provisioner) ~ Create(label, None, validPhoneNo)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
@@ -772,7 +889,7 @@ class RelationshipProtocolSpec
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
 
-          (requester engage provisioner) ~ Create(label, None, phoneNo)
+          (requester engage provisioner) ~ Create(label, None, validPhoneNo)
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
@@ -801,7 +918,7 @@ class RelationshipProtocolSpec
 
   "Requester asking to prepare OOB SMS invitation" - {
     val shortUrl = "shortUrl"
-    val phoneNo = Option("123456")
+    val validPhoneNo = Option("+18011234567")
 
     "when phone number is not given in create" - {
       "problem report is generated" in { _ =>
@@ -825,7 +942,7 @@ class RelationshipProtocolSpec
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
-        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        (requester engage provisioner) ~ Create(label, None, validPhoneNo)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
@@ -856,7 +973,7 @@ class RelationshipProtocolSpec
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
-        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        (requester engage provisioner) ~ Create(label, None, validPhoneNo)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
@@ -885,7 +1002,7 @@ class RelationshipProtocolSpec
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
 
-          (requester engage provisioner) ~ Create(label, None, phoneNo)
+          (requester engage provisioner) ~ Create(label, None, validPhoneNo)
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 

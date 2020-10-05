@@ -17,7 +17,7 @@ trait CommonSpecUtil {
   import com.evernym.verity.util.Util._
 
   val CONN_ID = "connId"
-  val phoneNo: String = "4045943696"
+  val phoneNo: String = "+14045943696"
   val edgeAgentLogoUrl = "https://test-ent.ent.com"
   val edgeAgentName = "Local Enterprise Agent"
 

@@ -170,7 +170,7 @@ trait UserAgentCommon
   def handleUpdateConfig(updateConfigMsg: UpdateConfigCommand): Future[Option[ControlMsg]] = {
     validateConfigValues(updateConfigMsg.configs)
     updateConfigMsg.configs.foreach { cd =>
-      if (! state.isConfigExists(cd.name, cd.value)) {
+      if (cd.name != null && cd.value != null && !state.isConfigExists(cd.name, cd.value)) {
         writeAndApply(ConfigUpdated(cd.name, cd.value, getMillisForCurrentUTCZonedDateTime))
       }
     }

@@ -1,11 +1,10 @@
 package com.evernym.verity.actor.agent
 
-import com.evernym.verity.Main.agentMsgRouter.activityTrackerRegion
-import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.{ForIdentifier, ShardRegionCommon}
 import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity}
 import com.evernym.verity.util.TimeUtil
 
-trait AgentActivityTracker {
+trait AgentActivityTracker extends ShardRegionCommon {
   private def sendToRegion(id: String, msg: ActivityTracking): Unit =
     activityTrackerRegion ! ForIdentifier(id, msg)
 

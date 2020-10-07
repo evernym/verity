@@ -45,8 +45,6 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.metrics.ActivityTracker
-import com.evernym.verity.config.ConfigUtil
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}

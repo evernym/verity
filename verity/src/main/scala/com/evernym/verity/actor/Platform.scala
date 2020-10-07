@@ -16,12 +16,13 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
+import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
@@ -86,6 +87,14 @@ class Platform(val aac: AgentActorContext)
   val userAgentPairwiseRegion: ActorRef = createRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
     buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+
+  //activity tracker actor
+  val activityTrackerRegion: ActorRef = createRegion(
+    ACTIVITY_TRACKER_REGION_ACTOR_NAME,
+    buildProp(
+      Props(new ActivityTracker(agentActorContext.appConfig)),
+      Option(ACTOR_DISPATCHER_NAME_ACTIVITY_TRACKER)
+  ))
 
   object agentPairwise extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {

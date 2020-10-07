@@ -100,11 +100,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       relationship.copy(myDidDoc = Option(didDoc))
   }
 
-  override lazy val activityTracker: Option[ActorRef] =
-    Some(system.actorOf(
-      ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)),
-      name=s"pairwise-activity-tracker-${myPairwiseVerKey}"
-    ))
   def relationshipState: PairwiseRelationship = state.relationship
   def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)
 
@@ -745,6 +740,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
                                     msgId: MsgId,
                                     msgName: MsgName,
                                     thread: Option[MsgThread]=None): Future[Any] = {
+    logger.debug(s"msg:${msgName}, domainId:$domainId, sponsor:$sponsorId}")
+    trackAgentActivity(msgName, domainId, sponsorId, state.theirDid)
+
     logger.debug("about to send stored msg to other entity: " + msgId)
     omp.givenMsg match {
 

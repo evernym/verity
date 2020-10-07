@@ -134,7 +134,7 @@ object ConfigUtil {
   private def _activity(config: AppConfig, key: String, behavior: Behavior): Set[ActiveWindowRules] = {
     if (config.getConfigBooleanReq(s"$key.enabled")) {
       val windows = config.getConfigListOfStringReq(s"$key.time-windows")
-        .map(x => ActiveWindowRules(VariableDuration(Duration(x)), behavior))
+        .map(x => ActiveWindowRules(VariableDuration(x), behavior))
 
       val monthly =
         if (config.getConfigBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))

@@ -199,8 +199,6 @@ trait AgentOutgoingMsgHandler
    * @tparam A
    */
   def handleOutgoingMsg[A](agentJsonMsg: AgentJsonMsg, threadContext: ThreadContextDetail, mc: OutgoingMsgContext): Unit = {
-    trackAgentActivity(agentJsonMsg.msgType.msgName, domainId, sponsorId)
-
     val agentJsonStr = if (threadContext.usesLegacyGenMsgWrapper) {
       AgentMsgPackagingUtil.buildPayloadWrapperMsg(agentJsonMsg.jsonStr, wrapperMsgType = agentJsonMsg.msgType.msgName)
     } else {

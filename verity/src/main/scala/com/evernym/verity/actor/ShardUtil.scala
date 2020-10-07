@@ -78,12 +78,14 @@ trait ShardRegionNames extends HasShardRegionNames{
   def appConfig: AppConfig
   lazy val userAgentRegionName: String = USER_AGENT_REGION_ACTOR_NAME
   lazy val userAgentPairwiseRegionName: String = USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
+  lazy val activityTrackerRegionName: String = ACTIVITY_TRACKER_REGION_ACTOR_NAME
 }
 
 trait ShardRegionCommon extends ShardRegionNames {
   def actorSystem: ActorSystem
   lazy val userAgentRegion: ActorRef = ClusterSharding(actorSystem).shardRegion(userAgentRegionName)
   lazy val userAgentPairwiseRegion: ActorRef = ClusterSharding(actorSystem).shardRegion(userAgentPairwiseRegionName)
+  lazy val activityTrackerRegion: ActorRef = ClusterSharding(actorSystem).shardRegion(activityTrackerRegionName)
 }
 
 trait ShardRegionFromActorContext extends ShardRegionCommon { this: Actor =>

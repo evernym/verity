@@ -1,15 +1,17 @@
 package com.evernym.verity.actor.agent
 
-import akka.actor.ActorRef
-import com.evernym.verity.actor.metrics.{ActivityWindow, AgentActivity}
+import com.evernym.verity.Main.agentMsgRouter.activityTrackerRegion
+import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity}
 import com.evernym.verity.util.TimeUtil
 
 trait AgentActivityTracker {
-  def trackAgentActivity(msgType: String, domainId: String, sponsorId: Option[String]=None): Unit =
-    activityTracker.foreach(at => at ! AgentActivity(domainId, TimeUtil.nowDateString, sponsorId.getOrElse(""), msgType))
+  private def sendToRegion(id: String, msg: ActivityTracking): Unit =
+    activityTrackerRegion ! ForIdentifier(id, msg)
 
-  def setWindows(windows: ActivityWindow): Unit =
-    activityTracker.foreach(at => at ! windows)
+  def trackAgentActivity(msgType: String, domainId: String, sponsorId: Option[String]=None, relId: Option[String]): Unit =
+    sendToRegion(domainId, AgentActivity(domainId, TimeUtil.nowDateString, sponsorId.getOrElse(""), msgType, relId))
 
-  lazy val activityTracker: Option[ActorRef]=None
+  def setWindows(domainId: String, windows: ActivityWindow): Unit =
+    sendToRegion(domainId, windows)
 }

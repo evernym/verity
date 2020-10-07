@@ -494,5 +494,6 @@ message RecordingAgentActivity {
     string timestamp = 2;
     string sponsorId = 3;
     string activityType = 4;
-    string metricKey = 5;
+    string relId = 5;
+    string stateKey = 6;
 }

@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.event.LoggingReceive
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity}
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.DID
@@ -17,21 +17,31 @@ import scala.concurrent.duration.Duration
   1. activity within a specified window
   2. active relationships within a specified window
  */
-class ActivityTracker(override val appConfig: AppConfig, var activityWindows: ActivityWindow)
+class ActivityTracker(override val appConfig: AppConfig)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
- type MetricKey = String
- type StateType = State
- var state = new State
+  type StateKey = String
+  type StateType = State
+  var state = new State
+  var activityWindows: ActivityWindow = ActivityWindow(Set())
 
  /**
   * actor persistent state object
   */
- class State(_activity: Map[MetricKey, AgentActivity]=Map.empty) {
-   def copy(newActivity: Map[MetricKey, AgentActivity]): State = new State(newActivity)
-   def activity: Map[MetricKey, AgentActivity] = _activity
-   def activity(key: MetricKey): Option[AgentActivity] = _activity.get(key)
+ class State(_activity: Map[StateKey, AgentActivity]=Map.empty) {
+
+   def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
+     s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
+   def copy(newActivity: Map[StateKey, AgentActivity]): State = new State(newActivity)
+   def activity: Map[StateKey, AgentActivity] = _activity
+   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] =
+     _activity.get(key(window, id))
  }
+
+  override def beforeStart(): Unit = {
+    super.beforeStart()
+    activityWindows = ConfigUtil.findActivityWindow(appConfig)
+  }
 
  /**
   * internal command handler
@@ -43,46 +53,58 @@ class ActivityTracker(override val appConfig: AppConfig, var activityWindows: Ac
 
  val receiveEvent: Receive = {
   case r: RecordingAgentActivity =>
+    val relId: Option[String] = if (r.relId == "") None else Some(r.relId)
     state = state.copy(
-      state.activity + (r.metricKey -> AgentActivity(r.domainId, r.timestamp, r.sponsorId, r.activityType))
+      state.activity + (r.stateKey -> AgentActivity(r.domainId, r.timestamp, r.sponsorId, r.activityType, relId))
     )
  }
 
- def handleAgentActivity(activity: AgentActivity): Unit =
-   /**
-    * 1. Process each defined window
-    * 2. Check if new activity within window
-    * 3. check activity type (AU, AR)
-    * 4. Record accordingly
-    */
+  /**
+   * 1. Process each defined window
+   * 2. Check if new activity within window
+   * 3. check activity type (AU, AR)
+   * 4. Record accordingly
+   */
+  def handleAgentActivity(activity: AgentActivity): Unit = {
+   appConfig.logger.debug(s"request to record activity: $activity, windows: $activityWindows")
    activityWindows
      .windows
-     .filter(window => isUntrackedMetric(state.activity(window.metricKey), activity.timestamp, window.activityFrequency))
+     .filter(window => isUntrackedMetric(window, activity))
      .foreach(window => recordAgentMetric(window, activity))
+ }
 
-  def isUntrackedMetric(lastActivity: Option[AgentActivity], newActivity: IsoDateTime, frequency: FrequencyType): Boolean = {
+  def isUntrackedMetric(window: ActiveWindowRules, newActivity: AgentActivity): Boolean = {
+    val lastActivity = state.activity(window, newActivity.id(window.activityType))
     lastActivity.forall(activity => {
-      frequency match {
+      window.activityFrequency match {
         case CalendarMonth =>
           //If timestamps are not in the same month, record new activity
-          !toMonth(activity.timestamp).equals(toMonth(newActivity))
+          !toMonth(activity.timestamp).equals(toMonth(newActivity.timestamp))
         case VariableDuration(duration) =>
           //If newActivity is >= then the expiredDate, record new activity
           val expiredDate = dateAfterDuration(activity.timestamp, duration)
-          isDateExpired(newActivity, expiredDate)
+          isDateExpired(newActivity.timestamp, expiredDate)
       }
     })
   }
 
+  /*
+    1. There will be two metrics, active users, active relationships
+    2. Each entry will be tagged with either a domainId or sponsorId
+    3. The entry will only be written if it hasn't already been written in that timeframe
+      // Means I have to change how I'm keeping track in the state
+    4.
+   */
   def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
-    appConfig.logger.info(s"recording new agent activity: $activity, key: ${window.metricKey}")
-    MetricsWriter.gaugeApi.incrementWithTags(window.metricKey, agentTags(window, activity))
+    appConfig.logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity)}")
+    MetricsWriter.gaugeApi.incrementWithTags(window.activityType.metricBase, agentTags(window, activity))
     val recording = RecordingAgentActivity(
       activity.domainId,
       activity.timestamp,
       activity.sponsorId,
       activity.activityType,
-      window.metricKey
+      activity.relId.getOrElse(""),
+      state.key(window, activity.id(window.activityType))
     )
 
     writeAndApply(recording)
@@ -90,14 +112,14 @@ class ActivityTracker(override val appConfig: AppConfig, var activityWindows: Ac
 
   private def agentTags(behavior: ActiveWindowRules, agentActivity: AgentActivity): Map[String, String] =
     behavior.activityType match {
-      case ActiveUsers => ActiveUsers.tags(agentActivity.sponsorId)
-      case ActiveRelationships => ActiveRelationships.tags(agentActivity.domainId)
+      case ActiveUsers => ActiveUsers.tags(agentActivity.sponsorId, behavior.activityFrequency)
+      case ActiveRelationships => ActiveRelationships.tags(agentActivity.domainId, behavior.activityFrequency)
     }
 }
 
 object ActivityTracker {
- def props(implicit config: AppConfig, windows: ActivityWindow): Props = {
-  Props(new ActivityTracker(config, windows))
+ def props(implicit config: AppConfig): Props = {
+  Props(new ActivityTracker(config))
  }
 }
 
@@ -107,16 +129,21 @@ object ActivityTracker {
  * */
 trait Behavior {
   def metricBase: String
-  def tagType: String
-  def tags(value: String): Map[String, String] = Map(tagType -> value)
+  def idType: String
+  def tags(id: String, frequency: FrequencyType): Map[String, String] =
+    Map(
+      idType -> id,
+      "frequency" -> frequency.toString
+    )
 }
-case object ActiveUsers extends Behavior {
+trait AgentBehavior extends Behavior
+case object ActiveUsers extends AgentBehavior {
   def metricBase: String = AS_ACTIVE_USER_AGENT_COUNT
-  def tagType: String = "sponsorId"
+  def idType: String = "sponsorId"
 }
-case object ActiveRelationships extends Behavior {
+case object ActiveRelationships extends AgentBehavior {
   def metricBase: String = AS_USER_AGENT_ACTIVE_RELATIONSHIPS
-  def tagType: String = "domainId"
+  def idType: String = "domainId"
 }
 
 /** How often a behavior is recorded
@@ -125,20 +152,32 @@ case object ActiveRelationships extends Behavior {
  * */
 trait FrequencyType
 case object CalendarMonth extends FrequencyType {
-  override def toString: String = "Monthly"
+  override def toString: String = "monthly"
 }
 case class VariableDuration(duration: Duration) extends FrequencyType {
   override def toString: String = duration.toString
+}
+object VariableDuration {
+  def apply(duration: String): VariableDuration = new VariableDuration(Duration(duration))
 }
 
 /** ActivityTracker Commands */
 trait ActivityTracking extends ActorMessageClass
 final case class ActivityWindow(windows: Set[ActiveWindowRules]) extends ActivityTracking
-final case class AgentActivity(domainId: DID, timestamp: IsoDateTime, sponsorId: String, activityType: String) extends ActivityTracking
-
-final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior) {
-  def metricKey: String = s"${activityType.metricBase}.${activityType.toString}.${activityFrequency.toString}"
+final case class AgentActivity(domainId: DID,
+                               timestamp: IsoDateTime,
+                               sponsorId: String,
+                               activityType: String,
+                               relId: Option[String]=None) extends ActivityTracking {
+  def id(behavior: Behavior): Option[String] =
+    behavior match {
+      case ActiveUsers => Some(domainId)
+      case ActiveRelationships => relId
+      case _ => None
+    }
 }
+
+final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior)
 
 /** ActivityTracker Event Base Type */
 trait Active extends ActorMessageClass

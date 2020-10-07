@@ -225,6 +225,8 @@ trait UserAgentCommon
 
   override def sendStoredMsgToEdge(msgId:MsgId): Future[Any] = {
     logger.debug("about to send stored msg: " + msgId)
+    //TODO: activity should be handled on outgoing message to other cloud agent (Not Edge)
+    trackAgentActivity("unknown", domainId, sponsorId, state.theirDid)
     self ? SendStoredMsgToSelf(msgId)
   }
 

@@ -231,6 +231,7 @@ trait CommonConfig {
   val ACTOR_DISPATCHER_NAME_AGENCY_AGENT_PAIRWISE = s"$ACTOR_DISPATCHER_NAME.agency-agent-pairwise-dispatcher"
   val ACTOR_DISPATCHER_NAME_USER_AGENT = s"$ACTOR_DISPATCHER_NAME.user-agent-dispatcher"
   val ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE = s"$ACTOR_DISPATCHER_NAME.user-agent-pairwise-dispatcher"
+  val ACTOR_DISPATCHER_NAME_ACTIVITY_TRACKER = s"$ACTOR_DISPATCHER_NAME.activity-tracker-dispatcher"
 
   val APP_STATE_MANAGER = s"$VERITY.app-state-manager"
   val APP_STATE_MANAGER_STATE = s"$APP_STATE_MANAGER.state"

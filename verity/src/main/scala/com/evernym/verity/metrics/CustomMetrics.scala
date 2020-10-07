@@ -75,6 +75,7 @@ object CustomMetrics {
   /**
    * this is the total number of active users (AU)
    */
+    //as.akka.actor.user.agent.active.users.count
   final val AS_ACTIVE_USER_AGENT_COUNT = s"$AS_USER_AGENT.active.users.count"
 
   /**

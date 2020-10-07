@@ -205,7 +205,8 @@ trait BasePersistentActor
     }
   }
 
-  final override def beforeStart(): Unit = {
+  override def beforeStart(): Unit = {
+    super.beforeStart()
     logger.debug("in pre-start", (LOG_KEY_PERSISTENCE_ID, persistenceId))
     context.become(receiveActorInitHandler)
   }

@@ -110,4 +110,5 @@ object OptionUtil {
     Option(bool).flatten.getOrElse(false)
   }
 
+  implicit def optionToEmptyStr(v: Option[String]): String = ""
 }

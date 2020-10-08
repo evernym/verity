@@ -3,6 +3,7 @@ package com.evernym.verity.metrics
 import java.time.{Duration => JavaDuration}
 
 import akka.testkit.TestKit
+import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
 import com.evernym.verity.config.AppConfig
@@ -28,18 +29,18 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         val baseTimeStamp = "2020-08-01"
         val window15Day = ActiveWindowRules(VariableDuration("15 d"), ActiveUsers)
         val windows = Set(window15Day)
-        val activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE, None)
+        val activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE, None)
         val user1 = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         val user2 = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         val user3 = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         val userDifferentSponsor = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
-        val activityDifferentSponsor = AgentActivity(DOMAIN_ID2, baseTimeStamp, SPONSOR_ID2, DEFAULT_ACTIVITY_TYPE)
+        val activityDifferentSponsor = AgentActivity(DOMAIN_ID2, baseTimeStamp, SPONSOR_REL2, DEFAULT_ACTIVITY_TYPE)
 
         user1 ! activity
         user2 ! activity
         user3 ! activity
         //Will not increase count for SPONSOR_ID even though the relationship is different because "new" depends on domain id
-        user3 ! AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE, Some(REL_ID2))
+        user3 ! AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE, Some(REL_ID2))
         userDifferentSponsor ! activityDifferentSponsor
         Thread.sleep(500)
 
@@ -58,7 +59,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         val window30Day = ActiveWindowRules(VariableDuration("30 d"), ActiveUsers)
         val window7Day = ActiveWindowRules(VariableDuration("7 d"), ActiveUsers)
         val windows = Set(windowMonth, window30Day, window7Day)
-        var activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        var activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
 
         val activityTracker = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         activityTracker ! activity
@@ -83,7 +84,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
          */
 
         val sevenDayIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("7 d"))
-        activity = AgentActivity(DOMAIN_ID, sevenDayIncrease, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        activity = AgentActivity(DOMAIN_ID, sevenDayIncrease, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
         activityTracker ! activity
         Thread.sleep(500)
 
@@ -98,7 +99,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
            Still falls within August so monthly discards.
          */
         val thirtyDayIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("30 d"))
-        activity = AgentActivity(DOMAIN_ID, thirtyDayIncrease, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        activity = AgentActivity(DOMAIN_ID, thirtyDayIncrease, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
         activityTracker ! activity
         Thread.sleep(500)
 
@@ -115,7 +116,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
              so this new timestamp is 1 day more than the last sent activity timestamp.
          */
         val monthIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("31 d"))
-        activity = AgentActivity(DOMAIN_ID, monthIncrease, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        activity = AgentActivity(DOMAIN_ID, monthIncrease, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
         activityTracker ! activity
         Thread.sleep(500)
 
@@ -129,7 +130,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
       "should be able to update window" in {
         val window = ActiveWindowRules(VariableDuration("9 min"), ActiveUsers)
         val activityTracker = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(Set(window)))))
-        val activity = AgentActivity(DOMAIN_ID, TimeUtil.nowDateString, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        val activity = AgentActivity(DOMAIN_ID, TimeUtil.nowDateString, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
         activityTracker ! activity
         Thread.sleep(500)
         var metrics = getMetricWithTags(Set(window.activityType.metricBase))
@@ -153,9 +154,9 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         val baseTimeStamp = "2020-08-01"
         val windowMonthRel = ActiveWindowRules(CalendarMonth, ActiveRelationships)
         val windows = Set(windowMonthRel)
-        val rel1 = AgentActivity(DOMAIN_ID3, baseTimeStamp, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE, Some(REL_ID1))
-        val rel2 = AgentActivity(DOMAIN_ID3, baseTimeStamp, SPONSOR_ID2, DEFAULT_ACTIVITY_TYPE, Some(REL_ID2))
-        val rel3 = AgentActivity(DOMAIN_ID3, baseTimeStamp, SPONSOR_ID2, DEFAULT_ACTIVITY_TYPE, Some(REL_ID3))
+        val rel1 = AgentActivity(DOMAIN_ID3, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE, Some(REL_ID1))
+        val rel2 = AgentActivity(DOMAIN_ID3, baseTimeStamp, SPONSOR_REL2, DEFAULT_ACTIVITY_TYPE, Some(REL_ID2))
+        val rel3 = AgentActivity(DOMAIN_ID3, baseTimeStamp, SPONSOR_REL2, DEFAULT_ACTIVITY_TYPE, Some(REL_ID3))
 
         val activityTracker = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         activityTracker ! rel1
@@ -177,7 +178,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         val window7DayRel = ActiveWindowRules(VariableDuration("7 d"), ActiveRelationships)
         val window3DayUser = ActiveWindowRules(VariableDuration("3 d"), ActiveUsers)
         val windows = Set(windowMonthRel, window7DayRel, window3DayUser)
-        var activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        var activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
 
         val activityTracker = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         activityTracker ! activity
@@ -201,7 +202,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
           Both the 30 day and monthly discard it because it doesn't increase window.
          */
         val sevenDayIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("7 d"))
-        activity = AgentActivity(DOMAIN_ID, sevenDayIncrease, SPONSOR_ID, DEFAULT_ACTIVITY_TYPE)
+        activity = AgentActivity(DOMAIN_ID, sevenDayIncrease, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
         activityTracker ! activity
         Thread.sleep(500)
 
@@ -218,7 +219,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
           Only the tag for domainId will increase
          */
         val threeMonthIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("90 d"))
-        val newActivity = AgentActivity(DOMAIN_ID2, threeMonthIncrease, SPONSOR_ID2, DEFAULT_ACTIVITY_TYPE)
+        val newActivity = AgentActivity(DOMAIN_ID2, threeMonthIncrease, SPONSOR_REL2, DEFAULT_ACTIVITY_TYPE)
         activityTracker ! newActivity
         Thread.sleep(500)
 
@@ -298,6 +299,8 @@ case class MetricWithTags(name: String, totalValue: Double, tags: Map[TagSet, Do
 object ActivityConstants {
   val SPONSOR_ID: String = "sponsor-1"
   val SPONSOR_ID2: String = "sponsor-2"
+  val SPONSEE_ID1: String = "sponsee-1"
+  val SPONSEE_ID2: String = "sponsor-2"
   val DOMAIN_ID: String = "domain-1"
   val DOMAIN_ID2: String = "domain-2"
   val DOMAIN_ID3: String = "domain-3"
@@ -305,4 +308,6 @@ object ActivityConstants {
   val REL_ID2: String = "rel-2"
   val REL_ID3: String = "rel-3"
   val DEFAULT_ACTIVITY_TYPE: String = "action-taken"
+  val SPONSOR_REL1: SponsorRel = SponsorRel(SPONSOR_ID, SPONSEE_ID1)
+  val SPONSOR_REL2: SponsorRel = SponsorRel(SPONSOR_ID2, SPONSEE_ID2)
 }

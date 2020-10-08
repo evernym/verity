@@ -2,6 +2,7 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.Props
 import akka.event.LoggingReceive
+import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -53,10 +54,7 @@ class ActivityTracker(override val appConfig: AppConfig)
 
  val receiveEvent: Receive = {
   case r: RecordingAgentActivity =>
-    val relId: Option[String] = if (r.relId == "") None else Some(r.relId)
-    state = state.copy(
-      state.activity + (r.stateKey -> AgentActivity(r.domainId, r.timestamp, r.sponsorId, r.activityType, relId))
-    )
+    state = state.copy( state.activity + (r.stateKey -> AgentActivity(r)))
  }
 
   /**
@@ -101,7 +99,8 @@ class ActivityTracker(override val appConfig: AppConfig)
     val recording = RecordingAgentActivity(
       activity.domainId,
       activity.timestamp,
-      activity.sponsorId,
+      activity.sponsorRel.sponsorId,
+      activity.sponsorRel.sponseeId,
       activity.activityType,
       activity.relId.getOrElse(""),
       state.key(window, activity.id(window.activityType))
@@ -112,7 +111,7 @@ class ActivityTracker(override val appConfig: AppConfig)
 
   private def agentTags(behavior: ActiveWindowRules, agentActivity: AgentActivity): Map[String, String] =
     behavior.activityType match {
-      case ActiveUsers => ActiveUsers.tags(agentActivity.sponsorId, behavior.activityFrequency)
+      case ActiveUsers => ActiveUsers.tags(agentActivity.sponsorRel.sponsorId, behavior.activityFrequency)
       case ActiveRelationships => ActiveRelationships.tags(agentActivity.domainId, behavior.activityFrequency)
     }
 }
@@ -144,6 +143,8 @@ case object ActiveUsers extends AgentBehavior {
 case object ActiveRelationships extends AgentBehavior {
   def metricBase: String = AS_USER_AGENT_ACTIVE_RELATIONSHIPS
   def idType: String = "domainId"
+  def tags(id: String, frequencyType: FrequencyType, sponseeId: String): Map[String, String] =
+    super.tags(id, frequencyType) + ("sponseeId" -> sponseeId)
 }
 
 /** How often a behavior is recorded
@@ -166,7 +167,7 @@ trait ActivityTracking extends ActorMessageClass
 final case class ActivityWindow(windows: Set[ActiveWindowRules]) extends ActivityTracking
 final case class AgentActivity(domainId: DID,
                                timestamp: IsoDateTime,
-                               sponsorId: String,
+                               sponsorRel: SponsorRel,
                                activityType: String,
                                relId: Option[String]=None) extends ActivityTracking {
   def id(behavior: Behavior): Option[String] =
@@ -175,6 +176,17 @@ final case class AgentActivity(domainId: DID,
       case ActiveRelationships => relId
       case _ => None
     }
+}
+
+object AgentActivity {
+  def apply(r: RecordingAgentActivity): AgentActivity =
+    new AgentActivity(
+      r.domainId,
+      r.timestamp,
+      SponsorRel(r.sponsorId, r.sponseeId),
+      r.activityType,
+      if (r.relId == "") None else Some(r.relId)
+    )
 }
 
 final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior)

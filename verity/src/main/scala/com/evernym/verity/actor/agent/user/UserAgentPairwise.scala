@@ -10,7 +10,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.agency.SetupCreateKeyEndpoint
+import com.evernym.verity.actor.agent.agency.{SetupCreateKeyEndpoint, SponsorRel}
 import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
@@ -741,7 +741,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
                                     msgName: MsgName,
                                     thread: Option[MsgThread]=None): Future[Any] = {
     logger.debug(s"msg:${msgName}, domainId:$domainId, sponsor:$sponsorId}")
-    trackAgentActivity(msgName, domainId, sponsorId, state.theirDid)
+    trackAgentActivity(msgName, domainId, sponsorId, sponseeId, state.theirDid)
 
     logger.debug("about to send stored msg to other entity: " + msgId)
     omp.givenMsg match {

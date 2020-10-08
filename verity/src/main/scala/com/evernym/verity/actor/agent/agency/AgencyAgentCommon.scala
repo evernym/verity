@@ -136,9 +136,9 @@ trait AgencyAgentCommon
 
     val newActorId = getNewActorId
     val (domainDID, domainVk, requesterVk) = requester match {
-      case NeedsCloudAgent(requesterKeys, _, _) =>
+      case NeedsCloudAgent(requesterKeys, _) =>
         (requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey)
-      case NeedsEdgeAgent(requesterVk, _, _) =>
+      case NeedsEdgeAgent(requesterVk, _) =>
         val domainKeys = agentActorContext.walletAPI.createNewKey()
         (domainKeys.did, domainKeys.verKey, requesterVk)
     }
@@ -149,8 +149,7 @@ trait AgencyAgentCommon
       domainDID,
       agentPairwiseKey.did,
       requesterVk,
-      requester.sponsorId,
-      requester.sponseeId
+      requester.sponsorRel
     )
 
     userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)

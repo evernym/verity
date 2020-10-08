@@ -218,6 +218,7 @@ trait SetupEndpoint extends ActorMessageClass {
   def agentKeyDID: DID
 }
 
+case class SponsorRel(sponsorId: String, sponseeId: String)
 case class SetupAgentEndpoint(
                                override val ownerDID: DID,
                                override val agentKeyDID: DID
@@ -228,6 +229,5 @@ case class SetupAgentEndpoint_V_0_7 (
                                       override val ownerDID: DID,
                                       override val agentKeyDID: DID,
                                       requesterVerKey: VerKey,
-                                      sponsorId: Option[String]=None,
-                                      sponseeId: Option[String]=None
+                                      sponsorRel: Option[SponsorRel]=None
                                    ) extends SetupEndpoint

@@ -617,7 +617,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val sndr = sender()
     val resp = se match {
       case s: SetupAgentEndpoint_V_0_7  =>
-        s.sponsorId.foreach(sid => writeAndApply(SponsorAssigned(sid, s.sponseeId.getOrElse(""))))
+        s.sponsorRel.foreach(sr => writeAndApply(SponsorAssigned(sr.sponsorId, sr.sponseeId)))
         logger.debug(s"User Agent initialized with V0.7")
         writeAndApply(RequesterKeyAdded(s.requesterVerKey))
         AgentProvisioningDone(s.ownerDID, getVerKeyReqViaCache(s.agentKeyDID), s.threadId)

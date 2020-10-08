@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
+import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
@@ -190,13 +191,12 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
   }
 
   def provisioningSignal(requesterState: AwaitsSponsor): Signal = {
-    val sponsorId = requesterState.token.map(_.sponsorId)
-    val sponseeId = requesterState.token.map(_.sponseeId)
+    val sponsorRel = requesterState.token.map(t => SponsorRel(t.sponsorId, t.sponseeId))
     requesterState match {
       case x: CloudWaitingOnSponsor =>
-        NeedsCloudAgent(x.requesterKeys, sponsorId, sponseeId)
+        NeedsCloudAgent(x.requesterKeys, sponsorRel)
       case x: EdgeCreationWaitingOnSponsor =>
-        NeedsEdgeAgent(x.requesterVk, sponsorId, sponseeId)
+        NeedsEdgeAgent(x.requesterVk, sponsorRel)
     }
   }
 

@@ -228,5 +228,6 @@ case class SetupAgentEndpoint_V_0_7 (
                                       override val ownerDID: DID,
                                       override val agentKeyDID: DID,
                                       requesterVerKey: VerKey,
-                                      sponsorId: Option[String]=None
+                                      sponsorId: Option[String]=None,
+                                      sponseeId: Option[String]=None
                                    ) extends SetupEndpoint

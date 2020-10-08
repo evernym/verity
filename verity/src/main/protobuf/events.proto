@@ -486,6 +486,7 @@ message TheirDidUpdated {
 
 message SponsorAssigned {
     string id = 1;
+    string sponsee = 2;
 }
 
 message RecordingAgentActivity {

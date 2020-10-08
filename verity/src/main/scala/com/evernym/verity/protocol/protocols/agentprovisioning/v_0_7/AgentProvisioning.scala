@@ -191,11 +191,12 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
 
   def provisioningSignal(requesterState: AwaitsSponsor): Signal = {
     val sponsorId = requesterState.token.map(_.sponsorId)
+    val sponseeId = requesterState.token.map(_.sponseeId)
     requesterState match {
       case x: CloudWaitingOnSponsor =>
-        NeedsCloudAgent(x.requesterKeys, sponsorId)
+        NeedsCloudAgent(x.requesterKeys, sponsorId, sponseeId)
       case x: EdgeCreationWaitingOnSponsor =>
-        NeedsEdgeAgent(x.requesterVk, sponsorId)
+        NeedsEdgeAgent(x.requesterVk, sponsorId, sponseeId)
     }
   }
 

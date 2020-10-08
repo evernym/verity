@@ -150,7 +150,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     case rka: RecoveryKeyAdded             => handleRecoveryKeyAdded(rka.verKey)
     case cmu: ComMethodUpdated             => handleUpdateAuthKeyAndEndpoint(cmu)
     case cmd: ComMethodDeleted             => handleRemoveComMethod(cmd)
-    case sa: SponsorAssigned               => state.setSponsorId(sa.id)
+    case sa: SponsorAssigned               => state.setSponsorId(sa.id); state.setSponseeId(sa.sponsee)
     case pis: PublicIdentityStored         => state.setPublicIdentity(DidPair(pis.DID, pis.verKey))
 
       //this is received for each new pairwise connection/actor that gets created
@@ -617,14 +617,18 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val sndr = sender()
     val resp = se match {
       case s: SetupAgentEndpoint_V_0_7  =>
-        s.sponsorId.foreach(sid => writeAndApply(SponsorAssigned(sid)))
-        logger.debug(s"User Agent initialized with V0.7 with sponsorId: ${state.sponsorId}")
+        s.sponsorId.foreach(sid => writeAndApply(SponsorAssigned(sid, s.sponseeId.getOrElse(""))))
+        logger.debug(s"User Agent initialized with V0.7")
         writeAndApply(RequesterKeyAdded(s.requesterVerKey))
         AgentProvisioningDone(s.ownerDID, getVerKeyReqViaCache(s.agentKeyDID), s.threadId)
       case _: SetupAgentEndpoint        =>
         logger.debug(s"User Agent initialized (old protocol)")
         Done
     }
+
+    logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorId: ${state.sponsorId}, sponseeId: ${state.sponseeId}")
+    trackNewAgent(state.sponsorId)
+
     setRouteFut map {
       case _: RouteSet  => sndr ! resp
       case _            => throw new RuntimeException("route not set for user agent")

@@ -199,8 +199,13 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   sealed trait Signal
   sealed trait ProvisioningNeeded {
     def sponsorId: Option[String]
+    def sponseeId: Option[String]
   }
   case class IdentifySponsor(provisionDetails: Option[ProvisionToken])                 extends Signal
-  case class NeedsCloudAgent(requesterKeys: RequesterKeys, sponsorId: Option[String])  extends Signal with ProvisioningNeeded
-  case class NeedsEdgeAgent(requesterVk: VerKey, sponsorId: Option[String])            extends Signal with ProvisioningNeeded
+  case class NeedsCloudAgent(requesterKeys: RequesterKeys,
+                             sponsorId: Option[String],
+                             sponseeId: Option[String]=None)  extends Signal with ProvisioningNeeded
+  case class NeedsEdgeAgent(requesterVk: VerKey,
+                            sponsorId: Option[String],
+                            sponseeId: Option[String]=None)            extends Signal with ProvisioningNeeded
 }

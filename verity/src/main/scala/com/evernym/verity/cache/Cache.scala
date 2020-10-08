@@ -4,7 +4,6 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{getUnhandledError, _}
@@ -12,10 +11,12 @@ import com.evernym.verity.actor.agent.agency.AgencyInfo
 import com.evernym.verity.actor.agent.msgrouter.ActorAddressDetail
 import com.evernym.verity.actor.agent.user.AgentConfigs
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.{getLoggerByClass, getLoggerByName}
 import com.evernym.verity.protocol.engine.DID
 import com.typesafe.scalalogging.Logger
 
+import scala.collection.mutable
 import scala.concurrent.Future
 
 
@@ -135,7 +136,7 @@ trait CacheBase {
 
   def fetchers: Map[Int, CacheValueFetcher]
 
-  private var cachedObjects: List[CachedObject] = List.empty
+  private val cachedObjects: mutable.HashMap[Any, CachedObject] = mutable.HashMap.empty
 
   private var hit: Int = 0
 
@@ -144,17 +145,16 @@ trait CacheBase {
   def size: Int = cachedObjects.size
 
   def getUnexpiredCachedObjectsByFetcherId(fetcherId: Int): List[CachedObject] = {
-    cachedObjects.filter(co => co.fetcherId == fetcherId && co.value.isDefined && ! co.isExpired)
+    cachedObjects.values.filter(co => co.fetcherId == fetcherId && co.value.isDefined && !co.isExpired).toList
   }
 
   def addToCachedObject(co: CachedObject): Unit = {
     logger.debug("cached object added: " + co)
-    cachedObjects = cachedObjects.filterNot(_.key == co.key)
-    cachedObjects = cachedObjects :+ co
+    cachedObjects.put(co.key, co)
   }
 
   def deleteFromCache(keys: Set[Any]): Unit = {
-    cachedObjects = cachedObjects.filterNot(k => keys.contains(k.key))
+    keys.foreach(cachedObjects.remove)
   }
 
   def getCacheHitRatio: String = {
@@ -223,8 +223,8 @@ trait CacheBase {
     val keyMappings = fetcher.getKeyDetailMapping(gcop.kds)
     val requestedCacheKeys = keyMappings.map(_.cacheKey)
 
-    val cachedObjectsFound = cachedObjects.filter(c => requestedCacheKeys.contains(c.key) &&
-      c.fetcherId == gcop.fetcherId && ! c.isExpired).toSet
+    val cachedObjectsFound = requestedCacheKeys.flatMap(cachedObjects.get).filter{ co =>
+      co.fetcherId == gcop.fetcherId && !co.isExpired}
     val keysFoundInCache = cachedObjectsFound.map(_.key)
     val keysNotFoundInCache = requestedCacheKeys.diff(keysFoundInCache)
     val originalKeysNotFound = keyMappings.filter(km => keysNotFoundInCache.contains(km.cacheKey)).map(_.kd)

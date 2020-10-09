@@ -22,9 +22,8 @@ object BasicMessageMsgFamily extends MsgFamily {
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-    classOf[Signal.ReceiveMessage]   -> "receive-message",
+    classOf[Signal.ReceiveMessage]   -> "message-received",
     classOf[Signal.ProblemReport] -> "problem-report",
-    classOf[Signal.StatusReport]  -> "status-report",
   )
 }
 
@@ -67,8 +66,6 @@ object Signal {
   case class ReceiveMessage(`~l10n`: String,
                             sent_time: BaseTiming,
                             content: String) extends SignalMsg
-
-  case class StatusReport(status: String) extends SignalMsg
 
   case class ProblemReport(description: ProblemDescription) extends SignalMsg
 

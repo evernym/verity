@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Sender, Receiver}
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Signal.{StatusReport, buildProblemReport}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Signal.buildProblemReport
 import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.evernym.verity.util.TimeUtil._
 

@@ -19,10 +19,7 @@ object State {
   // Receiver and Sender STATE:
 
   // Only one state
-  case class Messaging(question:    Msg.Message,
-                            response:    String,
-                            signature:   Option[Sig],
-                            received:    String
-                            ) extends State
+  case class Messaging(message:    Msg.Message,
+                      ) extends State
 }
 

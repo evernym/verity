@@ -16,30 +16,11 @@ message MyRole {
     int32  roleNum = 1;
 }
 
-message QuestionUsed {
+message MessageSent {
     option (scalapb.message).extends = "Event";
-
-    string questionText            = 1;
-    string questionDetail          = 2;
-    repeated string validResponses = 3;
-    repeated string validNonce     = 4;
-    string expiresTime             = 5;
-}
-
-message SignedAnswerUsed {
-    option (scalapb.message).extends = "Event";
-    string response           = 1;
-    string received           = 2;
-    string signature          = 3;
-    string signatureData      = 4;
-    string signatureTimestamp = 5;
-}
-
-message Validity {
-    option (scalapb.message).extends = "Event";
-    bool answerValidity    = 1;
-    bool signatureValidity = 2;
-    bool timingValidity    = 3;
+    string l10n                 = 1;
+    string sentTime             = 2;
+    string content              = 3;
 }
 
 message Error {

@@ -35,7 +35,7 @@ sealed trait Msg extends MsgBase
 
 object Msg {
 
-  case class Message(`~l10n`: String,
+  case class Message(`~I10n`: String,
                       sent_time: BaseTiming,
                       content: String
                      ) extends Msg

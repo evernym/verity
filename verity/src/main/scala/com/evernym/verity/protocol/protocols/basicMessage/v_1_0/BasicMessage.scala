@@ -40,6 +40,12 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
 
   def applyEvent: ApplyEvent = {
     case (_: State.Uninitialized , _ , e: Initialized  ) => (State.Initialized(), initialize(e))
+    case (_                      , _ , MyRole(n)       ) => (None, setRole(n))
+    case (_: State.Initialized   , r , e: MessageSent) =>
+      r.selfRole_! match {
+        case Sender => State.Messaging(buildMessage(e))
+        case Receiver  => State.Messaging(buildMessage(e))
+      }
   }
   // Protocol Msg Handlers
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = ???
@@ -63,26 +69,46 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     ctx.apply(MyRole(Receiver.roleNum))
     ctx.apply(messageToEvt(m))
 
-    //val signal = ???
-    //ctx.signal(signal)
+    val signal = Signal.ReceiveMessage(
+      m.`~I10n`,
+      m.sent_time,
+      m.content
+    )
+    ctx.signal(signal)
   }
 
   def send(m: Ctl.SendMessage): Unit = {
     ctx.apply(MyRole(Sender.roleNum))
-    val questionMsg = Msg.Message(
+    val messageMsg = Msg.Message(
       m.`~l10n`,
       m.sent_time,
       m.content
     )
-    ctx.apply(messageToEvt(questionMsg))
-    ctx.send(questionMsg, Some(Receiver), Some(Sender))
+    ctx.apply(messageToEvt(messageMsg))
+    ctx.send(messageMsg, Some(Receiver), Some(Sender))
+  }
+
+  // Helper Functions
+  def setRole(role: Int): Option[Roster[Role]] = {
+    val myRole = Role.numToRole(role)
+    val otherAssignment = Role.otherRole(myRole) -> ctx.getRoster.otherId()
+    ctx.getRoster.withSelfAssignment(myRole).withAssignmentById(otherAssignment)
   }
 
   def initialize(p: Initialized): Roster[Role] = {
     ctx.updatedRoster(Seq(InitParamBase(SELF_ID, p.selfIdValue), InitParamBase(OTHER_ID, p.otherIdValue)))
   }
 }
+
 object BasicMessage {
+  def buildMessage(m: MessageSent): Msg.Message = {
+    Msg.Message(
+      m.l10n,
+      BaseTiming(out_time = Some(m.sentTime)),
+      m.content,
+    )
+  }
+
   def messageToEvt(q: Msg.Message): Unit = {
     // TODO: Implement this
   }

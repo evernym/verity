@@ -5,6 +5,7 @@ import com.evernym.verity.actor.agent.agency.AgencyAgentState
 import com.evernym.verity.actor.agent.msgrouter.{RouteProcessed, StatusUpdated}
 import com.evernym.verity.actor.cluster_singleton.fixlegacyroutes.{Completed, Registered}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
+import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
 import com.evernym.verity.protocol.protocols.committedAnswer.{v_1_0 => committedAnswer_v10}
 import com.evernym.verity.protocol.protocols.connections.{v_1_0 => connections_10}
 import com.evernym.verity.protocol.protocols.issueCredential.{v_1_0 => issueCredential_v10}
@@ -248,7 +249,11 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     203 -> ItemManagerState,
     
     204 -> WindowActivityDefined,
-    205 -> AgencyAgentState
+    205 -> AgencyAgentState,
+
+    206 -> basicMessage_v10.Initialized,
+    207 -> basicMessage_v10.MyRole,
+    208 -> basicMessage_v10.MessageSent
   )
 
 }

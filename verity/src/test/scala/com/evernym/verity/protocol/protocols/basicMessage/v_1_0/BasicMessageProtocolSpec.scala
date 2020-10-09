@@ -35,11 +35,11 @@ class BasicMessageSpec
     val receiver: TestEnvir = s(RECEIVER)
   }
 
-  def checkStatus(envir: TestEnvir, expectedStatus: StatusReport): Unit = {
-    envir clear signals
-    envir ~ GetStatus()
-    (envir expect signal [StatusReport]) shouldBe expectedStatus
-  }
+//  def checkStatus(envir: TestEnvir, expectedStatus: StatusReport): Unit = {
+//    envir clear signals
+//    envir ~ GetStatus()
+//    (envir expect signal [StatusReport]) shouldBe expectedStatus
+//  }
 
   "Basic Message Protocol Definition" - {
     "should have two roles" in { _ =>
@@ -79,13 +79,13 @@ class BasicMessageSpec
 
           s.sender ~ testSendMessage(EXPIRATION_TIME)
 
-          //s.receiver expect signal [Signal.AnswerNeeded]
+          s.receiver expect signal [Signal.ReceiveMessage]
 
           s.sender.state shouldBe a[State.Messaging]
-          checkStatus(s.sender, StatusReport("Messaging"))
+          //checkStatus(s.sender, StatusReport("Messaging"))
 
           s.receiver.state shouldBe a[State.Messaging]
-          checkStatus(s.receiver, StatusReport("Messaging"))
+          //checkStatus(s.receiver, StatusReport("Messaging"))
         }
       }
     }

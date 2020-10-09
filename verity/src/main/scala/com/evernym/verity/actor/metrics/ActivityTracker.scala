@@ -111,8 +111,10 @@ class ActivityTracker(override val appConfig: AppConfig)
 
   private def agentTags(behavior: ActiveWindowRules, agentActivity: AgentActivity): Map[String, String] =
     behavior.activityType match {
-      case ActiveUsers => ActiveUsers.tags(agentActivity.sponsorRel.sponsorId, behavior.activityFrequency)
-      case ActiveRelationships => ActiveRelationships.tags(agentActivity.domainId, behavior.activityFrequency)
+      case ActiveUsers =>
+        ActiveUsers.tags(agentActivity.sponsorRel.sponsorId, behavior.activityFrequency)
+      case ActiveRelationships =>
+        ActiveRelationships.tags(agentActivity.domainId, behavior.activityFrequency, agentActivity.sponsorRel.sponseeId)
     }
 }
 

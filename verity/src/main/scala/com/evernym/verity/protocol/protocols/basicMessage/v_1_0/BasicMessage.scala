@@ -37,7 +37,10 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   extends Protocol[BasicMessage, Role, Msg, Event, State, String](BasicMessageDefinition) {
   import BasicMessage._
   // Event Handlers
-  def applyEvent: ApplyEvent = ???
+
+  def applyEvent: ApplyEvent = {
+    case (_: State.Uninitialized , _ , e: Initialized  ) => (State.Initialized(), initialize(e))
+  }
   // Protocol Msg Handlers
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = ???
   // Control Message Handlers
@@ -73,6 +76,10 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     )
     ctx.apply(messageToEvt(questionMsg))
     ctx.send(questionMsg, Some(Receiver), Some(Sender))
+  }
+
+  def initialize(p: Initialized): Roster[Role] = {
+    ctx.updatedRoster(Seq(InitParamBase(SELF_ID, p.selfIdValue), InitParamBase(OTHER_ID, p.otherIdValue)))
   }
 }
 object BasicMessage {

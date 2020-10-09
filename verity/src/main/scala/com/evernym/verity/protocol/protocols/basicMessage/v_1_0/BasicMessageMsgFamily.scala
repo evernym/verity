@@ -5,7 +5,6 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
-import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Ctl.Init
 
 object BasicMessageMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
@@ -17,7 +16,7 @@ object BasicMessageMsgFamily extends MsgFamily {
   )
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
-    "Init"              -> classOf[Init],
+    "Init"              -> classOf[Ctl.Init],
     "send-message"      -> classOf[Ctl.SendMessage],
     "get-status"        -> classOf[Ctl.GetStatus],
   )

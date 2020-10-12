@@ -4,12 +4,13 @@ import com.evernym.verity.Exceptions.InvalidValueException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager._
+import com.typesafe.config.Config
 import org.scalatest.time.{Seconds, Span}
 
 
 class ShardBasedItemManagerSpec extends ItemManagerSpecBase {
 
-  override def overrideConfig: Option[String] = Option {
+  override def overrideConfig: Option[Config] = Option {
     watcherConfig
   }
 

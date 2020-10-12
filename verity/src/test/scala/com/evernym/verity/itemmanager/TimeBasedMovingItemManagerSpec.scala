@@ -5,12 +5,13 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.{ItemManagerConfigNotYetSet, _}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
+import com.typesafe.config.Config
 import org.scalatest.time.{Seconds, Span}
 
 
 class TimeBasedMovingItemManagerSpec extends ItemManagerSpecBase {
 
-  override def overrideConfig: Option[String] = Option {
+  override def overrideConfig: Option[Config] = Option {
     watcherConfig
   }
 

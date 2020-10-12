@@ -281,8 +281,16 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-freespec" % scalatestVer,
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
+
+    akkaGrp %% "akka-actor-typed" % akkaVer,
+    akkaGrp %% "akka-persistence-typed" % akkaVer,
+    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
+
     akkaGrp %% "akka-testkit" % akkaVer,
+    akkaGrp %% "akka-persistence-testkit" % akkaVer,
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
+    akkaGrp %% "akka-serialization-jackson" % akkaVer,
+
     "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl

@@ -13,6 +13,7 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.walletBackup.BackupStored
 import com.evernym.verity.testkit.BasicSpec
 import com.google.protobuf.ByteString
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
 class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
@@ -27,8 +28,8 @@ class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
     }
   }
 
-  override def overrideConfig: Option[String] = Option {
-    AkkaTestBasic.journalFailingOnLargeEvents
+  override def overrideConfig: Option[Config] = Option {
+      AkkaTestBasic.journalFailingOnLargeEvents
   }
 }
 

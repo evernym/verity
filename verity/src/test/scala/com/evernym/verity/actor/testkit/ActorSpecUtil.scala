@@ -2,7 +2,9 @@ package com.evernym.verity.actor.testkit
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
+import akka.{actor => classic}
+import akka.actor.typed
+import akka.persistence.testkit.scaladsl.{PersistenceTestKit, SnapshotTestKit}
 import akka.testkit.{ImplicitSender, TestEventListener, TestKit, TestKitBase}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, OverrideConfig, ProvidesMockPlatform}
@@ -46,7 +48,7 @@ class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean =
 
 sealed trait CleansUpPersistence { this: CleansUpActorSystem =>
 
-  override def cleanupStorage(as: ActorSystem): Unit = {
+  override def cleanupStorage(as: classic.ActorSystem): Unit = {
     FileUtils.deleteRecursively {
       new java.io.File(AkkaTestBasic.tmpdir(as.name))
     }
@@ -64,7 +66,7 @@ sealed trait CleansUpActorSystem extends BeforeAndAfterAll { this: TestKitBase w
     super.afterAll()
   }
 
-  def cleanupStorage(as: ActorSystem): Unit = ()
+  def cleanupStorage(as: classic.ActorSystem): Unit = ()
 
 }
 
@@ -77,6 +79,18 @@ trait PersistentActorSpec
   this: BasicSpecBase =>
 }
 
+trait HasActorSystem {
+  implicit val system: classic.ActorSystem
+  import akka.actor.typed.scaladsl.adapter._
+  implicit lazy val typedSystem: typed.ActorSystem[Nothing] = system.toTyped
+}
+
+trait HasTestActorSystem extends HasActorSystem {
+  import akka.actor.testkit.typed.scaladsl.ActorTestKit
+  lazy val typedTestKit: ActorTestKit = ActorTestKit(typedSystem)
+  lazy val persTestKit: PersistenceTestKit = PersistenceTestKit(system)
+  lazy val snapTestKit: SnapshotTestKit = SnapshotTestKit(system)
+}
 
 /**
   * To help ensure actor-based tests are cleaned up properly, we should use ActorSpec and not TestKit directly
@@ -85,7 +99,7 @@ trait ActorSpec extends TestSuite with ActorSpecLike with OverrideConfig {
   this: BasicSpecBase =>
 
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(overrideConfig)
-  implicit lazy val system: ActorSystem = as
+  implicit lazy val system: classic.ActorSystem = as
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
 }
 

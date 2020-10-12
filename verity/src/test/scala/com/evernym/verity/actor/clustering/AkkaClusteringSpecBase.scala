@@ -8,9 +8,9 @@ import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAgentActorContext}
 import com.evernym.verity.actor.{Platform, agentRegion}
-import com.evernym.verity.testkit.{BasicSpec, BasicSpecBase, CleansUpIndyClientFirst, Matchers}
+import com.evernym.verity.testkit.{BasicSpec, CleansUpIndyClientFirst}
 import com.evernym.verity.ActorErrorResp
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.reflect.ClassTag
 
@@ -22,7 +22,7 @@ trait MultiNodeClusterSpecLike
 
   lazy val firstNodePort: Int = getNextAvailablePort
   lazy val systemName: String = "actorSpecSystem" + firstNodePort
-  lazy val seedNodeConfig: Option[String] = generateSeedNodeConfig(systemName, firstNodePort)
+  lazy val seedNodeConfig: Option[Config] = generateSeedNodeConfig(systemName, firstNodePort)
 
   lazy val node1: TestNodePlatform = {
     val (as, config) = createNodeSystem(systemName, seedNodeConfig, Option(firstNodePort))
@@ -34,21 +34,23 @@ trait MultiNodeClusterSpecLike
     new TestNodePlatform(as, config)
   }
 
-  def generateSeedNodeConfig(systemName: String, firstNodePort: Int): Option[String] = {
+  def generateSeedNodeConfig(systemName: String, firstNodePort: Int): Option[Config] = {
     Option {
-      s"""
-        akka {
-          cluster {
-            seed-nodes = [
-              "akka://$systemName@127.0.0.1:$firstNodePort"
-            ]
+      ConfigFactory parseString {
+        s"""
+          akka {
+            cluster {
+              seed-nodes = [
+                "akka://$systemName@127.0.0.1:$firstNodePort"
+              ]
+            }
           }
-        }
-      """
+        """
+      }
     }
   }
 
-  def createNodeSystem(systemName: String, overrideConfig: Option[String]=None, port: Option[Int]=None): (ActorSystem, Config) = {
+  def createNodeSystem(systemName: String, overrideConfig: Option[Config]=None, port: Option[Int]=None): (ActorSystem, Config) = {
     val portToBeUsed = port.getOrElse(getNextAvailablePort)
     val config = getConfigByPort(portToBeUsed, overrideConfig)
     (ActorSystem(systemName, config), config)

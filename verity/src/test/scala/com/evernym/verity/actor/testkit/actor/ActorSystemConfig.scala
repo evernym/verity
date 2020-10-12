@@ -7,7 +7,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
 trait ActorSystemConfig {
 
-  def journalFailingOnLargeEvents =
+  def journalFailingOnLargeEvents: Config = ConfigFactory parseString {
     s"""
       akka {
         persistence {
@@ -22,8 +22,9 @@ trait ActorSystemConfig {
         }
       }
     """
+  }
 
-  def levelDBJournal(tdir: String) =
+  def levelDBJournal(tdir: String): Config = ConfigFactory parseString {
     s"""
       akka {
         persistence {
@@ -36,81 +37,86 @@ trait ActorSystemConfig {
           }
         }
       }
-
     """
-
-  def singleNodeClusterSharded(systemName: String, port: Int, tdir: String, overrideConfig: Option[String]=None): Config =
-    ConfigFactory.parseString(
-      s"""
-  akka {
-
-    loglevel = "WARNING"
-
-    test {
-      single-expect-default = 5s
-    }
-
-    loggers = ["akka.event.slf4j.Slf4jLogger", "com.evernym.verity.actor.testkit.QuietTestEventListener"]
-    stdout-loglevel = "off"
-
-    debug {
-      receive = on
-    }
-
-    actor {
-      provider = "akka.cluster.ClusterActorRefProvider"
-    }
-
-    remote {
-      log-remote-lifecycle-events = off
-      artery.canonical {
-        hostname = "127.0.0.1"
-        port = $port
-      }
-    }
-
-    persistence {
-      snapshot-store {
-        plugin = "akka.persistence.snapshot-store.local"
-        local.dir = "$tdir/snapshots"
-      }
-    }
-
-    cluster {
-
-      seed-nodes = [
-        "akka://$systemName@127.0.0.1:$port"
-      ]
-      roles = ["backend"]
-      jmx.multi-mbeans-in-same-jvm = on  # this is to get rid of warnings in tests
-    }
-
-    actor {
-
-      serializers {
-        protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
-        kryo-akka = "com.twitter.chill.akka.AkkaSerializer"
-      }
-
-      serialization-bindings {
-        "com.evernym.verity.actor.TransformedMultiEvent" = protoser
-        "com.evernym.verity.actor.TransformedEvent" = protoser
-        "com.evernym.verity.actor.TransformedState" = protoser
-        "com.evernym.verity.actor.PersistentData" = protoser
-        "com.evernym.verity.actor.ActorMessage" = kryo-akka
-      }
-
-      allow-java-serialization = off
-
-      //NOTE: below config is to test message serialization/deserialization in testing environment to catch any related issues early
-      serialize-messages = on
-    }
   }
 
-  """
-        + levelDBJournal(tdir)            //default persistence
-        + overrideConfig.getOrElse("")    //override any of the above default configuration
-    )
+  def singleNodeClusterSharded(systemName: String, port: Int, tdir: String, overrideConfig: Option[Config]=None): Config =
+  {
+    val baseConfigStr =
+      s"""
+      akka {
+
+        loglevel = "WARNING"
+
+        test {
+          single-expect-default = 5s
+        }
+
+        loggers = ["akka.event.slf4j.Slf4jLogger", "com.evernym.verity.actor.testkit.QuietTestEventListener"]
+        stdout-loglevel = "off"
+
+        debug {
+          receive = on
+        }
+
+        actor {
+          provider = "akka.cluster.ClusterActorRefProvider"
+        }
+
+        remote {
+          log-remote-lifecycle-events = off
+          artery.canonical {
+            hostname = "127.0.0.1"
+            port = $port
+          }
+        }
+
+        persistence {
+          snapshot-store {
+            plugin = "akka.persistence.snapshot-store.local"
+            local.dir = "$tdir/snapshots"
+          }
+        }
+
+        cluster {
+
+          seed-nodes = [
+            "akka://$systemName@127.0.0.1:$port"
+          ]
+          roles = ["backend"]
+          jmx.multi-mbeans-in-same-jvm = on  # this is to get rid of warnings in tests
+        }
+
+        actor {
+
+          serializers {
+            protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
+            kryo-akka = "com.twitter.chill.akka.AkkaSerializer"
+            jackson-cbor = "akka.serialization.jackson.JacksonCborSerializer"
+          }
+
+          serialization-bindings {
+            "com.evernym.verity.actor.TransformedMultiEvent" = protoser
+            "com.evernym.verity.actor.TransformedEvent" = protoser
+            "com.evernym.verity.actor.TransformedState" = protoser
+            "com.evernym.verity.actor.PersistentData" = protoser
+            "com.evernym.verity.actor.ActorMessage" = kryo-akka
+          }
+
+          allow-java-serialization = off
+
+          //NOTE: below config is to test message serialization/deserialization in testing environment to catch any related issues early
+          serialize-messages = on
+        }
+      }
+      """
+    val baseConfig = ConfigFactory.parseString(baseConfigStr)
+
+    overrideConfig.getOrElse(ConfigFactory.empty())
+      .withFallback(levelDBJournal(tdir)) //default persistence
+      .withFallback(baseConfig)
+
+  }
 
 
   def tmpdir(systemName: String) = s"target/actorspecs/$systemName"
@@ -127,7 +133,7 @@ trait ActorSystemConfig {
 
   def systemNameForPort(port: Int): String = "actorSpecSystem" + port
 
-  def getConfigByPort(port: Int, overrideConfig: Option[String]=None): Config = {
+  def getConfigByPort(port: Int, overrideConfig: Option[Config]=None): Config = {
     val systemName = systemNameForPort(port)
     val tdir = tmpdir(systemName)
     overrideConfigValuesIfAny(singleNodeClusterSharded(systemName, port, tdir, overrideConfig))
@@ -140,20 +146,20 @@ trait ActorSystemConfig {
     overrideConfigValuesIfAny(singleNodeClusterSharded(systemName, port, tdir))
   }
 
-  def getConfig(overrideConfig: Option[String]=None): Config = {
+  def getConfig(overrideConfig: Option[Config]=None): Config = {
     getConfigByPort(getNextAvailablePort, overrideConfig)
   }
 
-  def getOverriddenConfig(overrideConfig: Option[String]=None): Config = {
+  def getOverriddenConfig(overrideConfig: Option[Config]=None): Config = {
     val port = getNextAvailablePort
     getConfigByPort(port, overrideConfig)
   }
 
-  def system(overrideConfig: Option[String]=None): ActorSystem = {
+  def system(overrideConfig: Option[Config]=None): ActorSystem = {
     systemWithConfig(overrideConfig)._1
   }
 
-  def systemWithConfig(overrideConfig: Option[String]=None): (ActorSystem, Config) = {
+  def systemWithConfig(overrideConfig: Option[Config]=None): (ActorSystem, Config) = {
     val port = getNextAvailablePort
     val config = getConfigByPort(port, overrideConfig)
     val systemName = systemNameForPort(port)

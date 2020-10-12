@@ -2,6 +2,7 @@ package com.evernym.verity.actor.testkit.actor
 
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.config.AppConfig
+import com.typesafe.config.Config
 
 /**
  * unless overridden by implementing class, this is the place where app config
@@ -20,5 +21,5 @@ trait OverrideConfig {
    * The withFallback method is used, so the expectation is that overrideConfig includes only those config
    * entries that are being overridden.
    */
-  def overrideConfig: Option[String] = None
+  def overrideConfig: Option[Config] = None
 }

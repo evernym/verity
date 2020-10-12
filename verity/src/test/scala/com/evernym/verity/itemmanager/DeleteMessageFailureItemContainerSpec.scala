@@ -11,6 +11,7 @@ import com.evernym.verity.apphealth.AppStateConstants.{CONTEXT_MANUAL_UPDATE, ST
 import com.evernym.verity.apphealth._
 import com.evernym.verity.apphealth.state.{InitializingState, ListeningState, SickState}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
+import com.typesafe.config.Config
 import org.scalatest.time.{Seconds, Span}
 
 import scala.concurrent.Future
@@ -22,11 +23,9 @@ class DeleteMessageFailureItemManagerSpec
     with SystemExitSpec {
 
 
-  override def overrideConfig: Option[String] = Option {
-    s"""
-       |$deleteEventFailure
-       |$watcherConfig
-       |""".stripMargin
+  override def overrideConfig: Option[Config] = Option {
+    watcherConfig
+      .withFallback(configForDeleteEventFailure)
   }
 
   final val ITEM_TYPE = "uap-messages"

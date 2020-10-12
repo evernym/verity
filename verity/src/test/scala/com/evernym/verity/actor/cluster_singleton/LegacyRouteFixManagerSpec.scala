@@ -14,6 +14,7 @@ import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -110,8 +111,10 @@ class LegacyRouteFixManagerSpec extends PersistentActorSpec with BasicSpec with 
     }
   )
 
-  override def overrideConfig: Option[String] = Option {
-    s"verity.agent.route-store.fix-legacy-routes.enabled = true"
+  override def overrideConfig: Option[Config] = Option {
+    ConfigFactory parseString {
+      s"verity.agent.route-store.fix-legacy-routes.enabled = true"
+    }
   }
 }
 

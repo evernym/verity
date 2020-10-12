@@ -18,6 +18,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
 import com.evernym.verity.util.Base64Util
+import com.typesafe.config.Config
 
 class WalletBackupActorSpec
   extends UserAgentSpecScaffolding
@@ -29,7 +30,7 @@ class WalletBackupActorSpec
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
-  override def overrideConfig: Option[String] = Option {
+  override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.journalFailingOnLargeEvents
   }
 

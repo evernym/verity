@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.event.LoggingReceive
 import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity}
+import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
@@ -24,24 +24,23 @@ class ActivityTracker(override val appConfig: AppConfig)
   type StateKey = String
   type StateType = State
   var state = new State
-  var activityWindows: ActivityWindow = ActivityWindow(Set())
-
  /**
   * actor persistent state object
   */
- class State(_activity: Map[StateKey, AgentActivity]=Map.empty) {
+ class State(_activity: Map[StateKey, AgentActivity]=Map.empty, activityWindow: ActivityWindow=ActivityWindow(Set())) {
+   def activityWindows: ActivityWindow = activityWindow
 
    def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
      s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
-   def copy(newActivity: Map[StateKey, AgentActivity]): State = new State(newActivity)
+   def copy(newActivity: Map[StateKey, AgentActivity]=_activity, activityWindow: ActivityWindow=activityWindow): State =
+     new State(newActivity, activityWindow)
    def activity: Map[StateKey, AgentActivity] = _activity
-   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] =
-     _activity.get(key(window, id))
+   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
  }
 
   override def beforeStart(): Unit = {
     super.beforeStart()
-    activityWindows = ConfigUtil.findActivityWindow(appConfig)
+    applyEvent(ConfigUtil.findActivityWindow(appConfig).asEvt)
   }
 
  /**
@@ -49,12 +48,14 @@ class ActivityTracker(override val appConfig: AppConfig)
   */
  val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
   case activity: AgentActivity => handleAgentActivity(activity)
-  case updateActivityWindows: ActivityWindow => activityWindows = updateActivityWindows
+  case updateActivityWindows: ActivityWindow => applyEvent(updateActivityWindows.asEvt)
  }
 
  val receiveEvent: Receive = {
   case r: RecordingAgentActivity =>
-    state = state.copy( state.activity + (r.stateKey -> AgentActivity(r)))
+    state = state.copy(newActivity=state.activity + (r.stateKey -> AgentActivity(r)))
+  case w: WindowActivityDefined =>
+     state = state.copy(activityWindow=ActivityWindow.fromEvt(w))
  }
 
   /**
@@ -64,8 +65,8 @@ class ActivityTracker(override val appConfig: AppConfig)
    * 4. Record accordingly
    */
   def handleAgentActivity(activity: AgentActivity): Unit = {
-   appConfig.logger.debug(s"request to record activity: $activity, windows: $activityWindows")
-   activityWindows
+   appConfig.logger.debug(s"request to record activity: $activity, windows: ${state.activityWindows}")
+   state.activityWindows
      .windows
      .filter(window => isUntrackedMetric(window, activity))
      .foreach(window => recordAgentMetric(window, activity))
@@ -100,10 +101,10 @@ class ActivityTracker(override val appConfig: AppConfig)
       activity.domainId,
       activity.timestamp,
       activity.sponsorRel.sponsorId,
-      activity.sponsorRel.sponseeId,
       activity.activityType,
       activity.relId.getOrElse(""),
-      state.key(window, activity.id(window.activityType))
+      state.key(window, activity.id(window.activityType)),
+      activity.sponsorRel.sponseeId,
     )
 
     writeAndApply(recording)
@@ -166,7 +167,25 @@ object VariableDuration {
 
 /** ActivityTracker Commands */
 trait ActivityTracking extends ActorMessageClass
-final case class ActivityWindow(windows: Set[ActiveWindowRules]) extends ActivityTracking
+final case class ActivityWindow(windows: Set[ActiveWindowRules]) extends ActivityTracking {
+  def asEvt: WindowActivityDefined =
+    WindowActivityDefined(windows.map(x => WindowRules(x.activityFrequency.toString, x.activityType.toString)).toSeq)
+}
+object ActivityWindow {
+  def fromEvt(e: WindowActivityDefined): ActivityWindow = new ActivityWindow(e.windows.map(x => {
+    val frequency: FrequencyType = x.frequency match {
+      case f if f == CalendarMonth.toString => CalendarMonth
+      case f => VariableDuration(f)
+    }
+
+    val behavior: Behavior = x.behavior match {
+      case b if b == ActiveUsers.toString => ActiveUsers
+      case b if b == ActiveRelationships.toString => ActiveRelationships
+    }
+    ActiveWindowRules(frequency, behavior)
+  }).toSet)
+
+}
 final case class AgentActivity(domainId: DID,
                                timestamp: IsoDateTime,
                                sponsorRel: SponsorRel,

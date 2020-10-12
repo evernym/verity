@@ -263,7 +263,8 @@ object DefaultEventMapper extends EventCodeMapper {
     198 -> Completed,
     199 -> StatusUpdated,
     200 -> RouteProcessed,
-    201 -> RecordingAgentActivity
+    201 -> RecordingAgentActivity,
+    202 -> WindowActivityDefined
   )
 
 }

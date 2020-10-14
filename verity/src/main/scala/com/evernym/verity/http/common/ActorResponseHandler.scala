@@ -6,11 +6,11 @@ import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.ExceptionHandler
 import akka.pattern.AskTimeoutException
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_STATUS_CODE, LOG_KEY_STATUS_DETAIL}
-import com.evernym.verity.Exceptions._
+import com.evernym.verity.Exceptions.{FeatureNotEnabledException, _}
 import com.evernym.verity.Status.{StatusDetail, TIMEOUT, UNHANDLED}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.{ActorErrorResp, ActorResponse, Exceptions, Status}
+import com.evernym.verity.{ActorErrorResp, ActorResponse, DoNotLogError, Exceptions, Status}
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -80,9 +80,10 @@ trait ActorResponseHandler {
 
   def logErrorIfNeeded(e: Any): Unit = {
     e match {
-      case ate: AskTimeoutException => logger.warn(Exceptions.getStackTraceAsSingleLineString(ate))
-      case rte: RuntimeException    => logger.error(Exceptions.getStackTraceAsSingleLineString(rte))
-      case _                        => //nothing
+      case _: DoNotLogError           => //nothing
+      case ate: AskTimeoutException   => logger.warn(Exceptions.getStackTraceAsSingleLineString(ate))
+      case e: Exception               => logger.error(Exceptions.getStackTraceAsSingleLineString(e))
+      case _                          => //nothing
     }
   }
 }

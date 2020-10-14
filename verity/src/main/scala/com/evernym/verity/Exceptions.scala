@@ -47,26 +47,32 @@ object Exceptions {
   class BadRequestErrorException(code: String, msg: Option[String] = None,
                                  msgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends HandledErrorException(code, msg, msgDetail, errorDetail)
+      with DoNotLogError
 
   class NotImplementedErrorException(code: String, msg: Option[String] = None,
                                      msgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends HandledErrorException(code, msg, msgDetail, errorDetail)
+      with DoNotLogError
 
   class NotEnabledErrorException(code: String, msg: Option[String] = None,
                                  msgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends HandledErrorException(code, msg, msgDetail, errorDetail)
+      with DoNotLogError
 
   class NotFoundErrorException(code: String, msg: Option[String] = None,
                                msgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends HandledErrorException(code, msg, msgDetail, errorDetail)
+      with DoNotLogError
 
   class ForbiddenErrorException(msg: Option[String] = None,
                                 msgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends HandledErrorException(FORBIDDEN.statusCode, msg, msgDetail, errorDetail)
+      with DoNotLogError
 
   class UnauthorisedErrorException(msg: Option[String] = None,
                                    msgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends HandledErrorException(UNAUTHORIZED.statusCode, msg, msgDetail, errorDetail)
+      with DoNotLogError
 
   //specific exceptions
   class MissingReqFieldException(statusMsg: Option[String] = None,
@@ -153,3 +159,7 @@ object Exceptions {
     getStackTraceAsString(e).replace("\n", "\\n")
   }
 }
+
+// just a marker trait to decide if the exception is extending this trait
+// those doesn't need to be logged as an error
+trait DoNotLogError

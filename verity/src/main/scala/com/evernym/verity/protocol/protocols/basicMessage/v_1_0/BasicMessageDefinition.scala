@@ -2,8 +2,8 @@ package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{AccessRight, AccessSign, AccessVerify, MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition}
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Sender, Receiver}
+import com.evernym.verity.protocol.engine.{AccessRight, AccessSign, AccessVerify, MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Receiver, Sender}
 
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = BasicMessageMsgFamily
@@ -21,9 +21,6 @@ object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg
   }
 
   def initialState: State = State.Uninitialized()
-}
 
-object ProblemReportCodes {
-  val invalidAnswer = "invalid-answer"
-  val unexpectedMessage = "unexpected-message"
+  override def scope: Scope.ProtocolScope = Scope.Relationship // Should be tied to a given Relationship
 }

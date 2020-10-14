@@ -7,11 +7,12 @@ import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Envelope1
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessage._
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl._
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Sender, Receiver}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Receiver, Sender}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Signal._
+import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Signal
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -53,7 +54,7 @@ class BasicMessageSpec
     "produces valid json" in { _ =>
       val t = MockableWalletAccess.randomSig()
       val msg = Msg.Message(
-        "en",
+        l10n(locale = Some("en")),
         BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")),
         "Hello, World!"
       )
@@ -79,39 +80,31 @@ class BasicMessageSpec
 
           s.sender ~ testSendMessage(EXPIRATION_TIME)
 
-          s.receiver expect signal [Signal.ReceiveMessage]
+          s.receiver expect signal [Signal.ReceivedMessage]
 
           s.sender.state shouldBe a[State.Messaging]
-          //checkStatus(s.sender, StatusReport("Messaging"))
 
           s.receiver.state shouldBe a[State.Messaging]
-          //checkStatus(s.receiver, StatusReport("Messaging"))
         }
       }
     }
-//    "when Sender sends message" - {
-//      "Receiver should receive message" in { s =>
-//        interaction (s.sender, s.receiver) {
-//
-//          s.sender ~ testSendMessage(EXPIRATION_TIME)
-//
-//          s.receiver walletAccess MockableWalletAccess()
-//
-//          s.sender walletAccess MockableWalletAccess()
-//
-//          s.receiver.state shouldBe a[State.Messaging]
-//          checkStatus(s.receiver, StatusReport("Message Received"))
-//
-//          s.sender.state shouldBe a[State.Messaging]
-//          val result = s.sender expect signal [Signal.ReceiveMessage]
-//          result.valid_signature shouldBe true
-//          checkStatus(
-//            s.sender,
-//            StatusReport("AnswerReceived", expectedAnswer(CORRECT_ANSWER))
-//          )
-//        }
-//      }
-//    }
+    "when Sender sends message" - {
+      "Receiver should receive message" in { s =>
+        interaction (s.sender, s.receiver) {
+
+          s.sender ~ testSendMessage(EXPIRATION_TIME)
+
+          val result = s.receiver expect signal [Signal.ReceivedMessage]
+          result.content shouldBe "Hello, World!"
+          result.`~l10n` shouldBe l10n(locale = Some("en"))
+          result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
+
+          s.receiver.state shouldBe a[State.Messaging]
+
+          s.sender.state shouldBe a[State.Messaging]
+        }
+      }
+    }
   }
 
 //  def expectedAnswer(answer: String,
@@ -166,7 +159,7 @@ object TestingVars extends CommonSpecUtil {
   val SENDER = "sender"
   val RECEIVER = "receiver"
   val MESSAGE_CONTENT = "Hello, World!"
-  val INTERNATIONALIZATION = "en"
+  val INTERNATIONALIZATION = l10n(locale = Some("en"))
 
   val EXPIRATION_TIME = Option(BaseTiming(expires_time = Some("2118-12-13T17:29:06+0000")))
   val TIME_EXPIRED = Option(BaseTiming(expires_time = Some("2017-12-13T17:29:06+0000")))

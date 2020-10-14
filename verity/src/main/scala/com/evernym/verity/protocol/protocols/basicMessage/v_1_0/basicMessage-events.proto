@@ -22,9 +22,3 @@ message MessageSent {
     string sentTime             = 2;
     string content              = 3;
 }
-
-message Error {
-    option (scalapb.message).extends = "Event";
-    int32 errorCode = 1;
-    string comment  = 2;
-}

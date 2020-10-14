@@ -4,7 +4,7 @@ import com.evernym.verity.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming, Localization => l10n}
 
 object BasicMessageMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
@@ -18,12 +18,10 @@ object BasicMessageMsgFamily extends MsgFamily {
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "Init"              -> classOf[Ctl.Init],
     "send-message"      -> classOf[Ctl.SendMessage],
-    "get-status"        -> classOf[Ctl.GetStatus],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-    classOf[Signal.ReceiveMessage]   -> "message-received",
-    classOf[Signal.ProblemReport] -> "problem-report",
+    classOf[Signal.ReceivedMessage] -> "received-message",
   )
 }
 
@@ -35,15 +33,11 @@ sealed trait Msg extends MsgBase
 
 object Msg {
 
-  case class Message(`~I10n`: String,
+  case class Message(`~l10n`: l10n = l10n(locale = Some("en")),
                       sent_time: BaseTiming,
                       content: String
                      ) extends Msg
 }
-
-case class Sig(signature: Base64Encoded,
-               sig_data: Base64Encoded,
-               timestamp: String)
 
 // Control Messages
 sealed trait Ctl extends Control with MsgBase
@@ -52,29 +46,16 @@ object Ctl {
 
   case class Init(selfId: ParameterValue, otherId: ParameterValue) extends Ctl
 
-  case class SendMessage(`~l10n`: String,
+  case class SendMessage(`~l10n`: l10n,
                          sent_time: BaseTiming,
                          content: String) extends Ctl
-
-  case class GetStatus() extends Ctl
 }
 
 // Signal Messages
 sealed trait SignalMsg
 
 object Signal {
-  case class ReceiveMessage(`~l10n`: String,
+  case class ReceivedMessage(`~l10n`: l10n,
                             sent_time: BaseTiming,
                             content: String) extends SignalMsg
-
-  case class ProblemReport(description: ProblemDescription) extends SignalMsg
-
-  def buildProblemReport(description: String, code: String): ProblemReport = {
-    Signal.ProblemReport(
-      ProblemDescription(
-        Some(description),
-        code
-      )
-    )
-  }
 }

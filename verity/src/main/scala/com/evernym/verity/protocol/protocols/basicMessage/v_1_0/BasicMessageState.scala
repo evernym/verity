@@ -10,16 +10,13 @@ object State {
 
   case class Error(errorCode:   Int,
                    comment:     String,
-                   question:    Option[Msg.Message] = None,
-                   response:    Option[String] = None,
-                   signature:   Option[Sig] = None,
-                   received:    Option[String] = None,
+                   message:    Option[Msg.Message] = None,
+                   content:    Option[String] = None,
                   ) extends State
 
   // Receiver and Sender STATE:
 
   // Only one state
-  case class Messaging(message:    Msg.Message,
-                      ) extends State
+  case class Messaging(message: Msg.Message) extends State
 }
 

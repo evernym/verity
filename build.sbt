@@ -88,13 +88,7 @@ lazy val verity = (project in file("verity"))
     ),
 
     // Conditionally download an unpack shared libraries
-    update := {
-      sys.env.get(managedSharedLibTrigger)
-      .map{ _ =>
-          update.dependsOn(updateSharedLibraries).value
-      }
-      .getOrElse(update.value)
-    }
+    update := update.dependsOn(updateSharedLibraries).value
   )
 
 lazy val integrationTests = (project in file("integration-tests"))

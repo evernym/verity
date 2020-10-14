@@ -1,5 +1,6 @@
 import java.nio.file.{Files, Path, Paths}
 
+import sbt.Keys.update
 import sbt._
 import sbt.internal.util.ManagedLogger
 
@@ -30,6 +31,10 @@ object SharedLibrary {
   def defaultUpdateSharedLibraries(libs: Seq[Lib],
                                    shareLibTarget: Path,
                                    logger: ManagedLogger): Unit = {
+    println("HI**********")
+    if(!sys.env.contains(managedSharedLibTrigger)) return
+    println("BYE**********")
+
     // check that required commands are available
     try {
       "dpkg --version".!!

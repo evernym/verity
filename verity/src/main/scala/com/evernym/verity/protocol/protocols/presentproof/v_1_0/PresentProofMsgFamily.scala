@@ -24,15 +24,13 @@ object PresentProofMsgFamily
     "Init"              -> classOf[Ctl.Init],
     "request"           -> classOf[Ctl.Request],
     "present"           -> classOf[Ctl.AcceptRequest],
-//    "accept-proposal"   -> classOf[Ctl.AcceptProposal],
-//    "propose"           -> classOf[Ctl.Propose],
+    "accept-proposal"   -> classOf[Ctl.AcceptProposal],
+    "propose"           -> classOf[Ctl.Propose],
     "reject"            -> classOf[Ctl.Reject],
     "status"            -> classOf[Ctl.Status],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-//    classOf[_]          -> "sent",
-//    classOf[_]          -> "received",
     classOf[Sig.ReviewRequest]        -> "review-request",
     classOf[Sig.ReviewProposal]       -> "review-proposal",
     classOf[Sig.PresentationResult]   -> "presentation-result",
@@ -41,11 +39,24 @@ object PresentProofMsgFamily
   )
 }
 
+case class PresentationPreviewAttribute(name: String,
+                                        cred_def_id: Option[String],
+                                        `mime-type`: Option[String],
+                                        value: Option[String],
+                                        referent: Option[String])
+case class PresentationPreviewPredicate(name: String,
+                                        cred_def_id: String,
+                                        predicate: String,
+                                        threshold: String)
+case class PresentationPreview(attributes: Seq[PresentationPreviewAttribute],
+                               predicates: Seq[PresentationPreviewPredicate],
+                               `@type`: String = "https://didcomm.org/present-proof/1.0/presentation-preview")
+
 // Protocol Messages
 sealed trait ProtoMsg extends MsgBase
 
 package object Msg {
-  case class ProposePresentation(comment: String = "") extends ProtoMsg
+  case class ProposePresentation(comment: String = "", presentation_proposal: PresentationPreview) extends ProtoMsg
   case class RequestPresentation(comment: String = "",
                                  `request_presentations~attach`: Seq[EmbeddingAttachment]) extends ProtoMsg
   case class Presentation(comment: String = "",
@@ -74,8 +85,10 @@ package object Ctl {
                      proof_predicates: Option[List[ProofPredicate]],
                      revocation_interval: Option[RevocationInterval]) extends CtlMsg
   case class AcceptRequest(selfAttestedAttrs: Map[String, String]=Map.empty) extends CtlMsg
-//  case class AcceptProposal() extends CtlMsg
-//  case class Propose() extends CtlMsg
+  case class AcceptProposal() extends CtlMsg
+  case class Propose(attributes: Option[List[PresentationPreviewAttribute]],
+                     predicates: Option[List[PresentationPreviewPredicate]],
+                     comment: String) extends CtlMsg
   case class Reject(reason: Option[String]) extends CtlMsg
   case class Status() extends CtlMsg
 
@@ -86,7 +99,9 @@ sealed trait SigMsg
 case class Problem(code: Int, error: String)
 package object Sig {
   case class ReviewRequest(proof_request: ProofRequest, can_fulfill: Boolean) extends SigMsg
-  case class ReviewProposal() extends SigMsg
+  case class ReviewProposal(attributes: Seq[PresentationPreviewAttribute],
+                            predicates: Seq[PresentationPreviewPredicate],
+                            comment: String) extends SigMsg
   case class PresentationResult(verification_result: String, requested_presentation: AttributesPresented) extends SigMsg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
   case class StatusReport(status: String, results: Option[PresentationResult], error: Option[Problem])

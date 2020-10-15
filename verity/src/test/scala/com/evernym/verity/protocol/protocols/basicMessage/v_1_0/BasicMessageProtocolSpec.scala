@@ -18,6 +18,7 @@ import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocols
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeUtil._
+import org.joda.time.base.BaseDateTime
 import org.scalatest.Assertion
 
 import scala.language.{implicitConversions, reflectiveCalls}
@@ -36,12 +37,6 @@ class BasicMessageSpec
     val receiver: TestEnvir = s(RECEIVER)
   }
 
-//  def checkStatus(envir: TestEnvir, expectedStatus: StatusReport): Unit = {
-//    envir clear signals
-//    envir ~ GetStatus()
-//    (envir expect signal [StatusReport]) shouldBe expectedStatus
-//  }
-
   "Basic Message Protocol Definition" - {
     "should have two roles" in { _ =>
       BasicMessageDefinition.roles.size shouldBe 2
@@ -49,10 +44,8 @@ class BasicMessageSpec
     }
   }
 
-
   "Message Msg" - {
     "produces valid json" in { _ =>
-      val t = MockableWalletAccess.randomSig()
       val msg = Msg.Message(
         l10n(locale = Some("en")),
         BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")),
@@ -76,11 +69,11 @@ class BasicMessageSpec
 
     "when Enterprise Driver sends SendMessage control message" - {
       "sender and receiver should both be in the messaging state" in { s =>
-        interaction (s.sender, s.receiver) {
+        interaction(s.sender, s.receiver) {
 
-          s.sender ~ testSendMessage(EXPIRATION_TIME)
+          s.sender ~ testSendMessage()
 
-          s.receiver expect signal [Signal.ReceivedMessage]
+          s.receiver expect signal[Signal.ReceivedMessage]
 
           s.sender.state shouldBe a[State.Messaging]
 
@@ -90,11 +83,11 @@ class BasicMessageSpec
     }
     "when Sender sends message" - {
       "Receiver should receive message" in { s =>
-        interaction (s.sender, s.receiver) {
+        interaction(s.sender, s.receiver) {
 
-          s.sender ~ testSendMessage(EXPIRATION_TIME)
+          s.sender ~ testSendMessage()
 
-          val result = s.receiver expect signal [Signal.ReceivedMessage]
+          val result = s.receiver expect signal[Signal.ReceivedMessage]
           result.content shouldBe "Hello, World!"
           result.`~l10n` shouldBe l10n(locale = Some("en"))
           result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
@@ -105,52 +98,41 @@ class BasicMessageSpec
         }
       }
     }
+      "Receiver can also send messages " in { s =>
+        interaction (s.sender, s.receiver) {
+          s.sender ~ testSendMessage()
+
+          s.receiver expect signal [Signal.ReceivedMessage]
+
+          s.sender.state shouldBe a[State.Messaging]
+
+          s.receiver.state shouldBe a[State.Messaging]
+
+          s.receiver ~ testSendMessage()
+
+          s.sender expect signal [Signal.ReceivedMessage]
+
+          s.sender.state shouldBe a[State.Messaging]
+
+          s.receiver.state shouldBe a[State.Messaging]
+        }
+    }
+
   }
 
-//  def expectedAnswer(answer: String,
-//                     validAnswer: Boolean = true,
-//                     validSig: Boolean = true,
-//                     notExpired: Boolean = true): Some[AnswerGiven] = {
-//    Some(
-//      AnswerGiven(
-//        answer,
-//        valid_answer = validAnswer,
-//        valid_signature = validSig,
-//        not_expired = notExpired
-//      )
-//    )
-//  }
+  "Negative Cases" - {
+    "Sender does not include localization" in { s =>
+      interaction (s.sender, s.receiver) {
+        s.sender ~ SendMessage(
+          sent_time=BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")),
+          content="Hello, World",
+        )
 
-//  def compareQuestion(q1: Msg.Question, q2: Msg.Question): Assertion = {
-//    val normalizedResponses  = q1.valid_responses
-//      .zip(q2.valid_responses)
-//      .map{ x =>
-//        (x._1.copy(nonce = ""), x._2.copy(nonce = ""))
-//      }
-//      .unzip
-//    assert(
-//      q1.copy(valid_responses = normalizedResponses._1) == q2.copy(valid_responses = normalizedResponses._2)
-//    )
-//  }
-
-//  def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {
-//    s.receiver walletAccess MockableWalletAccess()
-//    s.sender walletAccess MockableWalletAccess()
-//  }
-
-//  def askAndAnswer(s: Scenario,
-//                   ex: Option[BaseTiming] = EXPIRATION_TIME,
-//                   out: Option[BaseTiming] = OUT_TIME): Unit = {
-//
-//    s.questioner ~ testAskQuestion(ex)
-//    s.questioner expect state [State.QuestionSent]
-//    s.responder expect signal [Signal.AnswerNeeded]
-//    s.responder expect state [State.QuestionReceived]
-//
-//    s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
-//    s.responder expect state [State.AnswerSent]
-//    s.questioner expect state [State.AnswerReceived]
-//  }
+        var result = s.receiver expect signal [Signal.ReceivedMessage]
+        result.`~l10n` shouldBe l10n(locale = Some("en"))
+      }
+    }
+  }
 
   override val containerNames: Set[ContainerName] = Set(TestingVars.SENDER, TestingVars.RECEIVER)
 }
@@ -159,23 +141,14 @@ object TestingVars extends CommonSpecUtil {
   val SENDER = "sender"
   val RECEIVER = "receiver"
   val MESSAGE_CONTENT = "Hello, World!"
-  val INTERNATIONALIZATION = l10n(locale = Some("en"))
-
-  val EXPIRATION_TIME = Option(BaseTiming(expires_time = Some("2118-12-13T17:29:06+0000")))
-  val TIME_EXPIRED = Option(BaseTiming(expires_time = Some("2017-12-13T17:29:06+0000")))
+  val LOCALIZATION = l10n(locale = Some("en"))
   val OUT_TIME = BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
 
-  def testSendMessage(time: Option[BaseTiming]): SendMessage = {
+  def testSendMessage(): SendMessage = {
     SendMessage(
-      INTERNATIONALIZATION,
+      LOCALIZATION,
       OUT_TIME,
       MESSAGE_CONTENT
     )
   }
-
-//  def testQuestion(time: Option[BaseTiming]): Msg.Question =
-//    Msg.Question(QUESTION_TEXT, QUESTION_DETAIL, VALID_RESPONSES, time)
-//
-//  def testAnswer(time: Option[BaseTiming], sigData: Sig = TEST_SIGNATURE_DATA): Msg.Answer =
-//    Msg.Answer(sigData)
 }

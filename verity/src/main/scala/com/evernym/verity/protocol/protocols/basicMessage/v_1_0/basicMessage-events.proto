@@ -7,7 +7,7 @@ package com.evernym.verity.protocol.protocols.basicMessage.v_1_0;
 
 message Initialized {
     option (scalapb.message).extends = "Event";
-    string selfIdValue = 1;
+    string selfIdValue  = 1;
     string otherIdValue = 2;
 }
 
@@ -16,9 +16,17 @@ message MyRole {
     int32  roleNum = 1;
 }
 
+message AttachmentObject {
+    string id               = 1;
+    string mimeType         = 2;
+    string filename         = 3;
+    string data_base64      = 4;
+}
+
 message MessageSent {
     option (scalapb.message).extends = "Event";
-    string l10n                 = 1;
-    string sentTime             = 2;
-    string content              = 3;
+    string localization                     = 1;
+    string sentTime                         = 2;
+    string content                          = 3;
+    repeated AttachmentObject attachments   = 4;
 }

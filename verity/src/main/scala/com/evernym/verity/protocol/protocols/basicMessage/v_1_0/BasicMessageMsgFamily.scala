@@ -26,7 +26,14 @@ object BasicMessageMsgFamily extends MsgFamily {
 }
 
 // Sub Types
-case class MessageResponse(text: String, nonce: Nonce)
+
+case class Attachment(`@id`: String,
+                      `mime-type`: String,
+                      filename: String,
+                      lastmod_time: String,
+                      description: String,
+                      data_base64: String,
+                     )
 
 // Messages
 sealed trait Msg extends MsgBase
@@ -35,7 +42,8 @@ object Msg {
 
   case class Message(`~l10n`: l10n = l10n(locale = Some("en")),
                       sent_time: BaseTiming,
-                      content: String
+                      content: String = "",
+                     `~attach`: Option[Vector[Attachment]]
                      ) extends Msg
 }
 
@@ -46,9 +54,11 @@ object Ctl {
 
   case class Init(selfId: ParameterValue, otherId: ParameterValue) extends Ctl
 
-  case class SendMessage(`~l10n`: l10n,
+  case class SendMessage(`~l10n`: l10n = l10n(locale = Some("en")),
                          sent_time: BaseTiming,
-                         content: String) extends Ctl
+                         content: String,
+                         `~attach`: Option[Vector[Attachment]]
+                        ) extends Ctl
 }
 
 // Signal Messages
@@ -57,5 +67,7 @@ sealed trait SignalMsg
 object Signal {
   case class ReceivedMessage(`~l10n`: l10n,
                             sent_time: BaseTiming,
-                            content: String) extends SignalMsg
+                            content: String,
+                             `~attach`: Option[Vector[Attachment]]
+                            ) extends SignalMsg
 }

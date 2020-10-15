@@ -1,13 +1,15 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import java.util.UUID
+
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming, Localization => l10n}
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Sender, Receiver}
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Receiver, Sender}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.AttachmentObject
 import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.evernym.verity.util.TimeUtil._
 
@@ -37,15 +39,13 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   def applyEvent: ApplyEvent = {
     case (_: State.Uninitialized , _ , e: Initialized  ) => (State.Initialized(), initialize(e))
     case (_                      , _ , MyRole(n)       ) => (None, setRole(n))
-    case (_: State.Initialized   , r , e: MessageSent  ) =>
-      r.selfRole_! match {
-        case Sender => State.Messaging(buildMessage(e))
-        case Receiver  => State.Messaging(buildMessage(e))
-      }
+    case (_: State.Initialized   , _ , e: MessageSent  ) => State.Messaging(buildMessage(e))
+    case (_: State.Messaging     , _ , e: MessageSent  ) => State.Messaging(buildMessage(e))
   }
   // Protocol Msg Handlers
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
     case (_: State.Initialized  , _ , m: Msg.Message ) => receiveMessage(m)
+    case (_: State.Messaging  , _ , m: Msg.Message ) => receiveMessage(m)
   }
   // Control Message Handlers
   def handleControl: Control ?=> Any = {
@@ -64,7 +64,8 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     val signal = Signal.ReceivedMessage(
       m.`~l10n`,
       m.sent_time,
-      m.content
+      m.content,
+      attachmentsToStrings(m.`~attach`),
     )
     ctx.signal(signal)
   }
@@ -74,7 +75,8 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     val messageMsg = Msg.Message(
       m.`~l10n`,
       m.sent_time,
-      m.content
+      m.content,
+      m.`~attach`,
     )
     ctx.apply(messageToEvt(messageMsg))
     ctx.send(messageMsg, Some(Receiver), Some(Sender))
@@ -95,22 +97,26 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
 object BasicMessage {
   def buildMessage(m: MessageSent): Msg.Message = {
     Msg.Message(
-      l10n(locale = Some("en")),
-      BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")),
-      "Hello World",
+      l10n(locale = Some(m.localization)),
+      BaseTiming(out_time = Some(m.sentTime)),
+      m.content,
+      Some(attachmentObjectsToAttachments(m.attachments)),
     )
-//    Msg.Message(
-//      l10n(locale = Some(m.l10n)),
-//      BaseTiming(out_time = Some(m.sentTime)),
-//      m.content,
-//    )
   }
 
   def messageToEvt(m: Msg.Message): MessageSent = {
     MessageSent(
       m.`~l10n`.locale.get,
       m.sent_time.out_time.get,
-      m.content
+      m.content,
+      attachmentsToAttachmentObjects(m.`~attach`.get),
     )
+  }
+
+  def attachmentsToAttachmentObjects(values: Vector[Attachment]): Vector[AttachmentObject] = {
+    values.map(a => AttachmentObject(a.`@id`, a.`mime-type`, a.filename, a.data_base64))
+  }
+  def attachmentObjectsToAttachments(values: Vector[AttachmentObject]): Vector[Attachment] = {
+    values.map(a => Attachment(a.id, a.mimeType, a.filename, a.dataBase64))
   }
 }

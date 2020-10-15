@@ -13,15 +13,14 @@ def eprint(*args, **kwargs):
 def test_genesis_is_avaiable(tries, interval_sec):
     for t in range(0, tries):
         if t > 0:
-            eprint("sleeping for " + str(interval_sec))
             time.sleep(interval_sec)
-        eprint("Trying to retrieve genesis file.")
         try:
             r = urlopen("http://0.0.0.0:5679/genesis.txt").read()
             return True
         except OSError as e:
             pass
 
+    eprint("Failed to retrieve genesis file after " + tries +" try(s)")
     return False
 
 def main():

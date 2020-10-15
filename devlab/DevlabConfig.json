@@ -18,10 +18,14 @@
       "status_script": "/devlab/scripts/verity_pool_health.py"
     },
     "verity-dynamodb": {
-      "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-dynamodb:20b4ceda",
+      "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-dynamodb:5ac4add3",
+      "mounts": [
+        ":/devlab"
+      ],
       "cmd": "-jar DynamoDBLocal.jar -sharedDb -dbPath $HOME/data",
       "enabled": true,
-      "ports": ["8000:8000"]
+      "ports": ["8000:8000"],
+      "status_script": "/devlab/scripts/verity_dynamodb_health.sh"
     },
     "verity-mysql": {
       "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-mysql-wallet:288429c3",
@@ -54,6 +58,9 @@
     },
     "verity-yourls": {
       "image": "gitlab.corp.evernym.com:4567/dev/containers/yourls-mysql:2283cd0c",
+      "mounts": [
+        ":/devlab"
+      ],
       "enabled": true,
       "ports": ["8080:80"],
       "run_opts": [
@@ -63,7 +70,9 @@
         "YOURLS_USER=yourlsuser",
         "-e",
         "YOURLS_PASS=yourlspass"
-      ]
+      ],
+      "scripts": ["/devlab/scripts/verity_yourls_install.sh"],
+      "status_script": "/devlab/scripts/verity_yourls_health.sh"
     }
   },
   "project_filter": "verity_integration_env",

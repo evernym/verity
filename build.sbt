@@ -26,7 +26,7 @@ val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
 val libIndyVer = "1.15.0~1542"
-val shardLibDeps = Seq(
+val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),
   LibPack("libmysqlstorage",  "0.1.11"),
@@ -82,7 +82,7 @@ lazy val verity = (project in file("verity"))
     protoBufSettings,
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
     updateSharedLibraries := defaultUpdateSharedLibraries(
-      shardLibDeps,
+      sharedLibDeps,
       target.value.toPath.resolve("shared-libs"),
       streams.value.log
     ),

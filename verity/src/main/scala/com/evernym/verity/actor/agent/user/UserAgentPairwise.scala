@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PAC
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.agency.SetupCreateKeyEndpoint
+import com.evernym.verity.actor.agent.agency.{SetupCreateKeyEndpoint, SponsorRel}
 import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
@@ -32,7 +32,6 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
@@ -50,6 +49,8 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUpdated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
+import com.evernym.verity.Exceptions
+import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}
 import com.evernym.verity.texter.SmsInfo
@@ -74,7 +75,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with AgentActivityTracker
+    with HasAgentActivity
+    with HasSponsorRel
     with FailedMsgRetrier {
 
   type StateType = State
@@ -139,6 +141,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     case stc: StoreThreadContext                            => handleStoreThreadContext(stc)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
+    case s: SetSponsorRel                                   => if (state.sponsorRel.isEmpty) setSponsorDetail(s.rel)
   }
 
   override final def receiveAgentEvent: Receive =
@@ -151,13 +154,15 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       agentSpecificEventReceiver
 
   val eventReceiver: Receive = {
-    case os: OwnerSetForAgent     => 
+    case os: OwnerSetForAgent     =>
       state.setMySelfRelDID(os.ownerDID)
       state.setOwnerAgentKeyDID(os.agentDID)
     case ads: AgentDetailSet      =>
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
       state.setConnectionStatus(state.connectionStatus.map(_.copy(answerStatusCode = csu.statusCode)))
+    case sa: SponsorAssigned               =>
+      state.setSponsorRel(SponsorRel(sa.id, sa.sponsee))
   }
 
   //this is for backward compatibility
@@ -740,9 +745,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
                                     msgId: MsgId,
                                     msgName: MsgName,
                                     thread: Option[MsgThread]=None): Future[Any] = {
-    logger.debug(s"msg:${msgName}, domainId:$domainId, sponsor:$sponsorId}")
-    trackAgentActivity(msgName, domainId, sponsorId, sponseeId, state.theirDid)
-
     logger.debug("about to send stored msg to other entity: " + msgId)
     omp.givenMsg match {
 
@@ -913,3 +915,8 @@ case class ProcessPersistedSendRemoteMsg(
 
 case class StoreThreadContext(pinstId: PinstId, threadContext: ThreadContextDetail) extends ActorMessageClass
 case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessageClass
+case class SetSponsorRel(rel: SponsorRel) extends ActorMessageClass
+object SetSponsorRel {
+  def apply(rel: Option[SponsorRel]): SetSponsorRel =
+    new SetSponsorRel(rel.getOrElse(SponsorRel.empty))
+}

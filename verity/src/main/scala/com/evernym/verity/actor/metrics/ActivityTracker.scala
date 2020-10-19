@@ -6,10 +6,12 @@ import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
 
@@ -24,6 +26,7 @@ class ActivityTracker(override val appConfig: AppConfig)
   type StateKey = String
   type StateType = State
   var state = new State
+  val logger: Logger = getLoggerByClass(classOf[ActivityTracker])
  /**
   * actor persistent state object
   */
@@ -41,6 +44,7 @@ class ActivityTracker(override val appConfig: AppConfig)
   override def beforeStart(): Unit = {
     super.beforeStart()
     applyEvent(ConfigUtil.findActivityWindow(appConfig).asEvt)
+    logger.info(s"started activity tracker with windows: ${state.activityWindows}")
   }
 
  /**
@@ -65,10 +69,11 @@ class ActivityTracker(override val appConfig: AppConfig)
    * 4. Record accordingly
    */
   def handleAgentActivity(activity: AgentActivity): Unit = {
-   appConfig.logger.debug(s"request to record activity: $activity, windows: ${state.activityWindows}")
+   logger.debug(s"request to record activity: $activity, windows: ${state.activityWindows}")
    state.activityWindows
      .windows
      .filter(window => isUntrackedMetric(window, activity))
+     .filter(window => relationshipValidation(window, activity))
      .foreach(window => recordAgentMetric(window, activity))
  }
 
@@ -87,6 +92,12 @@ class ActivityTracker(override val appConfig: AppConfig)
     })
   }
 
+  def relationshipValidation(window: ActiveWindowRules, activity: AgentActivity): Boolean =
+    window.activityType match {
+      case ActiveRelationships if activity.relId.isEmpty => false
+      case _ => true
+    }
+
   /*
     1. There will be two metrics, active users, active relationships
     2. Each entry will be tagged with either a domainId or sponsorId
@@ -95,7 +106,7 @@ class ActivityTracker(override val appConfig: AppConfig)
     4.
    */
   def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
-    appConfig.logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity)}")
+    logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity)}")
     MetricsWriter.gaugeApi.incrementWithTags(window.activityType.metricBase, agentTags(window, activity))
     val recording = RecordingAgentActivity(
       activity.domainId,

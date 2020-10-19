@@ -217,6 +217,12 @@ trait SetupEndpoint extends ActorMessageClass {
 }
 
 case class SponsorRel(sponsorId: String, sponseeId: String)
+object SponsorRel {
+  def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
+    new SponsorRel(sponsorId.getOrElse(""), sponseeId.getOrElse(""))
+
+  def empty: SponsorRel = new SponsorRel("", "")
+}
 case class SetupAgentEndpoint(
                                override val ownerDID: DID,
                                override val agentKeyDID: DID

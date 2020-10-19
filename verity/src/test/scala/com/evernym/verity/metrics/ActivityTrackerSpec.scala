@@ -16,6 +16,7 @@ import kamon.tag.TagSet
 import org.scalatest.BeforeAndAfterEach
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with BeforeAndAfterEach {
 
@@ -150,6 +151,30 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
     }
 
     "with a window of Active Agent Relationship" - {
+      "should filter windows when relationship is missing" in {
+        val baseTimeStamp = "2020-08-01"
+        val windowMonthRel = ActiveWindowRules(CalendarMonth, ActiveRelationships)
+        val window7DayRel = ActiveWindowRules(VariableDuration("7 d"), ActiveRelationships)
+        val window2DayUser = ActiveWindowRules(VariableDuration("2 d"), ActiveUsers)
+        val windows = Set(windowMonthRel, window7DayRel, window2DayUser)
+        val missingRelId: Option[String] = None
+        val activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE, missingRelId)
+
+        val activityTracker = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
+        activityTracker ! activity
+        activityTracker ! activity
+        Thread.sleep(500)
+
+        /*
+          1. Should only record for Active Users because relId is missing
+         */
+        val metricKeys = windows.map(_.activityType.metricBase)
+        val metrics = getMetricWithTags(metricKeys)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, missingRelId) == 0.0)
+        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, missingRelId) == 0.0)
+        assert(extractTagCount(metrics, window2DayUser, SPONSOR_REL1.sponsorId) == 1.0)
+      }
+
       "should record new activity with multiple relationships" in {
         val baseTimeStamp = "2020-08-01"
         val windowMonthRel = ActiveWindowRules(CalendarMonth, ActiveRelationships)
@@ -178,7 +203,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         val window7DayRel = ActiveWindowRules(VariableDuration("7 d"), ActiveRelationships)
         val window3DayUser = ActiveWindowRules(VariableDuration("3 d"), ActiveUsers)
         val windows = Set(windowMonthRel, window7DayRel, window3DayUser)
-        var activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
+        var activity = AgentActivity(DOMAIN_ID, baseTimeStamp, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE, Some(REL_ID1))
 
         val activityTracker = system.actorOf(ActivityTracker.props(metricConfig(ActivityWindow(windows))))
         activityTracker ! activity
@@ -202,7 +227,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
           Both the 30 day and monthly discard it because it doesn't increase window.
          */
         val sevenDayIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("7 d"))
-        activity = AgentActivity(DOMAIN_ID, sevenDayIncrease, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE)
+        activity = AgentActivity(DOMAIN_ID, sevenDayIncrease, SPONSOR_REL1, DEFAULT_ACTIVITY_TYPE, Some(REL_ID1))
         activityTracker ! activity
         Thread.sleep(500)
 
@@ -219,7 +244,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
           Only the tag for domainId will increase
          */
         val threeMonthIncrease = TimeUtil.dateAfterDuration(baseTimeStamp, Duration("90 d"))
-        val newActivity = AgentActivity(DOMAIN_ID2, threeMonthIncrease, SPONSOR_REL2, DEFAULT_ACTIVITY_TYPE)
+        val newActivity = AgentActivity(DOMAIN_ID2, threeMonthIncrease, SPONSOR_REL2, DEFAULT_ACTIVITY_TYPE, Some(REL_ID2))
         activityTracker ! newActivity
         Thread.sleep(500)
 
@@ -271,7 +296,8 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
                       window: ActiveWindowRules,
                       id: String,
                       relId: Option[String]=None): Double =
-    metrics(window.activityType.metricBase).tag(window, id, relId).get
+    Try(metrics(window.activityType.metricBase)).map(_.tag(window, id, relId)).getOrElse(Some(0.0)).getOrElse(0.0)
+
 
   def getMetricWithTags(names: Set[String]): Map[String, MetricWithTags] = {
     val report = awaitReport(JavaDuration.ofSeconds(5))

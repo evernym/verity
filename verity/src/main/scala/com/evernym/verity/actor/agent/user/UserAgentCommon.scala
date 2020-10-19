@@ -9,6 +9,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
+import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
@@ -126,6 +127,11 @@ trait UserAgentCommon
     }.getOrElse(List.empty)
   }
 
+  def setSponsorDetail(s: SponsorRel): Unit = {
+    logger.debug(s"set sponsor details: $s")
+    writeAndApply(SponsorAssigned(s.sponsorId, s.sponseeId))
+  }
+
   def setAgentActorDetail(saw: SetAgentActorDetail): Unit = {
     logger.debug("'SetAgentActorDetail' received", (LOG_KEY_SRC_DID, saw.did), (LOG_KEY_PERSISTENCE_ID, persistenceId))
     setAndOpenWalletIfExists(saw.actorEntityId)
@@ -224,8 +230,6 @@ trait UserAgentCommon
 
   override def sendStoredMsgToEdge(msgId:MsgId): Future[Any] = {
     logger.debug("about to send stored msg: " + msgId)
-    //TODO: activity should be handled on outgoing message to other cloud agent (Not Edge)
-    trackAgentActivity("unknown", domainId, sponsorId, sponseeId, state.theirDid)
     self ? SendStoredMsgToSelf(msgId)
   }
 

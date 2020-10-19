@@ -8,9 +8,9 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentActorContext, MsgPackVersion}
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.agency.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SetupCreateKeyEndpoint, SetupEndpoint}
+import com.evernym.verity.actor.agent.{HasAgentActivity, AgentActorContext, MsgPackVersion}
+import com.evernym.verity.actor.agent.agency.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SetupCreateKeyEndpoint, SetupEndpoint, SponsorRel}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, PayloadMetadata, ProcessSendSignalMsg, SendSignalMsg}
 import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
@@ -56,8 +56,9 @@ import scala.util.{Failure, Left, Success}
  */
 class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
+    with HasSponsorRel
     with HasPublicIdentity
-    with AgentActivityTracker
+    with HasAgentActivity
     with MsgNotifierForUserAgent {
 
   type StateType = State
@@ -71,7 +72,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
       with PublicIdentity
       with RelationshipAgents
       with MsgAndDeliveryState
-      with OptSponsorId
       with Configs {
     override def initialRel: Relationship = SelfRelationship.empty
   }
@@ -149,7 +149,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     case rka: RecoveryKeyAdded             => handleRecoveryKeyAdded(rka.verKey)
     case cmu: ComMethodUpdated             => handleUpdateAuthKeyAndEndpoint(cmu)
     case cmd: ComMethodDeleted             => handleRemoveComMethod(cmd)
-    case sa: SponsorAssigned               => state.setSponsorId(sa.id); state.setSponseeId(sa.sponsee)
+    case sa: SponsorAssigned               => state.setSponsorRel(SponsorRel(sa.id, sa.sponsee))
     case pis: PublicIdentityStored         => state.setPublicIdentity(DidPair(pis.DID, pis.verKey))
 
       //this is received for each new pairwise connection/actor that gets created
@@ -245,6 +245,11 @@ class UserAgent(val agentActorContext: AgentActorContext)
     } else {
       writeApplyAndSendItBack(ads)
     }
+
+    logger.info(s"setting sponsor for pw: ${ads.agentKeyDID}")
+    agentActorContext
+      .agentMsgRouter
+      .execute(InternalMsgRouteParam(ads.agentKeyDID, SetSponsorRel(state.sponsorRel)))
   }
 
   def handleDeleteComMethod(dcm: DeleteComMethod): Unit = {
@@ -257,7 +262,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def getComMethods(types: Seq[Int] = Seq.empty): CommunicationMethods =
-    state.comMethodsByTypes(types, state.sponsorId)
+    state.comMethodsByTypes(types, state.sponsorRel.map(_.sponsorId))
 
   def sendComMethodsByType(filterComMethodTypes: Seq[Int]): Unit = {
     logger.debug("about to send com methods...")
@@ -308,8 +313,11 @@ class UserAgent(val agentActorContext: AgentActorContext)
       writeAndApply(AgentDetailSet(forDID, pairwiseKeyResult.did))
       pairwiseKeyResult.did
     } else forDID
+
     val ipc = buildSetupCreateKeyEndpoint(forDID, endpointDID)
-    val resp = userAgentPairwiseRegion ? ForIdentifier(getNewActorId, ipc)
+    val pairwiseEntityId = getNewActorId
+    val resp = userAgentPairwiseRegion ? ForIdentifier(pairwiseEntityId, ipc)
+    userAgentPairwiseRegion ! ForIdentifier(pairwiseEntityId, SetSponsorRel(state.sponsorRel))
     (resp, endpointDID)
   }
 
@@ -415,14 +423,14 @@ class UserAgent(val agentActorContext: AgentActorContext)
         ucm.comMethod
       case COM_METHOD_TYPE_HTTP_ENDPOINT  => UrlDetail(ucm.comMethod.value); ucm.comMethod
       case COM_METHOD_TYPE_FWD_PUSH       =>
-        if (state.sponsorId.isEmpty){
+        if (state.sponsorRel.isEmpty){
           throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("no sponsor registered - cannot register fwd method"))
         }
         else {
           ComMethod(ucm.comMethod.id, ucm.comMethod.`type`, ucm.comMethod.value, None)
         }
       case COM_METHOD_TYPE_SPR_PUSH       =>
-        if (state.sponsorId.isEmpty){
+        if (state.sponsorRel.isEmpty){
           throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("no sponsor registered - cannot register sponsor push method"))
         }
         else {
@@ -581,6 +589,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
               case MPV_MSG_PACK | MPV_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
               case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack version not supported: " + x))
             }
+            AgentActivityTracker.track(respMsg.metadata.map(_.msgTypeStr).getOrElse(""), domainId, state.sponsorRel, Some(fromDID))
             fromDID -> msgs
           }.toMap
           val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(result)(reqMsgContext.agentMsgContext)
@@ -613,10 +622,12 @@ class UserAgent(val agentActorContext: AgentActorContext)
     writeAndApply(evt)
     writeAndApply(AgentKeyCreated(se.agentKeyDID))
     val setRouteFut = setRoute(se.ownerDID, Option(se.agentKeyDID))
+    var sponsorRel: Option[SponsorRel] = None
     val sndr = sender()
     val resp = se match {
       case s: SetupAgentEndpoint_V_0_7  =>
-        s.sponsorRel.foreach(sr => writeAndApply(SponsorAssigned(sr.sponsorId, sr.sponseeId)))
+        sponsorRel = s.sponsorRel
+        sponsorRel.foreach(setSponsorDetail)
         logger.debug(s"User Agent initialized with V0.7")
         writeAndApply(RequesterKeyAdded(s.requesterVerKey))
         AgentProvisioningDone(s.ownerDID, getVerKeyReqViaCache(s.agentKeyDID), s.threadId)
@@ -625,8 +636,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
         Done
     }
 
-    logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorId: ${state.sponsorId}, sponseeId: ${state.sponseeId}")
-    trackNewAgent(state.sponsorId)
+    logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
+    AgentActivityTracker.newAgent(sponsorRel.map(_.sponsorId))
 
     setRouteFut map {
       case _: RouteSet  => sndr ! resp

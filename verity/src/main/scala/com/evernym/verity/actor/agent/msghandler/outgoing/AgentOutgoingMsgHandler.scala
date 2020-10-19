@@ -6,10 +6,9 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
-import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentIdentity, MsgPackVersion, ThreadContextDetail, TypeFormat}
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
+import com.evernym.verity.actor.agent.{HasAgentActivity, AgentIdentity, MsgPackVersion, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
-import com.evernym.verity.actor.agent.state.OptSponsorId
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.buildAgentMsg
@@ -33,9 +32,8 @@ import scala.util.{Failure, Success, Try}
 
 trait AgentOutgoingMsgHandler
   extends SendOutgoingMsg
-    with OptSponsorId
     with AgentIdentity
-    with AgentActivityTracker { this: AgentMsgHandler with AgentPersistentActor  =>
+    with HasAgentActivity { this: AgentMsgHandler with AgentPersistentActor =>
 
   lazy val defaultSelfRecipKeys = Set(KeyInfo(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
 
@@ -147,6 +145,12 @@ trait AgentOutgoingMsgHandler
 
     val agentMsg = createAgentMsg(oam.msg, oam.threadId, oam.pinstId, oam.protoDef, isSignalMsg=isSignalMsg)
     logger.debug("outgoing msg: prepared agent msg: " + threadContext)
+
+    if (!isSignalMsg) {
+      val myDID = ParticipantUtil.agentId(oam.context.from)
+      logger.debug(s"outgoing msg: my participant DID: " + myDID)
+      AgentActivityTracker.track(agentMsg.msgType.msgName, domainId, state.sponsorRel, Some(myDID))
+    }
 
     handleOutgoingMsg(agentMsg, threadContext, oam.context)
   }

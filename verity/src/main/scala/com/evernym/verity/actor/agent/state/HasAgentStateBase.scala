@@ -7,6 +7,7 @@ package com.evernym.verity.actor.agent.state
  */
 trait AgentStateBase
   extends RelationshipState
+    with OptHasSponsorRel
     with AgentWalletSeed
     with AgencyDID
     with ThreadContexts

@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship}
+import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.user.AgentProvisioningDone
 import com.evernym.verity.actor.persistence.Done
@@ -35,6 +35,7 @@ import scala.concurrent.Future
  */
 class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
+    with LegacyAgentStateUpdateImpl
     with PairwiseConnState {
 
   type StateType = State
@@ -43,9 +44,11 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
    * actor persistent state object
    */
   class State
-    extends AgentStateBase
+    extends LegacyAgentStateImpl
       with HasConnectionStatus {
     override def initialRel: Relationship = PairwiseRelationship.empty
+
+    override def serializedSize: Int = -1
   }
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
@@ -83,8 +86,8 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
 
   def handleSetupRelationship(myPairwiseDID: DID, theirPairwiseDID: DID): Unit = {
     state.setThisAgentKeyId(myPairwiseDID)
-    val myDidDoc = state.prepareMyDidDoc(myPairwiseDID, myPairwiseDID, Set(EDGE_AGENT_KEY))
-    val theirDidDoc = state.prepareTheirDidDoc(theirPairwiseDID, theirPairwiseDID)
+    val myDidDoc = RelationshipUtil.prepareMyDidDoc(myPairwiseDID, myPairwiseDID, Set(EDGE_AGENT_KEY))
+    val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(theirPairwiseDID, theirPairwiseDID)
     val pairwiseRel = PairwiseRelationship.apply("pairwise", Option(myDidDoc), Option(theirDidDoc))
     state.setRelationship(pairwiseRel)
   }
@@ -158,6 +161,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
    * the purpose of this function is to update any 'LegacyAuthorizedKey' to 'AuthorizedKey'
    */
   override def postSuccessfulActorRecovery(): Unit = {
+    super.postSuccessfulActorRecovery()
     if (state.relationship.nonEmpty) {
       val updatedMyDidDoc = updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
       val updatedTheirDidDoc = updatedDidDocWithMigratedAuthKeys(state.theirDidDoc)

@@ -45,7 +45,7 @@ trait AgencyAgentCommon
   }
 
   def setAgencyAndOwnerDetail(aDID: DID): Unit = {
-    state.setAgencyDID(aDID)
+    setAgencyDID(aDID)
   }
 
   def setAgentActorDetail(saw: SetAgentActorDetail): Unit = {

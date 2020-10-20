@@ -4,6 +4,7 @@ import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, CREATE_MSG_TYPE_REDIRECT_CONN_REQ, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_GET_CONFIGS, MSG_TYPE_GET_MSGS, MSG_TYPE_GET_MSGS_BY_CONNS, MSG_TYPE_MSG_DETAIL, MSG_TYPE_REMOVE_CONFIGS, MSG_TYPE_SEND_MSGS, MSG_TYPE_UPDATE_CONFIGS, MSG_TYPE_UPDATE_CONN_STATUS, MSG_TYPE_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, InviteCreateMsgDetail_MFV_0_5, PairwiseMsgUids, RedirectConnReqMsgDetail_MFV_0_5}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -53,14 +54,19 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       preparePackedRequestForAgent(payload)
     }
 
-    private def buildCoreConnectMsgWithVersion(version: String): PackMsgParam = {
-      val verKey = getVerKeyFromWallet(myDIDDetail.did)
-      val agentMsg = Connect_MFV_0_5(TypeDetail(MSG_TYPE_CONNECT, version), myDIDDetail.did, verKey)
+    private def buildCoreConnectMsgWithVersion(version: String, useRandomDetails: Boolean = false): PackMsgParam = {
+      val (did, verKey) = if (useRandomDetails) {
+        val dd = CommonSpecUtil.generateNewAgentDIDDetail()
+        (dd.did, dd.verKey)
+      } else {
+        (myDIDDetail.did, getVerKeyFromWallet(myDIDDetail.did))
+      }
+      val agentMsg = Connect_MFV_0_5(TypeDetail(MSG_TYPE_CONNECT, version), did, verKey)
       buildAgentMsgPackParam(agentMsg, encryptParamFromEdgeToAgencyAgent)
     }
 
-    def prepareConnectMsg: PackedMsg = {
-      preparePackedRequestForAgent(buildCoreConnectMsgWithVersion(MTV_1_0))
+    def prepareConnectMsg(useRandomDetails: Boolean = false): PackedMsg = {
+      preparePackedRequestForAgent(buildCoreConnectMsgWithVersion(MTV_1_0, useRandomDetails))
     }
 
     def buildSignUpMsgForAgency(msgTypeVersion: String): PackedMsg = {

@@ -8,18 +8,8 @@ import kamon.tag.TagSet
  * metrics api to add/update metrics values
  */
 object MetricsWriter {
-
-  var initialized: Set[String] = Set.empty
-
   lazy val gaugeApi: GaugeApi = GaugeApiImpl
-
-  def addToInitialized(name: String): Unit = {
-    if (! initialized.contains(name)) {
-      initialized = initialized + name
-    }
-  }
-
-  def isInitialized(name: String): Boolean = initialized.contains(name)
+  lazy val histogramApi: HistogramApi = HistogramApiImpl
 }
 
 trait GaugeApi {
@@ -52,10 +42,33 @@ object GaugeApiImpl extends GaugeApi {
 
   private def initializedGaugeMetric(name: String): Metric.Gauge = {
     val gm = gaugeMetric(name)
-    if (! MetricsWriter.isInitialized(name)) {
-      gm.withoutTags().update(0)
-      MetricsWriter.addToInitialized(name)
-    }
     gm
+  }
+}
+
+trait HistogramApi {
+  def record(name: String, value: Long): Unit
+  def recordWithTag(name: String, value: Long, tag: (String, String)): Unit
+  def recordWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty): Unit
+}
+
+object HistogramApiImpl extends HistogramApi {
+  override def record(name: String, value: Long): Unit = initializedHistogramMetric(name).withoutTags().record(value)
+
+  def recordWithTag(name: String, value: Long, tag: (String, String)): Unit = {
+    initializedHistogramMetric(name)
+      .withTag(tag._1, tag._2)
+      .record(value)
+  }
+
+  def recordWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty): Unit = {
+    initializedHistogramMetric(name).withTags(TagSet.from(tags)).record(value)
+  }
+
+  private def histogramMetric(name: String): Metric.Histogram = Kamon.histogram(name)
+
+  private def initializedHistogramMetric(name: String): Metric.Histogram = {
+    val hist = histogramMetric(name)
+    hist
   }
 }

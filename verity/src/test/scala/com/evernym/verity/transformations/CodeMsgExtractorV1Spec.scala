@@ -2,9 +2,9 @@ package com.evernym.verity.transformations
 
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.transformations.transformers.CodeMsgExtractor
+import com.evernym.verity.transformations.transformers.v1.CodeMsgExtractorV1
 
-class CodeMsgExtractorSpec extends BasicSpec {
+class CodeMsgExtractorV1Spec extends BasicSpec {
 
   "CodeMsgExtractor" - {
 
@@ -15,8 +15,8 @@ class CodeMsgExtractorSpec extends BasicSpec {
 
         typeCodes.foreach { code =>
           val msg = KeyCreated("forDID").toByteArray
-          val packedData = CodeMsgExtractor.pack(code, msg)
-          val (extractedCode, extractedMsg) = CodeMsgExtractor.unpack(packedData)
+          val packedData = CodeMsgExtractorV1.pack(code, msg)
+          val (extractedCode, extractedMsg) = CodeMsgExtractorV1.unpack(packedData)
           extractedCode shouldBe code
           extractedMsg shouldBe msg
         }

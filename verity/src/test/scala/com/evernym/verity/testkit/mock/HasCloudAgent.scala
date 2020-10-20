@@ -25,6 +25,8 @@ trait HasCloudAgent { this: MockAgent =>
 
   def agencyEndpoint: UrlDetail
 
+  def agencyPublicDIDReq: DID = agencyPublicDid.get.DID
+
   def getAgencyDIDReq: DID = agencyPublicDid.get.DID
 
   lazy val senderAgencyDetail: SenderAgencyDetail = SenderAgencyDetail(agencyPublicDid.get.DID, agencyPublicDid.get.verKey, agencyEndpoint.toString)

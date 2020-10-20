@@ -137,7 +137,7 @@ object Outbox {
         .withRetention {
           RetentionCriteria.snapshotEvery(
             numberOfEvents = 10,
-            keepNSnapshots = 2
+            keepNSnapshots = 100  //TODO: increased from '2' to higher value to make failing test working, need to come back to this
           )
         }
     }

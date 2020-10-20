@@ -4,6 +4,7 @@ import com.evernym.verity.transformations.Transformer
 
 /**
  * identity transformer
+ * NOTE: assumption is that this transformer won't change ever
  *
  * @tparam A
  */

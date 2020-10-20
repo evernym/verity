@@ -13,7 +13,7 @@ import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
-import com.evernym.verity.actor.agent.state.{AgentStateBase, Configs}
+import com.evernym.verity.actor.agent.state.{Configs, AgentStateInterface}
 import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, SetAgencyIdentity, SetAgentActorDetail, UpdateRoute}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -50,7 +50,7 @@ trait UserAgentCommon
 
   this: AgentPersistentActor with MsgNotifierForUserAgentCommon =>
 
-  type StateType <: AgentStateBase with MsgAndDeliveryState with Configs
+  type StateType <: AgentStateInterface with MsgAndDeliveryState with Configs
 
   def msgState: MsgState = state.msgState
 
@@ -140,7 +140,7 @@ trait UserAgentCommon
 
   def setAgencyIdentity(saw: SetAgencyIdentity): Unit = {
     logger.debug("'SetAgencyIdentity' received", (LOG_KEY_SRC_DID, saw.did), (LOG_KEY_PERSISTENCE_ID, persistenceId))
-    state.setAgencyDID(saw.did)
+    setAgencyDID(saw.did)
     sender ! AgencyIdentitySet(saw.did)
   }
 

@@ -6,7 +6,6 @@ import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
-import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
@@ -24,13 +23,14 @@ import scala.util.Left
  */
 trait PairwiseConnState {
 
-  type StateType <: RelationshipState with HasConnectionStatus
+  type StateType <: AgentStateInterface with RelationshipState with HasConnectionStatus
   def state: StateType
 
   implicit def relationshipUtilParam: RelUtilParam
   def ownerDIDReq: DID
 
-  def relationshipState: Relationship = state.relationship
+  def relationshipState: Relationship = state.relationshipReq
+
   def updateRelationship(rel: Relationship): Unit =
     if(rel.relationshipType != PAIRWISE_RELATIONSHIP) {
       throw new IllegalArgumentException("Can not update to a non-pairwise relationship")
@@ -39,12 +39,12 @@ trait PairwiseConnState {
     }
 
   def updateLegacyRelationshipState(relScopeDID: DID, lrd: LegacyRoutingDetail): Unit = {
-    val theirDidDoc = state.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
+    val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
     updateRelAndConnection(theirDidDoc)
   }
 
   def updateRelationshipState(relScopeDID: DID, agentKeyDID: DID, rd: RoutingDetail): Unit = {
-    val theirDidDoc = state.prepareTheirDidDoc(relScopeDID, agentKeyDID, Option(Right(rd)))
+    val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, agentKeyDID, Option(Right(rd)))
     updateRelAndConnection(theirDidDoc)
   }
 
@@ -85,19 +85,7 @@ trait PairwiseConnState {
   def agentMsgTransformer: AgentMsgTransformer
   def encParamBuilder: EncryptionParamBuilder = new EncryptionParamBuilder(walletVerKeyCacheHelper)
 
-  def theirAgentAuthKey: Option[AuthorizedKeyLike] = state.relationship.theirDidDocAuthKeyByTag(AGENT_KEY_TAG)
-  def theirAgentAuthKeyReq: AuthorizedKeyLike = theirAgentAuthKey.getOrElse(
-    throw new RuntimeException("their agent auth key not yet set")
-  )
-
-  def theirAgentKeyDID: Option[DID] = theirAgentAuthKey.map(_.keyId)
-  def theirAgentKeyDIDReq: DID = theirAgentKeyDID.getOrElse(throw new RuntimeException("their agent auth key not yet set"))
-  def theirAgentVerKey: Option[VerKey] = theirAgentAuthKey.flatMap(_.verKeyOpt)
-  def theirAgentVerKeyReq: VerKey = theirAgentVerKey.getOrElse(throw new RuntimeException("their agent ver key not yet set"))
-
-  def thisAgentVerKeyReq: VerKey = state.thisAgentVerKeyReq
-
-  def isTheirAgentVerKey(key: VerKey): Boolean = theirAgentAuthKey.exists(_.verKeyOpt.contains(key))
+  def isTheirAgentVerKey(key: VerKey): Boolean = state.theirAgentAuthKey.exists(_.verKeyOpt.contains(key))
 
   def isMyPairwiseVerKey(verKey: VerKey): Boolean = {
     val userPairwiseVerKey = walletVerKeyCacheHelper.getVerKeyReqViaCache(state.myDid_!)
@@ -110,11 +98,11 @@ trait PairwiseConnState {
    * @return
    */
   def theirRoutingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]] = {
-    state.theirDidDoc.flatMap(_.endpoints_!.filterByKeyIds(theirAgentKeyDIDReq).headOption).map(_.endpointADTX) map {
+    state.theirDidDoc.flatMap(_.endpoints_!.filterByKeyIds(state.theirAgentKeyDIDReq).headOption).map(_.endpointADTX) map {
       case le: LegacyRoutingServiceEndpoint =>
         Left(LegacyRoutingDetail(le.agencyDID, le.agentKeyDID, le.agentVerKey, le.agentKeyDlgProofSignature))
       case e: RoutingServiceEndpoint        =>
-        Right(RoutingDetail(theirAgentAuthKeyReq.verKey, e.value, e.routingKeys))
+        Right(RoutingDetail(state.theirAgentAuthKeyReq.verKey, e.value, e.routingKeys))
     }
   }
 
@@ -123,7 +111,11 @@ trait PairwiseConnState {
    * internal to the agency msg delivery system (no role in actual agent messages)
    * @return
    */
-  def theirRoutingTarget: String = state.theirDidDoc.flatMap(_.endpoints_!.filterByKeyIds(theirAgentKeyDIDReq).headOption).map(_.endpointADTX) match {
+  def theirRoutingTarget: String =
+    state
+      .theirDidDoc
+      .flatMap(_.endpoints_!.filterByKeyIds(state.theirAgentKeyDIDReq).headOption)
+      .map(_.endpointADTX) match {
     case Some(lrse: LegacyRoutingServiceEndpoint) => lrse.agencyDID
     case Some(rse: RoutingServiceEndpoint)        => rse.value
     case x                                        => throw new RuntimeException("unsupported condition while preparing their routing target: " + x)
@@ -145,17 +137,17 @@ trait PairwiseConnState {
         if (isMyPairwiseVerKey(verKey))
           encParamBuilder
             .withRecipDID(ownerDIDReq)
-            .withSenderVerKey(thisAgentVerKeyReq)
+            .withSenderVerKey(state.thisAgentVerKeyReq)
             .encryptParam
         else if (isTheirAgentVerKey(verKey))
           encParamBuilder
-            .withRecipVerKey(theirAgentVerKeyReq)
-            .withSenderVerKey(thisAgentVerKeyReq)
+            .withRecipVerKey(state.theirAgentVerKeyReq)
+            .withSenderVerKey(state.thisAgentVerKeyReq)
             .encryptParam
         else
           encParamBuilder
             .withRecipVerKey(verKey)
-            .withSenderVerKey(thisAgentVerKeyReq)
+            .withSenderVerKey(state.thisAgentVerKeyReq)
             .encryptParam
       case None => throw new InvalidValueException(Option("no sender ver key found"))
     }
@@ -170,8 +162,8 @@ trait PairwiseConnState {
       case Some(Left(_: LegacyRoutingDetail)) =>
         val encryptParam =
           encParamBuilder
-            .withRecipVerKey(theirAgentVerKeyReq)
-            .withSenderVerKey(thisAgentVerKeyReq)
+            .withRecipVerKey(state.theirAgentVerKeyReq)
+            .withSenderVerKey(state.thisAgentVerKeyReq)
             .encryptParam
         val packMsgParam = PackMsgParam(encryptParam, agentMsgs, wrapInBundledMsgs)
         val packedMsg = AgentMsgPackagingUtil.buildAgentMsg(msgPackVersion, packMsgParam)(agentMsgTransformer, wap)

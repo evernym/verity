@@ -67,7 +67,7 @@ trait AgentMsgHandler
     // is already created in the given context(like agency agent pairwise or user agent pairwise actor etc),
     // and if it is, then it uses that identifier to send incoming message to the protocol actor, or else creates a new protocol actor.
     case ProtocolIdDetailSet(msgFamilyName, msgFamilyVersion, pinstId) =>
-      state.addPinst(ProtoRef(msgFamilyName, msgFamilyVersion) -> pinstId)
+      addPinst(ProtoRef(msgFamilyName, msgFamilyVersion) -> pinstId)
 
     case tcs: ThreadContextStored =>
       val msgTypeFormat = try {
@@ -81,7 +81,7 @@ trait AgentMsgHandler
       val tcd = ThreadContextDetail(tcs.threadId, MsgPackVersion.fromString(tcs.msgPackVersion), msgTypeFormat,
         tcs.usesGenMsgWrapper, tcs.usesBundledMsgWrapper)
 
-      state.addThreadContextDetail(tcs.pinstId, tcd)
+      addThreadContextDetail(tcs.pinstId, tcd)
 
     case _: FirstProtoMsgSent => //nothing to do (deprecated, just kept it for backward compatibility)
 
@@ -91,7 +91,7 @@ trait AgentMsgHandler
       val updatedProtoMsgOrderDetail =
         protoMsgOrderDetail.copy(senderOrder = protoMsgOrderDetail.senderOrder + 1)
       val updatedContext = stc.copy(protoMsgOrderDetail = Option(updatedProtoMsgOrderDetail))
-      state.addThreadContextDetail(pms.pinstId, updatedContext)
+      addThreadContextDetail(pms.pinstId, updatedContext)
 
     case pms: ProtoMsgReceivedOrderIncremented  =>
       val stc = state.threadContextDetail(pms.pinstId)
@@ -101,7 +101,7 @@ trait AgentMsgHandler
       val updatedProtoMsgOrderDetail =
         protoMsgOrderDetail.copy(receivedOrders = updatedReceivedOrders)
       val updatedContext = stc.copy(protoMsgOrderDetail = Option(updatedProtoMsgOrderDetail))
-      state.addThreadContextDetail(pms.pinstId, updatedContext)
+      addThreadContextDetail(pms.pinstId, updatedContext)
   }
 
   /**

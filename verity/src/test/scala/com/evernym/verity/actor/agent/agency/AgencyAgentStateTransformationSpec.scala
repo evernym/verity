@@ -9,11 +9,12 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.ConnectingProtoDef
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.transformations.transformers._
+import com.evernym.verity.transformations.transformers.{IdentityTransformer, _}
+import com.evernym.verity.transformations.transformers.v1._
 
 class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
-  lazy val transformer = createPersistenceTransformer("enc key", new IdentityTransformer)
+  lazy val transformer = createPersistenceTransformerV1("enc key", new IdentityTransformer)
 
   "AgencyAgentState" - {
 

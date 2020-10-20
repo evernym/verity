@@ -10,7 +10,7 @@ import "relationship.proto";
 package com.evernym.verity.actor.agent.agency;
 
 message AgencyAgentState {
-    option (scalapb.message).extends = "com.evernym.verity.actor.State";
+    option (scalapb.message).extends = "com.evernym.verity.actor.agent.agency.AgencyAgentStateImpl";
     bool isEndpointSet = 1;
     google.protobuf.StringValue thisAgentKeyId = 2;
     google.protobuf.StringValue agencyDID = 3;

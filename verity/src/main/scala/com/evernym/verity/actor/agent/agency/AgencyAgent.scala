@@ -10,8 +10,8 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, Relationship, RelationshipUtil}
-import com.evernym.verity.actor.agent.state.AgentStateBase
+import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, DidDoc, Relationship, RelationshipUtil}
+import com.evernym.verity.actor.agent.state.{AgentStateUpdateInterface, AgentStateInterface}
 import com.evernym.verity.actor.agent.user.AgentProvisioningDone
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.cache._
@@ -40,23 +40,12 @@ import scala.util.Left
  */
 class AgencyAgent(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
-    with AgencyPackedMsgHandler {
+    with AgencyAgentStateUpdateImpl
+    with AgencyPackedMsgHandler
+    with AgencyAgentSnapshotter {
 
-  type StateType = State
-  val state = new State
-  /**
-   * actor persistent state object
-   */
-  class State extends AgentStateBase {
-
-    /**
-     * indicates whether this agency agent's endpoint is set in the ledger
-     */
-    private var _isEndpointSet: Boolean = false
-    def isEndpointSet: Boolean = _isEndpointSet
-    def setIsEndpointSet(value: Boolean): Unit = _isEndpointSet = value
-    override def initialRel: Relationship = AnywiseRelationship.empty
-  }
+  type StateType = AgencyAgentState
+  var state = new AgencyAgentState
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 
@@ -85,15 +74,16 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   val eventReceiver: Receive = {
     //dhh What type of "key" are we talking about here, that gets created?
     case kg: KeyCreated             => handleKeyCreated(kg)
-    case _: EndpointSet             => state.setIsEndpointSet(true)
+    case _: EndpointSet             => state = state.withIsEndpointSet(true)
     case _: AgentDetailSet          => //nothing to do, kept it for backward compatibility
   }
 
   def handleKeyCreated(kg: KeyCreated): Unit = {
-    state.setAgencyDID(kg.forDID)
-    state.setThisAgentKeyId(kg.forDID)
-    val myDidDoc = state.prepareMyDidDoc(kg.forDID, kg.forDID, Set(EDGE_AGENT_KEY))
-    state.setRelationship(AnywiseRelationship(myDidDoc))
+    state = state
+      .withAgencyDID(kg.forDID)
+      .withThisAgentKeyId(kg.forDID)
+    val myDidDoc = RelationshipUtil.prepareMyDidDoc(kg.forDID, kg.forDID, Set(EDGE_AGENT_KEY))
+    state = state.withRelationship(AnywiseRelationship(myDidDoc))
   }
 
   override def getAgencyDIDFut: Future[DID] = state.agencyDID match {
@@ -322,11 +312,14 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
    * the purpose of this function is to update any 'LegacyAuthorizedKey' to 'AuthorizedKey'
    */
   override def postSuccessfulActorRecovery(): Unit = {
-    if (state.relationship.nonEmpty) {
+    super.postSuccessfulActorRecovery()
+    state = state
+      .relationship
+      .map { r =>
       val updatedMyDidDoc = RelationshipUtil.updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
-      val updatedRel = state.relationship.copy(myDidDoc = updatedMyDidDoc)
-      state.updateRelationship(updatedRel)
-    }
+      state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
+      }
+      .getOrElse(state)
   }
 
   override def isReadyToHandleIncomingMsg: Boolean = state.isEndpointSet
@@ -393,3 +386,60 @@ case object SetEndpoint extends ActorMessageObject
 
 case object UpdateEndpoint extends ActorMessageObject
 
+trait AgencyAgentStateImpl extends AgentStateInterface with State { this: AgencyAgentState =>
+
+  def relationshipOpt: Option[Relationship] = relationship
+
+  def threadContextReq: ThreadContext = threadContext.getOrElse(
+    throw new RuntimeException("thread context not available"))
+
+  def sponsorRel: Option[SponsorRel] = None
+
+  override def threadContextDetail(pinstId: PinstId): ThreadContextDetail =
+    threadContextReq.contexts(pinstId)
+
+  override def threadContextsContains(pinstId: PinstId): Boolean =
+    threadContext.exists(_.contexts.contains(pinstId))
+
+  override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
+    protoInstances.flatMap(_.instances.get(protoDef.toString))
+
+  def myDidDoc: Option[DidDoc] = relationshipOpt.flatMap(_.myDidDoc)
+  def myDidDoc_! : DidDoc = myDidDoc.getOrElse(throw new RuntimeException("myDidDoc is not set yet"))
+  def myDid: Option[DID] = myDidDoc.map(_.did)
+  def myDid_! : DID = myDid.getOrElse(throw new RuntimeException("myDid is not set yet"))
+
+  def theirDidDoc: Option[DidDoc] = relationshipOpt.flatMap(_.theirDidDoc)
+  def theirDidDoc_! : DidDoc = theirDidDoc.getOrElse(throw new RuntimeException("theirDidDoc is not set yet"))
+  def theirDid: Option[DID] = theirDidDoc.map(_.did)
+  def theirDid_! : DID = theirDid.getOrElse(throw new RuntimeException("theirDid is not set yet"))
+}
+
+trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgent =>
+
+  override def setAgentWalletSeed(seed: String): Unit = {
+    state = state.withAgentWalletSeed(seed)
+  }
+
+  override def setAgencyDID(did: DID): Unit = {
+    state = state.withAgencyDID(did)
+  }
+
+  override def setSponsorRel(rel: SponsorRel): Unit = {
+    //nothing to do
+  }
+
+  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
+    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
+    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
+  }
+
+  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
+    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
+    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
+    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
+  }
+
+  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
+}

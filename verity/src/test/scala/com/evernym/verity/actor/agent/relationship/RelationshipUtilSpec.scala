@@ -29,7 +29,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'prepareMyDidDoc' with 'agentKeyDID' same as provided in relUtilParam" - {
         "should create correct MyDidDic" in {
-          val myDidDoc = buildMyDidDoc("relDID", "thisAgentKeyId", Set.empty)
+          val myDidDoc = prepareMyDidDoc("relDID", "thisAgentKeyId", Set.empty)
 
           myDidDoc.did shouldBe "relDID"
           myDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("thisAgentKeyId", "", Set.empty)))
@@ -41,7 +41,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'prepareMyDidDoc' with 'agentKeyDID' different than provided in relUtilParam" - {
         "should create correct my DidDic" in {
-          val myDidDoc = buildMyDidDoc("relDID", "otherAgentKeyId", Set(EDGE_AGENT_KEY))
+          val myDidDoc = prepareMyDidDoc("relDID", "otherAgentKeyId", Set(EDGE_AGENT_KEY))
           myDidDoc.did shouldBe "relDID"
           myDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("otherAgentKeyId", "", Set(EDGE_AGENT_KEY))))
           myDidDoc.endpoints.value shouldBe Endpoints.empty
@@ -64,7 +64,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'prepareMyDidDoc' with 'agentKeyDID' same as provided in relUtilParam" - {
         "should create correct MyDidDic" in {
-          val myDidDoc = buildMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)
+          val myDidDoc = prepareMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)
 
           myDidDoc.did shouldBe "relDID"
           myDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(
@@ -78,7 +78,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'prepareMyDidDoc' with 'agentKeyDID' different than provided in relUtilParam" - {
         "should create correct MyDidDic" in {
-          val myDidDoc = buildMyDidDoc("relDID", "M34tyavAr1ZQYmARN4Gt5D", Set(EDGE_AGENT_KEY))
+          val myDidDoc = prepareMyDidDoc("relDID", "M34tyavAr1ZQYmARN4Gt5D", Set(EDGE_AGENT_KEY))
 
           myDidDoc.did shouldBe "relDID"
           myDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(
@@ -100,7 +100,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with legacy auth keys" - {
         "should migrate LegacyAuthorizedKey to AuthorizedKey" in {
-          val myDidDoc = buildMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamDuringRecovery)
+          val myDidDoc = prepareMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamDuringRecovery)
           myDidDoc.authorizedKeys_!.keys shouldBe Seq(AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "", Set.empty))
           val updatedDidDoc = updatedDidDocWithMigratedAuthKeys(Option(myDidDoc))(relUtilParamPostRecovery)
           updatedDidDoc.isDefined shouldBe true
@@ -113,7 +113,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with legacy and other duplicate keys" - {
         "should migrate LegacyAuthorizedKey to AuthorizedKey" in {
-          val myDidDoc = buildMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamDuringRecovery)
+          val myDidDoc = prepareMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamDuringRecovery)
           val updatedDidDoc = myDidDoc.updatedWithNewAuthKey("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty)
           val updatedDidDocWithEndpoints = updatedDidDoc.updatedWithEndpoint(PushEndpoint("1", "123"), Set("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5"))
 
@@ -137,7 +137,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
 
       "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with standard auth keys" - {
         "should provide unmodified did doc" in {
-          val myDidDoc = buildMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamPostRecovery)
+          val myDidDoc = prepareMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamPostRecovery)
           myDidDoc.authorizedKeys_!.keys shouldBe Seq(AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty))
           val updatedDidDoc = updatedDidDocWithMigratedAuthKeys(Option(myDidDoc))(relUtilParamPostRecovery)
           updatedDidDoc.isDefined shouldBe true

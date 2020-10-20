@@ -35,4 +35,6 @@ package object persistence {
   case object ActorInitializedPostRecovery extends ActorMessageObject
 
   case class InternalReqHelperData(reqMsgContext: ReqMsgContext)
+
+  def stdPersistenceId(entityName: String, entityId: String) = s"$entityName-$entityId"
 }

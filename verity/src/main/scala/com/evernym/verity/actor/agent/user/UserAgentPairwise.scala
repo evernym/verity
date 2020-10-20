@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
@@ -18,7 +17,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.{EndpointADT, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, Relationship, RoutingServiceEndpoint, Tags}
+import com.evernym.verity.actor.agent.relationship.{EndpointADT, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, Relationship, RelationshipUtil, RoutingServiceEndpoint, Tags}
 import com.evernym.verity.actor.agent.state.{OwnerDetail, _}
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
 import com.evernym.verity.actor.cluster_singleton.{ForMetricsHelper, ForUserAgentPairwiseActorWatcher, MetricsCountUpdated, UpdateCountMetrics, UpdateFailedAttemptCount, UpdateFailedMsgCount, UpdateUndeliveredMsgCount}
@@ -70,13 +69,13 @@ import scala.util.{Failure, Left, Success}
  */
 class UserAgentPairwise(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
+    with LegacyAgentStateUpdateImpl
     with AgentMsgSender
     with UsesConfigs
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
     with HasAgentActivity
-    with HasSponsorRel
     with FailedMsgRetrier {
 
   type StateType = State
@@ -85,7 +84,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
    * actor persistent state object
    */
   class State
-    extends AgentStateBase
+    extends LegacyAgentStateImpl
       with OwnerDetail
       with HasConnectionStatus
       with MsgAndDeliveryState
@@ -94,6 +93,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       new MsgDeliveryState(maxRetryCount, retryEligibilityCriteriaProvider)
     )
     override def initialRel: Relationship = PairwiseRelationship.empty
+
+    override def serializedSize: ParticipantIndex = -1
   }
 
   override final def agentCmdReceiver: Receive = commonCmdReceiver orElse cmdReceiver
@@ -209,7 +210,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def encParamFromThisAgentToOwner: EncryptParam =
     encParamBuilder
       .withRecipDID(mySelfRelDIDReq)
-      .withSenderVerKey(thisAgentVerKeyReq)
+      .withSenderVerKey(state.thisAgentVerKeyReq)
       .encryptParam
 
   /**
@@ -243,7 +244,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     state.setThisAgentKeyId(ad.agentKeyDID)
     val isThisAnEdeAgent = ad.forDID == ad.agentKeyDID
     val agentKeyTags: Set[Tags] = if (isThisAnEdeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
-    val myDidDoc = state.prepareMyDidDoc(ad.forDID, ad.agentKeyDID, agentKeyTags)
+    val myDidDoc = RelationshipUtil.prepareMyDidDoc(ad.forDID, ad.agentKeyDID, agentKeyTags)
     state.setRelationship(PairwiseRelationship("pairwise", Option(myDidDoc)))
     if (! isThisAnEdeAgent) {
       state.addNewAuthKeyToMyDidDoc(ad.forDID, Set(EDGE_AGENT_KEY))
@@ -251,12 +252,12 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   }
 
   def authedMsgSenderVerKeys: Set[VerKey] = {
-    val authedDIDS =
-      (ownerAgentKeyDID  ++                           //owner agent (if internal msgs are sent encrypted)
-        state.myDid ++                                //this edge pairwise DID
-        state.theirDid ++                             //their pairwise DID
-        theirAgentKeyDID                              //their pairwise agent key DID
-        ).toSet
+    val authedDIDS = (
+      ownerAgentKeyDID  ++                          //owner agent (if internal msgs are sent encrypted)
+      state.myDid ++                                //this edge pairwise DID
+      state.theirDid ++                             //their pairwise DID
+      state.theirAgentKeyDID                        //their pairwise agent key DID
+    ).toSet
     authedDIDS.filter(_.nonEmpty).map(getVerKeyReqViaCache(_))
   }
 
@@ -855,6 +856,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
    * the purpose of this function is to update any 'LegacyAuthorizedKey' to 'AuthorizedKey'
    */
   override def postSuccessfulActorRecovery(): Unit = {
+    super.postSuccessfulActorRecovery()
     if (state.relationship.nonEmpty) {
       val updatedMyDidDoc = updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
       val updatedTheirDidDoc = updatedDidDocWithMigratedAuthKeys(state.theirDidDoc)

@@ -50,6 +50,9 @@ object CustomMetrics {
   final val AS_SERVICE_LIBINDY_WALLET_OPEN_FAILED_AFTER_ALL_RETRIES_COUNT = s"$AS_SERVICE_LIBINDY_WALLET.open.failed.after.all.retries.count"
 
   private final val AS_AKKA_ACTOR = s"$AS.akka.actor"
+
+  final val AS_ACTOR_AGENT_STATE_SIZE = s"$AS_AKKA_ACTOR.agent.state.size"
+
   private final val AS_USER_AGENT = s"$AS_AKKA_ACTOR.user.agent"
   private final val AS_USER_AGENT_PAIRWISE = s"$AS_AKKA_ACTOR.user.agent.pairwise"
 

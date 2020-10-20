@@ -101,15 +101,20 @@ trait AgencyAgentScaffolding
     }
   }
 
+
   protected def restartSpecs(): Unit = {
     "when tried to restart actor" - {
       "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-        aa ! PoisonPill
-        expectNoMessage()
-        Thread.sleep(1000)
-        aa ! GetActorDetail
-        expectMsgType[ActorDetail]
+        restartActor()
       }
     }
+  }
+
+  def restartActor(): Unit = {
+    aa ! PoisonPill
+    expectNoMessage()
+    Thread.sleep(1000)
+    aa ! GetActorDetail
+    expectMsgType[ActorDetail]
   }
 }

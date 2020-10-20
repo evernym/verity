@@ -56,7 +56,7 @@ import scala.util.{Failure, Left, Success}
  */
 class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
-    with HasSponsorRel
+    with LegacyAgentStateUpdateImpl
     with HasPublicIdentity
     with HasAgentActivity
     with MsgNotifierForUserAgent {
@@ -68,12 +68,14 @@ class UserAgent(val agentActorContext: AgentActorContext)
    * actor persistent state object
    */
   class State
-    extends AgentStateBase
+    extends LegacyAgentStateImpl
       with PublicIdentity
       with RelationshipAgents
       with MsgAndDeliveryState
       with Configs {
     override def initialRel: Relationship = SelfRelationship.empty
+
+    override def serializedSize: Int = -1
   }
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
@@ -180,7 +182,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def handleOwnerDIDSet(did: DID): Unit = {
-    val myDidDoc = state.prepareMyDidDoc(did, did, Set(EDGE_AGENT_KEY), checkThisAgentKeyId = false)
+    val myDidDoc = RelationshipUtil.prepareMyDidDoc(did, did, Set(EDGE_AGENT_KEY))
     state.setRelationship(SelfRelationship(myDidDoc))
   }
 
@@ -737,6 +739,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
    * the purpose of this function is to update any 'LegacyAuthorizedKey' to 'AuthorizedKey'
    */
   override def postSuccessfulActorRecovery(): Unit = {
+    super.postSuccessfulActorRecovery()
     if (state.relationship.nonEmpty) {
       val updatedMyDidDoc = RelationshipUtil.updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
       val updatedRel = state.relationship.copy(myDidDoc = updatedMyDidDoc)

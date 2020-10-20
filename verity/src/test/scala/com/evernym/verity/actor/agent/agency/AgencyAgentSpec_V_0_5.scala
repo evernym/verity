@@ -69,7 +69,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
 
         "when sent CONNECT msg 0.5" - {
           "should respond with CONNECTED msg" in {
-            val msg = prepareConnectMsg
+            val msg = prepareConnectMsg()
             aa ! PackedMsgParam(msg, reqMsgContext)
             val pm = expectMsgType[PackedMsg]
             handleConnectedResp(pm)
@@ -78,7 +78,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
 
         "when resent CONNECT msg" - {
           "should respond with already connected error msg" in {
-            val msg = prepareConnectMsg
+            val msg = prepareConnectMsg()
             aa ! PackedMsgParam(msg, reqMsgContext)
             expectError(CONN_STATUS_ALREADY_CONNECTED.statusCode)
           }
@@ -99,7 +99,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
 
     "when resent CONNECT msg with different content" - {
       "should respond with CONNECTED msg" in {
-        val msg = mockEdgeAgent1.v_0_5_req.prepareConnectMsg
+        val msg = mockEdgeAgent1.v_0_5_req.prepareConnectMsg()
         aa ! PackedMsgParam(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         mockEdgeAgent1.v_0_5_resp.handleConnectedResp(pm)

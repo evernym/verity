@@ -12,7 +12,7 @@ class JournalLoggingSpec extends BasicSpec {
 
   "Detailed Logging" - {
     "has indentation" - {
-      "that matches nested calls" taggedAs (UNSAFE_IgnoreLog) in {
+      "that matches nested calls" taggedAs UNSAFE_IgnoreLog in {
 
         Journal.shouldIndent = true
         Journal.overrideLogger = Some(getLoggerByName("AV"))

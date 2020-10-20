@@ -10,6 +10,20 @@ import com.evernym.verity.util.Util.buildAgencyEndpoint
 object RelationshipUtil {
 
   /**
+   * prepares "initial" version of their did doc for given domain DID
+   *
+   * @param relScopeDID DID of the relationship scope ('self', 'pairwise', 'anywise' etc)
+   * @param agentKeyDID DID assigned/belong to agent key
+   * @return
+   */
+  def prepareTheirDidDoc(relScopeDID: DID,
+                         agentKeyDID: DID,
+                         routingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]]=None)
+                        (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
+    RelationshipUtil.buildTheirDidDoc(relScopeDID, agentKeyDID, routingDetail)
+  }
+
+  /**
    * prepares "initial" version of my did doc for given domain DID and agent key DID
    *
    * @param relScopeDID DID of the relationship scope ('self', 'pairwise', 'anywise' etc)
@@ -17,10 +31,10 @@ object RelationshipUtil {
    * @param agentKeyTags tags associated with the auth key
    * @return
    */
-  def buildMyDidDoc(relScopeDID: DID,
-                    agentKeyDID: DID,
-                    agentKeyTags: Set[Tags])
-                   (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
+  def prepareMyDidDoc(relScopeDID: DID,
+                      agentKeyDID: DID,
+                      agentKeyTags: Set[Tags])
+                     (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
     val authKey = prepareAuthorizedKey(agentKeyDID, agentKeyTags)
     val agentEndpoint = buildAgencyEndpoint(relationshipUtilParam.appConfig)
     val endpoints = if (relationshipUtilParam.thisAgentKeyId.contains(agentKeyDID)) {

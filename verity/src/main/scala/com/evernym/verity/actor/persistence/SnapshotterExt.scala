@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.persistence
 
-import akka.persistence.{DeleteSnapshotsFailure, DeleteSnapshotsSuccess, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer, SnapshotSelectionCriteria, Snapshotter}
+import akka.persistence._
 import com.evernym.verity
-import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
 import com.evernym.verity.actor.{PersistentData, State, TransformedState}
+import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
 import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT, AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.transformations.transformers.<=>
@@ -52,7 +52,7 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    * @return
    */
   lazy val persistenceConfig: PersistenceConfig = {
-    if (snapshotAfterNEvents.exists(_ > 0) && keepNSnapshots.contains(0)) {
+    if (snapshotAfterNEvents.exists(_ > 0) && keepNSnapshots.exists(_ < 1)) {
       throw new RuntimeException("keepNSnapshots should be greater than 0 (if snapshotAfterNEvents is greater than 0)")
     }
     PersistenceConfig (
@@ -97,6 +97,14 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
     case dsf: DeleteSnapshotsFailure =>
       logger.error("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dsf.criteria), (LOG_KEY_ERR_MSG, dsf.cause))
+
+    case dms: DeleteMessagesSuccess =>
+      logger.debug("old messages deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+        ("toSequenceNr", dms.toSequenceNr))
+
+    case dmf: DeleteMessagesFailure =>
+      logger.error("could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+        ("toSequenceNr", dmf.toSequenceNr), (LOG_KEY_ERR_MSG, dmf.cause))
   }
 
   /**
@@ -147,18 +155,21 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    * this is to be called manually/explicitly by implementing class
    */
   final def saveSnapshotStateIfAvailable(): Unit = {
-    snapshotState.foreach(transformAndSaveSnapshot)
+    snapshotState.foreach{ state =>
+      // This is a good generic place the track a metric on snapshot size but it will not be helpful until snapshot is
+      // enabled. I have moved to agent common so we can gather metrics before we enable snapshotting
+//      state match {
+//        case s: GeneratedMessage =>
+//          MetricsWriter.histogramApi.record(AS_ACTOR_AGENT_STATE_SIZE, s.serializedSize)
+//      }
+      transformAndSaveSnapshot(state)
+    }
   }
-
-  //TODO: Below we are using 'legacyStateTransformer'.
-  // When we should change it to 'persistenceTransformer' (more optimized one)?
-  // It can be changed anytime with backward compatibility as during 'undo' operation
-  // we do lookup appropriate transformer based on 'transformationId'.
 
   /**
    * transformer used for state persistence
    */
-  lazy val stateTransformer: Any <=> TransformedState = legacyStateTransformer
+  lazy val stateTransformer: Any <=> PersistentData = persistenceTransformerV1
 
   /**
    * serialize, encrypt and then save the given snapshot
@@ -181,6 +192,7 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
 
   final override def receiveRecover: Receive = defaultSnapshotOfferReceiver orElse handleEvent
 
-  final override def receiveCommand: Receive = handleCommand(cmdHandler) orElse snapshotCallbackCommandHandler orElse receiveCmdBase
+  final override def receiveCommand: Receive =
+    handleCommand(cmdHandler) orElse snapshotCallbackCommandHandler orElse receiveCmdBase
 
 }

@@ -6,7 +6,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
-import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
+import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.actor.{AgencyPublicDid, ForIdentifier, agentRegion}
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.actor.ActorProtocol
@@ -44,7 +44,7 @@ class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
 
       "when sent CONNECT msg" - {
         "should respond with CONNECTED msg" in {
-          val msg = prepareConnectMsg
+          val msg = prepareConnectMsg()
           aa ! PackedMsgParam(msg, reqMsgContext)
           val pm = expectMsgType[PackedMsg]
           val connectedResp = handleConnectedResp(pm)

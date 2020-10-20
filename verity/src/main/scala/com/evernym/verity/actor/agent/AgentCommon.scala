@@ -22,6 +22,8 @@ import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
+import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -30,13 +32,27 @@ import scala.concurrent.Future
  * common interface for any type of agent actor (agencyAgent, agencyPairwiseAgent, userAgent, userPairwiseAgent)
  */
 trait AgentCommon
-  extends AgentIdentity
-    with HasAgentStateBase
+  extends AgentStateUpdateInterface
+    with AgentIdentity
     with HasAgentWallet
     with HasSetRoute
     with ResourceUsageCommon { this: AgentPersistentActor =>
 
-  type StateType <: AgentStateBase
+  type StateType <: AgentStateInterface
+  def state: StateType
+
+  override def postSuccessfulActorRecovery(): Unit = {
+    Option(state).foreach { s =>
+      val stateSize = s.serializedSize
+      if (stateSize >= 0) { // so only states that can calculate size are part the metric
+        MetricsWriter.histogramApi.recordWithTag(
+          AS_ACTOR_AGENT_STATE_SIZE,
+          stateSize,
+          "actor_class" -> this.getClass.getSimpleName,
+        )
+      }
+    }
+  }
 
   lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
 
@@ -75,7 +91,7 @@ trait AgentCommon
 
   def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
     try {
-      setAgentWalletSeed(actorEntityId)
+      setWalletSeed(actorEntityId)
       openWalletIfExists(wap)
       logger.debug(s"wallet successfully initialized and opened for actorEntityId: $actorEntityId")
     } catch {
@@ -86,10 +102,10 @@ trait AgentCommon
     }
   }
 
-  def setAgentWalletSeed(actorEntityId: String): Unit = {
+  def setWalletSeed(actorEntityId: String): Unit = {
     if (agentWalletSeed.nonEmpty && ! agentWalletSeed.contains(actorEntityId))
       throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet seed already set to different value"))
-    state.setAgentWalletSeed(actorEntityId)
+    setAgentWalletSeed(actorEntityId)
   }
 
   def openWalletIfExists(wap: WalletAccessParam): Boolean = {

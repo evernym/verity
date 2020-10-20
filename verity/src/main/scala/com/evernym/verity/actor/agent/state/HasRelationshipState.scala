@@ -1,10 +1,9 @@
 package com.evernym.verity.actor.agent.state
 
 import com.evernym.verity.actor.agent.relationship.Endpoints._
-import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, KeyIds, RelUtilParam, Relationship, RelationshipUtil, Tags}
+import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, KeyIds, Relationship, Tags}
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, ComMethodsPackaging, CommunicationMethods}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail}
+import com.evernym.verity.protocol.engine.VerKey
 
 import scala.language.implicitConversions
 
@@ -48,39 +47,6 @@ trait RelationshipState extends HasRelationship {
     _relationship = rel
   }
 
-  /**
-   * prepares "initial" version of my did doc for given domain DID and agent key DID
-   *
-   * @param relScopeDID DID of the relationship scope ('self', 'pairwise', 'anywise' etc)
-   * @param agentKeyDID DID assigned/belong to agent key
-   * @param agentKeyTags tags associated with the auth key
-   * @param checkThisAgentKeyId only purpose of this is to make sure it gets set at appropriate time
-   * @return
-   */
-  def prepareMyDidDoc(relScopeDID: DID,
-                      agentKeyDID: DID,
-                      agentKeyTags: Set[Tags],
-                      checkThisAgentKeyId: Boolean = true)
-                     (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
-    if (checkThisAgentKeyId && thisAgentKeyId.isEmpty) {
-      throw new RuntimeException("set 'thisAgentKeyId' first before preparing my DID doc")
-    }
-    RelationshipUtil.buildMyDidDoc(relScopeDID, agentKeyDID, agentKeyTags)
-  }
-
-  /**
-   * prepares "initial" version of their did doc for given domain DID
-   *
-   * @param relScopeDID DID of the relationship scope ('self', 'pairwise', 'anywise' etc)
-   * @param agentKeyDID DID assigned/belong to agent key
-   * @return
-   */
-  def prepareTheirDidDoc(relScopeDID: DID,
-                         agentKeyDID: DID,
-                         routingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]]=None)
-                        (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
-    RelationshipUtil.buildTheirDidDoc(relScopeDID, agentKeyDID, routingDetail)
-  }
   private def updateWithNewMyDidDoc(updatedDidDoc: DidDoc): Unit = {
     val updatedRel = updatedWithNewMyDidDoc(updatedDidDoc)
     updateRelationship(updatedRel)
@@ -118,14 +84,6 @@ trait RelationshipState extends HasRelationship {
     }
     CommunicationMethods(comMethods.toSet, withSponsorId)
   }
-
-  def thisAgentAuthKey: Option[AuthorizedKeyLike] = thisAgentKeyId.flatMap(keyId => relationship.myDidDocAuthKeyById(keyId))
-
-  def thisAgentKeyDID: Option[DID] = thisAgentAuthKey.map(_.keyId)
-  def thisAgentKeyDIDReq: DID = thisAgentKeyDID.getOrElse(throw new RuntimeException("this agent key not found"))
-
-  def thisAgentVerKey: Option[VerKey] = thisAgentAuthKey.filter(_.verKeyOpt.isDefined).map(_.verKey)
-  def thisAgentVerKeyReq: VerKey = thisAgentVerKey.getOrElse(throw new RuntimeException("this agent key not found"))
 
   def myAuthVerKeys: Set[VerKey] =
     relationship.myDidDoc.map(_.authorizedKeys_!.safeVerKeys).getOrElse(Set.empty)

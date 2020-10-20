@@ -8,26 +8,24 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Receiver, Sender}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.AttachmentObject
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
+import com.evernym.verity.protocol.didcomm.decorators.{Base64, AppendingAttachment => Attachment}
 import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.evernym.verity.util.TimeUtil._
 
 sealed trait Role
 object Role {
-  case object Sender extends Role {
+  case object Participator extends Role {
     def roleNum = 0
   }
   case object Receiver extends Role {
     def roleNum = 1
   }
   def numToRole: Int ?=> Role = {
-    case 0 => Sender
-    case 1 => Receiver
+    case 0 => Participator
   }
   def otherRole: Role ?=> Role = {
-    case Sender => Receiver
-    case Receiver => Sender
+    case Participator => Participator
   }
 }
 trait Event
@@ -58,20 +56,20 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   }
 
   def receiveMessage(m: Msg.Message): Unit = {
-    ctx.apply(MyRole(Receiver.roleNum))
+    ctx.apply(MyRole(Participator.roleNum))
     ctx.apply(messageToEvt(m))
 
     val signal = Signal.ReceivedMessage(
       m.`~l10n`,
       m.sent_time,
       m.content,
-      attachmentsToStrings(m.`~attach`),
+      m.`~attach`,
     )
     ctx.signal(signal)
   }
 
   def send(m: Ctl.SendMessage): Unit = {
-    ctx.apply(MyRole(Sender.roleNum))
+    ctx.apply(MyRole(Participator.roleNum))
     val messageMsg = Msg.Message(
       m.`~l10n`,
       m.sent_time,
@@ -79,7 +77,7 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
       m.`~attach`,
     )
     ctx.apply(messageToEvt(messageMsg))
-    ctx.send(messageMsg, Some(Receiver), Some(Sender))
+    ctx.send(messageMsg, Some(Participator), Some(Participator))
   }
 
   // Helper Functions
@@ -100,23 +98,32 @@ object BasicMessage {
       l10n(locale = Some(m.localization)),
       BaseTiming(out_time = Some(m.sentTime)),
       m.content,
-      Some(attachmentObjectsToAttachments(m.attachments)),
+      Some(attachmentObjectsToAttachments(m.attachments.toVector)),
     )
   }
 
   def messageToEvt(m: Msg.Message): MessageSent = {
-    MessageSent(
-      m.`~l10n`.locale.get,
-      m.sent_time.out_time.get,
-      m.content,
-      attachmentsToAttachmentObjects(m.`~attach`.get),
-    )
+    if(m.`~attach`.isEmpty){
+      MessageSent(
+        m.`~l10n`.locale.get,
+        m.sent_time.out_time.get,
+        m.content,
+      )
+    }
+    else {
+      MessageSent(
+        m.`~l10n`.locale.get,
+        m.sent_time.out_time.get,
+        m.content,
+        attachmentsToAttachmentObjects(m.`~attach`.get),
+      )
+    }
   }
 
   def attachmentsToAttachmentObjects(values: Vector[Attachment]): Vector[AttachmentObject] = {
-    values.map(a => AttachmentObject(a.`@id`, a.`mime-type`, a.filename, a.data_base64))
+    values.map(a => AttachmentObject(a.`@id`, a.`mime-type`, a.filename, a.data.base64))
   }
   def attachmentObjectsToAttachments(values: Vector[AttachmentObject]): Vector[Attachment] = {
-    values.map(a => Attachment(a.id, a.mimeType, a.filename, a.dataBase64))
+    values.map(a => Attachment(a.id, a.mimeType, a.filename, Base64(a.dataBase64)))
   }
 }

@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{AccessRight, AccessSign, AccessVerify, MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Receiver, Sender}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Participator}
 
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = BasicMessageMsgFamily
@@ -12,7 +12,7 @@ object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg
 
   override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID)
 
-  override val roles: Set[Role] = Set(Sender, Receiver)
+  override val roles: Set[Role] = Set(Participator)
 
   override val requiredAccess: Set[AccessRight] = Set()
 

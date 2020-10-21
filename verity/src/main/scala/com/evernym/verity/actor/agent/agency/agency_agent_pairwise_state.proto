@@ -6,12 +6,13 @@ import "google/protobuf/wrappers.proto";
 import "thread_context.proto";
 import "protocol_instances.proto";
 import "relationship.proto";
+import "connection_status.proto";
 
 package com.evernym.verity.actor.agent.agency;
 
-message AgencyAgentState {
-    option (scalapb.message).extends = "com.evernym.verity.actor.agent.agency.AgencyAgentStateImpl";
-    bool isEndpointSet = 1;
+message AgencyAgentPairwiseState {
+    option (scalapb.message).extends = "com.evernym.verity.actor.agent.agency.AgencyAgentPairwiseStateImpl";
+    ConnectionStatus connectionStatus = 1;
     google.protobuf.StringValue thisAgentKeyId = 2;
     google.protobuf.StringValue agencyDID = 3;
     google.protobuf.StringValue agentWalletSeed = 4;

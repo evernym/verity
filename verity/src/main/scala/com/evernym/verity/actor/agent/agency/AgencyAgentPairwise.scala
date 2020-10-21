@@ -35,21 +35,11 @@ import scala.concurrent.Future
  */
 class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
-    with LegacyAgentStateUpdateImpl
+    with AgencyAgentPairwiseStateUpdateImpl
     with PairwiseConnState {
 
-  type StateType = State
-  val state = new State
-  /**
-   * actor persistent state object
-   */
-  class State
-    extends LegacyAgentStateImpl
-      with HasConnectionStatus {
-    override def initialRel: Relationship = PairwiseRelationship.empty
-
-    override def serializedSize: Int = -1
-  }
+  type StateType = AgencyAgentPairwiseState
+  var state = new AgencyAgentPairwiseState
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 
@@ -85,11 +75,11 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   }
 
   def handleSetupRelationship(myPairwiseDID: DID, theirPairwiseDID: DID): Unit = {
-    state.setThisAgentKeyId(myPairwiseDID)
+    state = state.withThisAgentKeyId(myPairwiseDID)
     val myDidDoc = RelationshipUtil.prepareMyDidDoc(myPairwiseDID, myPairwiseDID, Set(EDGE_AGENT_KEY))
     val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(theirPairwiseDID, theirPairwiseDID)
     val pairwiseRel = PairwiseRelationship.apply("pairwise", Option(myDidDoc), Option(theirDidDoc))
-    state.setRelationship(pairwiseRel)
+    state = state.withRelationship(pairwiseRel)
   }
 
   def handleSetupCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
@@ -126,7 +116,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     handleAgentMsgWrapper(amw)
   }
 
-  def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthVerKeys.toSet
+  def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys
 
   def prepareAgencyPairwiseDetailForActor(): Future[Any] = {
     getAgencyDIDFut(req = true).mapTo[CacheQueryResponse].flatMap { cqr =>
@@ -165,11 +155,13 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     if (state.relationship.nonEmpty) {
       val updatedMyDidDoc = updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
       val updatedTheirDidDoc = updatedDidDocWithMigratedAuthKeys(state.theirDidDoc)
-      val updatedRel = state.relationship.update(
-        _.myDidDoc.setIfDefined(updatedMyDidDoc),
-        _.thoseDidDocs.setIfDefined(updatedTheirDidDoc.map(Seq(_)))
-      )
-      state.updateRelationship(updatedRel)
+      state = state
+        .relationship
+        .map { r =>
+          state.withRelationship(
+            r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc))
+            .update(_.thoseDidDocs.setIfDefined(updatedTheirDidDoc.map(Seq(_)))))}
+        .getOrElse(state)
     }
   }
 
@@ -179,7 +171,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   override def userDIDForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[DID] = state.theirDid
 
   override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
-    val didDocs = state.relationship.myDidDoc ++ state.relationship.theirDidDoc
+    val didDocs = state.relationship.flatMap(_.myDidDoc) ++ state.relationship.flatMap(_.theirDidDoc)
     didDocs.find(_.authorizedKeys_!.keys.exists(ak => senderVerKey.exists(svk => ak.containsVerKey(svk)))) match {
       case Some (dd)  => ParticipantUtil.participantId(dd.did, None)
       case None       => throw new RuntimeException("unsupported use case")
@@ -239,3 +231,43 @@ case class SetupAgentEndpoint_V_0_7 (
                                       requesterVerKey: VerKey,
                                       sponsorRel: Option[SponsorRel]=None
                                    ) extends SetupEndpoint
+
+
+trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
+
+trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
+
+  override def setAgentWalletSeed(seed: String): Unit = {
+    state = state.withAgentWalletSeed(seed)
+  }
+
+  override def setAgencyDID(did: DID): Unit = {
+    state = state.withAgencyDID(did)
+  }
+
+  override def setSponsorRel(rel: SponsorRel): Unit = {
+    //nothing to do
+  }
+
+  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
+    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
+    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
+  }
+
+  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
+    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
+    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
+    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
+  }
+
+  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
+
+  def updateRelationship(rel: Relationship): Unit = {
+    state = state.withRelationship(rel)
+  }
+
+  def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {
+    state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
+  }
+}

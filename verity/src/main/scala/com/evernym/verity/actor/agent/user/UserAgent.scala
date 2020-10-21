@@ -264,13 +264,27 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def getComMethods(types: Seq[Int] = Seq.empty): CommunicationMethods =
-    state.comMethodsByTypes(types, state.sponsorRel.map(_.sponsorId))
+    comMethodsByTypes(types, state.sponsorRel.map(_.sponsorId))
 
   def sendComMethodsByType(filterComMethodTypes: Seq[Int]): Unit = {
     logger.debug("about to send com methods...")
     val filteredComMethods = getComMethods(filterComMethodTypes)
     sender ! filteredComMethods
     logger.debug("com methods sent: " + filteredComMethods)
+  }
+
+  def comMethodsByTypes(types: Seq[Int], withSponsorId: Option[String]): CommunicationMethods = {
+    val endpoints = if (types.nonEmpty) state.myDidDoc_!.endpoints_!.filterByTypes(types: _*)
+    else state.myDidDoc_!.endpoints_!.endpoints
+    val comMethods = endpoints.map { ep =>
+      val authKeyIds = state.myDidDoc_!.endpoints_!.endpointsToAuthKeys.getOrElse(ep.id, KeyIds())
+      val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
+        .filterByKeyIds(authKeyIds)
+        .map(_.verKey).toSet
+      val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packVersion, verKeys))
+      ComMethodDetail(ep.`type`, ep.value, cmp)
+    }
+    CommunicationMethods(comMethods.toSet, withSponsorId)
   }
 
   def sendAllComMethods(): Unit = sendComMethodsByType(Seq.empty)

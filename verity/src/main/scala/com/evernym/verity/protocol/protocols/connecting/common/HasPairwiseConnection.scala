@@ -4,7 +4,7 @@ import akka.actor.Actor.Receive
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.Status.{CONN_STATUS_NOT_CONNECTED, MSG_STATUS_ACCEPTED}
-import com.evernym.verity.actor.agent.state.HasConnectionStatus
+import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 
@@ -15,7 +15,7 @@ import com.evernym.verity.protocol.engine.{DID, VerKey}
  * contains information about the "connection status" (requested, accepted etc)
  * and their (other participant's) DID Doc
  */
-trait HasPairwiseConnection extends HasConnectionStatus {
+trait HasPairwiseConnection {
 
   private var _theirDIDDoc: Option[LegacyDIDDoc] = None
   def theirDIDDoc: Option[LegacyDIDDoc] = _theirDIDDoc
@@ -49,6 +49,12 @@ trait HasPairwiseConnection extends HasConnectionStatus {
    */
   def theirRoutingTarget: String = theirRoutingParam.routingTarget
 
+  private var _connectionStatus: Option[ConnectionStatus] = None
+  def connectionStatus: Option[ConnectionStatus] = _connectionStatus
+  def setConnectionStatus(cs: ConnectionStatus): Unit = _connectionStatus = Option(cs)
+  def setConnectionStatus(cso: Option[ConnectionStatus]): Unit = _connectionStatus = cso
+
+  def isConnectionStatusEqualTo(status: String): Boolean = connectionStatus.exists(_.answerStatusCode == status)
 }
 
 trait HasPairwiseConnectionState {
@@ -92,13 +98,6 @@ trait HasPairwiseConnectionState {
       state.setConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
   }
 }
-
-/**
- *
- * @param reqReceived true if connection request is received, else false
- * @param answerStatusCode user's response to the connection request (accepted/rejected etc)
- */
-case class ConnectionStatus(reqReceived: Boolean, answerStatusCode: String)
 
 /**
  * Calling this as a legacy DIDDoc because it is not per standard DIDDoc

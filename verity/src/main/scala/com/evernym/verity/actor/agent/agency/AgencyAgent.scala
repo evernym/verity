@@ -10,8 +10,8 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, DidDoc, Relationship, RelationshipUtil}
-import com.evernym.verity.actor.agent.state.{AgentStateUpdateInterface, AgentStateInterface}
+import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
+import com.evernym.verity.actor.agent.state.{AgentStateImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.user.AgentProvisioningDone
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.cache._
@@ -316,8 +316,8 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     state = state
       .relationship
       .map { r =>
-      val updatedMyDidDoc = RelationshipUtil.updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
-      state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
+        val updatedMyDidDoc = RelationshipUtil.updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
+        state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
       }
       .getOrElse(state)
   }
@@ -386,34 +386,7 @@ case object SetEndpoint extends ActorMessageObject
 
 case object UpdateEndpoint extends ActorMessageObject
 
-trait AgencyAgentStateImpl extends AgentStateInterface with State { this: AgencyAgentState =>
-
-  def relationshipOpt: Option[Relationship] = relationship
-
-  def threadContextReq: ThreadContext = threadContext.getOrElse(
-    throw new RuntimeException("thread context not available"))
-
-  def sponsorRel: Option[SponsorRel] = None
-
-  override def threadContextDetail(pinstId: PinstId): ThreadContextDetail =
-    threadContextReq.contexts(pinstId)
-
-  override def threadContextsContains(pinstId: PinstId): Boolean =
-    threadContext.exists(_.contexts.contains(pinstId))
-
-  override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
-    protoInstances.flatMap(_.instances.get(protoDef.toString))
-
-  def myDidDoc: Option[DidDoc] = relationshipOpt.flatMap(_.myDidDoc)
-  def myDidDoc_! : DidDoc = myDidDoc.getOrElse(throw new RuntimeException("myDidDoc is not set yet"))
-  def myDid: Option[DID] = myDidDoc.map(_.did)
-  def myDid_! : DID = myDid.getOrElse(throw new RuntimeException("myDid is not set yet"))
-
-  def theirDidDoc: Option[DidDoc] = relationshipOpt.flatMap(_.theirDidDoc)
-  def theirDidDoc_! : DidDoc = theirDidDoc.getOrElse(throw new RuntimeException("theirDidDoc is not set yet"))
-  def theirDid: Option[DID] = theirDidDoc.map(_.did)
-  def theirDid_! : DID = theirDid.getOrElse(throw new RuntimeException("theirDid is not set yet"))
-}
+trait AgencyAgentStateImpl extends AgentStateImplBase
 
 trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgent =>
 

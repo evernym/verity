@@ -7,12 +7,12 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
+import com.evernym.verity.actor.agent.{ConnectionStatus, EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.connecting.common.{ConnectionStatus, LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
+import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAccessParam}
 
 import scala.util.Left
@@ -21,9 +21,9 @@ import scala.util.Left
  * base class for handling a pairwise connection related functions
  * for example: updating connection status, their did doc etc
  */
-trait PairwiseConnState {
+trait PairwiseConnStateBase {
 
-  type StateType <: AgentStateInterface with RelationshipState with HasConnectionStatus
+  type StateType <: AgentStatePairwiseInterface
   def state: StateType
 
   implicit def relationshipUtilParam: RelUtilParam
@@ -31,12 +31,16 @@ trait PairwiseConnState {
 
   def relationshipState: Relationship = state.relationshipReq
 
-  def updateRelationship(rel: Relationship): Unit =
-    if(rel.relationshipType != PAIRWISE_RELATIONSHIP) {
+  def updateRelationshipBase(rel: Relationship): Unit =
+    if (rel.relationshipType != PAIRWISE_RELATIONSHIP) {
       throw new IllegalArgumentException("Can not update to a non-pairwise relationship")
     } else {
-      state.updateRelationship(rel)
+      updateRelationship(rel)
     }
+
+  def updateRelationship(rel: Relationship): Unit
+
+  def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit
 
   def updateLegacyRelationshipState(relScopeDID: DID, lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
@@ -48,13 +52,9 @@ trait PairwiseConnState {
     updateRelAndConnection(theirDidDoc)
   }
 
-  def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit = {
-    state.setConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
-  }
-
   private def updateRelAndConnection(updatedTheirDidDoc: DidDoc): Unit = {
     val updatedRel = relationshipState.update(_.thoseDidDocs := Seq(updatedTheirDidDoc))
-    updateRelationship(updatedRel)
+    updateRelationshipBase(updatedRel)
     updateConnectionStatus(reqReceived = true, MSG_STATUS_ACCEPTED.statusCode)
   }
 
@@ -188,14 +188,24 @@ trait PairwiseConnState {
   }
 }
 
-/**
- * has a connection status information (accepted, rejected etc)
- */
-trait HasConnectionStatus {
-  private var _connectionStatus: Option[ConnectionStatus] = None
-  def connectionStatus: Option[ConnectionStatus] = _connectionStatus
-  def setConnectionStatus(cs: ConnectionStatus): Unit = _connectionStatus = Option(cs)
-  def setConnectionStatus(cso: Option[ConnectionStatus]): Unit = _connectionStatus = cso
 
-  def isConnectionStatusEqualTo(status: String): Boolean = connectionStatus.exists(_.answerStatusCode == status)
+/**
+ * base class for handling a pairwise connection related functions
+ * for example: updating connection status, their did doc etc
+ */
+trait LegacyPairwiseConnState extends PairwiseConnStateBase with LegacyAgentPairwiseStateUpdateImpl {
+
+  def updateRelationship(rel: Relationship): Unit =
+      state.updateRelationship(rel)
+
+  def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit = {
+    setConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
+  }
+
 }
+
+/**
+ * base class for handling a pairwise connection related functions
+ * for example: updating connection status, their did doc etc
+ */
+trait PairwiseConnState extends PairwiseConnStateBase

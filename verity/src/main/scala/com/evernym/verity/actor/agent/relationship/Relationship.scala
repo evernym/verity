@@ -248,18 +248,6 @@ trait HasRelationship {
 
   private def exmap[A](f: => A): A = try f catch excHandler
 
-  def myDidDoc: Option[DidDoc] = exmap { relationship.myDidDoc }
-  def myDid: Option[DID]       = exmap { relationship.myDid }
-  def myDidDoc_! : DidDoc      = exmap { relationship.myDidDoc_! }
-  def myDid_! : DID            = exmap { relationship.myDid_! }
-
-  def theirDidDoc: Option[DidDoc] = exmap { relationship.theirDidDoc }
-  def theirDid: Option[DID]       = exmap { relationship.theirDid }
-  def theirDidDoc_! : DidDoc      = exmap { relationship.theirDidDoc_! }
-  def theirDid_! : DID            = exmap { relationship.theirDid_! }
-
-  def thoseDidDocs: Seq[DidDoc]  = exmap { relationship.thoseDidDocs }
-
   def checkRelationshipSet(): Unit = exmap { relationship.checkNotEmpty() }
 
 }

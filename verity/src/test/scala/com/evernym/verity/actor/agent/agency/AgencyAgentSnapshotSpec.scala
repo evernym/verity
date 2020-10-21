@@ -138,7 +138,10 @@ class AgencyAgentSnapshotSpec
   def checkStateSizeMetrics(): Unit = {
     Thread.sleep(5000)  //to make sure metrics are recorded and available to read by this time
     val currentMetrics = MetricsReader.getNodeMetrics().metrics
-    val stateSizeMetrics = currentMetrics.filter(_.name.startsWith("as_akka_actor_agent_state"))
+    val stateSizeMetrics = currentMetrics.filter { m =>
+      m.name.startsWith("as_akka_actor_agent_state") &&
+      m.tags.getOrElse(Map.empty)("actor_class") == "AgencyAgent"
+    }
     println("stateSizeMetrics: \n" + stateSizeMetrics.mkString("\n"))
     stateSizeMetrics.size shouldBe 12   //histogram metrics
     stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>

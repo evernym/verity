@@ -69,10 +69,10 @@ import scala.util.{Failure, Left, Success}
  */
 class UserAgentPairwise(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
-    with LegacyAgentStateUpdateImpl
+    with LegacyAgentPairwiseStateUpdateImpl
     with AgentMsgSender
     with UsesConfigs
-    with PairwiseConnState
+    with LegacyPairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
     with HasAgentActivity
@@ -84,9 +84,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
    * actor persistent state object
    */
   class State
-    extends LegacyAgentStateImpl
+    extends LegacyAgentPairwiseStateImpl
       with OwnerDetail
-      with HasConnectionStatus
       with MsgAndDeliveryState
       with Configs {
     override lazy val msgDeliveryState: Option[MsgDeliveryState] = Option(

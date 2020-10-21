@@ -13,7 +13,8 @@ import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
-import com.evernym.verity.actor.agent.state.{Configs, AgentStateInterface}
+import com.evernym.verity.actor.agent.state.Configs
+import com.evernym.verity.actor.agent.state.base.AgentStateInterface
 import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, SetAgencyIdentity, SetAgentActorDetail, UpdateRoute}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._

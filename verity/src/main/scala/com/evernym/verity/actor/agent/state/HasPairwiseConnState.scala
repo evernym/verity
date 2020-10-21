@@ -7,6 +7,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
+import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseInterface, LegacyAgentPairwiseStateUpdateImpl}
 import com.evernym.verity.actor.agent.{ConnectionStatus, EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
 import com.evernym.verity.agentmsg.msgpacker._

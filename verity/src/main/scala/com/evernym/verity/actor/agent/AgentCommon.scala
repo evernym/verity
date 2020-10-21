@@ -22,6 +22,7 @@ import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger

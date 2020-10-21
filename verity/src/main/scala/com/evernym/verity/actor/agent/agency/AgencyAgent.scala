@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
-import com.evernym.verity.actor.agent.state.{AgentStateImplBase, AgentStateUpdateInterface}
+import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.user.AgentProvisioningDone
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.cache._

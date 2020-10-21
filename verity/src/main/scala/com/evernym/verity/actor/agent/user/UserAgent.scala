@@ -9,7 +9,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.{HasAgentActivity, AgentActorContext, MsgPackVersion}
+import com.evernym.verity.actor.agent.{AgentActorContext, HasAgentActivity, MsgPackVersion}
 import com.evernym.verity.actor.agent.agency.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SetupCreateKeyEndpoint, SetupEndpoint, SponsorRel}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, PayloadMetadata, ProcessSendSignalMsg, SendSignalMsg}
@@ -47,6 +47,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
+import com.evernym.verity.actor.agent.state.base.{LegacyAgentStateImpl, LegacyAgentStateUpdateImpl}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}

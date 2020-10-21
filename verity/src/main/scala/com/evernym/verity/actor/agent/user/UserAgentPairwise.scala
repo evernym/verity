@@ -49,6 +49,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUp
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.agent.state.base.{LegacyAgentPairwiseStateImpl, LegacyAgentPairwiseStateUpdateImpl}
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}

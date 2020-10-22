@@ -80,7 +80,10 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   override lazy val activityTracker: Option[ActorRef] =
-    Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
+    Some(system.actorOf(
+      ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)),
+      name=s"useragent-activity-tracker-$domainId"
+    ))
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 

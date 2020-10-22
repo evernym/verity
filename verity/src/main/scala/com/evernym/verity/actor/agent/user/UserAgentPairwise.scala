@@ -52,12 +52,12 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.actor.metrics.ActivityTracker
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}
 import com.evernym.verity.texter.SmsInfo
-import com.evernym.verity.actor.metrics.ActivityTracker
-import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.Util.replaceVariables
 import org.json.JSONObject
@@ -101,8 +101,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   }
 
   override lazy val activityTracker: Option[ActorRef] =
-    Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
-
+    Some(system.actorOf(
+      ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)),
+      name=s"pairwise-activity-tracker-$relationshipId"
+    ))
   def relationshipState: PairwiseRelationship = state.relationship
   def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.state
 
-import com.evernym.verity.actor.agent.ThreadContextDetail
+import com.evernym.verity.actor.agent.{ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine.PinstId
 
 /**
@@ -10,13 +10,14 @@ import com.evernym.verity.protocol.engine.PinstId
  * which is used during incoming and outgoing message handling (like packaging information etc)
  */
 trait ThreadContexts {
-  private var _threadContexts: Map[PinstId, ThreadContextDetail] = Map.empty
-  def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    _threadContexts = _threadContexts + (pinstId -> threadContextDetail)
-  }
-  def threadContextDetail(pinstId: PinstId): ThreadContextDetail = _threadContexts(pinstId)
+  private var _threadContexts: ThreadContext = ThreadContext()
 
-  def threadContextsContains(pinstId: PinstId): Boolean = _threadContexts.contains(pinstId)
+  def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
+    _threadContexts = _threadContexts.copy(contexts = _threadContexts.contexts + (pinstId -> threadContextDetail))
+  }
+  def threadContextDetail(pinstId: PinstId): ThreadContextDetail = _threadContexts.contexts(pinstId)
+
+  def threadContextsContains(pinstId: PinstId): Boolean = _threadContexts.contexts.contains(pinstId)
 }
 
 trait HasThreadContexts {

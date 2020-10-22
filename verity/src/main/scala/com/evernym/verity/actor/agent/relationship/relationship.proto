@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+//in the IDE, it shows error for this below import, but it builds successfully
+import "msg_pack_version.proto";
+
+package com.evernym.verity.actor.agent.relationship;
+
+message Relationship {
+    option (scalapb.message).extends = "RelationshipLike";
+    RelationshipTypeEnum relationshipType = 1;
+    string name = 2;
+    DidDoc myDidDoc = 3;
+    repeated DidDoc thoseDidDocs = 4;
+}
+
+enum RelationshipTypeEnum {
+    NO_RELATIONSHIP = 0 [(scalapb.enum_value).extends = "NoRelationshipType"];
+    SELF_RELATIONSHIP = 1 [(scalapb.enum_value).extends = "SelfRelationshipType"];
+    PAIRWISE_RELATIONSHIP = 2 [(scalapb.enum_value).extends = "PairwiseRelationshipType"];
+    NWISE_RELATIONSHIP = 3 [(scalapb.enum_value).extends = "NwiseRelationshipType"];
+    ANYWISE_RELATIONSHIP = 4 [(scalapb.enum_value).extends = "AnywiseRelationshipType"];
+}
+
+message DidDoc {
+    option (scalapb.message).extends = "DidDocLike";
+    string did = 1;
+    AuthorizedKeys authorizedKeys = 2;
+    Endpoints endpoints = 3;
+}
+
+message AuthorizedKeys {
+    option (scalapb.message).extends = "AuthorizedKeysLike";
+    repeated AuthorizedKey keys = 1;
+}
+
+message AuthorizedKey {
+    option (scalapb.message).extends = "AuthorizedKeyLike";
+    string keyId = 1;
+    string givenVerKey = 2;
+    repeated Tags tags = 3 [(scalapb.field).collection_type="Set"];
+}
+
+message Endpoints {
+    option (scalapb.message).companion_extends = "EndpointsCompanion";
+    option (scalapb.message).extends = "EndpointsLike";
+    repeated EndpointADT endpoints = 1;
+    map<string, KeyIds> endpointsToAuthKeys = 2;
+}
+
+message KeyIds {
+    repeated string keyId = 1 [(scalapb.field).collection_type="Set"];
+}
+
+message EndpointADT {
+    option (scalapb.message).extends = "EndpointLikePassThrough";
+    EndpointADTUntyped endpointADTX = 1;
+}
+
+message EndpointADTUntyped {
+    oneof sealed_value {
+        HttpEndpoint httpEndpoint = 1;
+        ForwardPushEndpoint forwardPushEndpoint = 2;
+        SponsorPushEndpoint sponsorPushEndpoint = 3;
+        PushEndpoint pushEndpoint = 4;
+        RoutingServiceEndpoint routingServiceEndpoint = 5;
+        LegacyRoutingServiceEndpoint legacyRoutingServiceEndpoint = 6;
+    }
+}
+
+message HttpEndpoint {
+    option (scalapb.message).extends = "EndpointLike";
+    option (scalapb.message).extends = "HttpEndpointType";
+    string id = 1;
+    string value = 2;
+    PackagingContext packagingContext = 3;
+}
+
+message ForwardPushEndpoint {
+    option (scalapb.message).extends = "EndpointLike";
+    option (scalapb.message).extends = "FwdPushEndpointType";
+    string id = 1;
+    string value = 2;
+    PackagingContext packagingContext = 3;
+}
+
+message SponsorPushEndpoint {
+    option (scalapb.message).extends = "EndpointLike";
+    option (scalapb.message).extends = "SponsorPushEndpointType";
+    string id = 1;
+    string value = 2;
+    PackagingContext packagingContext = 3;
+}
+
+message PushEndpoint {
+    option (scalapb.message).extends = "EndpointLike";
+    option (scalapb.message).extends = "PushEndpointType";
+    string id = 1;
+    string value = 2;
+}
+
+message RoutingServiceEndpoint {
+    option (scalapb.message).extends = "RoutingServiceEndpointLike";
+    string value = 1;
+    repeated string routingKeys = 3;
+}
+
+message LegacyRoutingServiceEndpoint {
+    option (scalapb.message).extends = "LegacyRoutingServiceEndpointLike";
+    string agencyDID = 1;
+    string agentKeyDID = 2;
+    string agentVerKey = 3;
+    string agentKeyDlgProofSignature = 4;
+}
+
+message PackagingContext {
+    option (scalapb.message).companion_extends = "PackagingContextCompanion";
+    MsgPackVersion packVersion = 1;
+}
+
+enum Tags {
+    option (scalapb.enum_options).extends = "TagLike";
+    option (scalapb.enum_options).companion_extends = "TagLikeCompanion";
+    AGENT_KEY_TAG = 0 [(scalapb.enum_value).extends = "AgentKeyTag"];
+    EDGE_AGENT_KEY = 1 [(scalapb.enum_value).extends = "AgentKeyTag"];
+    CLOUD_AGENT_KEY = 2 [(scalapb.enum_value).extends = "CloudAgentKeyTag"];
+    RECIP_KEY = 3 [(scalapb.enum_value).extends = "RecipKeyTag"];
+    RECOVERY_KEY = 4 [(scalapb.enum_value).extends = "RecipKeyTag"];
+}

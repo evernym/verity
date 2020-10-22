@@ -15,7 +15,7 @@ import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyCommon}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.{MPV_INDY_PACK, MPV_MSG_PACK, MsgId}
+import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.agentmsg._
 import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
@@ -37,6 +37,7 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.isRunScenario
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.util.HttpListenerUtil
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._

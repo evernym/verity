@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.protocol.engine.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.msgcodec.MsgPlusMeta
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackedMsg, UnpackParam}

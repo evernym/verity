@@ -6,13 +6,14 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
-import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentIdentity, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentIdentity, MsgPackVersion, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.actor.agent.state.OptSponsorId
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.{AgentJsonMsg, StandardTypeFormat, TypeFormat}
+import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
@@ -89,7 +90,7 @@ trait AgentOutgoingMsgHandler
                                         threadId: ThreadId,
                                         protoDef: ProtoDef,
                                         pinstId: PinstId): Unit = {
-    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, threadId, pinstId, protoDef, Option(StandardTypeFormat))
+    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, threadId, pinstId, protoDef, Option(TypeFormat.STANDARD_TYPE_FORMAT))
 
       sd match {
       case pushToken: PushToken =>
@@ -165,7 +166,8 @@ trait AgentOutgoingMsgHandler
     val threadContextResult = Try(getThreadContext(pinstId))
     val (msgId, mtf, protoMsgDetail) = threadContextResult match {
       case Success(tcd)                       =>
-        val mId = if (tcd.protoMsgOrderDetail.senderOrder == 0 && tcd.protoMsgOrderDetail.receivedOrders.isEmpty) {
+        val mId = if (tcd.protoMsgOrderDetail.exists(_.senderOrder == 0)
+          && tcd.protoMsgOrderDetail.exists(_.receivedOrders.isEmpty) ){
           //this is temporary workaround to solve an issue between how
           // thread id is determined by libvcx (and may be by other third parties) vs verity/agency
           // here, we are basically checking if this msg is 'first' protocol msg and in that case
@@ -174,7 +176,7 @@ trait AgentOutgoingMsgHandler
         } else {
           getNewMsgId
         }
-        (mId, msgTypeFormat.getOrElse(tcd.msgTypeFormat), Option(tcd.protoMsgOrderDetail))
+        (mId, msgTypeFormat.getOrElse(tcd.msgTypeFormat), tcd.protoMsgOrderDetail)
       case Failure(_: NoSuchElementException) =>
         (getNewMsgId, msgTypeFormat.get, None)
       case Failure(e) => throw e // TODO ryan please check that this is correct
@@ -185,8 +187,9 @@ trait AgentOutgoingMsgHandler
     //that participant is unknown and hence it is stored as 'unknown_sender_participant_id' in the thread context
     //and when it responds with 'response' message, it just adds that in thread object
     //but for recipient it may look unfamilier and for now, filtering it.
-    val updatedPmd = protoMsgDetail.map(pmd =>
-      pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID)))
+    val updatedPmd = protoMsgDetail.map { pmd =>
+      pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID))
+    }
     buildAgentMsg(msg, msgId, threadId, protoDef, mtf, updatedPmd)
   }
 

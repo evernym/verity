@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.agency.AgencyAgentState
 import com.evernym.verity.actor.agent.msgrouter.{RouteProcessed, StatusUpdated}
 import com.evernym.verity.actor.cluster_singleton.fixlegacyroutes.{Completed, Registered}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
@@ -245,8 +246,9 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     202 -> ResourceUsageState,
     203 -> ItemManagerState,
-
-    204 -> WindowActivityDefined
+    
+    204 -> WindowActivityDefined,
+    205 -> AgencyAgentState
   )
 
 }

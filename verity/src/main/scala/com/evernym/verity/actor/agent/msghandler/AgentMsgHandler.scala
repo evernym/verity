@@ -6,8 +6,9 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
 import com.evernym.verity.actor.agent.msghandler.outgoing.{AgentOutgoingMsgHandler, OutgoingMsgParam}
 import com.evernym.verity.actor.agent._
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.agentmsg.msgcodec.{TypeFormat, UnknownFormatType}
+import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgExtractor, MsgThread}
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.actor.InitProtocolReq
@@ -86,16 +87,20 @@ trait AgentMsgHandler
 
     case pms: ProtoMsgSenderOrderIncremented =>
       val stc = state.threadContextDetail(pms.pinstId)
-      val updatedProtoMsgOrderDetail = stc.protoMsgOrderDetail.copy(senderOrder = stc.protoMsgOrderDetail.senderOrder + 1)
-      val updatedContext = stc.copy(protoMsgOrderDetail = updatedProtoMsgOrderDetail)
+      val protoMsgOrderDetail = stc.protoMsgOrderDetail.getOrElse(ProtoMsgOrderDetail(senderOrder = -1))
+      val updatedProtoMsgOrderDetail =
+        protoMsgOrderDetail.copy(senderOrder = protoMsgOrderDetail.senderOrder + 1)
+      val updatedContext = stc.copy(protoMsgOrderDetail = Option(updatedProtoMsgOrderDetail))
       state.addThreadContextDetail(pms.pinstId, updatedContext)
 
     case pms: ProtoMsgReceivedOrderIncremented  =>
       val stc = state.threadContextDetail(pms.pinstId)
-      val updatedMsgOrder = stc.protoMsgOrderDetail.receivedOrders.getOrElse(pms.fromPartiId, -1) + 1
-      val updatedReceivedOrders = stc.protoMsgOrderDetail.receivedOrders + (pms.fromPartiId -> updatedMsgOrder)
-      val updatedProtoMsgOrderDetail = stc.protoMsgOrderDetail.copy(receivedOrders = updatedReceivedOrders)
-      val updatedContext = stc.copy(protoMsgOrderDetail = updatedProtoMsgOrderDetail)
+      val protoMsgOrderDetail = stc.protoMsgOrderDetail.getOrElse(ProtoMsgOrderDetail(senderOrder = -1))
+      val curReceivedMsgOrder = protoMsgOrderDetail.receivedOrders.getOrElse(pms.fromPartiId, -1)
+      val updatedReceivedOrders = protoMsgOrderDetail.receivedOrders + (pms.fromPartiId -> (curReceivedMsgOrder + 1))
+      val updatedProtoMsgOrderDetail =
+        protoMsgOrderDetail.copy(receivedOrders = updatedReceivedOrders)
+      val updatedContext = stc.copy(protoMsgOrderDetail = Option(updatedProtoMsgOrderDetail))
       state.addThreadContextDetail(pms.pinstId, updatedContext)
   }
 

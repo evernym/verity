@@ -110,6 +110,7 @@ sealed trait ActorSpecLike
     with ExpectsErrors
     with ChecksAkkaEvents
     with ProvidesMockPlatform
+    with HasTestActorSystem
     with CleansUpActorSystem
     with CleansUpIndyClientFirst {
   this: TestSuite with BasicSpecBase =>

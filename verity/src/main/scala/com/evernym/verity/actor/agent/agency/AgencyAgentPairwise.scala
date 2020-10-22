@@ -5,9 +5,10 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.tags.EdgeAgentKeyTag
-import com.evernym.verity.actor.agent.relationship.{DidDoc, PairwiseRelationship}
+import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship}
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.user.AgentProvisioningDone
 import com.evernym.verity.actor.persistence.Done
@@ -44,11 +45,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   class State
     extends AgentStateBase
       with HasConnectionStatus {
-
-    override type RelationshipType = PairwiseRelationship
-    override def initialRel: PairwiseRelationship = PairwiseRelationship.empty
-    override def updatedWithNewMyDidDoc(didDoc: DidDoc): PairwiseRelationship =
-      relationship.copy(myDidDoc = Option(didDoc))
+    override def initialRel: Relationship = PairwiseRelationship.empty
   }
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
@@ -86,7 +83,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
 
   def handleSetupRelationship(myPairwiseDID: DID, theirPairwiseDID: DID): Unit = {
     state.setThisAgentKeyId(myPairwiseDID)
-    val myDidDoc = state.prepareMyDidDoc(myPairwiseDID, myPairwiseDID, Set(EdgeAgentKeyTag))
+    val myDidDoc = state.prepareMyDidDoc(myPairwiseDID, myPairwiseDID, Set(EDGE_AGENT_KEY))
     val theirDidDoc = state.prepareTheirDidDoc(theirPairwiseDID, theirPairwiseDID)
     val pairwiseRel = PairwiseRelationship.apply("pairwise", Option(myDidDoc), Option(theirDidDoc))
     state.setRelationship(pairwiseRel)
@@ -164,7 +161,10 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     if (state.relationship.nonEmpty) {
       val updatedMyDidDoc = updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
       val updatedTheirDidDoc = updatedDidDocWithMigratedAuthKeys(state.theirDidDoc)
-      val updatedRel = state.relationship.copy(myDidDoc = updatedMyDidDoc, theirDidDoc = updatedTheirDidDoc)
+      val updatedRel = state.relationship.update(
+        _.myDidDoc.setIfDefined(updatedMyDidDoc),
+        _.thoseDidDocs.setIfDefined(updatedTheirDidDoc.map(Seq(_)))
+      )
       state.updateRelationship(updatedRel)
     }
   }
@@ -173,12 +173,10 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   def ownerAgentKeyDID: Option[DID] = state.agencyDID
 
   override def userDIDForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[DID] = state.theirDid
-  override def relationshipState: PairwiseRelationship = state.relationship
-  override def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)
 
   override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
     val didDocs = state.relationship.myDidDoc ++ state.relationship.theirDidDoc
-    didDocs.find(_.authorizedKeys.keys.exists(ak => senderVerKey.exists(svk => ak.containsVerKey(svk)))) match {
+    didDocs.find(_.authorizedKeys_!.keys.exists(ak => senderVerKey.exists(svk => ak.containsVerKey(svk)))) match {
       case Some (dd)  => ParticipantUtil.participantId(dd.did, None)
       case None       => throw new RuntimeException("unsupported use case")
     }

@@ -7,6 +7,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.actor.agent.state.{HasOwnerDetail, RelationshipState}
 import com.evernym.verity.actor.agent.user._
 import com.evernym.verity.actor.persistence.AgentPersistentActor

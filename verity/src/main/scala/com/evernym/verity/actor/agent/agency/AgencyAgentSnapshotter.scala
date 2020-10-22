@@ -1,6 +1,5 @@
 //package com.evernym.verity.actor.agent.agency
 //
-//import com.evernym.verity.actor.State
 //import com.evernym.verity.actor.persistence.SnapshotterExt
 //
 ////TODO: finalize and enable agency agent snapshot configuration in 'reference.conf'
@@ -24,5 +23,3 @@
 //    case as: AgencyAgentState => state = as
 //  }
 //}
-//
-//case class AgencyAgentState() extends State   //this is just for example purposes

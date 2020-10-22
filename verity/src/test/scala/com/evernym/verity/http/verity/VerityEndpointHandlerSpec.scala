@@ -1,10 +1,10 @@
 package com.evernym.verity.http.verity
 
 import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MPV_MSG_PACK
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin

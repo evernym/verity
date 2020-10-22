@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
 import com.evernym.verity.testkit.BasicSpec
+import Endpoints._
 
 class EndpointSpec extends BasicSpec {
 
@@ -72,9 +72,11 @@ class EndpointSpec extends BasicSpec {
     "when tried to add endpoints without proper auth key mapping" - {
       "should throw appropriate error" in {
         val ex = intercept[RuntimeException] {
-          Endpoints(Vector(
+          val eps = Seq(
             PushEndpoint("1", "push-token-1"),
-            PushEndpoint("2", "push-token-2")),
+            PushEndpoint("2", "push-token-2")
+          )
+          Endpoints(eps,
             Map.empty
           )
         }
@@ -88,8 +90,24 @@ class EndpointSpec extends BasicSpec {
           RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2")),
           PushEndpoint("1", "push-token")),
           Set("key1", "key2"))
-        ep.filterByKeyIds("key1") shouldBe Vector(RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2")), PushEndpoint("1", "push-token"))
-        ep.filterByKeyIds("key2") shouldBe Vector(RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2")), PushEndpoint("1", "push-token"))
+        ep.filterByKeyIds("key1") shouldBe
+          Vector(
+            EndpointADT(
+              RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2"))
+            ),
+            EndpointADT(
+              PushEndpoint("1", "push-token")
+            )
+          )
+        ep.filterByKeyIds("key2") shouldBe
+          Vector(
+            EndpointADT(
+              RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2"))
+            ),
+            EndpointADT(
+              PushEndpoint("1", "push-token")
+            )
+          )
       }
     }
 
@@ -97,8 +115,8 @@ class EndpointSpec extends BasicSpec {
       "should return correct result" in {
         val ep = Endpoints.init(Vector(
           RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2")),
-          PushEndpoint("2", "push-token")), Set.empty[KeyId])
-        ep.filterByTypes(EndpointType.PUSH) shouldBe Vector(PushEndpoint("2", "push-token"))
+          PushEndpoint("2", "push-token")))
+        ep.filterByTypes(EndpointType.PUSH) shouldBe Vector(EndpointADT(PushEndpoint("2", "push-token")))
       }
     }
 
@@ -106,8 +124,8 @@ class EndpointSpec extends BasicSpec {
       "should return correct result" in {
         val ep = Endpoints.init(Vector(
           RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2")),
-          PushEndpoint("2", "push-token")), Set.empty[KeyId])
-        ep.filterByValues("push-token") shouldBe Vector(PushEndpoint("2", "push-token"))
+          PushEndpoint("2", "push-token")))
+        ep.filterByValues("push-token") shouldBe Vector(EndpointADT(PushEndpoint("2", "push-token")))
       }
     }
 
@@ -115,9 +133,9 @@ class EndpointSpec extends BasicSpec {
       "should return correct result" in {
         val ep = Endpoints.init(Vector(
           RoutingServiceEndpoint("http://xyz.com", Vector("key1", "key2")),
-          PushEndpoint("2", "push-token")), Set.empty[KeyId])
+          PushEndpoint("2", "push-token")))
         ep.findById("1") shouldBe None
-        ep.findById("2") shouldBe Option(PushEndpoint("2", "push-token"))
+        ep.findById("2") shouldBe Some(EndpointADT(PushEndpoint("2", "push-token")))
       }
     }
   }

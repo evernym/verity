@@ -9,7 +9,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
-import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
@@ -37,7 +36,6 @@ import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext}
 import com.evernym.verity.vault._
 
 import scala.concurrent.Future
-import scala.util.Left
 
 /**
  * common logic between 'UserAgent' and 'UserAgentPairwise' actor

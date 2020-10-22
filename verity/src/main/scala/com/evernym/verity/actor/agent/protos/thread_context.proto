@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+import "msg_pack_version.proto";
+import "type_format.proto";
+import "proto_msg_order_detail.proto";
+
+package com.evernym.verity.actor.agent;
+
+message ThreadContext {
+    map<string,ThreadContextDetail> contexts = 1;
+}
+
+message ThreadContextDetail {
+    string threadId = 1;
+    MsgPackVersion msgPackVersion = 2;
+    TypeFormat msgTypeFormat = 3;
+    bool usesLegacyGenMsgWrapper = 4;
+    bool usesLegacyBundledMsgWrapper = 5;
+    ProtoMsgOrderDetail protoMsgOrderDetail = 6;
+}

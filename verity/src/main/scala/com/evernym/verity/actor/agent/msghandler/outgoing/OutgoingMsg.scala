@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.msghandler.MsgParam
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine._

@@ -1,30 +1,30 @@
 package com.evernym.verity.actor.agent.user
 
-import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.constants.Constants._
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.actor.agent.SpanUtil._
+import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.agency.{SetupCreateKeyEndpoint, SponsorRel}
+import com.evernym.verity.actor.agent.agency.SetupCreateKeyEndpoint
 import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.tags.{CloudAgentKeyTag, EdgeAgentKeyTag}
-import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointLike, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, RoutingServiceEndpoint, Tag}
+import com.evernym.verity.actor.agent.relationship.{EndpointADT, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, Relationship, RoutingServiceEndpoint, Tags}
 import com.evernym.verity.actor.agent.state.{OwnerDetail, _}
-import com.evernym.verity.actor.cluster_singleton.{ForMetricsHelper, ForUserAgentPairwiseActorWatcher}
+import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
+import com.evernym.verity.actor.cluster_singleton.{ForMetricsHelper, ForUserAgentPairwiseActorWatcher, MetricsCountUpdated, UpdateCountMetrics, UpdateFailedAttemptCount, UpdateFailedMsgCount, UpdateUndeliveredMsgCount}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.{Done, InternalReqHelperData}
-import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -32,13 +32,15 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
+import com.evernym.verity.constants.ActorNameConstants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.actor.{MsgEnvelope, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, Parameter, VerKey, _}
 import com.evernym.verity.protocol.protocols._
@@ -48,18 +50,14 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUpdated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
-import com.evernym.verity.util.TimeZoneUtil._
-import com.evernym.verity.util._
-import com.evernym.verity.vault._
-import com.evernym.verity.Exceptions
-import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.actor.metrics.ActivityTracker
-import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
+import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.replaceVariables
+import com.evernym.verity.util._
+import com.evernym.verity.vault._
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -93,15 +91,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     override lazy val msgDeliveryState: Option[MsgDeliveryState] = Option(
       new MsgDeliveryState(maxRetryCount, retryEligibilityCriteriaProvider)
     )
-
-    override type RelationshipType = PairwiseRelationship
-    override def initialRel: PairwiseRelationship = PairwiseRelationship.empty
-    override def updatedWithNewMyDidDoc(didDoc: DidDoc): PairwiseRelationship =
-      relationship.copy(myDidDoc = Option(didDoc))
+    override def initialRel: Relationship = PairwiseRelationship.empty
   }
-
-  def relationshipState: PairwiseRelationship = state.relationship
-  def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)
 
   override final def agentCmdReceiver: Receive = commonCmdReceiver orElse cmdReceiver
 
@@ -177,19 +168,28 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
     case rcd: TheirAgentDetailSet =>
       val theirDidDoc = state.relationship.theirDidDoc.map(_.copy(did = rcd.DID))
-      val updatedRel = state.relationship.copy(theirDidDoc = theirDidDoc)
+      val updatedRel = state.relationship
+        .update(
+          _.thoseDidDocs.setIfDefined(theirDidDoc.map(Seq(_)))
+        )
       state.updateRelationship(updatedRel)
       state.setConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
 
     case rad: TheirAgencyIdentitySet =>
+      //TODO This can be more easily done by teaching the LegacyRoutingServiceEndpoint and RoutingServiceEndpoint how to do the conversion.
       val updatedDidDoc = state.relationship.theirDidDoc.map { tdd =>
-        val updatedEndpoints: Vector[EndpointLike] = tdd.endpoints.endpoints.map {
+        val updatedEndpointSeq: Seq[EndpointADT] = tdd.endpoints_!.endpoints.map(_.endpointADTX).map {
           case lep: LegacyRoutingServiceEndpoint => lep.copy(agencyDID = rad.DID)
           case ep: RoutingServiceEndpoint        => ep
-        }
-        tdd.copy(endpoints = Endpoints(updatedEndpoints, tdd.endpoints.endpointsToAuthKeys))
+        }.map(EndpointADT.apply)
+        val updatedEndpoints = Endpoints(updatedEndpointSeq, tdd.endpoints_!.endpointsToAuthKeys)
+        tdd.update(_.endpoints := updatedEndpoints)
       }
-      val updatedRel = state.relationship.copy(theirDidDoc = updatedDidDoc)
+      val updatedRel = state
+        .relationship
+        .update(
+          _.thoseDidDocs.setIfDefined(updatedDidDoc.map(Seq(_)))
+        )
       state.updateRelationship(updatedRel)
       state.setConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
   }
@@ -237,11 +237,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def handleAgentDetailSet(ad: AgentDetailSet): Unit = {
     state.setThisAgentKeyId(ad.agentKeyDID)
     val isThisAnEdeAgent = ad.forDID == ad.agentKeyDID
-    val agentKeyTags: Set[Tag] = if (isThisAnEdeAgent) Set(EdgeAgentKeyTag) else Set(CloudAgentKeyTag)
+    val agentKeyTags: Set[Tags] = if (isThisAnEdeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
     val myDidDoc = state.prepareMyDidDoc(ad.forDID, ad.agentKeyDID, agentKeyTags)
     state.setRelationship(PairwiseRelationship("pairwise", Option(myDidDoc)))
     if (! isThisAnEdeAgent) {
-      state.addNewAuthKeyToMyDidDoc(ad.forDID, Set(EdgeAgentKeyTag))
+      state.addNewAuthKeyToMyDidDoc(ad.forDID, Set(EDGE_AGENT_KEY))
     }
   }
 
@@ -756,7 +756,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     }
   }
 
-  def futureNone = Future.successful(None)
+  def futureNone: Future[None.type] = Future.successful(None)
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
     //pinst (legacy connecting protocol) -> connecting actor driver -> this actor
@@ -856,7 +856,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     if (state.relationship.nonEmpty) {
       val updatedMyDidDoc = updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
       val updatedTheirDidDoc = updatedDidDocWithMigratedAuthKeys(state.theirDidDoc)
-      val updatedRel = state.relationship.copy(myDidDoc = updatedMyDidDoc, theirDidDoc = updatedTheirDidDoc)
+      val updatedRel = state.relationship
+        .update(
+          _.myDidDoc.setIfDefined(updatedMyDidDoc),
+          _.thoseDidDocs.setIfDefined(updatedTheirDidDoc.map(Seq(_)))
+        )
       state.updateRelationship(updatedRel)
     }
   }

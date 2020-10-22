@@ -1,8 +1,9 @@
 package com.evernym.verity.actor.agent.user
 
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_FWD_PUSH, COM_METHOD_TYPE_PUSH}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK}
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 
 class ConsumerAgentPairwiseBaseSpec_V_0_7 extends UserAgentPairwiseSpec_V_0_7 {

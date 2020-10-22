@@ -11,7 +11,7 @@ class RelationshipSpec extends BasicSpec {
   "Relationships" - {
 
     "come in five varieties" in {
-      val r1 = NoRelationship
+      val r1 = NoRelationship()
       val r2 = SelfRelationship()
       val r3 = PairwiseRelationship("some name")
       val r4 = NwiseRelationship("some group name")
@@ -19,7 +19,7 @@ class RelationshipSpec extends BasicSpec {
     }
 
     "No Relationship" - {
-      val nr = NoRelationship
+      val nr = NoRelationship()
 
       "should honor Relationship api" in {
         nr.name shouldBe "no relationship"

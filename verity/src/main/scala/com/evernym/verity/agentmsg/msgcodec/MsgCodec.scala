@@ -2,6 +2,7 @@ package com.evernym.verity.agentmsg.msgcodec
 
 import com.evernym.verity.actor.agent.ProtoMsgOrderDetail
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
 import com.evernym.verity.protocol.engine._
@@ -76,18 +77,18 @@ trait MsgCodec {
   def extractMetadata(jsonStr: JsonStr, msgPackVersion: MsgPackVersion): MsgMetadata
 
   def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, protoDef: ProtoDef,
-                    msgTypeFormat: TypeFormat, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): AgentJsonMsg = {
+                    msgTypeFormat: TypeFormatLike, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): AgentJsonMsg = {
     runWithInternalSpan("toAgentMsg", "MsgCodec") {
       val msgType = protoDef.msgFamily.msgType(value.getClass)
       val doc = value match {
-        case s: String => docFromStr(s)
-        case ojb => toDocument(ojb)
+        case s: String  => docFromStr(s)
+        case ojb        => toDocument(ojb)
       }
 
       val typedJsonMsg = msgTypeFormat match {
-        case NoopTypeFormat => doc
-        case LegacyTypeFormat => addLegacyMetaDataToDoc(doc, msgType, threadId)
-        case StandardTypeFormat => addMetaDataToDoc(doc, msgType, msgId, threadId, protoMsgOrderDetail)
+        case _:NoopTypeFormat     => doc
+        case _:LegacyTypeFormat   => addLegacyMetaDataToDoc(doc, msgType, threadId)
+        case _:StandardTypeFormat => addMetaDataToDoc(doc, msgType, msgId, threadId, protoMsgOrderDetail)
       }
 
       AgentJsonMsg(typedJsonMsg.toString, msgType)

@@ -4,9 +4,11 @@ import akka.actor.Actor.Receive
 import com.evernym.verity.Exceptions.InvalidValueException
 import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
+import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.relationship.tags.AgentKeyTag
-import com.evernym.verity.actor.agent.{EncryptionParamBuilder, WalletVerKeyCacheHelper}
+import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
@@ -28,9 +30,13 @@ trait PairwiseConnState {
   implicit def relationshipUtilParam: RelUtilParam
   def ownerDIDReq: DID
 
-  //TODO: need to find out if we can refactor out below two abstract members
-  def relationshipState: PairwiseRelationship
-  def updateRelationship(rel: PairwiseRelationship)
+  def relationshipState: Relationship = state.relationship
+  def updateRelationship(rel: Relationship): Unit =
+    if(rel.relationshipType != PAIRWISE_RELATIONSHIP) {
+      throw new IllegalArgumentException("Can not update to a non-pairwise relationship")
+    } else {
+      state.updateRelationship(rel)
+    }
 
   def updateLegacyRelationshipState(relScopeDID: DID, lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc = state.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
@@ -47,7 +53,7 @@ trait PairwiseConnState {
   }
 
   private def updateRelAndConnection(updatedTheirDidDoc: DidDoc): Unit = {
-    val updatedRel = relationshipState.copy(theirDidDoc = Option(updatedTheirDidDoc))
+    val updatedRel = relationshipState.update(_.thoseDidDocs := Seq(updatedTheirDidDoc))
     updateRelationship(updatedRel)
     updateConnectionStatus(reqReceived = true, MSG_STATUS_ACCEPTED.statusCode)
   }
@@ -79,7 +85,7 @@ trait PairwiseConnState {
   def agentMsgTransformer: AgentMsgTransformer
   def encParamBuilder: EncryptionParamBuilder = new EncryptionParamBuilder(walletVerKeyCacheHelper)
 
-  def theirAgentAuthKey: Option[AuthorizedKeyLike] = state.relationship.theirDidDocAuthKeyByTag(AgentKeyTag)
+  def theirAgentAuthKey: Option[AuthorizedKeyLike] = state.relationship.theirDidDocAuthKeyByTag(AGENT_KEY_TAG)
   def theirAgentAuthKeyReq: AuthorizedKeyLike = theirAgentAuthKey.getOrElse(
     throw new RuntimeException("their agent auth key not yet set")
   )
@@ -104,7 +110,7 @@ trait PairwiseConnState {
    * @return
    */
   def theirRoutingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]] = {
-    state.theirDidDoc.flatMap(_.endpoints.filterByKeyIds(theirAgentKeyDIDReq).headOption) map {
+    state.theirDidDoc.flatMap(_.endpoints_!.filterByKeyIds(theirAgentKeyDIDReq).headOption).map(_.endpointADTX) map {
       case le: LegacyRoutingServiceEndpoint =>
         Left(LegacyRoutingDetail(le.agencyDID, le.agentKeyDID, le.agentVerKey, le.agentKeyDlgProofSignature))
       case e: RoutingServiceEndpoint        =>
@@ -117,7 +123,7 @@ trait PairwiseConnState {
    * internal to the agency msg delivery system (no role in actual agent messages)
    * @return
    */
-  def theirRoutingTarget: String = state.theirDidDoc.flatMap(_.endpoints.filterByKeyIds(theirAgentKeyDIDReq).headOption) match {
+  def theirRoutingTarget: String = state.theirDidDoc.flatMap(_.endpoints_!.filterByKeyIds(theirAgentKeyDIDReq).headOption).map(_.endpointADTX) match {
     case Some(lrse: LegacyRoutingServiceEndpoint) => lrse.agencyDID
     case Some(rse: RoutingServiceEndpoint)        => rse.value
     case x                                        => throw new RuntimeException("unsupported condition while preparing their routing target: " + x)

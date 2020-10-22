@@ -1,6 +1,8 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
 import com.evernym.verity.Status.{MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED}
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.DefaultMsgCodec

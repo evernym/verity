@@ -4,8 +4,9 @@ import java.util.concurrent.ExecutionException
 
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.{MsgPackVersion, VerKey}
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.MessagePackUtil
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.InvalidStructureException

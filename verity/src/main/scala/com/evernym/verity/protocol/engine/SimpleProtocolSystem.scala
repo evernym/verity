@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.actor.agent.relationship.Relationship.RelationshipName
-import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, SelfRelationship}
+import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, RelationshipName, SelfRelationship}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
@@ -285,7 +284,7 @@ trait HasRelationships {
     system.addRoute(rel.myDid_!, this)
   }
 
-  def addSelfRelationship(did: DID): SelfRelationship = {
+  def addSelfRelationship(did: DID): Relationship = {
     val rel = SelfRelationship(Some(DidDoc(did)))
     addRelationship(rel)
     rel

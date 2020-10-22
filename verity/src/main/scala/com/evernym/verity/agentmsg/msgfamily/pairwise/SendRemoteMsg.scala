@@ -1,11 +1,12 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{MPV_INDY_PACK, MPV_MSG_PACK, MsgBase, MsgId}
+import com.evernym.verity.protocol.engine.{MsgBase, MsgId}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderAgencyDetail, SenderDetail}
 import org.json.JSONObject
 

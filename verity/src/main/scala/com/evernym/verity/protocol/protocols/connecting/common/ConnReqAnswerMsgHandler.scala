@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD, MSG_STATUS_ACCEPTED, MSG_STATUS_REDIRECTED, MSG_STATUS_REJECTED, PAIRWISE_KEYS_ALREADY_IN_WALLET}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._

@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentPairwiseSpec_V_0_6
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.MPV_INDY_PACK
 import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 

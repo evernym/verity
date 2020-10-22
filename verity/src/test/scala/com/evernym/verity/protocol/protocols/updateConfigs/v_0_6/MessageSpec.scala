@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
 import java.util.UUID
 
+import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
@@ -24,7 +25,7 @@ class MessageSpec extends BasicSpec {
           UUID.randomUUID().toString,
           DEFAULT_THREAD_ID,
           UpdateConfigsDefinition,
-          StandardTypeFormat
+          TypeFormat.STANDARD_TYPE_FORMAT
         )
         assert(json.jsonStr.contains(name))
         assert(json.jsonStr.contains(logoUrl))

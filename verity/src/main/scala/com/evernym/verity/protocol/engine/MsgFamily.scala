@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.agentmsg.msgcodec.{MsgTypeParsingException, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
+import com.evernym.verity.agentmsg.msgcodec.MsgTypeParsingException
 
 import scala.util.matching.Regex
 

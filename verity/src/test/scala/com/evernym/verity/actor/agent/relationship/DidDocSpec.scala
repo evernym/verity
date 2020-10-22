@@ -1,7 +1,8 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.tags.{AgentKeyTag, CloudAgentKeyTag, EdgeAgentKeyTag}
 import com.evernym.verity.testkit.BasicSpec
+import Endpoints._
+import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 
 class DidDocSpec extends BasicSpec {
 
@@ -10,12 +11,12 @@ class DidDocSpec extends BasicSpec {
     "when called different constructors" - {
       "should be successful" in {
         DidDoc("did1")
-        DidDoc("did1", AuthorizedKeys(), Endpoints.empty)
-        DidDoc("did1", AuthorizedKeys(Vector(LegacyAuthorizedKey("key1", Set.empty))))
+        DidDoc("did1", Some(AuthorizedKeys()), None)
+        DidDoc("did1", Some(AuthorizedKeys(Seq(AuthorizedKey("key1", "", Set.empty)))))
         DidDoc(
           "did1",
-          AuthorizedKeys(Vector(LegacyAuthorizedKey("key1", Set.empty))),
-          Endpoints.init(PushEndpoint("1", "push-token"), Set("key1"))
+          Some(AuthorizedKeys(Seq(AuthorizedKey("key1", "", Set.empty)))),
+          Some(Endpoints.init(PushEndpoint("1", "push-token"), Set("key1")))
         )
       }
     }
@@ -24,7 +25,7 @@ class DidDocSpec extends BasicSpec {
       "should get added to authorized keys" in {
         val dd = DidDoc("did1")
         val updatedDidDoc = dd.updatedWithNewAuthKey("key1", Set.empty)
-        updatedDidDoc.authorizedKeys shouldBe AuthorizedKeys(Vector(LegacyAuthorizedKey("key1", Set.empty)))
+        updatedDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "", Set.empty)))
       }
     }
 
@@ -32,11 +33,11 @@ class DidDocSpec extends BasicSpec {
       "should replace existing key (if any) with newer one" in {
         val dd = DidDoc("did1")
 
-        val dd1 = dd.updatedWithNewAuthKey("key1", "verKey1", Set(AgentKeyTag))
-        dd1.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key1", "verKey1", Set(AgentKeyTag))))
+        val dd1 = dd.updatedWithNewAuthKey("key1", "verKey1", Set(AGENT_KEY_TAG))
+        dd1.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "verKey1", Set(AGENT_KEY_TAG))))
 
         val ex = intercept[RuntimeException] {
-          dd1.updatedWithNewAuthKey("key2", "verKey1", Set(EdgeAgentKeyTag))
+          dd1.updatedWithNewAuthKey("key2", "verKey1", Set(EDGE_AGENT_KEY))
         }
         ex.getMessage shouldBe "duplicate auth keys not allowed"
       }
@@ -46,11 +47,11 @@ class DidDocSpec extends BasicSpec {
       "should replace existing key (if any) with newer one" in {
         val dd = DidDoc("did1")
 
-        val dd1 = dd.updatedWithNewAuthKey("key1", Set(AgentKeyTag))
-        dd1.authorizedKeys shouldBe AuthorizedKeys(Vector(LegacyAuthorizedKey("key1", Set(AgentKeyTag))))
+        val dd1 = dd.updatedWithNewAuthKey("key1", Set(AGENT_KEY_TAG))
+        dd1.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "", Set(AGENT_KEY_TAG))))
 
-        val dd2 = dd1.updatedWithNewAuthKey("key1", Set(EdgeAgentKeyTag))
-        dd2.authorizedKeys shouldBe AuthorizedKeys(Vector(LegacyAuthorizedKey("key1", Set(EdgeAgentKeyTag))))
+        val dd2 = dd1.updatedWithNewAuthKey("key1", Set(EDGE_AGENT_KEY))
+        dd2.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "", Set(EDGE_AGENT_KEY))))
       }
     }
 
@@ -58,11 +59,11 @@ class DidDocSpec extends BasicSpec {
       "should replace existing key (if any) with newer one" in {
         val dd = DidDoc("did1")
 
-        val dd1 = dd.updatedWithNewAuthKey("key1", "verKey1", Set(AgentKeyTag))
-        dd1.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key1", "verKey1", Set(AgentKeyTag))))
+        val dd1 = dd.updatedWithNewAuthKey("key1", "verKey1", Set(AGENT_KEY_TAG))
+        dd1.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "verKey1", Set(AGENT_KEY_TAG))))
 
-        val dd2 = dd1.updatedWithNewAuthKey("key1", "verKey1", Set(EdgeAgentKeyTag))
-        dd2.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key1", "verKey1", Set(EdgeAgentKeyTag))))
+        val dd2 = dd1.updatedWithNewAuthKey("key1", "verKey1", Set(EDGE_AGENT_KEY))
+        dd2.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "verKey1", Set(EDGE_AGENT_KEY))))
       }
     }
 
@@ -70,11 +71,11 @@ class DidDocSpec extends BasicSpec {
       "should replace existing key (if any) with existing and newer tags" in {
         val dd = DidDoc("did1")
 
-        val dd1 = dd.updatedWithNewAuthKey("key1", "verKey1", Set(AgentKeyTag))
-        dd1.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key1", "verKey1", Set(AgentKeyTag))))
+        val dd1 = dd.updatedWithNewAuthKey("key1", "verKey1", Set(AGENT_KEY_TAG))
+        dd1.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "verKey1", Set(AGENT_KEY_TAG))))
 
-        val dd2 = dd1.updatedWithMergedAuthKey("key1", "verKey1", Set(CloudAgentKeyTag))
-        dd2.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key1", "verKey1", Set(AgentKeyTag, CloudAgentKeyTag))))
+        val dd2 = dd1.updatedWithMergedAuthKey("key1", "verKey1", Set(CLOUD_AGENT_KEY))
+        dd2.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key1", "verKey1", Set(AGENT_KEY_TAG, CLOUD_AGENT_KEY))))
       }
     }
 
@@ -82,11 +83,11 @@ class DidDocSpec extends BasicSpec {
       "should replace existing key (if any) with existing and newer tags" in {
         val dd = DidDoc("did1")
 
-        val dd1 = dd.updatedWithNewAuthKey("key2", "verKey1", Set(AgentKeyTag))
-        dd1.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key2", "verKey1", Set(AgentKeyTag))))
+        val dd1 = dd.updatedWithNewAuthKey("key2", "verKey1", Set(AGENT_KEY_TAG))
+        dd1.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key2", "verKey1", Set(AGENT_KEY_TAG))))
 
-        val dd2 = dd1.updatedWithMergedAuthKey("key1", "verKey1", Set(CloudAgentKeyTag))
-        dd2.authorizedKeys shouldBe AuthorizedKeys(Vector(AuthorizedKey("key2", "verKey1", Set(AgentKeyTag, CloudAgentKeyTag))))
+        val dd2 = dd1.updatedWithMergedAuthKey("key1", "verKey1", Set(CLOUD_AGENT_KEY))
+        dd2.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("key2", "verKey1", Set(AGENT_KEY_TAG, CLOUD_AGENT_KEY))))
       }
     }
 
@@ -114,10 +115,10 @@ class DidDocSpec extends BasicSpec {
           .updatedWithNewAuthKey("key2", Set.empty)
 
         val dd2 = dd1.updatedWithEndpoint(PushEndpoint("1", "push-token-0"), Set("key1"))
-        dd2.endpoints shouldBe Endpoints.init(PushEndpoint("1", "push-token-0"), Set("key1"))
+        dd2.endpoints.value shouldBe Endpoints.init(PushEndpoint("1", "push-token-0"), Set("key1"))
 
         val dd3 = dd2.updatedWithEndpoint(PushEndpoint("1", "push-token-1"), Set("key1", "key2"))
-        dd3.endpoints shouldBe Endpoints.init(PushEndpoint("1", "push-token-1"), Set("key1", "key2"))
+        dd3.endpoints.value shouldBe Endpoints.init(PushEndpoint("1", "push-token-1"), Set("key1", "key2"))
       }
     }
 
@@ -128,12 +129,12 @@ class DidDocSpec extends BasicSpec {
         val dd1 = dd.updatedWithNewAuthKey("key1", Set.empty)
         val dd2 = dd1.updatedWithEndpoint(PushEndpoint("1", "push-token-0"), Set("key1"))
 
-        dd2.endpoints shouldBe Endpoints(Vector(PushEndpoint("1", "push-token-0")), Map("1" -> Set("key1")))
-        dd2.endpoints.endpoints.size shouldBe 1
+        dd2.endpoints.value shouldBe Endpoints(Vector(PushEndpoint("1", "push-token-0")), Map("1" -> KeyIds(Set("key1"))))
+        dd2.endpoints.value.endpoints.size shouldBe 1
 
         val dd3 = dd2.updatedWithRemovedEndpointById("1")
-        dd3.endpoints.endpoints.size shouldBe 0
-        dd3.endpoints.endpointsToAuthKeys.size shouldBe 0
+        dd3.endpoints.value.endpoints.size shouldBe 0
+        dd3.endpoints.value.endpointsToAuthKeys.size shouldBe 0
       }
     }
 
@@ -146,10 +147,10 @@ class DidDocSpec extends BasicSpec {
           .updatedWithNewAuthKey("key2", Set.empty)
 
         val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
-        dd2.endpoints shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
+        dd2.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
 
         val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
-        dd3.endpoints shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
+        dd3.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
       }
     }
 
@@ -162,10 +163,10 @@ class DidDocSpec extends BasicSpec {
           .updatedWithNewAuthKey("key2", Set.empty)
 
         val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
-        dd2.endpoints shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
+        dd2.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
 
         val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("3", "http://localhost:6001"), Set("key1", "key2"))
-        dd3.endpoints shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
+        dd3.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
       }
     }
 

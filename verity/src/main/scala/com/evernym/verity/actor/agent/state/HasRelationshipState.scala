@@ -1,11 +1,12 @@
 package com.evernym.verity.actor.agent.state
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
-import com.evernym.verity.actor.agent.relationship.Endpoints.EndpointId
-import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, EndpointLike, HasRelationship, RelUtilParam, RelationshipUtil, Tag}
+import com.evernym.verity.actor.agent.relationship.Endpoints._
+import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, KeyIds, RelUtilParam, Relationship, RelationshipUtil, Tags}
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, ComMethodsPackaging, CommunicationMethods}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail}
+
+import scala.language.implicitConversions
 
 trait RelationshipState extends HasRelationship {
 
@@ -13,17 +14,18 @@ trait RelationshipState extends HasRelationship {
    * initial relationship object
    * @return
    */
-  def initialRel: RelationshipType
+  def initialRel: Relationship
+
+  private var _relationship: Relationship = initialRel
+  def relationship: Relationship = _relationship
 
   /**
    * updates my did doc with given did doc
    * @param didDoc new/updated did doc
    * @return updated relationship
    */
-  def updatedWithNewMyDidDoc(didDoc: DidDoc): RelationshipType
-
-  private var _relationship: RelationshipType = initialRel
-  def relationship: RelationshipType = _relationship
+  def updatedWithNewMyDidDoc(didDoc: DidDoc): Relationship =
+    relationship.copy(myDidDoc = Option(didDoc))
 
   /**
    * key Id of the authorized key which is "controlled" by "this" agent.
@@ -38,11 +40,11 @@ trait RelationshipState extends HasRelationship {
    *
    * @param rel relationship object
    */
-  def setRelationship(rel: RelationshipType): Unit = {
+  def setRelationship(rel: Relationship): Unit = {
     _relationship = rel
   }
 
-  def updateRelationship(rel: RelationshipType): Unit = {
+  def updateRelationship(rel: Relationship): Unit = {
     _relationship = rel
   }
 
@@ -57,7 +59,7 @@ trait RelationshipState extends HasRelationship {
    */
   def prepareMyDidDoc(relScopeDID: DID,
                       agentKeyDID: DID,
-                      agentKeyTags: Set[Tag],
+                      agentKeyTags: Set[Tags],
                       checkThisAgentKeyId: Boolean = true)
                      (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
     if (checkThisAgentKeyId && thisAgentKeyId.isEmpty) {
@@ -84,19 +86,19 @@ trait RelationshipState extends HasRelationship {
     updateRelationship(updatedRel)
   }
 
-  def addNewAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tag]): Unit = {
+  def addNewAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithNewAuthKey(keyId, verKey, tags))
   }
 
-  def mergeAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tag]): Unit = {
+  def mergeAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithMergedAuthKey(keyId, verKey, tags))
   }
 
-  def addNewAuthKeyToMyDidDoc(keyId: KeyId, tags: Set[Tag]): Unit = {
+  def addNewAuthKeyToMyDidDoc(keyId: KeyId, tags: Set[Tags]): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithNewAuthKey(keyId, tags))
   }
 
-  def addOrUpdateEndpointToMyDidDoc(endpoint: EndpointLike, authKeyIds: Set[KeyId]): Unit = {
+  def addOrUpdateEndpointToMyDidDoc(endpoint: EndpointADTUntyped, authKeyIds: Set[KeyId]): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithEndpoint(endpoint, authKeyIds))
   }
 
@@ -105,11 +107,11 @@ trait RelationshipState extends HasRelationship {
   }
 
   def comMethodsByTypes(types: Seq[Int], withSponsorId: Option[String]): CommunicationMethods = {
-    val endpoints = if (types.nonEmpty) myDidDoc_!.endpoints.filterByTypes(types: _*) else myDidDoc_!.endpoints.endpoints
+    val endpoints = if (types.nonEmpty) myDidDoc_!.endpoints_!.filterByTypes(types: _*) else myDidDoc_!.endpoints_!.endpoints
     val comMethods = endpoints.map { ep =>
-      val authKeyIds = myDidDoc_!.endpoints.endpointsToAuthKeys.getOrElse(ep.id, Set.empty)
-      val verKeys = myDidDoc_!.authorizedKeys.safeAuthorizedKeys
-        .filterByKeyIds(authKeyIds.toSeq:_*)
+      val authKeyIds = myDidDoc_!.endpoints_!.endpointsToAuthKeys.getOrElse(ep.id, KeyIds())
+      val verKeys = myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
+        .filterByKeyIds(authKeyIds)
         .map(_.verKey).toSet
       val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packVersion, verKeys))
       ComMethodDetail(ep.`type`, ep.value, cmp)
@@ -126,13 +128,13 @@ trait RelationshipState extends HasRelationship {
   def thisAgentVerKeyReq: VerKey = thisAgentVerKey.getOrElse(throw new RuntimeException("this agent key not found"))
 
   def myAuthVerKeys: Set[VerKey] =
-    relationship.myDidDoc.map(_.authorizedKeys.safeVerKeys).getOrElse(Set.empty)
+    relationship.myDidDoc.map(_.authorizedKeys_!.safeVerKeys).getOrElse(Set.empty)
 
   def theirAuthVerKeys: Set[VerKey] =
-    relationship.theirDidDoc.map(_.authorizedKeys.safeVerKeys).getOrElse(Set.empty)
+    relationship.theirDidDoc.map(_.authorizedKeys_!.safeVerKeys).getOrElse(Set.empty)
 
   def thoseAuthVerKeys: Set[VerKey] =
-    relationship.thoseDidDocs.flatMap(_.authorizedKeys.safeVerKeys).toSet
+    relationship.thoseDidDocs.flatMap(_.authorizedKeys_!.safeVerKeys).toSet
 
   def allAuthVerKeys: Set[VerKey] = myAuthVerKeys ++ theirAuthVerKeys ++ thoseAuthVerKeys
 

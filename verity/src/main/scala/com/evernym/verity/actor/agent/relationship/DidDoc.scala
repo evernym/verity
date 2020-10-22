@@ -1,39 +1,55 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
-import com.evernym.verity.actor.agent.relationship.Endpoints.EndpointId
 import com.evernym.verity.protocol.engine.{DID, VerKey}
+import scalapb.lenses.{Lens, Mutation, Updatable}
 
-case class DidDoc(did: DID, authorizedKeys: AuthorizedKeys = AuthorizedKeys(), endpoints: Endpoints = Endpoints.empty) {
+trait DidDocLike { this: Updatable[DidDoc] =>
+  def did: DID
 
-  validate ()
+  def authorizedKeys: Option[AuthorizedKeys]
+  def `authorizedKeys_!`: AuthorizedKeys = authorizedKeys
+    .getOrElse(throw new RuntimeException("authorizedKeys is not defined"))
+
+  def endpoints: Option[Endpoints]
+  def `endpoints_!`: Endpoints = endpoints
+    .getOrElse(throw new RuntimeException("endpoints is not defined"))
+
+  def update(ms: (Lens[DidDoc, DidDoc] => Mutation[DidDoc])*): DidDoc
 
   def validate(): Unit = {
-    endpoints.endpointsToAuthKeys.values.toSet.flatten.foreach { ak =>
-      if (! authorizedKeys.keys.exists(_.keyId == ak)) {
+    endpoints_!.endpointsToAuthKeys.values.map(_.keyId).toSet.flatten.foreach { ak =>
+      if (! authorizedKeys_!.keys.exists(_.keyId == ak)) {
         throw new RuntimeException("auth key referenced from 'endpoints' not exists in 'authorizedKeys'")
       }
     }
   }
+
+  def existsAuthedVerKey(verKey: VerKey): Boolean = authorizedKeys.exists(_.safeVerKeys.contains(verKey))
 
   /**
    * adds/replaces (old tags will be replaced with provided ones) given key in 'authorizedKeys'
    * @param newAuthKey
    * @return
    */
-  private def updatedWithNewAuthKey(newAuthKey: AuthorizedKeyLike): DidDoc = {
-    val otherAuthKeys = authorizedKeys.keys.filter(_.keyId != newAuthKey.keyId)
-    copy(authorizedKeys = AuthorizedKeys(otherAuthKeys :+ newAuthKey))
+  def updatedWithNewAuthKey(newAuthKey: AuthorizedKey): DidDoc = {
+    val otherAuthKeys = authorizedKeys
+      .map{
+        _.keys
+          .filter(_.keyId != newAuthKey.keyId)
+      }
+      .getOrElse(Seq.empty)
+    update(_.authorizedKeys := AuthorizedKeys(otherAuthKeys :+ newAuthKey))
   }
+
 
   /**
    * merges (new tags will be added to existing tags) given key in 'authorizedKeys'
    * @param newAuthKey
    * @return
    */
-  private def updatedWithMergedAuthKey(newAuthKey: AuthorizedKeyLike): DidDoc = {
+  private def updatedWithMergedAuthKey(newAuthKey: AuthorizedKey): DidDoc = {
     val (matchedAuthKeys, otherAuthKeys) =
-      authorizedKeys
+      authorizedKeys_!
         .keys
         .partition(ak => ak.hasSameKeyIdAs(newAuthKey) || ak.hasSameVerKeyAs(newAuthKey))
 
@@ -42,12 +58,13 @@ case class DidDoc(did: DID, authorizedKeys: AuthorizedKeys = AuthorizedKeys(), e
     }
 
     val updatedAuthKey = matchedWithDifferentKeyIdAndVerKey.find(emak => emak.keyId != emak.verKey).map { emak =>
-      emak.addTags(newAuthKey.tags)
+      val t = emak
+      emak.addAllTags(newAuthKey.tags)
     }.getOrElse {
-      newAuthKey.addTags(matchedWithSameKeyIdAndVerKey.flatMap(_.tags).toSet)
+      newAuthKey.addAllTags(matchedWithSameKeyIdAndVerKey.flatMap(_.tags))
     }
 
-    copy(authorizedKeys = AuthorizedKeys(otherAuthKeys :+ updatedAuthKey))
+    update(_.authorizedKeys := AuthorizedKeys(otherAuthKeys :+ updatedAuthKey))
   }
 
   /**
@@ -57,8 +74,8 @@ case class DidDoc(did: DID, authorizedKeys: AuthorizedKeys = AuthorizedKeys(), e
    * @param tags
    * @return
    */
-  def updatedWithNewAuthKey(keyId: KeyId, tags: Set[Tag]): DidDoc = {
-    updatedWithNewAuthKey(LegacyAuthorizedKey(keyId, tags))
+  def updatedWithNewAuthKey(keyId: KeyId, tags: Set[Tags]): DidDoc = {
+    updatedWithNewAuthKey(AuthorizedKey(keyId, "", tags))
   }
 
   /**
@@ -69,7 +86,7 @@ case class DidDoc(did: DID, authorizedKeys: AuthorizedKeys = AuthorizedKeys(), e
    * @param tags
    * @return
    */
-  def updatedWithNewAuthKey(keyId: KeyId, verKey: VerKey, tags: Set[Tag]): DidDoc = {
+  def updatedWithNewAuthKey(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): DidDoc = {
     updatedWithNewAuthKey(AuthorizedKey(keyId, verKey, tags))
   }
 
@@ -81,9 +98,10 @@ case class DidDoc(did: DID, authorizedKeys: AuthorizedKeys = AuthorizedKeys(), e
    * @param tags
    * @return
    */
-  def updatedWithMergedAuthKey(keyId: KeyId, verKey: VerKey, tags: Set[Tag]): DidDoc = {
+  def updatedWithMergedAuthKey(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): DidDoc = {
     updatedWithMergedAuthKey(AuthorizedKey(keyId, verKey, tags))
   }
+
 
   /**
    * adds/updates given endpoint in 'endpoints'
@@ -91,21 +109,20 @@ case class DidDoc(did: DID, authorizedKeys: AuthorizedKeys = AuthorizedKeys(), e
    * @param endpoint
    * @return
    */
-  def updatedWithEndpoint(endpoint: EndpointLike, authKeyIds: Set[KeyId]): DidDoc = {
-    if (authKeyIds.isEmpty && ! endpoints.endpointsToAuthKeys.contains(endpoint.id))
+  def updatedWithEndpoint(endpoint: EndpointADT, authKeyIds: Set[KeyId]): DidDoc = {
+    if (authKeyIds.isEmpty && ! endpoints.exists(_.endpointsToAuthKeys.contains(endpoint.id)))
       throw new RuntimeException("at least one auth key id require to be associated with the given endpoint")
-    authKeyIds.foreach(checkIfAuthKeyExists)
-    copy(endpoints = endpoints.addOrUpdate(endpoint, authKeyIds))
-  }
+    authKeyIds.foreach{ keyId =>
+      if(! authorizedKeys.exists(_.keys.exists(ak => ak.keyId == keyId)))
+        throw new RuntimeException(s"authorized key '$keyId' doesn't exists")
+    }
 
-  private def checkIfAuthKeyExists(keyId: KeyId): Unit = {
-    if (! authorizedKeys.keys.exists(ak => ak.keyId == keyId))
-      throw new RuntimeException(s"authorized key '$keyId' doesn't exists")
+    val updatedEndpoints = endpoints.getOrElse(Endpoints()).addOrUpdate(endpoint, authKeyIds)
+    update(_.endpoints := updatedEndpoints)
   }
 
   def updatedWithRemovedEndpointById(id: EndpointId): DidDoc = {
-    copy(endpoints = endpoints.remove(id))
+    update(_.endpoints := endpoints_!.remove(id))
   }
 
-  def existsAuthedVerKey(verKey: VerKey): Boolean = authorizedKeys.safeVerKeys.contains(verKey)
 }

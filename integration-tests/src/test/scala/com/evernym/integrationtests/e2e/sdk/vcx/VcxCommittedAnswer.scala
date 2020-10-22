@@ -13,6 +13,7 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedCommitt
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxCommittedAnswer.HolderCommittedAnswer
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.connection.ConnectionApi
+import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
 import com.evernym.verity.sdk.utils.Context
 import org.json.JSONObject
@@ -55,7 +56,13 @@ protected trait VcxCommittedAnswer
 
         ConnectionApi.connectionSendMessage(
           connHandle,
-          buildAgentMsg(answerMsg, UUID.randomUUID().toString, threadId, CommittedAnswerDefinition, StandardTypeFormat).jsonStr,
+          buildAgentMsg(
+            answerMsg,
+            UUID.randomUUID().toString,
+            threadId,
+            CommittedAnswerDefinition,
+            TypeFormat.STANDARD_TYPE_FORMAT
+          ).jsonStr,
           sendOptions.toString
         ).get()
       }

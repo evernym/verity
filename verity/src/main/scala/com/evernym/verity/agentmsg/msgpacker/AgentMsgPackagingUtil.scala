@@ -3,13 +3,15 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdReqMsg_MFV_0_5, FwdReqMsg_MFV_1_0_1}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK, MPV_MSG_PACK, MsgFamilyQualifier, MsgName, MsgPackVersion, VerKey}
+import com.evernym.verity.protocol.engine.{DID, MsgFamilyQualifier, MsgName, VerKey}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAccessParam}
 import org.json.JSONObject
@@ -146,7 +148,7 @@ object AgentMsgPackagingUtil {
   //TODO: come back to this and see if this requires any more refactoring
   def packMsgForRoutingKeys(msgPackVersion: MsgPackVersion,
                             msg: Array[Byte],
-                            routingKeys: Vector[VerKey],
+                            routingKeys: Seq[VerKey],
                             msgType: String
                            )
                            (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {

@@ -1,5 +1,7 @@
 package com.evernym.verity.testkit.util
 
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgThread, PairwiseMsgUids}
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging

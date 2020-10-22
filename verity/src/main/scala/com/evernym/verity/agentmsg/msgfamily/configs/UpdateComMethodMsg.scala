@@ -1,10 +1,12 @@
 package com.evernym.verity.agentmsg.msgfamily.configs
 
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{MsgBase, MsgPackVersion, MPV_INDY_PACK}
+import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 
 case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]) extends MsgBase {

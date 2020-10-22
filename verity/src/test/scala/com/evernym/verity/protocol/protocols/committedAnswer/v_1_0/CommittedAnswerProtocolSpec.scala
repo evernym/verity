@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
 import java.util.UUID
 
+import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
@@ -61,7 +62,7 @@ class CommittedAnswerProtocolSpec
           UUID.randomUUID().toString,
           threadId,
           CommittedAnswerDefinition,
-          StandardTypeFormat
+          TypeFormat.STANDARD_TYPE_FORMAT
         )
 
         jsonWithType.msgType.msgName shouldBe "answer"

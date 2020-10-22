@@ -1,10 +1,11 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.{DID, MPV_MSG_PACK, VerKey}
+import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestConfigDetail
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.tags.{AgentKeyTag, CloudAgentKeyTag, EdgeAgentKeyTag}
+import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.testkit.BasicSpec
 
 class AuthorizedKeySpec extends BasicSpec {
@@ -9,43 +9,43 @@ class AuthorizedKeySpec extends BasicSpec {
 
     "when tried to construct without tags" - {
       "should be constructed successfully" in {
-        LegacyAuthorizedKey("keyId", Set.empty)
+        AuthorizedKey("keyId", "", Set.empty)
         AuthorizedKey("keyId", "verKey", Set.empty)
       }
     }
 
     "when tried to construct with tags" - {
       "should be constructed successfully" in {
-        LegacyAuthorizedKey("keyId", Set(AgentKeyTag))
-        AuthorizedKey("keyId", "verKey", Set(AgentKeyTag))
+        AuthorizedKey("keyId", "", Set(AGENT_KEY_TAG))
+        AuthorizedKey("keyId", "verKey", Set(AGENT_KEY_TAG))
       }
     }
 
     "when exercised interface members" - {
       "should behave correctly" in {
-        val lak = LegacyAuthorizedKey("keyId", Set(AgentKeyTag))
+        val lak = AuthorizedKey("keyId", "", Set(AGENT_KEY_TAG))
         lak.keyId shouldBe "keyId"
-        lak.tags shouldBe Set(AgentKeyTag)
+        lak.tags shouldBe Set(AGENT_KEY_TAG)
         intercept[UnsupportedOperationException] {
           lak.verKey
         }
 
-        val ak = AuthorizedKey("keyId", "verKey", Set(AgentKeyTag))
+        val ak = AuthorizedKey("keyId", "verKey", Set(AGENT_KEY_TAG))
         ak.keyId shouldBe "keyId"
         ak.verKey shouldBe "verKey"
-        ak.tags shouldBe Set(AgentKeyTag)
+        ak.tags shouldBe Set(AGENT_KEY_TAG)
       }
     }
 
     "when tried to add tags" - {
       "should add tags successfully" in {
-        val ak1 = AuthorizedKey("keyId", "verKey", Set(AgentKeyTag))
-        val ak2 = ak1.addTags(Set(CloudAgentKeyTag))
-        ak2.tags shouldBe Set(AgentKeyTag, CloudAgentKeyTag)
+        val ak1 = AuthorizedKey("keyId", "verKey", Set(AGENT_KEY_TAG))
+        val ak2 = ak1.addAllTags(Set(CLOUD_AGENT_KEY))
+        ak2.tags shouldBe Set(AGENT_KEY_TAG, CLOUD_AGENT_KEY)
 
-        val lak1 = LegacyAuthorizedKey("keyId", Set(AgentKeyTag))
-        val lak2 = lak1.addTags(Set(CloudAgentKeyTag))
-        lak2.tags shouldBe Set(AgentKeyTag, CloudAgentKeyTag)
+        val lak1 = AuthorizedKey("keyId", "", Set(AGENT_KEY_TAG))
+        val lak2 = lak1.addAllTags(Set(CLOUD_AGENT_KEY))
+        lak2.tags shouldBe Set(AGENT_KEY_TAG, CLOUD_AGENT_KEY)
       }
     }
   }
@@ -55,18 +55,18 @@ class AuthorizedKeySpec extends BasicSpec {
     "when tried to construct with duplicate keys" - {
       "should fail with appropriate error" in {
         val ex1 = intercept[RuntimeException] {
-          AuthorizedKeys(
-            AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)),
-            AuthorizedKey("keyId2", "verKey1", Set(AgentKeyTag))
-          )
+          AuthorizedKeys(Seq(
+            AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)),
+            AuthorizedKey("keyId2", "verKey1", Set(AGENT_KEY_TAG))
+          ))
         }
         ex1.getMessage shouldBe "duplicate auth keys not allowed"
 
         val ex2 = intercept[RuntimeException] {
-          AuthorizedKeys(
-            LegacyAuthorizedKey("keyId1", Set(AgentKeyTag)),
-            AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag))
-          )
+          AuthorizedKeys(Seq(
+            AuthorizedKey("keyId1", "", Set(AGENT_KEY_TAG)),
+            AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG))
+          ))
         }
         ex2.getMessage shouldBe "duplicate auth keys not allowed"
       }
@@ -74,33 +74,33 @@ class AuthorizedKeySpec extends BasicSpec {
 
     "when tried to filter by tags" - {
       "should produce correct result" in {
-        val authKeys = AuthorizedKeys(
-          AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)),
-          AuthorizedKey("keyId2", "verKey2", Set(EdgeAgentKeyTag)),
-          AuthorizedKey("keyId3", "verKey3", Set(CloudAgentKeyTag))
-        )
-        authKeys.filterByTags(AgentKeyTag) shouldBe Vector(AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)))
-        authKeys.filterByTags(EdgeAgentKeyTag) shouldBe Vector(AuthorizedKey("keyId2", "verKey2", Set(EdgeAgentKeyTag)))
-        authKeys.filterByTags(CloudAgentKeyTag) shouldBe Vector(AuthorizedKey("keyId3", "verKey3", Set(CloudAgentKeyTag)))
+        val authKeys = AuthorizedKeys(Seq(
+          AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)),
+          AuthorizedKey("keyId2", "verKey2", Set(EDGE_AGENT_KEY)),
+          AuthorizedKey("keyId3", "verKey3", Set(CLOUD_AGENT_KEY))
+        ))
+        authKeys.filterByTags(AGENT_KEY_TAG) shouldBe Vector(AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)))
+        authKeys.filterByTags(EDGE_AGENT_KEY) shouldBe Vector(AuthorizedKey("keyId2", "verKey2", Set(EDGE_AGENT_KEY)))
+        authKeys.filterByTags(CLOUD_AGENT_KEY) shouldBe Vector(AuthorizedKey("keyId3", "verKey3", Set(CLOUD_AGENT_KEY)))
 
-        authKeys.filterByTags(AgentKeyTag, CloudAgentKeyTag) shouldBe
-          Vector(AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)), AuthorizedKey("keyId3", "verKey3", Set(CloudAgentKeyTag)))
+        authKeys.filterByTags(AGENT_KEY_TAG, CLOUD_AGENT_KEY) shouldBe
+          Vector(AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)), AuthorizedKey("keyId3", "verKey3", Set(CLOUD_AGENT_KEY)))
       }
     }
 
     "when tried to filter by ver keys" - {
       "should produce correct result" in {
-        val authKeys = AuthorizedKeys(
-          AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)),
-          AuthorizedKey("keyId2", "verKey2", Set(EdgeAgentKeyTag)),
-          AuthorizedKey("keyId3", "verKey3", Set(CloudAgentKeyTag))
-        )
-        authKeys.filterByVerKeys("verKey1") shouldBe Vector(AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)))
-        authKeys.filterByVerKeys("verKey2") shouldBe Vector(AuthorizedKey("keyId2", "verKey2", Set(EdgeAgentKeyTag)))
-        authKeys.filterByVerKeys("verKey3") shouldBe Vector(AuthorizedKey("keyId3", "verKey3", Set(CloudAgentKeyTag)))
+        val authKeys = AuthorizedKeys(Seq(
+          AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)),
+          AuthorizedKey("keyId2", "verKey2", Set(EDGE_AGENT_KEY)),
+          AuthorizedKey("keyId3", "verKey3", Set(CLOUD_AGENT_KEY))
+        ))
+        authKeys.filterByVerKeys("verKey1") shouldBe Vector(AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)))
+        authKeys.filterByVerKeys("verKey2") shouldBe Vector(AuthorizedKey("keyId2", "verKey2", Set(EDGE_AGENT_KEY)))
+        authKeys.filterByVerKeys("verKey3") shouldBe Vector(AuthorizedKey("keyId3", "verKey3", Set(CLOUD_AGENT_KEY)))
 
         authKeys.filterByVerKeys("verKey1", "verKey3") shouldBe
-          Vector(AuthorizedKey("keyId1", "verKey1", Set(AgentKeyTag)), AuthorizedKey("keyId3", "verKey3", Set(CloudAgentKeyTag)))
+          Vector(AuthorizedKey("keyId1", "verKey1", Set(AGENT_KEY_TAG)), AuthorizedKey("keyId3", "verKey3", Set(CLOUD_AGENT_KEY)))
       }
     }
   }

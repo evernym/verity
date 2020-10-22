@@ -27,40 +27,6 @@ package object engine {
   type RefMsgId = String
   type SafeThreadId = String
 
-  class UnknownMsgPackVersion(message: String) extends Exception(message)
-
-  sealed trait MsgPackVersion {
-    def toString: String
-
-    def isEqual(mpv: String): Boolean = this == MsgPackVersion.fromString(mpv)
-  }
-
-  // used by REST
-  case object MPV_PLAIN extends MsgPackVersion {
-    override val toString = "plain"
-  }
-
-  // message pack
-  case object MPV_MSG_PACK extends MsgPackVersion {
-    override val toString = "0.5"
-  }
-
-  // indy pack
-  case object MPV_INDY_PACK extends MsgPackVersion {
-    override val toString = "1.0"
-  }
-
-  object MsgPackVersion {
-    def fromString(v: String): MsgPackVersion = {
-      v.trim match {
-        case MPV_PLAIN.toString     => MPV_PLAIN
-        case MPV_MSG_PACK.toString  => MPV_MSG_PACK
-        case MPV_INDY_PACK.toString => MPV_INDY_PACK
-        case v => throw new UnknownMsgPackVersion("invalid msg pack version found: " + v)
-      }
-    }
-  }
-
   type Nonce = String
 
   //NOTE: until we implement threading, we'll use below mentioned thread id

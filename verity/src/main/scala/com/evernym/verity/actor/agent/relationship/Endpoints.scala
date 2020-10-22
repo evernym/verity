@@ -1,49 +1,28 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
-import com.evernym.verity.actor.agent.relationship.Endpoints.EndpointId
-import com.evernym.verity.actor.agent.relationship.Relationship.URL
-import com.evernym.verity.protocol.engine.{DID, MsgPackVersion, VerKey}
+import com.evernym.verity.actor.agent._
 
+import scala.language.implicitConversions
 
-object Endpoints {
-  type EndpointId = String    //a unique id for the given endpoint
-
-  def empty: Endpoints = Endpoints(Vector.empty, Map.empty)
+trait EndpointsLike {
+  this: Endpoints =>
+  /**
+   * collection of different endpoints
+   * @return endpoints
+   */
+  def endpoints: Seq[EndpointADT]
 
   /**
-   *
-   * @param endpoint endpoint to be added
-   * @param authKeys auth keys belonging to provided endpoint
-   * @return
+   * mapping between endpoint id and auth key ids
+   * @return endpointsToAuthKeys
    */
-  def init(endpoint: EndpointLike, authKeys: Set[KeyId]): Endpoints =
-    init(Vector(endpoint), authKeys)
-
-  /**
-   *
-   * @param endpoints endpoints to be added
-   * @param authKeys auth keys belonging to all given endpoints
-   * @return
-   */
-  def init(endpoints: Vector[EndpointLike], authKeys: Set[KeyId]): Endpoints = {
-    val endpointsToAuthKeys = endpoints.map(ep => ep.id -> authKeys).toMap
-    Endpoints(endpoints, endpointsToAuthKeys)
-  }
-}
-
-/**
- *
- * @param endpoints collection of different endpoints
- * @param endpointsToAuthKeys mapping between endpoint id and auth key ids
- */
-case class Endpoints(endpoints: Vector[EndpointLike], endpointsToAuthKeys: Map[EndpointId, Set[KeyId]]) {
+  def endpointsToAuthKeys: Map[EndpointId, KeyIds]
 
   validate()
 
   def validate() {
 
-    endpointsToAuthKeys.keySet.find(eid => ! endpoints.map(_.id).contains(eid)).map { eid =>
+    endpointsToAuthKeys.keySet.find(eid => !endpoints.map(_.id).contains(eid)).map { eid =>
       throw new RuntimeException(s"endpoint with id '$eid' not exists")
     }
 
@@ -60,28 +39,31 @@ case class Endpoints(endpoints: Vector[EndpointLike], endpointsToAuthKeys: Map[E
     }
   }
 
-  def filterByKeyIds(keyIds: KeyId*): Vector[EndpointLike] = {
-    val endpointIds = endpointsToAuthKeys.filter(_._2.intersect(keyIds.toSet).nonEmpty).keySet
+  def filterByKeyIds(keyIds: KeyId*): Seq[EndpointADT] = {
+    val endpointIds = endpointsToAuthKeys.filter(_._2.keyId.intersect(keyIds.toSet).nonEmpty).keySet
     endpoints.filter(ep => endpointIds.contains(ep.id))
   }
 
-  def filterByTypes(types: Int*): Vector[EndpointLike] =
+  def filterByTypes(types: Int*): Seq[EndpointADT] =
     endpoints.filter(ep => types.toVector.contains(ep.`type`))
 
-  def filterByValues(values: String*): Vector[EndpointLike] =
+  def filterByValues(values: String*): Seq[EndpointADT] =
     endpoints.filter(ep => values.toVector.contains(ep.value))
 
   def findById(id: EndpointId): Option[EndpointLike] = endpoints.find(_.id == id)
 
-  def addOrUpdate(endpoint: EndpointLike, authKeys: Set[KeyId]): Endpoints = {
+  def addOrUpdate(endpoint: EndpointADT, authKeys: Set[KeyId]): Endpoints = {
     endpoints.find(_.value == endpoint.value) match {
       case Some(ep) =>
-        val updatedAuthKeys = endpointsToAuthKeys.getOrElse(ep.id, Set.empty) ++ authKeys
-        copy(endpointsToAuthKeys = endpointsToAuthKeys ++ Map(ep.id -> updatedAuthKeys))
-      case None    =>
+        val updatedAuthKeys = endpointsToAuthKeys.getOrElse(ep.id, KeyIds()).addAllKeyId(authKeys)
+        val e2ak = endpointsToAuthKeys ++ Map(ep.id -> updatedAuthKeys)
+        this.
+        copy(endpointsToAuthKeys = e2ak)
+      case None =>
         val otherEndpoints = endpoints.filter(_.id != endpoint.id)
-        val authKeyMapping = Map(endpoint.id -> authKeys)
-        copy(endpoints = otherEndpoints :+ endpoint, endpointsToAuthKeys = endpointsToAuthKeys ++ authKeyMapping)
+        val authKeyMapping = Map(endpoint.id -> KeyIds(authKeys))
+        val newE2ak = endpointsToAuthKeys ++ authKeyMapping
+        copy(endpoints = otherEndpoints :+ endpoint, endpointsToAuthKeys = newE2ak)
     }
   }
 
@@ -89,6 +71,45 @@ case class Endpoints(endpoints: Vector[EndpointLike], endpointsToAuthKeys: Map[E
     val otherEndpoints = endpoints.filter(_.id != id)
     val otherEndpointsToAuthKeys = endpointsToAuthKeys - id
     copy(endpoints = otherEndpoints, endpointsToAuthKeys = otherEndpointsToAuthKeys)
+  }
+}
+
+trait EndpointsCompanion {
+
+  def empty: Endpoints = Endpoints(Vector.empty, Map.empty)
+
+  implicit def EndpointADTUntyped2ADT(endpoint: EndpointADTUntyped): EndpointADT = EndpointADT(endpoint)
+  implicit def SeqEndpointADTUntyped2ADT(endpoints: Seq[EndpointADTUntyped]): Seq[EndpointADT] = endpoints.map(EndpointADT.apply)
+
+  /**
+   *
+   * @param endpoint endpoint to be added
+   * @param authKey auth key belonging to provided endpoint
+   * @return
+   */
+  def init(endpoint: EndpointADTUntyped, authKey: KeyId): Endpoints =
+    init(Vector(endpoint), Set(authKey))
+
+  /**
+   *
+   * @param endpoint endpoint to be added
+   * @param authKeys auth keys belonging to provided endpoint
+   * @return
+   */
+  def init(endpoint: EndpointADTUntyped, authKeys: Set[KeyId]): Endpoints =
+    init(Vector(endpoint), authKeys)
+
+  /**
+   *
+   * @param endpoints endpoints to be added
+   * @param authKeys  auth keys belonging to all given endpoints
+   * @return
+   */
+  def init(endpoints: Seq[EndpointADTUntyped], authKeys: Set[KeyId] = Set.empty): Endpoints = {
+    val ep2 = endpoints.map(EndpointADT.apply)
+    lazy val keyIds = KeyIds(authKeys)
+    val endpointsToAuthKeys = ep2.map(ep => ep.id -> keyIds).toMap
+    Endpoints(ep2, endpointsToAuthKeys)
   }
 }
 
@@ -102,11 +123,12 @@ trait EndpointType {
   def packagingContext: Option[PackagingContext]
 }
 
-object PackagingContext {
+trait PackagingContextCompanion {
   def apply(packVersion: String): PackagingContext =
     PackagingContext(MsgPackVersion.fromString(packVersion))
 }
-case class PackagingContext(packVersion: MsgPackVersion)
+//object PackagingContext extends PackagingContextCompanion
+//case class PackagingContext(packVersion: MsgPackVersion)
 
 trait EndpointLike extends EndpointType {
 
@@ -124,68 +146,79 @@ trait EndpointLike extends EndpointType {
   def value: String
 }
 
-/**
- * it contains information for legacy routing service endpoint (as per connecting 0.5 and 0.6 protocols)
- *
- * @param agencyDID their agency DID
- * @param agentKeyDID their agent key DID
- * @param agentVerKey their agent ver key
- * @param agentKeyDlgProofSignature their agent key delegation proof signature
- */
-case class LegacyRoutingServiceEndpoint(agencyDID: DID,
-                                        agentKeyDID: DID,
-                                        agentVerKey: VerKey,
-                                        agentKeyDlgProofSignature: String)
-  extends RoutingServiceEndpointLike {
+trait EndpointLikePassThrough extends EndpointLike {
+  this: EndpointADT =>
+  lazy val endpoint = this.endpointADTX.asInstanceOf[EndpointLike]
+  def id = endpoint.id
+  def value = endpoint.value
+  def `type`= endpoint.`type`
+  def packagingContext = endpoint.packagingContext
+}
+
+///**
+// * it contains information for legacy routing service endpoint (as per connecting 0.5 and 0.6 protocols)
+// *
+// * @param agencyDID their agency DID
+// * @param agentKeyDID their agent key DID
+// * @param agentVerKey their agent ver key
+// * @param agentKeyDlgProofSignature their agent key delegation proof signature
+// */
+//case class LegacyRoutingServiceEndpoint(agencyDID: DID,
+//                                        agentKeyDID: DID,
+//                                        agentVerKey: VerKey,
+//                                        agentKeyDlgProofSignature: String)
+//  extends LegacyRoutingServiceEndpointLike
+
+trait LegacyRoutingServiceEndpointLike extends RoutingServiceEndpointLike {
   def value = "their-route"
 }
 
-/**
- * it contains information for standard routing service endpoint (as per connections 1.0 protocol)
- *
- * @param value endpoint http url (for example: http://verity.example.com etc)
- * @param routingKeys an optional ordered list of public keys (RoutingKeys) of
- *                    mediators used by the Receiver in delivering the message
- *                    (see aries RFC for more detail: https://github.com/hyperledger/aries-rfcs/blob/82365b991743e92a34b1b6460f90b5016e22909a/concepts/0094-cross-domain-messaging/README.md)
- */
-case class RoutingServiceEndpoint(value: URL,
-                                  routingKeys: Vector[VerKey]=Vector.empty)
-  extends RoutingServiceEndpointLike
+///**
+// * it contains information for standard routing service endpoint (as per connections 1.0 protocol)
+// *
+// * @param value endpoint http url (for example: http://verity.example.com etc)
+// * @param routingKeys an optional ordered list of public keys (RoutingKeys) of
+// *                    mediators used by the Receiver in delivering the message
+// *                    (see aries RFC for more detail: https://github.com/hyperledger/aries-rfcs/blob/82365b991743e92a34b1b6460f90b5016e22909a/concepts/0094-cross-domain-messaging/README.md)
+// */
+//case class RoutingServiceEndpoint(value: URL,
+//                                  routingKeys: Vector[VerKey]=Vector.empty)
+//  extends RoutingServiceEndpointLike
 
 
-/**
- *
- * @param id a unique endpoint identifier
- * @param value push notification token (provided by corresponding push notification service provider)
- */
-case class PushEndpoint(id: EndpointId,
-                        value: String) extends EndpointLike with PushEndpointType {
-  def packagingContext: Option[PackagingContext] = None
-}
+///**
+// *
+// * @param id a unique endpoint identifier
+// * @param value push notification token (provided by corresponding push notification service provider)
+// */
+//case class PushEndpoint(id: EndpointId,
+//                        value: String) extends EndpointLike with PushEndpointType {
+//  def packagingContext: Option[PackagingContext] = None
+//}
 
 
-/**
- *
- * @param id a unique endpoint identifier
- * @param value http endpoint url
- * @param packagingContext optional packaging context (what pack version to use etc)
- */
-case class HttpEndpoint(id: EndpointId,
-                        value: String,
-                        packagingContext: Option[PackagingContext] = None) extends EndpointLike with HttpEndpointType
+///**
+// *
+// * @param id a unique endpoint identifier
+// * @param value http endpoint url
+// * @param packagingContext optional packaging context (what pack version to use etc)
+// */
+//case class HttpEndpoint(id: EndpointId,
+//                        value: String,
+//                        packagingContext: Option[PackagingContext] = None) extends EndpointLike with HttpEndpointType
 
-/**
- *
- * @param id a unique endpoint identifier
- * @param value http endpoint url (where a message will be sent and that http will in turn send a push notification)
- */
-case class ForwardPushEndpoint(id: EndpointId,
-                               value: String,
-                               packagingContext: Option[PackagingContext] = None) extends EndpointLike with FwdPushEndpointType
-
-case class SponsorPushEndpoint(id: EndpointId,
-                               value: String,
-                               packagingContext: Option[PackagingContext] = None) extends EndpointLike with SponsorPushEndpointType
+///**
+// *
+// * @param id a unique endpoint identifier
+// * @param value http endpoint url (where a message will be sent and that http will in turn send a push notification)
+// */
+//case class ForwardPushEndpoint(id: EndpointId,
+//                               value: String,
+//                               packagingContext: Option[PackagingContext] = None) extends EndpointLike with FwdPushEndpointType
+//
+//case class SponsorPushEndpoint(id: EndpointId,
+//                               value: String,
+//                               packagingContext: Option[PackagingContext] = None) extends EndpointLike with SponsorPushEndpointType
 
 object EndpointType {
   final val ROUTING_SERVICE_ENDPOINT = 0    //routing service endpoint (it contains more information than just http endpoint)
@@ -217,6 +250,7 @@ trait HttpEndpointType extends EndpointType {
  */
 trait PushEndpointType extends EndpointType {
   def `type`: Int = EndpointType.PUSH
+  def packagingContext: Option[PackagingContext] = None
 }
 
 /**

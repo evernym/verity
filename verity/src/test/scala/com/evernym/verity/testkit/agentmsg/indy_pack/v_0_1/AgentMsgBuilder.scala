@@ -1,11 +1,12 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_1
 
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_GET_TOKEN
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
 import com.evernym.verity.agentmsg.tokenizer.GetToken
 import com.evernym.verity.protocol.engine.Constants.MFV_1_0
-import com.evernym.verity.protocol.engine.{MPV_INDY_PACK, MsgPackVersion}
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.{preparePackedRequestForAgent, preparePackedRequestForRoutes}

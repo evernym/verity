@@ -1,8 +1,7 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
-import com.evernym.verity.actor.agent.relationship.tags.AgentKeyTag
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
+import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail}
@@ -20,14 +19,15 @@ object RelationshipUtil {
    */
   def buildMyDidDoc(relScopeDID: DID,
                     agentKeyDID: DID,
-                    agentKeyTags: Set[Tag])
+                    agentKeyTags: Set[Tags])
                    (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
     val authKey = prepareAuthorizedKey(agentKeyDID, agentKeyTags)
     val agentEndpoint = buildAgencyEndpoint(relationshipUtilParam.appConfig)
     val endpoints = if (relationshipUtilParam.thisAgentKeyId.contains(agentKeyDID)) {
-      Endpoints.init(RoutingServiceEndpoint(agentEndpoint.toString), Set(authKey.keyId))
+      Endpoints.init(RoutingServiceEndpoint(agentEndpoint.toString), authKey.keyId)
     } else Endpoints.empty
-    DidDoc(relScopeDID, AuthorizedKeys(authKey), endpoints)
+    val keys = AuthorizedKeys(Seq(authKey))
+    DidDoc(relScopeDID, Some(keys), Some(endpoints))
   }
 
   /**
@@ -41,15 +41,18 @@ object RelationshipUtil {
                        agentKeyDID: DID,
                        routingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]]=None)
                       (implicit relationshipUtilParam: RelUtilParam): DidDoc = {
-    val authKey = prepareAuthorizedKey(agentKeyDID, Set(AgentKeyTag))
+    val authKey = prepareAuthorizedKey(agentKeyDID, Set(AGENT_KEY_TAG))
     val endpointsOpt = routingDetail map {
       case Left(lrd: LegacyRoutingDetail) =>
-        Endpoints.init(LegacyRoutingServiceEndpoint(lrd.agencyDID, lrd.agentKeyDID,
-          lrd.agentVerKey, lrd.agentKeyDlgProofSignature), Set(authKey.keyId))
+        val ep = LegacyRoutingServiceEndpoint(
+          lrd.agencyDID, lrd.agentKeyDID, lrd.agentVerKey, lrd.agentKeyDlgProofSignature)
+        Endpoints.init(ep, authKey.keyId)
       case Right(rd: RoutingDetail)       =>
-        Endpoints.init(RoutingServiceEndpoint(rd.endpoint, rd.routingKeys), Set(authKey.keyId))
+        Endpoints.init(RoutingServiceEndpoint(rd.endpoint, rd.routingKeys), authKey.keyId)
     }
-    DidDoc(relScopeDID, AuthorizedKeys(Vector(authKey)), endpointsOpt.getOrElse(Endpoints.empty))
+    val keys = AuthorizedKeys(Vector(authKey))
+    val endpoints = endpointsOpt.getOrElse(Endpoints.empty)
+    DidDoc(relScopeDID, Some(keys), Some(endpoints))
   }
 
   /**
@@ -60,9 +63,9 @@ object RelationshipUtil {
   def updatedDidDocWithMigratedAuthKeys(didDoc: Option[DidDoc])
                                        (implicit relationshipUtilParam: RelUtilParam): Option[DidDoc] = {
     didDoc.map { dd =>
-      val currentAuthKeys = dd.authorizedKeys.keys
-      val currentEndpoints = dd.endpoints
-      val currentEndpointToAuthKeys = dd.endpoints.endpointsToAuthKeys
+      val currentAuthKeys = dd.authorizedKeys_!.keys
+      val currentEndpoints = dd.endpoints_!
+      val currentEndpointToAuthKeys = dd.endpoints_!.endpointsToAuthKeys
 
       val migratedAuthKeys = currentAuthKeys.map(authorizedKeyMapper(relationshipUtilParam.walletVerKeyCacheHelper))
 
@@ -70,7 +73,7 @@ object RelationshipUtil {
       //result: Vector[(authKey, Option[duplicate AuthKey])]
       val result = migratedAuthKeys.map { curAuthKey =>
         val otherMatchedAuthKey = migratedAuthKeys.find(mak => mak.verKey == curAuthKey.verKey && mak.keyId == mak.verKey && curAuthKey.keyId != mak.keyId)
-        val curAuthKeyUpdatedWithTags = otherMatchedAuthKey.map(mak => curAuthKey.addTags(mak.tags)).getOrElse(curAuthKey)
+        val curAuthKeyUpdatedWithTags = otherMatchedAuthKey.map(mak => curAuthKey.addAllTags(mak.tags)).getOrElse(curAuthKey)
         (curAuthKeyUpdatedWithTags, otherMatchedAuthKey)
       }
 
@@ -80,19 +83,19 @@ object RelationshipUtil {
       //removing auth key (referenced from endpoints) which is going to be removed from authorized keys
       val dupKeyIdToRetainedKeyId = result.filter(_._2.isDefined).map(ak => ak._2.get.keyId -> ak._1.keyId).toMap
       val updatedEndpointsToKeys = currentEndpointToAuthKeys.map { case (k, v) =>
-        k -> v.map(k => dupKeyIdToRetainedKeyId.getOrElse(k, k))
+        k -> KeyIds(v.keyId.map(k => dupKeyIdToRetainedKeyId.getOrElse(k, k)))
       }
 
       //update the did doc with new data
       dd.copy(
-        authorizedKeys = AuthorizedKeys(authKeysToRetain),
-        endpoints = currentEndpoints.copy(endpointsToAuthKeys = updatedEndpointsToKeys)
+        authorizedKeys = Some(AuthorizedKeys(authKeysToRetain)),
+        endpoints = Some(currentEndpoints.copy(endpointsToAuthKeys = updatedEndpointsToKeys))
       )
     }
   }
 
-  private def prepareAuthorizedKey(agentKeyDID: DID, agentKeyTags: Set[Tag] = Set.empty)
-                          (implicit relationshipUtilParam: RelUtilParam): AuthorizedKeyLike = {
+  private def prepareAuthorizedKey(agentKeyDID: DID, agentKeyTags: Set[Tags] = Set.empty)
+                          (implicit relationshipUtilParam: RelUtilParam): AuthorizedKey = {
     relationshipUtilParam.walletVerKeyCacheHelperOpt match {
       case Some(wc) =>
         //if actor has successfully recovered, that means, this function is being called
@@ -106,7 +109,7 @@ object RelationshipUtil {
         // until post recovery, so just create 'LegacyAuthorizedKey' and then
         // after successful recovery, 'relationship' object will be re-prepared with proper
         // 'AuthorizedKey'
-        LegacyAuthorizedKey(agentKeyDID, tags = agentKeyTags)
+        AuthorizedKey(agentKeyDID, "", tags = agentKeyTags)
     }
   }
 
@@ -126,10 +129,10 @@ object RelationshipUtil {
    * @return
    */
   private def authorizedKeyMapper(walletVerKeyCacheHelper: WalletVerKeyCacheHelper):
-  PartialFunction[AuthorizedKeyLike, AuthorizedKeyLike] = {
-    case lak: LegacyAuthorizedKey =>
-      val verKey = getDidVerKey(lak.keyId, walletVerKeyCacheHelper)
-      AuthorizedKey(lak.keyId, verKey, lak.tags)
+  PartialFunction[AuthorizedKey, AuthorizedKey] = {
+    case key: AuthorizedKeyLike if key.verKeyOpt.isEmpty =>
+      val verKey = getDidVerKey(key.keyId, walletVerKeyCacheHelper)
+      AuthorizedKey(key.keyId, verKey, key.tags)
     case other                    => other
   }
 }

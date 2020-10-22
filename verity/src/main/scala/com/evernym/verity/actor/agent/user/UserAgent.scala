@@ -8,13 +8,13 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentActorContext}
+import com.evernym.verity.actor.agent.{AgentActivityTracker, AgentActorContext, MsgPackVersion}
+import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.agency.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SetupCreateKeyEndpoint, SetupEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, PayloadMetadata, ProcessSendSignalMsg, SendSignalMsg}
 import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
-import com.evernym.verity.actor.agent.relationship.tags.{CloudAgentKeyTag, EdgeAgentKeyTag, RecipKeyTag, RecoveryKeyTag}
-import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointType, ForwardPushEndpoint, HttpEndpoint, PackagingContext, PushEndpoint, RelationshipUtil, SelfRelationship, SponsorPushEndpoint}
+import com.evernym.verity.actor.agent.relationship.{EndpointType, RelationshipUtil, SelfRelationship}
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -45,6 +45,8 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -71,10 +73,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       with MsgAndDeliveryState
       with OptSponsorId
       with Configs {
-    override type RelationshipType = SelfRelationship
-    override def initialRel: SelfRelationship = SelfRelationship.empty
-    override def updatedWithNewMyDidDoc(didDoc: DidDoc): SelfRelationship =
-      relationship.copy(myDidDoc = Option(didDoc))
+    override def initialRel: Relationship = SelfRelationship.empty
   }
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
@@ -162,16 +161,16 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def handleUpdateAuthKeyAndEndpoint(cmu: ComMethodUpdated): Unit = {
-    val existingEdgeAuthKeys = state.myDidDoc_!.authorizedKeys.filterByTags(EdgeAgentKeyTag)
+    val existingEdgeAuthKeys = state.myDidDoc_!.authorizedKeys_!.filterByTags(EDGE_AGENT_KEY)
     val newAuthKeys = cmu.packaging.map(_.recipientKeys).getOrElse(Seq.empty).toSet
     val authKeyIds = newAuthKeys.map { verKey =>
 
       //for now, using 'verKey' as the keyId, if required, it can be changed
-      state.mergeAuthKeyToMyDidDoc(verKey, verKey, Set(RecipKeyTag))
-      state.myDidDoc_!.authorizedKeys.findByVerKey(verKey).get.keyId    //TODO: fix .get
+      state.mergeAuthKeyToMyDidDoc(verKey, verKey, Set(RECIP_KEY))
+      state.myDidDoc_!.authorizedKeys_!.findByVerKey(verKey).get.keyId    //TODO: fix .get
     }
     val packagingContext = cmu.packaging.map(p => PackagingContext(p.pkgType))
-    val endpoint = cmu.typ match {
+    val endpoint: EndpointADTUntyped = cmu.typ match {
       case EndpointType.PUSH        => PushEndpoint(cmu.id, cmu.value)
       case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, packagingContext)
       case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, packagingContext)
@@ -181,14 +180,14 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def handleOwnerDIDSet(did: DID): Unit = {
-    val myDidDoc = state.prepareMyDidDoc(did, did, Set(EdgeAgentKeyTag), checkThisAgentKeyId = false)
+    val myDidDoc = state.prepareMyDidDoc(did, did, Set(EDGE_AGENT_KEY), checkThisAgentKeyId = false)
     state.setRelationship(SelfRelationship(myDidDoc))
   }
 
   def handleAgentKeyCreated(forDID: DID): Unit = {
     state.setThisAgentKeyId(forDID)
     if (forDID != state.myDid_!) {
-      state.addNewAuthKeyToMyDidDoc(forDID, getVerKeyReqViaCache(forDID), Set(CloudAgentKeyTag))
+      state.addNewAuthKeyToMyDidDoc(forDID, getVerKeyReqViaCache(forDID), Set(CLOUD_AGENT_KEY))
     }
     //this is only to handle a legacy code issue
     pendingEdgeAuthKeyToBeAdded.foreach(pak => handleAuthKeyAdded(pak.rka))
@@ -205,7 +204,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     if (state.relationship.isEmpty) {
       pendingEdgeAuthKeyToBeAdded = Option(PendingAuthKey(rka))
     } else if (! pendingEdgeAuthKeyToBeAdded.exists(_.applied)) {
-      state.addNewAuthKeyToMyDidDoc(state.myDid_!, rka.verKey, Set(EdgeAgentKeyTag))
+      state.addNewAuthKeyToMyDidDoc(state.myDid_!, rka.verKey, Set(EDGE_AGENT_KEY))
       pendingEdgeAuthKeyToBeAdded = pendingEdgeAuthKeyToBeAdded.map(_.copy(applied = true))
     } else {
       //if flow comes to this block, it means, this is a 'recovery key'
@@ -217,7 +216,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def handleRecoveryKeyAdded(verKey: VerKey): Unit = {
-    state.addNewAuthKeyToMyDidDoc("recovery-key", verKey, Set(RecoveryKeyTag))
+    state.addNewAuthKeyToMyDidDoc("recovery-key", verKey, Set(RECOVERY_KEY))
   }
 
   def taa: Option[TransactionAuthorAgreement] = {
@@ -249,7 +248,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def handleDeleteComMethod(dcm: DeleteComMethod): Unit = {
-    state.myDidDoc_!.endpoints.filterByValues(dcm.value).foreach { ep =>
+    state.myDidDoc_!.endpoints_!.filterByValues(dcm.value).foreach { ep =>
       state.removeEndpointById(ep.id)
       writeAndApply(ComMethodDeleted(ep.id, ep.value, dcm.reason))
       logger.debug(s"com method deleted (userDID=<${state.myDid}>, id=${ep.id}, " +
@@ -363,11 +362,11 @@ class UserAgent(val agentActorContext: AgentActorContext)
     Set(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_FWD_PUSH).contains(comType)
 
   def processValidatedUpdateComMethodMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val authKeyIds = state.myDidDoc_!.endpoints.endpointsToAuthKeys.getOrElse(comMethod.id, Set.empty)
-    val verKeys = state.myDidDoc_!.authorizedKeys.safeAuthorizedKeys
-      .filterByKeyIds(authKeyIds.toSeq: _*)
+    val authKeyIds = state.myDidDoc_!.endpoints_!.endpointsToAuthKeys.getOrElse(comMethod.id, KeyIds())
+    val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
+      .filterByKeyIds(authKeyIds)
       .map(_.verKey).toSet
-    val existingEndpointOpt = state.myDidDoc_!.endpoints.findById(comMethod.id)
+    val existingEndpointOpt = state.myDidDoc_!.endpoints_!.findById(comMethod.id)
     val isComMethodExistsWithSameValue = existingEndpointOpt.exists{ eep =>
       eep.`type` == comMethod.`type` && eep.value == comMethod.value && {
         (eep.packagingContext, comMethod.packaging) match {
@@ -380,7 +379,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     }
     if (! isComMethodExistsWithSameValue) {
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
-      state.myDidDoc_!.endpoints.filterByTypes(comMethod.`type`)
+      state.myDidDoc_!.endpoints_!.filterByTypes(comMethod.`type`)
         .filter (_ => isOnlyOneComMethodAllowed(comMethod.`type`)).foreach { ep =>
 	      writeAndApply(ComMethodDeleted(ep.id, ep.value, "new com method will be updated (as of now only one device supported at a time)"))
       }
@@ -636,8 +635,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def authedMsgSenderVerKeys: Set[VerKey] = {
-    (state.relationship.myDidDocAuthKeysByTag(EdgeAgentKeyTag).flatMap(_.verKeyOpt)  ++
-      state.relationship.myDidDocAuthKeysByTag(RecoveryKeyTag).flatMap(_.verKeyOpt)).toSet
+    (state.relationship.myDidDocAuthKeysByTag(EDGE_AGENT_KEY).flatMap(_.verKeyOpt)  ++
+      state.relationship.myDidDocAuthKeysByTag(RECOVERY_KEY).flatMap(_.verKeyOpt)).toSet
   }
 
   def checkIfKeyNotCreated(forDID: DID): Unit = {

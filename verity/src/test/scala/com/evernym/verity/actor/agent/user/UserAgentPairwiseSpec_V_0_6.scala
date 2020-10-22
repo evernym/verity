@@ -2,12 +2,13 @@ package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_HTTP_ENDPOINT, COM_METHOD_TYPE_PUSH, DEFAULT_INVITE_SENDER_LOGO_URL, DEFAULT_INVITE_SENDER_NAME}
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED_OFFER, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, getNewMsgUniqueId}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqAcceptedMsg_MFV_0_6, MsgThread}
 import com.evernym.verity.agentmsg.msgpacker.{PackMsgParam, PackedMsg}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK}
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent

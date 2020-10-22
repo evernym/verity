@@ -2,6 +2,7 @@ package com.evernym.verity.testkit.agentmsg
 
 import com.evernym.verity.Status.FORBIDDEN
 import com.evernym.verity.Version
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.{AgencyPublicDid, DidPair}
 import com.evernym.verity.agentmsg._

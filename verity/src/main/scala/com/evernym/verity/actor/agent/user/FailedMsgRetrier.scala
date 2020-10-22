@@ -5,10 +5,11 @@ import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
 import com.evernym.verity.actor.ActorMessageObject
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{PackedMsgParam, RestMsgParam}
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.protocol.engine.{MsgId, MsgPackVersion}
+import com.evernym.verity.protocol.engine.MsgId
 
 import scala.concurrent.Future
 

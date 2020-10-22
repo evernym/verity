@@ -1,7 +1,8 @@
-package com.evernym.verity.actor
+package com.evernym.verity.actor.cluster_singleton
 
 import akka.actor.Props
 import akka.cluster.sharding.ShardRegion.EntityId
+import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.persistence.BaseNonPersistentActor
 import com.evernym.verity.config.AppConfig

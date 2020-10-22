@@ -2,8 +2,9 @@ package com.evernym.verity.agentmsg.msgpacker
 
 import com.evernym.verity.constants.Constants.`@MSG`
 import com.evernym.verity.Exceptions.MissingReqFieldException
+import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgcodec.{LegacyTypeFormat, MsgCodecException, StandardTypeFormat}
+import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.CreateMsgReqMsg_MFV_0_5
 import com.evernym.verity.agentmsg.msgfamily.{BundledMsg_MFV_0_5, LegacyTypedMsg}
@@ -42,9 +43,9 @@ object AgentMsgParseUtil {
   def agentMsg(jsonMsg: String, family: Option[MsgFamilyDetail] = None): AgentMsg = {
     val mfd = family.getOrElse(msgFamilyDetail(jsonMsg))
     val mtfv = if (mfd.isLegacyMsg) {
-      LegacyTypeFormat
+      TypeFormat.LEGACY_TYPE_FORMAT
     } else {
-      StandardTypeFormat
+      TypeFormat.STANDARD_TYPE_FORMAT
     }
     AgentMsg(jsonMsg, mfd, mtfv)
   }

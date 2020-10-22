@@ -10,7 +10,7 @@ import com.evernym.verity.actor.{ForIdentifier, agentRegion}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgpacker.{PackMsgParam, PackedMsg}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, MPV_MSG_PACK, ThreadId}
+import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, ThreadId}
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -24,6 +24,7 @@ import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 

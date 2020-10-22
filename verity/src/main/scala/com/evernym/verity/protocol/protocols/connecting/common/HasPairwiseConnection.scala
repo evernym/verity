@@ -139,7 +139,7 @@ case class LegacyRoutingDetail(
 
 case class RoutingDetail(verKey: VerKey,
                          endpoint: ServiceEndpoint,
-                         routingKeys: Vector[VerKey])
+                         routingKeys: Seq[VerKey])
   extends RoutingDetailProvider
 
 /**

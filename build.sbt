@@ -315,11 +315,16 @@ lazy val protoBufSettings = Seq(
   // Must set deleteTargetDirectory to false. When set to true (the default) other generated sources in the
   // sourceManaged directory get deleted. For example, version.scala being generated below.
   PB.deleteTargetDirectory := false,
+
+  //this 'PB.includePaths' is to make import works
+  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Compile / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch).taskValue,
+
+  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),

@@ -1,10 +1,10 @@
 package com.evernym.integrationtests.e2e.env
 
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.MPV_MSG_PACK
 import com.evernym.verity.testkit.agentmsg.{AgentMsgPackagingContext, AgentMsgSenderHttpWrapper, GeneralMsgCreatedResp_MFV_0_5}
 import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgent
 
 class MockAgentService(val urlDetail: UrlDetail)

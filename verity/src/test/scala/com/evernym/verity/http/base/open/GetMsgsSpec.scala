@@ -2,11 +2,11 @@ package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, HasMsgStore}
 import com.evernym.verity.protocol.engine.Constants.MFV_1_0
-import com.evernym.verity.protocol.engine.MPV_INDY_PACK
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent

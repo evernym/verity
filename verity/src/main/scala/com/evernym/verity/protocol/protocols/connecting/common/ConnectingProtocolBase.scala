@@ -8,6 +8,8 @@ import com.evernym.verity.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.{NotifyMsgDetail, PayloadMetadata}
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._

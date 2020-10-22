@@ -1,32 +1,34 @@
 package com.evernym.verity.agentmsg.msgcodec
 
+import com.evernym.verity.actor.agent.TypeFormat
+
 import scala.util.Try
 
 class UnknownFormatType(message: String) extends Exception(message)
 
-sealed trait TypeFormat {
+trait TypeFormatLike {
   def toString: String
 }
 
-case object NoopTypeFormat     extends TypeFormat // Do NOT inject a message type
+trait NoopTypeFormat extends TypeFormatLike // Do NOT inject a message type
 {
   override val toString = "noop"
 }
-case object LegacyTypeFormat   extends TypeFormat //"{"@type":{"name":"connect","ver":"1.0"}}"
+trait LegacyTypeFormat extends TypeFormatLike //"{"@type":{"name":"connect","ver":"1.0"}}"
 {
   override val toString = "0.5"
 }
-case object StandardTypeFormat extends TypeFormat //"{"@type":"did:sov:<DID>;spec/TicTacToe/0.5/OFFER"}
+trait StandardTypeFormat extends TypeFormatLike //"{"@type":"did:sov:<DID>;spec/TicTacToe/0.5/OFFER"}
 {
   override val toString = "1.0"
 }
 
-object TypeFormat {
+trait TypeFormatCompanion {
   def fromString(v: String): TypeFormat = {
     v.trim match {
-      case "noop" => NoopTypeFormat
-      case "0.5" => LegacyTypeFormat
-      case "1.0" => StandardTypeFormat
+      case "noop" => TypeFormat.NOOP_TYPE_FORMAT
+      case "0.5" => TypeFormat.LEGACY_TYPE_FORMAT
+      case "1.0" => TypeFormat.STANDARD_TYPE_FORMAT
       case t => throw new UnknownFormatType("invalid msg type format version found: " + t)
     }
   }

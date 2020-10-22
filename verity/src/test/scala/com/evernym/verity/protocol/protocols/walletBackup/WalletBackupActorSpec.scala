@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.walletBackup
 import java.util.UUID
 
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.testkit.AkkaTestBasic
@@ -12,7 +13,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK, MsgType, VerKey}
+import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent

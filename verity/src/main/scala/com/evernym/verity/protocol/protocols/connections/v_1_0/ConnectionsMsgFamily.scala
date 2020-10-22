@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
 import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.actor.agent.relationship.Relationship.URL
+import com.evernym.verity.actor.agent.relationship.URL
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{DID, DIDDocFormatted, MsgBase, MsgFamily, MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName, Parameters, VerKey}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity

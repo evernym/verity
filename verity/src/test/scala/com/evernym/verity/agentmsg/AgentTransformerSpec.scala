@@ -1,12 +1,13 @@
 package com.evernym.verity.agentmsg
 
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackParam, PackedMsg}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
-import com.evernym.verity.protocol.engine.{MsgFamilyVersion, MsgPackVersion}
+import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._

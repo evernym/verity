@@ -13,13 +13,11 @@ class ProtoBufTransformer(objectCodeMapper: ObjectCodeMapperBase) extends (Any <
     val typeCode = objectCodeMapper.codeFromObject(msg)
     val msgBytes = msg.asInstanceOf[GeneratedMessage].toByteArray
     CodeMsgExtractor.pack(typeCode, msgBytes)
-    throw new RuntimeException("TODO: finalize 'CodeMsgExtractor' logic and then remove this line")
   }
 
   override val undo: Array[Byte] => Any = { msg =>
     val (typeCode, msgBytes) = CodeMsgExtractor.unpack(msg)
     objectCodeMapper.objectFromCode(typeCode, msgBytes)
-    throw new RuntimeException("TODO: finalize 'CodeMsgExtractor' logic and then remove this line")
   }
 
 }

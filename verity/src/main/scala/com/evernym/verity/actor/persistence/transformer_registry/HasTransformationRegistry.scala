@@ -20,7 +20,7 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
 
   /**
    * new persistence transformer, optimized compared to legacy event/state transformers
-   * TODO: 'ProtoBufTransformer' code needs to be reviewed and finalized before getting used
+   * TODO: 'CodeMsgExtractor' code needs to be reviewed and finalized before getting used
    */
   lazy val persistenceTransformer: Any <=> PersistentData =
     createPersistenceTransformer(persistenceEncryptionKey, schemaEvolTransformation)

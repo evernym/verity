@@ -2,13 +2,15 @@ package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
 import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.Version
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, CREATE_MSG_TYPE_REDIRECT_CONN_REQ, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_GET_CONFIGS, MSG_TYPE_GET_MSGS, MSG_TYPE_GET_MSGS_BY_CONNS, MSG_TYPE_MSG_DETAIL, MSG_TYPE_REMOVE_CONFIGS, MSG_TYPE_SEND_MSGS, MSG_TYPE_UPDATE_CONFIGS, MSG_TYPE_UPDATE_CONN_STATUS, MSG_TYPE_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, InviteCreateMsgDetail_MFV_0_5, PairwiseMsgUids, RedirectConnReqMsgDetail_MFV_0_5}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
 import com.evernym.verity.protocol.engine.Constants.{MFV_1_0, MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
-import com.evernym.verity.protocol.engine.{DID, MPV_MSG_PACK, MsgPackVersion, VerKey}
+import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
 import com.evernym.verity.testkit.mock.HasCloudAgent

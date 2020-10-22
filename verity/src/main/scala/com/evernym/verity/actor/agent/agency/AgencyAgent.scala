@@ -8,9 +8,9 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.relationship.tags.EdgeAgentKeyTag
-import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, DidDoc, RelationshipUtil}
+import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, Relationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state.AgentStateBase
 import com.evernym.verity.actor.agent.user.AgentProvisioningDone
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
@@ -55,11 +55,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     private var _isEndpointSet: Boolean = false
     def isEndpointSet: Boolean = _isEndpointSet
     def setIsEndpointSet(value: Boolean): Unit = _isEndpointSet = value
-
-    type RelationshipType = AnywiseRelationship
-    override def initialRel: AnywiseRelationship = AnywiseRelationship.empty
-    override def updatedWithNewMyDidDoc(didDoc: DidDoc): AnywiseRelationship =
-      relationship.copy(myDidDoc = Option(didDoc))
+    override def initialRel: Relationship = AnywiseRelationship.empty
   }
 
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
@@ -96,7 +92,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def handleKeyCreated(kg: KeyCreated): Unit = {
     state.setAgencyDID(kg.forDID)
     state.setThisAgentKeyId(kg.forDID)
-    val myDidDoc = state.prepareMyDidDoc(kg.forDID, kg.forDID, Set(EdgeAgentKeyTag))
+    val myDidDoc = state.prepareMyDidDoc(kg.forDID, kg.forDID, Set(EDGE_AGENT_KEY))
     state.setRelationship(AnywiseRelationship(myDidDoc))
   }
 

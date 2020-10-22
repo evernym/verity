@@ -1,17 +1,13 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
 import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.util.OptionUtil
 
 import scala.language.implicitConversions
 
-object AuthorizedKeys {
-  type KeyId = String
-  def apply(keys: AuthorizedKeyLike*): AuthorizedKeys = AuthorizedKeys(keys.toVector)
-  //  def apply(keys: (KeyId, VerKey)*): AuthorizedKeys = AuthorizedKeys(keys.map(AuthorizedKey.apply).toVector)
-}
+trait AuthorizedKeysLike {
 
-case class AuthorizedKeys(keys: Vector[AuthorizedKeyLike] = Vector.empty) {
+  def keys: Seq[AuthorizedKey]
 
   validate()
 
@@ -36,15 +32,20 @@ case class AuthorizedKeys(keys: Vector[AuthorizedKeyLike] = Vector.empty) {
    */
   def safeAuthorizedKeys: AuthorizedKeys = {
     val filtered = keys.filter(ak => ak.verKeyOpt.isDefined)
-    copy(keys = filtered)
+    AuthorizedKeys(filtered)
   }
 
-  def safeAuthKeys: Vector[AuthorizedKeyLike] = safeAuthorizedKeys.keys
+  def safeAuthKeys: Vector[AuthorizedKeyLike] = safeAuthorizedKeys.keys.toVector
 
-  def filterByKeyIds(keyIds: KeyId*): Vector[AuthorizedKeyLike] =
-    keys.filter(ak => keyIds.toVector.contains(ak.keyId))
+  def filterByKeyIds(keyIds: Iterable[KeyId]): Seq[AuthorizedKey] = {
+    val keySeq = keyIds.toSeq
+    keys.filter(ak => keySeq.contains(ak.keyId))
+  }
 
-  def filterByTags(tags: Tag*): Vector[AuthorizedKeyLike] =
+  def filterByKeyIds(keyIds: KeyIds): Seq[AuthorizedKey] =
+    filterByKeyIds(keyIds.keyId)
+
+  def filterByTags(tags: Tags*): Seq[AuthorizedKey] =
     keys.filter(ak => ak.tags.intersect(tags.toSet).nonEmpty)
 
   def filterByVerKeys(verKeys: VerKey*): Vector[AuthorizedKeyLike] =
@@ -67,31 +68,21 @@ object AuthorizedKeyLike {
 
 trait AuthorizedKeyLike {
   def keyId: KeyId
-  def tags: Set[Tag]
-  def verKey: VerKey
+  def tags: Set[Tags]
+  protected def givenVerKey: VerKey
 
-  def verKeyOpt: Option[VerKey] = Option(verKey)
+  /*
+  * It is possible that during event recovery the verkey is not known,
+  * but by the time it is complete it will be known and it will be replaced with a copy with the verkey,
+  * This is caused because the wallet information is not available (until full event recovery)
+  */
+  def verKey: VerKey = verKeyOpt.getOrElse(
+    throw new UnsupportedOperationException("'Authorized' was not given a 'verKey'")
+  )
+
+  def verKeyOpt: Option[VerKey] = OptionUtil.blankOption(givenVerKey)
 
   def containsVerKey(vk: VerKey): Boolean = verKeyOpt.contains(vk)
   def hasSameVerKeyAs(otherAuthKey: AuthorizedKeyLike): Boolean = verKeyOpt == otherAuthKey.verKeyOpt
   def hasSameKeyIdAs(otherAuthKey: AuthorizedKeyLike): Boolean = keyId == otherAuthKey.keyId
-
-  def addTags(newTags: Set[Tag]): AuthorizedKeyLike
-}
-case class AuthorizedKey(keyId: KeyId, verKey: VerKey, tags: Set[Tag]) extends AuthorizedKeyLike {
-  def addTags(newTags: Set[Tag]): AuthorizedKeyLike = copy(tags = tags ++ newTags)
-}
-
-/**
- * this would be used during event recovery as in good amount of cases,
- * by that time, the wallet information is not available (until full event recovery)
- * so, idea is that during recovery we'll create 'LegacyAuthorizedKey' (without ver key)
- * and post all event recovery it will be replaced by 'AuthorizedKey' (with ver key)
- *
- * @param keyId agent key id
- */
-case class LegacyAuthorizedKey(keyId: KeyId, tags: Set[Tag]) extends AuthorizedKeyLike {
-  override def verKeyOpt: Option[VerKey] = None
-  def verKey: String = throw new UnsupportedOperationException("'LegacyAuthorizedKey' doesn't support 'verKey'")
-  def addTags(newTags: Set[Tag]): AuthorizedKeyLike = copy(tags = tags ++ newTags)
 }

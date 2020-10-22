@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup
 
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.persistence.Done
@@ -7,7 +8,7 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK, MsgType, VerKey}
+import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
 import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 

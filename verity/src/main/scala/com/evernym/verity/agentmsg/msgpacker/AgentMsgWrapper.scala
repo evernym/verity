@@ -1,8 +1,9 @@
 package com.evernym.verity.agentmsg.msgpacker
 
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.protocol.actor.ProtoMsg
-import com.evernym.verity.protocol.engine.{MsgFamilyName, MsgFamilyVersion, MsgName, MsgPackVersion, MsgType, VerKey}
+import com.evernym.verity.protocol.engine.{MsgFamilyName, MsgFamilyVersion, MsgName, MsgType, VerKey}
 import com.evernym.verity.protocol.engine.Constants._
 
 case class AgentMsgWrapper(msgPackVersion: MsgPackVersion, agentBundledMsg: AgentBundledMsg) extends ProtoMsg {

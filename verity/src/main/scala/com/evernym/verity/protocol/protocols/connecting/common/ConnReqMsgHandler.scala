@@ -21,6 +21,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormalizedPhoneNumber, replaceVariables}
 import com.evernym.verity.vault.{EncryptParam, KeyInfo}
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 
 import scala.concurrent.Future
 import scala.util.Left

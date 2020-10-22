@@ -23,7 +23,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.metrics.AllNodeMetricsData
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MPV_MSG_PACK, MsgId}
+import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.RequesterKeys
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -33,6 +33,7 @@ import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.{Duration, _}

@@ -1,5 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6
 
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_PAIRWISE, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_CONNECTION, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_SEND_REMOTE_MSG, MSG_TYPE_DETAIL_WALLET_INIT_BACKUP, MSG_TYPE_UPDATE_COM_METHOD, MSG_TYPE_UPDATE_CONN_STATUS, getNewMsgUniqueId}
@@ -8,7 +10,7 @@ import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedM
 import com.evernym.verity.agentmsg.wallet_backup.{WalletBackupProvisionMsg, WalletBackupRestoreMsg}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK, MsgFamilyVersion, MsgPackVersion, ThreadId, VerKey}
+import com.evernym.verity.protocol.engine.{DID, MsgFamilyVersion, ThreadId, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail}
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
@@ -403,7 +405,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
         //NOTE: this is legacy create/send message which is supposed to be using MESSAGE PACK (and not INDY_PACK)
         //thats why in below call, the last parameter passed is MESSAGE PACK
         buildCoreCreateGeneralMsgWithVersion(MTV_1_0, msgType = "test", corePayloadMsg = pm,
-          replyToMsgId = None)(encryptParamFromEdgeToCloudAgent)(com.evernym.verity.protocol.engine.MPV_MSG_PACK)
+          replyToMsgId = None)(encryptParamFromEdgeToCloudAgent)(MPV_MSG_PACK)
       } else {
         pmp
       }

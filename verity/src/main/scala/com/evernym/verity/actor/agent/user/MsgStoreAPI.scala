@@ -5,12 +5,13 @@ import com.evernym.verity.MsgPayloadStoredEventBuilder
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgPayloadStored, MsgStatusUpdated}
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, StatusDetail}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, MSG_TYPE_UPDATE_MSG_STATUS}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, MsgThread, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.Constants.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.{DID, MsgId, MPV_MSG_PACK}
+import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.util.TimeZoneUtil._

@@ -1,12 +1,13 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.agentmsg.{AgentMsgSpecBase, DefaultMsgCodec}
 import com.evernym.verity.protocol.engine
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
-import com.evernym.verity.protocol.engine.{MPV_INDY_PACK, PinstIdResolution, ProtocolRegistry}
+import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
 import com.evernym.verity.vault.WalletAccessParam
 import com.evernym.verity.testkit.BasicSpec

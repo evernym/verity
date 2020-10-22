@@ -1,8 +1,9 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
-import com.evernym.verity.agentmsg.msgcodec.{StandardTypeFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, PackedMsg}
 import com.evernym.verity.protocol.engine.MsgFamily._
 import com.evernym.verity.protocol.engine._
@@ -34,7 +35,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
 
   def msgFormat: Option[TypeFormat] = givenMsg match {
     case amw: AgentMsgWrapper   => Option(amw.headAgentMsg.msgTypeFormat)
-    case _: RestMsgParam        => Option(StandardTypeFormat)
+    case _: RestMsgParam        => Option(TypeFormat.STANDARD_TYPE_FORMAT)
   }
 
   def usesLegacyGenMsgWrapper: Boolean = givenMsg match {

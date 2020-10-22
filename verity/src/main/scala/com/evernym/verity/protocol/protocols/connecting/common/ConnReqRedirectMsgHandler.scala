@@ -3,12 +3,13 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{MSG_STATUS_REDIRECTED, REDIRECTED_CONN_REQ_EXISTS}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgParam, PackedMsg}
 import com.evernym.verity.protocol.actor.ProtoMsg
-import com.evernym.verity.protocol.engine.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, MsgId, Protocol}
+import com.evernym.verity.protocol.engine.{MsgId, Protocol}
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.vault.StoreTheirKeyParam
 import org.json.JSONObject

@@ -1,7 +1,9 @@
 package com.evernym.verity.agentmsg.msgpacker
 
+import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.protocol.engine.{MPV_INDY_PACK, MPV_MSG_PACK, MsgPackVersion, VerKey}
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.JsonUtil.getDeserializedJson
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.wallet.Wallet

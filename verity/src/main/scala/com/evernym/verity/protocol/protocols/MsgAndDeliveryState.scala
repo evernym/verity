@@ -5,8 +5,9 @@ import java.time.ZonedDateTime
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgThread, UpdateMsgStatusReqMsg}
-import com.evernym.verity.protocol.engine.{DID, MsgId, MsgPackVersion}
+import com.evernym.verity.protocol.engine.{DID, MsgId}
 
 
 trait MsgAndDeliveryState {

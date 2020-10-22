@@ -22,7 +22,7 @@ import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
-import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId

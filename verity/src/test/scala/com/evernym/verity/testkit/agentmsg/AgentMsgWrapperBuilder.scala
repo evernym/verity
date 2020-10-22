@@ -1,11 +1,12 @@
 package com.evernym.verity.testkit.agentmsg
 
+import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_CREATE_AGENT
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper}
 import com.evernym.verity.protocol.actor.ProtoMsg
-import com.evernym.verity.protocol.engine.{DID, MPV_INDY_PACK, VerKey}
+import com.evernym.verity.protocol.engine.{DID, VerKey}
 
 trait AgentMsgWrapperBuilder extends CommonSpecUtil {
 

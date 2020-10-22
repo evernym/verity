@@ -1,12 +1,18 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.agent.relationship.AuthorizedKeys.KeyId
-import com.evernym.verity.actor.agent.relationship.Relationship._
+import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, NO_RELATIONSHIP, NWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
 import com.evernym.verity.actor.agent.relationship.RelationshipException._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
+import scalapb.lenses.Updatable
 
+
+trait NoRelationshipType
+trait SelfRelationshipType
+trait PairwiseRelationshipType
+trait NwiseRelationshipType
+trait AnywiseRelationshipType
 
 
 /**
@@ -25,97 +31,97 @@ import com.evernym.verity.protocol.engine.util.?=>
 // can be used generically with an expectation of a consistent relationship
 // API.
 
-case object NoRelationship extends Relationship {
-  def name = "no relationship"
-  override def myDidDoc: Option[DidDoc] = None
-  override def theirDidDoc: Option[DidDoc] = None
-  override def thoseDidDocs: Seq[DidDoc] = Seq.empty
-  override def theirDid: Option[DID] = None
-
-  override def updatedWithNewMyDidDoc[T <: Relationship](didDoc: DidDoc): T =
-    throw new RuntimeException("not supported")
+object NoRelationship {
+  def apply(): Relationship = Relationship(
+    NO_RELATIONSHIP,
+    "no relationship",
+    None,
+    Seq.empty
+  )
 }
-
 
 // ---------- SELF ----------
 
 object SelfRelationship {
-  def apply(myDidDoc: DidDoc): SelfRelationship = SelfRelationship(Option(myDidDoc))
-  def empty: SelfRelationship = SelfRelationship(None)
+  def apply(myDidDoc: Option[DidDoc] = None): Relationship = Relationship(
+    SELF_RELATIONSHIP,
+    "self",
+    myDidDoc,
+    Seq.empty
+  )
+  def apply(myDidDoc: DidDoc): Relationship = apply(Option(myDidDoc))
+  def empty: Relationship = apply(None)
 }
-case class SelfRelationship(myDidDoc: Option[DidDoc]=None) extends Relationship {
-  override def name = "self"
-  override def thoseDidDocs: Seq[DidDoc] = Seq.empty
-  override def theirDidDoc: Option[DidDoc] = None
-
-  override def updatedWithNewMyDidDoc[T <: Relationship](didDoc: DidDoc): Relationship =
-    this.copy(myDidDoc = Option(didDoc))
-}
-
 
 // ---------- PAIRWISE ----------
 
 object PairwiseRelationship {
-  def apply(name: RelationshipName, myDid: DID, theirDid: DID): PairwiseRelationship = {
-    PairwiseRelationship(name, Option(DidDoc(myDid)), Option(DidDoc(theirDid)))
+  def apply(name: RelationshipName, myDidDoc: Option[DidDoc] = None, theirDid: Option[DidDoc] = None): Relationship = Relationship(
+    PAIRWISE_RELATIONSHIP,
+    name,
+    myDidDoc,
+    theirDid.toSeq
+  )
+
+  def apply(name: RelationshipName, myDid: DID, theirDid: DID): Relationship = apply(
+    name,
+    Some(DidDoc(myDid)),
+    Some(DidDoc(theirDid))
+  )
+
+  def apply(name: RelationshipName, myDidDoc: DidDoc, theirDidDoc: DidDoc): Relationship = apply(
+    name,
+    Option(myDidDoc),
+    Option(theirDidDoc)
+  )
+
+  def empty: Relationship = apply("<empty>", None, None)
+
+  def theirDidDoc(thoseDidDocs: Seq[DidDoc]): Option[DidDoc] = thoseDidDocs match {
+    case s if s.isEmpty => None
+    case s if s.length == 1 => s.headOption
+    case _ => throw new MoreThanOneExistsException
   }
-
-  def apply(name: RelationshipName, myDidDoc: DidDoc, theirDidDoc: DidDoc): PairwiseRelationship = {
-    PairwiseRelationship(name, Option(myDidDoc), Option(theirDidDoc))
-  }
-
-  def empty: PairwiseRelationship = PairwiseRelationship("<empty>", None, None)
 }
-case class PairwiseRelationship(name: RelationshipName,
-                                myDidDoc: Option[DidDoc] = None,
-                                theirDidDoc: Option[DidDoc] = None) extends Relationship {
-  override def thoseDidDocs: Seq[DidDoc] = theirDidDoc.toSeq
-
-  override def updatedWithNewMyDidDoc[T](didDoc: DidDoc): PairwiseRelationship =
-    this.copy(myDidDoc = Option(didDoc))
-}
-
 
 // ---------- NWISE ----------
-
 /**
  * This relationship is not being used currently in the code base
  * but wanted to make sure the "relationship" code considers that type of scenario
  * and handles situations accordingly
- *
- * @param name
- * @param myDidDoc
- * @param thoseDidDocs
  */
-case class NwiseRelationship(name: String, myDidDoc: Option[DidDoc] = None, thoseDidDocs: Seq[DidDoc] = Seq.empty) extends Relationship {
 
-  def theirDidDoc: Option[DidDoc] = thoseDidDocs.size match {
+object NwiseRelationship {
+
+  def apply(name: RelationshipName, myDidDoc: Option[DidDoc] = None, thoseDidDocs: Seq[DidDoc] = Seq.empty): Relationship =
+    Relationship(
+      NWISE_RELATIONSHIP,
+      name,
+      myDidDoc,
+      thoseDidDocs
+    )
+
+  def theirDidDoc(thoseDidDocs: Seq[DidDoc]): Option[DidDoc] = thoseDidDocs.size match {
     case 0|1 => thoseDidDocs.headOption
     case _ => throw new MoreThanOneExistsException
   }
-
-  override def updatedWithNewMyDidDoc[T](didDoc: DidDoc): NwiseRelationship =
-    this.copy(myDidDoc = Option(didDoc))
 }
-
 
 // ---------- ANYWISE ----------
 // 'those' and 'their' did docs are empty because the assumption is that a
 // public DID is primarily used to bootstrap pairwise or nwise relationships.
 
 object AnywiseRelationship {
-  def apply(myDidDoc: DidDoc): AnywiseRelationship = AnywiseRelationship(Option(myDidDoc))
-  def empty: AnywiseRelationship = AnywiseRelationship(None)
+  def apply(myDidDoc: Option[DidDoc] = None): Relationship = Relationship(
+    ANYWISE_RELATIONSHIP,
+    "anywise",
+    myDidDoc,
+    Seq.empty
+  )
+  def apply(myDidDoc: DidDoc): Relationship = apply(Option(myDidDoc))
+  def empty: Relationship = apply(None)
 }
-case class AnywiseRelationship(myDidDoc: Option[DidDoc]=None) extends Relationship {
-  override def name: RelationshipName = "anywise"
 
-  override def thoseDidDocs: Seq[DidDoc] = Seq.empty
-  override def theirDidDoc: Option[DidDoc] = None
-
-  override def updatedWithNewMyDidDoc[T](didDoc: DidDoc): AnywiseRelationship =
-    this.copy(myDidDoc = Option(didDoc))
-}
 
 
 // ---------- general ----------
@@ -123,12 +129,21 @@ case class AnywiseRelationship(myDidDoc: Option[DidDoc]=None) extends Relationsh
 /**
   * General trait for relationships with helper methods
   */
-sealed trait Relationship {
-  def name: RelationshipName
+trait RelationshipLike { this: Updatable[Relationship] =>
+  type RelationshipName = String
 
+  // Data members
+  def name: RelationshipName
+  def relationshipType: RelationshipTypeEnum
   def myDidDoc: Option[DidDoc]
-  def theirDidDoc: Option[DidDoc]
   def thoseDidDocs: Seq[DidDoc]
+
+  // derived members
+  def theirDidDoc: Option[DidDoc] = relationshipType match {
+    case PAIRWISE_RELATIONSHIP => PairwiseRelationship.theirDidDoc(thoseDidDocs)
+    case NWISE_RELATIONSHIP    => NwiseRelationship.theirDidDoc(thoseDidDocs)
+    case _                     => None
+  }
 
   def myDid: Option[DID] = myDidDoc.map(_.did)
   def myDid_! : DID = myDidDoc_!.did
@@ -144,30 +159,30 @@ sealed trait Relationship {
   def nonEmpty: Boolean = !isEmpty
   def checkNotEmpty(): Unit = if (isEmpty) throw new RelationshipNotEmptyException
 
-  private def authKeysByTags(didDoc: Option[DidDoc], tag: Tag): Vector[AuthorizedKeyLike] =
-    didDoc.map(_.authorizedKeys.keys.filter(_.tags.contains(tag))).getOrElse(Vector.empty)
+  private def authKeysByTags(didDoc: Option[DidDoc], tag: Tags): Vector[AuthorizedKeyLike] =
+    didDoc.map(_.authorizedKeys_!.keys.filter(_.tags.contains(tag)).toVector).getOrElse(Vector.empty)
 
-  def authKeyByTag(didDoc: Option[DidDoc], tag: Tag): Option[AuthorizedKeyLike] = {
+  def authKeyByTag(didDoc: Option[DidDoc], tag: Tags): Option[AuthorizedKeyLike] = {
     val authKeys = authKeysByTags(didDoc, tag)
     if (authKeys.isEmpty) None
     else if (authKeys.size == 1) authKeys.headOption
     else throw new RuntimeException("more than 1 auth key found with tag: " + tag)
   }
 
-  def myDidDocAuthKeysByTag(tag: Tag): Vector[AuthorizedKeyLike] = {
+  def myDidDocAuthKeysByTag(tag: Tags): Vector[AuthorizedKeyLike] = {
     authKeysByTags(myDidDoc, tag)
   }
 
-  def myDidDocAuthKeyByTag(tag: Tag): Option[AuthorizedKeyLike] = {
+  def myDidDocAuthKeyByTag(tag: Tags): Option[AuthorizedKeyLike] = {
     authKeyByTag(myDidDoc, tag)
   }
 
-  def theirDidDocAuthKeyByTag(tag: Tag): Option[AuthorizedKeyLike] = {
+  def theirDidDocAuthKeyByTag(tag: Tags): Option[AuthorizedKeyLike] = {
     authKeyByTag(theirDidDoc, tag)
   }
 
   def myDidDocAuthKeyById(keyId: KeyId): Option[AuthorizedKeyLike] = {
-    myDidDoc.flatMap(_.authorizedKeys.keys.find(_.keyId == keyId))
+    myDidDoc.flatMap(_.authorizedKeys_!.keys.find(_.keyId == keyId))
   }
 
   def initParams(initParamNames: Set[ParameterName]): Parameters = Parameters {
@@ -178,13 +193,12 @@ sealed trait Relationship {
     }
   }
 
-  def updatedWithNewMyDidDoc[T <: Relationship](didDoc: DidDoc): Relationship
-}
-
-object Relationship {
-  type KeyId = String
-  type URL = String
-  type RelationshipName = String
+  def updatedWithNewMyDidDoc[T <: Relationship](didDoc: DidDoc): Relationship = {
+    relationshipType match {
+      case NO_RELATIONSHIP => throw new RuntimeException("not supported")
+      case _ => update(_.myDidDoc := didDoc)
+    }
+  }
 }
 
 // ---------- exceptions ----------
@@ -200,9 +214,7 @@ object RelationshipException {
 
 trait HasRelationship {
 
-  type RelationshipType <: Relationship
-
-  def relationship: RelationshipType
+  def relationship: Relationship
 
   type RelationshipExceptionMap = RelationshipException ?=> Exception
 

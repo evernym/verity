@@ -6,9 +6,10 @@ import java.util.UUID
 import com.evernym.verity.constants.Constants.{CLIENT_IP_ADDRESS, MSG_PACK_VERSION}
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.DATA_NOT_FOUND
+import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgpacker.MsgFamilyDetail
-import com.evernym.verity.protocol.engine.{MsgPackVersion, VerKey}
+import com.evernym.verity.protocol.engine.VerKey
 
 
 case object ReqMsgContext {

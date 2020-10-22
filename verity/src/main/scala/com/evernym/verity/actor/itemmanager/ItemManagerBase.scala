@@ -9,7 +9,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemType}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, Done, SnapshotterExt}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, Done, PersistenceConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
 import com.evernym.verity.protocol.engine.VerKey
@@ -19,11 +19,19 @@ import scala.concurrent.Future
 
 trait ItemManagerBase
   extends BasePersistentActor
-    with SnapshotterExt
+    with SnapshotterExt[ItemManagerState]
     with ItemCommandHandlerBase
     with DefaultPersistenceEncryption {
 
   implicit def appConfig: AppConfig
+
+  override lazy val persistenceConfig: PersistenceConfig = PersistenceConfig (
+    allowOnlyEvents = false,
+    allowOnlySnapshots = true,
+    snapshotEveryNEvents = None,
+    keepNSnapshots = Option(1),
+    deleteEventsOnSnapshot = false
+  )
 
   override def receiveCmdHandler: Receive = {
     if (itemManagerState.isDefined) receiveCmdAfterItemConfigSet
@@ -60,6 +68,10 @@ trait ItemManagerBase
   }
 
   override val receiveEvent: Receive = {
+    case x => throw new RuntimeException("no event recovery supported, event received: " + x)
+  }
+
+  override def receiveSnapshot: PartialFunction[Any, Unit] = {
     case ims: ItemManagerState =>
       val ownerVerKeyOpt = if (ims.ownerVerKey == "") None else Option(ims.ownerVerKey)
       val headIdOpt = if (ims.headContainerEntityId == "") None else Option(ims.headContainerEntityId)
@@ -87,7 +99,7 @@ trait ItemManagerBase
   def latestItemContainerMapper: ItemContainerMapper =
     ItemConfigManager.getLatestMapperByType(itemManagerStateReq.itemType)
 
-  override def getStateForSnapshot: Option[State] =
+  override def snapshotState: Option[ItemManagerState] =
     itemManagerState.map(ims => ItemManagerState(ims.itemType, ims.ownerVerKey.getOrElse(""),
       ims.totalEverAllocatedContainers, ims.headContainerEntityId.getOrElse(""), ims.tailContainerEntityId.getOrElse(""),
       ims.migrateItemsToNextLinkedContainer, ims.migrateItemsToLatestVersionedContainers))
@@ -139,7 +151,7 @@ trait ItemManagerBase
         headContainerEntityId = Option(expectedHeadId),
         tailContainerEntityId = Option(expectedTailId))
       )
-      getStateForSnapshot.foreach(saveSnapshot)
+      saveSnapshotStateIfAvailable()
       recordMetrics()
     }
     sender ! Done
@@ -208,7 +220,7 @@ trait ItemManagerBase
   def updateHeadIdIfNeeded(cm: ContainerMigrated): Unit = {
     if (itemManagerStateReq.headContainerEntityId.contains(cm.migratedContainerEntityId)) {
       itemManagerState = itemManagerState.map(_.copy(headContainerEntityId = Option(cm.migratedContainersNextEntityId)))
-      getStateForSnapshot.foreach(saveSnapshot)
+      saveSnapshotStateIfAvailable()
     }
     sender ! Done
   }
@@ -234,7 +246,7 @@ trait ItemManagerBase
   def handleSetItemManagerConfig(so: SetItemManagerConfig): Unit = {
     itemManagerState = Option(ItemManagerStateDetail(so.itemType, so.ownerVerKey, 0, None, None,
       so.migrateItemsToNextLinkedContainer, so.migrateItemsToLatestVersionedContainers))
-    getStateForSnapshot.foreach(saveSnapshot)
+    saveSnapshotStateIfAvailable()
     sender ! itemManagerStateReq
   }
 

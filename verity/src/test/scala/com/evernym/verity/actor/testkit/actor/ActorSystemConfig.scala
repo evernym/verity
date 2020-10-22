@@ -88,7 +88,7 @@ trait ActorSystemConfig {
     actor {
 
       serializers {
-        protoser = "com.evernym.verity.actor.event.serializer.ProtoBufSerializer"
+        protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
         kryo-akka = "com.twitter.chill.akka.AkkaSerializer"
       }
 
@@ -96,6 +96,7 @@ trait ActorSystemConfig {
         "com.evernym.verity.actor.TransformedMultiEvent" = protoser
         "com.evernym.verity.actor.TransformedEvent" = protoser
         "com.evernym.verity.actor.TransformedState" = protoser
+        "com.evernym.verity.actor.PersistentData" = protoser
         "com.evernym.verity.actor.ActorMessage" = kryo-akka
       }
 

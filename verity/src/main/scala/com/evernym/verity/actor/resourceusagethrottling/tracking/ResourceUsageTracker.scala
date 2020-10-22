@@ -86,7 +86,7 @@ object ResourceUsageTracker {
 
 class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor)
   extends BasePersistentActor
-    with SnapshotterExt
+    with SnapshotterExt[ResourceUsageState]
     with HasLogger {
 
   val logger = getLoggerByClass(getClass)
@@ -98,9 +98,9 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   override lazy val persistenceConfig: PersistenceConfig = PersistenceConfig(
     allowOnlyEvents = false,
     allowOnlySnapshots = false,
-    autoSnapshotAfterEvents = Option(ResourceUsageRuleHelper.resourceUsageRules.snapshotAfterEvents),
-    deleteEventsOlderThanRecentSnapshot = true,
-    deleteSnapshotsOlderThanRecentSnapshot = true)
+    snapshotEveryNEvents = Option(ResourceUsageRuleHelper.resourceUsageRules.snapshotAfterEvents),
+    keepNSnapshots = Option(1),
+    deleteEventsOnSnapshot = true)
 
   def getResourceUsages: ResourceUsages = try {
     val allResourceUsages = resourceUsageTracker.getAllResources.map { case (resourceName, resourceBuckets) =>
@@ -122,7 +122,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
       throw e
   }
 
-  override def getStateForSnapshot: Option[State] = Option(resourceUsageTracker.getSnapshotState)
+  override def snapshotState: Option[ResourceUsageState] = Option(resourceUsageTracker.getSnapshotState)
 
   def addResourceUsage(aru: AddResourceUsage): Unit = {
     runWithInternalSpan("addResourceUsage", "ResourceUsageTracker") {
@@ -168,9 +168,6 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   }
 
   override def receiveEvent: Receive = {
-
-    case rus: ResourceUsageState => resourceUsageTracker.updateWithSnapshotState(rus)
-
     case beu: ResourceBucketUsageUpdated =>
       val startDateTime =
         if (beu.startDateTime == -1) None else Option(getZonedDateTimeFromMillis(beu.startDateTime)(UTCZoneId))
@@ -183,6 +180,10 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
 
     case rucu: ResourceUsageCounterUpdated => resourceUsageTracker.updateResourceUsageCounter(rucu)
 
+  }
+
+  override def receiveSnapshot: PartialFunction[Any, Unit] = {
+    case rus: ResourceUsageState => resourceUsageTracker.updateWithSnapshotState(rus)
   }
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {

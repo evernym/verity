@@ -7,7 +7,7 @@ package com.evernym.verity.actor;
 
 message TransformedState {
     int32 transformationId = 1;
-    int32 stateCode = 2;
+    int32 typeCode = 2;
     bytes data = 3;
 };
 

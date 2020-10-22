@@ -8,8 +8,7 @@ CUR_NODE_NUMBER=${1:-1}
 TOTAL_NODES=${2:-1}
 
 # export environment variables
-#export LIB_INDY_LEDGER_TAA_ENABLED=false      #enable if needed
-
+export LIB_INDY_LEDGER_TAA_ENABLED=$VAS_LIB_INDY_LEDGER_TAA_ENABLED
 export VERITY_HTTP_PORT=$((VAS_LOAD_BALANCER_PORT+CUR_NODE_NUMBER))
 export VERITY_DOMAIN_URL_PREFIX="http://localhost:$VAS_LOAD_BALANCER_PORT"
 export VERITY_AKKA_REMOTE_PORT=$((VAS_AKKA_REMOTE_PORT_BASE+CUR_NODE_NUMBER))
@@ -27,7 +26,7 @@ do
 done
 
 sbt "set test in assembly := {}" assembly
-startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent-1.0.5.jar -cp $SCRIPT_DIR/../../../../verity/target/scala-2.12/verity-assembly-0.4.SNAPSHOT.jar:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/verity com.evernym.verity.Main"
+startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent-1.0.5.jar -cp $SCRIPT_DIR/../../../../verity/target/scala-2.12/verity-assembly-0.4.0-SNAPSHOT.jar:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/verity com.evernym.verity.Main"
 
 echo "===================================== VAS ====================================================="
 echo "verity load balanced url (if you have configured): http://locahost:$VAS_LOAD_BALANCER_PORT"

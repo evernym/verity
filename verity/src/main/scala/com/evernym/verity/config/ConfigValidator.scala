@@ -457,7 +457,7 @@ trait CommonReqConfigValidatorBase extends ReqConfigValidator {
     ConfDetail(AKKA_MNGMNT_HTTP_PORT, depConfDetail = Option(DepConfDetail(AKKA_MNGMNT_HTTP_ENABLED, Option(YES), caseSensitive=false))),
     ConfDetail(AKKA_MNGMNT_HTTP_API_CREDS, depConfDetail = Option(DepConfDetail(AKKA_MNGMNT_HTTP_ENABLED, Option(YES), caseSensitive=false))),
 
-    ConfDetail("akka.actor.serializers.protoser", allowedValues = Set("com.evernym.verity.actor.event.serializer.ProtoBufSerializer")),
+    ConfDetail("akka.actor.serializers.protoser", allowedValues = Set("com.evernym.verity.actor.serializers.ProtoBufSerializer")),
     ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.TransformedEvent\"", allowedValues = Set("protoser")),
     ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.TransformedState\"", allowedValues = Set("protoser")),
     ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.TransformedMultiEvent\"", allowedValues = Set("protoser")),

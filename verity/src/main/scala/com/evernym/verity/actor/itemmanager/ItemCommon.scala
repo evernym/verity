@@ -6,11 +6,12 @@ import akka.actor.{ActorLogging, Props}
 import akka.event.Logging._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId, ItemType, VersionId}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, PersistenceConfig}
+import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.Util._
+
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 
@@ -91,18 +92,10 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 }
 
 object ItemManager extends HasProps {
-  implicit val persistenceConfig: PersistenceConfig = PersistenceConfig (
-    allowOnlyEvents = false,
-    allowOnlySnapshots = true,
-    autoSnapshotAfterEvents = None,
-    deleteEventsOlderThanRecentSnapshot = false,
-    deleteSnapshotsOlderThanRecentSnapshot = true
-  )
-
   def props(implicit conf: AppConfig): Props = Props(new ItemManager)
 }
 
-class ItemManager(implicit val appConfig: AppConfig, val persistenceConfig: PersistenceConfig) extends ItemManagerBase
+class ItemManager(implicit val appConfig: AppConfig) extends ItemManagerBase
 
 
 object ItemContainer extends HasProps {

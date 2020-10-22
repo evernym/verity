@@ -10,7 +10,6 @@ import com.evernym.verity.Exceptions._
 import com.evernym.verity.Status.{StatusDetail, TIMEOUT, UNHANDLED}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.Status
 import com.evernym.verity.{ActorErrorResp, ActorResponse, Exceptions, Status}
 import com.typesafe.scalalogging.Logger
 

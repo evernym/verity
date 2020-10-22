@@ -30,9 +30,9 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
   implicit val persistenceConfig: PersistenceConfig = PersistenceConfig (
     allowOnlyEvents=false,
     allowOnlySnapshots=true,
-    autoSnapshotAfterEvents=None,
-    deleteEventsOlderThanRecentSnapshot = true,
-    deleteSnapshotsOlderThanRecentSnapshot = true)
+    snapshotEveryNEvents=None,
+    deleteEventsOnSnapshot = true,
+    keepNSnapshots = Option(1))
 
   var itemContainerEntityDetails: Map[ItemId, ItemContainerEntityDetail] = Map.empty
 

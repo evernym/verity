@@ -8,18 +8,25 @@ package object persistence {
    *
    * @param allowOnlyEvents currently not used except for validation
    * @param allowOnlySnapshots currently not used except for validation
-   * @param autoSnapshotAfterEvents optional number of events after which actor will save snapshot
-   * @param deleteEventsOlderThanRecentSnapshot decides if older events than recent snapshot should be deleted or not
-   * @param deleteSnapshotsOlderThanRecentSnapshot decides if older snapshots (except recent one) should be deleted or not
+   * @param snapshotEveryNEvents optional, number of event persistence after which actor will save snapshot
+   * @param keepNSnapshots how many snapshots to retain, if empty, it will retain all snapshots
+   *                       this configuration is independent of 'snapshotEveryNEvents'
+   *                       as it can be used even if implementing class is explicitly saving snapshot
+   * @param deleteEventsOnSnapshot decides if older events than recent snapshot should be deleted or not
+   *                               this configuration is independent of 'snapshotEveryNEvents'
+   *                               as it can be used even if implementing class is explicitly saving snapshot
    */
   case class PersistenceConfig(allowOnlyEvents: Boolean,
                                allowOnlySnapshots: Boolean,
-                               autoSnapshotAfterEvents: Option[Int],
-                               deleteEventsOlderThanRecentSnapshot: Boolean,
-                               deleteSnapshotsOlderThanRecentSnapshot: Boolean) {
-    require(! (allowOnlyEvents && allowOnlySnapshots), "'allowOnlyEvents' and 'allowOnlySnapshots' are conflicting")
-    require(! (allowOnlyEvents && autoSnapshotAfterEvents.isDefined), "'allowOnlyEvents' and 'autoSnapshotAfterEvents' are conflicting")
-    require(! (allowOnlySnapshots && autoSnapshotAfterEvents.isDefined), "'allowOnlySnapshots' and 'autoSnapshotAfterEvents' are conflicting")
+                               snapshotEveryNEvents: Option[Int],
+                               keepNSnapshots: Option[Int],
+                               deleteEventsOnSnapshot: Boolean) {
+    require(! (allowOnlyEvents && allowOnlySnapshots),
+      "'allowOnlyEvents' and 'allowOnlySnapshots' are conflicting")
+    require(! (allowOnlyEvents && snapshotEveryNEvents.exists(_ > 0)),
+      "'allowOnlyEvents' and 'snapshotEveryNEvents' are conflicting")
+    require(! (allowOnlySnapshots && snapshotEveryNEvents.exists(_ > 0)),
+      "'allowOnlySnapshots' and 'snapshotEveryNEvents' are conflicting")
   }
 
   case object GetActorDetail extends ActorMessageObject

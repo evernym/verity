@@ -1,7 +1,7 @@
 package com.evernym.verity.actor
 
 import akka.serialization.SerializerWithStringManifest
-import com.evernym.verity.actor.event.serializer.{EventSerializerValidator, InvalidSerializerFound, NoSerializerFound}
+import com.evernym.verity.actor.persistence.{InvalidSerializerFound, NoSerializerFound, PersistenceSerializerValidator}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
@@ -22,7 +22,7 @@ class EventSerializerValidatorSpec extends BasicSpec {
       "should be validated successfully" in {
         val events = List(TransformedEvent(), TransformedState(), TransformedMultiEvent())
         events.foreach { event =>
-          EventSerializerValidator.validate(event, testConfig)
+          PersistenceSerializerValidator.validate(event, testConfig)
         }
       }
     }
@@ -31,7 +31,7 @@ class EventSerializerValidatorSpec extends BasicSpec {
       "should throw InvalidSerializerFound exception" in {
         val ite = EventWithInvalidProtoSerBinding("test")
         intercept[InvalidSerializerFound] {
-          EventSerializerValidator.validate(ite, testConfig)
+          PersistenceSerializerValidator.validate(ite, testConfig)
         }
       }
     }
@@ -40,7 +40,7 @@ class EventSerializerValidatorSpec extends BasicSpec {
       "should throw NoSerializerFound exception" in {
         val tc = EventWithoutProtoSerBinding("test")
         intercept[NoSerializerFound] {
-          EventSerializerValidator.validate(tc, testConfig)
+          PersistenceSerializerValidator.validate(tc, testConfig)
         }
       }
     }

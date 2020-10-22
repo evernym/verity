@@ -36,13 +36,17 @@ cd <project-folder>
 ```
 **Example**
 ```
-./devops/scripts/app/<cas/eas/vas>/start.sh 1 5
+for node 1 of 5 node cluster: ./devops/scripts/app/<cas/eas/vas>/start.sh 1 5
+for node 2 of 5 node cluster: ./devops/scripts/app/<cas/eas/vas>/start.sh 2 5
+for node 3 of 5 node cluster: ./devops/scripts/app/<cas/eas/vas>/start.sh 3 5
+etc
+
 ```
-* At present, this utility supports max 5 nodes cluster
+* At present, this utility supports max 5 nodes cluster.
 * In case of multi node cluster, once you start a node with say total nodes 5
-  then for other nodes, you can't change that 'total-nodes' number.
+  then for other nodes, you shouldn't change that 'total-nodes' number when you run them.
 * If you want to change the "total-nodes", then, stop all started nodes and 
-  restart each node with correct "total-nodes" number.
+  restart each node with new "total-nodes" number.
       
 ## How to "setup" Agency agent for various agent services
 ```
@@ -57,8 +61,12 @@ import com.evernym.verity.UrlDetail
 ```
 **Notes:** 
 * Below is an example for setting up CAS agency agent.   
-* Port '6701' given in below code block is an example, change it accordingly.
-* Replicate this for other agency agent setup.
+* Port '6701' given in below code block is an example port number, change it accordingly. 
+This is the "http" port where agent service is listening for rest api.
+When you run agent service, it prints this port on the console.
+It can be load balancer port (if you have configured a load balancer) or
+it can be port of any node of the cluster.
+* Replicate this step for other agent service (cas/eas/vas etc) as well.
 ```
 val casAgencyAgentService = new MockAgentService(UrlDetail("http://localhost:6701")) 
 casAgencyAgentService.setupAgency()

@@ -108,9 +108,10 @@ case class CachedObject(fetcherId: Int, key: Any, value: Option[Any],
   }
 }
 
-case class GetCachedObjectParam(kds: Set[KeyDetail], fetcherId: Int,
-                                ttls: Option[Int] = None, cacheOnlyIfValueFound: Boolean = true)
-
+case class GetCachedObjectParam(kds: Set[KeyDetail],
+                                fetcherId: Int,
+                                ttls: Option[Int] = None,
+                                cacheOnlyIfValueFound: Boolean = true)
 
 case class CachePreFetchResult(
                                               gcop: GetCachedObjectParam,

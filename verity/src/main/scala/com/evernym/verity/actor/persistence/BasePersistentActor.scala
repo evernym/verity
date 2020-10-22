@@ -13,7 +13,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.event.serializer.{DefaultEventSerializer, EventSerializer, EventSerializerValidator}
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
@@ -21,9 +20,10 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
-import com.typesafe.config.ConfigException
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
+import com.evernym.verity.transformations.transformers.<=>
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -39,17 +39,16 @@ trait BasePersistentActor
     with ActorCommon
     with HasActorResponseTimeout
     with DeleteMsgCallbackHandler
+    with HasTransformationRegistry
     with Stash {
 
-  def incrementTotalPersistedEvent(by: Int = 1): Unit = {
+  def incrementTotalPersistedEvents(by: Int = 1): Unit = {
     totalPersistedEvents = totalPersistedEvents + by
   }
 
-  def incrementTotalRecoveredEvent(by: Int = 1): Unit = {
+  def incrementTotalRecoveredEvents(by: Int = 1): Unit = {
     totalRecoveredEvents = totalRecoveredEvents + by
   }
-
-  val eventSerializer: EventSerializer = DefaultEventSerializer
 
   val defaultReceiveTimeoutInSeconds = 600
   val entityCategory: String = PERSISTENT_ACTOR_BASE
@@ -80,12 +79,30 @@ trait BasePersistentActor
     throw exception
   }
 
-  def buildTransformedEvents(evt: Any): Any = {
-    def getTransformedEvent(evt: Any): TransformedEvent = eventSerializer.getTransformedEvent(evt, persistenceEncryptionKey)
+  //TODO: Below we are using 'legacyEventTransformer'.
+  // When we should change it to 'persistenceTransformer' (more optimized one)?
+  // It can be changed anytime with backward compatibility, as during 'undo' operation
+  // we do lookup appropriate transformer based on persisted 'transformationId'.
+
+  /**
+   * transformer used for event persistence
+   */
+  lazy val eventTransformer: Any <=> TransformedEvent = legacyEventTransformer
+
+  /**
+   * transforms given event by using a "transformer" to a
+   * generic proto buf wrapper message for which a serialization binding is
+   * configured to use "ProtoBufSerializer"
+   *
+   * @param evt
+   * @return
+   */
+  def transformedEvent(evt: Any): Any = {
+
     try {
       evt match {
-        case x: MultiEvent   => TransformedMultiEvent(x.evts.map(e => getTransformedEvent(e)))
-        case e               => getTransformedEvent(e)
+        case x: MultiEvent   => TransformedMultiEvent(x.evts.map(eventTransformer.execute))
+        case e               => eventTransformer.execute(e)
       }
     } catch {
       case e: Exception =>
@@ -111,7 +128,7 @@ trait BasePersistentActor
     ActorMetrics.incrementGauge(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
-  final def persistExtCommon(event: Any, sync: Boolean)(handler: Any => Unit): Unit = {
+  final def persistEvent(event: Any, sync: Boolean)(handler: Any => Unit): Unit = {
     persistStart = System.currentTimeMillis()
     val successHandler = handler andThen { _ =>
       val eventDetail = buildEventDetail(event)
@@ -126,13 +143,13 @@ trait BasePersistentActor
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_PERSIST)
     }
 
-    incrementTotalPersistedEvent()
+    incrementTotalPersistedEvents()
 
     try {
       event match {
         case evt: Any =>
-          val te = buildTransformedEvents(evt)
-          EventSerializerValidator.validate(te, appConfig)
+          val te = transformedEvent(evt)
+          PersistenceSerializerValidator.validate(te, appConfig)
           if (sync) {
             super.persist(te)(successHandler)
           } else {
@@ -148,11 +165,11 @@ trait BasePersistentActor
   }
 
   final def persistExt(event: Any)(handler: Any => Unit): Unit = {
-    persistExtCommon(event, sync = true)(handler)
+    persistEvent(event, sync = true)(handler)
   }
 
   final def persistAsyncExt(event: Any)(handler: Any => Unit): Unit = {
-    persistExtCommon(event, sync = false)(handler)
+    persistEvent(event, sync = false)(handler)
   }
 
   def writeWithoutApply(evt: Any): Unit = persistExt(evt)(emptyEventHandler)
@@ -189,62 +206,31 @@ trait BasePersistentActor
 
   var persistStart: Long = _
 
-  val defaultWarnRecoveryTimeInMilliseconds: Int = 1000
+  val defaultWarnRecoveryTimeInMilliSeconds: Int = 1000
 
   lazy val warnRecoveryTime: Int = appConfig.getConfigIntOption(PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS)
-    .getOrElse(defaultWarnRecoveryTimeInMilliseconds)
-
-  def safeGetAppConfigIntOption(key: String): Option[Int] = {
-    try{
-      appConfig.getConfigIntOption(key)
-    }
-    catch {
-      case e: ConfigException =>
-        logger.warn(s"Exception during getting key: $key from config: $e")
-        None
-    }
-  }
+    .getOrElse(defaultWarnRecoveryTimeInMilliSeconds)
 
   override def beforeStart(): Unit = {
     logger.debug("in pre-start", (LOG_KEY_PERSISTENCE_ID, persistenceId))
     context.become(receiveActorInitHandler)
   }
 
-  def entityCategoryForReceiveTimeout: String = {
+  def normalizedEntityCategoryName: String = {
     entityCategory.replace("$", "")
   }
-  def entityNameForReceiveTimeout: String = {
-    //if entityName == "/", it is non sharded actor
+  def normalizedEntityName: String = {
+    //if entityName == "/", it is NON sharded actor
     if (entityName == "/") getClass.getSimpleName.replace("$", "")
     else entityName.replace("$", "")
   }
-  def entityIdForReceiveTimeout: String = {
+  def normalizedEntityId: String = {
     entityId.replace("$", "")
   }
 
-  def entityReceiveTimeout: Duration = PassivateUtil.getReceiveTimeout(appConfig, defaultReceiveTimeoutInSeconds,
-    entityCategoryForReceiveTimeout, entityNameForReceiveTimeout, entityIdForReceiveTimeout)
-
-  /*
-  Called after being reconstituted from event-sourced material.
-   */
-  def postRecoveryCompleted(): Unit = {
-    runWithInternalSpan("postRecoveryCompleted", "BasePersistentActor") {
-      context.setReceiveTimeout(entityReceiveTimeout)
-      val startTime = LocalDateTime.now
-      logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
-      val futures = postActorRecoveryCompleted()
-      Future.sequence(futures).map { _ =>
-        val curTime = LocalDateTime.now
-        val millis = ChronoUnit.MILLIS.between(startTime, curTime)
-        logger.debug(s"post actor recovery finished, time taken (in millis): $millis", (LOG_KEY_PERSISTENCE_ID, persistenceId))
-        self ! ActorInitializedPostRecovery
-      }.recover {
-        case e: Exception =>
-          self ! ActorInitPostRecoveryFailed(e)
-      }
-    }
-  }
+  def entityReceiveTimeout: Duration = PersistentActorConfigUtil.getReceiveTimeout(
+    appConfig, defaultReceiveTimeoutInSeconds,
+    normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
 
   def postActorRecoveryCompleted(): List[Future[Any]] = {
     List.empty
@@ -284,55 +270,19 @@ trait BasePersistentActor
     case _ => sender ! ActorInitPostRecoveryFailed
   }
 
-  def applyReceivedEvent(evt: Any): Unit = {
-    try {
-      receiveEvent(evt)
-      logger.trace("event recovered", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
-    } catch {
-      case e: Exception =>
-        logger.error(s"event not handled by event receiver: ${e.getMessage}", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
-        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
-        throw e
-    }
-  }
+  def handleEvent: Receive = {
 
-  def getDeserializedEvent(te: TransformedEvent): Any = {
-    try {
-      val dse = eventSerializer.getDeSerializedEvent(te, persistenceEncryptionKey)
-      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_DECRYPTION)
-      dse
-    } catch {
-      case e: Exception =>
-        val errorMsg = s"error while decrypting persisted event (persistence-id: $persistenceId)"
-        handleRecoveryFailure(e, errorMsg)
-        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
-        throw e
-    }
-  }
+    case RecoveryCompleted            => handleRecoveryCompleted()
 
-  /*
-  WARNING: This exists for already existing events in our databases
-  Only old events should pass through here when they are deserialized.
-  No new Events should use this. When we migrate all old events, this
-  should be removed.
-   */
-  def handledTransformedMultiEvents(tme: TransformedMultiEvents): Unit = {
-    val events = tme.events.map(getDeserializedEvent)
-    events.foreach(applyReceivedEvent)
-    incrementTotalRecoveredEvent()
-  }
+    case tmes: TransformedMultiEvents => handleTransformedEvents(tmes.events)
 
+    case tme: TransformedMultiEvent   => handleTransformedEvents(tme.events)
 
-  def handledTransformedMultiEvent(tme: TransformedMultiEvent): Unit = {
-    val events = tme.events.map(getDeserializedEvent)
-    events.foreach(applyReceivedEvent)
-    incrementTotalRecoveredEvent()
-  }
+    case te: TransformedEvent         => handleTransformedEvents(Seq(te))
 
-  def handledTransformedEvent(te: TransformedEvent): Unit = {
-    val evt: Any = getDeserializedEvent(te)
-    applyReceivedEvent(evt)
-    incrementTotalRecoveredEvent()
+    case pd: PersistentData           => handlePersistedData(pd)
+
+    case evt: Any                     => applyReceivedEvent(evt)
   }
 
   def handleRecoveryCompleted(): Unit = {
@@ -350,23 +300,77 @@ trait BasePersistentActor
     }
   }
 
-  def handleEvent: Receive = {
+  /**
+   * Called after being reconstituted from event-sourced material.
+   */
+  def postRecoveryCompleted(): Unit = {
+    runWithInternalSpan("postRecoveryCompleted", "BasePersistentActor") {
+      context.setReceiveTimeout(entityReceiveTimeout)
+      val startTime = LocalDateTime.now
+      logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
+      val futures = postActorRecoveryCompleted()
+      Future.sequence(futures).map { _ =>
+        val curTime = LocalDateTime.now
+        val millis = ChronoUnit.MILLIS.between(startTime, curTime)
+        logger.debug(s"post actor recovery finished, time taken (in millis): $millis", (LOG_KEY_PERSISTENCE_ID, persistenceId))
+        self ! ActorInitializedPostRecovery
+      }.recover {
+        case e: Exception =>
+          self ! ActorInitPostRecoveryFailed(e)
+      }
+    }
+  }
 
-    case RecoveryCompleted => handleRecoveryCompleted()
+  def handleTransformedEvents(tes: Seq[TransformedEvent]): Unit = {
+    val events = tes.map(untransformedEvent)
+    events.foreach(applyReceivedEvent)
+    incrementTotalRecoveredEvents()
+  }
 
-    /*
-    WARNING: This exists for already existing events in our databases
-    Only old events should pass through here when they are deserialized.
-    No new Events should use this. When we migrate all old events, this
-    should be removed.
-     */
-    case tme: TransformedMultiEvent => handledTransformedMultiEvent(tme)
+  def handlePersistedData(pd: PersistentData): Unit = {
+    val evt = untransformedEvent(pd)
+    applyReceivedEvent(evt)
+    incrementTotalRecoveredEvents()
+  }
 
-    case tme: TransformedMultiEvents => handledTransformedMultiEvents(tme)
+  /**
+   * transforms given generic proto buf wrapper message (TransformedEvent, PersistentData)
+   * by using a 'transformer' to a plain (deserialized, decrypted) event
+   * which actor can apply to it's state
+   *
+   * instead of hardcoding transformer for this 'undo' operation, we lookup appropriate transformer based on
+   * 'transformationId' available in serialized event to make sure it is backward compatible.
+   *
+   * @param persistedEvent persistent event (legacy or new)
+   * @return
+   */
+  private def untransformedEvent(persistedEvent: Any): Any = {
+    try {
+      val event = persistedEvent match {
+        case te: TransformedEvent => lookupTransformer(te.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(te)
+        case pd: PersistentData   => lookupTransformer(pd.transformationId).undo(pd)
+      }
+      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_DECRYPTION)
+      event
+    } catch {
+      case e: Exception =>
+        val errorMsg = s"error while decrypting persisted event (persistence-id: $persistenceId)"
+        handleRecoveryFailure(e, errorMsg)
+        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
+        throw e
+    }
+  }
 
-    case te: TransformedEvent => handledTransformedEvent(te)
-
-    case evt: Any => applyReceivedEvent(evt)
+  def applyReceivedEvent(evt: Any): Unit = {
+    try {
+      receiveEvent(evt)
+      logger.trace("event recovered", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+    } catch {
+      case e: Exception =>
+        logger.error(s"event not handled by event receiver: ${e.getMessage}", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
+        throw e
+    }
   }
 
   def handleErrorEventParam(errorEventParam: ErrorEventParam): Unit = {
@@ -456,6 +460,7 @@ trait BasePersistentActor
     logCrashReason(reason, message)
     super.preRestart(reason, message)
   }
+
 }
 
 trait HasActorResponseTimeout {

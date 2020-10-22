@@ -1,9 +1,8 @@
-package com.evernym.verity.util
+package com.evernym.verity.actor.serializers
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
-
-object Serialization {
+object JavaSerializer {
 
   def serialise(value: Any): Array[Byte] = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
@@ -21,5 +20,3 @@ object Serialization {
   }
 
 }
-
-

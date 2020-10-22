@@ -5,11 +5,17 @@ import "scalapb/scalapb.proto";
 
 package com.evernym.verity.actor;
 
+message PersistentData {
+    int32 transformationId = 1;
+    bytes data = 2;
+};
+
 message TransformedEvent {
     int32 transformationId = 1;
-    int32 eventCode = 2;
+    int32 typeCode = 2;
     bytes data = 3;
 };
+
 //
 // We need this Event for already existing events
 // on our servers. This is the old class that was

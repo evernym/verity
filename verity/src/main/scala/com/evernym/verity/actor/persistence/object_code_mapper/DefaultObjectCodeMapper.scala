@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.event.serializer
+package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msgrouter.{RouteProcessed, StatusUpdated}
@@ -17,40 +17,17 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
 import com.evernym.verity.protocol.{SetDomainId, SetPinstId}
-import com.evernym.verity.transformer.{EventDataTransformer, TransformedData}
 import com.evernym.verity.urlmapper.UrlAdded
-import com.google.protobuf.ByteString
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+import scalapb.GeneratedMessageCompanion
 
-
-trait EventSerializer {
-
-  val eventMapper: EventCodeMapper
-
-  def getTransformedEvent(evt: Any, encryptionKey: String): TransformedEvent = {
-    val sebd = evt.asInstanceOf[GeneratedMessage].toByteArray
-    val ed = EventDataTransformer.pack(sebd, encryptionKey)
-    val data = ByteString.copyFrom(ed.data)
-    TransformedEvent(ed.transformationId, eventMapper.getCodeFromClass(evt), data)
-  }
-
-  def getDeSerializedEvent(etd: TransformedEvent, encryptionKey: String): Any = {
-    val bed = etd.data.toByteArray
-    val dd = EventDataTransformer.unpack(TransformedData(bed, etd.transformationId), encryptionKey)
-    val sebd = dd.asInstanceOf[Array[Byte]]
-    eventMapper.getClassFromCode(etd.eventCode, sebd)
-  }
-}
-
-object DefaultEventSerializer extends EventSerializer {
-  val eventMapper: EventCodeMapper = DefaultEventMapper
-}
-
-object DefaultEventMapper extends EventCodeMapper {
+/**
+ * contains a mapping between an unique integer and corresponding object (a scala proto buf generated object)
+ */
+object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
   //NOTE: Never change the key (numbers) in below map once it is assigned and in use
 
-  lazy val eventCodeMapping: Map[Int, GeneratedMessageCompanion[_]] = Map (
+  lazy val objectCodeMapping: Map[Int, GeneratedMessageCompanion[_]] = Map (
     1  -> KeyCreated,
     2  -> SignedUp,
     3  -> OwnerSetForAgent,
@@ -263,8 +240,13 @@ object DefaultEventMapper extends EventCodeMapper {
     198 -> Completed,
     199 -> StatusUpdated,
     200 -> RouteProcessed,
+
     201 -> RecordingAgentActivity,
-    202 -> WindowActivityDefined
+
+    202 -> ResourceUsageState,
+    203 -> ItemManagerState,
+
+    204 -> WindowActivityDefined
   )
 
 }

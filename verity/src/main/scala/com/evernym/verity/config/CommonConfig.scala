@@ -63,6 +63,10 @@ trait CommonConfig {
   val URL_SHORTENER_SVC = s"$SERVICES.url-shortener-service"
   val URL_SHORTENER_SVC_SELECTED = s"$URL_SHORTENER_SVC.selected"
 
+  val SNAPSHOT_AFTER_N_EVENTS = "snapshot.after-n-events"
+  val KEEP_N_SNAPSHOTS = "snapshot.keep-n-snapshots"
+  val DELETE_EVENTS_ON_SNAPSHOTS = "snapshot.delete-events-on-snapshots"
+
   private val YOURLS = s"$URL_SHORTENER_SVC.yourls"
   val YOURLS_API_URL = s"$YOURLS.api-url"
   val YOURLS_API_SIGNATURE = s"$YOURLS.signature"

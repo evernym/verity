@@ -2,7 +2,7 @@ package com.evernym.verity.actor.segmentedstates
 
 import akka.actor.Props
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.event.serializer.DefaultEventSerializer
+import com.evernym.verity.actor.persistence.object_code_mapper.DefaultObjectCodeMapper
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ProtoRef
@@ -20,11 +20,11 @@ object SegmentedStateStore extends HasProps {
   }
 
   def eventCode(event: GeneratedMessage): Int = {
-    DefaultEventSerializer.eventMapper.getCodeFromClass(event)
+    DefaultObjectCodeMapper.codeFromObject(event)
   }
 
   def buildEvent(eventCode: Int, data: Array[Byte]): Any = {
-    DefaultEventSerializer.eventMapper.getClassFromCode(eventCode, data)
+    DefaultObjectCodeMapper.objectFromCode(eventCode, data)
   }
 }
 

@@ -198,7 +198,7 @@ package:
   extends: .package-common
   only:
     refs:
-      - master@dev/verity
+      - master@dev/verity/verity
 
 package-manual:
   extends: .package-common
@@ -228,7 +228,7 @@ publish:
     - package
   only:
     refs:
-      - master@dev/verity
+      - master@dev/verity/verity
 
 publish-manual:
   extends: .publish-common
@@ -258,7 +258,7 @@ publish-tests:
   extends: .publish-tests-common
   only:
     refs:
-      - master@dev/verity
+      - master@dev/verity/verity
 
 publish-tests-manual:
   extends: .publish-tests-common

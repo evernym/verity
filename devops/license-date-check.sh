@@ -16,13 +16,18 @@ if [ -f "$LICENSE_CHANGE_DATE_FILE" ]; then
 
   COMMIT_LICENSE_DATE=$(git show -s --format=%ci HEAD)
   COMMIT_DATE_UNIX=$(git show -s --format=%ct HEAD)
+  
+  FUTURE_YEARS_IN_SECONDS=94670778 # 3 year in the future
+
+  CONVERT_DATE=$((COMMIT_DATE_UNIX+FUTURE_YEARS_IN_SECONDS))
 
   echo "License Date Check:"
   echo "Grace window is $WINDOW_DAYS day(s) ($WINDOW_SECONDS sec)"
   echo "License Date: $LICENSE_DATE -- ($LICENSE_DATE_UNIX)"
   echo "Commit Date:  $COMMIT_LICENSE_DATE -- ($COMMIT_DATE_UNIX)"
+  echo "License Conversion Date: $CONVERT_DATE"
 
-  DIFFERENCE=$((COMMIT_DATE_UNIX - LICENSE_DATE_UNIX))
+  DIFFERENCE=$((CONVERT_DATE - LICENSE_DATE_UNIX))
   DIFFERENCE_DAYS=$((DIFFERENCE / SECONDS_IN_DAY))
   echo "Difference: $DIFFERENCE_DAYS day(s) ($DIFFERENCE sec)"
   echo

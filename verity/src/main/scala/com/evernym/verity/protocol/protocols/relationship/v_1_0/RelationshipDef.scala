@@ -26,5 +26,7 @@ object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, Relat
 
 object ProblemReportCodes {
   val shorteningFailed = "shortening-failed"
+  val smsSendingFailed = "sms-sending-failed"
+  val noPhoneNumberDefined = "no-phone-number-defined"
   val unexpectedMessage = "unexpected-message"
 }

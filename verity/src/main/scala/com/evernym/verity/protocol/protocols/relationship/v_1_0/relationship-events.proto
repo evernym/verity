@@ -19,6 +19,7 @@ message CreatingPairwiseKey {
     option (scalapb.message).extends = "RelationshipEvent";
     string label = 1;
     string profileUrl = 2;
+    string phoneNumber = 3;
 }
 
 message PairwiseKeyCreated {

@@ -42,8 +42,7 @@ class RelationshipProtocolSpec
     MY_PUBLIC_DID -> publicDID
   )
 
-  val controllerProvider: SimpleControllerProviderInputType => InteractionController =
-  { i: SimpleControllerProviderInputType =>
+  val controllerProvider: SimpleControllerProviderInputType => InteractionController = { i: SimpleControllerProviderInputType =>
     new InteractionController(i) {
       override def signal[A]: SignalHandler[A] = {
         case SignalEnvelope(_: Signal.CreatePairwiseKey, _, _, _, _) =>
@@ -67,13 +66,13 @@ class RelationshipProtocolSpec
   "Requester creating new relationship" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
 
     "protocol transitioning to Created state" in { _ =>
       (requester engage provisioner) ~ Create(label, None)
 
-      val pkc = requester expect signal [Signal.Created]
+      val pkc = requester expect signal[Signal.Created]
       pkc.did shouldBe newIdentity.DID
       pkc.verKey shouldBe newIdentity.verKey
       requester.state shouldBe a[State.Created]
@@ -84,16 +83,16 @@ class RelationshipProtocolSpec
   "Requester asking to prepare invitation without label" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
 
     "protocol should use label from configs" in { _ =>
       (requester engage provisioner) ~ Create(None, None)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ ConnectionInvitation()
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg, label = defLabel)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
@@ -101,7 +100,7 @@ class RelationshipProtocolSpec
       checkInvitationState(invitation.invitation, label = defLabel)
 
       requester ~ ConnectionInvitation()
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2, label = defLabel)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
@@ -114,17 +113,17 @@ class RelationshipProtocolSpec
   "Requester asking to prepare invitation with empty string label" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val emptyLabel = Option("")
 
     "protocol should set label to empty string" in { _ =>
       (requester engage provisioner) ~ Create(emptyLabel, None)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ ConnectionInvitation()
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg, label = emptyLabel.get)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
@@ -132,7 +131,7 @@ class RelationshipProtocolSpec
       checkInvitationState(invitation.invitation, label = emptyLabel.get)
 
       requester ~ ConnectionInvitation()
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2, label = emptyLabel.get)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
@@ -144,22 +143,22 @@ class RelationshipProtocolSpec
   "Requester sending unexpected controll message" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
 
     "protocol should send problem-report but not change state" in { _ =>
       (requester engage provisioner) ~ Create(label, None)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ Create(label, None)
-      val pr = requester expect signal [Signal.ProblemReport]
+      val pr = requester expect signal[Signal.ProblemReport]
       requester.state shouldBe a[State.Created]
       println(s"Problem report: $pr")
       pr.description.code shouldBe ProblemReportCodes.unexpectedMessage
 
       requester ~ ConnectionInvitation()
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
@@ -167,7 +166,7 @@ class RelationshipProtocolSpec
       checkInvitationState(invitation.invitation)
 
       requester ~ ConnectionInvitation()
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
@@ -179,16 +178,16 @@ class RelationshipProtocolSpec
   "Requester asking to prepare invitation without logoUrl" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
 
     "protocol should use logoUrl from configs" in { _ =>
       (requester engage provisioner) ~ Create(label, None)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ ConnectionInvitation()
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
@@ -196,7 +195,7 @@ class RelationshipProtocolSpec
       checkInvitationState(invitation.invitation)
 
       requester ~ ConnectionInvitation()
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
@@ -208,61 +207,61 @@ class RelationshipProtocolSpec
   "Requester asking to prepare invitation with empty logoUrl" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val emptyProfileUrl = Option("")
 
     "protocol should not set logoUrl" in { _ =>
       (requester engage provisioner) ~ Create(label, emptyProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ ConnectionInvitation()
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg, profileUrl = None)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=None)
+      checkInvitationState(invitation.invitation, profileUrl = None)
 
       requester ~ ConnectionInvitation()
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2, profileUrl = None)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
-      checkInvitationState(invitationAgain.invitation, profileUrl=None)
+      checkInvitationState(invitationAgain.invitation, profileUrl = None)
     }
   }
 
   "Requester asking to prepare invitation with logoUrl" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, specificProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ ConnectionInvitation()
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ ConnectionInvitation()
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
-      checkInvitationState(invitationAgain.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
   }
 
@@ -272,7 +271,7 @@ class RelationshipProtocolSpec
     "when shortening succeed" - {
       "invitation is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
-        val requester = setup("requester", odg=controllerProvider)
+        val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
         (requester engage provisioner) ~ Create(label, None)
@@ -281,7 +280,7 @@ class RelationshipProtocolSpec
 
         requester ~ ConnectionInvitation(Some(true))
         val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg.inviteURL, shortUrl)
+        requester ~ InviteShortened(shortenInviteMsg.invitationId, shortenInviteMsg.inviteURL, shortUrl)
         val inviteMsg = requester expect signal[Signal.Invitation]
         checkInvitationData(inviteMsg)
         inviteMsg.shortInviteURL shouldBe Some(shortUrl)
@@ -291,7 +290,7 @@ class RelationshipProtocolSpec
         // could be sent again.
         requester ~ ConnectionInvitation(Some(true))
         val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg2.inviteURL, shortUrl)
+        requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
         val inviteMsg2 = requester expect signal[Signal.Invitation]
         checkInvitationData(inviteMsg2)
         inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -303,7 +302,7 @@ class RelationshipProtocolSpec
     "when shortening failed" - {
       "problem report is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
-        val requester = setup("requester", odg=controllerProvider)
+        val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
         (requester engage provisioner) ~ Create(label, None)
@@ -311,16 +310,16 @@ class RelationshipProtocolSpec
         requester.state shouldBe a[State.Created]
 
         requester ~ ConnectionInvitation(Some(true))
-        requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed("Failed")
+        val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
+        requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
         val problemReport = requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationState = requester expect state[State.InvitationCreated]
         checkInvitationState(invitationState.invitation)
 
         requester ~ ConnectionInvitation(Some(true))
-        requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed("Failed")
+        val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
+        requester ~ InviteShorteningFailed(shortenInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationStateAgain = requester expect state[State.InvitationCreated]
@@ -338,8 +337,8 @@ class RelationshipProtocolSpec
           requester.state shouldBe a[State.Created]
 
           requester ~ ConnectionInvitation(Some(true))
-          requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed("Failed")
+          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
+          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
@@ -347,7 +346,7 @@ class RelationshipProtocolSpec
 
           requester ~ ConnectionInvitation(Some(true))
           val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShortened(shortenInviteMsg2.inviteURL, shortUrl)
+          requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkInvitationData(inviteMsg2)
           inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -359,7 +358,7 @@ class RelationshipProtocolSpec
       "if requested again without shortening" - {
         "invitation is being sent" in { _ =>
           implicit val system: TestSystem = new TestSystem()
-          val requester = setup("requester", odg=controllerProvider)
+          val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
 
           (requester engage provisioner) ~ Create(label, None)
@@ -367,12 +366,12 @@ class RelationshipProtocolSpec
           requester.state shouldBe a[State.Created]
 
           requester ~ ConnectionInvitation(Some(true))
-          requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed("Failed")
+          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
+          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
-          checkInvitationState(invitationState.invitation, profileUrl=Option(defLogo))
+          checkInvitationState(invitationState.invitation, profileUrl = Option(defLogo))
 
           requester ~ ConnectionInvitation(Some(false))
           val inviteMsg2 = requester expect signal[Signal.Invitation]
@@ -388,47 +387,47 @@ class RelationshipProtocolSpec
   "Requester asking to prepare invitation without shortening (explicitly)" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, specificProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ ConnectionInvitation(Some(false))
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ ConnectionInvitation(Some(false))
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
-      checkInvitationState(invitationAgain.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
   }
 
   "Requester asking to prepare OOB invitation without logoUrl" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, None)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
@@ -436,7 +435,7 @@ class RelationshipProtocolSpec
       checkInvitationState(invitation.invitation)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
@@ -448,92 +447,92 @@ class RelationshipProtocolSpec
   "Requester asking to prepare OOB invitation with empty logoUrl" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val emptyProfileUrl = Option("")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, emptyProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = None)
       inviteMsg.shortInviteURL shouldBe None
 
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=None)
+      checkInvitationState(invitation.invitation, profileUrl = None)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = None)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
-      checkInvitationState(invitationAgain.invitation, profileUrl=None)
+      checkInvitationState(invitationAgain.invitation, profileUrl = None)
     }
   }
 
   "Requester asking to prepare OOB invitation with logoUrl" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, specificProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
-      checkInvitationState(invitationAgain.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
   }
 
   "Requester asking to prepare OOB invitation" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, specificProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
-      checkInvitationState(invitationAgain.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
   }
 
@@ -543,7 +542,7 @@ class RelationshipProtocolSpec
     "when shortening succeed" - {
       "invitation is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
-        val requester = setup("requester", odg=controllerProvider)
+        val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
         (requester engage provisioner) ~ Create(label, None)
@@ -552,7 +551,7 @@ class RelationshipProtocolSpec
 
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
         val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg.inviteURL, shortUrl)
+        requester ~ InviteShortened(shortenInviteMsg.invitationId, shortenInviteMsg.inviteURL, shortUrl)
         val inviteMsg = requester expect signal[Signal.Invitation]
         checkOOBInvitationData(inviteMsg)
         inviteMsg.shortInviteURL shouldBe Some(shortUrl)
@@ -562,7 +561,7 @@ class RelationshipProtocolSpec
         // could be sent again.
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
         val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg2.inviteURL, shortUrl)
+        requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
         val inviteMsg2 = requester expect signal[Signal.Invitation]
         checkOOBInvitationData(inviteMsg2)
         inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -574,7 +573,7 @@ class RelationshipProtocolSpec
     "when shortening failed" - {
       "problem report is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
-        val requester = setup("requester", odg=controllerProvider)
+        val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
 
         (requester engage provisioner) ~ Create(label, None)
@@ -582,16 +581,16 @@ class RelationshipProtocolSpec
         requester.state shouldBe a[State.Created]
 
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
-        requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed("Failed")
+        val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
+        requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
         val problemReport = requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationState = requester expect state[State.InvitationCreated]
         checkInvitationState(invitationState.invitation)
 
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
-        requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed("Failed")
+        val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
+        requester ~ InviteShorteningFailed(shortenInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationStateAgain = requester expect state[State.InvitationCreated]
@@ -609,8 +608,8 @@ class RelationshipProtocolSpec
           requester.state shouldBe a[State.Created]
 
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
-          requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed("Failed")
+          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
+          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
@@ -618,7 +617,7 @@ class RelationshipProtocolSpec
 
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
           val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShortened(shortenInviteMsg2.inviteURL, shortUrl)
+          requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkOOBInvitationData(inviteMsg2)
           inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -630,7 +629,7 @@ class RelationshipProtocolSpec
       "if requested again without shortening" - {
         "invitation is being sent" in { _ =>
           implicit val system: TestSystem = new TestSystem()
-          val requester = setup("requester", odg=controllerProvider)
+          val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
 
           (requester engage provisioner) ~ Create(label, None)
@@ -638,12 +637,12 @@ class RelationshipProtocolSpec
           requester.state shouldBe a[State.Created]
 
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
-          requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed("Failed")
+          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
+          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
-          checkInvitationState(invitationState.invitation, profileUrl=Option(defLogo))
+          checkInvitationState(invitationState.invitation, profileUrl = Option(defLogo))
 
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(false))
           val inviteMsg2 = requester expect signal[Signal.Invitation]
@@ -659,31 +658,257 @@ class RelationshipProtocolSpec
   "Requester asking to prepare OOB invitation without shortening (explicitly)" - {
     implicit val system: TestSystem = new TestSystem()
 
-    val requester = setup("requester", odg=controllerProvider)
+    val requester = setup("requester", odg = controllerProvider)
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
     "protocol transitioning to InvitationCreated state" in { _ =>
       (requester engage provisioner) ~ Create(label, specificProfileUrl)
-      requester expect signal [Signal.Created]
+      requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(false))
-      val inviteMsg = requester expect signal [Signal.Invitation]
+      val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
       println("invitation: " + invitation)
-      checkInvitationState(invitation.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(false))
-      val inviteMsg2 = requester expect signal [Signal.Invitation]
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
       println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
-      checkInvitationState(invitationAgain.invitation, profileUrl=specificProfileUrl)
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
+    }
+  }
+
+  "Requester asking to prepare SMS invitation" - {
+    val shortUrl = "shortUrl"
+    val phoneNo = Option("123456")
+
+    "when phone number is not given in create" - {
+      "problem report is generated" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, None, None)
+        requester expect signal[Signal.Created]
+        requester.state shouldBe a[State.Created]
+
+        requester ~ SMSConnectionInvitation()
+        val problemReport = requester expect signal[Signal.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.noPhoneNumberDefined
+      }
+    }
+
+    "when sending SMS succeed" - {
+      "invitation is being sent" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        requester expect signal[Signal.Created]
+        requester.state shouldBe a[State.Created]
+
+        requester ~ SMSConnectionInvitation()
+        val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
+        checkInvitationUrlData(smsInviteMsg.inviteURL, smsInviteMsg.invitationId)
+        val invitation = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitation.invitation)
+        requester ~ SMSSent(smsInviteMsg.invitationId, smsInviteMsg.inviteURL, shortUrl)
+        val smsSentMsg = requester expect signal[Signal.SMSInvitationSent]
+        smsSentMsg.invitationId shouldBe smsInviteMsg.invitationId
+
+        // could be sent again.
+        requester ~ SMSConnectionInvitation()
+        val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
+        checkInvitationUrlData(smsInviteMsg2.inviteURL, smsInviteMsg2.invitationId)
+        val invitationAgain = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitationAgain.invitation)
+        requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
+        val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
+        smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+      }
+    }
+
+    "when sms sending failed" - {
+      "problem report is being sent" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        requester expect signal[Signal.Created]
+        requester.state shouldBe a[State.Created]
+
+        requester ~ SMSConnectionInvitation()
+        val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
+        val invitation = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitation.invitation)
+        requester ~ SMSSendingFailed(smsInviteMsg.invitationId, "Failed")
+        val problemReport = requester expect signal[Signal.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
+        val invitationState = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitationState.invitation)
+
+        requester ~ SMSConnectionInvitation()
+        val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
+        requester ~ InviteShorteningFailed(smsInviteMsg2.invitationId, "Failed")
+        requester expect signal[Signal.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
+        val invitationStateAgain = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitationStateAgain.invitation)
+      }
+
+      "if requested again and sms sending now succeed" - {
+        "invitation is being sent" in { _ =>
+          implicit val system: TestSystem = new TestSystem()
+          val requester = setup("requester", odg = controllerProvider)
+          val provisioner = setup("provisioner")
+
+          (requester engage provisioner) ~ Create(label, None, phoneNo)
+          requester expect signal[Signal.Created]
+          requester.state shouldBe a[State.Created]
+
+          requester ~ SMSConnectionInvitation()
+          val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
+          val invitation = requester expect state[State.InvitationCreated]
+          checkInvitationState(invitation.invitation)
+          requester ~ SMSSendingFailed(smsInviteMsg.invitationId, "Failed")
+          val problemReport = requester expect signal[Signal.ProblemReport]
+          problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
+          val invitationState = requester expect state[State.InvitationCreated]
+          checkInvitationState(invitationState.invitation)
+
+          requester ~ SMSConnectionInvitation()
+          val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
+          checkInvitationUrlData(smsInviteMsg2.inviteURL, smsInviteMsg2.invitationId)
+          val invitationAgain = requester expect state[State.InvitationCreated]
+          checkInvitationState(invitationAgain.invitation)
+          requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
+          val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
+          smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+        }
+      }
+    }
+  }
+
+  "Requester asking to prepare OOB SMS invitation" - {
+    val shortUrl = "shortUrl"
+    val phoneNo = Option("123456")
+
+    "when phone number is not given in create" - {
+      "problem report is generated" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, None, None)
+        requester expect signal[Signal.Created]
+        requester.state shouldBe a[State.Created]
+
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        val problemReport = requester expect signal[Signal.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.noPhoneNumberDefined
+      }
+    }
+
+    "when sending SMS succeed" - {
+      "invitation is being sent" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        requester expect signal[Signal.Created]
+        requester.state shouldBe a[State.Created]
+
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
+        checkOOBInvitationUrlData(smsInviteMsg.inviteURL, smsInviteMsg.invitationId)
+        val invitation = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitation.invitation)
+        requester ~ SMSSent(smsInviteMsg.invitationId, smsInviteMsg.inviteURL, shortUrl)
+        val smsSentMsg = requester expect signal[Signal.SMSInvitationSent]
+        smsSentMsg.invitationId shouldBe smsInviteMsg.invitationId
+
+        // could be sent again.
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
+        checkOOBInvitationUrlData(smsInviteMsg2.inviteURL, smsInviteMsg2.invitationId)
+        val invitationAgain = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitationAgain.invitation)
+        requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
+        val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
+        smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+      }
+    }
+
+    "when sms sending failed" - {
+      "problem report is being sent" in { _ =>
+        implicit val system: TestSystem = new TestSystem()
+        val requester = setup("requester", odg = controllerProvider)
+        val provisioner = setup("provisioner")
+
+        (requester engage provisioner) ~ Create(label, None, phoneNo)
+        requester expect signal[Signal.Created]
+        requester.state shouldBe a[State.Created]
+
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
+        val invitation = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitation.invitation)
+        requester ~ SMSSendingFailed(smsInviteMsg.invitationId, "Failed")
+        val problemReport = requester expect signal[Signal.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
+        val invitationState = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitationState.invitation)
+
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
+        requester ~ InviteShorteningFailed(smsInviteMsg2.invitationId, "Failed")
+        requester expect signal[Signal.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
+        val invitationStateAgain = requester expect state[State.InvitationCreated]
+        checkInvitationState(invitationStateAgain.invitation)
+      }
+
+      "if requested again and sms sending now succeed" - {
+        "invitation is being sent" in { _ =>
+          implicit val system: TestSystem = new TestSystem()
+          val requester = setup("requester", odg = controllerProvider)
+          val provisioner = setup("provisioner")
+
+          (requester engage provisioner) ~ Create(label, None, phoneNo)
+          requester expect signal[Signal.Created]
+          requester.state shouldBe a[State.Created]
+
+          requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+          val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
+          val invitation = requester expect state[State.InvitationCreated]
+          checkInvitationState(invitation.invitation)
+          requester ~ SMSSendingFailed(smsInviteMsg.invitationId, "Failed")
+          val problemReport = requester expect signal[Signal.ProblemReport]
+          problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
+          val invitationState = requester expect state[State.InvitationCreated]
+          checkInvitationState(invitationState.invitation)
+
+          requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+          val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
+          checkOOBInvitationUrlData(smsInviteMsg2.inviteURL, smsInviteMsg2.invitationId)
+          val invitationAgain = requester expect state[State.InvitationCreated]
+          checkInvitationState(invitationAgain.invitation)
+          requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
+          val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
+          smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+        }
+      }
     }
   }
 
@@ -695,10 +920,16 @@ class RelationshipProtocolSpec
 
   def checkInvitationData(invitation: Signal.Invitation,
                           label: String = labelStr,
-                          profileUrl: Option[String] = Option(defLogo)): Unit = {
-    val json = getInvitationJsonFromUrl(invitation.inviteURL, "c_i")
+                          profileUrl: Option[String] = Option(defLogo)): Unit =
+    checkInvitationUrlData(invitation.inviteURL, invitation.invitationId, label, profileUrl)
 
-    json.getString("@id") shouldBe invitation.invitationId.get
+  def checkInvitationUrlData(inviteURL: String,
+                             invitationId: String,
+                             label: String = labelStr,
+                             profileUrl: Option[String] = Option(defLogo)): Unit = {
+    val json = getInvitationJsonFromUrl(inviteURL, "c_i")
+
+    json.getString("@id") shouldBe invitationId
     json.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation"
     json.getString("label") shouldBe label
     profileUrl match {
@@ -712,11 +943,20 @@ class RelationshipProtocolSpec
                              profileUrl: Option[String] = Option(defLogo),
                              goal: String = defGoal,
                              goalCode: String = defGoalCode
-                            ): Unit = {
-    val json = getInvitationJsonFromUrl(invitation.inviteURL, "oob")
+                            ): Unit =
+    checkOOBInvitationUrlData(invitation.inviteURL, invitation.invitationId, label, profileUrl, goal, goalCode)
+
+  def checkOOBInvitationUrlData(inviteURL: String,
+                                invitationId: String,
+                                label: String = labelStr,
+                                profileUrl: Option[String] = Option(defLogo),
+                                goal: String = defGoal,
+                                goalCode: String = defGoalCode
+                               ): Unit = {
+    val json = getInvitationJsonFromUrl(inviteURL, "oob")
     println(s"### JSON: ${json.toString(2)}")
 
-    json.getString("@id") shouldBe invitation.invitationId.get
+    json.getString("@id") shouldBe invitationId
     json.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
     json.getString("label") shouldBe label
     profileUrl match {
@@ -739,7 +979,7 @@ class RelationshipProtocolSpec
       "IndyAgent",
       Vector(newIdentity.verKey),
       Option(Vector(newIdentity.verKey, defAgencyVerkey)),
-      invitation.inviteURL.split('?').head
+      inviteURL.split('?').head
     )
   }
 

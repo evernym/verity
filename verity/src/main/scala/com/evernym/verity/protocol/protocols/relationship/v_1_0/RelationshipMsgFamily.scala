@@ -16,20 +16,26 @@ object RelationshipMsgFamily extends MsgFamily {
   override protected val protocolMsgs: Map[MsgName, Class[_]] = Map.empty
 
   override protected val controlMsgs: Map[MsgName, Class[_]] = Map(
-    "Init"                    -> classOf[Init],
-    "create"                  -> classOf[Ctl.Create],
-    "key-created"             -> classOf[Ctl.KeyCreated],
-    "invite-shortened"        -> classOf[Ctl.InviteShortened],
-    "invite-shortening-failed"-> classOf[Ctl.InviteShorteningFailed],
-    "connection-invitation"   -> classOf[Ctl.ConnectionInvitation],
-    "out-of-band-invitation"  -> classOf[Ctl.OutOfBandInvitation]
+    "Init"                       -> classOf[Init],
+    "create"                     -> classOf[Ctl.Create],
+    "key-created"                -> classOf[Ctl.KeyCreated],
+    "invite-shortened"           -> classOf[Ctl.InviteShortened],
+    "invite-shortening-failed"   -> classOf[Ctl.InviteShorteningFailed],
+    "sms-sent"                   -> classOf[Ctl.SMSSent],
+    "sms-sending-failed"         -> classOf[Ctl.SMSSendingFailed],
+    "connection-invitation"      -> classOf[Ctl.ConnectionInvitation],
+    "out-of-band-invitation"     -> classOf[Ctl.OutOfBandInvitation],
+    "sms-connection-invitation"  -> classOf[Ctl.SMSConnectionInvitation],
+    "sms-out-of-band-invitation" -> classOf[Ctl.SMSOutOfBandInvitation]
   )
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
     classOf[Signal.CreatePairwiseKey]  -> "create-key",
     classOf[Signal.Created]            -> "created",
     classOf[Signal.Invitation]         -> "invitation",
     classOf[Signal.ProblemReport]      -> "problem-report",
-    classOf[Signal.ShortenInvite]      -> "shorten-invite"
+    classOf[Signal.ShortenInvite]      -> "shorten-invite",
+    classOf[Signal.SendSMSInvite]      -> "send-sms-invite",
+    classOf[Signal.SMSInvitationSent]  -> "sms-invitation-sent"
   )
 }
 
@@ -40,8 +46,10 @@ case class Identity(DID: DID, verKey: VerKey)
 object Signal {
   case class CreatePairwiseKey() extends SignalMsg
   case class Created(did: DID, verKey: VerKey) extends SignalMsg
-  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: Option[String]) extends SignalMsg
-  case class ShortenInvite(inviteURL: String) extends SignalMsg
+  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
+  case class ShortenInvite(invitationId: String, inviteURL: String) extends SignalMsg
+  case class SendSMSInvite(invitationId: String, inviteURL: String, senderName: String, phoneNo: String) extends SignalMsg
+  case class SMSInvitationSent(invitationId: String)
   case class ProblemReport(description: ProblemDescription) extends SignalMsg
   def buildProblemReport(description: String, code: String): Signal.ProblemReport = {
     Signal.ProblemReport(
@@ -88,21 +96,25 @@ sealed trait State
 object State {
   case class Uninitialized() extends State
   case class Initialized(agencyVerKey: String, label: String, logoUrl: String, publicDid: DID) extends State
-  case class KeyCreationInProgress(label: String, agencyVerKey: String, profileUrl: String, publicDid: DID) extends State
-  case class Created(label: String, did: DID, verKey: VerKey, agencyVerKey: String, profileUrl: String, publicDid: DID) extends State
-  case class InvitationCreated(invitation: Msg.Invitation, label: String, did: DID, verKey: VerKey, agencyVerKey: String, publicDid: DID) extends State
+  case class KeyCreationInProgress(label: String, agencyVerKey: String, profileUrl: String, publicDid: DID, phoneNumber: Option[String]) extends State
+  case class Created(label: String, did: DID, verKey: VerKey, agencyVerKey: String, profileUrl: String, publicDid: DID, phoneNumber: Option[String]) extends State
+  case class InvitationCreated(invitation: Msg.Invitation, label: String, did: DID, verKey: VerKey, agencyVerKey: String, publicDid: DID, phoneNumber: Option[String]) extends State
 }
 
 sealed trait Ctl extends Control with MsgBase
 
 object Ctl {
   case class Init(params: Parameters) extends Ctl
-  case class Create(label: Option[String], logoUrl: Option[String]) extends Ctl
+  case class Create(label: Option[String], logoUrl: Option[String], phoneNumber: Option[String]=None) extends Ctl
   case class KeyCreated(did: DID, verKey: VerKey) extends Ctl
-  case class InviteShortened(longInviteUrl: String, shortInviteUrl: String) extends Ctl
-  case class InviteShorteningFailed(reason: String) extends Ctl
+  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl
+  case class SMSSent(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl
+  case class InviteShorteningFailed(invitationId: String, reason: String) extends Ctl
+  case class SMSSendingFailed(invitationId: String, reason: String) extends Ctl
 
   trait CreateInvitation extends Ctl
   case class ConnectionInvitation(shortInvite: Option[Boolean]=None) extends CreateInvitation
   case class OutOfBandInvitation(goalCode: String, goal: String, `request~attach`: Vector[String], shortInvite: Option[Boolean]=None) extends CreateInvitation
+  case class SMSConnectionInvitation() extends CreateInvitation
+  case class SMSOutOfBandInvitation(goalCode: String, goal: String, `request~attach`: Vector[String]) extends CreateInvitation
 }

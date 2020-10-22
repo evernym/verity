@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
@@ -52,11 +52,14 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}
+import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.actor.metrics.ActivityTracker
 import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed}
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.ShortenInvite
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
+import com.evernym.verity.util.Util.replaceVariables
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -99,6 +102,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   override lazy val activityTracker: Option[ActorRef] =
     Some(system.actorOf(ActivityTracker.props(appConfig, ConfigUtil.findActivityWindow(appConfig)), name="activity-tracker"))
+
   def relationshipState: PairwiseRelationship = state.relationship
   def updateRelationship(rel: PairwiseRelationship): Unit = state.updateRelationship(rel)
 
@@ -768,7 +772,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     //pinst (connections 1.0) -> connections actor driver -> this actor
     case SignalMsgFromDriver(utd: UpdateTheirDid, _, _, _)                => handleUpdateTheirDid(utd)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
-    case SignalMsgFromDriver(su: ShortenInvite, _, _, _)                  => handleShorteningUrl(su)
+    case SignalMsgFromDriver(si: ShortenInvite, _, _, _)                  => handleShorteningInvite(si)
+    //pinst (relationship 1.0) -> relationship actor driver -> this actor
+    case SignalMsgFromDriver(ssi: SendSMSInvite, _, _, _)                 => handleSendingSMSInvite(ssi)
   }
 
   def handleUpdateTheirDid(utd: UpdateTheirDid):Future[Option[ControlMsg]] = {
@@ -776,11 +782,43 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     Future.successful(Option(ControlMsg(Ctl.TheirDidUpdated())))
   }
 
-  def handleShorteningUrl(su: ShortenInvite): Future[Option[ControlMsg]] = {
-    val fut = context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(su.inviteURL)
-    fut map {
-      case UrlShortened(shortUrl) => Option(ControlMsg(InviteShortened(su.inviteURL, shortUrl)))
-      case UrlShorteningFailed(_, msg) => Option(ControlMsg(InviteShorteningFailed(msg)))
+  def handleShorteningInvite(si: ShortenInvite): Future[Option[ControlMsg]] = {
+    context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) map {
+      case UrlShortened(shortUrl) => Option(ControlMsg(InviteShortened(si.invitationId, si.inviteURL, shortUrl)))
+      case UrlShorteningFailed(_, msg) => Option(ControlMsg(InviteShorteningFailed(si.invitationId, msg)))
+    }
+  }
+
+  def handleSendingSMSInvite(ssi: SendSMSInvite): Future[Option[ControlMsg]] = {
+    context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(ssi.inviteURL) flatMap {
+      case UrlShorteningFailed(_, msg) =>
+        Future.successful(
+          Option(ControlMsg(SMSSendingFailed(ssi.invitationId, msg)))
+        )
+      case UrlShortened(shortUrl) =>
+        val content = {
+          val url = {
+            val template = findAgentSpecificConfig(SMS_OFFER_TEMPLATE_DEEPLINK_URL, Option(domainId), appConfig)
+            replaceVariables(template, Map(TOKEN -> shortUrl))
+          }
+
+          val template = findAgentSpecificConfig(SMS_MSG_TEMPLATE_OFFER_CONN_MSG, Option(domainId), appConfig)
+          replaceVariables(template, Map(APP_URL_LINK -> url, REQUESTER_NAME -> ssi.senderName))
+        }
+
+        SmsTools.sendTextToPhoneNumber(
+          SmsInfo(ssi.phoneNo, content)
+        )(
+          agentActorContext.appConfig,
+          agentActorContext.smsSvc,
+          agentActorContext.remoteMsgSendingSvc
+        ) map { result =>
+          logger.info(s"Sent SMS invite to number: ${ssi.phoneNo} with content '${content}'. Result: $result")
+          Option(ControlMsg(SMSSent(ssi.invitationId, ssi.inviteURL, shortUrl)))
+        } recover {
+          case he: HandledErrorException => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Exception: $he")))
+          case e: Exception => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Unknown error: ${e}")))
+        }
     }
   }
 

@@ -1,10 +1,9 @@
 package com.evernym.verity.actor.agent.state.base
 
 import com.evernym.verity.actor.State
-import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
 import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, KeyId, Relationship}
-import com.evernym.verity.actor.agent.{ConnectionStatus, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{ConnectionStatus, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
 
 /**
@@ -40,7 +39,7 @@ trait AgentStateInterface extends State {
   def relationshipOpt: Option[Relationship]
   def relationshipReq: Relationship = relationshipOpt.getOrElse(throw new RuntimeException("relationship not found"))
 
-  def sponsorRel: Option[SponsorRel] = None
+  def sponsorRel: Option[SponsorRel]
   def agentWalletSeed: Option[String]
   def agencyDID: Option[DID]
   def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))

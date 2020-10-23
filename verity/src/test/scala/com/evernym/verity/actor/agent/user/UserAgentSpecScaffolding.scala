@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.PoisonPill
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.agency.SetupAgentEndpoint
+import com.evernym.verity.actor.agent.SetupAgentEndpoint
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.persistence.{ActorDetail, Done, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}

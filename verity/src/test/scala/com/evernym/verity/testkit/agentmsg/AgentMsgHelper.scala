@@ -2,9 +2,9 @@ package com.evernym.verity.testkit.agentmsg
 
 import com.evernym.verity.Status.FORBIDDEN
 import com.evernym.verity.Version
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.{DidPair, MsgPackVersion, Thread}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.actor.{AgencyPublicDid, DidPair}
+import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.dead_drop.GetDeadDropMsg
 import com.evernym.verity.agentmsg.issuer_setup.{CreateDIDMsg, CurrentIdentifierMsg}
@@ -217,7 +217,7 @@ trait AgentMsgHelper
     val msg = AskQuestionMsg(
       MSG_TYPE_DETAIL_QUESTION_ANSWER_ASK_QUESTION,
       getNewMsgUniqueId,
-      MsgThread(Option(MsgIdProvider.getNewMsgId)),
+      Thread(Option(MsgIdProvider.getNewMsgId)),
       forDID,
       testQuestion(None))
     prepareMsgForAgent(msg)

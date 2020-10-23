@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.mock
 
 import com.evernym.verity.constants.Constants.DEFAULT_INVITE_RECEIVER_USER_NAME
 import com.evernym.verity.Status.MSG_STATUS_CREATED
-import com.evernym.verity.actor.{AgencyPublicDid, DidPair}
+import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail}
 import com.evernym.verity.testkit.mock.agent.MockAgent
@@ -11,6 +11,7 @@ import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
 import com.evernym.verity.util.MsgIdProvider._
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.agent.DidPair
 
 trait HasCloudAgent { this: MockAgent =>
 

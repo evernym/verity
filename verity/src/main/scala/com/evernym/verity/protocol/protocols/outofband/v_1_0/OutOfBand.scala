@@ -1,13 +1,13 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import akka.http.scaladsl.model.Uri
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
 import com.evernym.verity.util.Base64Util
-import org.json.{JSONException, JSONObject}
+import org.json.JSONObject
 
 class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent, State, String])
   extends Protocol[OutOfBand, Role, Msg, OutOfBandEvent, State, String](OutOfBandDef){
@@ -52,7 +52,7 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
     try {
       val decoded = Base64Util.getBase64UrlDecoded(Uri(m.inviteUrl).query().getOrElse("oob", ""))
       val invite = new JSONObject(new String(decoded))
-      val reuseMsg = Msg.HandshakeReuse(MsgThread(null, Option(invite.getString("@id"))))
+      val reuseMsg = Msg.HandshakeReuse(Thread(null, Option(invite.getString("@id"))))
       ctx.send(reuseMsg)
       ctx.apply(ConnectionReuseRequested())
     } catch {

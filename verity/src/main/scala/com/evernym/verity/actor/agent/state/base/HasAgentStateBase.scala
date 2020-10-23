@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.state.base
 
-import com.evernym.verity.actor.agent.relationship.Relationship
+import com.evernym.verity.actor.agent.relationship.{EndpointADT, EndpointADTUntyped, EndpointId, KeyId, Relationship, Tags}
 import com.evernym.verity.actor.agent.{ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
 
@@ -28,6 +28,26 @@ trait AgentStateImplBase extends AgentStateInterface {
   def getPinstId(protoDef: ProtoDef): Option[PinstId] =
     protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))
 
+  def relWithEndpointRemoved(endpointId: EndpointId): Option[Relationship] = {
+    relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithRemovedEndpointById(endpointId)))))
+  }
+
+  def relWithAuthKeyMergedToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Option[Relationship] = {
+    relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithMergedAuthKey(keyId, verKey, tags)))))
+  }
+
+  def relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint: EndpointADTUntyped, authKeyIds: Set[KeyId]): Option[Relationship] = {
+    relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(
+      _.updatedWithEndpoint(EndpointADT(endpoint), authKeyIds)))))
+  }
+
+  def relWithNewAuthKeyAddedInMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Option[Relationship] = {
+    relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithNewAuthKey(keyId, verKey, tags)))))
+  }
+
+  def relWithNewAuthKeyAddedInMyDidDoc(keyId: KeyId, tags: Set[Tags]): Option[Relationship] = {
+    relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithNewAuthKey(keyId, tags)))))
+  }
 }
 
 /**

@@ -68,9 +68,6 @@ for instructions on how to run unit tests in Docker from an IDE
 ### Integration/E2E Tests
 See details here: integration-tests/README.md
 
-## See dependency graph
-sbt dependencyGraph
-
 ## Devlab Environment
 Once all unit and integration tests are passing, use a devlab environment (see puppet-agency-devlab)
 to test the installation/upgrade of artifacts (debian packages) and develop new

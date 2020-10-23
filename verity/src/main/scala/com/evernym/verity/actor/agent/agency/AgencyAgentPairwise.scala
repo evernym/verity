@@ -20,7 +20,6 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentBundledMsg, AgentMsgParseUtil
 import com.evernym.verity.cache.CacheQueryResponse
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.protocol.actor.ProtocolIdDetail
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
@@ -189,52 +188,9 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
 }
 
-
-/**
- *
- * @param newAgentKeyDID DID belonging to the new agent ver key
- * @param forDID pairwise DID for which new pairwise actor needs to be setup
- * @param mySelfRelDID my self relationship DID
- * @param ownerAgentKeyDID DID belonging to owner's agent's ver key
- * @param ownerAgentActorEntityId entity id of owner's agent actor
- * @param pid
- */
-case class SetupCreateKeyEndpoint(
-                                   newAgentKeyDID: DID,
-                                   forDID: DID,
-                                   mySelfRelDID: DID,
-                                   ownerAgentKeyDID: Option[DID] = None,
-                                   ownerAgentActorEntityId: Option[String]=None,
-                                   pid: Option[ProtocolIdDetail]=None
-                                 ) extends ActorMessageClass
-
-trait SetupEndpoint extends ActorMessageClass {
-  def ownerDID: DID
-  def agentKeyDID: DID
+trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase {
+  def sponsorRel: Option[SponsorRel] = None
 }
-
-case class SponsorRel(sponsorId: String, sponseeId: String)
-object SponsorRel {
-  def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
-    new SponsorRel(sponsorId.getOrElse(""), sponseeId.getOrElse(""))
-
-  def empty: SponsorRel = new SponsorRel("", "")
-}
-case class SetupAgentEndpoint(
-                               override val ownerDID: DID,
-                               override val agentKeyDID: DID
-                             ) extends SetupEndpoint
-
-case class SetupAgentEndpoint_V_0_7 (
-                                      threadId: ThreadId,
-                                      override val ownerDID: DID,
-                                      override val agentKeyDID: DID,
-                                      requesterVerKey: VerKey,
-                                      sponsorRel: Option[SponsorRel]=None
-                                   ) extends SetupEndpoint
-
-
-trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
 
 trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
 

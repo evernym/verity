@@ -2,7 +2,6 @@ package com.evernym.integrationtests.e2e.apis
 
 import java.util.UUID
 
-import com.evernym.verity.actor._
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
@@ -13,6 +12,7 @@ import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.verity.Status
+import com.evernym.verity.actor.agent.DidPair
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory, ConfigUtil => TypesafeConfigUtil}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}

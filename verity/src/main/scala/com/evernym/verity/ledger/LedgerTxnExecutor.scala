@@ -1,7 +1,7 @@
 package com.evernym.verity.ledger
 
 import com.evernym.verity.Status.StatusDetail
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.{DID, WalletAccess}
 
 import scala.concurrent.Future

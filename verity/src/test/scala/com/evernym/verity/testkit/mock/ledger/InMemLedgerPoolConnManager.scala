@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.mock.ledger
 
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.vault.WalletAPI
 

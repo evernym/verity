@@ -72,8 +72,3 @@ trait RelationshipState extends HasRelationship {
   }
 
 }
-
-trait HasRelationshipState {
-  type StateType <: RelationshipState
-  def state: StateType
-}

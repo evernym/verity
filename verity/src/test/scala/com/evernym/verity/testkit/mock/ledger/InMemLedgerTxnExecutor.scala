@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.mock.ledger
 
 import com.evernym.verity.Status.{LEDGER_POOL_NO_RESPONSE, StatusDetail}
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.{DID, WalletAccess}
 

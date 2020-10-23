@@ -7,7 +7,8 @@ import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, MSG_TYPE_UPDATE_MSG_STATUS}
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, MsgThread, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.Constants.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
@@ -27,15 +28,15 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   /**
    * Get messages API
-   * @param amw
-   * @param reqMsgContext
+   * @param amw agent msg wrapper
+   * @param reqMsgContext req msg context
    */
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleGetMsgs", "UserAgentCommon") {
       addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_GET_MSGS, ownerDID)
       val gmr = GetMsgsMsgHelper.buildReqMsg(amw)
       logger.debug("get msgs request: " + gmr)
-      val allMsgs = state.msgState.getMsgs(gmr)
+      val allMsgs = getMsgs(gmr)
       buildAndSendGetMsgsResp(allMsgs, sender())
     }
   }
@@ -60,14 +61,14 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   /**
    * UpdateMsgStatus API (used to update delivered message's status)
-   * @param updateMsgStatus
-   * @param reqMsgContext
+   * @param updateMsgStatus update msg status request msg
+   * @param reqMsgContext req msg context
    */
   def handleUpdateMsgStatus(updateMsgStatus: UpdateMsgStatusReqMsg)
                            (implicit reqMsgContext: ReqMsgContext): Unit = {
     addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE,
       MSG_TYPE_UPDATE_MSG_STATUS, Option(domainId))
-    state.checkIfMsgStatusCanBeUpdatedToNewStatus(updateMsgStatus)
+    checkIfMsgStatusCanBeUpdatedToNewStatus(updateMsgStatus)
 
     val uids = updateMsgStatus.uids.map(_.trim).toSet
     uids foreach {  uid =>
@@ -90,7 +91,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
                myPairwiseDID: DID,
                senderDID: DID,
                sendMsg: Boolean,
-               threadOpt: Option[MsgThread],
+               threadOpt: Option[Thread],
                payloadParam: Option[StorePayloadParam],
                useAsyncPersist: Boolean): MsgStored = {
     val msgStatus = if (senderDID == myPairwiseDID) MSG_STATUS_CREATED else MSG_STATUS_RECEIVED
@@ -102,11 +103,11 @@ trait MsgStoreAPI { this: UserAgentCommon =>
                msgStatus: StatusDetail,
                senderDID: DID,
                sendMsg: Boolean,
-               threadOpt: Option[MsgThread],
+               threadOpt: Option[Thread],
                payloadParam: Option[StorePayloadParam],
                useAsyncPersist: Boolean = false): MsgStored = {
 
-    val msgCreatedEvent = state.msgState.buildMsgCreatedEvt(msgName, senderDID,
+    val msgCreatedEvent = buildMsgCreatedEvt(msgName, senderDID,
       msgId, sendMsg = sendMsg, msgStatus.statusCode, threadOpt)
     storeMsg(msgCreatedEvent, payloadParam, useAsyncPersist)
   }
@@ -114,9 +115,9 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   /**
    * creates/stores message
    *
-   * @param msgCreatedEvent
-   * @param payloadParam
-   * @param useAsyncPersist
+   * @param msgCreatedEvent msg created event
+   * @param payloadParam payload param
+   * @param useAsyncPersist use async persist
    * @return
    */
   def storeMsg(msgCreatedEvent: MsgCreated, payloadParam: Option[StorePayloadParam], useAsyncPersist: Boolean): MsgStored = {
@@ -147,7 +148,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
    *
    * NOTE: currently, this is only used by connecting 0.5 and 0.6 protocols
    *
-   * @param msgAnswered
+   * @param msgAnswered msg answered event
    */
   def handleMsgAnswered(msgAnswered: MsgAnswered): Unit = {
     writeAndApply(msgAnswered)
@@ -155,10 +156,10 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   /**
    * Update Msg Delivery Status api
-   * @param umds
+   * @param umds update msg delivery status
    */
   def updateMsgDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit = {
-    val msgDeliveryStatuses = state.msgState.getMsgDeliveryStatus(umds.uid)
+    val msgDeliveryStatuses = getMsgDeliveryStatus(umds.uid)
     val deliveryStatusByDestination = msgDeliveryStatuses.get(umds.to)
     val existingFailedAttemptCount = deliveryStatusByDestination.map(_.failedAttemptCount).getOrElse(0)
     val newFailedAttemptCount =
@@ -179,14 +180,14 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   }
 
   /**
-   * To be overrridden by implementing class
+   * To be overridden by implementing class
    */
   def updateFailedAttemptCountMetrics(): Unit = {
     //specific actor can override this
   }
 
   /**
-   * To be overrridden by implementing class
+   * To be overridden by implementing class
    */
   def updateFailedMsgCountMetrics(): Unit = {
     //specific actor can override this

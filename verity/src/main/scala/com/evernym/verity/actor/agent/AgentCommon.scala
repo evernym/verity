@@ -1,5 +1,7 @@
 package com.evernym.verity.actor.agent
 
+import java.time.ZonedDateTime
+
 import akka.actor.ActorRef
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
@@ -9,7 +11,6 @@ import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
 import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.relationship.RelUtilParam
-import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
@@ -25,6 +26,8 @@ import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.protocol.actor.ProtocolIdDetail
+import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -183,3 +186,104 @@ case class AgentActorDetailSet(did: DID, actorEntityId: String) extends ActorMes
 case class SetAgencyIdentity(did: DID) extends ActorMessageClass
 case class AgencyIdentitySet(did: DID) extends ActorMessageClass
 case object UpdateRoute extends ActorMessageObject
+
+trait SponsorRelCompanion {
+  def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
+    new SponsorRel(sponsorId.getOrElse(""), sponseeId.getOrElse(""))
+
+  def empty: SponsorRel = new SponsorRel("", "")
+}
+
+/**
+ *
+ * @param newAgentKeyDID DID belonging to the new agent ver key
+ * @param forDID pairwise DID for which new pairwise actor needs to be setup
+ * @param mySelfRelDID my self relationship DID
+ * @param ownerAgentKeyDID DID belonging to owner's agent's ver key
+ * @param ownerAgentActorEntityId entity id of owner's agent actor
+ * @param pid
+ */
+case class SetupCreateKeyEndpoint(
+                                   newAgentKeyDID: DID,
+                                   forDID: DID,
+                                   mySelfRelDID: DID,
+                                   ownerAgentKeyDID: Option[DID] = None,
+                                   ownerAgentActorEntityId: Option[String]=None,
+                                   pid: Option[ProtocolIdDetail]=None
+                                 ) extends ActorMessageClass
+
+trait SetupEndpoint extends ActorMessageClass {
+  def ownerDID: DID
+  def agentKeyDID: DID
+}
+
+case class SetupAgentEndpoint(
+                               override val ownerDID: DID,
+                               override val agentKeyDID: DID
+                             ) extends SetupEndpoint
+
+case class SetupAgentEndpoint_V_0_7 (
+                                      threadId: ThreadId,
+                                      override val ownerDID: DID,
+                                      override val agentKeyDID: DID,
+                                      requesterVerKey: VerKey,
+                                      sponsorRel: Option[SponsorRel]=None
+                                    ) extends SetupEndpoint
+
+import com.evernym.verity.util.TimeZoneUtil._
+trait AgentMsgBase {
+  def `type`: String
+  def creationTimeInMillis: Long
+  def lastUpdatedTimeInMillis: Long
+  def getType: String = `type`
+
+  def creationDateTime: ZonedDateTime = getZonedDateTimeFromMillis(creationTimeInMillis)(UTCZoneId)
+  def lastUpdatedDateTime: ZonedDateTime = getZonedDateTimeFromMillis(lastUpdatedTimeInMillis)(UTCZoneId)
+}
+
+
+trait ThreadBase {
+  def sender_order: Option[Int]
+  def received_orders: Map[String, Int]
+
+  def senderOrderReq: Int = sender_order.getOrElse(0)
+  def senderOrder: Option[Int] = sender_order
+  def receivedOrders: Option[Map[String, Int]] = Option(received_orders)
+}
+
+trait MsgDeliveryStatusBase {
+  def lastUpdatedTimeInMillis: Long
+  def lastUpdatedDateTime: ZonedDateTime = getZonedDateTimeFromMillis(lastUpdatedTimeInMillis)(UTCZoneId)
+}
+
+trait PayloadWrapperCompanion {
+  def apply(msg: Array[Byte], metadata: Option[PayloadMetadata]): PayloadWrapper = {
+    PayloadWrapper(ByteString.copyFrom(msg), metadata)
+  }
+}
+
+trait PayloadWrapperBase {
+  def msg: Array[Byte] = msgBytes.toByteArray
+  def msgBytes: ByteString
+  def metadata: Option[PayloadMetadata]
+  def msgPackVersion: Option[MsgPackVersion] = metadata.map(md => md.msgPackVersion)
+}
+
+/**
+ * this is only used when this agent has packed a message and it knows its metadata (message type string, message pack version etc)
+ * this should NOT be used when this agent is acting as a proxy and just storing a received packed message
+ * (as in that case, it may/won't have idea about how that message is packed)
+ */
+trait PayloadMetadataCompanion {
+  def apply(msgTypeStr: String, msgPackVersion: MsgPackVersion): PayloadMetadata = {
+    PayloadMetadata(msgTypeStr, msgPackVersion.toString)
+  }
+  def apply(msgType: MsgType, msgPackVersion: MsgPackVersion): PayloadMetadata = {
+    PayloadMetadata(MsgFamily.typeStrFromMsgType(msgType), msgPackVersion.toString)
+  }
+}
+
+trait PayloadMetadataBase {
+  def msgPackVersionStr: String
+  def msgPackVersion: MsgPackVersion = MsgPackVersion.fromString(msgPackVersionStr)
+}

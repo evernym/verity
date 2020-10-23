@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PAC
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine._
@@ -99,7 +100,7 @@ object ConnectingMsgHelper {
             List(ConnReqAcceptedMsg_MFV_0_6(
               MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED,
               uid,
-              `~thread`=MsgThread(Option(threadId)),
+              `~thread`=Thread(Option(threadId)),
               sendMsg = false,
               senderDetail,
               senderAgencyDetail,
@@ -108,7 +109,7 @@ object ConnectingMsgHelper {
             List(ConnReqDeclinedMsg_MFV_0_6(
               MSG_TYPE_CONN_REQ_DECLINED,
               uid,
-              `~thread`=MsgThread(Option(threadId)),
+              `~thread`=Thread(Option(threadId)),
               sendMsg = false,
               senderDetail,
               senderAgencyDetail,
@@ -140,7 +141,7 @@ object ConnectingMsgHelper {
       case MPV_INDY_PACK =>
         List(
           ConnReqRedirectedMsg_MFV_0_6(
-          MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED, uid, `~thread`=MsgThread(Option(threadId)),
+          MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED, uid, `~thread`=Thread(Option(threadId)),
             sendMsg = false, redirectDetail, replyToMsgId, senderDetail, senderAgencyDetail))
       case x            => throw new RuntimeException("unsupported msg pack version: " + x)
     }

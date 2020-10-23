@@ -5,13 +5,14 @@ import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PAC
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_PAIRWISE, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_CONNECTION, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_SEND_REMOTE_MSG, MSG_TYPE_DETAIL_WALLET_INIT_BACKUP, MSG_TYPE_UPDATE_COM_METHOD, MSG_TYPE_UPDATE_CONN_STATUS, getNewMsgUniqueId}
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqAcceptedMsg_MFV_0_6, DeclineConnReqMsg_MFV_0_6, MsgThread, RedirectConnReqMsg_MFV_0_6}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqAcceptedMsg_MFV_0_6, DeclineConnReqMsg_MFV_0_6, RedirectConnReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
 import com.evernym.verity.agentmsg.wallet_backup.{WalletBackupProvisionMsg, WalletBackupRestoreMsg}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.{DID, MsgFamilyVersion, ThreadId, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail}
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
@@ -89,7 +90,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
 
       val agentMsgs = ConnReq_MFV_0_6(
         MSG_TYPE_DETAIL_CONN_REQ,
-        getNewMsgId, includeSendMsg, includePublicDID, `~thread` = MsgThread(thid=Option("1")),
+        getNewMsgId, includeSendMsg, includePublicDID, `~thread` = Thread(thid=Option("1")),
         keyDlgProof, phoneNo = ph)
 
       AgentPackMsgUtil(agentMsgs, encryptParamFromEdgeToGivenDID(forDID, fromConnId))
@@ -227,7 +228,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
       val connReqAnswerMsg =
         AcceptConnReq_MFV_0_6(MSG_TYPE_DETAIL_ACCEPT_CONN_REQ,
           getNewMsgId, sendMsg = includeSendMsg, keyDlgProof, inviteDetail.senderDetail, inviteDetail.senderAgencyDetail,
-          inviteDetail.connReqId, MsgThread())
+          inviteDetail.connReqId, Thread())
       AgentPackMsgUtil(connReqAnswerMsg, encryptParamFromEdgeToCloudAgentPairwise(connId))
     }
 
@@ -242,7 +243,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
       val connReqRedirectMsg = RedirectConnReqMsg_MFV_0_6(
         MSG_TYPE_DETAIL_REDIRECT_CONN_REQ, getNewMsgId,
         sendMsg = true, redirectJsonObject, inviteDetail.connReqId, inviteDetail.senderDetail,
-        inviteDetail.senderAgencyDetail, keyDlgProof, Option(MsgThread()))
+        inviteDetail.senderAgencyDetail, keyDlgProof, Option(Thread()))
       AgentPackMsgUtil(connReqRedirectMsg, encryptParamFromEdgeToCloudAgentPairwise(connId))
     }
 
@@ -324,7 +325,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
                                    keyDlgProof: AgentKeyDlgProof): PackMsgParam = {
       val connReqAnswerMsg =
         ConnReqAcceptedMsg_MFV_0_6(MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED,
-          getNewMsgId, MsgThread(Option(threadId)),
+          getNewMsgId, Thread(Option(threadId)),
           sendMsg = includeSendMsg, inviteDetail.senderDetail, inviteDetail.senderAgencyDetail,
           inviteDetail.connReqId, Option(keyDlgProof))
 
@@ -350,7 +351,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
 
     def buildCoreSendRemoteMsg(id: String, sendMsg: Boolean=false, msgType: String, corePayloadMsg: PackedMsg,
                                replyToMsgId: Option[String], title: Option[String] = None,
-                               detail: Option[String] = None, thread: Option[MsgThread]= None)
+                               detail: Option[String] = None, thread: Option[Thread]= None)
                               (encryptParam: EncryptParam): PackMsgParam = {
       val agentMsg = SendRemoteMsg_MFV_0_6(MSG_TYPE_DETAIL_SEND_REMOTE_MSG,
         id, msgType, corePayloadMsg.msg, sendMsg, thread, title, detail, replyToMsgId)

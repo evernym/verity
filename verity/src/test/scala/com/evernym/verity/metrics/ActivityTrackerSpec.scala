@@ -3,7 +3,7 @@ package com.evernym.verity.metrics
 import java.time.{Duration => JavaDuration}
 
 import akka.testkit.TestKit
-import com.evernym.verity.actor.agent.agency.SponsorRel
+import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
 import com.evernym.verity.config.AppConfig

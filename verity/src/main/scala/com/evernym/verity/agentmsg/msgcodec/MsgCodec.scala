@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.ProtoMsgOrderDetail
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.engine._
 
 import scala.reflect.ClassTag
@@ -139,7 +139,7 @@ trait MsgCodec {
 case class MsgPlusMeta(msg: Any, meta: MsgMetadata)
 
 
-case class MsgMetadata(msgId: Option[MsgId], msgThread: MsgThread, forRelationship: Option[DID]) {
+case class MsgMetadata(msgId: Option[MsgId], msgThread: Thread, forRelationship: Option[DID]) {
   def threadId: ThreadId = msgThread.thid.getOrElse(msgId.getOrElse(DEFAULT_THREAD_ID))
 }
 

@@ -386,7 +386,9 @@ case object SetEndpoint extends ActorMessageObject
 
 case object UpdateEndpoint extends ActorMessageObject
 
-trait AgencyAgentStateImpl extends AgentStateImplBase
+trait AgencyAgentStateImpl extends AgentStateImplBase {
+  def sponsorRel: Option[SponsorRel] = None
+}
 
 trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgent =>
 

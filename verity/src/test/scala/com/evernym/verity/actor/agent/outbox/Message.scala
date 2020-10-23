@@ -6,7 +6,7 @@ import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.engine.DID
 
 
@@ -27,7 +27,7 @@ object Message {
    * @param thread optional, message thread
    *
    */
-   case class Msg(typ: String, senderDID: DID, statusCode: String, refMsgId: Option[String], thread: Option[MsgThread])
+   case class Msg(typ: String, senderDID: DID, statusCode: String, refMsgId: Option[String], thread: Option[Thread])
 
 
   // Commands

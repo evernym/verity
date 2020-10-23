@@ -107,3 +107,10 @@ The following command routes 5006 localhost traffic to port 5005 on team1's EAS
 ## Coding Conventions
 ### Error Handling
 The [AppStateManager](verity/src/main/scala/com/evernym/verity/apphealth/README.md)
+
+
+# Acknowledgements
+This project was partially funded by a grant from the [eSSIF-LAB](https://essif-lab.eu/), an EU-Funded project that aims to advance the broad adoption of self-sovereign identity for the benefit of all.
+
+<img src="https://essif-lab.eu/wp-content/uploads/2020/04/essif-logo.png" alt="eSSIF-LAB logo" height="100px">
+<img src="http://essif-lab.eu/wp-content/uploads/2020/02/flag_yellow_low.jpg" alt="European Commission logo" height="100px">

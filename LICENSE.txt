@@ -17,8 +17,8 @@ Additional Use Grant: You may make use of the Licensed Work, including
                       production use, provided that in no case shall you use
                       the Licensed Work either:
 
-                      1. for communicating with more than 3,000 new DID
-                         connections per year, and/or
+                      1. for interacting with more than 500 Monthly Active
+                         Users (MAUs), and/or
                       2. for revenue-generating commercial activity.
 
                       For the avoidance of doubt, (i) this Additional Use
@@ -27,7 +27,10 @@ Additional Use Grant: You may make use of the Licensed Work, including
                       the Terms section below, (ii) permits use in conjunction
                       with commercial activity that neither generates nor is
                       intended to generate revenue, including providing
-                      products or services on a no-cost basis.
+                      products or services on a no-cost basis, (iii) an MAU is
+                      defined as a unique DID connection that the licensed work
+                      assisted in transmitting or receiving data during the
+                      calendar month.
 
 Change Date:          The third anniversary of the date the specific version
                       of the Licensed Work was publicly committed to the Code

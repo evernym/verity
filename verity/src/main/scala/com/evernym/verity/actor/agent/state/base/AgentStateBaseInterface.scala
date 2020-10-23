@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.state.base
 import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
 import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, KeyId, Relationship}
-import com.evernym.verity.actor.agent.{ConnectionStatus, SponsorRel, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{ConnectionStatus, ProtocolRunningInstances, SponsorRel, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
 
 /**
@@ -11,22 +11,28 @@ import com.evernym.verity.protocol.engine._
  * agent common/base classes will call below function to update agent's state
  */
 trait AgentStateUpdateInterface {
+  type StateType <: AgentStateInterface
+  def state: StateType
+
   def setAgentWalletSeed(seed: String): Unit
   def setAgencyDID(did: DID): Unit
   def setSponsorRel(rel: SponsorRel): Unit
-  def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit
-  def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit
-  def addPinst(inst: (ProtoRef, PinstId)): Unit
-}
+  def addThreadContextDetail(threadContext: ThreadContext): Unit
+  def addPinst(pri: ProtocolRunningInstances): Unit
 
-/**
- * interface for agent's common state update (for pairwise actors)
- * agent common/base classes will call below function to update agent's state
- */
-trait AgentPairwiseStateUpdateInterface extends AgentStateUpdateInterface {
-  def setConnectionStatus(cs: ConnectionStatus): Unit
-  def setConnectionStatus(cso: Option[ConnectionStatus]): Unit
-  def updateRelationship(rel: Relationship): Unit
+  def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
+    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
+    addThreadContextDetail(ThreadContext(contexts = updatedThreadContextDetails))
+  }
+
+  def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
+    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
+    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
+    addPinst(ProtocolRunningInstances(instances = updatedProtoInstances))
+  }
+
+  def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 }
 
 /**
@@ -35,6 +41,9 @@ trait AgentPairwiseStateUpdateInterface extends AgentStateUpdateInterface {
  *
  */
 trait AgentStateInterface extends State {
+
+  def threadContext: Option[ThreadContext]
+  def protoInstances: Option[ProtocolRunningInstances]
 
   def relationshipOpt: Option[Relationship]
   def relationshipReq: Relationship = relationshipOpt.getOrElse(throw new RuntimeException("relationship not found"))

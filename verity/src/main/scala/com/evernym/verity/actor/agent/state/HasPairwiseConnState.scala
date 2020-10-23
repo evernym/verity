@@ -190,21 +190,6 @@ trait PairwiseConnStateBase {
 }
 
 
-///**
-// * base class for handling a pairwise connection related functions
-// * for example: updating connection status, their did doc etc
-// */
-//trait LegacyPairwiseConnState extends PairwiseConnStateBase with LegacyAgentPairwiseStateUpdateImpl {
-//
-//  def updateRelationship(rel: Relationship): Unit =
-//      state.updateRelationship(rel)
-//
-//  def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit = {
-//    setConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
-//  }
-//
-//}
-
 /**
  * base class for handling a pairwise connection related functions
  * for example: updating connection status, their did doc etc

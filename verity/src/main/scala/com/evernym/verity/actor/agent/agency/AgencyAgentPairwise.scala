@@ -202,23 +202,13 @@ trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { thi
     state = state.withAgencyDID(did)
   }
 
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    //nothing to do
+  def addThreadContextDetail(threadContext: ThreadContext): Unit = {
+    state = state.withThreadContext(threadContext)
   }
 
-  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
-    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
+  def addPinst(pri: ProtocolRunningInstances): Unit = {
+    state = state.withProtoInstances(pri)
   }
-
-  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
-    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
-    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
-    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
-  }
-
-  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 
   def updateRelationship(rel: Relationship): Unit = {
     state = state.withRelationship(rel)
@@ -226,5 +216,9 @@ trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { thi
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {
     state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
+  }
+
+  override def setSponsorRel(rel: SponsorRel): Unit = {
+    //nothing to do
   }
 }

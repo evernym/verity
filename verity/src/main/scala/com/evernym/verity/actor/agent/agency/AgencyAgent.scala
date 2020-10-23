@@ -400,21 +400,15 @@ trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : Agen
     state = state.withAgencyDID(did)
   }
 
+  def addThreadContextDetail(threadContext: ThreadContext): Unit = {
+    state = state.withThreadContext(threadContext)
+  }
+
+  def addPinst(pri: ProtocolRunningInstances): Unit = {
+    state = state.withProtoInstances(pri)
+  }
+
   override def setSponsorRel(rel: SponsorRel): Unit = {
     //nothing to do
   }
-
-  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
-    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
-  }
-
-  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
-    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
-    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
-    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
-  }
-
-  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 }

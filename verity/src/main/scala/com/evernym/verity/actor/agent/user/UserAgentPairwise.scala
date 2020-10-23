@@ -49,7 +49,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUp
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseImplBase, AgentStateUpdateInterface}
+import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}
@@ -920,34 +920,23 @@ object SetSponsorRel {
 }
 
 
-trait UserAgentPairwiseStateImpl extends AgentStatePairwiseImplBase with UserAgentCommonState { this: UserAgentPairwiseState =>
-  def agentConfigs: Map[String, AgentConfig] =
-    configs.map(e => e._1 -> AgentConfig(
-      e._2.value,
-      TimeZoneUtil.getZonedDateTimeFromMillis(e._2.lastUpdatedTimeInMillis)(TimeZoneUtil.UTCZoneId)))
+trait UserAgentPairwiseStateImpl
+  extends AgentStatePairwiseImplBase
+    with UserAgentCommonState { this: UserAgentPairwiseState =>
 
   def checkIfMsgAlreadyNotInAnsweredState(msgId: MsgId): Unit = {
     if (msgAndDelivery.map(_.msgs).getOrElse(Map.empty).get(msgId)
-      .exists(m => validAnsweredMsgStatuses.contains(m.statusCode))){
+      .exists(m => MsgHelper.validAnsweredMsgStatuses.contains(m.statusCode))){
       throw new BadRequestErrorException(MSG_VALIDATION_ERROR_ALREADY_ANSWERED.statusCode,
         Option("msg is already answered (uid: " + msgId + ")"))
     }
   }
-
-  val validAnsweredMsgStatuses: Set[String] = Set(
-    MSG_STATUS_ACCEPTED,
-    MSG_STATUS_REJECTED,
-    MSG_STATUS_REDIRECTED
-  ).map(_.statusCode)
-
-  def isConfigExists(name: String): Boolean = configs.contains(name)
-  def isConfigExists(name: String, value: String): Boolean = configs.exists(c => c._1 == name && c._2.value == value)
-  def filterConfigsByNames(names: Set[String]): Map[String, AgentConfig] = agentConfigs.filter(c => names.contains(c._1))
 }
 
 trait UserAgentPairwiseStateUpdateImpl
-  extends AgentStateUpdateInterface
-    with UserAgentStateUpdateCommon { this : UserAgentPairwise =>
+  extends UserAgentCommonStateUpdateImpl { this : UserAgentPairwise =>
+
+  def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
   override def setAgentWalletSeed(seed: String): Unit = {
     state = state.withAgentWalletSeed(seed)
@@ -961,105 +950,24 @@ trait UserAgentPairwiseStateUpdateImpl
     state = state.withSponsorRel(rel)
   }
 
-  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
-    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
+  def addThreadContextDetail(threadContext: ThreadContext): Unit = {
+    state = state.withThreadContext(threadContext)
   }
 
-  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
-    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
-    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
-    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
+  def addPinst(pri: ProtocolRunningInstances): Unit = {
+    state = state.withProtoInstances(pri)
   }
-
-  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 
   def addConfig(name: String, ac: AgentConfig): Unit = {
-    state = state.withConfigs(
-      state.configs ++ Map(name -> ac.toConfigValue)
-    )
+    state = state.withConfigs(state.configs ++ Map(name -> ac.toConfigValue))
   }
 
   def removeConfig(name: String): Unit = {
-    state = state.withConfigs(
-      state.configs.filterNot(_._1 == name)
-    )
+    state = state.withConfigs(state.configs.filterNot(_._1 == name))
   }
 
-  def getMsgAndDelivery: MsgAndDelivery = state.msgAndDelivery.getOrElse(MsgAndDelivery())
-
-  def addToMsgs(msgId: MsgId, msg: Msg): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgs = msgAndDelivery.msgs ++ Map(msgId -> msg))
-    )
-  }
-  def getMsgOpt(msgId: MsgId): Option[Msg] = {
-    getMsgAndDelivery.msgs.get(msgId)
-  }
-
-  def getMsgDetails(msgId: MsgId): Map[String, String] = {
-    getMsgAndDelivery.msgDetails.getOrElse(msgId, MsgAttribs()).attribs
-  }
-
-  def addToMsgDetails(msgId: MsgId, attribs: Map[String, String]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    val newMsgAttribs = msgAndDelivery.msgDetails.getOrElse(msgId, MsgAttribs()).attribs ++ attribs
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails ++ Map(msgId -> MsgAttribs(newMsgAttribs)))
-    )
-  }
-
-  def addToMsgPayloads(msgId: MsgId, payloadWrapper: PayloadWrapper): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads ++ Map(msgId -> payloadWrapper))
-    )
-  }
-
-  def getMsgPayload(msgId: MsgId): Option[PayloadWrapper] = getMsgAndDelivery.msgPayloads.get(msgId)
-
-  def getMsgDeliveryStatus(msgId: MsgId): Map[String, MsgDeliveryDetail] = {
-    getMsgAndDelivery.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus
-  }
-
-  def addToDeliveryStatus(msgId: MsgId, deliveryDetails: Map[String, MsgDeliveryDetail]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    val newMsgDeliveryByDest =
-      msgAndDelivery.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus ++ deliveryDetails
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDeliveryStatus = msgAndDelivery.msgDeliveryStatus ++
-        Map(msgId -> MsgDeliveryByDest(newMsgDeliveryByDest)))
-    )
-  }
-
-  def removeFromMsgs(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgs = msgAndDelivery.msgs -- msgIds)
-    )
-  }
-
-  def removeFromMsgDetails(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails -- msgIds)
-    )
-  }
-
-  def removeFromMsgPayloads(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads -- msgIds)
-    )
-  }
-
-  def removeFromMsgDeliveryStatus(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDeliveryStatus = msgAndDelivery.msgDeliveryStatus -- msgIds)
-    )
+  def updateMsgAndDelivery(msgAndDelivery: MsgAndDelivery): Unit = {
+    state = state.withMsgAndDelivery(msgAndDelivery)
   }
 
   def updateRelationship(rel: Relationship): Unit = {

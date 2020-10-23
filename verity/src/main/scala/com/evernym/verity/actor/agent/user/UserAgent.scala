@@ -9,7 +9,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.{AgentActorContext, AgentDetail, DidPair, HasAgentActivity, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, MsgPackVersion, PayloadMetadata, PayloadWrapper, ProtocolRunningInstances, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SetupCreateKeyEndpoint, SetupEndpoint, SponsorRel, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, ProcessSendSignalMsg, SendSignalMsg}
 import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
@@ -44,7 +44,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
-import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
+import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -771,7 +771,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
 }
 
-
 case class PairwiseConnSetExt(agentDID: DID, reqMsgContext: ReqMsgContext)
 case class PendingAuthKey(rka: RequesterKeyAdded, applied: Boolean = false)
 
@@ -802,7 +801,9 @@ case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Opt
 }
 
 
-trait UserAgentStateImpl extends AgentStateImplBase with UserAgentCommonState { this: UserAgentState =>
+trait UserAgentStateImpl
+  extends AgentStateImplBase
+    with UserAgentCommonState { this: UserAgentState =>
 
   def relationshipAgentsContains(ad: AgentDetail): Boolean = relationshipAgents.contains(ad)
   def relationshipAgentsForDids: List[DID] = relationshipAgents.map(_.forDID).toList
@@ -811,17 +812,12 @@ trait UserAgentStateImpl extends AgentStateImplBase with UserAgentCommonState { 
   def relationshipAgentsFindByForDid(did: DID): AgentDetail = relationshipAgents.find(_.forDID == did).getOrElse(
     throw new RuntimeException("relationship agent doesn't exists for DID: " + did)
   )
-
-  def agentConfigs: Map[String, AgentConfig] =
-    configs.map(e => e._1 -> AgentConfig(e._2.value, TimeZoneUtil.getZonedDateTimeFromMillis(e._2.lastUpdatedTimeInMillis)(TimeZoneUtil.UTCZoneId)))
-
-  def isConfigExists(name: String): Boolean = configs.contains(name)
-  def isConfigExists(name: String, value: String): Boolean = configs.exists(c => c._1 == name && c._2.value == value)
-  def filterConfigsByNames(names: Set[String]): Map[String, AgentConfig] = agentConfigs.filter(c => names.contains(c._1))
 }
 
+trait UserAgentStateUpdateImpl
+  extends UserAgentCommonStateUpdateImpl { this : UserAgent =>
 
-trait UserAgentStateUpdateImpl extends AgentStateUpdateInterface with UserAgentStateUpdateCommon { this : UserAgent =>
+  def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
   override def setAgentWalletSeed(seed: String): Unit = {
     state = state.withAgentWalletSeed(seed)
@@ -835,110 +831,28 @@ trait UserAgentStateUpdateImpl extends AgentStateUpdateInterface with UserAgentS
     state = state.withSponsorRel(rel)
   }
 
-  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
-    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
+  def addThreadContextDetail(threadContext: ThreadContext): Unit = {
+    state = state.withThreadContext(threadContext)
   }
 
-  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
-    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
-    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
-    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
+  def addPinst(pri: ProtocolRunningInstances): Unit = {
+    state = state.withProtoInstances(pri)
   }
-
-  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 
   def addRelationshipAgent(ad: AgentDetail): Unit = {
-    state = state.withRelationshipAgents(
-      state.relationshipAgents :+ AgentDetail(ad.forDID, ad.agentKeyDID)
-    )
+    state = state.withRelationshipAgents(state.relationshipAgents :+ AgentDetail(ad.forDID, ad.agentKeyDID))
   }
 
   def addConfig(name: String, ac: AgentConfig): Unit = {
-    state = state.withConfigs(
-      state.configs ++ Map(name -> ac.toConfigValue)
-    )
+    state = state.withConfigs(state.configs ++ Map(name -> ac.toConfigValue))
   }
 
   def removeConfig(name: String): Unit = {
-    state = state.withConfigs(
-      state.configs.filterNot(_._1 == name)
-    )
+    state = state.withConfigs(state.configs.filterNot(_._1 == name))
   }
 
-  def getMsgAndDelivery: MsgAndDelivery = state.msgAndDelivery.getOrElse(MsgAndDelivery())
-
-  def addToMsgs(msgId: MsgId, msg: Msg): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgs = msgAndDelivery.msgs ++ Map(msgId -> msg))
-    )
-  }
-  def getMsgOpt(msgId: MsgId): Option[Msg] = {
-    getMsgAndDelivery.msgs.get(msgId)
+  def updateMsgAndDelivery(msgAndDelivery: MsgAndDelivery): Unit = {
+    state = state.withMsgAndDelivery(msgAndDelivery)
   }
 
-  def getMsgDetails(msgId: MsgId): Map[String, String] = {
-    getMsgAndDelivery.msgDetails.getOrElse(msgId, MsgAttribs()).attribs
-  }
-
-  def addToMsgDetails(msgId: MsgId, attribs: Map[String, String]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    val newMsgAttribs = msgAndDelivery.msgDetails.getOrElse(msgId, MsgAttribs()).attribs ++ attribs
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails ++ Map(msgId -> MsgAttribs(newMsgAttribs)))
-    )
-  }
-
-  def addToMsgPayloads(msgId: MsgId, payloadWrapper: PayloadWrapper): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads ++ Map(msgId -> payloadWrapper))
-    )
-  }
-
-  def getMsgPayload(msgId: MsgId): Option[PayloadWrapper] = getMsgAndDelivery.msgPayloads.get(msgId)
-
-  def getMsgDeliveryStatus(msgId: MsgId): Map[String, MsgDeliveryDetail] = {
-    getMsgAndDelivery.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus
-  }
-
-  def addToDeliveryStatus(msgId: MsgId, deliveryDetails: Map[String, MsgDeliveryDetail]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    val newMsgDeliveryByDest =
-      msgAndDelivery.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus ++ deliveryDetails
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDeliveryStatus = msgAndDelivery.msgDeliveryStatus ++
-        Map(msgId -> MsgDeliveryByDest(newMsgDeliveryByDest)))
-    )
-  }
-
-  def removeFromMsgs(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgs = msgAndDelivery.msgs -- msgIds)
-    )
-  }
-
-  def removeFromMsgDetails(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails -- msgIds)
-    )
-  }
-
-  def removeFromMsgPayloads(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads -- msgIds)
-    )
-  }
-
-  def removeFromMsgDeliveryStatus(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = getMsgAndDelivery
-    state = state.withMsgAndDelivery(
-      msgAndDelivery.copy(msgDeliveryStatus = msgAndDelivery.msgDeliveryStatus -- msgIds)
-    )
-  }
 }

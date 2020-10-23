@@ -218,6 +218,7 @@ trait MsgAndDeliveryHandler {
 }
 
 object MsgHelper {
+
   val seenMsgStatusCodes: Set[String] = Set(
     MSG_STATUS_CREATED, MSG_STATUS_SENT,
     MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED,

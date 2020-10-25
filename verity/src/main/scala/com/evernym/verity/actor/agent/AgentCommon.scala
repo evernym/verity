@@ -70,7 +70,6 @@ trait AgentCommon
   def ownerDID: Option[DID]
   def ownerDIDReq: DID = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
   def ownerAgentKeyDID: Option[DID]
-
   def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
 
   lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, walletDetail.walletAPI, appConfig)
@@ -95,7 +94,7 @@ trait AgentCommon
 
   def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
     try {
-      setWalletSeed(actorEntityId)
+      updateAgentWalletSeed(actorEntityId)
       openWalletIfExists(wap)
       logger.debug(s"wallet successfully initialized and opened for actorEntityId: $actorEntityId")
     } catch {
@@ -106,7 +105,7 @@ trait AgentCommon
     }
   }
 
-  def setWalletSeed(actorEntityId: String): Unit = {
+  def updateAgentWalletSeed(actorEntityId: String): Unit = {
     if (agentWalletSeed.nonEmpty && ! agentWalletSeed.contains(actorEntityId))
       throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet seed already set to different value"))
     setAgentWalletSeed(actorEntityId)
@@ -203,34 +202,29 @@ trait SponsorRelCompanion {
  * @param ownerAgentActorEntityId entity id of owner's agent actor
  * @param pid
  */
-case class SetupCreateKeyEndpoint(
-                                   newAgentKeyDID: DID,
-                                   forDID: DID,
-                                   mySelfRelDID: DID,
-                                   ownerAgentKeyDID: Option[DID] = None,
-                                   ownerAgentActorEntityId: Option[String]=None,
-                                   pid: Option[ProtocolIdDetail]=None
-                                 ) extends ActorMessageClass
+case class SetupCreateKeyEndpoint(newAgentKeyDID: DID,
+                                  forDID: DID,
+                                  mySelfRelDID: DID,
+                                  ownerAgentKeyDID: Option[DID] = None,
+                                  ownerAgentActorEntityId: Option[String]=None,
+                                  pid: Option[ProtocolIdDetail]=None) extends ActorMessageClass
 
 trait SetupEndpoint extends ActorMessageClass {
   def ownerDID: DID
   def agentKeyDID: DID
 }
 
-case class SetupAgentEndpoint(
-                               override val ownerDID: DID,
-                               override val agentKeyDID: DID
-                             ) extends SetupEndpoint
+case class SetupAgentEndpoint(ownerDID: DID,
+                              agentKeyDID: DID) extends SetupEndpoint
 
-case class SetupAgentEndpoint_V_0_7 (
-                                      threadId: ThreadId,
-                                      override val ownerDID: DID,
-                                      override val agentKeyDID: DID,
-                                      requesterVerKey: VerKey,
-                                      sponsorRel: Option[SponsorRel]=None
-                                    ) extends SetupEndpoint
+case class SetupAgentEndpoint_V_0_7 (threadId: ThreadId,
+                                     ownerDID: DID,
+                                     agentKeyDID: DID,
+                                     requesterVerKey: VerKey,
+                                     sponsorRel: Option[SponsorRel]=None) extends SetupEndpoint
 
 import com.evernym.verity.util.TimeZoneUtil._
+
 trait AgentMsgBase {
   def `type`: String
   def creationTimeInMillis: Long
@@ -246,8 +240,8 @@ trait ThreadBase {
   def sender_order: Option[Int]
   def received_orders: Map[String, Int]
 
-  def senderOrderReq: Int = sender_order.getOrElse(0)
   def senderOrder: Option[Int] = sender_order
+  def senderOrderReq: Int = sender_order.getOrElse(0)
   def receivedOrders: Option[Map[String, Int]] = Option(received_orders)
 }
 

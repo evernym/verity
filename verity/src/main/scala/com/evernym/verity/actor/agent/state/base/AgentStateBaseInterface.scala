@@ -45,8 +45,8 @@ trait AgentStateInterface extends State {
   def threadContext: Option[ThreadContext]
   def protoInstances: Option[ProtocolRunningInstances]
 
-  def relationshipOpt: Option[Relationship]
-  def relationshipReq: Relationship = relationshipOpt.getOrElse(throw new RuntimeException("relationship not found"))
+  def relationship: Option[Relationship]
+  def relationshipReq: Relationship = relationship.getOrElse(throw new RuntimeException("relationship not found"))
 
   def sponsorRel: Option[SponsorRel]
   def agentWalletSeed: Option[String]
@@ -60,24 +60,24 @@ trait AgentStateInterface extends State {
 
   def getPinstId(protoDef: ProtoDef): Option[PinstId]
 
-  def myDidDoc: Option[DidDoc] = relationshipOpt.flatMap(_.myDidDoc)
+  def myDidDoc: Option[DidDoc] = relationship.flatMap(_.myDidDoc)
   def myDidDoc_! : DidDoc = myDidDoc.getOrElse(throw new RuntimeException("myDidDoc is not set yet"))
   def myDid: Option[DID] = myDidDoc.map(_.did)
   def myDid_! : DID = myDid.getOrElse(throw new RuntimeException("myDid is not set yet"))
 
-  def theirDidDoc: Option[DidDoc] = relationshipOpt.flatMap(_.theirDidDoc)
+  def theirDidDoc: Option[DidDoc] = relationship.flatMap(_.theirDidDoc)
   def theirDidDoc_! : DidDoc = theirDidDoc.getOrElse(throw new RuntimeException("theirDidDoc is not set yet"))
   def theirDid: Option[DID] = theirDidDoc.map(_.did)
   def theirDid_! : DID = theirDid.getOrElse(throw new RuntimeException("theirDid is not set yet"))
 
   def thisAgentAuthKey: Option[AuthorizedKeyLike] = thisAgentKeyId.flatMap(keyId =>
-    relationshipOpt.flatMap(_.myDidDocAuthKeyById(keyId)))
+    relationship.flatMap(_.myDidDocAuthKeyById(keyId)))
   def thisAgentKeyDID: Option[KeyId] = thisAgentAuthKey.map(_.keyId)
   def thisAgentKeyDIDReq: DID = thisAgentKeyDID.getOrElse(throw new RuntimeException("this agent key id not found"))
   def thisAgentVerKey: Option[VerKey] = thisAgentAuthKey.filter(_.verKeyOpt.isDefined).map(_.verKey)
   def thisAgentVerKeyReq: VerKey = thisAgentVerKey.getOrElse(throw new RuntimeException("this agent ver key not found"))
 
-  def theirAgentAuthKey: Option[AuthorizedKeyLike] = relationshipOpt.flatMap(_.theirDidDocAuthKeyByTag(AGENT_KEY_TAG))
+  def theirAgentAuthKey: Option[AuthorizedKeyLike] = relationship.flatMap(_.theirDidDocAuthKeyByTag(AGENT_KEY_TAG))
   def theirAgentAuthKeyReq: AuthorizedKeyLike = theirAgentAuthKey.getOrElse(
     throw new RuntimeException("their agent auth key not yet set"))
   def theirAgentKeyDID: Option[DID] = theirAgentAuthKey.map(_.keyId)
@@ -86,9 +86,9 @@ trait AgentStateInterface extends State {
   def theirAgentVerKeyReq: VerKey = theirAgentVerKey.getOrElse(throw new RuntimeException("their agent ver key not yet set"))
 
   def myAuthVerKeys: Set[VerKey] =
-    relationshipOpt.flatMap(_.myDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
+    relationship.flatMap(_.myDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
   def theirAuthVerKeys: Set[VerKey] =
-    relationshipOpt.flatMap(_.theirDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
+    relationship.flatMap(_.theirDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
   def allAuthedVerKeys: Set[VerKey] = myAuthVerKeys ++ theirAuthVerKeys
 
   def serializedSize: Int

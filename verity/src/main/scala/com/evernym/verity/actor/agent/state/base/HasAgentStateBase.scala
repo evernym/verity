@@ -13,9 +13,6 @@ import com.evernym.verity.protocol.engine._
  */
 trait AgentStateImplBase extends AgentStateInterface {
 
-  def relationship: Option[Relationship]
-  def relationshipOpt: Option[Relationship] = relationship
-
   def threadContext: Option[ThreadContext]
   def threadContextReq: ThreadContext = threadContext.getOrElse(
     throw new RuntimeException("thread context not available"))

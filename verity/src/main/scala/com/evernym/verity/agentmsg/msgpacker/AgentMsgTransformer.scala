@@ -18,7 +18,7 @@ import scala.reflect.ClassTag
 
 class AgentMsgTransformer(val walletAPI: WalletAPI) {
 
-  implicit val executionContext: ExecutionContextExecutorService = ExecutionContext.fromExecutorService {
+  val executionContext: ExecutionContextExecutorService = ExecutionContext.fromExecutorService {
     Executors.newFixedThreadPool(8)
   }
 
@@ -60,7 +60,7 @@ class AgentMsgTransformer(val walletAPI: WalletAPI) {
           val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
           fromVerKeyFuture.map({ fromVerKey =>
             AgentMsgTransformerApi.unpack(we.wallet, msg, Option(fromVerKey), unpackParam)
-          })
+          })(executionContext)
         }
       )
     }

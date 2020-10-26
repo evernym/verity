@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Futu
 
 object Util extends UtilBase {
 
-  implicit val executionContext: ExecutionContextExecutorService = ExecutionContext.fromExecutorService {
+  val executionContext: ExecutionContextExecutorService = ExecutionContext.fromExecutorService {
     Executors.newFixedThreadPool(8)
   }
 
@@ -27,7 +27,7 @@ object Util extends UtilBase {
       case _ => Did.keyForLocalDid(walletExt.wallet, did)
     }
     FutureConverters.toScala(completableFuture)
-      .recover{ case e: Exception => throw new ExecutionException(e)}
+      .recover{ case e: Exception => throw new ExecutionException(e)}(executionContext)
   }
 
 

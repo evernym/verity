@@ -188,11 +188,13 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
 }
 
-trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase {
+trait AgencyAgentPairwiseStateImpl
+  extends AgentStatePairwiseImplBase {
   def sponsorRel: Option[SponsorRel] = None
 }
 
-trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
+trait AgencyAgentPairwiseStateUpdateImpl
+  extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
 
   override def setAgentWalletSeed(seed: String): Unit = {
     state = state.withAgentWalletSeed(seed)

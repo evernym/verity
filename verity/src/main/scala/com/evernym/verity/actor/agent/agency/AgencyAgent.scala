@@ -42,7 +42,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
     with AgencyAgentStateUpdateImpl
     with AgencyPackedMsgHandler
-    with AgencyAgentSnapshotter {
+    with AgentSnapshotter[AgencyAgentState] {
 
   type StateType = AgencyAgentState
   var state = new AgencyAgentState
@@ -386,11 +386,13 @@ case object SetEndpoint extends ActorMessageObject
 
 case object UpdateEndpoint extends ActorMessageObject
 
-trait AgencyAgentStateImpl extends AgentStateImplBase {
+trait AgencyAgentStateImpl
+  extends AgentStateImplBase {
   def sponsorRel: Option[SponsorRel] = None
 }
 
-trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgent =>
+trait AgencyAgentStateUpdateImpl
+  extends AgentStateUpdateInterface { this : AgencyAgent =>
 
   override def setAgentWalletSeed(seed: String): Unit = {
     state = state.withAgentWalletSeed(seed)

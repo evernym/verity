@@ -155,4 +155,17 @@ object Util {
       )
     }
   }
+
+  lazy val cloudrepoUsername: String = sys.env.getOrElse("IO_CLOUDREPO_ACCOUNT_USER", "")
+  lazy val cloudrepoPassword: String = sys.env.getOrElse("IO_CLOUDREPO_ACCOUNT_PASSWORD", "")
+
+  def conditionallyAddArtifact(artifact : sbt.Def.Initialize[sbt.librarymanagement.Artifact], taskDef : sbt.Def.Initialize[sbt.Task[java.io.File]]) : sbt.Def.SettingsDefinition = {
+    if (cloudrepoUsername != "" &&  cloudrepoPassword != "") {
+      println("Adding artifact " + artifact + " produced during task " + taskDef)
+      addArtifact(artifact, taskDef)
+    } else {
+      println("Skip publishing " + taskDef + " artifacts")
+      sbt.Def.SettingsDefinition.wrapSettingsDefinition(Seq.empty)
+    }
+  }
 }

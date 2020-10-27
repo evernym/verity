@@ -64,10 +64,9 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   def updateAppStatus(uas: UpdateAppStatus): Future[Any] = {
-    Future {
-      val causeDetail = CauseDetail(APP_STATUS_UPDATE_MANUAL.statusCode, uas.reason.getOrElse("manual-update"))
-      AppStateManager << SuccessEventParam(ManualUpdate(uas.newStatus), uas.context.getOrElse(CONTEXT_MANUAL_UPDATE), causeDetail)
-    }
+    val causeDetail = CauseDetail(APP_STATUS_UPDATE_MANUAL.statusCode, uas.reason.getOrElse("manual-update"))
+    AppStateManager << SuccessEventParam(ManualUpdate(uas.newStatus), uas.context.getOrElse(CONTEXT_MANUAL_UPDATE), causeDetail)
+    Future("Done")
   }
 
   protected val healthCheckRoute: Route =

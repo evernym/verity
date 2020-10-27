@@ -2,17 +2,17 @@
 Scala's incremental compilation depends on file timestamps with millisecond resolution. Compressed artifacts passed
 between jobs in a job's pipeline drop millisecond resolution on file stimestamps.
 
-TODO: Use truncateStamps to allow compressed artifacts in the CI/CD pipeline passed from one stage to another in the
+Use truncateStamps to allow compressed artifacts in the CI/CD pipeline passed from one stage to another in the
       CI/CD pipeline to remain valid (no need to recompile).
 
 import Util.amGitlabCI
 
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
-
-import Util.{addDeps, buildPackageMappings, dirsContaining, findAdditionalJars, referenceConfMerge}
+import SharedLibrary.{LibPack, defaultUpdateSharedLibraries, updateSharedLibraries, managedSharedLibTrigger}
+import Util.{addDeps, buildPackageMappings, cloudrepoUsername, cloudrepoPassword, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
 import Version._
-import sbt.Keys.{libraryDependencies, organization}
+import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
 import sbtassembly.MergeStrategy
 
@@ -23,6 +23,15 @@ enablePlugins(JavaAppPackaging)
 //deb package dependencies versions
 val debPkgDepLibIndyMinVersion = "1.15.0~1542"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
+
+//shared libraries versions
+val libIndyVer = "1.15.0~1542"
+val sharedLibDeps = Seq(
+  LibPack("libindy", libIndyVer),
+  LibPack("libnullpay", libIndyVer),
+  LibPack("libmysqlstorage",  "0.1.11"),
+  LibPack("libvcx", "0.9.2-bionic~754"), // For integration testing ONLY
+)
 
 //dependency versions
 val akkaVer = "2.6.8"
@@ -64,8 +73,6 @@ lazy val root = project.in(file(".")).aggregate(verity)
 
 lazy val verity = (project in file("verity"))
   .enablePlugins(DebianPlugin)
-//  .enablePlugins(MultiJvmPlugin)
-//  .configs(MultiJvm)
   .configs(IntegrationTest)
   .settings(
     name := s"verity",
@@ -74,20 +81,15 @@ lazy val verity = (project in file("verity"))
     packageSettings,
     protoBufSettings,
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
+    updateSharedLibraries := defaultUpdateSharedLibraries(
+      sharedLibDeps,
+      target.value.toPath.resolve("shared-libs"),
+      streams.value.log
+    ),
+
+    // Conditionally download an unpack shared libraries
+    update := update.dependsOn(updateSharedLibraries).value
   )
-
-lazy val username = sys.env.get("IO_CLOUDREPO_ACCOUNT_USER").getOrElse("")
-lazy val password = sys.env.get("IO_CLOUDREPO_ACCOUNT_PASSWORD").getOrElse("")
-
-def conditionallyAddArtifact(artifact : sbt.Def.Initialize[sbt.librarymanagement.Artifact], taskDef : sbt.Def.Initialize[sbt.Task[java.io.File]]) : sbt.Def.SettingsDefinition = {
-  if (username != "" &&  password != "") {
-    println("Adding artifact " + artifact + " produced during task " + taskDef)
-    addArtifact(artifact, taskDef)
-  } else {
-    println("Skip publishing " + taskDef + " artifacts")
-    sbt.Def.SettingsDefinition.wrapSettingsDefinition(Seq.empty)
-  }
-}
 
 lazy val integrationTests = (project in file("integration-tests"))
   .settings(
@@ -123,7 +125,12 @@ lazy val integrationTests = (project in file("integration-tests"))
       val nexus = "https://evernym.mycloudrepo.io/repositories/"
       Some("releases"  at nexus + "evernym-dev")
     },
-    credentials += Credentials("evernym.mycloudrepo.io", "evernym.mycloudrepo.io", username, password),
+    credentials += Credentials(
+      "evernym.mycloudrepo.io",
+      "evernym.mycloudrepo.io",
+      cloudrepoUsername,
+      cloudrepoPassword
+    ),
     publishMavenStyle := true
   ).dependsOn(verity % "test->test; compile->compile")
 
@@ -245,7 +252,7 @@ lazy val commonLibraryDependencies = {
     //helper/utility dependencies
     "commons-net" % "commons-net" % "3.6",
 
-    //sms (TODO: need to finalize dependencies mentioned in this section)
+    //sms
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",
 
     "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,

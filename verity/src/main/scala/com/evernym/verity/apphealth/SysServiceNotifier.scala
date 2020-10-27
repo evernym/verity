@@ -9,16 +9,25 @@ trait SysServiceNotifier {
 }
 
 object SDNotifySysServiceNotifier extends SysServiceNotifier {
+  private def shouldSend(): Boolean = sys.env
+    .get("NOTIFY_SOCKET")
+    .exists(!_.isEmpty)
 
   def setStatus(newStatus: String): Unit = {
-    SDNotify.sendStatus(newStatus)
+    if(shouldSend()) {
+      SDNotify.sendStatus(newStatus)
+    }
   }
 
   def started(): Unit = {
-    SDNotify.sendNotify()
+    if(shouldSend()) {
+      SDNotify.sendNotify()
+    }
   }
 
   def stop(): Unit = {
-    SDNotify.sendStopping()
+    if(shouldSend()) {
+      SDNotify.sendStopping()
+    }
   }
 }

@@ -1,0 +1,86 @@
+{
+  "components": {
+    "verity-pool": {
+      "image": "gitlab.corp.evernym.com:4567/dev/containers/indy-pool:1.12.3_1.0.8",
+      "mounts": [
+        ":/devlab"
+      ],
+      "enabled": true,
+      "ports": [
+        "9701-9708:9701-9708",
+        "5678-5679:5678-5679"
+      ],
+      "run_opts": [
+        "-e",
+        "TAA_ENABLE=true"
+      ],
+      "post_up_scripts": ["/devlab/scripts/verity_pool_health.py -w"],
+      "status_script": "/devlab/scripts/verity_pool_health.py"
+    },
+    "verity-dynamodb": {
+      "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-dynamodb:5ac4add3",
+      "mounts": [
+        ":/devlab"
+      ],
+      "cmd": "-jar DynamoDBLocal.jar -sharedDb -dbPath $HOME/data",
+      "enabled": true,
+      "ports": ["8000:8000"],
+      "status_script": "/devlab/scripts/verity_dynamodb_health.sh"
+    },
+    "verity-mysql": {
+      "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-mysql-wallet:288429c3",
+      "enabled": true,
+      "ports": ["3306:3306"],
+      "run_opts": [
+        "-e",
+        "MYSQL_ROOT_PASSWORD=root",
+        "-e",
+        "MYSQL_DATABASE=wallet",
+        "-e",
+        "MYSQL_USER=msuser",
+        "-e",
+        "MYSQL_PASSWORD=mspassword"
+      ]
+    },
+    "verity-s3": {
+      "image": "zenko/cloudserver",
+      "cmd": "yarn start mem_backend",
+      "enabled": true,
+      "ports": ["8001:8000"],
+      "run_opts": [
+        "-e",
+        "REMOTE_MANAGEMENT_DISABLE=1",
+        "-e",
+        "ENDPOINT=s3-devlab",
+        "--entrypoint",
+        "/usr/src/app/docker-entrypoint.sh"
+      ]
+    },
+    "verity-yourls": {
+      "image": "gitlab.corp.evernym.com:4567/dev/containers/yourls-mysql:2283cd0c",
+      "mounts": [
+        ":/devlab"
+      ],
+      "enabled": true,
+      "ports": ["8080:80"],
+      "run_opts": [
+        "-e",
+        "YOURLS_SITE=http://localhost:8080",
+        "-e",
+        "YOURLS_USER=yourlsuser",
+        "-e",
+        "YOURLS_PASS=yourlspass"
+      ],
+      "scripts": ["/devlab/scripts/verity_yourls_install.sh"],
+      "status_script": "/devlab/scripts/verity_yourls_health.sh"
+    }
+  },
+  "project_filter": "verity_integration_env",
+  "paths": {
+    "component_persistence": "target",
+    "component_persistence_wizard_paths": [],
+    "reset_paths": [],
+    "reset_full": []
+  },
+  "wizard_enabled": false
+}

@@ -1,7 +1,5 @@
 package com.evernym.verity.agentmsg.msgpacker
 
-import java.util.concurrent.Executors
-
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
@@ -12,16 +10,12 @@ import com.evernym.verity.vault._
 import org.hyperledger.indy.sdk.wallet.Wallet
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutorService, Future}
+import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 
 class AgentMsgTransformer(val walletAPI: WalletAPI) {
-
-  val executionContext: ExecutionContextExecutorService = ExecutionContext.fromExecutorService {
-    Executors.newFixedThreadPool(8)
-  }
-
 
   def pack(msgPackVersion: MsgPackVersion, msg: String, encryptInfo: EncryptParam,
            packParam: PackParam = PackParam())
@@ -40,30 +34,28 @@ class AgentMsgTransformer(val walletAPI: WalletAPI) {
     )
   }
 
-    def unpack(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())
-              (implicit wap: WalletAccessParam): AgentMsgWrapper = {
+  def unpack(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())
+            (implicit wap: WalletAccessParam): AgentMsgWrapper = {
+    walletAPI.executeOpWithWalletInfo("auth/anon decrypt",
+      openWalletIfNotExists = unpackParam.openWalletIfNotOpened, { we: WalletExt =>
+        val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
+        val fromVerKey = Await.result(fromVerKeyFuture, Duration.Inf) // fixme ve2028 testing
+        AgentMsgTransformerApi.unpack(we.wallet, msg, Option(fromVerKey), unpackParam)
+      }
+    )
+  }
 
-      walletAPI.executeOpWithWalletInfo("auth/anon decrypt",
-        openWalletIfNotExists = unpackParam.openWalletIfNotOpened, { we: WalletExt =>
-          val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
-          val fromVerKey = Await.result(fromVerKeyFuture, Duration.Inf) // fixme ve2028 testing
+  def unpackAsync(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())
+                 (implicit wap: WalletAccessParam): Future[AgentMsgWrapper] = {
+    walletAPI.executeOpWithWalletInfo("auth/anon decrypt",
+      openWalletIfNotExists = unpackParam.openWalletIfNotOpened, { we: WalletExt =>
+        val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
+        fromVerKeyFuture.map({ fromVerKey =>
           AgentMsgTransformerApi.unpack(we.wallet, msg, Option(fromVerKey), unpackParam)
-        }
-      )
-    }
-
-    def unpackAsync(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())
-                   (implicit wap: WalletAccessParam): Future[AgentMsgWrapper] = {
-
-      walletAPI.executeOpWithWalletInfo("auth/anon decrypt",
-        openWalletIfNotExists = unpackParam.openWalletIfNotOpened, { we: WalletExt =>
-          val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
-          fromVerKeyFuture.map({ fromVerKey =>
-            AgentMsgTransformerApi.unpack(we.wallet, msg, Option(fromVerKey), unpackParam)
-          })(executionContext)
-        }
-      )
-    }
+        })
+      }
+    )
+  }
 
 }
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.util
 
-import java.util.concurrent.{ExecutionException, Executors}
+import java.util.concurrent.ExecutionException
 
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.ledger.LedgerPoolConnManager
@@ -9,14 +9,10 @@ import com.evernym.verity.protocol.engine.{DID, VerKey}
 import org.hyperledger.indy.sdk.did.Did
 
 import scala.compat.java8.FutureConverters
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
-
+import scala.concurrent.Future
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 object Util extends UtilBase {
-
-  val executionContext: ExecutionContextExecutorService = ExecutionContext.fromExecutorService {
-    Executors.newFixedThreadPool(8)
-  }
 
   override def getVerKey(did: DID, walletExt: WalletExt, getKeyFromPool: Boolean, poolConnManager: LedgerPoolConnManager): Future[VerKey] = {
     //TODO: need to fix this so that it can work directly with LedgerPoolConnManager interface
@@ -27,8 +23,7 @@ object Util extends UtilBase {
       case _ => Did.keyForLocalDid(walletExt.wallet, did)
     }
     FutureConverters.toScala(completableFuture)
-      .recover{ case e: Exception => throw new ExecutionException(e)}(executionContext)
+      .recover{ case e: Exception => throw new ExecutionException(e)}
   }
-
 
 }

@@ -37,6 +37,7 @@ import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
+import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
@@ -94,7 +95,8 @@ class ActorProtocolContainer[
   }
 
   def protocolReceiveEvent: Receive = {
-    case evt: E =>
+    case evt: Any => // we can't make a stronger assertion about type because erasure
+
       //NOTE: assumption is that if any event is coming for recovery, then protocol should have
       // been already initialized [so that the last line of this code block 'protocol.apply(evt)' can work ]
       // if protocol is not yet initialized, it must be the case that this actor is just started and
@@ -110,7 +112,8 @@ class ActorProtocolContainer[
           senderActorRef = Option(sender())
           (None, c, CtlEnvelope(c, MsgFamilyUtil.getNewMsgUniqueId, DEFAULT_THREAD_ID))
 
-        case me @ MsgEnvelope(msg: M, _, to, frm, Some(msgId), Some(thId))  =>
+        // we can't make a stronger assertion about type because erasure
+        case me @ MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId))  =>
           senderActorRef = Option(sender())
           msg match {
             // flow diagram: ctl.thread, step 17 -- Handle control message with thread.
@@ -170,13 +173,15 @@ class ActorProtocolContainer[
 
   final def protocolReceiveCommandBase: Receive = {
     // flow diagram: ctl + proto, step 16
-    //NOTE: this is when any actor/object wants to send a command with ProtocolCmd wrapper
-    case pc @ ProtocolCmd(MsgEnvelope(msg: M, msgType, to, frm, msgId, thId), walletSeed, fwder) =>
+    // NOTE: this is when any actor/object wants to send a command with ProtocolCmd wrapper
+    // we can't make a stronger assertion about type because erasure
+    case pc @ ProtocolCmd(MsgEnvelope(msg: Any, msgType, to, frm, msgId, thId), walletSeed, fwder) =>
       logger.debug(s"$protocolIdForLog received ProtocolCmd: " + pc)
       setForwarderParams(walletSeed, fwder)
       protocolReceiveCommand(MsgEnvelope(msg, msgType, to, frm, msgId, thId))
 
-    case msg: M if protocolReceiveCommand.isDefinedAt(msg) =>
+    // we can't make a stronger assertion about type because erasure
+    case msg: Any if protocolReceiveCommand.isDefinedAt(msg) =>
       logger.debug(s"$protocolIdForLog received msg: " + msg)
       protocolReceiveCommand(msg)
   }
@@ -223,7 +228,7 @@ class ActorProtocolContainer[
     case _: SegmentStorageFailed =>
       logger.error(s"failed to store segment")
       changeReceiverToBase()
-    case msg: M =>
+    case msg: Any => // we can't make a stronger assertion about type because erasure
       logger.debug(s"$protocolIdForLog received msg: $msg while storing data")
       stash()
   }
@@ -244,7 +249,7 @@ class ActorProtocolContainer[
     case _: DataNotFound =>
       logger.debug(s"$protocolIdForLog data not found")
       changeReceiverToBase()
-    case msg: M =>
+    case msg: Any => // we can't make a stronger assertion about type because erasure
       logger.debug(s"$protocolIdForLog received msg: $msg while retrieving data")
       stash()
   }
@@ -285,7 +290,7 @@ class ActorProtocolContainer[
     MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-param-req-sent",
       "init-msg-id", outMsg = Option("init-req-sent"))
   }
-
+  @silent
   override def createServices: Option[Services] = {
     val walletParam = WalletParam(agentActorContext.walletAPI, agentActorContext.walletConfig)
 
@@ -343,7 +348,7 @@ class ActorProtocolContainer[
   //TODO move agentActorContext.smsSvc to be handled here (uses a future)
   class MsgSender extends SendsMsgsForContainer[M](this) {
 
-    def send(pmsg: ProtocolOutgoingMsg[Any]): Unit = {
+    def send(pmsg: ProtocolOutgoingMsg): Unit = {
       val fromAgentId = ParticipantUtil.agentId(pmsg.from)
 
       //TODO: right now assuming that the msg needs to be packed and send to 'to' agent.
@@ -404,6 +409,12 @@ class ActorProtocolContainer[
           logger.debug(s"Data stored at: ${storageInfo.endpoint}")
           val storageReference = StorageReferenceStored(storageInfo.`type`, SegmentedStateStore.eventCode(data), Some(storageInfo))
           postExecution(Right(Some(Write(segmentAddress, segmentKey, storageReference))))
+        case Success(value) =>
+          // TODO the type constraint should make this case un-needed
+          val msg = s"storing information is not a excepted type, unable to process it " +
+            s"-- it is ${value.getClass.getSimpleName}"
+          logger.error(msg)
+          postExecution(Left(new Exception(msg)))
         case Failure(e) =>
           logger.error(s"storing data externally failed with error: ${e.getMessage}")
           postExecution(Left(e))
@@ -552,8 +563,8 @@ case class MsgEnvelope[A](msg: A, msgType: MsgType, to: ParticipantId, frm: Part
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
 }
 
-trait ServiceDecorator[A]{
-  def msg: A
+trait ServiceDecorator{
+  def msg: Any
   def deliveryMethod: ComMethodDetail
 }
 

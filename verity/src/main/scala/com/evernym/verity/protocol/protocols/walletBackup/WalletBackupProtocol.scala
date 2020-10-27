@@ -145,9 +145,12 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
     val w: WalletBackup = wallet match {
       case w: WalletBackup => ctx.logger.debug("byte array received - newer expectation is base64 encoded str"); w
       case w: WalletBackupEncoded => ctx.logger.debug("received base64 encoded string"); getBase64Decoded(w)
-      case w: WalletBackupIntList =>
+      case w: List[_] =>
         ctx.logger.debug("Int list received - newer expectation is base64 encoded str");
-        w.map(_.toByte).toArray
+        // Can't test for List[Int] but that is what is expected
+        // So we will cast to List[Int] even though we don't know for sure it is of that type
+        val l = w.asInstanceOf[List[Int]]
+        l.map(_.toByte).toArray
       case _ => throw new UnsupportedBackupType
     }
 

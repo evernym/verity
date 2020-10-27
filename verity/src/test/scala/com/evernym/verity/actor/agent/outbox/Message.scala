@@ -108,6 +108,10 @@ object Message {
     case (State.Cleared, Cmd.Get(replyTo)    ) => Effect.reply(replyTo)(StatusReply.error(Error.MSG_CLEARED))
     case (State.Cleared, Cmd.Clear(replyTo)  ) => Effect.reply(replyTo)(StatusReply.error(Error.MSG_CLEARED))
 
+    case (State.Empty, Cmd.Legacy.UpdateMsgRefId(_)) => ???
+    case (State.Msg(_), Cmd.Legacy.UpdateMsgRefId(_)) => ???
+    case (State.Cleared, Cmd.Legacy.UpdateMsgRefId(_)) => ???
+
   }
 
   // The match below allows for transitions that are not permitted based on the

@@ -6,7 +6,7 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorExce
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, Unrecognized}
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.agent._
@@ -187,6 +187,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         val updatedEndpointSeq: Seq[EndpointADT] = tdd.endpoints_!.endpoints.map(_.endpointADTX).map {
           case lep: LegacyRoutingServiceEndpoint => lep.copy(agencyDID = rad.DID)
           case ep: RoutingServiceEndpoint        => ep
+          case _                                 => throw new MatchError("unsupported endpoint matched")
         }.map(EndpointADT.apply)
         val updatedEndpoints = Endpoints(updatedEndpointSeq, tdd.endpoints_!.endpointsToAuthKeys)
         tdd.update(_.endpoints := updatedEndpoints)

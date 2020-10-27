@@ -5,6 +5,8 @@ import java.util.{Map => JavaMap}
 import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
 
+import scala.language.implicitConversions
+
 object OptionUtil {
   // JAVA Collections
   def emptyOption[T1, T2](arg: JavaMap[T1, T2]) = {

@@ -95,16 +95,17 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
     }
   }
 
-  private def entryForUntypedMsg[B](msg: B): Option[Entry[A]] = {
+  // we can't make a stronger assertion about type because erasure
+  private def entryForUntypedMsg(msg: Any): Option[Entry[A]] = {
     val extractedMsg = msg match {
-      case env: Envelope[B] => env.msg
-      case CtlEnvelope(m: B, _, _) => m
-      case m: B => m
+      case env: Envelope[_] => env.msg
+      case m: CtlEnvelope[_] => m
+      case m => m
     }
     untypedMsgToEntry(extractedMsg)
   }
 
-  def `entryForUntypedMsg_!`[B](msg: B): Entry[A] = {
+  def `entryForUntypedMsg_!`(msg: Any): Entry[A] = {
     entryForUntypedMsg(msg).getOrElse(
       throw new UnsupportedMessageType(msg, registeredProtocols.keys)
     )

@@ -45,7 +45,7 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.{LegacyAgentStateImpl, LegacyAgentStateUpdateImpl}
 
@@ -380,6 +380,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
         val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg)
         val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackVersion, param) (agentMsgTransformer, wap)
         sendRespMsg(rp)
+      case Unrecognized(_) =>
+        throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
     }
   }
 
@@ -734,7 +736,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
    * it should respond in REST_PLAN or MSG_PACK or INDY_PACK etc.
    *
    */
-  override def handleSendSignalMsg[A](ssm: SendSignalMsg[A]): Unit = {
+  override def handleSendSignalMsg(ssm: SendSignalMsg): Unit = {
     ssm.msg match {
       case msg: ConnReqRespMsg_MFV_0_6 =>
         val threadContextDetail = state.threadContextDetail(ssm.pinstId)

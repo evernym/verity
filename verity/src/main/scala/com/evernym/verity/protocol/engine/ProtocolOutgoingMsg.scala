@@ -13,7 +13,7 @@ import com.evernym.verity.actor.ActorMessageClass
   * @param pinstId - protocol instance id which send this message
   * @param protoDef - protocol def
   */
-case class ProtocolOutgoingMsg[+A](msg: A,
+case class ProtocolOutgoingMsg(msg: Any,
                                    to: ParticipantId,
                                    from: ParticipantId,
                                    requestMsgId: MsgId,

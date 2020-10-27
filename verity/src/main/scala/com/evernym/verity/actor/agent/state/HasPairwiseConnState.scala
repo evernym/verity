@@ -104,6 +104,8 @@ trait PairwiseConnStateBase {
         Left(LegacyRoutingDetail(le.agencyDID, le.agentKeyDID, le.agentVerKey, le.agentKeyDlgProofSignature))
       case e: RoutingServiceEndpoint        =>
         Right(RoutingDetail(state.theirAgentAuthKeyReq.verKey, e.value, e.routingKeys))
+      case _                                =>
+        throw new MatchError("unsupported endpoint matched")
     }
   }
 

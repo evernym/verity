@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
-import com.evernym.verity.protocol.didcomm.decorators.{Base64, AppendingAttachment => Attachment}
+import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
 import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.evernym.verity.util.TimeUtil._
 
@@ -121,9 +121,9 @@ object BasicMessage {
   }
 
   def attachmentsToAttachmentObjects(values: Vector[Attachment]): Vector[AttachmentObject] = {
-    values.map(a => AttachmentObject(a.`@id`, a.`mime-type`, a.filename, a.data.base64))
+    values.map(a => AttachmentObject(a.`@id`.getOrElse(""), a.`mime-type`.getOrElse(""), a.filename.getOrElse(""), a.data.base64))
   }
   def attachmentObjectsToAttachments(values: Vector[AttachmentObject]): Vector[Attachment] = {
-    values.map(a => Attachment(a.id, a.mimeType, a.filename, Base64(a.dataBase64)))
+    values.map(a => Attachment(Some(a.id), Some(a.mimeType), Base64(a.dataBase64), Some(a.filename)))
   }
 }

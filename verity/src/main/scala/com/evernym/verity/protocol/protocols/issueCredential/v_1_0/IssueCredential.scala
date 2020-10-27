@@ -5,8 +5,8 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
-import com.evernym.verity.protocol.didcomm.decorators.EmbeddingAttachment._
-import com.evernym.verity.protocol.didcomm.decorators.{Base64, EmbeddingAttachment, PleaseAck}
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
+import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
@@ -76,7 +76,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       case Success(credOffer) =>
         val credPreview = buildCredPreview(m.credential_values)
         val credPreviewEventObject = credPreview.toOption.map(buildEventCredPreview)
-        val attachment = buildAttachment("libindy-cred-offer-0", payload=credOffer)
+        val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload=credOffer)
         val attachmentEventObject = toEvent(attachment)
         val credOffered = CredOffered(credPreviewEventObject, Seq(attachmentEventObject), commentReq(m.comment), m.price)
         val eventOffer = OfferSent(ctx.getInFlight.sender.id_!, Option(credOffered), m.auto_issue.getOrElse(false))
@@ -121,7 +121,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val credOfferJson = extractCredOfferJson(st.credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, st.myPwDid, credDefJson, credOfferJson) match {
       case Success(credRequest) =>
-        val attachment = buildAttachment("libindy-cred-req-0", payload=credRequest)
+        val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest)
         val attachmentEventObject = toEvent(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
         ctx.apply(RequestSent(ctx.getInFlight.sender.id_!, Option(credRequested)))
@@ -159,7 +159,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson,
       revRegistryId.orNull, -1) match {
       case Success(cred) =>
-        val attachment = buildAttachment("libindy-cred-0", payload=cred)
+        val attachment = buildAttachment(Some("libindy-cred-0"), payload=cred)
         val attachmentEventObject = toEvent(attachment)
         val credIssued = CredIssued(Seq(attachmentEventObject), commentReq(comment))
         ctx.apply(IssueCredSent(Option(credIssued)))
@@ -340,12 +340,12 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     CredPreview(MsgFamily.typeStrFromMsgType(msgType), cpa.toVector)
   }
 
-  def toEvent(a: EmbeddingAttachment): AttachmentObject = {
-    AttachmentObject(a.`@id`, a.`mime-type`, a.data.base64)
+  def toEvent(a: AttachmentDescriptor): AttachmentObject = {
+    AttachmentObject(a.`@id`.get, a.`mime-type`.get, a.data.base64)
   }
 
-  def fromEvent(ao: AttachmentObject): EmbeddingAttachment = {
-    EmbeddingAttachment(ao.id, ao.mimeType, Base64(ao.dataBase64))
+  def fromEvent(ao: AttachmentObject): AttachmentDescriptor = {
+    AttachmentDescriptor(Some(ao.id), Some(ao.mimeType), Base64(ao.dataBase64))
   }
 
   def buildProposedCred(proposal: Option[CredProposed]): ProposeCred = {

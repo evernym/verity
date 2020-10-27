@@ -2,18 +2,20 @@ package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import java.util.UUID
 
+import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.extractString
 import com.evernym.verity.protocol.engine.Envelope1
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessage._
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl._
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.{Participator}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Signal._
 import com.evernym.verity.protocol.testkit.DSL._
-import com.evernym.verity.protocol.didcomm.decorators.{AppendingAttachment => Attachment, Base64}
+import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
@@ -57,7 +59,7 @@ class BasicMessageSpec
         UUID.randomUUID().toString,
         threadId,
         BasicMessageDefinition,
-        StandardTypeFormat
+        TypeFormat.STANDARD_TYPE_FORMAT
       )
 
       jsonWithType.msgType.msgName shouldBe "message"
@@ -118,15 +120,15 @@ class BasicMessageSpec
       }
       "with attachment" - {
         "receiver receives attachment" in { s =>
-          interaction(s.alice, s.bob) {
-            val attachment = Attachment("testfile", "application\\json", "test.json", Base64("EABDCFIUDSAFJDF"))
+          interaction(s.alice, s.bob) {                                      // Base64 encoded "Hello, World!"
+            val attachment = Attachment(Some("testfile"), Some("application/json"), Base64("SGVsbG8sIFdvcmxkIQ=="), Some("test.json"))
             s.alice ~ testSendMessage(Option(Vector(attachment)))
 
             val result = s.bob expect signal[Signal.ReceivedMessage]
             result.content shouldBe "Hello, World!"
             result.`~l10n` shouldBe l10n(locale = Some("en"))
             result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
-            result.`~attach` shouldBe Some(Vector(attachment))
+            extractString(result.`~attach`.get(0)) shouldBe "Hello, World!"
           }
         }
       }
@@ -143,6 +145,18 @@ class BasicMessageSpec
 
         var result = s.bob expect signal [Signal.ReceivedMessage]
         result.`~l10n` shouldBe l10n(locale = Some("en"))
+      }
+    }
+    "Attachment does not include required parameters" in { s =>
+      interaction(s.alice, s.bob) {                                      // Base64 encoded "Hello, World!"
+        val attachment = Attachment(data = Base64("SGVsbG8sIFdvcmxkIQ=="))
+        s.alice ~ testSendMessage(Option(Vector(attachment)))
+
+        val result = s.bob expect signal[Signal.ReceivedMessage]
+        result.content shouldBe "Hello, World!"
+        result.`~l10n` shouldBe l10n(locale = Some("en"))
+        result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
+        extractString(result.`~attach`.get(0)) shouldBe "Hello, World!"
       }
     }
   }

@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.agent.state
 
-import com.evernym.verity.actor.agent.relationship.Endpoints._
 import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, Relationship, Tags}
 import com.evernym.verity.protocol.engine.VerKey
 
@@ -63,8 +62,8 @@ trait HasRelationshipState extends HasRelationship {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithNewAuthKey(keyId, tags))
   }
 
-  def addOrUpdateEndpointToMyDidDoc(endpoint: EndpointADTUntyped, authKeyIds: Set[KeyId]): Unit = {
-    updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithEndpoint(endpoint, authKeyIds))
+  def addOrUpdateEndpointToMyDidDoc(endpoint: EndpointADTUntyped): Unit = {
+    updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithEndpoint(endpoint))
   }
 
   def removeEndpointById(id: EndpointId): Unit = {

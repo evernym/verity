@@ -33,9 +33,9 @@ trait AgentStateImplBase extends AgentStateInterface {
     relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithMergedAuthKey(keyId, verKey, tags)))))
   }
 
-  def relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint: EndpointADTUntyped, authKeyIds: Set[KeyId]): Option[Relationship] = {
+  def relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint: EndpointADTUntyped): Option[Relationship] = {
     relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(
-      _.updatedWithEndpoint(EndpointADT(endpoint), authKeyIds)))))
+      _.updatedWithEndpoint(EndpointADT(endpoint))))))
   }
 
   def relWithNewAuthKeyAddedInMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Option[Relationship] = {

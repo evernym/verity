@@ -210,7 +210,7 @@ trait AgentOutgoingMsgHandler
     val agentJsonStr = if (threadContext.usesLegacyGenMsgWrapper) {
       AgentMsgPackagingUtil.buildPayloadWrapperMsg(agentJsonMsg.jsonStr, wrapperMsgType = agentJsonMsg.msgType.msgName)
     } else {
-      AgentMsgPackagingUtil.buildAgentMsgJson(List(JsonMsg(agentJsonMsg.jsonStr)), threadContext.msgPackVersion, threadContext.usesLegacyBundledMsgWrapper)
+      AgentMsgPackagingUtil.buildAgentMsgJson(List(JsonMsg(agentJsonMsg.jsonStr)), threadContext.usesLegacyBundledMsgWrapper)
     }
     logger.debug(s"outgoing msg: json msg: " + agentJsonMsg)
     val toDID = ParticipantUtil.agentId(mc.to)

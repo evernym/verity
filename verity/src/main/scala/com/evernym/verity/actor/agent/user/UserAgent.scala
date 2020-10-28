@@ -154,15 +154,15 @@ class UserAgent(val agentActorContext: AgentActorContext)
       state = state.copy(relationship = state.relWithAuthKeyMergedToMyDidDoc(verKey, verKey, Set(RECIP_KEY)))
       state.myDidDoc_!.authorizedKeys_!.findByVerKey(verKey).get.keyId    //TODO: fix .get
     }
+    val allAuthKeyIds = (authKeyIds ++ existingEdgeAuthKeys.map(_.keyId)).toSeq
     val packagingContext = cmu.packaging.map(p => PackagingContext(p.pkgType))
     val endpoint: EndpointADTUntyped = cmu.typ match {
       case EndpointType.PUSH        => PushEndpoint(cmu.id, cmu.value)
-      case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, packagingContext)
-      case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, packagingContext)
-      case EndpointType.SPR_PUSH    => SponsorPushEndpoint(cmu.id, cmu.value, packagingContext)
+      case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
+      case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
+      case EndpointType.SPR_PUSH    => SponsorPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
     }
-    state = state.copy(relationship = state.relWithEndpointAddedOrUpdatedInMyDidDoc(
-      endpoint, authKeyIds ++ existingEdgeAuthKeys.map(_.keyId)))
+    state = state.copy(relationship = state.relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint))
   }
 
   def handleOwnerDIDSet(did: DID): Unit = {
@@ -262,11 +262,10 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def comMethodsByTypes(types: Seq[Int], withSponsorId: Option[String]): CommunicationMethods = {
     val endpoints = if (types.nonEmpty) state.myDidDoc_!.endpoints_!.filterByTypes(types: _*)
-    else state.myDidDoc_!.endpoints_!.endpoints
+      else state.myDidDoc_!.endpoints_!.endpoints
     val comMethods = endpoints.map { ep =>
-      val authKeyIds = state.myDidDoc_!.endpoints_!.endpointsToAuthKeys.getOrElse(ep.id, KeyIds())
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
-        .filterByKeyIds(authKeyIds)
+        .filterByKeyIds(ep.authKeyIds.toSeq)
         .map(_.verKey).toSet
       val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packVersion, verKeys))
       ComMethodDetail(ep.`type`, ep.value, cmp)
@@ -352,7 +351,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         if (comMethod.`type` == COM_METHOD_TYPE_HTTP_ENDPOINT) {
           comMethodUpdatedRespMsg.head match {
             case resp: ComMethodUpdatedRespMsg_MFV_0_6 =>
-              val jsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(comMethodUpdatedRespMsg, MPV_PLAIN, wrapInBundledMsgs = false)
+              val jsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(comMethodUpdatedRespMsg, wrapInBundledMsgs = false)
               sendMsgToRegisteredEndpoint(
                 PayloadWrapper(
                   jsonMsg.getBytes,
@@ -373,7 +372,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     Set(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_FWD_PUSH).contains(comType)
 
   def processValidatedUpdateComMethodMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val authKeyIds = state.myDidDoc_!.endpoints_!.endpointsToAuthKeys.getOrElse(comMethod.id, KeyIds())
+    val authKeyIds = state.myDidDoc_!.endpoints.map(_.authKeyIdsForEndpoint(comMethod.id)).getOrElse(Set.empty)
     val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
       .filterByKeyIds(authKeyIds)
       .map(_.verKey).toSet

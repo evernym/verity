@@ -7,9 +7,7 @@ import "thread_context.proto";
 import "protocol_instances.proto";
 import "relationship.proto";
 import "config_value.proto";
-import "agent_detail.proto";
 import "msg_and_delivery.proto";
-import "did_pair.proto";
 import "sponsor_rel.proto";
 import "connection_status.proto";
 

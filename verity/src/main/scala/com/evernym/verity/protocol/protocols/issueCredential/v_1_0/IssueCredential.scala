@@ -341,7 +341,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def toEvent(a: AttachmentDescriptor): AttachmentObject = {
-    AttachmentObject(a.`@id`.get, a.`mime-type`.get, a.data.base64)
+    AttachmentObject(a.`@id`.getOrElse(""), a.`mime-type`.getOrElse(""), a.data.base64)
   }
 
   def fromEvent(ao: AttachmentObject): AttachmentDescriptor = {

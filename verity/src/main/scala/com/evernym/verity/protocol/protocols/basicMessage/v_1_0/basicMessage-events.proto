@@ -2,6 +2,7 @@ syntax = "proto3";
 
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
 
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0;
 
@@ -25,8 +26,8 @@ message AttachmentObject {
 
 message MessageSent {
     option (scalapb.message).extends = "Event";
-    string localization                     = 1;
-    string sentTime                         = 2;
-    string content                          = 3;
-    repeated AttachmentObject attachments   = 4;
+    string localization    = 1;
+    string sentTime        = 2;
+    string content                              = 3;
+    repeated AttachmentObject attachments       = 4;
 }

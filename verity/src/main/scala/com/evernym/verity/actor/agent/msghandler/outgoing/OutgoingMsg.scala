@@ -47,15 +47,14 @@ case class OutgoingMsg[A](msg: A,
  * @param protoRef - protocol reference
  * @param pinstId - protocol instance id
  */
-case class SendSignalMsg[A](msg: A, threadId: ThreadId, protoRef: ProtoRef, pinstId: PinstId, requestMsgId: Option[MsgId]) extends ActorMessageClass
+case class SendSignalMsg(msg: Any, threadId: ThreadId, protoRef: ProtoRef, pinstId: PinstId, requestMsgId: Option[MsgId]) extends ActorMessageClass
 
 /**
  * This is sent after any pre processing work is done for received SendSignalMsg
  * As of now, primarily it is used to copy the thread context from 'UserAgent' actor to 'UserAgentPairwise' actor
  * @param ssm
- * @tparam A
  */
-case class ProcessSendSignalMsg[A](ssm: SendSignalMsg[A]) extends ActorMessageClass
+case class ProcessSendSignalMsg(ssm: SendSignalMsg) extends ActorMessageClass
 
 /**
  * This case class is used by GenericProtocolActor to send synchronous response message

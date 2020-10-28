@@ -44,7 +44,7 @@ object TokenizerMsgFamily extends MsgFamily {
   //TODO: when the service decorator functionality is actually implemented,
   // the PushToken will be abstracted from the Token Protocol
   // somewhere in the engine or in the container the decorator will be handled - probably engine
-  case class PushToken(msg: Token, deliveryMethod: ComMethodDetail) extends ServiceDecorator[Msg] with Msg
+  case class PushToken(msg: Token, deliveryMethod: ComMethodDetail) extends ServiceDecorator with Msg
 
   case class GetToken(sponseeId: String, sponsorId: String, pushId: ComMethodDetail) extends Msg
   case class Token(sponseeId: String,

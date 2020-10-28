@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD, MSG_STATUS_ACCEPTED, MSG_STATUS_REDIRECTED, MSG_STATUS_REJECTED, PAIRWISE_KEYS_ALREADY_IN_WALLET}
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
@@ -163,6 +163,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
         case MPV_INDY_PACK | MPV_PLAIN =>
           ctx.signal(AcceptedInviteAnswerMsg_0_6(InviteAnswerPayloadMsg(connReqAnswerMsg.senderDetail), sourceId))
         case MPV_MSG_PACK =>
+        case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
       }
     }
     val param: PackMsgParam = AgentMsgPackagingUtil.buildPackMsgParam(

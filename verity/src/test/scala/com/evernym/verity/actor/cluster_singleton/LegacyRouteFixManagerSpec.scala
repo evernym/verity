@@ -28,7 +28,7 @@ class LegacyRouteFixManagerSpec extends PersistentActorSpec with BasicSpec with 
   "Platform" - {
     "during launch" - {
       "should start required region and other actors" in {
-        platform.agentRouteStoreRegion
+        val _ = platform.agentRouteStoreRegion
         platform.singletonParentProxy
       }
     }

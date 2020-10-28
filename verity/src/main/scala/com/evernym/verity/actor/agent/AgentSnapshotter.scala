@@ -28,6 +28,6 @@ trait AgentSnapshotter[T <: State] extends SnapshotterExt[T] { this: BasePersist
    * @return
    */
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
-    case as: T => state = as
+    case as => state = as.asInstanceOf[T]
   }
 }

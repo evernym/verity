@@ -98,6 +98,7 @@ object Outbox {
     case object Empty extends State {
       def applyEvent(evt: Evt): State = evt match {
         case Evt.MsgAdded(msgId) => Basic(Vector(msgId))
+        case Evt.SetReceivedSeqNr(_) => ???
       }
 
       val numPending: Int = 0

@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
+import com.github.ghik.silencer.silent
 
 import scala.concurrent.Future
 
@@ -59,5 +60,6 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   //TODO: no new protocols are supposed to use services
   //it is only being used by few existing protocols and sooner we should get rid of usages of the services
   // noinspection ScalaDeprecation
+  @silent
   def SERVICES_DEPRECATED: ProtocolServices[M,E,I] = _services.getOrElse(throw new RuntimeException("services are not available"))
 }

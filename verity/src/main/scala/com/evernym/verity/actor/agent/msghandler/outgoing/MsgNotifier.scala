@@ -7,7 +7,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.user._
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -159,6 +159,7 @@ trait MsgNotifierForStoredMsgs
         sendMsgToRegisteredEndpointLegacy(pw, allComMethods)
       case Some(MPV_PLAIN)  =>
         sendMsgToRegisteredEndpointNew(pw, allComMethods)
+      case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
     }
   }
 
@@ -174,6 +175,7 @@ trait MsgNotifierForStoredMsgs
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(pw.msg)(UrlDetail(hcm.value))
             case Some(MPV_PLAIN)  =>
               remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
+            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint (legacy): " + hcm)
         }
@@ -202,6 +204,7 @@ trait MsgNotifierForStoredMsgs
 
               val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlDetail(hcm.value))
+            case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint: " + hcm)
         }

@@ -120,8 +120,8 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     try {
       fn()
     } catch {
-      case e: Exception => problemReport(e.getMessage)
       case e: ProvisioningException => problemReport(e.err)
+      case e: Exception => problemReport(e.getMessage)
     }
   }
 

@@ -16,6 +16,8 @@ import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
 
+import com.github.ghik.silencer.silent
+
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -141,6 +143,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     pendingEvents = pendingEvents :+ event
   }
 
+  @silent // TODO we should fix this the typing, erasure make the type checking ineffective
   def applyToShadow[A >: E with ProtoSystemEvent](event: A): Unit = {
     event match {
       case me: MultiEvent => me.evts.foreach(applyToShadow)   //TODO: confirm about if this is correct way to handle MultiEvent
@@ -181,7 +184,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   protected lazy val inbox: BoxLike[Any,Any] =
     new Box("inbox", "control or protocol message", handleMsg(_), journalContext)
 
-  protected lazy val outbox: BoxLike[ProtocolOutgoingMsg[Any],Unit] =
+  protected lazy val outbox: BoxLike[ProtocolOutgoingMsg,Unit] =
     new Box("outbox", "protocol message", sendsMsgs.send, journalContext)
 
   protected lazy val signalOutbox = new SignalOutbox(driver, inbox, journalContext)
@@ -235,6 +238,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     case m => handleMsgBase(m)
   }
 
+  @silent // TODO we should fix this the typing, erasure make the type checking ineffective
   private def handleMsgBase: Any ?=> Any = {
 
     case Envelope1(msg: M, to, frm, msgId, tid) =>

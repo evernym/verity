@@ -9,7 +9,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackVersion, PayloadMetadata}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
@@ -144,6 +144,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           case MPV_MSG_PACK =>
             //to send received connection request answer asynchronously (to edge agent)
             List(SendMsgToEdgeAgent(uid))
+          case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
         }
 
       case _ => List.empty//nothing to do

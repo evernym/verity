@@ -19,7 +19,7 @@ class CacheSpec extends PersistentActorSpec with BasicAsyncSpec with CancelGloba
   "Cache" - {
     "when initialized" - {
       "should have no cached config" in {
-        platform.singletonParentProxy   //to make sure singleton proxy actor gets created before use
+        val _ = platform.singletonParentProxy   //to make sure singleton proxy actor gets created before use
 
         cache = new Cache("TestCache", fetchers)
         cache.size shouldBe 0

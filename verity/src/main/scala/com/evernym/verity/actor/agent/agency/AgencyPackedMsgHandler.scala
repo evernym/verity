@@ -40,31 +40,33 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
 
     getAgencyDIDFut flatMap { ad =>
       val fromKeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(ad, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL)))
-      implicit val amw: AgentMsgWrapper = agentActorContext.agentMsgTransformer.unpack(smw.msg, fromKeyInfo,
-        UnpackParam(openWalletIfNotOpened=true, isAnonCryptedMsg=true))
-      smw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackVersion))
-      addUserResourceUsage(smw.reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_ENDPOINT,
-        "POST_agency_msg", None)
-      amw.headAgentMsgDetail match {
-        // TODO: we need to support another possible qualifier, "http://didcomm.org/".
-        // See https://github.com/hyperledger/aries-rfcs/blob/master/features/0348-transition-msg-type-to-https/README.md.
-        // This is a tech debt that will quickly make us fail to be interoperable with
-        // the community; they are poised to begin step 2 as of July 2020.
-        case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(MTV_1_0), _) =>
-          handleFwdMsg(FwdMsgHelper.buildReqMsg)(smw.reqMsgContext)
-        // TODO: It looks to me like we may be routing incorrectly here. We are expeccting an exact
-        // match for a message family version (the string "1.0"), instead of using semantic versioning
-        // rules where we route to the nearest handler with a semantically compatible version less than
-        // or equal to the one we support.
-        case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD | MSG_TYPE_FORWARD, _, _) =>
-          handleFwdMsg(FwdMsgHelper.buildReqMsg)(smw.reqMsgContext)
+      agentActorContext.agentMsgTransformer.unpackAsync(smw.msg, fromKeyInfo,
+        UnpackParam(openWalletIfNotOpened = true, isAnonCryptedMsg = true)).flatMap({ amWorker =>
+        implicit val amw: AgentMsgWrapper = amWorker
+        smw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackVersion))
+        addUserResourceUsage(smw.reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_ENDPOINT,
+          "POST_agency_msg", None)
+        amw.headAgentMsgDetail match {
+          // TODO: we need to support another possible qualifier, "http://didcomm.org/".
+          // See https://github.com/hyperledger/aries-rfcs/blob/master/features/0348-transition-msg-type-to-https/README.md.
+          // This is a tech debt that will quickly make us fail to be interoperable with
+          // the community; they are poised to begin step 2 as of July 2020.
+          case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(MTV_1_0), _) =>
+            handleFwdMsg(FwdMsgHelper.buildReqMsg)(smw.reqMsgContext)
+          // TODO: It looks to me like we may be routing incorrectly here. We are expeccting an exact
+          // match for a message family version (the string "1.0"), instead of using semantic versioning
+          // rules where we route to the nearest handler with a semantically compatible version less than
+          // or equal to the one we support.
+          case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD | MSG_TYPE_FORWARD, _, _) =>
+            handleFwdMsg(FwdMsgHelper.buildReqMsg)(smw.reqMsgContext)
 
-        case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(_), _) =>
-          Future.failed(Util.handleUnsupportedMsgType(amw.headAgentMsgDetail.getTypeDetail.toString))
-        case _ =>
-          Future.failed(new BadRequestErrorException(UNSUPPORTED_MSG_TYPE.statusCode,
-            Option(amw.headAgentMsg.msgFamilyDetail.getTypeDetail.toString)))
-      }
+          case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(_), _) =>
+            Future.failed(Util.handleUnsupportedMsgType(amw.headAgentMsgDetail.getTypeDetail.toString))
+          case _ =>
+            Future.failed(new BadRequestErrorException(UNSUPPORTED_MSG_TYPE.statusCode,
+              Option(amw.headAgentMsg.msgFamilyDetail.getTypeDetail.toString)))
+        }
+      })
     }
   }
 }

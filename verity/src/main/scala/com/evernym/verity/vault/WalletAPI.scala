@@ -27,7 +27,8 @@ import org.hyperledger.indy.sdk.wallet.WalletItemAlreadyExistsException
 import org.hyperledger.indy.sdk.{InvalidParameterException, InvalidStructureException}
 
 import scala.compat.java8.FutureConverters
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 
 class WalletAPI(walletProvider: WalletProvider,
@@ -206,9 +207,9 @@ class WalletAPI(walletProvider: WalletProvider,
     }
   }
 
-  def getVerKeyFromDetail(verKeyDetail: Either[VerKey, GetVerKeyByDIDParam])(implicit wap: WalletAccessParam): VerKey = {
+  def getVerKeyFromDetail(verKeyDetail: Either[VerKey, GetVerKeyByDIDParam])(implicit wap: WalletAccessParam): Future[VerKey] = {
     verKeyDetail.fold (
-      l => l,
+      l => Future.successful(l),
       r => {
         executeOpWithWalletInfo("get ver key", openWalletIfNotExists=true, { we: WalletExt =>
           logger.debug("about to get DID ver key => wallet name: " + wap.walletName + ", DID: " + r.did)
@@ -218,9 +219,9 @@ class WalletAPI(walletProvider: WalletProvider,
     )
   }
 
-  def getVerKeyFromWallet(verKeyDetail: Either[VerKey, GetVerKeyByDIDParam])(implicit we: WalletExt): VerKey = {
+  def getVerKeyFromWallet(verKeyDetail: Either[VerKey, GetVerKeyByDIDParam])(implicit we: WalletExt): Future[VerKey] = {
     verKeyDetail.fold (
-      l => l,
+      l => Future.successful(l),
       r => {
         util.getVerKey(r.did, we, r.getKeyFromPool, ledgerPoolManager)
       }
@@ -228,12 +229,14 @@ class WalletAPI(walletProvider: WalletProvider,
   }
 
   def getVerKey(gvk: GetVerKeyByKeyInfoParam)(implicit wap: WalletAccessParam): VerKey = {
-    getVerKeyFromDetail(gvk.keyInfo.verKeyDetail)
+    val verKeyFuture = getVerKeyFromDetail(gvk.keyInfo.verKeyDetail)
+    Await.result(verKeyFuture, Duration.Inf) // fixme ve2028 testing
   }
 
   def signMsg(sm: SignMsgParam)(implicit wap: WalletAccessParam): Array[Byte] = {
     executeOpWithWalletInfo("sign msg", openWalletIfNotExists=false, { we: WalletExt =>
-      val verKey = getVerKeyFromWallet(sm.keyInfo.verKeyDetail)(we)
+      val verKeyFuture = getVerKeyFromWallet(sm.keyInfo.verKeyDetail)(we)
+      val verKey = Await.result(verKeyFuture, Duration.Inf) // fixme ve2028 testing
       Crypto.cryptoSign(we.wallet, verKey, sm.msg).get
     })
   }
@@ -257,7 +260,9 @@ class WalletAPI(walletProvider: WalletProvider,
   }
 
   def verifySig(vs: VerifySigByKeyInfoParam)(implicit wap: WalletAccessParam): VerifResult = {
-    val verKey = getVerKeyFromDetail(vs.keyInfo.verKeyDetail)
+    val verKeyFuture = getVerKeyFromDetail(vs.keyInfo.verKeyDetail)
+    val verKey = Await.result(verKeyFuture, Duration.Inf) // fixme ve2028 testing
+
     coreVerifySig(verKey, vs.challenge, vs.signature)
   }
 

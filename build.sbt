@@ -294,7 +294,10 @@ lazy val commonLibraryDependencies = {
     "info.faljse" % "SDNotify" % sdnotifyVer,       //needed by app state manager to notify to systemd
     "org.velvia" %% "msgpack4s" % "0.6.0",
 
-    "org.fusesource.jansi" % "jansi" % "1.18"
+    "org.fusesource.jansi" % "jansi" % "1.18",
+
+    "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1"
+
   )
 
   //for macro libraries that are compile-time-only

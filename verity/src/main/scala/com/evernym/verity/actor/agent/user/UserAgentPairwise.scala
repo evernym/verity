@@ -179,7 +179,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           case lep: LegacyRoutingServiceEndpoint => lep.copy(agencyDID = rad.DID)
           case ep: RoutingServiceEndpoint        => ep
         }.map(EndpointADT.apply)
-        val updatedEndpoints = Endpoints(updatedEndpointSeq, tdd.endpoints_!.endpointsToAuthKeys)
+        val updatedEndpoints = Endpoints(updatedEndpointSeq)
         tdd.update(_.endpoints := updatedEndpoints)
       })
       state = state
@@ -246,9 +246,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def authedMsgSenderVerKeys: Set[VerKey] = {
     val authedDIDS = (
       ownerAgentKeyDID  ++                          //owner agent (if internal msgs are sent encrypted)
-      state.myDid ++                                //this edge pairwise DID
+      state.myDid ++                                //my edge pairwise DID
       state.theirDid ++                             //their pairwise DID
-      state.theirAgentKeyDID                        //their pairwise agent key DID
+      state.theirAgentKeyDID                        //their agent key DID
     ).toSet
     authedDIDS.filter(_.nonEmpty).map(getVerKeyReqViaCache(_))
   }

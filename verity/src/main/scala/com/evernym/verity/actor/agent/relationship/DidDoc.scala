@@ -16,8 +16,10 @@ trait DidDocLike { this: Updatable[DidDoc] =>
 
   def update(ms: (Lens[DidDoc, DidDoc] => Mutation[DidDoc])*): DidDoc
 
+  validate()
+
   def validate(): Unit = {
-    endpoints_!.endpointsToAuthKeys.values.map(_.keyId).toSet.flatten.foreach { ak =>
+    endpoints.map(_.endpoints).getOrElse(Seq.empty).flatMap(_.authKeyIds).foreach { ak =>
       if (! authorizedKeys_!.keys.exists(_.keyId == ak)) {
         throw new RuntimeException("auth key referenced from 'endpoints' not exists in 'authorizedKeys'")
       }
@@ -108,16 +110,19 @@ trait DidDocLike { this: Updatable[DidDoc] =>
    * @param endpoint
    * @return
    */
-  def updatedWithEndpoint(endpoint: EndpointADT, authKeyIds: Set[KeyId]): DidDoc = {
-    if (authKeyIds.isEmpty && ! endpoints.exists(_.endpointsToAuthKeys.contains(endpoint.id)))
-      throw new RuntimeException("at least one auth key id require to be associated with the given endpoint")
-    authKeyIds.foreach{ keyId =>
-      if(! authorizedKeys.exists(_.keys.exists(ak => ak.keyId == keyId)))
-        throw new RuntimeException(s"authorized key '$keyId' doesn't exists")
-    }
-
-    val updatedEndpoints = endpoints.getOrElse(Endpoints()).addOrUpdate(endpoint, authKeyIds)
+  def updatedWithEndpoint(endpoint: EndpointADT): DidDoc = {
+    val updatedEndpoints = endpoints.getOrElse(Endpoints()).upsert(endpoint)
     update(_.endpoints := updatedEndpoints)
+  }
+
+  /**
+   * adds/updates given endpoint in 'endpoints'
+   *
+   * @param endpoint
+   * @return
+   */
+  def updatedWithEndpoint(endpoint: EndpointADTUntyped): DidDoc = {
+    updatedWithEndpoint(EndpointADT(endpoint))
   }
 
   def updatedWithRemovedEndpointById(id: EndpointId): DidDoc = {

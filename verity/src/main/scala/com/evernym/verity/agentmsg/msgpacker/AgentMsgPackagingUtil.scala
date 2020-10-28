@@ -21,12 +21,11 @@ object AgentMsgPackagingUtil {
 
   /**
    * creates agent message json string from given native messages (case classes) based on given parameters
-   * @param msgPackVersion
    * @param msgs
    * @param wrapInBundledMsgs
    * @return
    */
-  def buildAgentMsgJson(msgs: List[Any], msgPackVersion: MsgPackVersion, wrapInBundledMsgs: Boolean): String = {
+  def buildAgentMsgJson(msgs: List[Any], wrapInBundledMsgs: Boolean): String = {
     val jsonMsgs = convertToJsonMsgs(msgs)
     if (wrapInBundledMsgs) buildBundledMsg(jsonMsgs)
     else jsonMsgs match {
@@ -46,7 +45,7 @@ object AgentMsgPackagingUtil {
   def buildAgentMsg(msgPackVersion: MsgPackVersion, packMsgParam: PackMsgParam)
                    (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
     runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
-      val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, msgPackVersion, packMsgParam.wrapInBundledMsgs)
+      val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
       agentMsgTransformer.pack(msgPackVersion, agentMsgJson, packMsgParam.encryptParam)
     }
   }

@@ -13,19 +13,9 @@ trait EndpointsLike {
    */
   def endpoints: Seq[EndpointADT]
 
-  /**
-   * mapping between endpoint id and auth key ids
-   * @return endpointsToAuthKeys
-   */
-  def endpointsToAuthKeys: Map[EndpointId, KeyIds]
-
   validate()
 
   def validate() {
-
-    endpointsToAuthKeys.keySet.find(eid => !endpoints.map(_.id).contains(eid)).map { eid =>
-      throw new RuntimeException(s"endpoint with id '$eid' not exists")
-    }
 
     if (endpoints.map(_.value).toSet.size != endpoints.size) {
       throw new RuntimeException("endpoint with same 'value' not allowed")
@@ -34,14 +24,10 @@ trait EndpointsLike {
     if (endpoints.map(_.id).toSet.size != endpoints.size) {
       throw new RuntimeException("endpoints with same 'id' not allowed")
     }
-
-    if (endpoints.exists(ep => !endpointsToAuthKeys.contains(ep.id))) {
-      throw new RuntimeException("endpoints without auth key mapping not allowed")
-    }
   }
 
   def filterByKeyIds(keyIds: KeyId*): Seq[EndpointADT] = {
-    val endpointIds = endpointsToAuthKeys.filter(_._2.keyId.intersect(keyIds.toSet).nonEmpty).keySet
+    val endpointIds = endpoints.filter(_.authKeyIds.intersect(keyIds).nonEmpty).map(_.id)
     endpoints.filter(ep => endpointIds.contains(ep.id))
   }
 
@@ -53,31 +39,44 @@ trait EndpointsLike {
 
   def findById(id: EndpointId): Option[EndpointLike] = endpoints.find(_.id == id)
 
-  def addOrUpdate(endpoint: EndpointADT, authKeys: Set[KeyId]): Endpoints = {
-    endpoints.find(_.value == endpoint.value) match {
-      case Some(ep) =>
-        val updatedAuthKeys = endpointsToAuthKeys.getOrElse(ep.id, KeyIds()).addAllKeyId(authKeys)
-        val e2ak = endpointsToAuthKeys ++ Map(ep.id -> updatedAuthKeys)
-        this.
-        copy(endpointsToAuthKeys = e2ak)
+  /**
+   * adds/updates given endpoint
+   * @param newEndpoint
+   * @return
+   */
+  def upsert(newEndpoint: EndpointADT): Endpoints = {
+    endpoints.find(_.value == newEndpoint.value) match {
+      case Some(oldEndpoint) =>
+        val updatedEndpoint = oldEndpoint.updateAuthKeyIds((oldEndpoint.authKeyIds ++ newEndpoint.authKeyIds).distinct)
+        val otherEndpoints = endpoints.filter(_.value != newEndpoint.value)
+        copy(endpoints = otherEndpoints :+ updatedEndpoint)
       case None =>
-        val otherEndpoints = endpoints.filter(_.id != endpoint.id)
-        val authKeyMapping = Map(endpoint.id -> KeyIds(authKeys))
-        val newE2ak = endpointsToAuthKeys ++ authKeyMapping
-        copy(endpoints = otherEndpoints :+ endpoint, endpointsToAuthKeys = newE2ak)
+        val otherEndpoints = endpoints.filter(_.id != newEndpoint.id)
+        copy(endpoints = otherEndpoints :+ newEndpoint)
     }
+  }
+
+  /**
+   * adds/updates given endpoint
+   * @param endpoint
+   * @return
+   */
+  def upsert(endpoint: EndpointADTUntyped): Endpoints = {
+    upsert(EndpointADT.apply(endpoint))
   }
 
   def remove(id: EndpointId): Endpoints = {
     val otherEndpoints = endpoints.filter(_.id != id)
-    val otherEndpointsToAuthKeys = endpointsToAuthKeys - id
-    copy(endpoints = otherEndpoints, endpointsToAuthKeys = otherEndpointsToAuthKeys)
+    copy(endpoints = otherEndpoints)
   }
+
+  def authKeyIdsForEndpoint(id: EndpointId): Seq[KeyId] = endpoints.filter(_.id == id).flatMap(_.authKeyIds)
+
 }
 
 trait EndpointsCompanion {
 
-  def empty: Endpoints = Endpoints(Vector.empty, Map.empty)
+  def empty: Endpoints = Endpoints(Vector.empty)
 
   implicit def EndpointADTUntyped2ADT(endpoint: EndpointADTUntyped): EndpointADT = EndpointADT(endpoint)
   implicit def SeqEndpointADTUntyped2ADT(endpoints: Seq[EndpointADTUntyped]): Seq[EndpointADT] = endpoints.map(EndpointADT.apply)
@@ -85,33 +84,13 @@ trait EndpointsCompanion {
   /**
    *
    * @param endpoint endpoint to be added
-   * @param authKey auth key belonging to provided endpoint
    * @return
    */
-  def init(endpoint: EndpointADTUntyped, authKey: KeyId): Endpoints =
-    init(Vector(endpoint), Set(authKey))
+  def init(endpoint: EndpointADTUntyped): Endpoints =
+    Endpoints(Vector(endpoint))
 
-  /**
-   *
-   * @param endpoint endpoint to be added
-   * @param authKeys auth keys belonging to provided endpoint
-   * @return
-   */
-  def init(endpoint: EndpointADTUntyped, authKeys: Set[KeyId]): Endpoints =
-    init(Vector(endpoint), authKeys)
-
-  /**
-   *
-   * @param endpoints endpoints to be added
-   * @param authKeys  auth keys belonging to all given endpoints
-   * @return
-   */
-  def init(endpoints: Seq[EndpointADTUntyped], authKeys: Set[KeyId] = Set.empty): Endpoints = {
-    val ep2 = endpoints.map(EndpointADT.apply)
-    lazy val keyIds = KeyIds(authKeys)
-    val endpointsToAuthKeys = ep2.map(ep => ep.id -> keyIds).toMap
-    Endpoints(ep2, endpointsToAuthKeys)
-  }
+  def init(endpoints: Seq[EndpointADTUntyped]): Endpoints =
+    Endpoints(endpoints)
 }
 
 trait EndpointType {
@@ -122,13 +101,14 @@ trait EndpointType {
   def `type`: Int
   def isOfType(typ: Int): Boolean = typ == `type`
   def packagingContext: Option[PackagingContext]
+  def authKeyIds: Seq[KeyId]
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT
 }
 
 trait PackagingContextCompanion {
   def apply(packVersion: String): PackagingContext =
     PackagingContext(MsgPackVersion.fromString(packVersion))
 }
-
 
 trait EndpointLike extends EndpointType {
 
@@ -153,10 +133,9 @@ trait EndpointLikePassThrough extends EndpointLike {
   def value: String = endpoint.value
   def `type`: Int = endpoint.`type`
   def packagingContext: Option[PackagingContext] = endpoint.packagingContext
-}
+  def authKeyIds: Seq[KeyId] = endpoint.authKeyIds
 
-trait LegacyRoutingServiceEndpointLike extends RoutingServiceEndpointLike {
-  def value = "their-route"
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT = endpoint.updateAuthKeyIds(newAuthKeyIds)
 }
 
 object EndpointType {
@@ -167,15 +146,56 @@ object EndpointType {
   final val SPR_PUSH = 4                    //sponsor push notification endpoint type
 }
 
-/**
- * mostly used for "their" routing service endpoint
- */
-trait RoutingServiceEndpointLike extends EndpointLike {
+
+trait RoutingServiceEndpointBase extends EndpointLike {
   def id = "0"
   def `type`: Int = EndpointType.ROUTING_SERVICE_ENDPOINT
   def packagingContext: Option[PackagingContext] = None
 }
 
+/**
+ * mostly used for "their" routing service endpoint
+ */
+trait RoutingServiceEndpointLike
+  extends RoutingServiceEndpointBase { this: RoutingServiceEndpoint =>
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
+    EndpointADT(copy(authKeyIds = newAuthKeyIds))
+}
+
+trait LegacyRoutingServiceEndpointLike
+  extends RoutingServiceEndpointBase { this: LegacyRoutingServiceEndpoint =>
+  def value = "their-route"
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
+    EndpointADT(copy(authKeyIds = newAuthKeyIds))
+}
+
+trait HttpEndpointLike
+  extends EndpointLike
+    with HttpEndpointType { this: HttpEndpoint =>
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
+    EndpointADT(copy(authKeyIds = newAuthKeyIds))
+}
+
+trait ForwardPushEndpointLike
+  extends EndpointLike
+    with FwdPushEndpointType { this: ForwardPushEndpoint =>
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
+    EndpointADT(copy(authKeyIds = newAuthKeyIds))
+}
+
+trait SponsorPushEndpointLike
+  extends EndpointLike
+    with SponsorPushEndpointType
+    with EnforceNoAuthKeyIds { this: SponsorPushEndpoint =>
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT = EndpointADT(this)
+}
+
+trait PushEndpointLike
+  extends EndpointLike
+    with PushEndpointType
+    with EnforceNoAuthKeyIds { this: PushEndpoint =>
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT = EndpointADT(this)
+}
 
 /**
  * mostly used for "my" http endpoint (on edge)
@@ -206,4 +226,6 @@ trait SponsorPushEndpointType extends EndpointType {
   def `type`: Int = EndpointType.SPR_PUSH
 }
 
-
+trait EnforceNoAuthKeyIds { this: EndpointType =>
+  require(authKeyIds.isEmpty, s"${this.getClass.getSimpleName} shouldn't have non empty 'authKeyIds'")
+}

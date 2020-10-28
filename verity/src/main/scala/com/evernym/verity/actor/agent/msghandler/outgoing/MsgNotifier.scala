@@ -53,9 +53,11 @@ trait MsgNotifier {
   }
 }
 
-trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
-  this: AgentPersistentActor with MsgAndDeliveryHandler
-    with HasLogger =>
+trait MsgNotifierForStoredMsgs
+  extends MsgNotifier
+    with PushNotifMsgBuilder {
+
+  this: AgentPersistentActor with MsgAndDeliveryHandler with HasLogger =>
 
   def agentMsgRouter: AgentMsgRouter
   def remoteMsgSendingSvc: RemoteMsgSendingSvc

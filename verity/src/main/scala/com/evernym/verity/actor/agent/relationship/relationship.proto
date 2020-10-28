@@ -46,11 +46,6 @@ message Endpoints {
     option (scalapb.message).companion_extends = "EndpointsCompanion";
     option (scalapb.message).extends = "EndpointsLike";
     repeated EndpointADT endpoints = 1;
-    map<string, KeyIds> endpointsToAuthKeys = 2;
-}
-
-message KeyIds {
-    repeated string keyId = 1 [(scalapb.field).collection_type="Set"];
 }
 
 message EndpointADT {
@@ -70,40 +65,41 @@ message EndpointADTUntyped {
 }
 
 message HttpEndpoint {
-    option (scalapb.message).extends = "EndpointLike";
-    option (scalapb.message).extends = "HttpEndpointType";
+    option (scalapb.message).extends = "HttpEndpointLike";
     string id = 1;
     string value = 2;
-    PackagingContext packagingContext = 3;
+    repeated string authKeyIds = 3;
+    PackagingContext packagingContext = 4;
 }
 
 message ForwardPushEndpoint {
-    option (scalapb.message).extends = "EndpointLike";
-    option (scalapb.message).extends = "FwdPushEndpointType";
+    option (scalapb.message).extends = "ForwardPushEndpointLike";
     string id = 1;
     string value = 2;
-    PackagingContext packagingContext = 3;
+    repeated string authKeyIds = 3;
+    PackagingContext packagingContext = 4;
 }
 
 message SponsorPushEndpoint {
-    option (scalapb.message).extends = "EndpointLike";
-    option (scalapb.message).extends = "SponsorPushEndpointType";
+    option (scalapb.message).extends = "SponsorPushEndpointLike";
     string id = 1;
     string value = 2;
-    PackagingContext packagingContext = 3;
+    repeated string authKeyIds = 3;
+    PackagingContext packagingContext = 4;
 }
 
 message PushEndpoint {
-    option (scalapb.message).extends = "EndpointLike";
-    option (scalapb.message).extends = "PushEndpointType";
+    option (scalapb.message).extends = "PushEndpointLike";
     string id = 1;
     string value = 2;
+    repeated string authKeyIds = 3;
 }
 
 message RoutingServiceEndpoint {
     option (scalapb.message).extends = "RoutingServiceEndpointLike";
     string value = 1;
-    repeated string routingKeys = 3;
+    repeated string routingKeys = 2;
+    repeated string authKeyIds = 3;
 }
 
 message LegacyRoutingServiceEndpoint {
@@ -112,6 +108,7 @@ message LegacyRoutingServiceEndpoint {
     string agentKeyDID = 2;
     string agentVerKey = 3;
     string agentKeyDlgProofSignature = 4;
+    repeated string authKeyIds = 5;
 }
 
 message PackagingContext {

@@ -84,11 +84,6 @@ lazy val verity = (project in file("verity"))
     packageSettings,
     protoBufSettings,
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
-    // ComilerPlugin to allow suppression of a few warnings so we can get a clean build
-    libraryDependencies ++= Seq(
-      compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
-      "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
-    ),
     updateSharedLibraries := defaultUpdateSharedLibraries(
       sharedLibDeps,
       target.value.toPath.resolve("shared-libs"),
@@ -156,6 +151,11 @@ lazy val settings = Seq(
     "128",
     "-Xfatal-warnings",
     "-P:silencer:pathFilters=.*/tictactoe/Role.scala;.*/deaddrop/Role.scala"
+  ),
+  // ComilerPlugin to allow suppression of a few warnings so we can get a clean build
+  libraryDependencies ++= Seq(
+    compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
+    "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
   ),
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",

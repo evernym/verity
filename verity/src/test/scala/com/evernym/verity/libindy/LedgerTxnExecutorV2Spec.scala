@@ -3,7 +3,7 @@ package com.evernym.verity.libindy
 import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{StatusDetail, TAA_NOT_SET_ON_THE_LEDGER}
-import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.ledger._

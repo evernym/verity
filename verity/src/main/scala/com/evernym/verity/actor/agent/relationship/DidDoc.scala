@@ -58,7 +58,6 @@ trait DidDocLike { this: Updatable[DidDoc] =>
     }
 
     val updatedAuthKey = matchedWithDifferentKeyIdAndVerKey.find(emak => emak.keyId != emak.verKey).map { emak =>
-      val t = emak
       emak.addAllTags(newAuthKey.tags)
     }.getOrElse {
       newAuthKey.addAllTags(matchedWithSameKeyIdAndVerKey.flatMap(_.tags))

@@ -36,7 +36,7 @@ class LegacyRouteFixManagerSpec extends PersistentActorSpec with BasicSpec with 
 
   "AgentRouteStore" - {
     "when sent several SetRoute commands" - {
-      "should store the routes successfully" taggedAs (UNSAFE_IgnoreLog) in {
+      "should store the routes successfully" taggedAs UNSAFE_IgnoreLog in {
         addRandomRoutes()
       }
     }

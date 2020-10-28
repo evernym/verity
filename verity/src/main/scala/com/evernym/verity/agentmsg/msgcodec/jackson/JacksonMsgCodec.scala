@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
 import com.evernym.verity.agentmsg.msgcodec.{MsgCodec, MsgMetadata, MsgTypeException}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -134,7 +134,7 @@ object JacksonMsgCodec extends MsgCodec {
           .flatMap(OptionUtil.blankOption)
     }
 
-    MsgMetadata(msgId, MsgThread(threadId), forRelationship)
+    MsgMetadata(msgId, Thread(threadId), forRelationship)
   }
 
 }

@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.PoisonPill
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.agency.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
+import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
 import com.evernym.verity.actor.persistence.{ActorDetail, Done, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}

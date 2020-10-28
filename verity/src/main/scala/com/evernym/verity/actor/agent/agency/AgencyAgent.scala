@@ -42,7 +42,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
     with AgencyAgentStateUpdateImpl
     with AgencyPackedMsgHandler
-    with AgencyAgentSnapshotter {
+    with AgentSnapshotter[AgencyAgentState] {
 
   type StateType = AgencyAgentState
   var state = new AgencyAgentState
@@ -386,9 +386,13 @@ case object SetEndpoint extends ActorMessageObject
 
 case object UpdateEndpoint extends ActorMessageObject
 
-trait AgencyAgentStateImpl extends AgentStateImplBase
+trait AgencyAgentStateImpl
+  extends AgentStateImplBase {
+  def sponsorRel: Option[SponsorRel] = None
+}
 
-trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgent =>
+trait AgencyAgentStateUpdateImpl
+  extends AgentStateUpdateInterface { this : AgencyAgent =>
 
   override def setAgentWalletSeed(seed: String): Unit = {
     state = state.withAgentWalletSeed(seed)
@@ -398,21 +402,15 @@ trait AgencyAgentStateUpdateImpl extends AgentStateUpdateInterface { this : Agen
     state = state.withAgencyDID(did)
   }
 
+  def addThreadContextDetail(threadContext: ThreadContext): Unit = {
+    state = state.withThreadContext(threadContext)
+  }
+
+  def addPinst(pri: ProtocolRunningInstances): Unit = {
+    state = state.withProtoInstances(pri)
+  }
+
   override def setSponsorRel(rel: SponsorRel): Unit = {
     //nothing to do
   }
-
-  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
-    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
-  }
-
-  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
-    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
-    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
-    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
-  }
-
-  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 }

@@ -6,7 +6,7 @@ import com.evernym.verity.protocol.engine.VerKey
 
 import scala.language.implicitConversions
 
-trait RelationshipState extends HasRelationship {
+trait HasRelationshipState extends HasRelationship {
 
   /**
    * initial relationship object
@@ -71,9 +71,4 @@ trait RelationshipState extends HasRelationship {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithRemovedEndpointById(id))
   }
 
-}
-
-trait HasRelationshipState {
-  type StateType <: RelationshipState
-  def state: StateType
 }

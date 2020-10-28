@@ -3,7 +3,7 @@ package com.evernym.verity.actor.testkit.actor
 import akka.actor.ActorSystem
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail}
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.{DID, VerKey, WalletAccess}
 

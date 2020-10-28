@@ -20,7 +20,6 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentBundledMsg, AgentMsgParseUtil
 import com.evernym.verity.cache.CacheQueryResponse
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.protocol.actor.ProtocolIdDetail
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
@@ -189,54 +188,13 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
 }
 
-
-/**
- *
- * @param newAgentKeyDID DID belonging to the new agent ver key
- * @param forDID pairwise DID for which new pairwise actor needs to be setup
- * @param mySelfRelDID my self relationship DID
- * @param ownerAgentKeyDID DID belonging to owner's agent's ver key
- * @param ownerAgentActorEntityId entity id of owner's agent actor
- * @param pid
- */
-case class SetupCreateKeyEndpoint(
-                                   newAgentKeyDID: DID,
-                                   forDID: DID,
-                                   mySelfRelDID: DID,
-                                   ownerAgentKeyDID: Option[DID] = None,
-                                   ownerAgentActorEntityId: Option[String]=None,
-                                   pid: Option[ProtocolIdDetail]=None
-                                 ) extends ActorMessageClass
-
-trait SetupEndpoint extends ActorMessageClass {
-  def ownerDID: DID
-  def agentKeyDID: DID
+trait AgencyAgentPairwiseStateImpl
+  extends AgentStatePairwiseImplBase {
+  def sponsorRel: Option[SponsorRel] = None
 }
 
-case class SponsorRel(sponsorId: String, sponseeId: String)
-object SponsorRel {
-  def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
-    new SponsorRel(sponsorId.getOrElse(""), sponseeId.getOrElse(""))
-
-  def empty: SponsorRel = new SponsorRel("", "")
-}
-case class SetupAgentEndpoint(
-                               override val ownerDID: DID,
-                               override val agentKeyDID: DID
-                             ) extends SetupEndpoint
-
-case class SetupAgentEndpoint_V_0_7 (
-                                      threadId: ThreadId,
-                                      override val ownerDID: DID,
-                                      override val agentKeyDID: DID,
-                                      requesterVerKey: VerKey,
-                                      sponsorRel: Option[SponsorRel]=None
-                                   ) extends SetupEndpoint
-
-
-trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
-
-trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
+trait AgencyAgentPairwiseStateUpdateImpl
+  extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
 
   override def setAgentWalletSeed(seed: String): Unit = {
     state = state.withAgentWalletSeed(seed)
@@ -246,23 +204,13 @@ trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { thi
     state = state.withAgencyDID(did)
   }
 
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    //nothing to do
+  def addThreadContextDetail(threadContext: ThreadContext): Unit = {
+    state = state.withThreadContext(threadContext)
   }
 
-  override def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
-    state = state.withThreadContext(ThreadContext(contexts = updatedThreadContextDetails))
+  def addPinst(pri: ProtocolRunningInstances): Unit = {
+    state = state.withProtoInstances(pri)
   }
-
-  override def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
-    val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
-    val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
-    state = state.withProtoInstances(ProtocolRunningInstances(instances = updatedProtoInstances))
-  }
-
-  override def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 
   def updateRelationship(rel: Relationship): Unit = {
     state = state.withRelationship(rel)
@@ -270,5 +218,9 @@ trait AgencyAgentPairwiseStateUpdateImpl extends AgentStateUpdateInterface { thi
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {
     state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
+  }
+
+  override def setSponsorRel(rel: SponsorRel): Unit = {
+    //nothing to do
   }
 }

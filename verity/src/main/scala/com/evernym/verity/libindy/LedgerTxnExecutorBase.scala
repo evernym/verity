@@ -3,7 +3,7 @@ package com.evernym.verity.libindy
 import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{TIMEOUT, UNHANDLED, _}
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_LEDGER_OPERATION
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError, SeriousSystemError}

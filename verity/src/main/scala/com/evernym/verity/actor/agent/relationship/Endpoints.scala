@@ -6,6 +6,7 @@ import scala.language.implicitConversions
 
 trait EndpointsLike {
   this: Endpoints =>
+
   /**
    * collection of different endpoints
    * @return endpoints
@@ -127,8 +128,7 @@ trait PackagingContextCompanion {
   def apply(packVersion: String): PackagingContext =
     PackagingContext(MsgPackVersion.fromString(packVersion))
 }
-//object PackagingContext extends PackagingContextCompanion
-//case class PackagingContext(packVersion: MsgPackVersion)
+
 
 trait EndpointLike extends EndpointType {
 
@@ -148,77 +148,16 @@ trait EndpointLike extends EndpointType {
 
 trait EndpointLikePassThrough extends EndpointLike {
   this: EndpointADT =>
-  lazy val endpoint = this.endpointADTX.asInstanceOf[EndpointLike]
-  def id = endpoint.id
-  def value = endpoint.value
-  def `type`= endpoint.`type`
-  def packagingContext = endpoint.packagingContext
+  lazy val endpoint: EndpointLike = this.endpointADTX.asInstanceOf[EndpointLike]
+  def id: EndpointId = endpoint.id
+  def value: String = endpoint.value
+  def `type`: Int = endpoint.`type`
+  def packagingContext: Option[PackagingContext] = endpoint.packagingContext
 }
-
-///**
-// * it contains information for legacy routing service endpoint (as per connecting 0.5 and 0.6 protocols)
-// *
-// * @param agencyDID their agency DID
-// * @param agentKeyDID their agent key DID
-// * @param agentVerKey their agent ver key
-// * @param agentKeyDlgProofSignature their agent key delegation proof signature
-// */
-//case class LegacyRoutingServiceEndpoint(agencyDID: DID,
-//                                        agentKeyDID: DID,
-//                                        agentVerKey: VerKey,
-//                                        agentKeyDlgProofSignature: String)
-//  extends LegacyRoutingServiceEndpointLike
 
 trait LegacyRoutingServiceEndpointLike extends RoutingServiceEndpointLike {
   def value = "their-route"
 }
-
-///**
-// * it contains information for standard routing service endpoint (as per connections 1.0 protocol)
-// *
-// * @param value endpoint http url (for example: http://verity.example.com etc)
-// * @param routingKeys an optional ordered list of public keys (RoutingKeys) of
-// *                    mediators used by the Receiver in delivering the message
-// *                    (see aries RFC for more detail: https://github.com/hyperledger/aries-rfcs/blob/82365b991743e92a34b1b6460f90b5016e22909a/concepts/0094-cross-domain-messaging/README.md)
-// */
-//case class RoutingServiceEndpoint(value: URL,
-//                                  routingKeys: Vector[VerKey]=Vector.empty)
-//  extends RoutingServiceEndpointLike
-
-
-///**
-// *
-// * @param id a unique endpoint identifier
-// * @param value push notification token (provided by corresponding push notification service provider)
-// */
-//case class PushEndpoint(id: EndpointId,
-//                        value: String) extends EndpointLike with PushEndpointType {
-//  def packagingContext: Option[PackagingContext] = None
-//}
-
-
-///**
-// *
-// * @param id a unique endpoint identifier
-// * @param value http endpoint url
-// * @param packagingContext optional packaging context (what pack version to use etc)
-// */
-//case class HttpEndpoint(id: EndpointId,
-//                        value: String,
-//                        packagingContext: Option[PackagingContext] = None) extends EndpointLike with HttpEndpointType
-
-///**
-// *
-// * @param id a unique endpoint identifier
-// * @param value http endpoint url (where a message will be sent and that http will in turn send a push notification)
-// */
-//case class ForwardPushEndpoint(id: EndpointId,
-//                               value: String,
-//                               packagingContext: Option[PackagingContext] = None) extends EndpointLike with FwdPushEndpointType
-//
-//case class SponsorPushEndpoint(id: EndpointId,
-//                               value: String,
-//                               packagingContext: Option[PackagingContext] = None) extends EndpointLike with SponsorPushEndpointType
 
 object EndpointType {
   final val ROUTING_SERVICE_ENDPOINT = 0    //routing service endpoint (it contains more information than just http endpoint)

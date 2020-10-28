@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import akka.http.scaladsl.model.Uri
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._

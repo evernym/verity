@@ -1,6 +1,6 @@
 package com.evernym.verity
 
-import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.{MsgPayloadStored, PayloadContext}
 import com.evernym.verity.protocol.engine.MsgId
 import com.google.protobuf.ByteString

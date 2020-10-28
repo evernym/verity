@@ -30,7 +30,7 @@ class EndpointSpec extends BasicSpec {
 
   "Endpoints" - {
 
-    "when tried to add routing service type of endpoints with same id" - {
+    "when tried to initialize routing service type of endpoints with same id" - {
       "should throw appropriate error" in {
         val ex = intercept[RuntimeException] {
           Endpoints.init(Vector(
@@ -43,7 +43,7 @@ class EndpointSpec extends BasicSpec {
       }
     }
 
-    "when tried to add endpoints with same id" - {
+    "when tried to initialize endpoints with same id" - {
       "should throw appropriate error" in {
         val ex = intercept[RuntimeException] {
           Endpoints.init(Vector(
@@ -56,7 +56,7 @@ class EndpointSpec extends BasicSpec {
       }
     }
 
-    "when tried to add endpoints with same value" - {
+    "when tried to initialize endpoints with same value" - {
       "should throw appropriate error" in {
         val ex = intercept[RuntimeException] {
           Endpoints.init(Vector(
@@ -69,7 +69,7 @@ class EndpointSpec extends BasicSpec {
       }
     }
 
-    "when tried to add endpoints without proper auth key mapping" - {
+    "when tried to initialize endpoints without proper auth key mapping" - {
       "should throw appropriate error" in {
         val ex = intercept[RuntimeException] {
           val eps = Seq(
@@ -81,6 +81,29 @@ class EndpointSpec extends BasicSpec {
           )
         }
         ex.getMessage shouldBe "endpoints without auth key mapping not allowed"
+      }
+    }
+
+    "when tried to add/remove distinct endpoint" - {
+      "should be able to add/remove it successfully" in {
+        val endpoints = Endpoints(Vector(HttpEndpoint("0", "http://abc.xyz.com")), Map("0" -> KeyIds(Set("key1"))))
+        val afterAdd = endpoints.addOrUpdate(HttpEndpoint("1", "http://def.xyz.com"), Set("key2"))
+        afterAdd.endpoints shouldBe Seq(
+          EndpointADT(HttpEndpoint("0", "http://abc.xyz.com")),
+          EndpointADT(HttpEndpoint("1", "http://def.xyz.com")),
+        )
+        val afterRemoval = afterAdd.remove("0")
+        afterRemoval.endpoints shouldBe Seq(
+          EndpointADT(HttpEndpoint("1", "http://def.xyz.com")),
+        )
+      }
+    }
+
+    "when tried to add endpoint with same value" - {
+      "should be able to update existing endpoint" in {
+        val endpoints = Endpoints(Vector(HttpEndpoint("0", "http://abc.xyz.com")), Map("0" -> KeyIds(Set("key1"))))
+        val updatedEndpoints = endpoints.addOrUpdate(HttpEndpoint("1", "http://abc.xyz.com"), Set("key1"))
+        updatedEndpoints shouldBe endpoints
       }
     }
 

@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
-import com.evernym.verity.actor.agent.{HasAgentActivity, AgentIdentity, MsgPackVersion, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackVersion, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
@@ -14,13 +14,14 @@ import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifResponse}
@@ -273,7 +274,7 @@ trait AgentOutgoingMsgHandler
                          msgType: MsgType,
                          mc: OutgoingMsgContext,
                          threadContext: ThreadContextDetail): Unit = {
-    val thread = Option(MsgThread(Option(threadContext.threadId)))
+    val thread = Option(Thread(Option(threadContext.threadId)))
     logger.debug("sending outgoing msg => self participant id: " + selfParticipantId)
     logger.debug("sending outgoing => toParticipantId: " + mc.to)
     val (sendResult, nextHop) = if (ParticipantUtil.DID(selfParticipantId) == ParticipantUtil.DID(mc.to)) {

@@ -6,17 +6,17 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
 import com.evernym.verity.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.msghandler.outgoing.{NotifyMsgDetail, PayloadMetadata}
+import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackVersion, PayloadMetadata}
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.engine.Constants._
@@ -297,7 +297,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       packedMsg.msg
     }
     val payload = prepareEdgeMsg()
-    val payloadStoredEvent = MsgPayloadStoredEventBuilder.buildMsgPayloadStoredEvt(msgId, payload, Option(PayloadMetadata(msgName, msgPackVersion)))
+    val payloadStoredEvent = MsgPayloadStoredEventBuilder.buildMsgPayloadStoredEvt(
+      msgId, payload, Option(PayloadMetadata(msgName, msgPackVersion)))
     Some(payloadStoredEvent)
   }
 
@@ -347,8 +348,10 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId,
-                         sendMsg: Boolean, threadOpt: Option[MsgThread]=None): MsgCreated = {
-    val msgStatus = if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode else MSG_STATUS_RECEIVED.statusCode
+                         sendMsg: Boolean, threadOpt: Option[Thread]=None): MsgCreated = {
+    val msgStatus =
+      if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode
+      else MSG_STATUS_RECEIVED.statusCode
     ctx.getState.msgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
   }
 

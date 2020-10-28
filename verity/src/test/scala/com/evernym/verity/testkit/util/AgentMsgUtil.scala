@@ -2,11 +2,12 @@ package com.evernym.verity.testkit.util
 
 import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgThread, PairwiseMsgUids}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer, FwdRouteMsg, PackMsgParam, PackedMsg}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.protocol.protocols.MsgDetail
@@ -39,7 +40,7 @@ case class SendRemoteMsg_MFV_0_6(`@type`: String,
                                  mtype: String,
                                  `@msg`: Array[Byte],
                                  sendMsg: Boolean,
-                                 `~thread`: Option[MsgThread] = None,
+                                 `~thread`: Option[Thread] = None,
                                  title: Option[String] = None,
                                  detail: Option[String] = None,
                                  replyToMsgId: Option[String]=None)
@@ -54,7 +55,7 @@ case class ConnReq_MFV_0_6(
                                    `@id`: String,
                                    sendMsg: Boolean = false,
                                    includePublicDID: Boolean = false,
-                                   `~thread`: MsgThread,
+                                   `~thread`: Thread,
                                    keyDlgProof: Option[AgentKeyDlgProof] = None,
                                    targetName: Option[String] = None,
                                    phoneNo: Option[String] = None)
@@ -66,7 +67,7 @@ case class AcceptConnReq_MFV_0_6(`@type`: String,
                                  senderDetail: SenderDetail,
                                  senderAgencyDetail: SenderAgencyDetail,
                                  replyToMsgId: String,
-                                 `~thread`: MsgThread)
+                                 `~thread`: Thread)
 
 case class SendMsgs_MFV_0_5(`@type`: TypeDetail, uids: List[String])
 

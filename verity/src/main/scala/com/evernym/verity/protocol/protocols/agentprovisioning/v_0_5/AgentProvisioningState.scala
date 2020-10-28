@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 
-import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.protocol.engine.{DID, Parameters, VerKey}
 
 sealed trait State

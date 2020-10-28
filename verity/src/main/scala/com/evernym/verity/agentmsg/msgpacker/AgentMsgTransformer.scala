@@ -2,10 +2,10 @@ package com.evernym.verity.agentmsg.msgpacker
 
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
 import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.vault._
 import org.hyperledger.indy.sdk.wallet.Wallet
 

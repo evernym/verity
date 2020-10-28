@@ -3,16 +3,16 @@ package com.evernym.verity.actor.agent.state
 import akka.actor.Actor.Receive
 import com.evernym.verity.Exceptions.InvalidValueException
 import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
 import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseInterface, LegacyAgentPairwiseStateUpdateImpl}
-import com.evernym.verity.actor.agent.{ConnectionStatus, EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
+import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseInterface
+import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackVersion, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAccessParam}
 
@@ -191,21 +191,6 @@ trait PairwiseConnStateBase {
   }
 }
 
-
-/**
- * base class for handling a pairwise connection related functions
- * for example: updating connection status, their did doc etc
- */
-trait LegacyPairwiseConnState extends PairwiseConnStateBase with LegacyAgentPairwiseStateUpdateImpl {
-
-  def updateRelationship(rel: Relationship): Unit =
-      state.updateRelationship(rel)
-
-  def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit = {
-    setConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
-  }
-
-}
 
 /**
  * base class for handling a pairwise connection related functions

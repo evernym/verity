@@ -2,7 +2,7 @@ package com.evernym.verity.actor.testkit
 
 import java.util.concurrent.TimeUnit
 
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.testkit.util.TestUtil.getSigningKey
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault._

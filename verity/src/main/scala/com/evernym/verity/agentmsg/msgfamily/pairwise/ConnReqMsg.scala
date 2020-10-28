@@ -5,6 +5,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, _}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.{MsgBase, ThreadId}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, InviteDetailAbbreviated}
@@ -24,7 +25,7 @@ case class ConnReqMsg_MFV_0_6(`@type`: String, `@id`: String,
                               phoneNo: Option[String] = None,
                               targetName: Option[String] = None,
                               includePublicDID: Option[Boolean] = None,
-                              `~thread`: Option[MsgThread] = None
+                              `~thread`: Option[Thread] = None
                              ) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
@@ -42,11 +43,11 @@ case class ConnReqMsg(msgFamilyDetail: MsgFamilyDetail,
                       phoneNo: Option[String] = None,
                       targetName: Option[String] = None,
                       includePublicDID: Option[Boolean] = None,
-                      threadOpt: Option[MsgThread] = None)
+                      threadOpt: Option[Thread] = None)
 
 case class ConnReqRespMsg_MFV_0_6(`@type`: String,
                                   `@id`: String,
-                                 `~thread`: MsgThread,
+                                 `~thread`: Thread,
                                   inviteDetail: InviteDetail,
                                   truncatedInviteDetail: Option[InviteDetailAbbreviated],
                                   urlToInviteDetail: String,
@@ -91,7 +92,7 @@ object ConnReqMsgHelper {
                                        urlToInviteDetail: String,
                                        urlToInviteDetailEncoded: String,
                                        sourceId: Option[String]=None): ConnReqRespMsg_MFV_0_6 = {
-    val msgThread: MsgThread = MsgThread(thid=Option(threadId))
+    val msgThread = Thread(thid=Option(threadId))
     ConnReqRespMsg_MFV_0_6(MSG_TYPE_DETAIL_CONN_REQ_RESP, `@id`, msgThread, inviteDetail, truncatedInviteDetail,
       urlToInviteDetail, urlToInviteDetailEncoded, sourceId)
   }

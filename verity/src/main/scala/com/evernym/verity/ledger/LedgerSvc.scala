@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 
 import akka.actor.ActorSystem
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.{DID, WalletAccess}
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAccessParam

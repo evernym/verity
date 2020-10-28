@@ -1,14 +1,12 @@
 package com.evernym.verity.protocol.protocols
 
-import java.time.ZonedDateTime
-
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgThread, UpdateMsgStatusReqMsg}
+import com.evernym.verity.actor.agent.{Msg, PayloadMetadata}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
 import com.evernym.verity.protocol.engine.{DID, MsgId}
-
+import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.agent.user.MsgHelper._
 
 trait MsgAndDeliveryState {
 
@@ -20,18 +18,6 @@ trait MsgAndDeliveryState {
   def msgDeliveryState: Option[MsgDeliveryState] = None
 
   val msgState: MsgState = new MsgState(msgDeliveryState)
-
-  val validAnsweredMsgStatuses: Set[String] = Set(
-    MSG_STATUS_ACCEPTED,
-    MSG_STATUS_REJECTED,
-    MSG_STATUS_REDIRECTED
-  ).map(_.statusCode)
-
-  val validNewMsgStatusesAllowedToBeUpdatedTo: Set[String] =
-    validAnsweredMsgStatuses ++ Set(MSG_STATUS_REVIEWED.statusCode)
-
-  val validExistingMsgStatusesAllowedToBeUpdated: Set[String] =
-    Set(MSG_STATUS_RECEIVED, MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED).map(_.statusCode)
 
   def checkIfMsgAlreadyNotInAnsweredState(msgId: MsgId): Unit = {
     if (msgState.getMsgOpt(msgId).exists(m => validAnsweredMsgStatuses.contains(m.statusCode))){
@@ -67,29 +53,14 @@ trait MsgAndDeliveryState {
 
 }
 
-//state
-case class Msg(`type`: String, senderDID: DID, statusCode: String,
-               creationDateTime: ZonedDateTime, lastUpdatedDateTime: ZonedDateTime,
-               refMsgId: Option[String], thread: Option[MsgThread],
-               sendMsg: Boolean) {
-  def getType: String = `type`
-}
-case class MsgDeliveryStatus(statusCode: String, statusDetail: Option[String], lastUpdatedDateTime: ZonedDateTime, failedAttemptCount: Int)
-
-//response msg
-
 case class DeliveryStatus(to: String, statusCode: String, statusDetail: Option[String], lastUpdatedDateTime: String)
 
 case class MsgDetail(uid: MsgId, `type`: String, senderDID: DID, statusCode: String,
-                     refMsgId: Option[String], thread: Option[MsgThread],
+                     refMsgId: Option[String], thread: Option[Thread],
                      payload: Option[Array[Byte]], deliveryDetails: Set[DeliveryStatus]) {
 
   override def toString: String = s"uid=$uid, type=${`type`}, senderDID=$senderDID, " +
     s"statusCode=$statusCode, thread=$thread, refMsgId=$refMsgId"
-}
-
-case class PayloadWrapper(msg: Array[Byte], metadata: Option[PayloadMetadata]) {
-  def msgPackVersion: Option[MsgPackVersion] = metadata.map(md => md.msgPackVersion)
 }
 
 case class StorePayloadParam(message: Array[Byte], metadata: Option[PayloadMetadata])

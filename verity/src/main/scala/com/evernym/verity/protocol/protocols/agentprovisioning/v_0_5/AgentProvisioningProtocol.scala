@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control

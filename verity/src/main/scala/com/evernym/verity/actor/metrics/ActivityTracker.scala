@@ -2,7 +2,7 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.Props
 import akka.event.LoggingReceive
-import com.evernym.verity.actor.agent.agency.SponsorRel
+import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}

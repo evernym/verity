@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.mock.agent
 
 import java.util.UUID
 
-import com.evernym.verity.actor.DidPair
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.AgentDIDDetail
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}

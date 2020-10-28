@@ -8,7 +8,6 @@ import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.WalletUtil.buildWalletConfig
 import com.evernym.verity.vault.{WalletAPI, WalletAccessParam, WalletConfig}
-import Endpoints._
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import org.scalatest.OptionValues
@@ -34,8 +33,7 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
           myDidDoc.did shouldBe "relDID"
           myDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("thisAgentKeyId", "", Set.empty)))
           myDidDoc.endpoints.value shouldBe Endpoints.init(
-            Vector(RoutingServiceEndpoint("localhost:9000/agency/msg", Vector.empty)),
-            Set("thisAgentKeyId"))
+            Vector(RoutingServiceEndpoint("localhost:9000/agency/msg", Vector.empty, Seq("thisAgentKeyId"))))
         }
       }
 
@@ -69,9 +67,8 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
           myDidDoc.did shouldBe "relDID"
           myDidDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(
             AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty)))
-          myDidDoc.endpoints.value shouldBe Endpoints(Vector(
-            RoutingServiceEndpoint("localhost:9000/agency/msg", Seq.empty)),
-            Map("0" -> KeyIds(Set("SpUiyicXonPRdaJre4S1TJ")))
+          myDidDoc.endpoints.value shouldBe Endpoints.init(Vector(
+            RoutingServiceEndpoint("localhost:9000/agency/msg", Seq.empty, Seq("SpUiyicXonPRdaJre4S1TJ")))
           )
         }
       }
@@ -111,26 +108,26 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
         }
       }
 
-      "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with legacy and other duplicate keys" - {
+      "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with legacy and other duplicate auth keys" - {
         "should migrate LegacyAuthorizedKey to AuthorizedKey" in {
           val myDidDoc = prepareMyDidDoc("relDID", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamDuringRecovery)
           val updatedDidDoc = myDidDoc.updatedWithNewAuthKey("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty)
-          val updatedDidDocWithEndpoints = updatedDidDoc.updatedWithEndpoint(PushEndpoint("1", "123"), Set("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5"))
+          val updatedDidDocWithEndpoints = updatedDidDoc.updatedWithEndpoint(
+            HttpEndpoint("1", "http://abc.xyz.com", Seq("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5")))
 
           updatedDidDocWithEndpoints.authorizedKeys_!.keys shouldBe Seq(
             AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "", Set.empty),
             AuthorizedKey("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty)
           )
-
-          updatedDidDocWithEndpoints.endpoints_!.endpoints shouldBe Vector(EndpointADT(PushEndpoint("1", "123")))
-          updatedDidDocWithEndpoints.endpoints_!.endpointsToAuthKeys shouldBe Map("1" -> KeyIds(Set("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5")))
+          updatedDidDocWithEndpoints.endpoints_!.endpoints shouldBe Vector(EndpointADT(
+            HttpEndpoint("1", "http://abc.xyz.com", Seq("F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5"))))
 
           val migratedDidDoc = updatedDidDocWithMigratedAuthKeys(Option(updatedDidDocWithEndpoints))(relUtilParamPostRecovery)
           migratedDidDoc.isDefined shouldBe true
 
           migratedDidDoc.foreach { dd =>
             dd.authorizedKeys.value shouldBe AuthorizedKeys(Seq(AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty)))
-            dd.endpoints.value shouldBe Endpoints(Vector(PushEndpoint("1", "123")), Map("1" -> KeyIds(Set("SpUiyicXonPRdaJre4S1TJ"))))
+            dd.endpoints.value shouldBe Endpoints.init(Vector(HttpEndpoint("1", "http://abc.xyz.com", Seq("SpUiyicXonPRdaJre4S1TJ"))))
           }
         }
       }

@@ -3,6 +3,7 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
@@ -16,7 +17,7 @@ case class SendRemoteMsgReq_MFV_0_6(`@type`: String,
                                     mtype: String,
                                     `@msg`: JSONObject,
                                     sendMsg: Boolean,
-                                    `~thread`: Option[MsgThread] = None,
+                                    `~thread`: Option[Thread] = None,
                                     title: Option[String] = None,
                                     detail: Option[String] = None,
                                     replyToMsgId: Option[String]=None) extends MsgBase {
@@ -31,13 +32,13 @@ case class SendRemoteMsgReq_MFV_0_6(`@type`: String,
     checkOptionalNotEmpty("replyToMsgId", replyToMsgId)
   }
 
-  def threadOpt: Option[MsgThread] = `~thread`
+  def threadOpt: Option[Thread] = `~thread`
 }
 
 case class CreateMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
                                    uid: Option[String] = None,
                                    replyToMsgId: Option[String] = None,
-                                   thread: Option[MsgThread]=None,
+                                   thread: Option[Thread]=None,
                                    sendMsg: Boolean = false) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
@@ -50,7 +51,7 @@ case class CreateMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
 case class AnswerMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
                                    uid: Option[String] = None,
                                    replyToMsgId: Option[String] = None,
-                                   thread: Option[MsgThread]=None,
+                                   thread: Option[Thread]=None,
                                    sendMsg: Boolean = false) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
@@ -63,7 +64,7 @@ case class AnswerMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
 case class RedirectMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
                                      uid: Option[String] = None,
                                      replyToMsgId: Option[String] = None,
-                                     thread: Option[MsgThread]=None,
+                                     thread: Option[Thread]=None,
                                      sendMsg: Boolean = false) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
@@ -76,7 +77,7 @@ case class RedirectMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
 case class RedirectedMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
                                        uid: Option[String] = None,
                                        replyToMsgId: Option[String] = None,
-                                       thread: Option[MsgThread]=None,
+                                       thread: Option[Thread]=None,
                                        sendMsg: Boolean = false) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
@@ -148,7 +149,7 @@ case class SendRemoteMsg(msgFamilyDetail: MsgFamilyDetail,
                          mtype: String,
                          `@msg`: Array[Byte],
                          sendMsg: Boolean,
-                         threadOpt: Option[MsgThread]=None,
+                         threadOpt: Option[Thread]=None,
                          replyToMsgId: Option[MsgId]=None,
                          title: Option[String] = None,
                          detail: Option[String] = None,

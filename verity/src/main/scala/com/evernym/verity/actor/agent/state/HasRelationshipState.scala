@@ -1,12 +1,11 @@
 package com.evernym.verity.actor.agent.state
 
-import com.evernym.verity.actor.agent.relationship.Endpoints._
 import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, Relationship, Tags}
 import com.evernym.verity.protocol.engine.VerKey
 
 import scala.language.implicitConversions
 
-trait RelationshipState extends HasRelationship {
+trait HasRelationshipState extends HasRelationship {
 
   /**
    * initial relationship object
@@ -63,17 +62,12 @@ trait RelationshipState extends HasRelationship {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithNewAuthKey(keyId, tags))
   }
 
-  def addOrUpdateEndpointToMyDidDoc(endpoint: EndpointADTUntyped, authKeyIds: Set[KeyId]): Unit = {
-    updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithEndpoint(endpoint, authKeyIds))
+  def addOrUpdateEndpointToMyDidDoc(endpoint: EndpointADTUntyped): Unit = {
+    updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithEndpoint(endpoint))
   }
 
   def removeEndpointById(id: EndpointId): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithRemovedEndpointById(id))
   }
 
-}
-
-trait HasRelationshipState {
-  type StateType <: RelationshipState
-  def state: StateType
 }

@@ -4,6 +4,7 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD, MSG_STATUS_ACCEPTED, MSG_STATUS_REDIRECTED, MSG_STATUS_REJECTED, PAIRWISE_KEYS_ALREADY_IN_WALLET}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -191,7 +192,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def checkIfValidAnswerStatusCode(statusCode: String): Unit = {
-    if (! ctx.getState.validAnsweredMsgStatuses.contains(statusCode)) {
+    if (! MsgHelper.validAnsweredMsgStatuses.contains(statusCode)) {
       throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("invalid answer status code: " + statusCode))
     }
   }

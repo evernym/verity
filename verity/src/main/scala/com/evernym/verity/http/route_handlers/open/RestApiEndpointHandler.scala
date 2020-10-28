@@ -8,12 +8,11 @@ import akka.http.scaladsl.server.directives.BasicDirectives.extract
 import akka.http.scaladsl.server.{Directive1, Route}
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
-import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.config.CommonConfig.REST_API_ENABLED
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
@@ -41,7 +40,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     entity(as[String]) { payload =>
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
-      val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(MsgThread(thid)), reqMsgContext)
+      val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext)
 
       complete {
         platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, payload, restMsgContext)) map responseHandler
@@ -55,7 +54,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
     val msgType = buildGetStatusMsgType(protoRef, params)
     val msg = buildGetStatusMsg(msgType, params)
-    val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(MsgThread(thid)), reqMsgContext, sync = true)
+    val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext, sync = true)
 
     complete {
       platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, msg, restMsgContext)) map responseHandler

@@ -42,9 +42,6 @@ trait AuthorizedKeysLike {
     keys.filter(ak => keySeq.contains(ak.keyId))
   }
 
-  def filterByKeyIds(keyIds: KeyIds): Seq[AuthorizedKey] =
-    filterByKeyIds(keyIds.keyId)
-
   def filterByTags(tags: Tags*): Seq[AuthorizedKey] =
     keys.filter(ak => ak.tags.intersect(tags.toSet).nonEmpty)
 

@@ -3,7 +3,6 @@ package com.evernym.verity.testkit.mock.cloud_agent
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.testkit.BasicSpecBase
 import com.evernym.verity.UrlDetail
 
 /**

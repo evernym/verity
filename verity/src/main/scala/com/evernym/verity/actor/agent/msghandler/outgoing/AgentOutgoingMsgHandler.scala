@@ -14,13 +14,14 @@ import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifResponse}
@@ -207,7 +208,7 @@ trait AgentOutgoingMsgHandler
     val agentJsonStr = if (threadContext.usesLegacyGenMsgWrapper) {
       AgentMsgPackagingUtil.buildPayloadWrapperMsg(agentJsonMsg.jsonStr, wrapperMsgType = agentJsonMsg.msgType.msgName)
     } else {
-      AgentMsgPackagingUtil.buildAgentMsgJson(List(JsonMsg(agentJsonMsg.jsonStr)), threadContext.msgPackVersion, threadContext.usesLegacyBundledMsgWrapper)
+      AgentMsgPackagingUtil.buildAgentMsgJson(List(JsonMsg(agentJsonMsg.jsonStr)), threadContext.usesLegacyBundledMsgWrapper)
     }
     logger.debug(s"outgoing msg: json msg: " + agentJsonMsg)
     val toDID = ParticipantUtil.agentId(mc.to)
@@ -273,7 +274,7 @@ trait AgentOutgoingMsgHandler
                          msgType: MsgType,
                          mc: OutgoingMsgContext,
                          threadContext: ThreadContextDetail): Unit = {
-    val thread = Option(MsgThread(Option(threadContext.threadId)))
+    val thread = Option(Thread(Option(threadContext.threadId)))
     logger.debug("sending outgoing msg => self participant id: " + selfParticipantId)
     logger.debug("sending outgoing => toParticipantId: " + mc.to)
     val (sendResult, nextHop) = if (ParticipantUtil.DID(selfParticipantId) == ParticipantUtil.DID(mc.to)) {

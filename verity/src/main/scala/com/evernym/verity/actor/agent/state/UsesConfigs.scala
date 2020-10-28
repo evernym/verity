@@ -7,6 +7,7 @@ import com.evernym.verity.actor.agent.user.{AgentConfig, AgentConfigs, GetConfig
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.cache._
 import com.evernym.verity.constants.Constants.AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.HasAppConfig
 
 import scala.concurrent.Future
@@ -15,8 +16,9 @@ import scala.concurrent.Future
  * supposed to be used from a pairwise actor (UserAgentPairwise actor)
  * it contains utility functions to get configs from agent actor (UserAgent actor) which has the config state
  */
-trait UsesConfigs extends HasAppConfig { this: HasOwnerDetail => //TODO Should refactor this out
+trait UsesConfigs extends HasAppConfig {
 
+  def ownerAgentKeyDIDReq: DID
   def agentConfigs: Map[String, AgentConfig]
   def agentCache: Cache
 
@@ -53,7 +55,7 @@ trait UsesConfigs extends HasAppConfig { this: HasOwnerDetail => //TODO Should r
   def getMissingConfigsFromUserAgent(configs: Set[GetConfigDetail]): Future[AgentConfigs] = {
 
     def buildKeyDetails(gcd: Set[GetConfigDetail], req: Boolean): Set[KeyDetail] = {
-      if (gcd.nonEmpty) Set(KeyDetail(GetConfigCacheParam(state.ownerAgentKeyDIDReq, GetConfigs(gcd.map(_.name))), required = req))
+      if (gcd.nonEmpty) Set(KeyDetail(GetConfigCacheParam(ownerAgentKeyDIDReq, GetConfigs(gcd.map(_.name))), required = req))
       else Set.empty[KeyDetail]
     }
 

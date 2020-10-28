@@ -2,10 +2,10 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.msghandler.MsgParam
-import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.push_notification.PushNotifData
 
 import scala.concurrent.Future
@@ -118,27 +118,3 @@ case class OutgoingMsgParam(givenMsg: Any, metadata: Option[PayloadMetadata]=Non
     case jm: JsonMsg     => jm.msg
   }
 }
-
-/**
- * this is only used when this agent has packed a message and it knows its metadata (message type string, message pack version etc)
- * this should NOT be used when this agent is acting as a proxy and just storing a received packed message
- * (as in that case, it may/won't have idea about how that message is packed)
- */
-object PayloadMetadata {
-  def apply(msgTypeStr: String, msgPackVersion: MsgPackVersion): PayloadMetadata = {
-    PayloadMetadata(msgTypeStr, msgPackVersion.toString)
-  }
-  def apply(msgType: MsgType, msgPackVersion: MsgPackVersion): PayloadMetadata = {
-    PayloadMetadata(MsgFamily.typeStrFromMsgType(msgType), msgPackVersion.toString)
-  }
-}
-
-/**
- * describes associated payload
- * @param msgTypeStr message type string
- * @param msgPackVersionStr message pack version
- */
-case class PayloadMetadata(msgTypeStr: String, msgPackVersionStr: String){
-  def msgPackVersion: MsgPackVersion = MsgPackVersion.fromString(msgPackVersionStr)
-}
-

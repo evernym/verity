@@ -7,6 +7,7 @@ import com.evernym.verity.protocol.didcomm.decorators.EmbeddingAttachment
 import com.evernym.verity.protocol.didcomm.decorators.EmbeddingAttachment.buildAttachment
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.PresentProofContext
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
@@ -41,45 +42,65 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def proverApplyEvent: ApplyEvent = {
-    case (_: States.Initialized    , _ , RequestGiven(r)    ) => States.initRequestReceived(r)
-    case (s: States.RequestReceived, _,  PresentationUsed(p)) => States.Presented(s.data.addPresentation(p))
-    case (s: States.Presented      , _,  PresentationAck(a) ) => States.Presented(s.data.addAck(a))
+    case (_: States.Initialized    , _, RequestGiven(r)           ) => States.initRequestReceived(r)
+    case (_: States.Initialized    , _, PresentationProposed(a, p)) => States.initProposalSent(a, p)
+    case (s: States.ProposalSent   , _, RequestGiven(r)           ) => States.RequestReceived(s.data.addRequest(r))
+    case (s: States.RequestReceived, _, PresentationUsed(p)       ) => States.Presented(s.data.addPresentation(p))
+    case (s: States.RequestReceived, _, PresentationProposed(a, p)) => States.ProposalSent(s.data.addProposal(a, p))
+    case (s: States.Presented      , _, PresentationAck(a)        ) => States.Presented(s.data.addAck(a))
   }
 
   def verifierApplyEvent: ApplyEvent = {
-    case (_: States.Initialized, _ , RequestUsed(r)       ) => States.initRequestSent(r)
-    case (s: States.RequestSent, _ , PresentationGiven(p) ) => States.Complete(s.data.addPresentation(p))
-    case (s: States.Complete, _ , AttributesGiven(p)      ) => States.Complete(s.data.addAttributesPresented(p))
-    case (s: States.Complete, _ , ResultsOfVerification(r)) => States.Complete(s.data.addVerificationResults(r))
+    case (_: States.Initialized     , _, RequestUsed(r)          ) => States.initRequestSent(r)
+    case (_: States.Initialized     , _, ProposeReceived(a, p)   ) => States.initProposalReceived(a, p)
+    case (s: States.ProposalReceived, _, RequestUsed(r)          ) => States.RequestSent(s.data.addRequest(r))
+    case (s: States.RequestSent     , _, PresentationGiven(p)    ) => States.Complete(s.data.addPresentation(p))
+    case (s: States.RequestSent     , _, ProposeReceived(a, p)   ) => States.ProposalReceived(s.data.addProposal(a, p))
+    case (s: States.Complete        , _, AttributesGiven(p)      ) => States.Complete(s.data.addAttributesPresented(p))
+    case (s: States.Complete        , _, ResultsOfVerification(r)) => States.Complete(s.data.addVerificationResults(r))
   }
 
 
 
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (States.Initialized() , None               , msg: Msg.RequestPresentation) => handleMsgRequest(msg)
-    case (s: States.RequestSent, Some(Role.Prover)  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
-    case (s: State             , Some(senderRole)   , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, senderRole, msg)
-    case (States.Presented(_)  , Some(Role.Verifier), msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
-    case (_                    , _                  , _: Msg.Ack                  ) => //Acks any other time are ignored
-    case (_                    , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
-    case (_                    , _                  , msg: ProtoMsg               ) => invalidMessageState(msg)
+    case (States.Initialized()  , None               , msg: Msg.RequestPresentation) =>
+      apply(Role.Prover.toEvent)
+      handleMsgRequest(msg)
+    case (States.Initialized()  , None               , msg: Msg.ProposePresentation) =>
+      apply(Role.Verifier.toEvent)
+      handleMsgProposePresentation(msg)
+    case (_: States.ProposalSent, Some(Role.Verifier), msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+    case (_: States.RequestSent , Some(Role.Prover)  , msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
+    case (s: States.RequestSent , Some(Role.Prover)  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
+    case (s: State              , Some(senderRole)   , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, senderRole, msg)
+    case (States.Presented(_)   , Some(Role.Verifier), msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
+    case (_                     , _                  , _: Msg.Ack                  ) => //Acks any other time are ignored
+    case (_                     , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
+    case (_                     , _                  , msg: ProtoMsg               ) => invalidMessageState(msg)
   }
 
   override def handleControl: Control ?=> Any = statefulHandleControl
   {
-    case (States.Uninitialized()   , None             , Ctl.Init(s, o)        ) => apply(Participants(s, o))
-    case (States.Initialized()     , None             , ctl: Ctl.Request      ) => handleCtlRequest(ctl)
-    case (s: States.RequestReceived, Some(Role.Prover), msg: Ctl.AcceptRequest) => handleCtlAcceptRequest(s, msg)
-    case (s                        , _                , msg: Ctl.Status       ) => handleCtlStatus(s, msg)
-    case (s                        , _                , msg: Ctl.Reject       ) => handleCtlReject(s, msg)
-    case (s: State                 , _                , msg: CtlMsg           ) => invalidControlState(s, msg)
+    case (States.Uninitialized()    , None               , Ctl.Init(s, o)         ) => apply(Participants(s, o))
+    case (States.Initialized()      , None               , ctl: Ctl.Request       ) =>
+      apply(Role.Verifier.toEvent)
+      handleCtlRequest(ctl)
+    case (States.Initialized()      , None               , ctl: Ctl.Propose       ) =>
+      apply(Role.Prover.toEvent)
+      handleCtlPropose(ctl)
+    case (_: States.RequestReceived , Some(Role.Prover)  , ctl: Ctl.Propose       ) => handleCtlPropose(ctl)
+    case (s: States.RequestReceived , Some(Role.Prover)  , msg: Ctl.AcceptRequest ) => handleCtlAcceptRequest(s, msg)
+    case (s: States.ProposalReceived, Some(Role.Verifier), msg: Ctl.AcceptProposal) => handleCtlAcceptProposal(s, msg)
+    case (_: States.ProposalReceived, Some(Role.Verifier), msg: Ctl.Request       ) => handleCtlRequest(msg)
+    case (s                         , _                  , msg: Ctl.Status        ) => handleCtlStatus(s, msg)
+    case (s                         , _                  , msg: Ctl.Reject        ) => handleCtlReject(s, msg)
+    case (s: State                  , _                  , msg: CtlMsg            ) => invalidControlState(s, msg)
   }
 
   // *****************************
   // HANDLE PROTOCOL MESSAGES
   // *****************************
   def handleMsgRequest(request: Msg.RequestPresentation): Unit = {
-    apply(Role.Prover.toEvent)
     extractRequest(request) match {
       case Success(request) =>
         apply(RequestGiven(request))
@@ -106,8 +127,18 @@ class PresentProof (implicit val ctx: PresentProofContext)
     request.copy(non_revoked=interval)
   }
 
+  def handleMsgProposePresentation(msg: Msg.ProposePresentation): Unit = {
+    apply(
+      ProposeReceived(
+        msg.presentation_proposal.attributes.map(_.toEvent),
+        msg.presentation_proposal.predicates.map(_.toEvent)
+      )
+    )
+    ctx.signal(Sig.ReviewProposal(msg.presentation_proposal.attributes, msg.presentation_proposal.predicates, msg.comment))
+  }
+
   def handleMsgPresentation(s: States.RequestSent, msg: Msg.Presentation): Unit = {
-    val proofRequest = s.data.requests.last
+    val proofRequest = s.data.requests.head
     val proofRequestJson = DefaultMsgCodec.toJson(_checkRevocationInterval(proofRequest))
 
     extractPresentation(msg) match {
@@ -183,9 +214,21 @@ class PresentProof (implicit val ctx: PresentProofContext)
   // *****************************
   // HANDLE CONTROL MESSAGES
   // *****************************
-  def handleCtlRequest(ctr: Ctl.Request): Unit = {
-    apply(Role.Verifier.toEvent)
+  def handleCtlPropose(ctp: Ctl.Propose): Unit = {
+    val attributes = ctp.attributes.getOrElse(List())
+    val predicates = ctp.predicates.getOrElse(List())
 
+    apply(PresentationProposed(attributes.map(_.toEvent), predicates.map(_.toEvent)))
+
+    val proposeProof = ProposePresentation(
+      comment = ctp.comment,
+      presentation_proposal = PresentationPreview(attributes, predicates)
+    )
+
+    send(proposeProof)
+  }
+
+  def handleCtlRequest(ctr: Ctl.Request): Unit = {
     val proofRequest = ProofRequestUtil.requestToProofRequest(ctr)
     val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
     proofRequestStr match {
@@ -202,11 +245,10 @@ class PresentProof (implicit val ctx: PresentProofContext)
       case Failure(e) =>
         signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
     }
-
   }
 
   def handleCtlAcceptRequest(s: States.RequestReceived, msg: Ctl.AcceptRequest): Unit = {
-    val proofRequest = s.data.requests.last
+    val proofRequest = s.data.requests.head
     val proofRequestJson: Try[String] = Try(proofRequest).map(DefaultMsgCodec.toJson)
 
     val credentialsNeeded: Try[AvailableCredentials] = proofRequestJson
@@ -239,6 +281,27 @@ class PresentProof (implicit val ctx: PresentProofContext)
       case Failure(e) => signal(
         Sig.buildProblemReport(s"Ledger assets unavailable -- ${e.getMessage}", ledgerAssetsUnavailable)
       )
+    }
+  }
+
+  def handleCtlAcceptProposal(s: States.ProposalReceived, msg: Ctl.AcceptProposal): Unit = {
+    val proposal = s.data.proposals.head
+
+    val proofRequest = ProofRequestUtil.proposalToProofRequest(proposal, msg.name.getOrElse(""), msg.non_revoked)
+    val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
+    proofRequestStr match {
+      case Success(str) =>
+        val presentationRequest = Msg.RequestPresentation(
+          "",
+          Vector(
+            buildAttachment(AttIds.request0, str)
+          )
+        )
+
+        send(presentationRequest)
+        apply(RequestUsed(str))
+      case Failure(e) =>
+        signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
     }
   }
 

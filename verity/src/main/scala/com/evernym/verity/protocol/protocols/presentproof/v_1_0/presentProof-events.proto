@@ -45,6 +45,35 @@ message PresentationAck {
     string status = 1;
 }
 
+message PreviewAttribute {
+    option (scalapb.message).extends = "Event";
+    string name = 1;
+    repeated string credDefId = 2; // optional
+    repeated string mimeType = 3; // optional
+    repeated string value = 4; // optional
+    repeated string referent = 5; // optional
+}
+
+message PreviewPredicate {
+    option (scalapb.message).extends = "Event";
+    string name = 1;
+    string credDefId = 2;
+    string predicate = 3;
+    int32 threshold = 4;
+}
+
+message PresentationProposed {
+    option (scalapb.message).extends = "Event";
+    repeated PreviewAttribute attributes = 1;
+    repeated PreviewPredicate predicates = 2;
+}
+
+message ProposeReceived {
+    option (scalapb.message).extends = "Event";
+    repeated PreviewAttribute attributes = 1;
+    repeated PreviewPredicate predicates = 2;
+}
+
 message AttributesGiven {
     option (scalapb.message).extends = "Event";
     string attributesPresented = 1;

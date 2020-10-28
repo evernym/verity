@@ -7,10 +7,26 @@ sealed trait AttachmentData
 
 case class Base64(base64: String) extends AttachmentData
 
-case class AttachmentDescriptor(`@id`: Option[String] = None, `mime-type`: Option[String] = None, data: Base64 = Base64(""), filename: Option[String] = None, lastmod_time: Option[String] = None, byte_count: Option[Int] = None, description: Option[String] = None)
+// All attachment descriptor fields except the data are listed as optional in the attachments RFC (RFC0017)
+// some subset of these fields may be required in specific use cases
+case class AttachmentDescriptor(`@id`: Option[String] = None,
+                                `mime-type`: Option[String] = None,
+                                data: Base64 = Base64(""),
+                                filename: Option[String] = None,
+                                lastmod_time: Option[String] = None,
+                                byte_count: Option[Int] = None,
+                                description: Option[String] = None
+                               )
 
 object AttachmentDescriptor {
-  def buildAttachment[A](id: Option[String] = None, payload: A, mimeType: Option[String] = Some("application/json"), filename: Option[String] = None, lastmod_time: Option[String] = None, byte_count: Option[Int] = None, description: Option[String] = None): AttachmentDescriptor = {
+  def buildAttachment[A](id: Option[String] = None,
+                         payload: A,
+                         mimeType: Option[String] = Some("application/json"),
+                         filename: Option[String] = None,
+                         lastmod_time: Option[String] = None,
+                         byte_count: Option[Int] = None,
+                         description: Option[String] = None
+                        ): AttachmentDescriptor = {
     val json = payload match {
       case s: String => s
       case _ => DefaultMsgCodec.toJson(payload)

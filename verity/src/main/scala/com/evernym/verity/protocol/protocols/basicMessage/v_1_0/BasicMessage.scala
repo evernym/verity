@@ -37,8 +37,8 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   def applyEvent: ApplyEvent = {
     case (_: State.Uninitialized , _ , e: Initialized  ) => (State.Initialized(), initialize(e))
     case (_                      , _ , MyRole(n)       ) => (None, setRole(n))
-    case (_: State.Initialized   , _ , e: MessageSent  ) => State.Messaging(buildMessage(e))
-    case (_: State.Messaging     , _ , e: MessageSent  ) => State.Messaging(buildMessage(e))
+    case (_: State.Initialized   , _ , e: MessageReceived  ) => State.Messaging(buildMessage(e))
+    case (_: State.Messaging     , _ , e: MessageReceived  ) => State.Messaging(buildMessage(e))
   }
   // Protocol Msg Handlers
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
@@ -93,31 +93,22 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
 }
 
 object BasicMessage {
-  def buildMessage(m: MessageSent): Msg.Message = {
+  def buildMessage(m: MessageReceived): Msg.Message = {
     Msg.Message(
-      l10n(locale = Some(m.localization)),
-      BaseTiming(out_time = Some(m.sentTime)),
+      l10n(locale = m.localization),
+      BaseTiming(out_time = m.sentTime),
       m.content,
       Some(attachmentObjectsToAttachments(m.attachments.toVector)),
     )
   }
 
-  def messageToEvt(m: Msg.Message): MessageSent = {
-    if(m.`~attach`.isEmpty){
-      MessageSent(
-        m.`~l10n`.locale.get,
-        m.sent_time.out_time.get,
-        m.content,
-      )
-    }
-    else {
-      MessageSent(
-        m.`~l10n`.locale.get,
-        m.sent_time.out_time.get,
-        m.content,
-        attachmentsToAttachmentObjects(m.`~attach`.get),
-      )
-    }
+  def messageToEvt(m: Msg.Message): MessageReceived = {
+    MessageReceived(
+      m.`~l10n`.locale,
+      m.sent_time.out_time,
+      m.content,
+      attachmentsToAttachmentObjects(m.`~attach`.getOrElse(Vector.empty)),
+    )
   }
 
   def attachmentsToAttachmentObjects(values: Vector[Attachment]): Vector[AttachmentObject] = {

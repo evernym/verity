@@ -253,7 +253,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     206 -> basicMessage_v10.Initialized,
     207 -> basicMessage_v10.MyRole,
-    208 -> basicMessage_v10.MessageSent
+    208 -> basicMessage_v10.MessageReceived
   )
 
 }

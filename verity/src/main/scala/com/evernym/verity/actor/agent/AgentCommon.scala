@@ -29,6 +29,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.actor.ProtocolIdDetail
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
+import kamon.metric.MeasurementUnit
 
 import scala.concurrent.Future
 
@@ -51,6 +52,7 @@ trait AgentCommon
       if (stateSize >= 0) { // so only states that can calculate size are part the metric
         MetricsWriter.histogramApi.recordWithTag(
           AS_ACTOR_AGENT_STATE_SIZE,
+          MeasurementUnit.information.bytes,
           stateSize,
           "actor_class" -> this.getClass.getSimpleName,
         )

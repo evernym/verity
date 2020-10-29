@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
-import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{MY_PUBLIC_DID, MY_SELF_REL_DID}

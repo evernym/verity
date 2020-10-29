@@ -52,12 +52,12 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   override lazy val journalContext: JournalContext = pce.parentLogContext + pinstId.take(5)
   val sendsMsgs: SendsMsgs = new SendsMsgsForContainer[M](this) {
 
-    def send(pmsg: ProtocolOutgoingMsg[Any]): Unit = {
+    def send(pmsg: ProtocolOutgoingMsg): Unit = {
           pmsg match {
-            case ProtocolOutgoingMsg(s: ServiceDecorator[M], to, from, mId, tId, pId, pDef) =>
+            case ProtocolOutgoingMsg(s: ServiceDecorator, to, from, mId, tId, pId, pDef) =>
               pce.system.handleOutMsg(ProtocolOutgoingMsg(s.msg, to, from, mId, tId, pId, pDef).envelope)
 
-            case pom: ProtocolOutgoingMsg[Any]  => pce.system.handleOutMsg(pom.envelope)
+            case pom: ProtocolOutgoingMsg  => pce.system.handleOutMsg(pom.envelope)
 
           }
     }

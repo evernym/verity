@@ -7,9 +7,10 @@ import com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandle
 import com.evernym.verity.actor.agent.msghandler.outgoing.{AgentOutgoingMsgHandler, OutgoingMsgParam}
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgExtractor, MsgThread}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.actor.InitProtocolReq
 import com.evernym.verity.protocol.engine._
@@ -161,7 +162,7 @@ trait AgentMsgHandler
   lazy val walletSeed: String = agentWalletSeedReq
 
   def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
-                       senderDID: DID, threadOpt: Option[MsgThread]): Unit = {
+                       senderDID: DID, threadOpt: Option[Thread]): Unit = {
     Future.successful("default implementation of storeOutgoingMsg")
   }
 
@@ -170,7 +171,7 @@ trait AgentMsgHandler
     Future.successful("default implementation of sendStoredMsgToEdge")
   }
 
-  def sendMsgToOtherEntity(omp: OutgoingMsgParam, msgId: MsgId, msgName: MsgName, thread: Option[MsgThread]=None): Future[Any] = {
+  def sendMsgToOtherEntity(omp: OutgoingMsgParam, msgId: MsgId, msgName: MsgName, thread: Option[Thread]=None): Future[Any] = {
     Future.successful("default implementation of sendPackedMsgToOtherEntity")
   }
 

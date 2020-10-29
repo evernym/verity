@@ -8,9 +8,9 @@ import scala.concurrent.Future
   */
 trait SendsMsgs {
 
-  def prepare(env: Envelope1[Any]): ProtocolOutgoingMsg[Any]
+  def prepare(env: Envelope1[Any]): ProtocolOutgoingMsg
 
-  def send(pmsg: ProtocolOutgoingMsg[Any]): Unit
+  def send(pmsg: ProtocolOutgoingMsg): Unit
 
   //TODO how a message is sent should not be a concern of the caller
   def sendSMS(toPhoneNumber: String, msg: String): Future[String]
@@ -18,7 +18,7 @@ trait SendsMsgs {
 
 abstract class SendsMsgsForContainer[M](container: ProtocolContainer[_,_,M,_,_,_]) extends SendsMsgs {
 
-  def prepare(env: Envelope1[Any]): ProtocolOutgoingMsg[Any] = {
+  def prepare(env: Envelope1[Any]): ProtocolOutgoingMsg = {
     val msgIdReq = env.msgId getOrElse {
       throw new RuntimeException("msgId required while sending protocol outgoing message")
     }

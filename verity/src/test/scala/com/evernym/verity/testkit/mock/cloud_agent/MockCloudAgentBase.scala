@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.mock.cloud_agent
 
 import com.evernym.verity.http.base.RemoteAgentAndAgencyIdentity
-import com.evernym.verity.testkit.{AgentWithMsgHelper, BasicSpecBase}
+import com.evernym.verity.testkit.AgentWithMsgHelper
 import com.evernym.verity.vault.StoreTheirKeyParam
 
 /**

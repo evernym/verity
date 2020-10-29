@@ -38,7 +38,7 @@ object RelationshipUtil {
     val authKey = prepareAuthorizedKey(agentKeyDID, agentKeyTags)
     val agentEndpoint = buildAgencyEndpoint(relationshipUtilParam.appConfig)
     val endpoints = if (relationshipUtilParam.thisAgentKeyId.contains(agentKeyDID)) {
-      Endpoints.init(RoutingServiceEndpoint(agentEndpoint.toString), authKey.keyId)
+      Endpoints.init(RoutingServiceEndpoint(agentEndpoint.toString, authKeyIds = Seq(authKey.keyId)))
     } else Endpoints.empty
     val keys = AuthorizedKeys(Seq(authKey))
     DidDoc(relScopeDID, Some(keys), Some(endpoints))
@@ -59,10 +59,10 @@ object RelationshipUtil {
     val endpointsOpt = routingDetail map {
       case Left(lrd: LegacyRoutingDetail) =>
         val ep = LegacyRoutingServiceEndpoint(
-          lrd.agencyDID, lrd.agentKeyDID, lrd.agentVerKey, lrd.agentKeyDlgProofSignature)
-        Endpoints.init(ep, authKey.keyId)
+          lrd.agencyDID, lrd.agentKeyDID, lrd.agentVerKey, lrd.agentKeyDlgProofSignature, Seq(authKey.keyId))
+        Endpoints.init(ep)
       case Right(rd: RoutingDetail)       =>
-        Endpoints.init(RoutingServiceEndpoint(rd.endpoint, rd.routingKeys), authKey.keyId)
+        Endpoints.init(RoutingServiceEndpoint(rd.endpoint, rd.routingKeys, Seq(authKey.keyId)))
     }
     val keys = AuthorizedKeys(Vector(authKey))
     val endpoints = endpointsOpt.getOrElse(Endpoints.empty)
@@ -79,7 +79,6 @@ object RelationshipUtil {
     didDoc.map { dd =>
       val currentAuthKeys = dd.authorizedKeys_!.keys
       val currentEndpoints = dd.endpoints_!
-      val currentEndpointToAuthKeys = dd.endpoints_!.endpointsToAuthKeys
 
       val migratedAuthKeys = currentAuthKeys.map(authorizedKeyMapper(relationshipUtilParam.walletVerKeyCacheHelper))
 
@@ -94,16 +93,18 @@ object RelationshipUtil {
       //remove duplicate auth keys
       val authKeysToRetain = result.filter(r => ! result.exists(_._2.exists(_.keyId == r._1.keyId))).map(_._1)
 
-      //removing auth key (referenced from endpoints) which is going to be removed from authorized keys
-      val dupKeyIdToRetainedKeyId = result.filter(_._2.isDefined).map(ak => ak._2.get.keyId -> ak._1.keyId).toMap
-      val updatedEndpointsToKeys = currentEndpointToAuthKeys.map { case (k, v) =>
-        k -> KeyIds(v.keyId.map(k => dupKeyIdToRetainedKeyId.getOrElse(k, k)))
+      //updated endpoints
+      val authKeyIdsToBeRetained = authKeysToRetain.map(_.keyId)
+      val updatedEndpoints = currentEndpoints.endpoints.map { ce =>
+        val updatedAuthKeys = ce.authKeyIds.map { ak =>
+          result.find(e => e._2.exists(_.keyId == ak)).map(_._1.keyId).getOrElse(ak)
+        }
+        ce.updateAuthKeyIds(updatedAuthKeys)
       }
-
       //update the did doc with new data
       dd.copy(
-        authorizedKeys = Some(AuthorizedKeys(authKeysToRetain)),
-        endpoints = Some(currentEndpoints.copy(endpointsToAuthKeys = updatedEndpointsToKeys))
+        authorizedKeys = Option(AuthorizedKeys(authKeysToRetain)),
+        endpoints = Option(Endpoints(updatedEndpoints))
       )
     }
   }

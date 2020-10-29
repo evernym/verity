@@ -7,8 +7,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
-import com.evernym.verity.actor.agent.state.{HasOwnerDetail, RelationshipState}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.user._
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -24,7 +23,6 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgFamily.VALID_MESSAGE_TYPE_REG_EX
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.{MsgState, PayloadWrapper}
 import com.evernym.verity.push_notification._
 import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.util.ThrottledLogger
@@ -55,11 +53,12 @@ trait MsgNotifier {
   }
 }
 
-trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
-  this: AgentPersistentActor
-    with HasLogger =>
+trait MsgNotifierForStoredMsgs
+  extends MsgNotifier
+    with PushNotifMsgBuilder {
 
-  def msgState: MsgState
+  this: AgentPersistentActor with MsgAndDeliveryHandler with HasLogger =>
+
   def agentMsgRouter: AgentMsgRouter
   def remoteMsgSendingSvc: RemoteMsgSendingSvc
   def defaultSelfRecipKeys: Set[KeyInfo]
@@ -100,7 +99,7 @@ trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
     // one com method registered (either http endpoint or push notification)
     logger.debug("about to notify user for newly received message: " + notifMsgDtl.uid + s"(${notifMsgDtl.msgType})")
     getAllComMethods.map { allComMethods =>
-      val fut1 = msgState.getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(pw, Option(allComMethods)))
+      val fut1 = getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(pw, Option(allComMethods)))
       val fut2 = Option(sendMsgToRegisteredPushNotif(notifMsgDtl, updateDeliveryStatus, Option(allComMethods)))
       val fut3 = Option(fwdMsgToSponsor(notifMsgDtl, Option(allComMethods)))
       val allFut = (fut1 ++ fut2 ++ fut3).toSet
@@ -160,6 +159,7 @@ trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
         sendMsgToRegisteredEndpointLegacy(pw, allComMethods)
       case Some(MPV_PLAIN)  =>
         sendMsgToRegisteredEndpointNew(pw, allComMethods)
+      case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
     }
   }
 
@@ -175,6 +175,7 @@ trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(pw.msg)(UrlDetail(hcm.value))
             case Some(MPV_PLAIN)  =>
               remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
+            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint (legacy): " + hcm)
         }
@@ -203,6 +204,7 @@ trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
 
               val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlDetail(hcm.value))
+            case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint: " + hcm)
         }
@@ -213,8 +215,8 @@ trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
   private def sendMsgToRegisteredPushNotif(notifMsgDtl: NotifyMsgDetail, updateDeliveryStatus: Boolean, allComMethods: Option[CommunicationMethods]): Future[Any] = {
     try {
       runWithInternalSpan("sendMsgDetailToRegisteredPushNotif", "MsgNotifierForStoredMsgs") {
-        val msg = msgState.getMsgReq(notifMsgDtl.uid)
-        val mds = msgState.getMsgDetails(notifMsgDtl.uid)
+        val msg = getMsgReq(notifMsgDtl.uid)
+        val mds = getMsgDetails(notifMsgDtl.uid)
         val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
         val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
         val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
@@ -301,7 +303,7 @@ trait MsgNotifierForStoredMsgs extends MsgNotifier with PushNotifMsgBuilder {
           getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
             logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
 
-            val mds = msgState.getMsgDetails(notifMsgDtl.uid)
+            val mds = getMsgDetails(notifMsgDtl.uid)
             val name = mds.getOrElse(NAME_KEY, "")
             val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
             val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
@@ -366,6 +368,7 @@ trait MsgNotifierForUserAgentCommon
   extends MsgNotifierForStoredMsgs {
   this: AgentPersistentActor
     with PushNotifMsgBuilder
+    with MsgAndDeliveryHandler
     with SendOutgoingMsg
     with HasLogger =>
 
@@ -374,12 +377,12 @@ trait MsgNotifierForUserAgentCommon
 
   override def sendStoredMsgToSelf(msgId:MsgId): Future[Any] = {
     logger.debug("about to send stored msg to self: " + msgId)
-    val msg = msgState.getMsgReq(msgId)
+    val msg = getMsgReq(msgId)
     notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType), updateDeliveryStatus = true)
   }
 }
 
-trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon with HasOwnerDetail {
+trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon {
 
   this: UserAgentPairwise with PushNotifMsgBuilder =>
 
@@ -399,8 +402,6 @@ trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon with
 trait MsgNotifierForUserAgent extends MsgNotifierForUserAgentCommon {
 
   this: UserAgent with PushNotifMsgBuilder =>
-
-  type StateType <: RelationshipState
 
   override def selfRelDID: DID = state.myDid_!
 

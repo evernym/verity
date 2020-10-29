@@ -9,7 +9,8 @@ import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRout
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgParam, ProtoParam, TrackingParam}
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, MsgThread, SendRemoteMsgHelper}
+import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, SendRemoteMsgHelper}
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdMsgHelper
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackedMsg, ParseParam, UnpackParam}
 import com.evernym.verity.config.AgentAuthKeyUtil
@@ -51,7 +52,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    */
   def handlePackedMsg(msg: Array[Byte],
                       reqMsgContext: ReqMsgContext,
-                      msgThread: Option[MsgThread]=None): Unit = {
+                      msgThread: Option[Thread]=None): Unit = {
     // flow diagram: fwd + ctl + proto + legacy, step 7 -- Receive and decrypt.
     try {
       //msg progress tracking related
@@ -135,7 +136,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
   def handleAgentMsgWrapper(amw: AgentMsgWrapper,
                             rmc: ReqMsgContext = ReqMsgContext(),
-                            msgThread: Option[MsgThread]=None): Unit = {
+                            msgThread: Option[Thread]=None): Unit = {
     //NOTE: this reqMsgContext is to pass some msg context information (like client's ip address, msg sender ver key etc)
     //which was being used by existing agent message
     implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, rmc)
@@ -197,7 +198,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
       }
   }
 
-  def extractMsgAndSendToProtocol(aimp: IncomingMsgParam, msgThread: Option[MsgThread]=None)
+  def extractMsgAndSendToProtocol(aimp: IncomingMsgParam, msgThread: Option[Thread]=None)
                                  (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
     import scala.language.existentials
     // flow diagram: ctl + proto, step 9 -- add context to actor if sender expects sync response.
@@ -365,11 +366,12 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     )
   }
 
-  def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[MsgThread]=None):
+  def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
   (TypedMsg[_], ThreadId, Option[DID], Option[MsgRespConfig]) = {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackVersionReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
-    (tmsg, msgThread.flatMap(_.thid).getOrElse(m.meta.threadId), m.meta.forRelationship, msgRespDetail)
+    val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
+    (tmsg, thId, m.meta.forRelationship, msgRespDetail)
   }
 
   private def getResourceName(msgName: String): String = {

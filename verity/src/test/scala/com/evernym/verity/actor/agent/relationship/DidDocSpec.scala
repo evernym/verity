@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
 import com.evernym.verity.testkit.BasicSpec
-import Endpoints._
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 
 class DidDocSpec extends BasicSpec {
@@ -16,7 +15,7 @@ class DidDocSpec extends BasicSpec {
         DidDoc(
           "did1",
           Some(AuthorizedKeys(Seq(AuthorizedKey("key1", "", Set.empty)))),
-          Some(Endpoints.init(PushEndpoint("1", "push-token"), Set("key1")))
+          Some(Endpoints.init(PushEndpoint("1", "push-token")))
         )
       }
     }
@@ -91,21 +90,6 @@ class DidDocSpec extends BasicSpec {
       }
     }
 
-    "when tried to add a new endpoint without corresponding authorized key" - {
-      "should throw an error" in {
-        val dd = DidDoc("did1")
-        val ex1 = intercept[RuntimeException] {
-          dd.updatedWithEndpoint(PushEndpoint("1", "push-token-0"), Set("key1"))
-        }
-        ex1.getMessage shouldBe s"authorized key 'key1' doesn't exists"
-
-        val ex2 = intercept[RuntimeException] {
-          dd.updatedWithEndpoint(PushEndpoint("1", "push-token-0"), Set.empty)
-        }
-        ex2.getMessage shouldBe s"at least one auth key id require to be associated with the given endpoint"
-      }
-    }
-
     "when tried to add/update an endpoint" - {
       "should get added/updated" in {
         val dd = DidDoc("did1")
@@ -114,11 +98,11 @@ class DidDocSpec extends BasicSpec {
           .updatedWithNewAuthKey("key1", Set.empty)
           .updatedWithNewAuthKey("key2", Set.empty)
 
-        val dd2 = dd1.updatedWithEndpoint(PushEndpoint("1", "push-token-0"), Set("key1"))
-        dd2.endpoints.value shouldBe Endpoints.init(PushEndpoint("1", "push-token-0"), Set("key1"))
+        val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("1", "push-token-0", Seq("key1")))
+        dd2.endpoints.value shouldBe Endpoints.init(HttpEndpoint("1", "push-token-0", Seq("key1")))
 
-        val dd3 = dd2.updatedWithEndpoint(PushEndpoint("1", "push-token-1"), Set("key1", "key2"))
-        dd3.endpoints.value shouldBe Endpoints.init(PushEndpoint("1", "push-token-1"), Set("key1", "key2"))
+        val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("1", "push-token-1", Seq("key1", "key2")))
+        dd3.endpoints.value shouldBe Endpoints.init(HttpEndpoint("1", "push-token-1", Seq("key1", "key2")))
       }
     }
 
@@ -127,14 +111,13 @@ class DidDocSpec extends BasicSpec {
         val dd = DidDoc("did1")
 
         val dd1 = dd.updatedWithNewAuthKey("key1", Set.empty)
-        val dd2 = dd1.updatedWithEndpoint(PushEndpoint("1", "push-token-0"), Set("key1"))
+        val dd2 = dd1.updatedWithEndpoint(PushEndpoint("1", "push-token-0"))
 
-        dd2.endpoints.value shouldBe Endpoints(Vector(PushEndpoint("1", "push-token-0")), Map("1" -> KeyIds(Set("key1"))))
+        dd2.endpoints.value shouldBe Endpoints.init(Vector(PushEndpoint("1", "push-token-0")))
         dd2.endpoints.value.endpoints.size shouldBe 1
 
         val dd3 = dd2.updatedWithRemovedEndpointById("1")
         dd3.endpoints.value.endpoints.size shouldBe 0
-        dd3.endpoints.value.endpointsToAuthKeys.size shouldBe 0
       }
     }
 
@@ -146,11 +129,11 @@ class DidDocSpec extends BasicSpec {
           .updatedWithNewAuthKey("key1", Set.empty)
           .updatedWithNewAuthKey("key2", Set.empty)
 
-        val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
-        dd2.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
+        val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001", Seq("key1")))
+        dd2.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001", Seq("key1")))
 
-        val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
-        dd3.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
+        val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001", Seq("key1", "key2")))
+        dd3.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001", Seq("key1", "key2")))
       }
     }
 
@@ -162,11 +145,11 @@ class DidDocSpec extends BasicSpec {
           .updatedWithNewAuthKey("key1", Set.empty)
           .updatedWithNewAuthKey("key2", Set.empty)
 
-        val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
-        dd2.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1"))
+        val dd2 = dd1.updatedWithEndpoint(HttpEndpoint("2", "http://localhost:6001", Seq("key1")))
+        dd2.`endpoints_!` shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001", Seq("key1")))
 
-        val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("3", "http://localhost:6001"), Set("key1", "key2"))
-        dd3.endpoints.value shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001"), Set("key1", "key2"))
+        val dd3 = dd2.updatedWithEndpoint(HttpEndpoint("3", "http://localhost:6001", Seq("key1", "key2")))
+        dd3.`endpoints_!` shouldBe Endpoints.init(HttpEndpoint("2", "http://localhost:6001", Seq("key1", "key2")))
       }
     }
 

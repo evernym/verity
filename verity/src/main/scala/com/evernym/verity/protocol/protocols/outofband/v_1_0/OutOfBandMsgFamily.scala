@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
@@ -31,7 +31,7 @@ sealed trait SignalMsg
 case class Identity(DID: DID, verKey: VerKey)
 
 object Signal {
-  case class ConnectionReused(`~thread`: MsgThread, relationship: DID) extends SignalMsg
+  case class ConnectionReused(`~thread`: Thread, relationship: DID) extends SignalMsg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SignalMsg
   def buildProblemReport(description: String, code: String): Signal.ProblemReport = {
     Signal.ProblemReport(
@@ -46,8 +46,8 @@ object Signal {
 sealed trait Msg extends MsgBase
 object Msg {
 
-  case class HandshakeReuse(`~thread`: MsgThread) extends Msg
-  case class HandshakeReuseAccepted(`~thread`: MsgThread) extends Msg
+  case class HandshakeReuse(`~thread`: Thread) extends Msg
+  case class HandshakeReuseAccepted(`~thread`: Thread) extends Msg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with Msg
   def buildProblemReport(description: String, code: String): Msg.ProblemReport = {
     Msg.ProblemReport(

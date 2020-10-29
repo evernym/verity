@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.agent
 
-import com.evernym.verity.actor.agent.agency.SponsorRel
 import com.evernym.verity.actor.{ForIdentifier, ShardRegionCommon}
 import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity}
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT

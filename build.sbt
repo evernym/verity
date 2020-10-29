@@ -50,6 +50,9 @@ val sdnotifyVer = "1.3" // NOTE: Do not downgrade SDNotify to 1.1!
 val scalatestVer = "3.2.0"
 val mockitoVer = "1.14.8"
 
+// compiler plugin versions
+val silencerVersion = "1.6.0"
+
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
@@ -138,7 +141,22 @@ lazy val settings = Seq(
   organization := "com.evernym",
   version := s"${major.value}.${minor.value}.${patch.value}",
   scalaVersion := "2.12.10",
-  scalacOptions := Seq("-feature", "-unchecked", "-deprecation", "-encoding", "utf8", "-Xmax-classfile-name", "128"),
+  scalacOptions := Seq(
+    "-feature",
+    "-unchecked",
+    "-deprecation",
+    "-encoding",
+    "utf8",
+    "-Xmax-classfile-name",
+    "128",
+    "-Xfatal-warnings",
+    "-P:silencer:pathFilters=.*/tictactoe/Role.scala;.*/deaddrop/Role.scala"
+  ),
+  // ComilerPlugin to allow suppression of a few warnings so we can get a clean build
+  libraryDependencies ++= Seq(
+    compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
+    "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
+  ),
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
   resolvers += "MsgPack" at "https://dl.bintray.com/velvia/maven",
@@ -276,7 +294,10 @@ lazy val commonLibraryDependencies = {
     "info.faljse" % "SDNotify" % sdnotifyVer,       //needed by app state manager to notify to systemd
     "org.velvia" %% "msgpack4s" % "0.6.0",
 
-    "org.fusesource.jansi" % "jansi" % "1.18"
+    "org.fusesource.jansi" % "jansi" % "1.18",
+
+    "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1"
+
   )
 
   //for macro libraries that are compile-time-only

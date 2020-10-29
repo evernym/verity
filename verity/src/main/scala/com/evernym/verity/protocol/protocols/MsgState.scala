@@ -1,19 +1,16 @@
 package com.evernym.verity.protocol.protocols
 
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.constants.Constants.YES
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
+import com.evernym.verity.actor.agent._
+import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}
-import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgReceivedOrdersDetail, MsgStatusUpdated, MsgThreadDetail}
-import com.evernym.verity.actor.agent.msghandler.outgoing.PayloadMetadata
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, MsgThread}
+import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgStatusUpdated}
 import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName, RefMsgId}
 import com.evernym.verity.util.TimeZoneUtil._
-import com.evernym.verity.util.Util.checkIfDIDLengthIsValid
 
 
 class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
@@ -46,7 +43,7 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
    * keeps delivery status (failed/successful etc) for different delivery destinations (push notification, http endpoint etc)
    * for given message
    */
-  private var msgDeliveryStatus: Map[MsgId, Map[Destination, MsgDeliveryStatus]] = Map.empty
+  private var msgDeliveryStatus: Map[MsgId, Map[Destination, MsgDeliveryDetail]] = Map.empty
 
   /**
    * mapping between MsgName (message type name, like: connection req, cred etc)
@@ -80,12 +77,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
 
   def getMsgPayload(uid: MsgId): Option[PayloadWrapper] = msgPayloads.get(uid)
 
-  def getMsgPayloadReq(uid: MsgId): PayloadWrapper = getMsgPayload(uid).getOrElse(
-    throw new InternalServerErrorException(DATA_NOT_FOUND.statusCode, Option("payload not found"))
-  )
-
-  def getMsgPayloadMetadata(uid: MsgId): Option[PayloadMetadata] = getMsgPayload(uid).flatMap(_.metadata)
-
   def getMsgReq(uid: MsgId): Msg = getMsgOpt(uid).getOrElse(
     throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: " + uid)))
 
@@ -97,7 +88,7 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
     getReplyToMsgId(msgId).flatMap(msgs.get)
   }
 
-  def getMsgDeliveryStatus(uid: MsgId): Map[String, MsgDeliveryStatus] = {
+  def getMsgDeliveryStatus(uid: MsgId): Map[String, MsgDeliveryDetail] = {
     msgDeliveryStatus.getOrElse(uid, Map.empty)
   }
 
@@ -107,41 +98,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
 
   def getMsgExpirationTime(forMsgType: String): Option[Seconds] = {
     msgExpirationTime.get(forMsgType)
-  }
-
-  def getMsgs(gmr: GetMsgsReqMsg): List[MsgDetail] = {
-    val msgIds = gmr.uids.getOrElse(List.empty).map(_.trim).toSet
-    val statusCodes = gmr.statusCodes.getOrElse(List.empty).map(_.trim).toSet
-    val filteredMsgs = {
-      if (msgIds.isEmpty && statusCodes.size == 1 && statusCodes.head == MSG_STATUS_RECEIVED.statusCode) {
-        unseenMsgIds.map(mId => mId -> getMsgOpt(mId))
-          .filter(_._2.nonEmpty)
-          .map(r => r._1 -> r._2.get)
-          .toMap
-      } else {
-        val uidFilteredMsgs = if (msgIds.nonEmpty) {
-          msgIds.map(mId => mId -> getMsgOpt(mId))
-            .filter(_._2.nonEmpty)
-            .map(r => r._1 -> r._2.get)
-            .toMap
-        } else msgs
-        if (statusCodes.nonEmpty) uidFilteredMsgs.filter(m => statusCodes.contains(m._2.statusCode))
-        else uidFilteredMsgs
-      }
-    }
-    filteredMsgs.map { case (uid, msg) =>
-      val payloadWrapper = if (gmr.excludePayload.contains(YES)) None else msgPayloads.get(uid)
-      val payload = payloadWrapper.map(_.msg)
-      MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty)
-    }.toList
-  }
-
-  def checkIfMsgExists(uidOpt: Option[MsgId]): Unit = {
-    uidOpt.foreach { uid =>
-      if (getMsgOpt(uid).isEmpty) {
-        throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: " + uid))
-      }
-    }
   }
 
   def checkIfMsgAlreadyNotExists(msgId: MsgId): Unit = {
@@ -154,12 +110,15 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
 
   def msgEventReceiver: Receive = {
     case mc: MsgCreated =>
-      val receivedOrders = mc.thread.map(th => th.receivedOrders.map(ro => ro.from -> ro.order).toMap)
-      val msgThread = mc.thread.map(th => MsgThread(Evt.getOptionFromValue(th.id),
-        Evt.getOptionFromValue(th.parentId), receivedOrders, Option(th.senderOrder)))
+      val receivedOrders = mc.thread.map(th => th.receivedOrders.map(ro => ro.from -> ro.order).toMap).getOrElse(Map.empty)
+      val msgThread = mc.thread.map(th => Thread(
+        Evt.getOptionFromValue(th.id),
+        Evt.getOptionFromValue(th.parentId),
+        Option(th.senderOrder),
+        receivedOrders))
       val msg = Msg(mc.typ, mc.senderDID, mc.statusCode,
-        getZonedDateTimeFromMillis(mc.creationTimeInMillis),
-        getZonedDateTimeFromMillis(mc.lastUpdatedTimeInMillis),
+        mc.creationTimeInMillis,
+        mc.lastUpdatedTimeInMillis,
         Evt.getOptionFromValue(mc.refMsgId), msgThread, mc.sendMsg)
       msgs += mc.uid -> msg
       updateMsgIndexes(mc.uid, msg)
@@ -168,15 +127,15 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
     case ma: MsgAnswered =>
       msgs.get(ma.uid).foreach { msg =>
         val updated = msg.copy(statusCode = ma.statusCode, refMsgId = Option(ma.refMsgId),
-          lastUpdatedDateTime = getZonedDateTimeFromMillis(ma.lastUpdatedTimeInMillis))
+          lastUpdatedTimeInMillis = ma.lastUpdatedTimeInMillis)
         msgs += ma.uid -> updated
         updateMsgIndexes(ma.uid, updated)
       }
 
     case msu: MsgStatusUpdated =>
       msgs.get(msu.uid).foreach { msg =>
-        val updated = msg.copy(statusCode = msu.statusCode, lastUpdatedDateTime =
-          getZonedDateTimeFromMillis(msu.lastUpdatedTimeInMillis))
+        val updated = msg.copy(statusCode = msu.statusCode, lastUpdatedTimeInMillis =
+          msu.lastUpdatedTimeInMillis)
         msgs += msu.uid -> updated
         updateMsgIndexes(msu.uid, updated)
       }
@@ -191,8 +150,8 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
 //        msgDetails -= mdsu.uid
       } else {
         val emds = msgDeliveryStatus.getOrElse(mdsu.uid, Map.empty)
-        val newMds = MsgDeliveryStatus(mdsu.statusCode, Evt.getOptionFromValue(mdsu.statusDetail),
-          getZonedDateTimeFromMillis(mdsu.lastUpdatedTimeInMillis), mdsu.failedAttemptCount)
+        val newMds = MsgDeliveryDetail(mdsu.statusCode, Evt.getOptionFromValue(mdsu.statusDetail),
+          mdsu.failedAttemptCount, mdsu.lastUpdatedTimeInMillis)
         val nmds = emds ++ Map(mdsu.to -> newMds)
         msgDeliveryStatus += mdsu.uid -> nmds
       }
@@ -219,27 +178,16 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
   }
 
   def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId, sendMsg: Boolean,
-                         msgStatus: String, threadOpt: Option[MsgThread], LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
+                         msgStatus: String, threadOpt: Option[Thread], LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfMsgAlreadyNotExists(msgId)
-    checkIfDIDLengthIsValid(senderDID)
-    val msgReceivedOrderDetail = threadOpt.flatMap(_.getReceivedOrders).getOrElse(Map.empty).
-      map(ro => MsgReceivedOrdersDetail(ro._1, ro._2)).toSeq
-    val msgThreadDetail = threadOpt.map(th => MsgThreadDetail(
-      Evt.getStringValueFromOption(th.thid), Evt.getStringValueFromOption(th.pthid), th.getSenderOrder, msgReceivedOrderDetail))
-    MsgCreated(msgId, mType, senderDID, msgStatus,
-      getMillisForCurrentUTCZonedDateTime, getMillisForCurrentUTCZonedDateTime,
-      LEGACY_refMsgId.getOrElse(Evt.defaultUnknownValueForStringType), msgThreadDetail, sendMsg)
+    MsgHelper.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg,
+      msgStatus, threadOpt, LEGACY_refMsgId)
   }
-
-  val seenMsgStatusCode: Set[String] = Set(
-    MSG_STATUS_CREATED, MSG_STATUS_SENT,
-    MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED,
-    MSG_STATUS_REVIEWED).map(_.statusCode)
 
   def updateMsgIndexes(msgId: MsgId, msg: Msg): Unit = {
     if (msg.statusCode == MSG_STATUS_RECEIVED.statusCode) {
       unseenMsgIds += msgId
-    } else if (seenMsgStatusCode.contains(msg.statusCode)) {
+    } else if (MsgHelper.seenMsgStatusCodes.contains(msg.statusCode)) {
       seenMsgIds += msgId
       unseenMsgIds -= msgId
     }
@@ -247,31 +195,4 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
       refMsgIdToMsgId += refMsgId -> msgId
     }
   }
-
-  /**
-   * THIS IS NOT USED AS OF NOW (but will be once we thoroughly test this logic)
-   *
-   * This is initial implementation of in-memory msg state cleanup for stale messages
-   * once we know this change is working at high level, then we should finalize it,
-   * make it more robust if needed (at least for short term)
-   *
-   */
-  def performStateCleanup(maxTimeToRetainSeenMsgsInMinutes: Int): Unit = {
-    val currentDateTime = getCurrentUTCZonedDateTime
-    val candidateMsgIds = seenMsgIds.filter { msgId =>
-      val msg = msgs(msgId)
-      val duration = ChronoUnit.MINUTES.between(msg.creationDateTime, currentDateTime)
-      duration >= maxTimeToRetainSeenMsgsInMinutes
-    }
-    msgs --= candidateMsgIds
-    msgDetails --= candidateMsgIds
-    msgPayloads --= candidateMsgIds
-    msgDeliveryStatus --= candidateMsgIds
-    seenMsgIds --= candidateMsgIds
-    unseenMsgIds --= candidateMsgIds
-    refMsgIdToMsgId = refMsgIdToMsgId.filterNot { case (refMsgId, msgId) =>
-      candidateMsgIds.contains(refMsgId) || candidateMsgIds.contains(msgId)
-    }
-  }
 }
-

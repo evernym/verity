@@ -121,7 +121,7 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
   }
 
   def buildSendsMsgs(threadId: ThreadId): SendsMsgsExt = new SendsMsgsExt {
-    def prepare(env: Envelope1[Any]): ProtocolOutgoingMsg[Any] = {
+    def prepare(env: Envelope1[Any]): ProtocolOutgoingMsg = {
       engine.ProtocolOutgoingMsg(env.msg,
         env.to,
         env.frm,
@@ -131,7 +131,7 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
         null)
     }
 
-    override def send(pmsg: ProtocolOutgoingMsg[Any]): Unit = {
+    override def send(pmsg: ProtocolOutgoingMsg): Unit = {
       outbox.add(pmsg)
     }
 
@@ -139,14 +139,14 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
   }
 }
 
-class Inbox(engine: ProtocolEngineLite, val nickname: String) extends BoxLike[ProtocolOutgoingMsg[Any], Any] {
+class Inbox(engine: ProtocolEngineLite, val nickname: String) extends BoxLike[ProtocolOutgoingMsg, Any] {
   override def name: String = this.nickname + "ProtocolEngine.inbox"
 
   override def itemType: String = "ProtocolOutgoingMsg"
 
-  override protected def processOneItem(pom: ProtocolOutgoingMsg[Any]): Any = {
+  override protected def processOneItem(pom: ProtocolOutgoingMsg): Any = {
     pom match {
-      case pmfp: ProtocolOutgoingMsg[Any] => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadId, protoRef, pmfp.envelope)
+      case pmfp: ProtocolOutgoingMsg => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadId, protoRef, pmfp.envelope)
       case _               => throw new RuntimeException("not supported")
     }
 

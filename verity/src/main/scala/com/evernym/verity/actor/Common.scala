@@ -26,25 +26,11 @@ final case class ForUrlStore(hashedUrl: String, msg: Any) extends ActorMessageCl
 }
 
 /**
- *
- * @param DID agent's DID (agent should not have a DID, this is legacy/wrong design)
- * @param verKey agent's verKey belonging to the DID
- */
-case class DidPair(DID: DID, verKey: VerKey)
-
-/**
  * agency agent's identity
  * @param DID agency agent's public DID
  * @param verKey agency agent's public DID verKey
  */
 case class AgencyPublicDid(DID: DID, verKey: VerKey, ledgers: Option[Ledgers]=None) extends ActorMessageClass
-
-/**
- *
- * @param forDID DID
- * @param agentKeyDID DID allocated to the agent actor (this is legacy/wrong design)
- */
-case class AgentDetail(forDID: DID, agentKeyDID: DID)
 
 //event
 object Evt {

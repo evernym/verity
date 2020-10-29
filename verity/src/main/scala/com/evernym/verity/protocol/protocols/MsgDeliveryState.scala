@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.MsgDeliveryStatusUpdated
+import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail}
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 
 
@@ -22,7 +23,7 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
 
   def updateDeliveryState(msgId: MsgId,
                           msg: Msg,
-                          deliveryStatus: Map[String, MsgDeliveryStatus],
+                          deliveryStatus: Map[String, MsgDeliveryDetail],
                           updatedDeliveryStatus: Option[MsgDeliveryStatusUpdated]=None): Unit = {
 
     updatedDeliveryStatus.foreach { newDeliveryStatus =>
@@ -61,7 +62,7 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
   }
 
   private def filterRetriableDeliveryStatus(criteria: RetryEligibilityCriteria,
-                                            msg: Msg, deliveryStatus: Map[String, MsgDeliveryStatus]): List[MsgDeliveryStatus] = {
+                                            msg: Msg, deliveryStatus: Map[String, MsgDeliveryDetail]): List[MsgDeliveryDetail] = {
     if (!criteria.exceptMsgTypes.contains(msg.getType) &&
       //only those msgs which is sent by given senderDID
       criteria.senderDID.forall(msg.senderDID == _)) {
@@ -73,13 +74,13 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
   }
 
   private def isEligibleForRetries(criteria: RetryEligibilityCriteria,
-                                   msg: Msg, deliveryStatus: Map[String, MsgDeliveryStatus]): Boolean = {
+                                   msg: Msg, deliveryStatus: Map[String, MsgDeliveryDetail]): Boolean = {
     filterRetriableDeliveryStatus(criteria, msg, deliveryStatus)
       .exists(_.failedAttemptCount < maxRetryAttempts)
   }
 
   private def isUndeliveredMsg(criteria: RetryEligibilityCriteria,
-                               msg: Msg, deliveryStatus: Map[String, MsgDeliveryStatus]): Boolean = {
+                               msg: Msg, deliveryStatus: Map[String, MsgDeliveryDetail]): Boolean = {
     filterRetriableDeliveryStatus(criteria, msg, deliveryStatus)
       .exists(_.failedAttemptCount >= maxRetryAttempts)
   }
@@ -111,8 +112,6 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
  * @param exceptMsgTypes if provided, then only those failed messages are chosen who's type is NOT one of the provided one
  * @param deliveryTargets if provided, then only those failed messages are chosen who's target was one of the provided one
  */
-case class RetryEligibilityCriteria(
-                                     senderDID: Option[DID]=None,
-                                     exceptMsgTypes: Set[String]=Set.empty,
-                                     deliveryTargets: Set[String]=Set.empty
-                                 )
+case class RetryEligibilityCriteria(senderDID: Option[DID]=None,
+                                    exceptMsgTypes: Set[String]=Set.empty,
+                                    deliveryTargets: Set[String]=Set.empty)

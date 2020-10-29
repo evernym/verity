@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.actor.agent.agency.SponsorRel
+import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
@@ -120,8 +120,8 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     try {
       fn()
     } catch {
-      case e: Exception => problemReport(e.getMessage)
       case e: ProvisioningException => problemReport(e.err)
+      case e: Exception => problemReport(e.getMessage)
     }
   }
 

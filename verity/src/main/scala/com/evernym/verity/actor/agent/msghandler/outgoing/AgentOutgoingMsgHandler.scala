@@ -6,21 +6,22 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
-import com.evernym.verity.actor.agent.{HasAgentActivity, AgentIdentity, MsgPackVersion, ThreadContextDetail, TypeFormat}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackVersion, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgThread
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifResponse}
@@ -37,23 +38,23 @@ trait AgentOutgoingMsgHandler
 
   lazy val defaultSelfRecipKeys = Set(KeyInfo(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
 
-  def agentOutgoingCommonCmdReceiver[A]: Receive = {
+  def agentOutgoingCommonCmdReceiver: Receive = {
 
     //[LEGACY] pinst -> actor protocol container (sendRespToCaller method) -> this actor
     case psrp: ProtocolSyncRespMsg      => handleProtocolSyncRespMsg(psrp)
 
     //pinst -> actor protocol container (send method) -> this actor
-    case ProtocolOutgoingMsg(sd: ServiceDecorator[A], to, _, rmId, tId, pinstId, pDef)
+    case ProtocolOutgoingMsg(sd: ServiceDecorator, to, _, rmId, tId, pinstId, pDef)
                                         => handleProtocolServiceDecorator(sd, to, rmId, tId, pDef, pinstId)
 
     //pinst -> actor protocol container (send method) -> this actor
-    case pom: ProtocolOutgoingMsg[A]    => handleProtocolOutgoingMsg(pom)
+    case pom: ProtocolOutgoingMsg    => handleProtocolOutgoingMsg(pom)
 
     //pinst -> actor driver (sendToForwarder method) -> this actor
-    case ssm: SendSignalMsg[A]          => handleSendSignalMsg(ssm)
+    case ssm: SendSignalMsg          => handleSendSignalMsg(ssm)
 
     //this actor -> this actor (after done some pre processing work)
-    case pssm: ProcessSendSignalMsg[A]  => processSendSignalMsg(pssm.ssm)
+    case pssm: ProcessSendSignalMsg  => processSendSignalMsg(pssm.ssm)
 
     //this actor -> this actor
     case ssm: SendStoredMsgToSelf       => handleSendStoredMsgToSelf(ssm.msgId)
@@ -74,15 +75,14 @@ trait AgentOutgoingMsgHandler
   /**
    * this is used when protocol container 'send msg api' sends 'ProtocolOutgoingMsg' to this agent actor
    * @param pom protocol outgoing message
-   * @tparam A
    */
-  def handleProtocolOutgoingMsg[A](pom: ProtocolOutgoingMsg[A]): Unit = {
+  def handleProtocolOutgoingMsg(pom: ProtocolOutgoingMsg): Unit = {
     logger.trace(s"sending protocol outgoing message: $pom")
     handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.threadId, pom.pinstId,
       pom.protoDef, Option(pom.requestMsgId)))
   }
 
-  def handleProtocolServiceDecorator[A](sd: ServiceDecorator[A],
+  def handleProtocolServiceDecorator(sd: ServiceDecorator,
                                         to: ParticipantId,
                                         requestMsgId: MsgId,
                                         threadId: ThreadId,
@@ -116,9 +116,8 @@ trait AgentOutgoingMsgHandler
   /**
    * this is send by actor driver (who handles outgoing signal messages)
    * @param ssm send signal message
-   * @tparam A
    */
-  def processSendSignalMsg[A](ssm: SendSignalMsg[A]): Unit = {
+  def processSendSignalMsg(ssm: SendSignalMsg): Unit = {
     logger.trace(s"sending signal msg to endpoint: $ssm")
     val outMsg = OutgoingMsg(
       msg = ssm.msg,
@@ -209,7 +208,7 @@ trait AgentOutgoingMsgHandler
     val agentJsonStr = if (threadContext.usesLegacyGenMsgWrapper) {
       AgentMsgPackagingUtil.buildPayloadWrapperMsg(agentJsonMsg.jsonStr, wrapperMsgType = agentJsonMsg.msgType.msgName)
     } else {
-      AgentMsgPackagingUtil.buildAgentMsgJson(List(JsonMsg(agentJsonMsg.jsonStr)), threadContext.msgPackVersion, threadContext.usesLegacyBundledMsgWrapper)
+      AgentMsgPackagingUtil.buildAgentMsgJson(List(JsonMsg(agentJsonMsg.jsonStr)), threadContext.usesLegacyBundledMsgWrapper)
     }
     logger.debug(s"outgoing msg: json msg: " + agentJsonMsg)
     val toDID = ParticipantUtil.agentId(mc.to)
@@ -259,6 +258,8 @@ trait AgentOutgoingMsgHandler
           case MPV_INDY_PACK | MPV_MSG_PACK =>
             // we pack the message if needed.
             packOutgoingMsg(omp, mc.to, threadContext.msgPackVersion, packForVerKey.map(svk => KeyInfo(Left(svk))))
+          case Unrecognized(_) =>
+            throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
         }
         logger.debug(s"outgoing msg will be sent to waiting caller...")
         sendMsgToWaitingCaller(updatedOmp, rmid, sar)
@@ -273,7 +274,7 @@ trait AgentOutgoingMsgHandler
                          msgType: MsgType,
                          mc: OutgoingMsgContext,
                          threadContext: ThreadContextDetail): Unit = {
-    val thread = Option(MsgThread(Option(threadContext.threadId)))
+    val thread = Option(Thread(Option(threadContext.threadId)))
     logger.debug("sending outgoing msg => self participant id: " + selfParticipantId)
     logger.debug("sending outgoing => toParticipantId: " + mc.to)
     val (sendResult, nextHop) = if (ParticipantUtil.DID(selfParticipantId) == ParticipantUtil.DID(mc.to)) {
@@ -339,7 +340,7 @@ trait AgentOutgoingMsgHandler
    * @param ssm
    * @tparam A
    */
-  def handleSendSignalMsg[A](ssm: SendSignalMsg[A]): Unit = {
+  def handleSendSignalMsg(ssm: SendSignalMsg): Unit = {
     processSendSignalMsg(ssm)
   }
 

@@ -7,13 +7,14 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{MsgBase, ThreadId}
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderAgencyDetail, SenderDetail}
 import org.json.JSONObject
 
 
 case class ConnReqAcceptedMsg_MFV_0_6(`@type`: String,
                                       `@id`: String,
-                                      `~thread`: MsgThread,
+                                      `~thread`: Thread,
                                       sendMsg: Boolean,
                                       senderDetail: SenderDetail,
                                       senderAgencyDetail: SenderAgencyDetail,
@@ -32,7 +33,7 @@ case class ConnReqAcceptedMsg_MFV_0_6(`@type`: String,
 
 case class ConnReqDeclinedMsg_MFV_0_6(`@type`: String,
                                       `@id`: String,
-                                      `~thread`: MsgThread,
+                                      `~thread`: Thread,
                                       sendMsg: Boolean,
                                       senderDetail: SenderDetail,
                                       senderAgencyDetail: SenderAgencyDetail,
@@ -56,7 +57,7 @@ case class AcceptConnReqMsg_MFV_0_6(`@type`: String,
                                     senderAgencyDetail: SenderAgencyDetail,
                                     replyToMsgId: String,
                                     keyDlgProof: Option[AgentKeyDlgProof]=None,
-                                    `~thread`: Option[MsgThread] = None) extends MsgBase {
+                                    `~thread`: Option[Thread] = None) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -74,7 +75,7 @@ case class DeclineConnReqMsg_MFV_0_6(`@type`: String,
                                      senderAgencyDetail: SenderAgencyDetail,
                                      replyToMsgId: String,
                                      keyDlgProof: AgentKeyDlgProof,
-                                     `~thread`: Option[MsgThread] = None) extends MsgBase {
+                                     `~thread`: Option[Thread] = None) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -91,7 +92,7 @@ case class ConnReqAnswerMsg(msgFamilyDetail: MsgFamilyDetail, id: String,
                             replyToMsgId: String,
                             keyDlgProof: Option[AgentKeyDlgProof],
                             msg: Option[Array[Byte]]=None,
-                            threadOpt: Option[MsgThread] = None) extends MsgBase {
+                            threadOpt: Option[Thread] = None) extends MsgBase {
   checkRequired("replyToMsgId", replyToMsgId)
 }
 
@@ -105,7 +106,7 @@ case class RedirectConnReqMsg_MFV_0_6(
                                        senderDetail: SenderDetail,
                                        senderAgencyDetail: SenderAgencyDetail,
                                        keyDlgProof: AgentKeyDlgProof,
-                                       `~thread`: Option[MsgThread] = None) extends MsgBase {
+                                       `~thread`: Option[Thread] = None) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -125,7 +126,7 @@ case class RedirectConnReqMsg(msgFamilyDetail: MsgFamilyDetail,
                               senderDetail: SenderDetail,
                               senderAgencyDetail: SenderAgencyDetail,
                               keyDlgProof: Option[AgentKeyDlgProof],
-                              threadOpt: Option[MsgThread] = None) extends MsgBase {
+                              threadOpt: Option[Thread] = None) extends MsgBase {
   checkRequired("replyToMsgId", replyToMsgId)
 
   def keyDlgProofReq: AgentKeyDlgProof = keyDlgProof.getOrElse(
@@ -152,7 +153,7 @@ case class ConnReqRedirectedMsg_MFV_0_5(
 case class ConnReqRedirectedMsg_MFV_0_6(
                                          `@type`: String,
                                          `@id`: String,
-                                         `~thread`: MsgThread,
+                                         `~thread`: Thread,
                                          sendMsg: Boolean,
                                          redirectDetail: JSONObject,
                                          replyToMsgId: String,
@@ -169,15 +170,15 @@ case class ConnReqRedirectedMsg_MFV_0_6(
   }
 }
 
-case class AcceptConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: MsgThread, sourceId: Option[String]=None) extends MsgBase
+case class AcceptConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends MsgBase
 
-case class DeclineConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: MsgThread, sourceId: Option[String]=None) extends MsgBase
+case class DeclineConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends MsgBase
 
-case class ConnReqAcceptedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: MsgThread) extends MsgBase
+case class ConnReqAcceptedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread) extends MsgBase
 
-case class ConnReqDeclinedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: MsgThread) extends MsgBase
+case class ConnReqDeclinedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread) extends MsgBase
 
-case class ConnReqRedirectResp_MFV_0_6(`@type`: String, `@id`: String, `~thread`: MsgThread, sourceId: Option[String]=None) extends MsgBase
+case class ConnReqRedirectResp_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends MsgBase
 
 object AcceptConnReqMsgHelper {
 
@@ -196,7 +197,7 @@ object AcceptConnReqMsgHelper {
   }
 
   def buildAcceptConnReqResp_MFV_0_6(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None): AcceptConnReqRespMsg_MFV_0_6 = {
-    AcceptConnReqRespMsg_MFV_0_6(MSG_TYPE_DETAIL_ACCEPT_CONN_REQ_RESP, `@id`, MsgThread(Option(threadId)), sourceId)
+    AcceptConnReqRespMsg_MFV_0_6(MSG_TYPE_DETAIL_ACCEPT_CONN_REQ_RESP, `@id`, Thread(Option(threadId)), sourceId)
   }
 
   def buildRespMsg(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None)
@@ -226,7 +227,7 @@ object DeclineConnReqMsgHelper {
   }
 
   def buildDeclineConnReqResp_MFV_0_6(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None): DeclineConnReqRespMsg_MFV_0_6 = {
-    DeclineConnReqRespMsg_MFV_0_6(MSG_TYPE_DETAIL_DECLINE_CONN_REQ_RESP, `@id`, MsgThread(Option(threadId)), sourceId)
+    DeclineConnReqRespMsg_MFV_0_6(MSG_TYPE_DETAIL_DECLINE_CONN_REQ_RESP, `@id`, Thread(Option(threadId)), sourceId)
   }
 
 
@@ -296,7 +297,7 @@ object RedirectConnReqMsgHelper {
   }
 
   def buildConnReqRedirectedResp_MFV_0_6(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None): ConnReqRedirectResp_MFV_0_6 = {
-    ConnReqRedirectResp_MFV_0_6(MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED, `@id`, MsgThread(Option(threadId)), sourceId)
+    ConnReqRedirectResp_MFV_0_6(MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED, `@id`, Thread(Option(threadId)), sourceId)
   }
 
   def buildRespMsg(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None)

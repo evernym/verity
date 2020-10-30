@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
-import com.evernym.verity.protocol.didcomm.decorators.EmbeddingAttachment
-import com.evernym.verity.protocol.didcomm.decorators.EmbeddingAttachment.buildAttachment
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.PresentProofContext
@@ -193,7 +193,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
         val presentationRequest = Msg.RequestPresentation(
           "",
           Vector(
-            buildAttachment(AttIds.request0, str)
+            buildAttachment(Some(AttIds.request0), str)
           )
         )
 
@@ -226,7 +226,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
         )
         match {
           case Success(presentation) =>
-            val payload = buildAttachment(AttIds.presentation0, presentation)
+            val payload = buildAttachment(Some(AttIds.presentation0), presentation)
             send(Msg.Presentation("", Seq(payload)))
             apply(PresentationUsed(presentation))
           case Failure(e) => signal(
@@ -281,15 +281,14 @@ object PresentProof {
     extractAttachment(AttIds.request0, msg.`request_presentations~attach`)
   }
 
-  def extractAttachment(attachmentId: String, attachments: Seq[EmbeddingAttachment]): Try[String] ={
+  def extractAttachment(attachmentId: String, attachments: Seq[AttachmentDescriptor]): Try[String] ={
     Try(attachments.size)
-      .getOrElse(throw new Exception("Attachment decorator don't have an Attachment"))
+    .getOrElse(throw new Exception("Attachment decorator don't have an Attachment"))
     match {
       case 1 =>
-        val att = attachments.head
-        att.`@id` match {
-          case id: String if id == attachmentId => Try(EmbeddingAttachment.extractString(att))
-          case _ =>  Failure(new Exception(""))
+        attachments.head match {
+          case att if att.`@id`.contains(attachmentId) => Try(AttachmentDescriptor.extractString(att))
+          case _ => Failure(new Exception("Attachment Id don't match"))
         }
       case _ => Failure(new Exception("Attachment has unsupported multiple attachments"))
     }

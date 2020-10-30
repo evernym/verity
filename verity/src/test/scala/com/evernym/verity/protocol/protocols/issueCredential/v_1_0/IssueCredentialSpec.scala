@@ -10,6 +10,7 @@ import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
+import org.scalatest.OptionValues
 
 import scala.reflect.ClassTag
 
@@ -322,8 +323,8 @@ class IssueCredentialSpec extends TestsProtocolsImpl(IssueCredentialProtoDef)
     credOffer.`offers~attach`.size shouldBe 1
     credOffer.price.contains(price) shouldBe true
     val attachedOffer = credOffer.`offers~attach`.head
-    attachedOffer.`@id` shouldBe "libindy-cred-offer-0"
-    attachedOffer.`mime-type` shouldBe "application/json"
+    attachedOffer.`@id`.value shouldBe "libindy-cred-offer-0"
+    attachedOffer.`mime-type`.value shouldBe "application/json"
     attachedOffer.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedOffer.data.base64))
     dataBase64Decoded shouldBe expectedOfferAttachment
@@ -333,8 +334,8 @@ class IssueCredentialSpec extends TestsProtocolsImpl(IssueCredentialProtoDef)
   def assertRequest(requestCred: RequestCred): Unit = {
     requestCred.`requests~attach`.size shouldBe 1
     val attachedRequest = requestCred.`requests~attach`.head
-    attachedRequest.`@id` shouldBe "libindy-cred-req-0"
-    attachedRequest.`mime-type` shouldBe "application/json"
+    attachedRequest.`@id`.value shouldBe "libindy-cred-req-0"
+    attachedRequest.`mime-type`.value shouldBe "application/json"
     attachedRequest.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedRequest.data.base64))
     dataBase64Decoded shouldBe expectedReqAttachment
@@ -344,8 +345,8 @@ class IssueCredentialSpec extends TestsProtocolsImpl(IssueCredentialProtoDef)
   def assertIssuedCred(issueCred: IssueCred): Unit = {
     issueCred.`credentials~attach`.size shouldBe 1
     val attachedCred = issueCred.`credentials~attach`.head
-    attachedCred.`@id` shouldBe "libindy-cred-0"
-    attachedCred.`mime-type` shouldBe "application/json"
+    attachedCred.`@id`.value shouldBe "libindy-cred-0"
+    attachedCred.`mime-type`.value shouldBe "application/json"
     attachedCred.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedCred.data.base64))
     println("cred:" + dataBase64Decoded)

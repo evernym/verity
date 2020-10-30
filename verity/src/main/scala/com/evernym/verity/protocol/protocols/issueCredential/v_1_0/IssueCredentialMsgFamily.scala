@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.{EmbeddingAttachment, PleaseAck}
+import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init
@@ -123,14 +123,14 @@ object Msg {
                          comment: Option[String]=Some("")) extends Msg
 
   case class OfferCred(credential_preview: CredPreview,
-                       `offers~attach`: Vector[EmbeddingAttachment],
+                       `offers~attach`: Vector[AttachmentDescriptor],
                        comment: Option[String]=Some(""),
                        price: Option[String]=None) extends Msg
 
-  case class RequestCred(`requests~attach`: Vector[EmbeddingAttachment],
+  case class RequestCred(`requests~attach`: Vector[AttachmentDescriptor],
                          comment: Option[String]=Some("")) extends Msg
 
-  case class IssueCred(`credentials~attach`: Vector[EmbeddingAttachment],
+  case class IssueCred(`credentials~attach`: Vector[AttachmentDescriptor],
                        comment: Option[String]=Some(""),
                        `~please_ack`: Option[PleaseAck]=None) extends Msg
 

@@ -14,6 +14,8 @@ object CommonProtoTypes {
                     wait_until_time: Option[String] = None
                    )
 
+  case class Localization(locale: Option[String] = None)
+
   case class SigBlock(signature: Base64Encoded,
                       sig_data: Base64Encoded,
                       signers: Seq[VerKey],

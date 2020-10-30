@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.EmbeddingAttachment
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 
@@ -58,9 +58,9 @@ sealed trait ProtoMsg extends MsgBase
 package object Msg {
   case class ProposePresentation(comment: String = "", presentation_proposal: PresentationPreview) extends ProtoMsg
   case class RequestPresentation(comment: String = "",
-                                 `request_presentations~attach`: Seq[EmbeddingAttachment]) extends ProtoMsg
+                                 `request_presentations~attach`: Seq[AttachmentDescriptor]) extends ProtoMsg
   case class Presentation(comment: String = "",
-                          `presentations~attach`: Seq[EmbeddingAttachment]) extends ProtoMsg
+                          `presentations~attach`: Seq[AttachmentDescriptor]) extends ProtoMsg
   case class Ack(status: String) extends AdoptableAck with ProtoMsg
   case class ProblemReport(description: ProblemDescription, override val comment: Option[String] = None)
     extends AdoptableProblemReport

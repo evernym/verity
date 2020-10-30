@@ -283,13 +283,12 @@ object PresentProof {
 
   def extractAttachment(attachmentId: String, attachments: Seq[AttachmentDescriptor]): Try[String] ={
     Try(attachments.size)
-      .getOrElse(throw new Exception("Attachment decorator don't have an Attachment"))
+    .getOrElse(throw new Exception("Attachment decorator don't have an Attachment"))
     match {
       case 1 =>
-        val att = attachments.head
-        att.`@id`.get match {
-          case id: String if id == attachmentId => Try(AttachmentDescriptor.extractString(att))
-          case _ =>  Failure(new Exception(""))
+        attachments.head match {
+          case att if att.`@id`.contains(attachmentId) => Try(AttachmentDescriptor.extractString(att))
+          case _ => Failure(new Exception("Attachment Id don't match"))
         }
       case _ => Failure(new Exception("Attachment has unsupported multiple attachments"))
     }

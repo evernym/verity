@@ -16,7 +16,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow}
+import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow, LibindyMetricsTick, LibindyMetricsTracker}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -29,6 +29,7 @@ import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
 
 import scala.concurrent.Future
+import scala.concurrent.duration.{Duration, DurationInt}
 
 class Platform(val aac: AgentActorContext)
   extends MsgTracingRegionActors
@@ -121,6 +122,15 @@ class Platform(val aac: AgentActorContext)
         singletonManagerPath = singletonManagerPath,
         settings = ClusterSingletonProxySettings(agentActorContext.system)),
       name = CLUSTER_SINGLETON_MANAGER_PROXY)
+  }
+
+  def createLibindyMetricsTrackerActor(): ActorRef = {
+    val libindyMetricsTracker = agentActorContext.system.actorOf(
+      Props(new LibindyMetricsTracker()),
+      name = LIBINDY_METRICS_TRACKER)
+    agentActorContext.system.scheduler.scheduleWithFixedDelay(Duration.Zero,
+      30.milliseconds, libindyMetricsTracker, LibindyMetricsTick())
+    libindyMetricsTracker
   }
 
   //token manager

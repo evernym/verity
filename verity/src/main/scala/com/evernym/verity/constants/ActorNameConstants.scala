@@ -22,6 +22,7 @@ object ActorNameConstants {
   val MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME = "MsgProgressTracker"
   val LEGACY_ROUTE_UPDATER = "LegacyRouteUpdater"
   val RESOURCE_USAGE_TRACKER = "resource-usage-tracker"
+  val LIBINDY_METRICS_TRACKER = "LibindyMetricsTracker"
 
   //cluster singleton actors
   val CLUSTER_SINGLETON_MANAGER = "cluster-singleton-mngr"

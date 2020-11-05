@@ -13,7 +13,7 @@ package object agentmsg {
   def buildAgentMsg(msg: Any, msgId: MsgId, threadId: ThreadId,
                     protoDef: ProtoDef, msgTypeFormat: TypeFormat,
                     protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): AgentJsonMsg = {
-    DefaultMsgCodec.toAgentMsg(msg, msgId, threadId, protoDef, msgTypeFormat, protoMsgOrderDetail)
+    DefaultMsgCodec.toAgentMsg(msg, msgId, threadId, protoDef.msgFamily, msgTypeFormat, protoMsgOrderDetail)
   }
 }
 

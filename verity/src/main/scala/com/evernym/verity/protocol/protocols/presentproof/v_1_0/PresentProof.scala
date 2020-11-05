@@ -60,7 +60,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
     case (s: States.RequestSent, Some(Role.Prover)  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
     case (s: State             , Some(senderRole)   , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, senderRole, msg)
     case (States.Presented(_)  , Some(Role.Verifier), msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
-    case (_                    , _                  , _: Msg.Ack                  ) => //Acks any other time are ignored
+    case (_                    , _                  , _  : Msg.Ack                ) => //Acks any other time are ignored
     case (_                    , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
     case (_                    , _                  , msg: ProtoMsg               ) => invalidMessageState(msg)
   }

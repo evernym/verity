@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.didcomm.decorators
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.protocol.engine.{MsgFamily, ProtoDef}
 import com.evernym.verity.util.{Base64Util, Util}
 
 sealed trait AttachmentData
@@ -35,6 +36,14 @@ object AttachmentDescriptor {
     val encoded = Base64Util.getBase64Encoded(json.getBytes)
 
     AttachmentDescriptor(id, mimeType, Base64(encoded))
+  }
+
+  def buildProtocolMsgAttachment[A](id: String, threadId: String, msgFamily: MsgFamily, payload: A) = {
+    val json = DefaultMsgCodec.toAgentMsg(payload, id, threadId, msgFamily).jsonStr
+
+    val encoded = Base64Util.getBase64Encoded(json.getBytes)
+
+    AttachmentDescriptor(Some(id), Some("application/didcomm-plain+json"), Base64(encoded))
   }
 
   def extractString(at: AttachmentDescriptor): String = {

@@ -30,7 +30,6 @@ class RelationshipProtocolSpec
 
   val defGoal = "some goal"
   val defGoalCode = "some-goal-code"
-  val requestAttach: Vector[String] = Vector()
   val publicDID = "publicDID"
   val labelStr = "label"
   val label: Option[String] = Option(labelStr)
@@ -543,7 +542,7 @@ class RelationshipProtocolSpec
       requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
@@ -551,7 +550,7 @@ class RelationshipProtocolSpec
       println("invitation: " + invitation)
       checkInvitationState(invitation.invitation)
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
@@ -572,7 +571,7 @@ class RelationshipProtocolSpec
       (requester engage provisioner) ~ Create(label, emptyProfileUrl)
       requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = None)
       inviteMsg.shortInviteURL shouldBe None
@@ -581,7 +580,7 @@ class RelationshipProtocolSpec
       println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = None)
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = None)
       inviteMsg2.shortInviteURL shouldBe None
@@ -603,7 +602,7 @@ class RelationshipProtocolSpec
       requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
@@ -611,7 +610,7 @@ class RelationshipProtocolSpec
       println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
@@ -634,7 +633,7 @@ class RelationshipProtocolSpec
       requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
@@ -642,7 +641,7 @@ class RelationshipProtocolSpec
       println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, None)
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
       val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
@@ -666,7 +665,7 @@ class RelationshipProtocolSpec
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
-        requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+        requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
         val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
         requester ~ InviteShortened(shortenInviteMsg.invitationId, shortenInviteMsg.inviteURL, shortUrl)
         val inviteMsg = requester expect signal[Signal.Invitation]
@@ -676,7 +675,7 @@ class RelationshipProtocolSpec
         checkInvitationState(invitation.invitation)
 
         // could be sent again.
-        requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+        requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
         val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
         requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
         val inviteMsg2 = requester expect signal[Signal.Invitation]
@@ -697,7 +696,7 @@ class RelationshipProtocolSpec
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
-        requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+        requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
         val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
         requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
         val problemReport = requester expect signal[Signal.ProblemReport]
@@ -705,7 +704,7 @@ class RelationshipProtocolSpec
         val invitationState = requester expect state[State.InvitationCreated]
         checkInvitationState(invitationState.invitation)
 
-        requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+        requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
         val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
         requester ~ InviteShorteningFailed(shortenInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
@@ -724,7 +723,7 @@ class RelationshipProtocolSpec
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
-          requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+          requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
           val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
           requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
@@ -732,7 +731,7 @@ class RelationshipProtocolSpec
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation)
 
-          requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+          requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
           val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
           requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
           val inviteMsg2 = requester expect signal[Signal.Invitation]
@@ -753,7 +752,7 @@ class RelationshipProtocolSpec
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
-          requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(true))
+          requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
           val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
           requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
@@ -761,7 +760,7 @@ class RelationshipProtocolSpec
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation, profileUrl = Option(defLogo))
 
-          requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(false))
+          requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(false))
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkOOBInvitationData(inviteMsg2)
           inviteMsg2.shortInviteURL shouldBe None
@@ -784,7 +783,7 @@ class RelationshipProtocolSpec
       requester expect signal[Signal.Created]
       requester.state shouldBe a[State.Created]
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(false))
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(false))
       val inviteMsg = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
@@ -792,7 +791,7 @@ class RelationshipProtocolSpec
       println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
-      requester ~ OutOfBandInvitation(defGoalCode, defGoal, requestAttach, Some(false))
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(false))
       val inviteMsg2 = requester expect signal[Signal.Invitation]
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
@@ -930,7 +929,7 @@ class RelationshipProtocolSpec
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
-        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
         val problemReport = requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe ProblemReportCodes.noPhoneNumberDefined
       }
@@ -946,7 +945,7 @@ class RelationshipProtocolSpec
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
-        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
         val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
         checkOOBInvitationUrlData(smsInviteMsg.inviteURL, smsInviteMsg.invitationId)
         val invitation = requester expect state[State.InvitationCreated]
@@ -956,7 +955,7 @@ class RelationshipProtocolSpec
         smsSentMsg.invitationId shouldBe smsInviteMsg.invitationId
 
         // could be sent again.
-        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
         val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
         checkOOBInvitationUrlData(smsInviteMsg2.inviteURL, smsInviteMsg2.invitationId)
         val invitationAgain = requester expect state[State.InvitationCreated]
@@ -977,7 +976,7 @@ class RelationshipProtocolSpec
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
-        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
         val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
         val invitation = requester expect state[State.InvitationCreated]
         checkInvitationState(invitation.invitation)
@@ -987,7 +986,7 @@ class RelationshipProtocolSpec
         val invitationState = requester expect state[State.InvitationCreated]
         checkInvitationState(invitationState.invitation)
 
-        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+        requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
         val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
         requester ~ InviteShorteningFailed(smsInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
@@ -1006,7 +1005,7 @@ class RelationshipProtocolSpec
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
-          requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+          requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
           val smsInviteMsg = requester expect signal[Signal.SendSMSInvite]
           val invitation = requester expect state[State.InvitationCreated]
           checkInvitationState(invitation.invitation)
@@ -1016,7 +1015,7 @@ class RelationshipProtocolSpec
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation)
 
-          requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal, requestAttach)
+          requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
           val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
           checkOOBInvitationUrlData(smsInviteMsg2.inviteURL, smsInviteMsg2.invitationId)
           val invitationAgain = requester expect state[State.InvitationCreated]

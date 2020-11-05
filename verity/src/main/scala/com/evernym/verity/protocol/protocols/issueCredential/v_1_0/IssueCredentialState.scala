@@ -19,7 +19,13 @@ object State {
 
   trait PostInteractionStarted extends HasMyAndTheirDid
 
-  case class Initialized(myPwDid: String, theirPwDid: String) extends HasMyAndTheirDid {
+  case class Initialized(myPwDid: String,
+                         theirPwDid: String,
+                         agentName: Option[String],
+                         logoUrl: Option[String],
+                         agencyVerkey: Option[String],
+                         publicDid: Option[String]
+                        ) extends HasMyAndTheirDid {
     override def status: String = "Initialized"
   }
 

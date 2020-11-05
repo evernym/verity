@@ -257,7 +257,12 @@ trait ProtocolContext[P,R,M,E,S,I]
               } catch {
                 case me: MatchError =>
                   recordWarn(s"no protocol message handler for: ${me.getMessage}")
-                  throw new NoProtocolMsgHandler(state.toString, sender.role.toString, msg.toString, me)
+                  throw new NoProtocolMsgHandler(
+                    state.getClass.getSimpleName,
+                    sender.role.map(_.toString).getOrElse("UNKNOWN"),
+                    msg.getClass.getSimpleName,
+                    me
+                  )
               }
             }
           }
@@ -587,4 +592,4 @@ class NoControlHandler(ctl: String, me: MatchError) extends NoHandler(s"no contr
 class NoEventHandler(state: String, role: String, event: String, me: MatchError) extends NoHandler(s"no event handler found for event `$event` in state `$state` with role `$role`", me)
 class NoSystemMsgHandler(sysMsg: String, me: MatchError) extends NoHandler(s"no system msg handler found for system message `$sysMsg`", me)
 class NoProtocolMsgHandler(state: String, role: String, msg: String, me: MatchError)
-  extends NoHandler(s"no protocol msg handler found for message `$msg` in state `$state` with role `$role`", me)
+  extends NoHandler(s"no protocol msg handler found for message `${msg}` in state `$state` with role `$role`", me)

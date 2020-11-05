@@ -22,15 +22,15 @@ case class AttribTag(attrib: Attribute) extends Tag {
 }
 
 object Tag {
-  val blue = ColorTag(BLUE)
-  val black = ColorTag(BLACK)
-  val red = ColorTag(RED)
-  val green = ColorTag(GREEN)
-  val yellow = ColorTag(YELLOW)
-  val magenta = ColorTag(MAGENTA)
-  val cyan = ColorTag(CYAN)
-  val white = ColorTag(WHITE)
-  val underline = AttribTag(UNDERLINE)
-  val bold = AttribTag(INTENSITY_BOLD)
+  val blue: ColorTag = ColorTag(BLUE)
+  val black: ColorTag = ColorTag(BLACK)
+  val red: ColorTag = ColorTag(RED)
+  val green: ColorTag = ColorTag(GREEN)
+  val yellow: ColorTag = ColorTag(YELLOW)
+  val magenta: ColorTag = ColorTag(MAGENTA)
+  val cyan: ColorTag = ColorTag(CYAN)
+  val white: ColorTag = ColorTag(WHITE)
+  val underline: AttribTag = AttribTag(UNDERLINE)
+  val bold: AttribTag = AttribTag(INTENSITY_BOLD)
 }
 

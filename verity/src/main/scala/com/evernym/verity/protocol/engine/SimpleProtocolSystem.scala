@@ -29,7 +29,6 @@ case class DidRouter(routes: Map[DID,Domain] = Map.empty) {
       case _ => throw new RuntimeException(s"""DID "$did" already registered to another domain""")
     }
   }
-
 }
 
 trait SegmentedStateStore {
@@ -222,7 +221,7 @@ class Domain(override val domainId: DomainId,
     startInteraction(domainId, ctl)
   }
 
-  def startInteraction(did: DID, ctl: Control): Option[Driver] = {
+  def startInteraction(did: DID, ctl: Control): ThreadId = {
     val rel = lookup_!(did)
     startInteractionRel(rel, ctl)
   }
@@ -231,11 +230,11 @@ class Domain(override val domainId: DomainId,
   //  it doesn't provide type safety among other Strings, and functional
   //  overloading doesn't work properly because everything can be implicitly
   //  converted to a string.
-  def startInteractionRel(rel: Relationship, ctl: Control): Option[Driver] = {
+  def startInteractionRel(rel: Relationship, ctl: Control): ThreadId = {
     val ctlEnvelope = MsgUtil.encloseCtl(ctl)
     val ctnr = containerFor(ctl, ctlEnvelope.threadId, rel)
     handleControlRel(ctlEnvelope, rel)
-    ctnr.driver
+    ctlEnvelope.threadId
   }
 
   val logger: Logger = Logger(s"Domain")
@@ -268,8 +267,6 @@ class Domain(override val domainId: DomainId,
   }
 
 }
-
-
 
 trait HasRelationships {
   this: Domain =>

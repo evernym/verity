@@ -9,7 +9,11 @@ case class StateData(requests: List[ProofRequest] = List(),
                      presentation: Option[ProofPresentation] = None,
                      presentedAttributes: Option[AttributesPresented] = None,
                      verificationResults: Option[String] = None,
-                     presentationAcknowledged: Boolean = false) {
+                     presentationAcknowledged: Boolean = false,
+                     agentName: Option[String] = None,
+                     logoUrl: Option[String] = None,
+                     agencyVerkey: Option[String] = None,
+                     publicDid: Option[String] = None) {
 
   def addPresentation(presentation: String): StateData = {
     copy(presentation = Some(DefaultMsgCodec.fromJson[ProofPresentation](presentation)))
@@ -41,7 +45,7 @@ sealed trait HasData {
 object States {
   // Common States
   case class Uninitialized() extends State
-  case class Initialized() extends State
+  case class Initialized(data: StateData) extends State
   case class ProblemReported(data: StateData, problemDescription: String) extends State with HasData
   case class Rejected(data: StateData, whoRejected: Role, reasonGiven: Option[String]) extends State with HasData
 

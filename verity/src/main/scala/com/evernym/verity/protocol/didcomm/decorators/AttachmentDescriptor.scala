@@ -38,7 +38,7 @@ object AttachmentDescriptor {
     AttachmentDescriptor(id, mimeType, Base64(encoded))
   }
 
-  def buildProtocolMsgAttachment[A](id: String, threadId: String, msgFamily: MsgFamily, payload: A) = {
+  def buildProtocolMsgAttachment[A](id: String, threadId: String, msgFamily: MsgFamily, payload: A): AttachmentDescriptor = {
     val json = DefaultMsgCodec.toAgentMsg(payload, id, threadId, msgFamily).jsonStr
 
     val encoded = Base64Util.getBase64Encoded(json.getBytes)

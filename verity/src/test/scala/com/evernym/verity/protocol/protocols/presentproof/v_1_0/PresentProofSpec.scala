@@ -1,16 +1,34 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.protocol.engine.{AnonCredRequests, DID, LedgerAccess, Nonce, WalletAccess, WalletAccessTest}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.Base64Util
+import org.json.JSONObject
 
 import scala.util.Try
 
 class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
   with BasicFixtureSpec {
     import PresentProofSpec._
+
+    val orgName = "Acme Corp"
+    val logoUrl = "https://robohash.org/234"
+    val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
+    val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
+
+    override val defaultInitParams = Map(
+      NAME -> orgName,
+      LOGO_URL -> logoUrl,
+      AGENCY_DID_VER_KEY -> agencyVerkey,
+      MY_PUBLIC_DID -> publicDid
+    )
+
 
     def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 
@@ -138,6 +156,105 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
       }
 
+      "should handle Out-Of-Band Invitation happy path" in { f =>
+        val (verifier, prover) = indyAccessMocks(f)
+
+        var nonce: Option[Nonce] = None
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ Ctl.Request(
+          "",
+          Some(List(requestedAttr1)),
+          None,
+          None,
+          Some(true)
+        )
+
+        val invitation = verifier expect signal[Sig.Invitation]
+
+        invitation.inviteURL should not be empty
+        val base64 = invitation.inviteURL.split("oob=")(1)
+        val invite = new String(Base64Util.getBase64Decoded(base64))
+        val inviteObj = new JSONObject(invite)
+
+        inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+        inviteObj.has("@id") shouldBe true
+        inviteObj.getString("profileUrl") shouldBe logoUrl
+        inviteObj.getString("label") shouldBe orgName
+        inviteObj.getString("public_did") should endWith(publicDid)
+
+        inviteObj.getJSONArray("service")
+          .getJSONObject(0)
+          .getJSONArray("routingKeys")
+          .getString(1) shouldBe agencyVerkey
+
+        val attachmentBase64 = inviteObj
+          .getJSONArray("request~attach")
+          .getJSONObject(0)
+          .getJSONObject("data")
+          .getString("base64")
+
+        val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
+        val attachmentObj = new JSONObject(attachment)
+
+        attachmentObj.getString("@id") should not be empty
+        attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation"
+        attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
+
+        val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
+
+        verifier.backstate.roster.selfRole_! shouldBe Role.Verifier
+        verifier.expectAs(state[States.RequestSent]){ s =>
+          s.data.requests should have size 1
+          nonce = Some(s.data.requests.head.nonce)
+        }
+
+        prover ~ Ctl.AttachedRequest(attachedRequest)
+
+        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
+          msg.proof_request.nonce shouldBe nonce.value
+        }
+        prover.role shouldBe Role.Prover
+        prover.expectAs(state[States.RequestReceived]){ s =>
+          s.data.requests should have size 1
+          s.data.requests.head.nonce shouldBe nonce.value
+        }
+        prover ~ Ctl.AcceptRequest()
+
+        // Verifier should receive presentation and verify it
+        verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
+          msg.verification_result shouldBe VerificationResults.ProofValidated
+          msg.requested_presentation should not be null
+        }
+
+        verifier.expectAs(state[States.Complete]) { s =>
+          s.data.presentation should not be None
+          s.data.presentedAttributes should not be None
+          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
+          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
+        }
+
+        // Prover should be in Presented state
+        prover.expectAs(state[States.Presented]) {s =>
+          s.data.presentation should not be None
+          s.data.presentationAcknowledged shouldBe true
+        }
+
+        verifier ~ Ctl.Status()
+        verifier.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results.value shouldBe an[PresentationResult]
+          s.status shouldBe "Complete"
+        }
+
+        prover ~ Ctl.Status()
+        prover.expectAs(signal[Sig.StatusReport]) { s =>
+          s.error shouldBe None
+          s.results shouldBe None
+          s.status shouldBe "Presented"
+        }
+      }
+
       "should handle all self attested - real wallet access" in { f =>
         val (verifier, prover) = indyAccessMocks(f, wa=WalletAccessTest.walletAccess())
 
@@ -206,7 +323,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
       }
 
-      "should fail with unexpected self attested" in {f =>
+      "should fail with unexpected self attested" in { f =>
         val (verifier, prover) = indyAccessMocks(f, wa=WalletAccessTest.walletAccess())
 
         var nonce: Option[Nonce] = None

@@ -14,6 +14,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReport
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.StatusReport
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyAndTheirDid, PostInteractionStarted}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{OutOfBandInvitation, prepareInviteUrl}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
 import com.evernym.verity.util.MsgIdProvider
@@ -83,8 +84,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     buildOffer(m) match {
       case Success((event, offer)) =>
         ctx.apply(event)
-        val byInvitation = m.by_invitation.getOrElse(false)
-        if(!byInvitation) {
+        if(!m.by_invitation.getOrElse(false)) {
           ctx.send(offer)
           ctx.signal(SignalMsg.Sent(offer))
         }
@@ -454,19 +454,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[SignalMsg.Invitation] = {
-    val service = for(
-      agencyVerkey    <- toTry(s.agencyVerkey);
-      did             <- toTry(ctx.getRoster.selfId);
-      verkey          <- ctx.wallet.verKey(did);
-      serviceEndpoint <- Try(ctx.serviceEndpoint);
-      routingKeys <- Try(Vector(verkey, agencyVerkey))
-    ) yield DIDDoc(
-      did,
-      verkey,
-      serviceEndpoint,
-      routingKeys)
-      .toDIDDocFormatted
-      .service
+    val service = InviteUtil.buildServiced(s.agencyVerkey, ctx)
 
     val offerAttachment = Try(
       buildProtocolMsgAttachment(
@@ -476,17 +464,12 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         offer)
     )
 
-    val invite = for(
-      service         <- service;
-      offerAttachment <- offerAttachment
-    ) yield OutOfBandInvitation(
-      s.agentName.getOrElse(""),
-      "issue-vc",
-      "To issue a credential",
-      Vector(offerAttachment),
-      service,
+    val invite = InviteUtil.buildInvite(
+      s.agentName,
       s.logoUrl,
-      s.publicDid.map(s"did:sov:"+_)
+      s.publicDid,
+      service,
+      offerAttachment
     )
 
     val signal = for(

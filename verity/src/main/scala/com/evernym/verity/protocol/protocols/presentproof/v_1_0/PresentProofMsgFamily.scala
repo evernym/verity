@@ -21,13 +21,14 @@ object PresentProofMsgFamily
   )
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
-    "Init"              -> classOf[Ctl.Init],
-    "request"           -> classOf[Ctl.Request],
-    "present"           -> classOf[Ctl.AcceptRequest],
-    "accept-proposal"   -> classOf[Ctl.AcceptProposal],
-    "propose"           -> classOf[Ctl.Propose],
-    "reject"            -> classOf[Ctl.Reject],
-    "status"            -> classOf[Ctl.Status],
+    "Init"               -> classOf[Ctl.Init],
+    "request-invitation" -> classOf[Ctl.AttachedRequest],
+    "request"            -> classOf[Ctl.Request],
+    "present"            -> classOf[Ctl.AcceptRequest],
+    "accept-proposal"    -> classOf[Ctl.AcceptProposal],
+    "propose"            -> classOf[Ctl.Propose],
+    "reject"             -> classOf[Ctl.Reject],
+    "status"             -> classOf[Ctl.Status],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -36,6 +37,7 @@ object PresentProofMsgFamily
     classOf[Sig.PresentationResult]   -> "presentation-result",
     classOf[Sig.ProblemReport]        -> "problem-report",
     classOf[Sig.StatusReport]         -> "status-report",
+    classOf[Sig.Invitation]             -> "protocol-invitation"
   )
 }
 
@@ -79,11 +81,20 @@ package object Msg {
 // Control Messages
 sealed trait CtlMsg extends Control with MsgBase
 package object Ctl {
-  case class Init(selfId: ParameterValue, otherId: ParameterValue) extends CtlMsg
+  case class Init(selfId: ParameterValue,
+                  otherId: ParameterValue,
+                  agentName: Option[String],
+                  logoUrl: Option[String],
+                  agencyVerkey: Option[String],
+                  publicDid: Option[String]
+                 ) extends CtlMsg
+  case class AttachedRequest(request: Msg.RequestPresentation) extends CtlMsg
   case class Request(name: String,
                      proof_attrs: Option[List[ProofAttribute]],
                      proof_predicates: Option[List[ProofPredicate]],
-                     revocation_interval: Option[RevocationInterval]) extends CtlMsg
+                     revocation_interval: Option[RevocationInterval],
+                     by_invitation: Option[Boolean]=None,
+                    ) extends CtlMsg
   case class AcceptRequest(selfAttestedAttrs: Map[String, String]=Map.empty) extends CtlMsg
   case class AcceptProposal() extends CtlMsg
   case class Propose(attributes: Option[List[PresentationPreviewAttribute]],
@@ -98,6 +109,7 @@ package object Ctl {
 sealed trait SigMsg
 case class Problem(code: Int, error: String)
 package object Sig {
+  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SigMsg
   case class ReviewRequest(proof_request: ProofRequest, can_fulfill: Boolean) extends SigMsg
   case class ReviewProposal(attributes: Seq[PresentationPreviewAttribute],
                             predicates: Seq[PresentationPreviewPredicate],

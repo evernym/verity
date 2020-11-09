@@ -5,6 +5,7 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
 import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.protocol.engine._
 
 import scala.reflect.ClassTag
@@ -76,10 +77,14 @@ trait MsgCodec {
 
   def extractMetadata(jsonStr: JsonStr, msgPackVersion: MsgPackVersion): MsgMetadata
 
-  def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, protoDef: ProtoDef,
+  def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, msgFamily: MsgFamily): AgentJsonMsg = {
+    toAgentMsg(value, msgId, threadId, msgFamily, STANDARD_TYPE_FORMAT, None)
+  }
+
+  def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, msgFamily: MsgFamily,
                     msgTypeFormat: TypeFormatLike, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): AgentJsonMsg = {
     runWithInternalSpan("toAgentMsg", "MsgCodec") {
-      val msgType = protoDef.msgFamily.msgType(value.getClass)
+      val msgType = msgFamily.msgType(value.getClass)
       val doc = value match {
         case s: String  => docFromStr(s)
         case ojb        => toDocument(ojb)

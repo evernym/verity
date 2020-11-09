@@ -34,6 +34,7 @@ object IssueCredMsgFamily
  */
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "Init"                              -> classOf[Init],
+    "offer-invitation"                  -> classOf[Ctl.AttachedOffer],
     "propose"                           -> classOf[Ctl.Propose],
     "offer"                             -> classOf[Ctl.Offer],
     "request"                           -> classOf[Ctl.Request],
@@ -51,7 +52,8 @@ object IssueCredMsgFamily
     classOf[SignalMsg.ShouldIssue]            -> "should-issue",
     classOf[SignalMsg.StatusReport]           -> "status-report",
     classOf[SignalMsg.ProblemReport]          -> "problem-report",
-    classOf[SignalMsg.Ack]                    -> "ack-received"
+    classOf[SignalMsg.Ack]                    -> "ack-received",
+    classOf[SignalMsg.Invitation]             -> "protocol-invitation"
   )
 }
 
@@ -73,6 +75,8 @@ object Ctl {
 
   case class Status() extends Ctl
 
+  case class AttachedOffer(offer: OfferCred) extends Ctl
+
   case class Propose(cred_def_id: String,
                      credential_values: Map[String, String],
                      comment: Option[String]=Some("")) extends Ctl
@@ -81,7 +85,9 @@ object Ctl {
                    credential_values: Map[String, String],
                    price: Option[String]=None,
                    comment: Option[String]=Some(""),
-                   auto_issue: Option[Boolean]=None) extends Ctl
+                   auto_issue: Option[Boolean]=None,
+                   by_invitation: Option[Boolean]=None,
+                  ) extends Ctl
 
   case class Request(cred_def_id: String,
                      comment: Option[String]=Some("")) extends Ctl
@@ -96,6 +102,7 @@ object Ctl {
 sealed trait SignalMsg
 object SignalMsg {
   case class Sent(msg: Any) extends SignalMsg
+  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
   case class Received(msg: Any) extends SignalMsg
   case class AcceptProposal(proposal: ProposeCred) extends SignalMsg
   case class AcceptOffer(offer: OfferCred) extends SignalMsg

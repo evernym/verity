@@ -333,8 +333,10 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
           domain.lookup_!(myDID)
         }
 
-        domain.startInteractionRel(rel, ctl)
+        val threadId = domain.startInteractionRel(rel, ctl)
 
+        me.currentInteraction = Some(Interaction(myDID, theirDID, Some(threadId)))
+        them.currentInteraction = Some(Interaction(theirDID, myDID, Some(threadId)))
       }
     }
 
@@ -368,16 +370,6 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
         controller.control(ctl)
       }
     }
-
-    //TODO find another way
-//    def inbound(transform: Any => Any, op: => Unit): Unit = {
-//      container_!.interceptInbound(transform, op)
-//    }
-//
-//    def outbound(transform: Any => Any, op: => Unit): Unit = {
-//      container_!.interceptOutbound(transform, op)
-//    }
-//
 
     // little helpers to help keep test scripts clean and concise
     def backstate = container_!.backstate

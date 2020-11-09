@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.protocol.engine.{AnonCredRequests, DID, LedgerAccess, Nonce, WalletAccess, WalletAccessTest}
-import com.evernym.verity.protocol.protocols.issueCredential.common.IssueCredentialSpecBase
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
@@ -10,9 +9,10 @@ import com.evernym.verity.testkit.BasicFixtureSpec
 import scala.util.Try
 
 class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
-  with IssueCredentialSpecBase
   with BasicFixtureSpec {
     import PresentProofSpec._
+
+    def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 
     val restriction1: RestrictionsV1 = RestrictionsV1(Some("NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0"),
       None,

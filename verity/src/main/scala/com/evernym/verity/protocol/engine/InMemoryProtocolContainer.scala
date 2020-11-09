@@ -43,7 +43,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     val driver = pce.driver
     val participantId = pce.participantId
     val system = pce.system
-    val threadId = pce.threadId
+    override val threadId = pce.threadId
     val initProvider = pce.initProvider
   } with ProtocolContainer[P,R,M,E,S,I]
     with HasInbox[Any,Any] {

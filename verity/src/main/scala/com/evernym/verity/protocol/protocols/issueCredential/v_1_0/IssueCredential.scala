@@ -1,23 +1,26 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.constants.InitParamConstants.{MY_PAIRWISE_DID, THEIR_PAIRWISE_DID}
+import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PAIRWISE_DID, MY_PUBLIC_DID, NAME, THEIR_PAIRWISE_DID}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
-import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor, PleaseAck}
+import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, _}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.StatusReport
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyAndTheirDid, PostInteractionStarted}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{OutOfBandInvitation, prepareInviteUrl}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
+import com.evernym.verity.util.MsgIdProvider
+import com.evernym.verity.util.OptionUtil.toTry
 import org.json.JSONObject
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 //protocol document:
 // https://github.com/hyperledger/aries-rfcs/blob/527849e/features/0036-issue-credential/README.md
@@ -27,16 +30,17 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     with ProtocolHelpers[IssueCredential, Role, Msg, Event, State, String] {
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
-    case (State.Uninitialized()                               , _, m: Ctl.Init       ) => handleInit(m)
+    case (State.Uninitialized()                               , _, m: Ctl.Init         ) => handleInit(m)
+    case (_: State.Initialized                                , _, m: Ctl.AttachedOffer) => handleAttachedOffer(m)
+    case (_: State.Initialized                                , _, m: Ctl.Propose      ) => handlePropose(m)
+    case (st: State.Initialized                               , _, m: Ctl.Offer        ) => handleInitialOffer(st, m)
+    case (_:State.ProposalReceived                            , _, m: Ctl.Offer        ) => handleOffer(m)
+    case (st: State.OfferReceived                             , _, m: Ctl.Request      ) => handleRequest(m, st)
+    case (st: State.RequestReceived                           , _, m: Ctl.Issue        ) => handleIssue(m, st)
 
-    case (_: State.Initialized                                , _, m: Ctl.Propose    ) => handlePropose(m)
-    case (_ @ (_: State.Initialized| _:State.ProposalReceived), _, m: Ctl.Offer      ) => handleOffer(m)
-    case (st: State.OfferReceived                             , _, m: Ctl.Request    ) => handleRequest(m, st)
-    case (st: State.RequestReceived                           , _, m: Ctl.Issue      ) => handleIssue(m, st)
-
-    case (st: State                                           , _, _: Ctl.Status     ) => handleStatus(st)
-    case (st: State.PostInteractionStarted                    , _, m: Ctl.Reject     ) => handleReject(m, st)
-    case (st: State                                           , _, m: Ctl            ) =>
+    case (st: State                                           , _, _: Ctl.Status       ) => handleStatus(st)
+    case (st: State.PostInteractionStarted                    , _, m: Ctl.Reject       ) => handleReject(m, st)
+    case (st: State                                           , _, m: Ctl              ) =>
       ctx.signal(SignalMsg.buildProblemReport(
         s"Unexpected '${IssueCredMsgFamily.msgType(m.getClass).msgName}' message in current state '${st.status}",
         unexpectedMessage
@@ -44,12 +48,12 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
-    case (_: State.Initialized, None | Some(Holder()), m: ProposeCred   )     => handleProposeCredReceived(m)
+    case (_: State.Initialized, None | Some(Holder()), m: ProposeCred   )     => handleProposeCredReceived(m, ctx.getInFlight.sender.id_!)
 
     case (_ @ (_: State.Initialized | _: State.ProposalSent),
-                                None | Some(Issuer()), m: OfferCred     )     => handleOfferCredReceived(m)
+                                None | Some(Issuer()), m: OfferCred     )     => handleOfferCredReceived(m, ctx.getInFlight.sender.id_!)
 
-    case (st: State.OfferSent,     Some(Holder()), m: RequestCred        )     => handleRequestCredReceived(m, st)
+    case (st: State.OfferSent,     Some(Holder()), m: RequestCred       )    => handleRequestCredReceived(m, st, ctx.getInFlight.sender.id_!)
 
     case (_: State.RequestSent,   Some(Issuer()), m: IssueCred          )     => handleIssueCredReceived(m)
 
@@ -62,6 +66,10 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.apply(Initialized(m.params.initParams.map(p => InitParam(p.name, p.value)).toSeq))
   }
 
+  def handleAttachedOffer(m: Ctl.AttachedOffer): Unit = {
+    handleOfferCredReceived(m.offer, ctx.getRoster.otherId())
+  }
+
   def handlePropose(m: Ctl.Propose): Unit = {
     val credPreviewEventObject = buildCredPreview(m.credential_values).toOption.map(buildEventCredPreview)
     val credProposed = CredProposed(m.cred_def_id, credPreviewEventObject, commentReq(m.comment))
@@ -71,21 +79,46 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.signal(SignalMsg.Sent(proposedCred))
   }
 
-  def handleOffer(m: Ctl.Offer): Unit = {
-    ctx.wallet.createCredOffer(m.cred_def_id) match {
-      case Success(credOffer) =>
-        val credPreview = buildCredPreview(m.credential_values)
-        val credPreviewEventObject = credPreview.toOption.map(buildEventCredPreview)
-        val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload=credOffer)
-        val attachmentEventObject = toEvent(attachment)
-        val credOffered = CredOffered(credPreviewEventObject, Seq(attachmentEventObject), commentReq(m.comment), m.price)
-        val eventOffer = OfferSent(ctx.getInFlight.sender.id_!, Option(credOffered), m.auto_issue.getOrElse(false))
-        ctx.apply(eventOffer)
-        val offerCred = OfferCred(credPreview, Vector(attachment), Option(credOffered.comment), m.price)
-        ctx.send(offerCred)
-        ctx.signal(SignalMsg.Sent(offerCred))
+  def handleInitialOffer(s: State.Initialized, m: Ctl.Offer): Unit = {
+    buildOffer(m) match {
+      case Success((event, offer)) =>
+        ctx.apply(event)
+        val byInvitation = m.by_invitation.getOrElse(false)
+        if(!byInvitation) {
+          ctx.send(offer)
+          ctx.signal(SignalMsg.Sent(offer))
+        }
+        else {
+          ctx.signal(
+            buildOobInvite(offer, s)
+              .recover{
+                case e: Exception =>
+                  ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
+                  SignalMsg.buildProblemReport(
+                    "unable to create out-of-band invitation",
+                    credentialOfferCreation
+                  )
+              }
+            .get
+          )
+        }
       case Failure(_) =>
-        //TODO: need to finalize error message based on different expected exception
+        ctx.signal(
+          SignalMsg.buildProblemReport(
+            "unable to create credential offer",
+            credentialOfferCreation
+          )
+        )
+    }
+  }
+
+  def handleOffer(m: Ctl.Offer): Unit = {
+    buildOffer(m) match {
+      case Success((event, offer)) =>
+        ctx.apply(event)
+        ctx.send(offer)
+        ctx.signal(SignalMsg.Sent(offer))
+      case Failure(_) =>
         ctx.signal(
           SignalMsg.buildProblemReport(
             "unable to create credential offer",
@@ -107,7 +140,6 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         ))
 
       case Failure(_)   =>
-        //TODO: need to finalize error message based on different expected exception
         ctx.signal(
           SignalMsg.buildProblemReport(
             s"unable to retrieve cred def from ledger (CredDefId: ${m.cred_def_id})",
@@ -204,24 +236,24 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.signal(StatusReport(st.status))
   }
 
-  def handleProposeCredReceived(m: ProposeCred): Unit = {
+  def handleProposeCredReceived(m: ProposeCred, senderId: String): Unit = {
     val credPreview = m.credential_proposal.map(buildEventCredPreview)
     val proposal = CredProposed(m.cred_def_id, credPreview, commentReq(m.comment))
-    ctx.apply(ProposalReceived(ctx.getInFlight.sender.id_!, Option(proposal)))
+    ctx.apply(ProposalReceived(senderId, Option(proposal)))
     ctx.signal(SignalMsg.AcceptProposal(m))
   }
 
-  def handleOfferCredReceived(m: OfferCred): Unit = {
+  def handleOfferCredReceived(m: OfferCred, senderId: String): Unit = {
     val credPreviewObject = buildEventCredPreview(m.credential_preview)
     val attachmentObject = m.`offers~attach`.map(toEvent)
     val offer = CredOffered(Option(credPreviewObject), attachmentObject, commentReq(m.comment), m.price)
-    ctx.apply(OfferReceived(ctx.getInFlight.sender.id_!, Option(offer)))
+    ctx.apply(OfferReceived(senderId, Option(offer)))
     ctx.signal(SignalMsg.AcceptOffer(m))
   }
 
-  def handleRequestCredReceived(m: RequestCred, st: State.OfferSent): Unit = {
+  def handleRequestCredReceived(m: RequestCred, st: State.OfferSent, senderId: String): Unit = {
     val req = CredRequested(m.`requests~attach`.map(toEvent), commentReq(m.comment))
-    ctx.apply(RequestReceived(ctx.getInFlight.sender.id_!, Option(req)))
+    ctx.apply(RequestReceived(senderId, Option(req)))
     if (st.autoIssue) {
       doIssueCredential(st.credOffer, buildRequestCred(Option(req)))
     } else {
@@ -244,10 +276,17 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   override def applyEvent: ApplyEvent = {
     case (_: State.Uninitialized, _, e: Initialized) =>
       val paramMap = Map(e.params map { p => p.name -> p.value }: _*)
-      (State.Initialized(
-        paramMap.getOrElse(MY_PAIRWISE_DID, throw new RuntimeException(s"$MY_PAIRWISE_DID not found in init params")),
-        paramMap.getOrElse(THEIR_PAIRWISE_DID, throw new RuntimeException(s"$THEIR_PAIRWISE_DID not found in init params"))),
-        initialize(e.params))
+      (
+        State.Initialized(
+          paramMap.getOrElse(MY_PAIRWISE_DID, throw new RuntimeException(s"$MY_PAIRWISE_DID not found in init params")),
+          paramMap.getOrElse(THEIR_PAIRWISE_DID, throw new RuntimeException(s"$THEIR_PAIRWISE_DID not found in init params")),
+          paramMap.get(NAME),
+          paramMap.get(LOGO_URL),
+          paramMap.get(AGENCY_DID_VER_KEY),
+          paramMap.get(MY_PUBLIC_DID),
+        ),
+        initialize(e.params)
+      )
 
     case (st: HasMyAndTheirDid, _, e: ProposalSent) =>
       val proposal: ProposeCred = buildProposedCred(e.proposal)
@@ -320,6 +359,36 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     jsonObject.toString()
   }
 
+  def buildOffer(m: Ctl.Offer) = {
+    ctx.wallet.createCredOffer(m.cred_def_id) match {
+      case Success(credOffer) =>
+        val credPreview = buildCredPreview(m.credential_values)
+        val credPreviewEventObject = credPreview.toOption.map(buildEventCredPreview)
+        val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload = credOffer)
+        val attachmentEventObject = toEvent(attachment)
+
+        val credOffered = CredOffered(
+          credPreviewEventObject,
+          Seq(attachmentEventObject),
+          commentReq(m.comment),
+          m.price
+        )
+        val eventOffer = OfferSent(
+          ctx.getInFlight.sender.id_!,
+          Option(credOffered),
+          m.auto_issue.getOrElse(false)
+        )
+        val offerCred = OfferCred(
+          credPreview,
+          Vector(attachment),
+          Option(credOffered.comment),
+          m.price
+        )
+        Try(eventOffer -> offerCred)
+      case Failure(e) => Failure(e)
+    }
+  }
+
   def buildEventCredPreview(cp: CredPreview): CredPreviewObject = {
     CredPreviewObject(cp.`@type`,
       cp.attributes.map(a => CredPreviewAttr(a.name, a.value, a.`mime-type`)))
@@ -382,6 +451,52 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       case Some(c) => IssueCred(c.credAttach.map(fromEvent).toVector, Option(c.comment))
       case None    => throw new NotImplementedError()
     }
+  }
+
+  def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[SignalMsg.Invitation] = {
+    val service = for(
+      agencyVerkey    <- toTry(s.agencyVerkey);
+      did             <- toTry(ctx.getRoster.selfId);
+      verkey          <- ctx.wallet.verKey(did);
+      serviceEndpoint <- Try(ctx.serviceEndpoint);
+      routingKeys <- Try(Vector(verkey, agencyVerkey))
+    ) yield DIDDoc(
+      did,
+      verkey,
+      serviceEndpoint,
+      routingKeys)
+      .toDIDDocFormatted
+      .service
+
+    val offerAttachment = Try(
+      buildProtocolMsgAttachment(
+        MsgIdProvider.getNewMsgId,
+        ctx.threadId_!,
+        IssueCredentialProtoDef.msgFamily,
+        offer)
+    )
+
+    val invite = for(
+      service         <- service;
+      offerAttachment <- offerAttachment
+    ) yield OutOfBandInvitation(
+      s.agentName.getOrElse(""),
+      "issue-vc",
+      "To issue a credential",
+      Vector(offerAttachment),
+      service,
+      s.logoUrl,
+      s.publicDid.map(s"did:sov:"+_)
+    )
+
+    val signal = for(
+      invite          <- invite;
+      serviceEndpoint <- Try(ctx.serviceEndpoint);
+      inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
+      inviteId        <- Success(invite.`@id`)
+    ) yield SignalMsg.Invitation(inviteUrl, None, inviteId)
+
+    signal
   }
 
   def commentReq(comment: Option[String]): String = {

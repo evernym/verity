@@ -1,27 +1,42 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.constants.InitParamConstants.{THEIR_PAIRWISE_DID, MY_PAIRWISE_DID}
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PAIRWISE_DID, MY_PUBLIC_DID, NAME, THEIR_PAIRWISE_DID}
 import com.evernym.verity.protocol.didcomm.decorators.PleaseAck
 import com.evernym.verity.protocol.engine.MsgFamily
-import com.evernym.verity.protocol.protocols.issueCredential.common.IssueCredentialSpecBase
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
-import org.scalatest.OptionValues
+import org.json.JSONObject
 
 import scala.reflect.ClassTag
 
 
-class IssueCredentialSpec extends TestsProtocolsImpl(IssueCredentialProtoDef)
-  with IssueCredentialSpecBase
+class IssueCredentialSpec
+  extends TestsProtocolsImpl(IssueCredentialProtoDef)
   with BasicFixtureSpec {
+
+  lazy val config: AppConfig = new TestAppConfig()
+
+  def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
+
+  val orgName = "Acme Corp"
+  val logoUrl = "https://robohash.org/234"
+  val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
+  val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
 
   override val defaultInitParams = Map(
     MY_PAIRWISE_DID -> "8XFh8yBzrpJQmNyZzgoTqB",
-    THEIR_PAIRWISE_DID -> "8XFh8yBzrpJQmNyZzgoTqB"
+    THEIR_PAIRWISE_DID -> "8XFh8yBzrpJQmNyZzgoTqB",
+    NAME -> orgName,
+    LOGO_URL -> logoUrl,
+    AGENCY_DID_VER_KEY -> agencyVerkey,
+    MY_PUBLIC_DID -> publicDid
   )
 
   "Credential Protocol Definition" - {
@@ -278,6 +293,74 @@ class IssueCredentialSpec extends TestsProtocolsImpl(IssueCredentialProtoDef)
 
       issuer expect signal[SignalMsg.Ack]
     }
+  }
+
+  "when Issuer offers credential via Out-Of-Band Invitation" in { f =>
+    val (issuer, holder) = (f.alice, f.bob)
+
+    issuer walletAccess MockableWalletAccess()
+    holder walletAccess MockableWalletAccess()
+    holder ledgerAccess MockableLedgerAccess()
+
+    (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
+    val invitation = issuer expect signal[SignalMsg.Invitation]
+    invitation.inviteURL should not be empty
+    val base64 = invitation.inviteURL.split("oob=")(1)
+    val invite = new String(Base64Util.getBase64Decoded(base64))
+    val inviteObj = new JSONObject(invite)
+
+    inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+    inviteObj.has("@id") shouldBe true
+    inviteObj.getString("profileUrl") shouldBe logoUrl
+    inviteObj.getString("label") shouldBe orgName
+
+    inviteObj.getJSONArray("service")
+      .getJSONObject(0)
+      .getJSONArray("routingKeys")
+      .getString(1) shouldBe agencyVerkey
+
+    val attachmentBase64 = inviteObj
+      .getJSONArray("request~attach")
+      .getJSONObject(0)
+      .getJSONObject("data")
+      .getString("base64")
+
+    val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
+    val attachmentObj = new JSONObject(attachment)
+
+    attachmentObj.getString("@id") should not be empty
+    attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
+    attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
+
+    val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
+
+    issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+
+    holder ~ Ctl.AttachedOffer(attachedOffer)
+    holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
+      s.offer.credential_preview.attributes.size should not be 0
+      s.offer.credential_preview.attributes.head.value shouldBe "Joe"
+    }
+
+    holder.backstate.roster.selfRole_! shouldBe Role.Holder()
+
+    holder ~ buildSendRequest()
+    holder expect signal[SignalMsg.Sent]
+    issuer expect signal[SignalMsg.AcceptRequest]
+
+    issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
+    issuer expect signal[SignalMsg.Sent]
+    val issueCredSent = issuer expect state[State.IssueCredSent]
+    assertStatus[State.IssueCredSent](issuer)
+    assertIssueSent(issueCredSent)
+
+    holder expect signal[SignalMsg.Received]
+    val issueCredReceived = holder expect state[State.IssueCredReceived]
+    assertStatus[State.IssueCredReceived](holder)
+    assertIssueReceived(issueCredReceived)
+
+    issuer expect signal[SignalMsg.Ack]
+
   }
 
   def assertStatus[T: ClassTag](from: TestEnvir): Unit = {

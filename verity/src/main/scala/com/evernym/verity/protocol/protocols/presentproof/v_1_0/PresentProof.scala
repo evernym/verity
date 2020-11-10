@@ -89,6 +89,11 @@ class PresentProof (implicit val ctx: PresentProofContext)
     case (s: States.RequestReceived, Some(Role.Prover), msg: Ctl.AcceptRequest   ) => handleCtlAcceptRequest(s, msg)
     case (s                        , _                , msg: Ctl.Status          ) => handleCtlStatus(s, msg)
     case (s                        , _                , msg: Ctl.Reject          ) => handleCtlReject(s, msg)
+    case (_: States.RequestSent    , _                , msg: Ctl.InviteShortened ) =>
+      ctx.signal(Sig.Invitation(msg.longInviteUrl, Option(msg.shortInviteUrl), msg.invitationId))
+    case (_: States.RequestSent    , Some(role)       , _: Ctl.InviteShorteningFailed ) =>
+      ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
+      apply(Rejection(role.roleNum, "Shortening failed"))
     case (s: State                 , _                , msg: CtlMsg              ) => invalidControlState(s, msg)
   }
 
@@ -316,7 +321,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
 
-  def buildOobInvite(request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[Sig.Invitation] = {
+  def buildOobInvite(request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[Sig.ShortenInvite] = {
     val service = InviteUtil.buildServiced(stateData.agencyVerkey, ctx)
 
     val attachement = Try(
@@ -340,7 +345,7 @@ object PresentProof {
       serviceEndpoint <- Try(ctx.serviceEndpoint);
       inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
       inviteId        <- Success(invite.`@id`)
-    ) yield Sig.Invitation(inviteUrl, None, inviteId)
+    ) yield Sig.ShortenInvite(inviteId, inviteUrl)
 
     signal
   }

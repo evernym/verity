@@ -295,73 +295,133 @@ class IssueCredentialSpec
     }
   }
 
-  "when Issuer offers credential via Out-Of-Band Invitation" in { f =>
-    val (issuer, holder) = (f.alice, f.bob)
+  "when Issuer offers credential via Out-Of-Band Invitation" - {
+    "it should work as expected" in { f =>
+      val (issuer, holder) = (f.alice, f.bob)
 
-    issuer walletAccess MockableWalletAccess()
-    holder walletAccess MockableWalletAccess()
-    holder ledgerAccess MockableLedgerAccess()
+      issuer walletAccess MockableWalletAccess()
+      holder walletAccess MockableWalletAccess()
+      holder ledgerAccess MockableLedgerAccess()
 
-    (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
-    val invitation = issuer expect signal[SignalMsg.Invitation]
-    invitation.inviteURL should not be empty
-    val base64 = invitation.inviteURL.split("oob=")(1)
-    val invite = new String(Base64Util.getBase64Decoded(base64))
-    val inviteObj = new JSONObject(invite)
+      (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
+      val shortenInvite = issuer expect signal[SignalMsg.ShortenInvite]
+      shortenInvite.inviteURL should not be empty
+      val base64 = shortenInvite.inviteURL.split("oob=")(1)
+      val invite = new String(Base64Util.getBase64Decoded(base64))
+      val inviteObj = new JSONObject(invite)
 
-    inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
-    inviteObj.has("@id") shouldBe true
-    inviteObj.getString("profileUrl") shouldBe logoUrl
-    inviteObj.getString("label") shouldBe orgName
-    inviteObj.getString("public_did") should endWith(publicDid)
+      inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+      inviteObj.has("@id") shouldBe true
+      inviteObj.getString("profileUrl") shouldBe logoUrl
+      inviteObj.getString("label") shouldBe orgName
+      inviteObj.getString("public_did") should endWith(publicDid)
 
-    inviteObj.getJSONArray("service")
-      .getJSONObject(0)
-      .getJSONArray("routingKeys")
-      .getString(1) shouldBe agencyVerkey
+      inviteObj.getJSONArray("service")
+        .getJSONObject(0)
+        .getJSONArray("routingKeys")
+        .getString(1) shouldBe agencyVerkey
 
-    val attachmentBase64 = inviteObj
-      .getJSONArray("request~attach")
-      .getJSONObject(0)
-      .getJSONObject("data")
-      .getString("base64")
+      val attachmentBase64 = inviteObj
+        .getJSONArray("request~attach")
+        .getJSONObject(0)
+        .getJSONObject("data")
+        .getString("base64")
 
-    val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
-    val attachmentObj = new JSONObject(attachment)
+      val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
+      val attachmentObj = new JSONObject(attachment)
 
-    attachmentObj.getString("@id") should not be empty
-    attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
-    attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
+      attachmentObj.getString("@id") should not be empty
+      attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
+      attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
 
-    val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
+      val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
 
-    issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+      issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
 
-    holder ~ Ctl.AttachedOffer(attachedOffer)
-    holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
-      s.offer.credential_preview.attributes.size should not be 0
-      s.offer.credential_preview.attributes.head.value shouldBe "Joe"
+      // successful shortening
+      issuer ~ Ctl.InviteShortened(shortenInvite.invitationId, shortenInvite.inviteURL, "http://short.url")
+      val invitation = issuer expect signal[SignalMsg.Invitation]
+      invitation.invitationId shouldBe shortenInvite.invitationId
+      invitation.inviteURL shouldBe shortenInvite.inviteURL
+      invitation.shortInviteURL shouldBe Some("http://short.url")
+
+      holder ~ Ctl.AttachedOffer(attachedOffer)
+      holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
+        s.offer.credential_preview.attributes.size should not be 0
+        s.offer.credential_preview.attributes.head.value shouldBe "Joe"
+      }
+
+      holder.backstate.roster.selfRole_! shouldBe Role.Holder()
+
+      holder ~ buildSendRequest()
+      holder expect signal[SignalMsg.Sent]
+      issuer expect signal[SignalMsg.AcceptRequest]
+
+      issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
+      issuer expect signal[SignalMsg.Sent]
+      val issueCredSent = issuer expect state[State.IssueCredSent]
+      assertStatus[State.IssueCredSent](issuer)
+      assertIssueSent(issueCredSent)
+
+      holder expect signal[SignalMsg.Received]
+      val issueCredReceived = holder expect state[State.IssueCredReceived]
+      assertStatus[State.IssueCredReceived](holder)
+      assertIssueReceived(issueCredReceived)
+
+      issuer expect signal[SignalMsg.Ack]
     }
+  }
 
-    holder.backstate.roster.selfRole_! shouldBe Role.Holder()
+  "when Issuer offers credential via Out-Of-Band Invitation and shortening fails" - {
+    "it should return problem report" in { f =>
+      val (issuer, holder) = (f.alice, f.bob)
 
-    holder ~ buildSendRequest()
-    holder expect signal[SignalMsg.Sent]
-    issuer expect signal[SignalMsg.AcceptRequest]
+      issuer walletAccess MockableWalletAccess()
+      holder walletAccess MockableWalletAccess()
+      holder ledgerAccess MockableLedgerAccess()
 
-    issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-    issuer expect signal[SignalMsg.Sent]
-    val issueCredSent = issuer expect state[State.IssueCredSent]
-    assertStatus[State.IssueCredSent](issuer)
-    assertIssueSent(issueCredSent)
+      (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
+      val shortenInvite = issuer expect signal[SignalMsg.ShortenInvite]
+      shortenInvite.inviteURL should not be empty
+      val base64 = shortenInvite.inviteURL.split("oob=")(1)
+      val invite = new String(Base64Util.getBase64Decoded(base64))
+      val inviteObj = new JSONObject(invite)
 
-    holder expect signal[SignalMsg.Received]
-    val issueCredReceived = holder expect state[State.IssueCredReceived]
-    assertStatus[State.IssueCredReceived](holder)
-    assertIssueReceived(issueCredReceived)
+      inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+      inviteObj.has("@id") shouldBe true
+      inviteObj.getString("profileUrl") shouldBe logoUrl
+      inviteObj.getString("label") shouldBe orgName
+      inviteObj.getString("public_did") should endWith(publicDid)
 
-    issuer expect signal[SignalMsg.Ack]
+      inviteObj.getJSONArray("service")
+        .getJSONObject(0)
+        .getJSONArray("routingKeys")
+        .getString(1) shouldBe agencyVerkey
 
+      val attachmentBase64 = inviteObj
+        .getJSONArray("request~attach")
+        .getJSONObject(0)
+        .getJSONObject("data")
+        .getString("base64")
+
+      val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
+      val attachmentObj = new JSONObject(attachment)
+
+      attachmentObj.getString("@id") should not be empty
+      attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
+      attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
+
+      val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
+
+      issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+
+      // failed shortening
+      issuer ~ Ctl.InviteShorteningFailed(shortenInvite.invitationId, "Failed")
+      val problemReport = issuer expect signal[SignalMsg.ProblemReport]
+      problemReport.description.code shouldBe ProblemReportCodes.shorteningFailed
+
+      issuer expect state[State.ProblemReported]
+    }
   }
 
   def assertStatus[T: ClassTag](from: TestEnvir): Unit = {

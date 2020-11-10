@@ -52,4 +52,5 @@ object ProblemReportCodes {
   val credentialRequestCreation = "credential-request-creation"
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
+  val shorteningFailed = "shortening-failed"
 }

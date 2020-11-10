@@ -82,11 +82,11 @@ package object Msg {
 sealed trait CtlMsg extends Control with MsgBase
 package object Ctl {
   case class Init(selfId: ParameterValue,
-                  otherId: ParameterValue,
-                  agentName: Option[String],
-                  logoUrl: Option[String],
-                  agencyVerkey: Option[String],
-                  publicDid: Option[String]
+                  otherId: Option[ParameterValue],
+                  agentName: Option[ParameterValue],
+                  logoUrl: Option[ParameterValue],
+                  agencyVerkey: Option[ParameterValue],
+                  publicDid: Option[ParameterValue]
                  ) extends CtlMsg
   case class AttachedRequest(request: Msg.RequestPresentation) extends CtlMsg
   case class Request(name: String,

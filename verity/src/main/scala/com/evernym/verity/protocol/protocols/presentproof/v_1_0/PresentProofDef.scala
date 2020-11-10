@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
+import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants.{NAME, _}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -28,7 +29,7 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(
     p.paramValueRequired(SELF_ID),
-    p.paramValueRequired(OTHER_ID),
+    p.paramValue(OTHER_ID).filterNot(_ == UNKNOWN_OTHER_ID),
     p.paramValue(NAME),
     p.paramValue(LOGO_URL),
     p.paramValue(AGENCY_DID_VER_KEY),

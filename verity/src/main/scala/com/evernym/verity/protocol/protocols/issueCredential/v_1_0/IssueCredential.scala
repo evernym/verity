@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PAIRWISE_DID, MY_PUBLIC_DID, NAME, THEIR_PAIRWISE_DID}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
@@ -15,10 +16,9 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder,
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.StatusReport
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyAndTheirDid, PostInteractionStarted}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
-import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{OutOfBandInvitation, prepareInviteUrl}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
-import com.evernym.verity.util.MsgIdProvider
-import com.evernym.verity.util.OptionUtil.toTry
+import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
 
 import scala.util.{Failure, Success, Try}
@@ -29,6 +29,7 @@ import scala.util.{Failure, Success, Try}
 class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role, Msg, Event, State, String])
   extends Protocol[IssueCredential, Role, Msg, Event, State, String](IssueCredentialProtoDef)
     with ProtocolHelpers[IssueCredential, Role, Msg, Event, State, String] {
+  import IssueCredential._
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
     case (State.Uninitialized()                               , _, m: Ctl.Init         ) => handleInit(m)
@@ -64,7 +65,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def handleInit(m: Ctl.Init): Unit = {
-    ctx.apply(Initialized(m.params.initParams.map(p => InitParam(p.name, p.value)).toSeq))
+    ctx.apply(buildInitialized(m.params))
   }
 
   def handleAttachedOffer(m: Ctl.AttachedOffer): Unit = {
@@ -275,42 +276,46 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   override def applyEvent: ApplyEvent = {
     case (_: State.Uninitialized, _, e: Initialized) =>
-      val paramMap = Map(e.params map { p => p.name -> p.value }: _*)
+      val params = e.params
+        .filterNot(p => p.name == OTHER_ID && p.value == UNKNOWN_OTHER_ID)
+
+      val paramMap = Map(params map { p => p.name -> p.value }: _*)
+
       (
         State.Initialized(
           paramMap.getOrElse(MY_PAIRWISE_DID, throw new RuntimeException(s"$MY_PAIRWISE_DID not found in init params")),
-          paramMap.getOrElse(THEIR_PAIRWISE_DID, throw new RuntimeException(s"$THEIR_PAIRWISE_DID not found in init params")),
+          paramMap.get(THEIR_PAIRWISE_DID).flatMap(OptionUtil.blankOption),
           paramMap.get(NAME),
           paramMap.get(LOGO_URL),
           paramMap.get(AGENCY_DID_VER_KEY),
           paramMap.get(MY_PUBLIC_DID),
         ),
-        initialize(e.params)
+        initialize(params)
       )
 
     case (st: HasMyAndTheirDid, _, e: ProposalSent) =>
       val proposal: ProposeCred = buildProposedCred(e.proposal)
-      ( Option(State.ProposalSent(st.myPwDid, st.theirPwDid, proposal)),  setRole(e.senderId, Holder()))
+      ( Option(State.ProposalSent(st.myPwDid, st.theirPwDid, proposal)),  setSenderRole(e.senderId, Holder(), ctx.getRoster))
 
     case (st: HasMyAndTheirDid, _, e: ProposalReceived) =>
       val proposal: ProposeCred = buildProposedCred(e.proposal)
-      ( Option(State.ProposalReceived(st.myPwDid, st.theirPwDid, proposal)),  setRole(e.senderId, Holder()))
+      ( Option(State.ProposalReceived(st.myPwDid, st.theirPwDid, proposal)),  setSenderRole(e.senderId, Holder(), ctx.getRoster))
 
     case (st: HasMyAndTheirDid, _, e: OfferSent) =>
       val offer: OfferCred = buildOfferCred(e.offer)
-      ( Option(State.OfferSent(st.myPwDid, st.theirPwDid, offer, e.autoIssue)), setRole(e.senderId, Issuer()))
+      ( Option(State.OfferSent(st.myPwDid, st.theirPwDid, offer, e.autoIssue)), setSenderRole(e.senderId, Issuer(), ctx.getRoster))
 
     case (st: HasMyAndTheirDid, _, e: OfferReceived) =>
       val offer: OfferCred = buildOfferCred(e.offer)
-      ( Option(State.OfferReceived(st.myPwDid, st.theirPwDid, offer)), setRole(e.senderId, Issuer()))
+      ( Option(State.OfferReceived(st.myPwDid, st.theirPwDid, offer)), setSenderRole(e.senderId, Issuer(), ctx.getRoster))
 
     case (st: State.OfferReceived, _, e: RequestSent) =>
       val request: RequestCred = buildRequestCred(e.request)
-      ( Option(State.RequestSent(st.myPwDid, st.theirPwDid, st.credOffer, request)), setRole(e.senderId, Holder()))
+      ( Option(State.RequestSent(st.myPwDid, st.theirPwDid, st.credOffer, request)), setSenderRole(e.senderId, Holder(), ctx.getRoster))
 
     case (st: State.OfferSent, _, e: RequestReceived) =>
       val request: RequestCred = buildRequestCred(e.request)
-      ( Option(State.RequestReceived(st.myPwDid, st.theirPwDid, st.credOffer, request)), setRole(e.senderId, Issuer()))
+      ( Option(State.RequestReceived(st.myPwDid, st.theirPwDid, st.credOffer, request)), setSenderRole(e.senderId, Issuer(), ctx.getRoster))
 
     case (st: HasMyAndTheirDid, _, e: IssueCredSent) =>
       val issueCred: IssueCred = buildIssueCred(e.cred)
@@ -328,18 +333,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   //helper methods
 
-  def setRole(senderId: String, senderRole: Role): Roster[Role] = {
-    if (ctx.getRoster.selfRole.isEmpty) {
-      val otherRole = senderRole match {
-        case Holder() => Issuer()
-        case Issuer() => Holder()
-      }
-      ctx.getRoster.withAssignmentById(
-        senderRole -> senderId,
-        otherRole  -> ctx.getRoster.otherId(senderId)
-      )
-    } else ctx.getRoster
-  }
+
 
   def extractCredOfferJson(offerCred: OfferCred): String = {
     val attachment = offerCred.`offers~attach`.head
@@ -493,3 +487,30 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 }
 
 case class EncodedCredAttribute(raw: String, encoded: String)
+
+object IssueCredential {
+  def setSenderRole(senderId: String, senderRole: Role, roster: Roster[Role]): Roster[Role] = {
+    val r = roster.withParticipant(senderId)
+
+    if (r.roleForId(senderId).isEmpty) {
+      val otherRole = senderRole match {
+        case Holder() => Issuer()
+        case Issuer() => Holder()
+      }
+      r.withAssignmentById(
+        senderRole -> senderId,
+        otherRole  -> r.otherId(senderId)
+      )
+    } else r
+  }
+
+  def buildInitialized(params: Parameters): Initialized = {
+    Initialized(
+      params
+        .initParams
+        .filterNot(p => p.name == OTHER_ID && p.value == UNKNOWN_OTHER_ID)
+        .map(p => InitParam(p.name, p.value))
+        .toSeq
+    )
+  }
+}

@@ -72,6 +72,7 @@ object ProblemReportCodes {
   val presentationCreationFailure = "presentation-creation-failure"
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
+  val shorteningFailed = "shortening-failed"
 }
 
 object Role {

@@ -170,10 +170,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           Some(true)
         )
 
-        val invitation = verifier expect signal[Sig.Invitation]
+        val shortenInvite = verifier expect signal[Sig.ShortenInvite]
 
-        invitation.inviteURL should not be empty
-        val base64 = invitation.inviteURL.split("oob=")(1)
+        shortenInvite.inviteURL should not be empty
+        val base64 = shortenInvite.inviteURL.split("oob=")(1)
         val invite = new String(Base64Util.getBase64Decoded(base64))
         val inviteObj = new JSONObject(invite)
 
@@ -208,6 +208,13 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           s.data.requests should have size 1
           nonce = Some(s.data.requests.head.nonce)
         }
+
+        // successful shortening
+        verifier ~ Ctl.InviteShortened(shortenInvite.invitationId, shortenInvite.inviteURL, "http://short.url")
+        val invitation = verifier expect signal[Sig.Invitation]
+        invitation.invitationId shouldBe shortenInvite.invitationId
+        invitation.inviteURL shouldBe shortenInvite.inviteURL
+        invitation.shortInviteURL shouldBe Some("http://short.url")
 
         prover ~ Ctl.AttachedRequest(attachedRequest)
 
@@ -252,6 +259,74 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           s.error shouldBe None
           s.results shouldBe None
           s.status shouldBe "Presented"
+        }
+      }
+
+      "should handle Out-Of-Band Invitation shortening failed path" in { f =>
+        val (verifier, prover) = indyAccessMocks(f)
+
+        var nonce: Option[Nonce] = None
+
+        // Verifier starts protocol
+        (verifier engage prover) ~ Ctl.Request(
+          "",
+          Some(List(requestedAttr1)),
+          None,
+          None,
+          Some(true)
+        )
+
+        val shortenInvite = verifier expect signal[Sig.ShortenInvite]
+
+        shortenInvite.inviteURL should not be empty
+        val base64 = shortenInvite.inviteURL.split("oob=")(1)
+        val invite = new String(Base64Util.getBase64Decoded(base64))
+        val inviteObj = new JSONObject(invite)
+
+        inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+        inviteObj.has("@id") shouldBe true
+        inviteObj.getString("profileUrl") shouldBe logoUrl
+        inviteObj.getString("label") shouldBe orgName
+        inviteObj.getString("public_did") should endWith(publicDid)
+
+        inviteObj.getJSONArray("service")
+          .getJSONObject(0)
+          .getJSONArray("routingKeys")
+          .getString(1) shouldBe agencyVerkey
+
+        val attachmentBase64 = inviteObj
+          .getJSONArray("request~attach")
+          .getJSONObject(0)
+          .getJSONObject("data")
+          .getString("base64")
+
+        val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
+        val attachmentObj = new JSONObject(attachment)
+
+        attachmentObj.getString("@id") should not be empty
+        attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation"
+        attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
+
+        val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
+
+        verifier.backstate.roster.selfRole_! shouldBe Role.Verifier
+        verifier.expectAs(state[States.RequestSent]){ s =>
+          s.data.requests should have size 1
+          nonce = Some(s.data.requests.head.nonce)
+        }
+
+        // failed shortening
+        verifier ~ Ctl.InviteShorteningFailed(shortenInvite.invitationId, "Failed")
+        val problemReport = verifier expect signal[Sig.ProblemReport]
+        problemReport.description.code shouldBe ProblemReportCodes.shorteningFailed
+
+        verifier expect state[States.Rejected]
+
+        verifier ~ Ctl.Status()
+        verifier.expectAs(signal[Sig.StatusReport]) { s =>
+          s.status shouldBe "Rejected"
+          s.error shouldBe None
+          s.results shouldBe None
         }
       }
 

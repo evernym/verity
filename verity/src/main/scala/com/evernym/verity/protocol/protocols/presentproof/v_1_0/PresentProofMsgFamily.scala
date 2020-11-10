@@ -21,14 +21,16 @@ object PresentProofMsgFamily
   )
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
-    "Init"               -> classOf[Ctl.Init],
-    "request-invitation" -> classOf[Ctl.AttachedRequest],
-    "request"            -> classOf[Ctl.Request],
-    "present"            -> classOf[Ctl.AcceptRequest],
-    "accept-proposal"    -> classOf[Ctl.AcceptProposal],
-    "propose"            -> classOf[Ctl.Propose],
-    "reject"             -> classOf[Ctl.Reject],
-    "status"             -> classOf[Ctl.Status],
+    "Init"                     -> classOf[Ctl.Init],
+    "request-invitation"       -> classOf[Ctl.AttachedRequest],
+    "request"                  -> classOf[Ctl.Request],
+    "present"                  -> classOf[Ctl.AcceptRequest],
+    "accept-proposal"          -> classOf[Ctl.AcceptProposal],
+    "propose"                  -> classOf[Ctl.Propose],
+    "reject"                   -> classOf[Ctl.Reject],
+    "status"                   -> classOf[Ctl.Status],
+    "invite-shortened"         -> classOf[Ctl.InviteShortened],
+    "invite-shortening-failed" -> classOf[Ctl.InviteShorteningFailed],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -37,7 +39,8 @@ object PresentProofMsgFamily
     classOf[Sig.PresentationResult]   -> "presentation-result",
     classOf[Sig.ProblemReport]        -> "problem-report",
     classOf[Sig.StatusReport]         -> "status-report",
-    classOf[Sig.Invitation]             -> "protocol-invitation"
+    classOf[Sig.Invitation]           -> "protocol-invitation",
+    classOf[Sig.ShortenInvite]        -> "shorten-invite",
   )
 }
 
@@ -102,7 +105,8 @@ package object Ctl {
                      comment: String) extends CtlMsg
   case class Reject(reason: Option[String]) extends CtlMsg
   case class Status() extends CtlMsg
-
+  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends CtlMsg
+  case class InviteShorteningFailed(invitationId: String, reason: String) extends CtlMsg
 }
 
 // Signal Messages
@@ -115,6 +119,7 @@ package object Sig {
                             predicates: Seq[PresentationPreviewPredicate],
                             comment: String) extends SigMsg
   case class PresentationResult(verification_result: String, requested_presentation: AttributesPresented) extends SigMsg
+  case class ShortenInvite(invitationId: String, inviteURL: String) extends SigMsg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
   case class StatusReport(status: String, results: Option[PresentationResult], error: Option[Problem])
 

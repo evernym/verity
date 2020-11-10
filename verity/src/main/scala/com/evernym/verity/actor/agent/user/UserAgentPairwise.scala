@@ -51,8 +51,15 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFa
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened, InviteShorteningFailed, SMSSendingFailed, SMSSent}
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened,
+  InviteShorteningFailed => IssueCredInviteShorteningFailed}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{ShortenInvite => IssueCredShortenInvite}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened,
+  InviteShorteningFailed => PresentProofInviteShorteningFailed}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.{ShortenInvite => PresentProofShortenInvite}
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened => RelInviteShortened,
+  InviteShorteningFailed => RelInviteShorteningFailed, SMSSendingFailed, SMSSent}
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite => RelShortenInvite}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.TimeZoneUtil._
@@ -768,9 +775,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     //pinst (connections 1.0) -> connections actor driver -> this actor
     case SignalMsgFromDriver(utd: UpdateTheirDid, _, _, _)                => handleUpdateTheirDid(utd)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
-    case SignalMsgFromDriver(si: ShortenInvite, _, _, _)                  => handleShorteningInvite(si)
+    case SignalMsgFromDriver(si: RelShortenInvite, _, _, _)               => handleRelationshipShorteningInvite(si)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
     case SignalMsgFromDriver(ssi: SendSMSInvite, _, _, _)                 => handleSendingSMSInvite(ssi)
+    //pinst (issue-credential 1.0) -> issue-credential actor driver -> this actor
+    case SignalMsgFromDriver(si: IssueCredShortenInvite, _, _, _)         => handleIssueCredShorteningInvite(si)
+    //pinst (present-proof 1.0) -> present-proof actor driver -> this actor
+    case SignalMsgFromDriver(si: PresentProofShortenInvite, _, _, _)      => handlePresentProofShorteningInvite(si)
   }
 
   def handleUpdateTheirDid(utd: UpdateTheirDid):Future[Option[ControlMsg]] = {
@@ -778,10 +789,24 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     Future.successful(Option(ControlMsg(Ctl.TheirDidUpdated())))
   }
 
-  def handleShorteningInvite(si: ShortenInvite): Future[Option[ControlMsg]] = {
+  def handleRelationshipShorteningInvite(si: RelShortenInvite): Future[Option[ControlMsg]] = {
     context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) map {
-      case UrlShortened(shortUrl) => Option(ControlMsg(InviteShortened(si.invitationId, si.inviteURL, shortUrl)))
-      case UrlShorteningFailed(_, msg) => Option(ControlMsg(InviteShorteningFailed(si.invitationId, msg)))
+      case UrlShortened(shortUrl) => Option(ControlMsg(RelInviteShortened(si.invitationId, si.inviteURL, shortUrl)))
+      case UrlShorteningFailed(_, msg) => Option(ControlMsg(RelInviteShorteningFailed(si.invitationId, msg)))
+    }
+  }
+
+  def handleIssueCredShorteningInvite(si: IssueCredShortenInvite): Future[Option[ControlMsg]] = {
+    context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) map {
+      case UrlShortened(shortUrl) => Option(ControlMsg(IssueCredInviteShortened(si.invitationId, si.inviteURL, shortUrl)))
+      case UrlShorteningFailed(_, msg) => Option(ControlMsg(IssueCredInviteShorteningFailed(si.invitationId, msg)))
+    }
+  }
+
+  def handlePresentProofShorteningInvite(si: PresentProofShortenInvite): Future[Option[ControlMsg]] = {
+    context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) map {
+      case UrlShortened(shortUrl) => Option(ControlMsg(PresentProofInviteShortened(si.invitationId, si.inviteURL, shortUrl)))
+      case UrlShorteningFailed(_, msg) => Option(ControlMsg(PresentProofInviteShorteningFailed(si.invitationId, msg)))
     }
   }
 

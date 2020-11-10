@@ -32,17 +32,22 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   import IssueCredential._
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
-    case (State.Uninitialized()                               , _, m: Ctl.Init         ) => handleInit(m)
-    case (_: State.Initialized                                , _, m: Ctl.AttachedOffer) => handleAttachedOffer(m)
-    case (_: State.Initialized                                , _, m: Ctl.Propose      ) => handlePropose(m)
-    case (st: State.Initialized                               , _, m: Ctl.Offer        ) => handleInitialOffer(st, m)
-    case (_:State.ProposalReceived                            , _, m: Ctl.Offer        ) => handleOffer(m)
-    case (st: State.OfferReceived                             , _, m: Ctl.Request      ) => handleRequest(m, st)
-    case (st: State.RequestReceived                           , _, m: Ctl.Issue        ) => handleIssue(m, st)
+    case (State.Uninitialized()                               , _, m: Ctl.Init           ) => handleInit(m)
+    case (_: State.Initialized                                , _, m: Ctl.AttachedOffer  ) => handleAttachedOffer(m)
+    case (_: State.Initialized                                , _, m: Ctl.Propose        ) => handlePropose(m)
+    case (st: State.Initialized                               , _, m: Ctl.Offer          ) => handleInitialOffer(st, m)
+    case (_:State.ProposalReceived                            , _, m: Ctl.Offer          ) => handleOffer(m)
+    case (st: State.OfferReceived                             , _, m: Ctl.Request        ) => handleRequest(m, st)
+    case (st: State.RequestReceived                           , _, m: Ctl.Issue          ) => handleIssue(m, st)
 
-    case (st: State                                           , _, _: Ctl.Status       ) => handleStatus(st)
-    case (st: State.PostInteractionStarted                    , _, m: Ctl.Reject       ) => handleReject(m, st)
-    case (st: State                                           , _, m: Ctl              ) =>
+    case (st: State                                           , _, _: Ctl.Status         ) => handleStatus(st)
+    case (st: State.PostInteractionStarted                    , _, m: Ctl.Reject         ) => handleReject(m, st)
+    case (_: State.OfferSent                                  , _, m: Ctl.InviteShortened) =>
+      ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
+    case (_: State.OfferSent                                  , _, _: Ctl.InviteShorteningFailed ) =>
+      ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
+      ctx.apply(ProblemReportReceived("Shortening failed"))
+    case (st: State                                           , _, m: Ctl                ) =>
       ctx.signal(SignalMsg.buildProblemReport(
         s"Unexpected '${IssueCredMsgFamily.msgType(m.getClass).msgName}' message in current state '${st.status}",
         unexpectedMessage
@@ -447,7 +452,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     }
   }
 
-  def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[SignalMsg.Invitation] = {
+  def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[SignalMsg.ShortenInvite] = {
     val service = InviteUtil.buildServiced(s.agencyVerkey, ctx)
 
     val offerAttachment = Try(
@@ -471,7 +476,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       serviceEndpoint <- Try(ctx.serviceEndpoint);
       inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
       inviteId        <- Success(invite.`@id`)
-    ) yield SignalMsg.Invitation(inviteUrl, None, inviteId)
+    ) yield SignalMsg.ShortenInvite(inviteId, inviteUrl)
 
     signal
   }

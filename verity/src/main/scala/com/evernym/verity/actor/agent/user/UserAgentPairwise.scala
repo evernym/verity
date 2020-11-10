@@ -325,7 +325,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case MY_SELF_REL_DID                        => Parameter(MY_SELF_REL_DID, mySelfRelDIDReq)
         case MY_PAIRWISE_DID                        => Parameter(MY_PAIRWISE_DID, state.myDid_!)
         case MY_PAIRWISE_DID_VER_KEY                => Parameter(MY_PAIRWISE_DID_VER_KEY, myPairwiseVerKey)
-        case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid_!)
+        case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
         case THIS_AGENT_WALLET_SEED                 => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)

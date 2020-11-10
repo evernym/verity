@@ -313,6 +313,7 @@ class IssueCredentialSpec
     inviteObj.has("@id") shouldBe true
     inviteObj.getString("profileUrl") shouldBe logoUrl
     inviteObj.getString("label") shouldBe orgName
+    inviteObj.getString("public_did") should endWith(publicDid)
 
     inviteObj.getJSONArray("service")
       .getJSONObject(0)

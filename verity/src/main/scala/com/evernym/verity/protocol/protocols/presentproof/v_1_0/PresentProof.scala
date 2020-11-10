@@ -4,15 +4,17 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.PresentProofContext
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.States.Complete
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
-import com.evernym.verity.util.OptionUtil
+import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -33,11 +35,24 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
   def commonApplyEvent: ApplyEvent = {
     case (_: States.Uninitialized , _ , Participants(selfId, otherId)  ) =>
-      (States.Initialized(), setupParticipantIds(selfId, otherId))
-    case (_: States.Initialized   , _ , MyRole(n)                      ) =>
-      (None, setRole(Role.numToRole(n), Role.otherRole(n)))
+      (States.Initialized(StateData()), setupParticipantIds(selfId, otherId))
+
+    case (States.Initialized(data)   , _ , context: AgentContext       ) =>
+      States.Initialized(data.copy(
+        agentName = context.agentName,
+        logoUrl = context.logoUrl,
+        agencyVerkey = context.agencyVerKey,
+        publicDid = context.publicDid
+      ))
+
+    case (s: State   , _ , MyRole(n)                      ) =>
+      (s, setRole(Role.numToRole(n), Role.otherRole(n)))
+
     case (s: HasData, _ , Rejection(role, reason)) if rejectableState(s) =>
       States.Rejected(s.data, Role.numToRole(role), OptionUtil.blankOption(reason))
+
+    case (s:State, _ , Participants(selfId, otherId))                    =>
+      (s, setupParticipantIds(selfId, otherId))
   }
 
   def proverApplyEvent: ApplyEvent = {
@@ -56,29 +71,32 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
 
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (States.Initialized() , None               , msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+    case (_                    , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
+    case (States.Initialized(_), None               , msg: Msg.RequestPresentation) => handleMsgRequest(msg)
     case (s: States.RequestSent, Some(Role.Prover)  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
     case (s: State             , Some(senderRole)   , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, senderRole, msg)
     case (States.Presented(_)  , Some(Role.Verifier), msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
     case (_                    , _                  , _  : Msg.Ack                ) => //Acks any other time are ignored
-    case (_                    , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
     case (_                    , _                  , msg: ProtoMsg               ) => invalidMessageState(msg)
   }
 
+
   override def handleControl: Control ?=> Any = statefulHandleControl
   {
-    case (States.Uninitialized()   , None             , Ctl.Init(s, o)        ) => apply(Participants(s, o))
-    case (States.Initialized()     , None             , ctl: Ctl.Request      ) => handleCtlRequest(ctl)
-    case (s: States.RequestReceived, Some(Role.Prover), msg: Ctl.AcceptRequest) => handleCtlAcceptRequest(s, msg)
-    case (s                        , _                , msg: Ctl.Status       ) => handleCtlStatus(s, msg)
-    case (s                        , _                , msg: Ctl.Reject       ) => handleCtlReject(s, msg)
-    case (s: State                 , _                , msg: CtlMsg           ) => invalidControlState(s, msg)
+    case (States.Uninitialized()   , None             , ctl: Ctl.Init            ) => handleCtlInit(ctl)
+    case (s: States.Initialized    , None             , ctl: Ctl.Request         ) => handleCtlRequest(ctl, s.data)
+    case (States.Initialized(_)    , None             , ctl: Ctl.AttachedRequest ) => handleCtlAttachedRequest(ctl)
+    case (s: States.RequestReceived, Some(Role.Prover), msg: Ctl.AcceptRequest   ) => handleCtlAcceptRequest(s, msg)
+    case (s                        , _                , msg: Ctl.Status          ) => handleCtlStatus(s, msg)
+    case (s                        , _                , msg: Ctl.Reject          ) => handleCtlReject(s, msg)
+    case (s: State                 , _                , msg: CtlMsg              ) => invalidControlState(s, msg)
   }
 
   // *****************************
   // HANDLE PROTOCOL MESSAGES
   // *****************************
   def handleMsgRequest(request: Msg.RequestPresentation): Unit = {
+    recordSenderId()
     apply(Role.Prover.toEvent)
     extractRequest(request) match {
       case Success(request) =>
@@ -107,6 +125,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def handleMsgPresentation(s: States.RequestSent, msg: Msg.Presentation): Unit = {
+    recordSenderId()
     val proofRequest = s.data.requests.last
     val proofRequestJson = DefaultMsgCodec.toJson(_checkRevocationInterval(proofRequest))
 
@@ -156,7 +175,9 @@ class PresentProof (implicit val ctx: PresentProofContext)
     }
   }
 
-  def handleMsgProposal( msg: Msg.ProposePresentation ): Unit = {
+  def handleMsgProposal(msg: Msg.ProposePresentation): Unit = {
+    recordSenderId()
+
     send(Msg.buildProblemReport("propose-presentation is not supported", unimplemented))
   }
 
@@ -183,7 +204,17 @@ class PresentProof (implicit val ctx: PresentProofContext)
   // *****************************
   // HANDLE CONTROL MESSAGES
   // *****************************
-  def handleCtlRequest(ctr: Ctl.Request): Unit = {
+  def handleCtlInit(ctl: Ctl.Init): Unit = {
+    apply(Participants(ctl.selfId, ctl.otherId.getOrElse("")))
+    apply(AgentContext(ctl.agentName, ctl.logoUrl, ctl.agencyVerkey, ctl.publicDid))
+  }
+
+
+  def handleCtlAttachedRequest(ctr: Ctl.AttachedRequest): Unit = {
+    handleMsgRequest(ctr.request)
+  }
+
+  def handleCtlRequest(ctr: Ctl.Request, stateData: StateData): Unit = {
     apply(Role.Verifier.toEvent)
 
     val proofRequest = ProofRequestUtil.requestToProofRequest(ctr)
@@ -197,8 +228,25 @@ class PresentProof (implicit val ctx: PresentProofContext)
           )
         )
 
-        send(presentationRequest)
         apply(RequestUsed(str))
+
+        if(!ctr.by_invitation.getOrElse(false)) {
+          send(presentationRequest)
+        }
+        else {
+          ctx.signal(
+            buildOobInvite(presentationRequest, stateData)
+              .recover{
+                case e: Exception =>
+                  ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
+                  Sig.buildProblemReport(
+                    "unable to create out-of-band invitation",
+                    invalidRequestedPresentation
+                  )
+              }
+              .get
+          )
+        }
       case Failure(e) =>
         signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
     }
@@ -267,6 +315,35 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
+
+  def buildOobInvite(request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[Sig.Invitation] = {
+    val service = InviteUtil.buildServiced(stateData.agencyVerkey, ctx)
+
+    val attachement = Try(
+      buildProtocolMsgAttachment(
+        MsgIdProvider.getNewMsgId,
+        ctx.threadId_!,
+        PresentProofDef.msgFamily,
+        request)
+    )
+
+    val invite = InviteUtil.buildInvite(
+      stateData.agentName,
+      stateData.logoUrl,
+      stateData.publicDid,
+      service,
+      attachement
+    )
+
+    val signal = for(
+      invite          <- invite;
+      serviceEndpoint <- Try(ctx.serviceEndpoint);
+      inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
+      inviteId        <- Success(invite.`@id`)
+    ) yield Sig.Invitation(inviteUrl, None, inviteId)
+
+    signal
+  }
 
   def extractPresentation(msg: Msg.Presentation):Try[(ProofPresentation, String)] = {
     extractAttachment(AttIds.presentation0, msg.`presentations~attach`) match {
@@ -436,6 +513,22 @@ object PresentProof {
         case _ => false
       }
       case _ => false
+    }
+  }
+
+  def recordSenderId()(implicit ctx: PresentProofContext): Unit = {
+    ctx
+    .getInFlight
+    .sender
+    .id
+    .foreach { id =>
+      val r = ctx.getRoster
+      if(r.participantIndex(id).isEmpty) {
+        ctx.apply(Participants("", id))
+        r.selfRole.foreach{ selfRole =>
+          ctx.apply(MyRole(selfRole.roleNum))
+        }
+      }
     }
   }
 }

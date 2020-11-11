@@ -205,7 +205,7 @@ trait IntegrationTestEnvBuilder {
     val ledgerConfig = integrationTestConfig.config.getConfig(s"$LEDGER_CONFIGS.$confName")
     val conf = new ConfigReadHelper(ledgerConfig)
     val genesisFilePath = stringReq(conf, LEDGER_GENESIS_FILE_PATH, confName)
-    val absGenesisFilePath = new File(genesisFilePath)
+    val absGenesisFilePath = new File(genesisFilePath).getAbsoluteFile
     assert(absGenesisFilePath.exists())
     val trusteeDID = stringReq(conf, LEDGER_GENESIS_SUBMITTER_DID, confName)
     val trusteeSeed = stringReq(conf, LEDGER_GENESIS_SUBMITTER_SEED, confName)

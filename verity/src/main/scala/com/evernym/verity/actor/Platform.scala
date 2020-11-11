@@ -16,20 +16,21 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow, LibindyMetricsTick, LibindyMetricsTracker}
+import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow, CollectLibindyMetrics, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 import scala.concurrent.Future
-import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.duration.{Duration, DurationInt, SECONDS}
 
 class Platform(val aac: AgentActorContext)
   extends MsgTracingRegionActors
@@ -124,12 +125,17 @@ class Platform(val aac: AgentActorContext)
       name = CLUSTER_SINGLETON_MANAGER_PROXY)
   }
 
-  def createLibindyMetricsTrackerActor(): ActorRef = {
+  def createLibindyMetricsCollectorActor(): ActorRef = {
     val libindyMetricsTracker = agentActorContext.system.actorOf(
-      Props(new LibindyMetricsTracker()),
+      Props(new LibindyMetricsCollector()),
       name = LIBINDY_METRICS_TRACKER)
-    agentActorContext.system.scheduler.scheduleWithFixedDelay(Duration.Zero,
-      30.milliseconds, libindyMetricsTracker, LibindyMetricsTick())
+    appConfig.getConfigIntOption(CommonConfig.LIBINDY_METRICS_COLLECTION_FREQUENCY) match {
+      case Some(duration) => agentActorContext.system.scheduler.scheduleWithFixedDelay(Duration.Zero,
+        Duration(duration, SECONDS),
+        libindyMetricsTracker, CollectLibindyMetrics())
+      case None => logger.debug(s"${CommonConfig.LIBINDY_METRICS_COLLECTION_FREQUENCY} is not defined in configs." +
+        s" Libindy metrics collecting was not scheduled.")
+    }
     libindyMetricsTracker
   }
 

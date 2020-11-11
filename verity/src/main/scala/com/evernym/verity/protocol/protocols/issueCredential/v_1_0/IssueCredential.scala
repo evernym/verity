@@ -55,18 +55,18 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
-    case (_: State.Initialized, None | Some(Holder()), m: ProposeCred   )     => handleProposeCredReceived(m, ctx.getInFlight.sender.id_!)
+    case (_: State.Initialized,   _, m: ProposeCred)   => handleProposeCredReceived(m, ctx.getInFlight.sender.id_!)
 
     case (_ @ (_: State.Initialized | _: State.ProposalSent),
-                                None | Some(Issuer()), m: OfferCred     )     => handleOfferCredReceived(m, ctx.getInFlight.sender.id_!)
+                                  _, m: OfferCred)     => handleOfferCredReceived(m, ctx.getInFlight.sender.id_!)
 
-    case (st: State.OfferSent,     Some(Holder()), m: RequestCred       )    => handleRequestCredReceived(m, st, ctx.getInFlight.sender.id_!)
+    case (st: State.OfferSent,    _, m: RequestCred)   => handleRequestCredReceived(m, st, ctx.getInFlight.sender.id_!)
 
-    case (_: State.RequestSent,   Some(Issuer()), m: IssueCred          )     => handleIssueCredReceived(m)
+    case (_: State.RequestSent,   _, m: IssueCred)     => handleIssueCredReceived(m)
 
-    case (st: State,              _,              m: ProblemReport      )     => handleProblemReport(m, st)
+    case (st: State,              _, m: ProblemReport) => handleProblemReport(m, st)
 
-    case (_: State.IssueCredSent, _,              m: Ack                )     => handleAck(m)
+    case (_: State.IssueCredSent, _, m: Ack)           => handleAck(m)
   }
 
   def handleInit(m: Ctl.Init): Unit = {
@@ -502,10 +502,13 @@ object IssueCredential {
         case Holder() => Issuer()
         case Issuer() => Holder()
       }
-      r.withAssignmentById(
-        senderRole -> senderId,
-        otherRole  -> r.otherId(senderId)
-      )
+
+      val newRoster = r.withAssignmentById(senderRole -> senderId)
+      if(newRoster.hasOther) {
+        newRoster.withAssignmentById(
+          otherRole  -> r.otherId(senderId)
+        )
+      } else newRoster
     } else r
   }
 

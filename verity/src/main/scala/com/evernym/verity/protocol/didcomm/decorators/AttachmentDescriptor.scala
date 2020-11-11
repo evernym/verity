@@ -43,7 +43,8 @@ object AttachmentDescriptor {
 
     val encoded = Base64Util.getBase64Encoded(json.getBytes)
 
-    AttachmentDescriptor(Some(id), Some("application/didcomm-plain+json"), Base64(encoded))
+//    AttachmentDescriptor(Some(id), Some("application/didcomm-plain+json"), Base64(encoded))
+    AttachmentDescriptor(Some(id), Some("application/json"), Base64(encoded))
   }
 
   def extractString(at: AttachmentDescriptor): String = {

@@ -71,13 +71,13 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
 
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (_                    , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
-    case (States.Initialized(_), None               , msg: Msg.RequestPresentation) => handleMsgRequest(msg)
-    case (s: States.RequestSent, Some(Role.Prover)  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
-    case (s: State             , Some(senderRole)   , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, senderRole, msg)
-    case (States.Presented(_)  , Some(Role.Verifier), msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
-    case (_                    , _                  , _  : Msg.Ack                ) => //Acks any other time are ignored
-    case (_                    , _                  , msg: ProtoMsg               ) => invalidMessageState(msg)
+    case (_                    , _  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
+    case (States.Initialized(_), _  , msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+    case (s: States.RequestSent, _  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
+    case (s: State             , r  , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
+    case (States.Presented(_)  , _  , msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
+    case (_                    , _  , _  : Msg.Ack                ) => //Acks any other time are ignored
+    case (_                    , _  , msg: ProtoMsg               ) => invalidMessageState(msg)
   }
 
 
@@ -186,13 +186,14 @@ class PresentProof (implicit val ctx: PresentProofContext)
     send(Msg.buildProblemReport("propose-presentation is not supported", unimplemented))
   }
 
-  def handleMsgProblemReport(state: State, role: Role, msg: Msg.ProblemReport): Unit = {
+  def handleMsgProblemReport(state: State, role: Option[Role], msg: Msg.ProblemReport): Unit = {
     val isRejection = true // Currently I don't see how we can tell between an problem and an rejection
     if(isRejection) {
       if (rejectableState(state)) {
         val reason = msg.resolveDescription
 
-        apply(Rejection(role.roleNum, reason))
+        val roleNum = role.map(_.roleNum).getOrElse(0) //not sure what we should if the role is not defined here
+        apply(Rejection(roleNum, reason))
         signal(Sig.buildProblemReport(s"Rejected -- $reason", rejection))
       }
       else {

@@ -90,7 +90,7 @@ abstract class ActorDriver(cp: ActorDriverGenParam)
 
   def trackProgress[A](sig: SignalEnvelope[A]): Unit = {
     val protoDef = cp.protocolRegistry.find(sig.protoRef).map(_.protoDef).get
-    MsgProgressTracker.recordProtoMsgStatus(protoDef, sig.pinstId, s"sent-to-agent-actor",
+    MsgProgressTracker.recordProtoMsgStatus(protoDef, sig.pinstId, "sent-to-agent-actor",
       sig.requestMsgId.getOrElse(UUID.randomUUID().toString), outMsg = Option(sig.signalMsg))
   }
 

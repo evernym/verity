@@ -139,7 +139,7 @@ trait HasContainers {
     filtered.size match {
       case 1 => Some(filtered.head)
       case 0 => None
-      case _ => throw new RuntimeException(s"multiple containers found")
+      case _ => throw new RuntimeException("multiple containers found")
     }
   }
 
@@ -237,7 +237,7 @@ class Domain(override val domainId: DomainId,
     ctlEnvelope.threadId
   }
 
-  val logger: Logger = Logger(s"Domain")
+  val logger: Logger = Logger("Domain")
   val journalContext: JournalContext = JournalContext(domainId)
 
   def submit[A](e: Envelope1[A]): Unit = {

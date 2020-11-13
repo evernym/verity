@@ -118,7 +118,7 @@ trait MsgAndDeliveryHandler {
   def addToMsgs(msgId: MsgId, msg: Msg): Unit
   def getMsgOpt(msgId: MsgId): Option[Msg]
   def getMsgReq(uid: MsgId): Msg = getMsgOpt(uid).getOrElse(
-    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: " + uid)))
+    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: $uid")))
 
   def removeFromMsgs(msgIds: Set[MsgId]): Unit
 
@@ -179,7 +179,7 @@ trait MsgAndDeliveryHandler {
   def checkIfMsgExists(uidOpt: Option[MsgId]): Unit = {
     uidOpt.foreach { uid =>
       if (getMsgOpt(uid).isEmpty) {
-        throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: " + uid))
+        throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: $uid"))
       }
     }
   }

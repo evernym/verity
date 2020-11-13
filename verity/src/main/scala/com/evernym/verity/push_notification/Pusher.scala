@@ -155,11 +155,11 @@ object PusherUtil  {
           }
       case COM_METHOD_TYPE_SPR_PUSH =>
         val sponsorIdVal = sponsorId
-          .getOrElse( throw new InvalidComMethodException(Some(s"Sponsor Id not Given -- COM_METHOD_TYPE_SPR_PUSH" +
-            s" requires a Sponsor Id")))
+          .getOrElse( throw new InvalidComMethodException(Some("Sponsor Id not Given -- COM_METHOD_TYPE_SPR_PUSH" +
+            " requires a Sponsor Id")))
         val pushProvider = sponsorPushProvider(config, sponsorIdVal)
           .getOrElse( throw new InvalidComMethodException(Some(s"Push provider for sponsor Id '$sponsorIdVal' did not" +
-            s"produce a valid push provider")))
+            "produce a valid push provider")))
         (pushProvider, comMethod.value)
       case t =>
         throw new InvalidComMethodException(Some(s"Unexpected com method type '$t', this type is not supported"))
@@ -168,8 +168,8 @@ object PusherUtil  {
 
   def sponsorPushProvider(config: AppConfig, sponsorId: String): Option[PushServiceProvider]  = {
     val t = ConfigUtil.findSponsorConfigWithId(sponsorId, config)
-      .orElse(throw new InvalidComMethodException(Some(s"Unable to find sponsor details, unable to push to sponsor " +
-        s"push service")))
+      .orElse(throw new InvalidComMethodException(Some("Unable to find sponsor details, unable to push to sponsor " +
+        "push service")))
       .flatMap(_.pushService)
       .map { x =>
         x.service match {
@@ -178,7 +178,7 @@ object PusherUtil  {
           case "mock" =>
             MockPusher
           case t => throw new InvalidComMethodException(Some(s"Unexpected push service type '$t', " +
-            s"this type is not supported"))
+            "this type is not supported"))
         }
       }
     t

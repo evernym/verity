@@ -68,7 +68,7 @@ object MsgProgressTrackerHtmlGenerator {
                 <div title="$eventDetail">total-time: $totalTimeTaken (in millis)</div>
               """
             case _ =>
-              s"""
+              """
                 <div>n/a</div>
               """
           }

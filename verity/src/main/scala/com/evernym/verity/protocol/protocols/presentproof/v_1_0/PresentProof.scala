@@ -421,7 +421,7 @@ object PresentProof {
         .map { x =>
           ctx.ledger.getSchema(x) match {
             case Success(s) => x -> DefaultMsgCodec.toJson(s.schema)
-            case Failure(e) => throw new Exception(s"Unable to retrieve schema from ledger", e)
+            case Failure(e) => throw new Exception("Unable to retrieve schema from ledger", e)
           }
         }
         .map(t => s""" "${t._1}": ${t._2} """)
@@ -438,7 +438,7 @@ object PresentProof {
         .map { x =>
           ctx.ledger.getCredDef(x) match {
             case Success(s) => x -> DefaultMsgCodec.toJson(s.credDef)
-            case Failure(e) => throw new Exception(s"Unable to retrieve cred def from ledger", e)
+            case Failure(e) => throw new Exception("Unable to retrieve cred def from ledger", e)
           }
         }
         .map(t => s""" "${t._1}": ${t._2} """)

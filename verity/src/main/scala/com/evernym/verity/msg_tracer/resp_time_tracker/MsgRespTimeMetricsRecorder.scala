@@ -59,7 +59,7 @@ class MsgRespTimeMetricsRecorder(appConfig: AppConfig) {
 
   private def updateHistogramMetrics(msgTypeName: String, nextHop: String): Unit = {
     if (isHistogramLatencyRecordingEnabled) {
-      val metricsName = s"histogram.processing.time.millis"
+      val metricsName = "histogram.processing.time.millis"
       Kamon
         .histogram(metricsName)
         .withTag(TAG_NAME_MSG_TYPE, msgTypeName)

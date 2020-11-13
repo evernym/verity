@@ -40,7 +40,7 @@ object InviteUtil {
       Vector(offerAttachment),
       service,
       logoUrl,
-      publicDid.map(s"did:sov:"+_)
+      publicDid.map("did:sov:"+_)
     )
   }
 

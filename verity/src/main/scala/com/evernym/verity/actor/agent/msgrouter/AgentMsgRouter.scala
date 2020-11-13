@@ -104,7 +104,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
         logger.debug("routing info for route '" + route + "' is: " + ri, (LOG_KEY_SRC_DID, route))
         ri
       case None =>
-        throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, msg = Option(s"agent not created for route: " + route))
+        throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, msg = Option(s"agent not created for route: $route"))
     }
   }
 
@@ -228,11 +228,12 @@ object AgentMsgRouter {
           case VALID_VER_KEY_BYTE_LENGTH =>
             val d = m.take(VALID_DID_BYTE_LENGTH)
             Success(Base58Util.encode(d))
-          case _ => Failure(new InvalidValueException(Some(s"Byte length of " +
-            s"route should be $VALID_DID_BYTE_LENGTH or $VALID_VER_KEY_BYTE_LENGTH but was found ${m.length}")))
+          case _ =>
+            val msg = s"Byte length of route should be $VALID_DID_BYTE_LENGTH or $VALID_VER_KEY_BYTE_LENGTH but was found ${m.length}"
+            Failure(new InvalidValueException(Some(msg)))
         }
       case Failure(_) =>
-        Failure(new InvalidValueException(Some(s"Route is not a base58 string")))
+        Failure(new InvalidValueException(Some("Route is not a base58 string")))
     }
   }
 }

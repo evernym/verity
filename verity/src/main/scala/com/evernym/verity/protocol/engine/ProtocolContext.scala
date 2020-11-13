@@ -380,7 +380,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
     shadowState = Some(state)
     shadowBackState = Some(backstate)
-    record(s"updated shadow state", state)
+    record("updated shadow state", state)
   }
 
   private def advanceStateVersion(): Unit = {

@@ -319,7 +319,7 @@ trait UtilBase {
 
   // Question: Why items is a Set and not a Seq, do we care about uniqueness of items?
   def jsonArray(items: Set[String]): String = {
-    """[""" + items.map(i => s""""$i"""").mkString(s",") + """]"""
+    JsonUtil.jsonArray(items)
   }
 
   def makeCache[K, V](capacity: Int): util.Map[K, V] = {

@@ -1,19 +1,23 @@
 package com.evernym.integrationtests.e2e.env
 
 import java.io.File
+import java.nio.file.Files
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.{AppConfig, ConfigReadHelper}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.util.CollectionUtil.containsDuplicates
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
+import com.evernym.verity.config.{AppConfig, ConfigReadHelper}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.util.CollectionUtil.containsDuplicates
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.util.EntityUtils
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -60,6 +64,7 @@ object Constants {
   final val LEDGER_CONFIG = "ledger-config"
   final val LEDGER_CONFIGS = "ledger-configs"
   final val LEDGER_GENESIS_FILE_PATH = "genesis-file-path"
+  final val LEDGER_GENESIS_IP_ADDR = "genesis-ip-addr"
   final val LEDGER_GENESIS_SUBMITTER_DID = "submitter-did"
   final val LEDGER_GENESIS_SUBMITTER_SEED = "submitter-seed"
   final val LEDGER_GENESIS_SUBMITTER_ROLE = "submitter-role"
@@ -204,9 +209,10 @@ trait IntegrationTestEnvBuilder {
     val confName = testEnvConfigReadHelper.getConfigStringOption(LEDGER_CONFIG).getOrElse("default")
     val ledgerConfig = integrationTestConfig.config.getConfig(s"$LEDGER_CONFIGS.$confName")
     val conf = new ConfigReadHelper(ledgerConfig)
-    val genesisFilePath = stringReq(conf, LEDGER_GENESIS_FILE_PATH, confName)
-    val absGenesisFilePath = new File(genesisFilePath).getAbsoluteFile
-    assert(absGenesisFilePath.exists())
+
+
+    val genesisFilePath = resolveGenesisFile(conf, confName)
+
     val trusteeDID = stringReq(conf, LEDGER_GENESIS_SUBMITTER_DID, confName)
     val trusteeSeed = stringReq(conf, LEDGER_GENESIS_SUBMITTER_SEED, confName)
     val trusteeRole = stringReq(conf, LEDGER_GENESIS_SUBMITTER_ROLE, confName)
@@ -252,6 +258,33 @@ object IntegrationTestEnvBuilder {
 
   def intOption(config: ConfigReadHelper, key: String, instanceKey: String): Option[Int] = {
     get(config.getConfigIntOption, { x => Some(x.toInt)}, key, instanceKey)
+  }
+
+  def resolveGenesisFile(conf: ConfigReadHelper, confName: String): String = {
+    stringOption(conf, LEDGER_GENESIS_FILE_PATH, confName)
+    .map{ p =>
+      val rtn = new File(p).getAbsoluteFile
+      assert(rtn.getAbsoluteFile.exists())
+      rtn
+    }
+    .orElse{
+      stringOption(conf, LEDGER_GENESIS_IP_ADDR, confName)
+        .map(addr => s"http://$addr:5679/genesis.txt")
+        .map { u =>
+          val e = HttpClientBuilder
+            .create
+            .build
+            .execute(new HttpGet(u))
+            .getEntity
+
+          val genesisContent = EntityUtils.toString(e)
+          val tempFile = Files.createTempFile("genesis-", ".txn")
+          Files.write(tempFile, genesisContent.getBytes)
+          tempFile.toFile
+        }
+    }
+    .map(_.getPath)
+    .getOrElse(throw new Exception("Must have Genesis Configuration"))
   }
 }
 

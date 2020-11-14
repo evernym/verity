@@ -107,7 +107,7 @@ The [AppStateManager](verity/src/main/scala/com/evernym/verity/apphealth/README.
 
 
 # Acknowledgements
-This project was partially funded by a grant from the [eSSIF-LAB](https://essif-lab.eu/), an EU-Funded project that aims to advance the broad adoption of self-sovereign identity for the benefit of all.
+This effort is part of a project that has received funding from the European Union’s Horizon 2020 research and innovation program under grant agreement No 871932 delivered through our participation in the eSSIF-Lab, which aims to advance the broad adoption of self-sovereign identity for the benefit of all.
 
 <img src="https://essif-lab.eu/wp-content/uploads/2020/04/essif-logo.png" alt="eSSIF-LAB logo" height="100px">
-<img src="http://essif-lab.eu/wp-content/uploads/2020/02/flag_yellow_low.jpg" alt="European Commission logo" height="100px">
+<img src="https://europa.eu/european-union/sites/europaeu/files/docs/body/flag_yellow_low.jpg" alt="European Commission flag" height="100px">

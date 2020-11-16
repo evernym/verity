@@ -6,6 +6,7 @@ import java.nio.file.Path
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
+import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.InterpreterEnv
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -66,7 +67,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
 
   override def available(): Unit ={
-    println("""import verity_sdk;print(verity_sdk.__file__)""".execute())
+    val out = """import verity_sdk;print(verity_sdk.__file__)""".execute()
+    debugPrintln(out)
   }
 
   private def executeCmd(ctx: Context,

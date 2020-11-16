@@ -84,7 +84,6 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent rest api request msg with invalid authorisation verkey" - {
       "should respond with Unauthorized" in {
-        println(s"did: $routingDid, verKey: $verKey")
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
           HttpEntity.Strict(ContentTypes.`application/json`, payload),
@@ -99,7 +98,6 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent rest api request msg with invalid authorisation signature" - {
       "should respond with Unauthorized" in {
-        println(s"did: $routingDid, verKey: $verKey")
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
           HttpEntity.Strict(ContentTypes.`application/json`, payload),
@@ -114,7 +112,6 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent valid rest api request msg" - {
       "should respond with Accepted" taggedAs (UNSAFE_IgnoreLog) in {
-        println(s"did: $routingDid, verKey: $verKey, signature: $signature")
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
           HttpEntity.Strict(ContentTypes.`application/json`, payload),
@@ -129,7 +126,6 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent valid rest api request msg without threadId" - {
       "should respond with Accepted" taggedAs (UNSAFE_IgnoreLog) in {
-        println(s"did: $routingDid, verKey: $verKey")
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6",
           HttpEntity.Strict(ContentTypes.`application/json`, payload),
@@ -144,7 +140,6 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent valid rest api request msg with case insensitive auth header" - {
       "should respond with Accepted" taggedAs (UNSAFE_IgnoreLog) in {
-        println(s"did: $routingDid, verKey: $verKey")
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
           HttpEntity.Strict(ContentTypes.`application/json`, payload),
@@ -242,8 +237,6 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent valid get rest api request msg" - {
       "should respond with OK" taggedAs (UNSAFE_IgnoreLog) in {
-
-        println(s"did: $routingDid, verKey: $verKey")
         overrideRestEnable = true
         val threadId = UUID.randomUUID.toString
         val sourceId = UUID.randomUUID.toString
@@ -282,14 +275,10 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
         })
         lastPayload.isDefined shouldBe true
         val jsonMsgString = lastPayload.get
-        println(s"# jsonMsgString: $jsonMsgString")
 
         val jsonMsg = new JSONObject(jsonMsgString)
         val regInvite = jsonMsg.getJSONObject("inviteDetail")
         val abrInvite = jsonMsg.getJSONObject("truncatedInviteDetail")
-
-        println(s"# regInvite: $regInvite")
-        println(s"# abrInvite: $abrInvite")
 
         regInvite.getString("connReqId") shouldBe abrInvite.getString("id")
         regInvite.getString("targetName") shouldBe abrInvite.getString("t")

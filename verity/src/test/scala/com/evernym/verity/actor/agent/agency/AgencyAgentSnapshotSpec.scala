@@ -142,7 +142,6 @@ class AgencyAgentSnapshotSpec
       m.name.startsWith("as_akka_actor_agent_state") &&
       m.tags.getOrElse(Map.empty)("actor_class") == "AgencyAgent"
     }
-    println("stateSizeMetrics: \n" + stateSizeMetrics.mkString("\n"))
     stateSizeMetrics.size shouldBe 12   //histogram metrics
     stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
       checkStateSizeSum(v.value, 623.0)

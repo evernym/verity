@@ -158,5 +158,4 @@ class UnhandledControlMsg(val state: Any, val control: Any)
 
 class UnhandledEvent(val state: Any, val event: Any)
   extends RuntimeException(s"no handler for event $event with state $state") {
-  println(s"no handler for event $event with state $state")
 }

@@ -263,7 +263,7 @@ trait AgentMsgSenderHttpWrapper
 
   def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
     val response = createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
-    println("response: " + response)
+//    println("response: " + response)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {
@@ -668,7 +668,6 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def checkServiceMetric(metrics: String): Unit = {
-    println(metrics)
     require(metrics.contains("as_endpoint_http_agent_msg_count"))
     require(metrics.contains("as_endpoint_http_agent_msg_succeed_count"))
     require(metrics.contains("as_endpoint_http_agent_msg_failed_count"))
@@ -703,15 +702,14 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def checkMessageTrackingData(messageTrackingData: String): Unit = {
-    //println(messageTrackingData)
     //require(messageTrackingData.contains("as_endpoint_http_agent_msg_count"))
   }
 
   def getMessageTrackingData(id: String="global", withEvents: String = "Y", inHtml: String = "N"): String = {
-    printApiCallStartedMsg(s"query message tracking data started ($id) ...")
+//    printApiCallStartedMsg(s"query message tracking data started ($id) ...")
     val r = sendGetRequest(Some(checkMessageTrackingData))(url,
       s"$agencyInternalPathPrefix/msg-progress-tracker/$id?withEvents=$withEvents&inHtml=$inHtml")
-    printApiCallStartedMsg(s"query message tracking data finished ($id)")
+//    printApiCallStartedMsg(s"query message tracking data finished ($id)")
     r.asInstanceOf[String]
   }
 

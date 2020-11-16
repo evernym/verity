@@ -28,7 +28,7 @@ trait PackedMsgHttpListener
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
         handleAgentMsgReqForOctetStreamContentType
       case _ =>
-        println("non binary message received")
+        // non-binary message received
         reject
     }
   }

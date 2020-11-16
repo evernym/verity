@@ -110,7 +110,7 @@ class ProtocolEngine(val signalMsgHandler: String => Unit,
 ////    // Do control messages need to be passed to protocols differently then protocol messages?
 ////    // Can we make it so that control messages have the same protocol entrypoint as protocol messages?
 ////    // The protocol should recognize whether or not a message is a control message
-////    println("control message handled")
+////
 ////  }
 ////
 ////  @JSExport

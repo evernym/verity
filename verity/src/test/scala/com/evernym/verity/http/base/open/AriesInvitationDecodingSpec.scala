@@ -54,7 +54,6 @@ trait AriesInvitationDecodingSpec { this : EndpointHandlerBaseSpec =>
           .withHeaders(`X-Forwarded-For`(RemoteAddress(InetAddress.getByName("127.0.0.1")))) ~> epRoutes ~> check {
           status shouldBe BadRequest
           header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
-          println(s"response: ${responseAs[String]}")
           val responseJson = new JSONObject(responseAs[String])
           responseJson.getString("statusCode") shouldBe "GNR-101"
         }
@@ -67,7 +66,6 @@ trait AriesInvitationDecodingSpec { this : EndpointHandlerBaseSpec =>
           .withHeaders(`X-Forwarded-For`(RemoteAddress(InetAddress.getByName("127.0.0.1")))) ~> epRoutes ~> check {
           status shouldBe BadRequest
           header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
-          println(s"response: ${responseAs[String]}")
           val responseJson = new JSONObject(responseAs[String])
           responseJson.getString("statusCode") shouldBe "GNR-101"
         }

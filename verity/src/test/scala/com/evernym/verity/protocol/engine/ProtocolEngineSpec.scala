@@ -21,7 +21,7 @@
 //
 //      class CmdlineUI {
 //        def ask(prompt: String): Future[String] = Future { StdIn.readLine() }
-//        def tell(message: String): Unit = println(message)
+//        def tell(message: String): Unit = ???
 //      }
 //
 //      def uiGen(): engine.UiGen = () => new CmdlineUI

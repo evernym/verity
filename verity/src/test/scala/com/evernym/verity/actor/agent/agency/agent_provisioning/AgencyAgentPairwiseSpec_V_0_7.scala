@@ -120,8 +120,6 @@ class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
       "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
         val expired = TimeUtil.longToDateString(Duration("12 minute").toMillis + TimeUtil.now)
         val checkNow = TimeUtil.nowDateString
-        println(expired)
-        println(checkNow)
         val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, expired, sig(timestamp=expired,vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
         val msg = prepareCreateAgentMsg(
           AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
@@ -224,7 +222,6 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwise
     "when sent first create agent (cloud) msg" - {
       "should respond with AGENT_CREATED msg" in {
         val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-        println(s"val aap = agentRegion($agencyAgentPairwiseEntityId, $agencyAgentPairwiseRegion)")
         val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
         val requesterKeys = RequesterKeys(mockEdgeAgent1.myDIDDetail.did, mockEdgeAgent1.myDIDDetail.verKey)
 
@@ -243,7 +240,6 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwise
     "when sent second create agent (cloud) msg" - {
       "should fail with problem report msg" taggedAs (UNSAFE_IgnoreLog) in {
         val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-        println(s"val aap = agentRegion($agencyAgentPairwiseEntityId, $agencyAgentPairwiseRegion)")
         val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
         val requesterKeys = RequesterKeys(mockEdgeAgent2.myDIDDetail.did, mockEdgeAgent2.myDIDDetail.verKey)
 

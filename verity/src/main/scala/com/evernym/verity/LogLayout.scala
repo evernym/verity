@@ -3,8 +3,10 @@ package com.evernym.verity
 import java.time.format.DateTimeFormatterBuilder
 import java.time.{Instant, ZoneId, ZonedDateTime}
 
+import ch.qos.logback.classic.PatternLayout
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.{CoreConstants, LayoutBase}
+import ch.qos.logback.core.CoreConstants.LINE_SEPARATOR
 import com.evernym.verity.util.OptionUtil
 
 import scala.collection.JavaConverters._
@@ -57,25 +59,69 @@ class LogLayout extends LayoutBase[ILoggingEvent] {
     * */
   def doLayout(event: ILoggingEvent): String = {
     // convert timestamp to a UTC zoned date time string
-    val timestamp =
-      dateTimeFormatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(event.getTimeStamp), ZoneId.of("UTC")))
-
+    val timestamp = resolveDateTime(event)
     val threadName = safeGet(event.getThreadName)
     val level = safeGet(event.getLevel)
     val msg = escapeQuotes(safeGet(event.getFormattedMessage))
-    val logger = safeGet(
-      {
-        safeGet(event.getLoggerName).split("\\.").lastOption.getOrElse("")
-      }
+    val logger = resolveLogger(event)
+    val source = resolveSource(event)
+    val args = resolveArgs(event)
+    val mdc = resolveMdc(event)
+
+    s"""$LOG_KEY_LEVEL="$level" $LOG_KEY_TIMESTAMP="$timestamp" $LOG_KEY_THREAD="$threadName" $LOG_KEY_LOGGER="$logger" $LOG_KEY_SOURCE="$source" $mdc$LOG_KEY_MESSAGE="$msg" $args$LINE_SEPARATOR"""
+  }
+
+}
+
+/**
+ * A more human read (specially for consoles) log layout
+ */
+class DevLogLayout extends LayoutBase[ILoggingEvent] {
+
+  import LogLayout._
+
+  val pattern = "[%highlight(%-5le)] [%magenta(%d{HH:mm:ss.SSS})] [%yellow(%10.15t)] [%cyan(%lo{25}:%M:%L)] -- %msg"
+
+  lazy val patternedLayout = {
+    val layout = new PatternLayout()
+    layout.setPattern(pattern)
+    layout.setContext(this.getContext)
+    layout.start()
+    layout
+  }
+
+  override def doLayout(event: ILoggingEvent): String = {
+    val args = resolveArgs(event)
+
+    val argsFormatted = if (args.trim.nonEmpty) {
+      s"[$args]"
+    } else ""
+
+    s"${patternedLayout.doLayout(event)} $argsFormatted$LINE_SEPARATOR"
+  }
+}
+
+object LogLayout {
+  def resolveDateTime(event: ILoggingEvent): String = {
+    dateTimeFormatter.format(
+      ZonedDateTime.ofInstant(
+        Instant.ofEpochMilli(event.getTimeStamp),
+        ZoneId.of("UTC")
+      )
     )
-    val source = safeGet{
+  }
+
+  def resolveSource(event: ILoggingEvent): String = {
+    safeGet{
       Option(event.getCallerData).getOrElse(Array[StackTraceElement]()).headOption match {
         case Some(callerData) => callerData.getFileName + ":" + callerData.getLineNumber
         case _                => ""
       }
     }
+  }
 
-    val args = safeGet{
+  def resolveArgs(event: ILoggingEvent): String = {
+    safeGet{
       Option(event.getArgumentArray) match {
         case Some(arguments) =>
           arguments
@@ -87,8 +133,10 @@ class LogLayout extends LayoutBase[ILoggingEvent] {
         case None => ""
       }
     }
+  }
 
-    val mdc = safeGet {
+  def resolveMdc(event:ILoggingEvent): String = {
+    safeGet {
       OptionUtil.emptyOption(event.getMDCPropertyMap)
         .map(_.asScala)
         .map {
@@ -97,13 +145,16 @@ class LogLayout extends LayoutBase[ILoggingEvent] {
         .map(_.mkString("", " ", " "))
         .getOrElse("")
     }
-
-    s"""$LOG_KEY_TIMESTAMP="$timestamp" $LOG_KEY_THREAD="$threadName" $LOG_KEY_LEVEL="$level" $LOG_KEY_LOGGER="$logger" $LOG_KEY_SOURCE="$source" $mdc$LOG_KEY_MESSAGE="$msg" $args${CoreConstants.LINE_SEPARATOR}"""
   }
 
-}
+  def resolveLogger(event: ILoggingEvent): String = {
+    safeGet(
+      {
+        safeGet(event.getLoggerName).split("\\.").lastOption.getOrElse("")
+      }
+    )
+  }
 
-object LogLayout {
   def escapeQuotes(arg: String) = arg.replace("\"", "'")
   def tupleStr(arg1: String, arg2: Any): String = {
     s"""$arg1="${escapeQuotes(arg2.toString)}""""

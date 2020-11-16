@@ -57,9 +57,10 @@ class DeleteMessageFailureItemManagerSpec
         }
         catch {
           case t: Throwable =>
-            println(t.getMessage)
-            println(t.getCause.getMessage)
-            println(t.getCause.printStackTrace())
+//            Is trapping Throwable really a good idea?
+//            println(t.getMessage)
+//            println(t.getCause.getMessage)
+//            println(t.getCause.printStackTrace())
         }
         expectMsgPF() {
           case _: ItemManagerStateDetail =>

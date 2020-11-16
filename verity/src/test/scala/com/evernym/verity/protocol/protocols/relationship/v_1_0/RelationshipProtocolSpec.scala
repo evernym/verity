@@ -212,7 +212,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg, label = defLabel)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, label = defLabel)
 
       requester ~ ConnectionInvitation()
@@ -220,7 +219,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2, label = defLabel)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation, label = defLabel)
     }
   }
@@ -243,7 +241,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg, label = emptyLabel.get)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, label = emptyLabel.get)
 
       requester ~ ConnectionInvitation()
@@ -251,7 +248,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2, label = emptyLabel.get)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation, label = emptyLabel.get)
     }
   }
@@ -270,7 +266,6 @@ class RelationshipProtocolSpec
       requester ~ Create(label, None)
       val pr = requester expect signal[Signal.ProblemReport]
       requester.state shouldBe a[State.Created]
-      println(s"Problem report: $pr")
       pr.description.code shouldBe ProblemReportCodes.unexpectedMessage
 
       requester ~ ConnectionInvitation()
@@ -278,7 +273,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation)
 
       requester ~ ConnectionInvitation()
@@ -286,7 +280,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation)
     }
   }
@@ -307,7 +300,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation)
 
       requester ~ ConnectionInvitation()
@@ -315,7 +307,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation)
     }
   }
@@ -337,7 +328,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg, profileUrl = None)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = None)
 
       requester ~ ConnectionInvitation()
@@ -345,7 +335,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2, profileUrl = None)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation, profileUrl = None)
     }
   }
@@ -367,7 +356,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ ConnectionInvitation()
@@ -375,7 +363,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
       checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
@@ -517,7 +504,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ ConnectionInvitation(Some(false))
@@ -525,7 +511,6 @@ class RelationshipProtocolSpec
       checkInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
       checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
@@ -547,7 +532,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
@@ -555,7 +539,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg2)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation)
     }
   }
@@ -577,7 +560,6 @@ class RelationshipProtocolSpec
       inviteMsg.shortInviteURL shouldBe None
 
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = None)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
@@ -585,7 +567,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg2, profileUrl = None)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       checkInvitationState(invitationAgain.invitation, profileUrl = None)
     }
   }
@@ -607,7 +588,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
@@ -615,7 +595,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
       checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
@@ -638,7 +617,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
@@ -646,7 +624,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
       checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
@@ -788,7 +765,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl)
       inviteMsg.shortInviteURL shouldBe None
       val invitation = requester expect state[State.InvitationCreated]
-      println("invitation: " + invitation)
       checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
 
       requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(false))
@@ -796,7 +772,6 @@ class RelationshipProtocolSpec
       checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl)
       inviteMsg2.shortInviteURL shouldBe None
       val invitationAgain = requester expect state[State.InvitationCreated]
-      println("invitation again: " + invitationAgain)
       invitationAgain shouldBe invitation
       checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
     }
@@ -1070,8 +1045,6 @@ class RelationshipProtocolSpec
                                 goalCode: String = defGoalCode
                                ): Unit = {
     val json = getInvitationJsonFromUrl(inviteURL, "oob")
-    println(s"### JSON: ${json.toString(2)}")
-
     json.getString("@id") shouldBe invitationId
     json.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
     json.getString("label") shouldBe label

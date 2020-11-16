@@ -30,6 +30,7 @@ object EnvUtils {
 
     //these names must be same what is defined in environment.conf under "verity-instance-configs" config
     // (in integration-tests/src/test/resources)
+    // (in integration-tests/src/test/resources)
     val APP_NAME_VERITY_1 = "VERITY1"
     val APP_NAME_VERITY_2 = "VERITY2"
     val APP_NAME_CAS_1    = "CAS1"

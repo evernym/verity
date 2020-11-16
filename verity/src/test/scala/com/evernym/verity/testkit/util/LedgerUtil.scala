@@ -53,13 +53,12 @@ class LedgerUtil (
   try {
     setupWallet(submitterDID, submitterKeySeed)
   } catch {
-    case e: Exception => println("error occurred during setting up trustee wallet: " + e.getMessage)
+    case e: Exception => throw new Exception("error occurred during setting up trustee wallet: " + e.getMessage)
   }
 
   def executeLedgerRequest(req: String): LedgerResponse = {
     poolConnManager.close()
     poolConnManager.open()
-    println("ledger request: " + req)
     val fut = poolConnManager
       .txnExecutor(Some(walletAPI))
       .completeRequest(Submitter(submitterDID, Some(wap)), LedgerRequest(req, taa = poolConnManager.currentTAA))
@@ -67,7 +66,6 @@ class LedgerUtil (
     val status = Await.result(fut, respWaitTime)
     status match {
       case Right(s: Any) =>
-        println("ledger response: " + status)
         poolConnManager.close()
         LedgerResponse(s)
       case e => throw new Exception(s"Unable to execute ledger request. Reason: $e")
@@ -106,10 +104,7 @@ class LedgerUtil (
             println(s"** Verkey: $verKey")
             println(s"**")
           }
-
-
       }
-
     }
   }
 

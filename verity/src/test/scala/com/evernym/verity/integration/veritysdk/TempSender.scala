@@ -23,7 +23,6 @@ object TempSender {
     val response = HttpClientBuilder.create().build().execute(request)
     val statusCode = response.getStatusLine.getStatusCode
     if (statusCode > 399) {
-      System.out.println("statusCode: " + statusCode)
       throw new IOException("Request failed! - " + EntityUtils.toString(response.getEntity))
     }
     else EntityUtils.toString(response.getEntity)

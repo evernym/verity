@@ -94,7 +94,6 @@ trait AgencyAgentScaffolding
             aa ! PackedMsgParam(msg, reqMsgContext)
             expectMsg(Done)
           })
-          println("pushNotifPayload: " + pushNotifPayload.map(_.jsonPayload))
         }
       }
 

@@ -26,8 +26,7 @@ class WalletAccessLibindySpec extends BasicSpec with TestWalletHelper {
           did = newDid
           verKey = newVerKey
         case Failure(cause) =>
-          println(cause)
-          assert(false)
+          fail(cause)
       }
     }
   }
@@ -37,8 +36,7 @@ class WalletAccessLibindySpec extends BasicSpec with TestWalletHelper {
       walletAccess.sign(TEST_MSG) match {
         case Success(signatureResult) => signature = signatureResult.signature
         case Failure(cause) =>
-          println(cause)
-          assert(false)
+          fail(cause)
       }
     }
 

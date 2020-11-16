@@ -275,7 +275,6 @@ class IssueCredentialSpec
       // if offer is sent in this state, problem-report is generated
       issuer ~ buildSendOffer(Option(false))
       val pr = issuer expect signal[SignalMsg.ProblemReport]
-      println(s"Problem report: $pr")
       pr.description.code shouldBe ProblemReportCodes.unexpectedMessage
       issuer expect state[State.RequestReceived]
 
@@ -472,7 +471,6 @@ class IssueCredentialSpec
     attachedOffer.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedOffer.data.base64))
     dataBase64Decoded shouldBe expectedOfferAttachment
-    println("cred offer:" + dataBase64Decoded)
   }
 
   def assertRequest(requestCred: RequestCred): Unit = {
@@ -483,7 +481,6 @@ class IssueCredentialSpec
     attachedRequest.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedRequest.data.base64))
     dataBase64Decoded shouldBe expectedReqAttachment
-    println("cred req:" + dataBase64Decoded)
   }
 
   def assertIssuedCred(issueCred: IssueCred): Unit = {
@@ -493,7 +490,6 @@ class IssueCredentialSpec
     attachedCred.`mime-type`.value shouldBe "application/json"
     attachedCred.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedCred.data.base64))
-    println("cred:" + dataBase64Decoded)
   }
 
   lazy val price = "0"

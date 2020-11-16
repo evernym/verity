@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg._
+import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.{Interaction, WalletBackupInteraction, WalletConfigKey}
 import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, MsgReceiver}
 import com.evernym.sdk.vcx.utils.UtilsApi
@@ -86,10 +87,10 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
   ).map(MsgFamily.typeStrFromMsgType)
 
   def interaction(vcxMsg: VcxMsg): JSONObject = {
-    println("vcxMsg: " + vcxMsg)
-    println("vcxMsg.meta.msgType: " + vcxMsg.meta.msgType)
-    println("vcxMsg.payloadMsgType: " + vcxMsg.payloadMsgType)
-    println("vcxMsg.payloadInnerMsgType: " + vcxMsg.payloadInnerMsgType)
+    debugPrintln("vcxMsg: " + vcxMsg)
+    debugPrintln("vcxMsg.meta.msgType: " + vcxMsg.meta.msgType)
+    debugPrintln("vcxMsg.payloadMsgType: " + vcxMsg.payloadMsgType)
+    debugPrintln("vcxMsg.payloadInnerMsgType: " + vcxMsg.payloadInnerMsgType)
     vcxMsg.meta.msgType match {
       case "question"             => interactQuestion(vcxMsg.meta, vcxMsg.msg)
       case "Question"             => interactQuestion(vcxMsg.meta, vcxMsg.msg)
@@ -227,8 +228,8 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
   def backup(threadId: String, sourceId: String, key: String): Backup = {
     new Backup() {
       def create(context: Context): Unit = {
-        println("id:"+sourceId)
-        println("key:"+key)
+        debugPrintln("id:"+sourceId)
+        debugPrintln("key:"+key)
         val handle = WalletApi.createWalletBackup(sourceId, key).get()
         updateInteraction( threadId ->
           WalletBackupInteraction(

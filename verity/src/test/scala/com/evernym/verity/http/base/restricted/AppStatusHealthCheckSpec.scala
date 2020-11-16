@@ -49,7 +49,6 @@ trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
           buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
             status shouldBe OK
             val aps = responseTo[AppStateDetailedResp]
-            println("app state: " + aps)
             aps.currentState shouldBe STATUS_LISTENING
           }
         }

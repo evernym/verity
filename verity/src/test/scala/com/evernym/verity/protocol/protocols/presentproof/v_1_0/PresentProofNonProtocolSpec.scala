@@ -74,7 +74,6 @@ class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
         Some(nonRevok)
       )
       val json = DefaultMsgCodec.toJson(pr)
-      println(json)
     }
   }
 

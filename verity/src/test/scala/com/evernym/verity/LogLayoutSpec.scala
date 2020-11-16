@@ -37,14 +37,14 @@ class LogLayoutSpec extends BasicSpec with MockitoSugar {
       "should generate a log message with a 3 digit millisecond value" in {
         when(event.getTimeStamp).thenReturn(Instant.parse(timestampString).toEpochMilli)
         val logLine = logLayout.doLayout(event)
-        logLine shouldBe "ts=\"2019-06-21T19:55:32.120Z[UTC]\" thread=\"test\" lvl=\"INFO\" logger=\"layoutLogger\" src=\"fake-file:1\" msg=\"\" argName=\"argValue\"\n"
+        logLine shouldBe "lvl=\"INFO\" ts=\"2019-06-21T19:55:32.120Z[UTC]\" thread=\"test\" logger=\"layoutLogger\" src=\"fake-file:1\" msg=\"\" argName=\"argValue\"\n"
       }
     }
     "when the timestamp has no millisecond value" - {
       "should generate a log message with a 3 digit millisecond value padded with 3 zeros" in {
         when(event.getTimeStamp).thenReturn(Instant.parse(timestampString).truncatedTo(ChronoUnit.SECONDS).toEpochMilli)
         val logLine = logLayout.doLayout(event)
-        logLine shouldBe "ts=\"2019-06-21T19:55:32.000Z[UTC]\" thread=\"test\" lvl=\"INFO\" logger=\"layoutLogger\" src=\"fake-file:1\" msg=\"\" argName=\"argValue\"\n"
+        logLine shouldBe "lvl=\"INFO\" ts=\"2019-06-21T19:55:32.000Z[UTC]\" thread=\"test\" logger=\"layoutLogger\" src=\"fake-file:1\" msg=\"\" argName=\"argValue\"\n"
       }
     }
   }

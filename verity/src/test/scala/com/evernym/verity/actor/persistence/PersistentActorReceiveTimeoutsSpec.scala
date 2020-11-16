@@ -9,8 +9,10 @@ import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -19,6 +21,8 @@ import scala.concurrent.duration._
 
 class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
   import TestActor._
+
+  val logger: Logger = getLoggerByClass(classOf[PersistentActorReceiveTimeoutsSpec])
 
   implicit val timeout: Timeout = Timeout(15.seconds)
   implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
@@ -202,18 +206,18 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
 
     try {
       Await.result(response, timeout.duration) match {
-        case ActorStopped(awakeMillis)      => println(s"Actor was awake for $awakeMillis milliseconds")
+        case ActorStopped(awakeMillis)      => logger.info(s"Actor was awake for $awakeMillis milliseconds")
         case WrongTimeoutReported(timeout)  => fail(s"Timeout value used is wrong, should be $expectedTimeout but it is $timeout")
         case x => throw new Exception(s"Wrong result: $x")
       }
     } catch {
       case _: TimeoutException if ! expectedTimeout.isFinite() =>
-        println("Actor not terminated, and that is expected.")
+        logger.info("Actor not terminated, and that is expected.")
       case e: TimeoutException =>
-        println("Actor not terminated, and that was NOT expected.")
+        logger.error("Actor not terminated, and that was NOT expected.")
         throw e
       case e: RuntimeException =>
-        println(s"Unexpected exception: $e")
+        logger.error(s"Unexpected exception: $e")
         throw e
     }
   }
@@ -241,15 +245,17 @@ import TestActor._
 
 
 class TestBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
+  val logger: Logger = getLoggerByClass(classOf[TestBaseActor])
+
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
-      println(s"$self: my timeout is: $entityReceiveTimeout")
+      logger.info(s"$self: my timeout is: $entityReceiveTimeout")
       sender ! ReceiveTimeoutAnswer(entityReceiveTimeout)
-    case x => println(s"receiveCmd: $x")
+    case x => logger.info(s"receiveCmd: $x")
   }
 
   override def receiveEvent: Receive = {
-    case x => println(s"receiveEvent: $x")
+    case x => logger.info(s"receiveEvent: $x")
   }
 
   override def persistenceEncryptionKey: String = "klsd89894kdsjisdji4"
@@ -258,15 +264,17 @@ class TestBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
 }
 
 class TestSingletonChildActor(val appConfig: AppConfig) extends SingletonChildrenPersistentActor {
+  val logger: Logger = getLoggerByClass(classOf[TestSingletonChildActor])
+
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
-      println(s"$self: my timeout is: $entityReceiveTimeout")
+      logger.info(s"$self: my timeout is: $entityReceiveTimeout")
       sender() ! ReceiveTimeoutAnswer(entityReceiveTimeout)
-    case x => println(s"receiveCmd: $x")
+    case x => logger.info(s"receiveCmd: $x")
   }
 
   override def receiveEvent: Receive = {
-    case x => println(s"receiveEvent: $x")
+    case x => logger.info(s"receiveEvent: $x")
   }
 
   override def persistenceEncryptionKey: String = "klsd89894kdsjisdji4"
@@ -275,6 +283,7 @@ class TestSingletonChildActor(val appConfig: AppConfig) extends SingletonChildre
 }
 
 class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration) extends Actor {
+  val logger: Logger = getLoggerByClass(classOf[WatcherActor])
   var testRef: ActorRef = _
   var persistStart: Long = _
 
@@ -294,13 +303,13 @@ class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration) extends Acto
       persistStart = System.currentTimeMillis()
 
     case ReceiveTimeoutAnswer(timeout) =>
-      println(s"${sender()} is alive and its timeout is: $timeout")
+      logger.info(s"${sender()} is alive and its timeout is: $timeout")
 
       if (timeout.isFinite() && timeout != expectedTimeout)
         testRef ! WrongTimeoutReported(timeout)
 
     case Terminated(kenny) =>
-      println(s"OMG, they killed Kenny: $kenny")
+      logger.info(s"OMG, they killed Kenny: $kenny")
       testRef ! ActorStopped(System.currentTimeMillis() - persistStart)
   }
 }

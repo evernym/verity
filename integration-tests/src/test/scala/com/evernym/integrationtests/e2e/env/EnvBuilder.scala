@@ -441,6 +441,8 @@ case class VerityInstance(name: String,
     */
 
   lazy val specificEnvVars: List[EnvVar] = {
+    val randSeed = (appType.systemName + endpoint.port.toString + System.currentTimeMillis.toString).hashCode
+    val rand = new Random(randSeed)
     List(
       EnvVar("APP_ACTOR_SYSTEM_NAME", appType.systemName),
       EnvVar("POOL_NAME", s"${name}_pool"),
@@ -453,8 +455,8 @@ case class VerityInstance(name: String,
       EnvVar("VERITY_ENDPOINT_PORT", endpoint.port),
       EnvVar("VERITY_DOMAIN_URL_PREFIX", endpoint, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
-      EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + Random.nextInt(1000), uniqueValueAcrossEnv = true),
-      EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + Random.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
     )
   }
 

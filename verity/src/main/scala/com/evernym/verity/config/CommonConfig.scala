@@ -176,7 +176,7 @@ trait CommonConfig {
   val PERSISTENCE = s"$VERITY.persistence"
   val PERSISTENCE_USE_ASYNC_MSG_FORWARD = s"$PERSISTENCE.use-async-for-msg-forward-feature"
 
-  private val KAMON = s"kamon"
+  private val KAMON = "kamon"
   val KAMON_ENV = s"$KAMON.environment"
   val KAMON_ENV_HOST = s"$KAMON_ENV.host"
   val KAMON_PROMETHEUS = s"$KAMON.prometheus"
@@ -213,15 +213,15 @@ trait CommonConfig {
   val WHITELISTED_TOKENS = s"$RESOURCE_USAGE_RULES.whitelisted-tokens"
   val BLACKLISTED_TOKENS = s"$RESOURCE_USAGE_RULES.blacklisted-tokens"
 
-  val AKKA_MNGMNT_HTTP = s"akka.management.http"
+  val AKKA_MNGMNT_HTTP = "akka.management.http"
   val AKKA_MNGMNT_HTTP_ENABLED = s"$AKKA_MNGMNT_HTTP.enabled"
   val AKKA_MNGMNT_HTTP_HOSTNAME = s"$AKKA_MNGMNT_HTTP.hostname"
   val AKKA_MNGMNT_HTTP_PORT = s"$AKKA_MNGMNT_HTTP.port"
   val AKKA_MNGMNT_HTTP_API_CREDS = s"$AKKA_MNGMNT_HTTP.api-creds"
 
-  val AKKA_SHARDING_REGION_NAME = s"akka.sharding-region-name"
-  val AKKA_SHARDING_REGION_NAME_USER_AGENT = s"akka.sharding-region-name.user-agent"
-  val AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE = s"akka.sharding-region-name.user-agent-pairwise"
+  val AKKA_SHARDING_REGION_NAME = "akka.sharding-region-name"
+  val AKKA_SHARDING_REGION_NAME_USER_AGENT = "akka.sharding-region-name.user-agent"
+  val AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE = "akka.sharding-region-name.user-agent-pairwise"
 
   private val TIMEOUT = s"$VERITY.timeout"
   val TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS = s"$TIMEOUT.general-ask-timeout-in-seconds"
@@ -230,7 +230,7 @@ trait CommonConfig {
   val TIMEOUT_SMS_SERVICE_ASK_TIMEOUT_IN_SECONDS = s"$TIMEOUT.sms-service-ask-timeout-in-seconds"
   val TIMEOUT_SERVICE_SHUTDOWN_TIMEOUT_IN_SECONDS = s"$TIMEOUT.service-shutdown-timeout-in-seconds"
 
-  private val ACTOR_DISPATCHER_NAME = s"akka.actor.dispatchers"
+  private val ACTOR_DISPATCHER_NAME = "akka.actor.dispatchers"
   val ACTOR_DISPATCHER_NAME_AGENCY_AGENT = s"$ACTOR_DISPATCHER_NAME.agency-agent-dispatcher"
   val ACTOR_DISPATCHER_NAME_AGENCY_AGENT_PAIRWISE = s"$ACTOR_DISPATCHER_NAME.agency-agent-pairwise-dispatcher"
   val ACTOR_DISPATCHER_NAME_USER_AGENT = s"$ACTOR_DISPATCHER_NAME.user-agent-dispatcher"

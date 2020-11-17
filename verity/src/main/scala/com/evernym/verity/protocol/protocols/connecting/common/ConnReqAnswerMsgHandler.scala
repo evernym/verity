@@ -186,7 +186,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
   private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
     walletDetail.walletAPI.getVerKeyOption(
         KeyInfo(Right(GetVerKeyByDIDParam(senderDID, getKeyFromPool = false)))) foreach {_ =>
-      throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option(s"pairwise keys already " +
+      throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))
     }
   }

@@ -647,7 +647,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       val msg = getMsgReq(uid)
       notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType), updateDeliveryStatus = true)
     } else {
-      val errorMsg = s"connection is marked as DELETED, user won't be notified about this msg: " + uid
+      val errorMsg = s"connection is marked as DELETED, user won't be notified about this msg: $uid"
       logger.warn("user agent pairwise", "notify user",
         s"connection is marked as DELETED, user won't be notified about this msg", uid)
       Future.failed(new RuntimeException(errorMsg))

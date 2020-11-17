@@ -17,7 +17,7 @@ object MsgFamily {
 
   val MSG_FAMILY_DID_METHOD: String = "sov"
 
-  val VALID_MESSAGE_TYPE_REG_EX: Regex = s"did:(.*):(.*);spec\\/(.*)\\/(.*)\\/(.*)".r
+  val VALID_MESSAGE_TYPE_REG_EX: Regex = "did:(.*):(.*);spec/(.*)/(.*)/(.*)".r
 
   def typeStrFromMsgType(msgType: MsgType): String = typeStrFromMsgType(
     msgType.familyQualifier,

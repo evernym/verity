@@ -255,7 +255,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
   }
 
   def smsNoPhoneNumberSignal: Signal.ProblemReport = Signal.buildProblemReport(
-    s"Unable to send SMS because no phone number defined for relationship",
+    "Unable to send SMS because no phone number defined for relationship",
     noPhoneNumberDefined
   )
 

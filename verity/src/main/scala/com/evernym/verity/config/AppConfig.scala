@@ -52,8 +52,7 @@ trait AppConfig extends ConfigReaderHelper {
         AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg))
         throw ex
       case e: BadRequestErrorException =>
-        val errorMsg = s"error while loading config " +
-          s"(${e.respMsg.getOrElse(Exceptions.getErrorMsg(e))})"
+        val errorMsg = s"error while loading config (${e.respMsg.getOrElse(Exceptions.getErrorMsg(e))})"
         val ex = new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(errorMsg))
         AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg))
         throw ex

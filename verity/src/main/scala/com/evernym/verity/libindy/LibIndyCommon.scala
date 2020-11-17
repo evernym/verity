@@ -34,7 +34,7 @@ trait LibIndyCommon {
       LibIndy.init(libIndyDirPath)
     } catch {
       case e: Exception =>
-        val errorMsg = s"unable to initialize lib-indy library: " + Exceptions.getErrorMsg(e)
+        val errorMsg = s"unable to initialize lib-indy library: ${Exceptions.getErrorMsg(e)}"
         AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_LIB_INDY_INIT, e, Option(errorMsg))
     }
   }

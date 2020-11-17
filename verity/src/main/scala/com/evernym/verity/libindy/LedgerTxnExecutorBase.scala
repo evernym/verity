@@ -441,7 +441,7 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
   def extractReqValue(resp: LedgerResult, fieldToExtract: String): Any = {
     resp.get(fieldToExtract) match {
       case Some(r) if r == null =>
-        throw new InvalidValueException(Option(s"ledger response parsing error " +
+        throw new InvalidValueException(Option("ledger response parsing error " +
           s"(invalid value found for field '$fieldToExtract': $r)"))
       case Some(r) => r
       case _ =>

@@ -127,7 +127,7 @@ class ActorProtocolContainer[
       }
       val reqId = msgIdOpt.getOrElse(UUID.randomUUID().toString)
 
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, s"in-msg-process-started", reqId, inMsg = Option(actualMsg))
+      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "in-msg-process-started", reqId, inMsg = Option(actualMsg))
       submit(msgToBeSent, Option(handleResponse(_, msgIdOpt, senderActorRef)))
   }
 
@@ -356,7 +356,7 @@ class ActorProtocolContainer[
       //if it is a message which needs to be packed and send to 'to' agent.
       //vs if it is a sms text msg etc
       agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(fromAgentId, pmsg))
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, s"sent-to-agent-actor",
+      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "sent-to-agent-actor",
         pmsg.requestMsgId, outMsg = Option(pmsg.msg))
 
       //      (msg, to) match {
@@ -411,7 +411,7 @@ class ActorProtocolContainer[
           postExecution(Right(Some(Write(segmentAddress, segmentKey, storageReference))))
         case Success(value) =>
           // TODO the type constraint should make this case un-needed
-          val msg = s"storing information is not a excepted type, unable to process it " +
+          val msg = "storing information is not a excepted type, unable to process it " +
             s"-- it is ${value.getClass.getSimpleName}"
           logger.error(msg)
           postExecution(Left(new Exception(msg)))

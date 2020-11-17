@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.MsgTypeParsingException
 
 import scala.util.matching.Regex
@@ -107,9 +107,9 @@ trait MsgFamily {
 
 /** Provides information which is needed during outgoing message flow (during packaging of the message)
   *
-  * @param msgPackVersion         msg pack version (messagepack vs indypack) to use for message packaging
+  * @param msgPackFormat         msg pack format (messagepack vs indypack) to use for message packaging
   *
-  * @param msgTypeFormat          msg type version (legacy '@type' json object vs latest '@type' string), for example:
+  * @param msgTypeFormat          msg type format (legacy '@type' json object vs latest '@type' string), for example:
   *                               legacy: "@type":{"name":"MESSAGE","ver":"1.0","fmt":"json"}
   *                               latest: "@type":"did:sov:123456789abcdefghi1234;spec/TicTacToe/0.5/OFFER"
   *
@@ -124,7 +124,7 @@ trait MsgFamily {
   *                                   }
   *
   */
-case class MsgPackagingContext(msgPackVersion: Option[MsgPackVersion]=None,
+case class MsgPackagingContext(msgPackFormat: Option[MsgPackFormat]=None,
                                msgTypeFormat: Option[TypeFormat]=None,
                                useLegacyGenMsgWrapper: Boolean=false,
                                useLegacyBundledMsgWrapper: Boolean=false)

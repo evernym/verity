@@ -2,14 +2,13 @@ package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE}
 import com.evernym.verity.Exceptions.UnauthorisedErrorException
-import com.evernym.verity.actor.ProtoMsgReceivedOrderIncremented
 import com.evernym.verity.actor.agent.msghandler.outgoing.OutgoingMsgParam
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespConfig, MsgRespContext}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgParam, ProtoParam, TrackingParam}
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, SendRemoteMsgHelper}
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdMsgHelper
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackedMsg, ParseParam, UnpackParam}
@@ -20,8 +19,9 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.vault.VerifySigByVerKeyParam
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
+import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -62,7 +62,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
       //msg progress tracking related
       MsgProgressTracker.recordMsgUnpackedByAgent(getClass.getSimpleName,
         inMsgParam = MsgParam(msgName = Option(amw.msgType.msgName)))(reqMsgContext)
-      logger.debug(s"incoming unpacked (mpv: ${amw.msgPackVersion}) msg: " + amw)
+      logger.debug(s"incoming unpacked (mpf: ${amw.msgPackFormat}) msg: " + amw)
       preMsgProcessing(amw.msgType, amw.senderVerKey)(reqMsgContext)
       handleAgentMsgWrapper(amw, reqMsgContext, msgThread)
     } catch protoExceptionHandler
@@ -110,27 +110,27 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     }
   }
 
-  def handleSignalMsgFromDriver(mfd: SignalMsgFromDriver): Unit = {
+  def handleSignalMsgFromDriver(smfd: SignalMsgFromDriver): Unit = {
     // flow diagram: SIG, step 5
-    if (handleSignalMsgs.isDefinedAt(mfd)) {
-      handleSignalMsgs(mfd).foreach { dmOpt =>
+    if (handleSignalMsgs.isDefinedAt(smfd)) {
+      handleSignalMsgs(smfd).foreach { dmOpt =>
         dmOpt.foreach { dm =>
           dm.forRel match {
             case Some(rel) =>
               val tm = typedMsg(dm.msg)
-              val tc = getThreadContext(mfd.pinstId)
-              val msgForRel = MsgForRelationship(tm, mfd.threadId, selfParticipantId,
-                Option(tc.msgPackVersion), Option(tc.msgTypeFormat), None)
+              val tc = smfd.threadContextDetail
+              val msgForRel = MsgForRelationship(tm, smfd.threadId, selfParticipantId,
+                Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
               agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
             case None =>
-              agentActorContext.protocolRegistry.find(mfd.protoRef).foreach { pd =>
-                sendUntypedMsgToProtocol(dm.msg, pd.protoDef, mfd.threadId)
+              agentActorContext.protocolRegistry.find(smfd.protoRef).foreach { pd =>
+                sendUntypedMsgToProtocol(dm.msg, pd.protoDef, smfd.threadId)
               }
           }
         }
       }
     } else {
-      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + mfd.signalMsg)
+      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + smfd.signalMsg)
     }
   }
 
@@ -244,7 +244,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     if (forRelationship.isDefined && forRelationship != relationshipId) {
       forRelationship.foreach { relId =>
         val msgForRel = MsgForRelationship(msgToBeSent, threadId, senderPartiId,
-          imp.msgPackVersion, imp.msgFormat, respDetail, Option(rmc))
+          imp.msgPackFormat, imp.msgFormat, respDetail, Option(rmc))
         logger.debug(s"msg for relationship sent by $persistenceId: " + msgForRel)
         // flow diagram: ctl.pairwise + proto.pairwise, step 10 -- Handle msg for specific connection.
         agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(relId, msgForRel), sender())
@@ -252,7 +252,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     } else {
       // flow diagram: ctl.self, step 10 -- Handle msg for self relationship.
       sendTypedMsgToProtocol(msgToBeSent, relationshipId, threadId, senderPartiId,
-        respDetail, imp.msgPackVersion,
+        respDetail, imp.msgPackFormat,
         imp.msgFormat, imp.usesLegacyGenMsgWrapper, imp.usesLegacyBundledMsgWrapper
       )
     }
@@ -263,8 +263,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
                                           threadId: ThreadId,
                                           senderParticipantId: ParticipantId,
                                           msgRespConfig: Option[MsgRespConfig],
-                                          msgPackVersion: Option[MsgPackVersion],
-                                          msgTypeFormat: Option[TypeFormat],
+                                          msgPackFormat: Option[MsgPackFormat],
+                                          msgTypeDeclarationFormat: Option[TypeFormat],
                                           usesLegacyGenMsgWrapper: Boolean=false,
                                           usesLegacyBundledMsgWrapper: Boolean=false)
                                           (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
@@ -279,16 +279,9 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     logger.debug("incoming msg processing, selfParticipantId: " + selfParticipantId)
     logger.debug("incoming msg processing, msgRespConfig: " + msgRespConfig)
     logger.debug("incoming msg processing, pair: " + pair)
-    logger.debug("incoming msg processing, msgPackVersionOpt: " + msgPackVersion)
+    logger.debug("incoming msg processing, msgPackVersionOpt: " + msgPackFormat)
     logger.debug(s"[$persistenceId] incoming msg processing, summary : msg: ${tmsg.msgType}, threadId: $threadId")
-    msgPackVersion.zip(msgTypeFormat).foreach { case (mpv, mtf) =>
-      logger.debug("incoming msg processing, updating thread context")
-      updateThreadContext(pair.id, threadId, mpv, mtf, usesLegacyGenMsgWrapper,
-        usesLegacyBundledMsgWrapper)
-      if (pair.protoDef.msgFamily.isProtocolMsg(tmsg.msg)) {
-        writeAndApply(ProtoMsgReceivedOrderIncremented(pair.id, senderParticipantId))
-      }
-    }
+
     sendGenericRespOrPrepareForAsyncResponse(msgEnvelope.msgId.get, senderParticipantId, msgRespConfig)
 
     //tracing/tracking metrics related
@@ -299,8 +292,12 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         inMsgParam = MsgParam(msgId = Option(rmId), msgName = Option(tmsg.msgType.msgName)),
         protoParam = ProtoParam(pair.id, pair.protoDef.msgFamily.name, pair.protoDef.msgFamily.version))
     }
-
-    tellProtocol(pair.id, pair.protoDef, msgEnvelope, self)
+    val tc = state.threadContextDetail(pair.id).getOrElse(
+      ThreadContextDetail(threadId,
+        msgPackFormat.getOrElse(MPF_INDY_PACK),
+        msgTypeDeclarationFormat.getOrElse(STANDARD_TYPE_FORMAT),
+        usesLegacyGenMsgWrapper, usesLegacyBundledMsgWrapper))
+    tellProtocol(pair, tc, msgEnvelope, self)
   }
 
   /**
@@ -348,8 +345,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
                                                        protoDef: ProtoDef,
                                                        threadId: ThreadId = DEFAULT_THREAD_ID,
                                                        msgRespConfig: MsgRespConfig = MsgRespConfig(isSyncReq = false),
-                                                       msgPackVersion: Option[MsgPackVersion]=None,
-                                                       msgTypeFormat: Option[TypeFormat]=None,
+                                                       msgPackFormat: Option[MsgPackFormat]=None,
+                                                       msgTypeDeclarationFormat: Option[TypeFormat]=None,
                                                        usesLegacyGenMsgWrapper: Boolean=false,
                                                        usesLegacyBundledMsgWrapper: Boolean=false): Unit = {
     val typedMsg = protoDef.msgFamily.typedMsg(msg)
@@ -359,8 +356,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
       threadId,
       selfParticipantId,
       Option(msgRespConfig),
-      msgPackVersion,
-      msgTypeFormat,
+      msgPackFormat,
+      msgTypeDeclarationFormat,
       usesLegacyGenMsgWrapper,
       usesLegacyBundledMsgWrapper
     )
@@ -368,7 +365,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
   (TypedMsg[_], ThreadId, Option[DID], Option[MsgRespConfig]) = {
-    val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackVersionReq, imp.msgType)
+    val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
     (tmsg, thId, m.meta.forRelationship, msgRespDetail)
@@ -448,7 +445,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         inMsgParam = MsgParam(msgName = Option(mfr.msgToBeSent.msgType.msgName)))(rmc)
     }
     sendTypedMsgToProtocol(mfr.msgToBeSent, relationshipId, mfr.threadId, mfr.senderParticipantId,
-      mfr.msgRespConfig, mfr.msgPackVersion, mfr.msgTypeFormat)(mfr.reqMsgContext.getOrElse(ReqMsgContext()))
+      mfr.msgRespConfig, mfr.msgPackFormat, mfr.msgTypeDeclarationFormat)(mfr.reqMsgContext.getOrElse(ReqMsgContext()))
   }
 
   /**
@@ -464,7 +461,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     }.getOrElse(Map.empty)
 
     val map2 = Map(
-      MSG_PACK_VERSION -> amw.msgPackVersion,
+      MSG_PACK_VERSION -> amw.msgPackFormat,
       MSG_TYPE_DETAIL -> amw.headAgentMsg.msgFamilyDetail)
 
     map1 ++ map2

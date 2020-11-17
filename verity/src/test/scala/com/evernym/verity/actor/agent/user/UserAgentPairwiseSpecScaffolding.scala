@@ -24,7 +24,7 @@ import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -207,7 +207,7 @@ trait UserAgentPairwiseSpecScaffolding
   }
 
   def buildReceivedReqMsg_V_0_5(pmp: PackMsgParam) : PackedMsg = {
-    preparePackedRequestForAgent(pmp)(MPV_MSG_PACK, mockRemoteEdgeCloudAgent.agentMsgTransformer,
+    preparePackedRequestForAgent(pmp)(MPF_MSG_PACK, mockRemoteEdgeCloudAgent.agentMsgTransformer,
       mockRemoteEdgeCloudAgent.wap)
   }
 

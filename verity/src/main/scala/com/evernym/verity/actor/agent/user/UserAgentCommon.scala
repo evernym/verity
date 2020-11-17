@@ -13,7 +13,7 @@ import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread, UpdateRoute}
+import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -83,8 +83,6 @@ trait UserAgentCommon
     case umds: UpdateMsgDeliveryStatus  => updateMsgDeliveryStatus(umds)
     case gc: GetConfigs                 => sender ! AgentConfigs(getFilteredConfigs(gc.names))
     case CheckPeriodicCleanupTasks      => checkPeriodicCleanupTasks()
-    case UpdateRoute                    => updateRoute()    //TODO: this is only till the legacy routes gets updated
-
     case sad: SetAgencyIdentity         => setAgencyIdentity(sad)
     case _: AgencyIdentitySet           => //nothing to od
   }
@@ -168,7 +166,7 @@ trait UserAgentCommon
       postUpdateConfig(tupdateConf, reqMsgContext.latestDecryptedMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sender ! rp
     }
   }
@@ -194,7 +192,7 @@ trait UserAgentCommon
       }
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sender ! rp
     }
   }
@@ -208,7 +206,7 @@ trait UserAgentCommon
       val confs = getFilteredConfigs(getConfs.configs)
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sender ! rp
     }
   }

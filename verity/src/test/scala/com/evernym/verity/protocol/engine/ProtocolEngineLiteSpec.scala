@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.drivers.TicTacToeAI
 import com.evernym.verity.protocol.{CtlEnvelope, engine}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
@@ -126,9 +127,9 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
         env.to,
         env.frm,
         env.msgId.getOrElse(""),
-        env.threadId.getOrElse(threadId),
         "",
-        null)
+        null,
+        ThreadContextDetail(threadId))
     }
 
     override def send(pmsg: ProtocolOutgoingMsg): Unit = {
@@ -146,8 +147,9 @@ class Inbox(engine: ProtocolEngineLite, val nickname: String) extends BoxLike[Pr
 
   override protected def processOneItem(pom: ProtocolOutgoingMsg): Any = {
     pom match {
-      case pmfp: ProtocolOutgoingMsg => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadId, protoRef, pmfp.envelope)
-      case _               => throw new RuntimeException("not supported")
+      case pmfp: ProtocolOutgoingMsg
+                          => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadContextDetail.threadId, protoRef, pmfp.envelope)
+      case _              => throw new RuntimeException("not supported")
     }
 
   }

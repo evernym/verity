@@ -27,7 +27,7 @@ end note
 autonumber
 soa -> pl: packed msg
 pl -> mel: packed msg
-pl <- mel: <b>(MsgPackVersion, ThreadId, <i>AgentMsgType</i>, native msg)\n<i>AgentMsgType</i> = (MsgFamilyName, MsgFamilyVersion, MsgName)
+pl <- mel: <b>(MsgPackFormat, ThreadId, <i>AgentMsgType</i>, native msg)\n<i>AgentMsgType</i> = (MsgFamilyName, MsgFamilyVersion, MsgName)
 alt if incoming msg expects a synchronous response
 pl -> pl: creates or computes a unique MsgId (could even be a sequence number)
 pl -> pl: store sender id with that msg Id (Map[MsgId, ActorRef])

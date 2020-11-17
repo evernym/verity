@@ -5,7 +5,7 @@ import com.evernym.verity.MsgPayloadStoredEventBuilder
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgPayloadStored, MsgStatusUpdated}
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, StatusDetail}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, MSG_TYPE_UPDATE_MSG_STATUS}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.actor.agent.Thread
@@ -53,8 +53,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       val logPrefix = "\n  => "
       logger.debug(s"filtered get msgs: $logPrefix" + filteredMsgs.mkString(logPrefix))
       logger.debug("get msgs response: " + getMsgsRespMsg)
-      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.msgPackVersion == MPV_MSG_PACK)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.msgPackFormat == MPF_MSG_PACK)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sndr ! rp
     }
   }
@@ -82,7 +82,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
     )
 
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
     sendRespMsg(rp)
   }
 

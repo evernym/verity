@@ -107,7 +107,7 @@ trait EndpointType {
 
 trait PackagingContextCompanion {
   def apply(packVersion: String): PackagingContext =
-    PackagingContext(MsgPackVersion.fromString(packVersion))
+    PackagingContext(MsgPackFormat.fromString(packVersion))
 }
 
 trait EndpointLike extends EndpointType {

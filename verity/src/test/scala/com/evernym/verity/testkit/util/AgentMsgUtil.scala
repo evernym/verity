@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.util
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
@@ -167,25 +167,25 @@ case class ConnReqAccepted_MFV_0_6(`@id`: String)
 
 object AgentPackMsgUtil {
 
-  def apply(msg: Any, encryptParam: EncryptParam)(implicit mpv: MsgPackVersion): PackMsgParam = {
+  def apply(msg: Any, encryptParam: EncryptParam)(implicit mpf: MsgPackFormat): PackMsgParam = {
     val nativeMsgs = msg match {
       case msgs: List[Any]  => msgs
       case native           => List(native)
     }
-    PackMsgParam(encryptParam, nativeMsgs, mpv==MPV_MSG_PACK)
+    PackMsgParam(encryptParam, nativeMsgs, mpf==MPF_MSG_PACK)
   }
 
   def preparePackedRequestForAgent(agentMsgParam: PackMsgParam)
-                                  (implicit msgPackVersion: MsgPackVersion,
+                                  (implicit msgPackFormat: MsgPackFormat,
                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildAgentMsg(msgPackVersion, agentMsgParam)
+    AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam)
   }
 
   def preparePackedRequestForRoutes(fwdMsgTypeVersion: String,
                                     packMsgParam: PackMsgParam,
                                     fwdRoutes: List[FwdRouteMsg])
-                                   (implicit msgPackVersion: MsgPackVersion,
+                                   (implicit msgPackFormat: MsgPackFormat,
                                     agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackVersion, packMsgParam, fwdRoutes, fwdMsgTypeVersion)
+    AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)
   }
 }

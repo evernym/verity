@@ -3,7 +3,7 @@ package com.evernym.verity.http.base.open
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.Status.UNAUTHORIZED
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil.convertTo
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
@@ -27,7 +27,7 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
   def testWalletBackupAndRecovery(): Unit = {
 
     implicit val msgPackagingContext: AgentMsgPackagingContext =
-      agentmsg.AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = true)
+      agentmsg.AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = true)
 
     val test_wallet: Array[Byte] = Array(1, 2, 3, 4, 5, 6, 7, 8, 9)
     val test_wallet_new_large: Array[Byte] = Array.range(0, 700000).map(_.toByte)

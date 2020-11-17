@@ -14,6 +14,7 @@ trait Envelope[+M] {
   */
 case class Envelope1[+M](msg: M, to: ParticipantId, frm: ParticipantId, msgId: Option[MsgId], threadId: Option[ThreadId]) extends Envelope[M]
 
+
 object Envelope1 {
   def apply[M](msg: M, to: ParticipantId, frm: ParticipantId, msgId: Option[MsgId]): Envelope1[M] = {
     apply(msg, to, frm, msgId, msgId)   //TODO: shall the last parameter value be msgId?

@@ -167,7 +167,7 @@ class TicTacToeSpec
         new InteractionController(i) {
           override def signal[A]: SignalHandler[A] = {
             case SignalEnvelope(_: AskAccept, _, _, _, _) => Some(AcceptOffer())
-            case SignalEnvelope(_,_,_,_, _) => None
+            case SignalEnvelope(_,_,_,_,_) => None
           }
         }
       }
@@ -194,7 +194,7 @@ class TicTacToeSpec
             case SignalEnvelope(_: AskAccept, _, _, _, _) =>
               control(AcceptOffer())
               None
-            case SignalEnvelope(_,_,_,_, _) => None
+            case SignalEnvelope(_,_,_,_,_) => None
           }
         }
       }

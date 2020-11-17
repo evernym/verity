@@ -8,8 +8,8 @@ import com.evernym.verity.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackVersion, PayloadMetadata}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
@@ -134,17 +134,17 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       case CREATE_MSG_TYPE_CONN_REQ_ANSWER | MSG_TYPE_ACCEPT_CONN_REQ |
            CREATE_MSG_TYPE_REDIRECT_CONN_REQ| MSG_TYPE_REDIRECT_CONN_REQ if msg.sendMsg =>
         //to send connection request answer asynchronously (to remote cloud agent)
-        List(SendMsgToRemoteCloudAgent(uid, agentMsgContext.msgPackVersion))
+        List(SendMsgToRemoteCloudAgent(uid, agentMsgContext.msgPackFormat))
 
       case CREATE_MSG_TYPE_CONN_REQ_ANSWER | MSG_TYPE_CONN_REQ_ACCEPTED |
            CREATE_MSG_TYPE_CONN_REQ_REDIRECTED | MSG_TYPE_CONN_REQ_REDIRECTED =>
-        agentMsgContext.msgPackVersion match {
-          case MPV_INDY_PACK | MPV_PLAIN =>
+        agentMsgContext.msgPackFormat match {
+          case MPF_INDY_PACK | MPF_PLAIN =>
             List.empty
-          case MPV_MSG_PACK =>
+          case MPF_MSG_PACK =>
             //to send received connection request answer asynchronously (to edge agent)
             List(SendMsgToEdgeAgent(uid))
-          case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+          case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
 
       case _ => List.empty//nothing to do
@@ -168,7 +168,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     getMsgDetail(uid, key).getOrElse(throw new RuntimeException(s"message detail not found, uid: $uid, key: $key"))
   }
 
-  private def buildConnReqAnswerMsgForRemoteCloudAgent(uid: MsgId, msgPackVersion: MsgPackVersion): List[Any] = {
+  private def buildConnReqAnswerMsgForRemoteCloudAgent(uid: MsgId): List[Any] = {
     val answerMsg = ctx.getState.msgState.getMsgReq(uid)
     val reqMsgIdOpt = ctx.getState.msgState.getReplyToMsgId(uid)
     logger.debug("reqMsgIdOpt when building conn request answer msg: " + reqMsgIdOpt)
@@ -181,7 +181,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     answerMsg.`type` match {
       case MSG_TYPE_ACCEPT_CONN_REQ | CREATE_MSG_TYPE_CONN_REQ_ANSWER =>
         ConnectingMsgHelper.buildConnReqAnswerMsgForRemoteCloudAgent(
-          msgPackVersion,
+          msgPackFormat,
           uid,
           answerMsg.statusCode,
           reqMsgIdOpt.get,
@@ -192,7 +192,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       case MSG_TYPE_REDIRECT_CONN_REQ | CREATE_MSG_TYPE_REDIRECT_CONN_REQ =>
         val redirectDetail = new JSONObject(getMsgDetailReq(uid, REDIRECT_DETAIL))
         ConnectingMsgHelper.buildRedirectedConnReqMsgForRemoteCloudAgent(
-          msgPackVersion,
+          msgPackFormat,
           uid,
           reqMsgIdOpt.get,
           redirectDetail,
@@ -208,14 +208,14 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     SendMsgParam(uid, msgType, msg, agencyDIDReq, s.state.theirRoutingParam, isItARetryAttempt)
   }
 
-  lazy val msgPackVersion: MsgPackVersion =
-    if (definition.msgFamily.protoRef.msgFamilyVersion == MFV_0_5) MPV_MSG_PACK else MPV_INDY_PACK
+  lazy val msgPackFormat: MsgPackFormat =
+    if (definition.msgFamily.protoRef.msgFamilyVersion == MFV_0_5) MPF_MSG_PACK else MPF_INDY_PACK
 
-  protected def sendMsgToRemoteCloudAgent(uid: MsgId, msgPackVersion: MsgPackVersion): Unit = {
+  protected def sendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat): Unit = {
     val answeredMsg = ctx.getState.msgState.getMsgReq(uid)
     try {
-      val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid, msgPackVersion)
-      val packedMsg = buildReqMsgForTheirRoutingService(msgPackVersion, agentMsgs, msgPackVersion == MPV_MSG_PACK, answeredMsg.`type`)
+      val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
+      val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
       sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg))
     } catch {
       case e: Exception =>
@@ -294,12 +294,12 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       val forKeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(getEncryptForDID, getKeyFromPool = false)))
       val ecInfo = EncryptParam (Set(forKeyInfo), Option(fromKeyInfo))
       val packedMsg = ctx.SERVICES_DEPRECATED.agentMsgTransformer.pack(
-        msgPackVersion, externalPayloadMsg, ecInfo)
+        msgPackFormat, externalPayloadMsg, ecInfo)
       packedMsg.msg
     }
     val payload = prepareEdgeMsg()
     val payloadStoredEvent = MsgPayloadStoredEventBuilder.buildMsgPayloadStoredEvt(
-      msgId, payload, Option(PayloadMetadata(msgName, msgPackVersion)))
+      msgId, payload, Option(PayloadMetadata(msgName, msgPackFormat)))
     Some(payloadStoredEvent)
   }
 
@@ -362,8 +362,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   def getEncryptForDID: DID
 
-  def buildAgentPackedMsg(msgPackVersion: MsgPackVersion, param: PackMsgParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildAgentMsg(msgPackVersion, param)
+  def buildAgentPackedMsg(msgPackFormat: MsgPackFormat, param: PackMsgParam): PackedMsg = {
+    AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)
   }
 
   def threadIdReq: ThreadId = ctx.getInFlight.threadId.getOrElse(
@@ -392,7 +392,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     }
   }
 
-  def buildReqMsgForTheirRoutingService(msgPackVersion: MsgPackVersion, agentMsgs: List[Any],
+  def buildReqMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, agentMsgs: List[Any],
                                         wrapInBundledMsgs: Boolean, msgType: String): PackedMsg = {
     (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(_: LegacyRoutingDetail), None) =>
@@ -400,24 +400,24 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           encryptionParamBuilder.withRecipDID(ctx.getState.theirAgentKeyDIDReq)
             .withSenderVerKey(ctx.getState.thisAgentVerKeyReq).encryptParam,
           agentMsgs, wrapInBundledMsgs)
-        val packedMsg = AgentMsgPackagingUtil.buildAgentMsg(msgPackVersion, packMsgParam)(agentMsgTransformer, wap)
-        buildRoutedPackedMsgForTheirRoutingService(msgPackVersion, packedMsg.msg, msgType)
+        val packedMsg = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
+        buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, packedMsg.msg, msgType)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
   }
 
-  def buildRoutedPackedMsgForTheirRoutingService(msgPackVersion: MsgPackVersion, packedMsg: Array[Byte], msgType: String): PackedMsg = {
+  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
     (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(v1: LegacyRoutingDetail), None) =>
         val theirAgencySealParam = SealParam(KeyInfo(Left(getVerKeyReqViaCache(
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
-        AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackVersion, PackedMsg(packedMsg),
+        AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
           List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap)
       case (None, Some(v2: RoutingDetail)) =>
         val routingKeys = if (v2.routingKeys.nonEmpty) Vector(v2.verKey) ++ v2.routingKeys else v2.routingKeys
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
-          MPV_INDY_PACK,
+          MPF_INDY_PACK,
           packedMsg,
           routingKeys,
           msgType
@@ -483,11 +483,11 @@ case class SendConnReqMsg(uid: MsgId) extends Control with ActorMessageClass
  * It is sent from Connecting Protocol to the protocol container (in this case GenericProtocolActor)
  * which then sends that message to self so that it will be guaranteed that it will be only picked up
  * by GenericProtocolActor when previous events would have been successfully persisted and applied.
- * As part of processing this (on connection request accepter side), it sends the received message
+ * As part of processing this (on connection request acceptor side), it sends the received message
  * to connection request sender's cloud agent
  * @param uid - connection request answer message uid
  */
-case class SendMsgToRemoteCloudAgent(uid: MsgId, msgPackVersion: MsgPackVersion) extends Control with ActorMessageClass
+case class SendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat) extends Control with ActorMessageClass
 
 
 /**

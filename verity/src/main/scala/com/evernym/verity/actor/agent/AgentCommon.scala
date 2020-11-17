@@ -7,7 +7,7 @@ import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
+import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.relationship.RelUtilParam
@@ -144,18 +144,6 @@ trait AgentCommon
   }
 
   /**
-   * handler to set correct agent routes (in case it is not set)
-   */
-  def updateRoute(): Unit = {
-    val sndr = sender()
-    state.myDid.map(did => setRoute(did))
-      .getOrElse(Future.successful("self rel not yet setup"))
-      .map { r =>
-        sndr ! r
-      }
-  }
-
-  /**
    * relationship util param, used in 'postSuccessfulActorRecovery' function call
    * to convert any LegacyAuthorizedKey to AuthorizedKey (by fetching ver key from the wallet)
    * @return
@@ -173,6 +161,7 @@ trait AgentCommon
       RelUtilParam(appConfig, state.thisAgentKeyDID, None)
     }
   }
+
 }
 
 /**
@@ -186,7 +175,6 @@ case class AgentActorDetailSet(did: DID, actorEntityId: String) extends ActorMes
 
 case class SetAgencyIdentity(did: DID) extends ActorMessageClass
 case class AgencyIdentitySet(did: DID) extends ActorMessageClass
-case object UpdateRoute extends ActorMessageObject
 
 trait SponsorRelCompanion {
   def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
@@ -262,24 +250,25 @@ trait PayloadWrapperBase {
   def msg: Array[Byte] = msgBytes.toByteArray
   def msgBytes: ByteString
   def metadata: Option[PayloadMetadata]
-  def msgPackVersion: Option[MsgPackVersion] = metadata.map(md => md.msgPackVersion)
+  def msgPackFormat: Option[MsgPackFormat] = metadata.map(md => md.msgPackFormat)
 }
 
 /**
- * this is only used when this agent has packed a message and it knows its metadata (message type string, message pack version etc)
+ * this is only used when this agent has packed a message and it knows its metadata
+ * (message type string, message pack version etc)
  * this should NOT be used when this agent is acting as a proxy and just storing a received packed message
  * (as in that case, it may/won't have idea about how that message is packed)
  */
 trait PayloadMetadataCompanion {
-  def apply(msgTypeStr: String, msgPackVersion: MsgPackVersion): PayloadMetadata = {
-    PayloadMetadata(msgTypeStr, msgPackVersion.toString)
+  def apply(msgTypeStr: String, msgPackFormat: MsgPackFormat): PayloadMetadata = {
+    PayloadMetadata(msgTypeStr, msgPackFormat.toString)
   }
-  def apply(msgType: MsgType, msgPackVersion: MsgPackVersion): PayloadMetadata = {
-    PayloadMetadata(MsgFamily.typeStrFromMsgType(msgType), msgPackVersion.toString)
+  def apply(msgType: MsgType, msgPackFormat: MsgPackFormat): PayloadMetadata = {
+    PayloadMetadata(MsgFamily.typeStrFromMsgType(msgType), msgPackFormat.toString)
   }
 }
 
 trait PayloadMetadataBase {
-  def msgPackVersionStr: String
-  def msgPackVersion: MsgPackVersion = MsgPackVersion.fromString(msgPackVersionStr)
+  def msgPackFormatStr: String
+  def msgPackFormat: MsgPackFormat = MsgPackFormat.fromString(msgPackFormatStr)
 }

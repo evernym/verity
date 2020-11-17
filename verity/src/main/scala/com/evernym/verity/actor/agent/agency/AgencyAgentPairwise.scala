@@ -5,7 +5,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship, RelationshipUtil}
@@ -41,7 +41,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
 
-  override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
+  override final def receiveAgentCmd: Receive = cmdReceiver
 
   val cmdReceiver: Receive = LoggingReceive.withLabel("cmdReceiver") {
     case saw: SetAgentActorDetail      => setAgentActorDetail(saw)
@@ -111,7 +111,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
       )
     )
     val agentMsgs = List(AgentMsgParseUtil.agentMsg(msg))
-    val amw = AgentMsgWrapper(MPV_INDY_PACK, AgentBundledMsg(agentMsgs,
+    val amw = AgentMsgWrapper(MPF_INDY_PACK, AgentBundledMsg(agentMsgs,
       state.thisAgentVerKey, None, None))
     handleAgentMsgWrapper(amw)
   }
@@ -206,6 +206,12 @@ trait AgencyAgentPairwiseStateUpdateImpl
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {
     state = state.withThreadContext(threadContext)
+  }
+
+  def removeThreadContext(pinstId: PinstId): Unit = {
+    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+    val afterRemoval = curThreadContexts - pinstId
+    state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 
   def addPinst(pri: ProtocolRunningInstances): Unit = {

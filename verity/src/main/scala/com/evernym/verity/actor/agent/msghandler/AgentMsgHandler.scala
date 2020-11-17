@@ -3,16 +3,18 @@ package com.evernym.verity.actor.agent.msghandler
 import akka.actor.ActorRef
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.actor._
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
 import com.evernym.verity.actor.agent.msghandler.outgoing.{AgentOutgoingMsgHandler, OutgoingMsgParam}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
+import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.msg_tracer.MsgTraceProvider
-import com.evernym.verity.protocol.actor.InitProtocolReq
+import com.evernym.verity.protocol.actor.{ActorProtocol, InitProtocolReq, SetThreadContext, ThreadContextStoredInProtoActor}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.util.MsgIdProvider
@@ -41,6 +43,11 @@ trait AgentMsgHandler
 
     //actor protocol container (only if created for first time) -> this actor
     case ipr: InitProtocolReq         => handleInitProtocolReq(ipr)
+
+    case MigrateThreadContexts        => migrateThreadContexts()
+
+    case tcsipa: ThreadContextStoredInProtoActor =>
+      writeAndApply(ProtoActorUpdatedWithThreadContext(tcsipa.pinstId))
   }
 
   override final def receiveCmd: Receive =
@@ -49,17 +56,21 @@ trait AgentMsgHandler
       agentOutgoingCommonCmdReceiver orElse
       receiveAgentCmd orElse {
 
-    case m: ActorMessage => try {
-      //these are the untyped incoming messages:
-      // a. for example get invite message sent by invite acceptor (connect.me)
-      // b. control messages sent by agent actors (in response to a signal message handling)
-      //      (search for 'sendUntypedMsgToProtocol' method in UserAgent.scala to see these messages)
-      //      (few others are like GetMsgs, UpdateMsgExpirationTime etc)
+      //TODO: below two cmd handler is only till the legacy routes gets updated
+      case FixActorState                      => fixActorState()
+      case CheckActorStateCleanupState(did)   => checkActorStateCleanupState(did)
 
-      val tm = typedMsg[Any](m)
-      sendTypedMsgToProtocol(tm, relationshipId, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID,
-        Option(MsgRespConfig(isSyncReq(m))), None, None)
-    } catch protoExceptionHandler
+      case m: ActorMessage => try {
+        //these are the untyped incoming messages:
+        // a. for example get invite message sent by invite acceptor (connect.me)
+        // b. control messages sent by agent actors (in response to a signal message handling)
+        //      (search for 'sendUntypedMsgToProtocol' method in UserAgent.scala to see these messages)
+        //      (few others are like GetMsgs, UpdateMsgExpirationTime etc)
+
+        val tm = typedMsg[Any](m)
+        sendTypedMsgToProtocol(tm, relationshipId, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID,
+          Option(MsgRespConfig(isSyncReq(m))), None, None)
+      } catch protoExceptionHandler
   }
 
   def agentCommonEventReceiver: Receive = {
@@ -72,14 +83,14 @@ trait AgentMsgHandler
 
     case tcs: ThreadContextStored =>
       val msgTypeFormat = try {
-        TypeFormat.fromString(tcs.msgTypeFormatVersion)
+        TypeFormat.fromString(tcs.msgTypeDeclarationFormat)
       } catch {
         //This is for backward compatibility (for older events which doesn't have msgTypeFormatVersion stored)
         case _: UnknownFormatType =>
-          TypeFormat.fromString(tcs.msgPackVersion)
+          TypeFormat.fromString(tcs.msgPackFormat)
       }
 
-      val tcd = ThreadContextDetail(tcs.threadId, MsgPackVersion.fromString(tcs.msgPackVersion), msgTypeFormat,
+      val tcd = ThreadContextDetail(tcs.threadId, MsgPackFormat.fromString(tcs.msgPackFormat), msgTypeFormat,
         tcs.usesGenMsgWrapper, tcs.usesBundledMsgWrapper)
 
       addThreadContextDetail(tcs.pinstId, tcd)
@@ -87,22 +98,43 @@ trait AgentMsgHandler
     case _: FirstProtoMsgSent => //nothing to do (deprecated, just kept it for backward compatibility)
 
     case pms: ProtoMsgSenderOrderIncremented =>
-      val stc = state.threadContextDetail(pms.pinstId)
-      val protoMsgOrderDetail = stc.protoMsgOrderDetail.getOrElse(ProtoMsgOrderDetail(senderOrder = -1))
+      val stc = state.threadContextDetailReq(pms.pinstId)
+      val protoMsgOrderDetail = stc.msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val updatedProtoMsgOrderDetail =
         protoMsgOrderDetail.copy(senderOrder = protoMsgOrderDetail.senderOrder + 1)
-      val updatedContext = stc.copy(protoMsgOrderDetail = Option(updatedProtoMsgOrderDetail))
+      val updatedContext = stc.copy(msgOrders = Option(updatedProtoMsgOrderDetail))
       addThreadContextDetail(pms.pinstId, updatedContext)
 
     case pms: ProtoMsgReceivedOrderIncremented  =>
-      val stc = state.threadContextDetail(pms.pinstId)
-      val protoMsgOrderDetail = stc.protoMsgOrderDetail.getOrElse(ProtoMsgOrderDetail(senderOrder = -1))
+      val stc = state.threadContextDetailReq(pms.pinstId)
+      val protoMsgOrderDetail = stc.msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val curReceivedMsgOrder = protoMsgOrderDetail.receivedOrders.getOrElse(pms.fromPartiId, -1)
       val updatedReceivedOrders = protoMsgOrderDetail.receivedOrders + (pms.fromPartiId -> (curReceivedMsgOrder + 1))
       val updatedProtoMsgOrderDetail =
         protoMsgOrderDetail.copy(receivedOrders = updatedReceivedOrders)
-      val updatedContext = stc.copy(protoMsgOrderDetail = Option(updatedProtoMsgOrderDetail))
+      val updatedContext = stc.copy(msgOrders = Option(updatedProtoMsgOrderDetail))
       addThreadContextDetail(pms.pinstId, updatedContext)
+
+    case pu: ProtoActorUpdatedWithThreadContext => removeThreadContext(pu.pinstId)
+  }
+
+  def migrateThreadContexts(): Unit = {
+    val candidateThreadContexts =
+      state.threadContext.map(_.contexts).getOrElse(Map.empty)
+        .take(migrateThreadContextBatchSize)
+    if (candidateThreadContexts.isEmpty) {
+      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+    } else {
+      Future {
+        candidateThreadContexts.foreach { case (pinstId, tcd) =>
+          com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
+            val cmd = ForIdentifier(pinstId, SetThreadContext(tcd))
+            java.lang.Thread.sleep(migrateThreadContextBatchItemSleepInterval)
+            ActorProtocol(e.protoDef).region.tell(cmd, self)
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -159,6 +191,28 @@ trait AgentMsgHandler
     }
   }
 
+  def fixActorState(): Unit = {
+    state.myDid.map(did => setRoute(did))
+  }
+
+  def checkActorStateCleanupState(actorDID: DID): Unit = {
+    val sndr = sender()
+    state.myDid.map { did =>
+      getRoute(did).map {
+        case Some(_)  => sndr !
+          ActorStateCleanupStatus(
+            actorDID,
+            routeFixed = true,
+            threadContextMigrated = state.threadContext.forall(tc => tc.contexts.isEmpty))
+        case None       => sndr !
+          ActorStateCleanupStatus(
+            actorDID,
+            routeFixed = false,
+            threadContextMigrated = state.threadContext.forall(tc => tc.contexts.isEmpty))
+      }
+    }
+  }
+
   lazy val walletSeed: String = agentWalletSeedReq
 
   def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
@@ -179,37 +233,35 @@ trait AgentMsgHandler
     Future.successful("default implementation of sendUnstoredMsgToEdge")
   }
 
-  /**
-   * stores given thread context (like thread id, msg pack version, type format etc) with key as pinstId,
-   * which is used during outgoing (protocol/signal) message processing
-   * to know how that outgoing message should be packed
-   * @param pinstId
-   * @param threadId
-   * @param msgPackVersion
-   * @param msgTypeFormat
-   * @param usesLegacyGenMsgWrapper
-   * @param usesLegacyBundledMsgWrapper
-   */
-  def updateThreadContext(pinstId: PinstId,
-                          threadId: ThreadId,
-                          msgPackVersion: MsgPackVersion,
-                          msgTypeFormat: TypeFormat,
-                          usesLegacyGenMsgWrapper: Boolean = false,
-                          usesLegacyBundledMsgWrapper: Boolean = false): Unit = {
-    val tc = ThreadContextDetail(threadId, msgPackVersion, msgTypeFormat,
-      usesLegacyGenMsgWrapper, usesLegacyBundledMsgWrapper)
-    updateThreadContext(pinstId, tc)
-  }
-
-  def updateThreadContext(pinstId: PinstId, tcd: ThreadContextDetail): Unit = {
-    if (! state.threadContextsContains(pinstId)) {
-      val tc = ThreadContextStored(pinstId, tcd.threadId, tcd.msgPackVersion.toString,
-        tcd.msgTypeFormat.toString, tcd.usesLegacyGenMsgWrapper, tcd.usesLegacyBundledMsgWrapper)
-      writeAndApply(tc)
-    }
-  }
-
   override def getPinstId(protoDef: ProtoDef): Option[PinstId] = state.getPinstId(protoDef)
+
+  lazy val migrateThreadContextBatchSize: Int =
+    appConfig
+      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
+      .getOrElse(5)
+
+  lazy val migrateThreadContextBatchItemSleepInterval: Int =
+    appConfig
+      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+      .getOrElse(5000)
+
+  lazy val migrateThreadContextScheduledJobInitialDelay: Int =
+    appConfig
+      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS)
+      .getOrElse(60)
+
+  lazy val migrateThreadContextScheduledJobInterval: Int =
+    appConfig
+      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getOrElse(300)
+
+  val MIGRATE_SCHEDULED_JOB_ID = "MigrateThreadContexts"
+
+  scheduleJob(
+    MIGRATE_SCHEDULED_JOB_ID,
+    migrateThreadContextScheduledJobInitialDelay,
+    migrateThreadContextScheduledJobInterval,
+    MigrateThreadContexts)
 }
 
 /**
@@ -228,3 +280,9 @@ case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKey]=None)
  * @param senderActorRef actor reference (of waiting http connection) to which the response needs to be sent
  */
 case class MsgRespContext(senderPartiId: ParticipantId, packForVerKey: Option[VerKey]=None, senderActorRef:Option[ActorRef]=None)
+
+case object MigrateThreadContexts extends ActorMessageObject
+
+case object FixActorState extends ActorMessageObject
+case class CheckActorStateCleanupState(actorDID: DID) extends ActorMessageClass
+case class ActorStateCleanupStatus(forDID: DID, routeFixed: Boolean, threadContextMigrated: Boolean) extends ActorMessageClass

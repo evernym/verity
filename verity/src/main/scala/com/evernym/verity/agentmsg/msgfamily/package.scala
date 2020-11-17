@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_MSGS_SENT, MSG_TYPE_MSG_CREATED, MSG_TYPE_MSG_DETAIL}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgCreatedRespMsg_MFV_0_5, MsgsSentRespMsg_MFV_0_5}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
@@ -33,7 +33,7 @@ package object msgfamily {
     }
   }
 
-  case class AgentMsgContext(msgPackVersion: MsgPackVersion, familyVersion: String, senderVerKey: Option[VerKey])
+  case class AgentMsgContext(msgPackFormat: MsgPackFormat, familyVersion: String, senderVerKey: Option[VerKey])
 
   def buildMsgCreatedTypeDetail(ver: String): TypeDetail = TypeDetail(MSG_TYPE_MSG_CREATED, ver)
 

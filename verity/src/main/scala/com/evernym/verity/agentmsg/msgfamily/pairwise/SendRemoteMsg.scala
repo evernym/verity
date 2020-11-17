@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.actor.agent.Thread
@@ -175,17 +175,17 @@ object SendRemoteMsgHelper {
   }
 
   def buildReqMsg(implicit amw: AgentMsgWrapper): SendRemoteMsg = {
-    (amw.msgPackVersion, amw.headAgentMsgDetail) match {
-      case (MPV_INDY_PACK, MsgFamilyDetail(EVERNYM_QUALIFIER, MSG_FAMILY_PAIRWISE, MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG, _, _)) =>
+    (amw.msgPackFormat, amw.headAgentMsgDetail) match {
+      case (MPF_INDY_PACK, MsgFamilyDetail(EVERNYM_QUALIFIER, MSG_FAMILY_PAIRWISE, MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG, _, _)) =>
         buildReqMsgFrom_MFV_0_6
       case x => throw new RuntimeException("send remote msg req builder failed: " + x)
     }
   }
 
   def buildRespMsg(id: String)(implicit agentMsgContext: AgentMsgContext): List[Any] = {
-    (agentMsgContext.msgPackVersion, agentMsgContext.familyVersion) match {
-      case (MPV_MSG_PACK, MFV_0_5)  => List(buildMsgCreatedResp_MFV_0_5(id))
-      case (MPV_INDY_PACK, MFV_0_6) => List(buildRemoteMsgSentResp_MFV_0_6(id, sent=true))
+    (agentMsgContext.msgPackFormat, agentMsgContext.familyVersion) match {
+      case (MPF_MSG_PACK, MFV_0_5)  => List(buildMsgCreatedResp_MFV_0_5(id))
+      case (MPF_INDY_PACK, MFV_0_6) => List(buildRemoteMsgSentResp_MFV_0_6(id, sent=true))
       case x => throw new RuntimeException("send remote msg resp builder failed: " + x)
     }
   }

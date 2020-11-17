@@ -4,9 +4,9 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, PoisonPill, Props}
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.actor.agent.UpdateRoute
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RouteAlreadySet, RoutingAgentUtil, SetRoute}
-import com.evernym.verity.actor.cluster_singleton.legacyroutefixmanager.{GetStatus, Status}
+import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, CheckActorStateCleanupState, FixActorState}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
+import com.evernym.verity.actor.cluster_singleton.maintenance.{GetStatus, Status}
 import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
@@ -19,7 +19,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
 
-class LegacyRouteFixManagerSpec extends PersistentActorSpec with BasicSpec with ShardUtil with Eventually {
+class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec with ShardUtil with Eventually {
 
   //number of total route store actors
   val shardSize = 100         //total possible actors
@@ -42,28 +42,28 @@ class LegacyRouteFixManagerSpec extends PersistentActorSpec with BasicSpec with 
     }
   }
 
-  "LegacyRouteFixManager" - {
+  "ActorStateCleanupManager" - {
 
     "when sent GetStatus" - {
       "should respond with correct status" in {
-        eventually(timeout(Span(20, Seconds)), interval(Span(3, Seconds))) {
-          platform.singletonParentProxy ! ForLegacyRouteFixManager(GetStatus)
+        eventually(timeout(Span(20, Seconds)), interval(Span(4, Seconds))) {
+          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus)
           val status = expectMsgType[Status]
-          status.registeredActorCount shouldBe shardSize
-          status.totalCandidateRoutes shouldBe totalRouteEntries
+          status.registeredRouteStoreActorCount shouldBe shardSize
+          status.totalCandidateAgentActors shouldBe totalRouteEntries
         }
       }
     }
 
     "after some time" - {
-      "should have processed all legacy routes" taggedAs (UNSAFE_IgnoreLog) in {
-        eventually(timeout(Span(20, Seconds)), interval(Span(1, Seconds))) {
-          platform.singletonParentProxy ! ForLegacyRouteFixManager(GetStatus)
+      "should have processed all state cleanup" taggedAs UNSAFE_IgnoreLog in {
+        eventually(timeout(Span(30, Seconds)), interval(Span(4, Seconds))) {
+          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus)
           val status = expectMsgType[Status]
-          status.registeredActorCount shouldBe shardSize
-          status.processedActorCount shouldBe shardSize
-          status.totalCandidateRoutes shouldBe totalRouteEntries
-          status.totalProcessedRoutes shouldBe totalRouteEntries
+          status.registeredRouteStoreActorCount shouldBe shardSize
+          status.processedRouteStoreActorCount shouldBe shardSize
+          status.totalCandidateAgentActors shouldBe totalRouteEntries
+          status.totalProcessedAgentActors shouldBe totalRouteEntries
         }
       }
     }
@@ -113,7 +113,7 @@ class LegacyRouteFixManagerSpec extends PersistentActorSpec with BasicSpec with 
 
   override def overrideConfig: Option[Config] = Option {
     ConfigFactory parseString {
-      s"verity.agent.route-store.fix-legacy-routes.enabled = true"
+      s"verity.agent.actor-state-cleanup.enabled = true"
     }
   }
 }
@@ -124,6 +124,8 @@ object DummyAgentActor {
 
 class DummyAgentActor extends Actor {
   override def receive: Receive = {
-    case UpdateRoute => sender ! RouteAlreadySet("did")
+    case FixActorState                      => //nothing
+    case CheckActorStateCleanupState(did)   =>
+      sender ! ActorStateCleanupStatus(did, routeFixed = true, threadContextMigrated = true)
   }
 }

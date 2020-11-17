@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg
 
 import com.evernym.verity.Status.FORBIDDEN
 import com.evernym.verity.Version
-import com.evernym.verity.actor.agent.{DidPair, MsgPackVersion, Thread}
+import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg._
@@ -115,7 +115,7 @@ trait AgentMsgHelper
     Logger("APIClientHelper").info("    " + msg)
   }
 
-  def buildPackedMsg(ampp: PackMsgParam)(implicit mpv: MsgPackVersion):  PackedMsg = {
+  def buildPackedMsg(ampp: PackMsgParam)(implicit mpf: MsgPackFormat):  PackedMsg = {
     preparePackedRequestForAgent(ampp)
   }
 
@@ -257,7 +257,7 @@ trait AgentMsgHelper
                                            corePayloadMsg: PackedMsg, replyToMsgId: Option[String],
                                            title: Option[String] = None, detail: Option[String] = None)
                                           (encryptParam: EncryptParam)
-                                          (implicit msgPackVersion: MsgPackVersion)
+                                          (implicit msgPackFormat: MsgPackFormat)
   : PackMsgParam = {
     val agentMsgs = buildBundledCreateGeneralMsgWithVersion(msgTypeVersion, includeSendMsg,
       msgType, corePayloadMsg, replyToMsgId, title, detail)
@@ -269,7 +269,7 @@ trait AgentMsgHelper
     prepareMsgForAgent(msg)
   }
 
-  def buildGetPayloadMsg(ddd: DeadDropData)(implicit mpv: MsgPackVersion): PackMsgParam = {
+  def buildGetPayloadMsg(ddd: DeadDropData)(implicit mpf: MsgPackFormat): PackMsgParam = {
     val msg = GetDeadDropMsg(MSG_TYPE_DETAIL_DEAD_DROP_RETRIEVE,
       ddd.recoveryVerKey, ddd.address, ddd.locator, ddd.locatorSignature)
     val encParam = EncryptParam(
@@ -280,13 +280,13 @@ trait AgentMsgHelper
   }
 
   def prepareGetPayloadMsgForAgent(ddd: DeadDropData)(implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
-    implicit val mpv: MsgPackVersion = msgPackagingContext.msgPackVersion
+    implicit val mpf: MsgPackFormat = msgPackagingContext.msgPackFormat
     val agentMsgParam = buildGetPayloadMsg(ddd)
     preparePackedRequestForAgent(agentMsgParam)
   }
 
   def prepareGetPayloadMsgForAgency(ddd: DeadDropData)(implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
-    implicit val mpv: MsgPackVersion = msgPackagingContext.msgPackVersion
+    implicit val mpf: MsgPackFormat = msgPackagingContext.msgPackFormat
     val agentMsgParam = buildGetPayloadMsg(ddd)
     val fwdRoute = FwdRouteMsg(agencyAgentDetailReq.DID, Left(sealParamFromEdgeToAgency))
     preparePackedRequestForRoutes(msgPackagingContext.fwdMsgVersion, agentMsgParam, List(fwdRoute))
@@ -301,13 +301,13 @@ trait AgentMsgHelper
   }
 
   def buildCoreUpdateComMethodMsgWithVersion(msgTypeVersion: String, cm: TestComMethod)
-                                            (implicit msgPackVersion: MsgPackVersion): PackMsgParam = {
+                                            (implicit msgPackFormat: MsgPackFormat): PackMsgParam = {
     val msgs = List(UpdateComMethod_MFV_0_5(TypeDetail(MSG_TYPE_UPDATE_COM_METHOD, msgTypeVersion), cm))
     AgentPackMsgUtil(msgs, encryptParamFromEdgeToCloudAgent)
   }
 
   def prepareUpdateComMethodMsgForAgentBase(msgTypeVersion: String, cm: TestComMethod)
-                                       (implicit msgPackVersion: MsgPackVersion): PackedMsg = {
+                                       (implicit msgPackFormat: MsgPackFormat): PackedMsg = {
     preparePackedRequestForAgent(buildCoreUpdateComMethodMsgWithVersion(msgTypeVersion, cm))
   }
 
@@ -322,7 +322,7 @@ trait AgentMsgHelper
 
   //this msg is packed for cloud agent (user agent actor will receive it)
   protected def prepareMsgForAgent(msg: Any)(implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
-    implicit val mpv: MsgPackVersion = msgPackagingContext.msgPackVersion
+    implicit val mpf: MsgPackFormat = msgPackagingContext.msgPackFormat
     val agentMsgPackParam = AgentPackMsgUtil(msg, encryptParamFromEdgeToCloudAgent)
     prepareRoutedAgentMsg(agentMsgPackParam, Option(cloudAgentRoutingDID))
   }
@@ -330,7 +330,7 @@ trait AgentMsgHelper
   //this msg is packed for a connection (user agent pairwise actor will receive it)
   protected def prepareMsgForConnection(msg: Any, connId: String)
                                      (implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
-    implicit val mpv: MsgPackVersion = msgPackagingContext.msgPackVersion
+    implicit val mpf: MsgPackFormat = msgPackagingContext.msgPackFormat
     val agentMsgPackParam = buildAgentMsgPackParam(msg, encryptParamFromEdgeToCloudAgentPairwise(connId))
     prepareRoutedAgentMsg(agentMsgPackParam, Option(cloudAgentPairwiseDIDForConn(connId)))
   }
@@ -338,7 +338,7 @@ trait AgentMsgHelper
   //adds proper routing (optionally adds agency routing based on msgPackagingContext)
   protected def prepareRoutedAgentMsg(agentMsgPackParam: PackMsgParam, forDIDOpt: Option[DID]=None)
                                    (implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
-    implicit val mpv: MsgPackVersion = msgPackagingContext.msgPackVersion
+    implicit val mpf: MsgPackFormat = msgPackagingContext.msgPackFormat
     val agencyRoute = forDIDOpt match {
       case Some(forDID) if msgPackagingContext.packForAgencyRoute
                         => List(FwdRouteMsg(forDID, Left(sealParamFromEdgeToAgency)))
@@ -347,7 +347,7 @@ trait AgentMsgHelper
     preparePackedRequestForRoutes(msgPackagingContext.fwdMsgVersion, agentMsgPackParam, agencyRoute)
   }
 
-  protected def buildAgentMsgPackParam(msgs: Any, ep: EncryptParam)(implicit mpv: MsgPackVersion): PackMsgParam = {
+  protected def buildAgentMsgPackParam(msgs: Any, ep: EncryptParam)(implicit mpf: MsgPackFormat): PackMsgParam = {
     AgentPackMsgUtil(msgs, ep)
   }
 
@@ -385,6 +385,6 @@ case class CreateInviteResp_MFV_0_5(mc: MsgCreated_MFV_0_5,
                                     ms: Option[MsgsSent_MFV_0_5])
 
 case class AgentMsgPackagingContext(
-                                     msgPackVersion: MsgPackVersion,
+                                     msgPackFormat: MsgPackFormat,
                                      fwdMsgVersion: Version,
                                      packForAgencyRoute: Boolean)

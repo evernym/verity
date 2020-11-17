@@ -15,3 +15,34 @@ message SetPinstId {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string pinstId = 1;
 }
+
+message PackagingContextSet {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    int32 msgPackFormat = 1;
+}
+
+message LegacyPackagingContextSet {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    int32 msgTypeDeclarationFormat = 1;
+    bool usesLegacyGenMsgWrapper = 2;
+    bool usesLegacyBundledMsgWrapper = 3;
+}
+
+message SenderOrderSet {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    int32 order = 1;
+}
+
+message ReceivedOrdersSet {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    map<string, int32> receivedOrders = 1;
+}
+
+message SenderOrderIncremented {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+}
+
+message ReceivedOrderIncremented {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string fromPartiId = 1;
+}

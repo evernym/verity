@@ -16,6 +16,8 @@ message AgencyAgentState {
     google.protobuf.StringValue agencyDID = 3;
     google.protobuf.StringValue agentWalletSeed = 4;
     ThreadContext threadContext = 5;
+    //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
+    //the below mentioned 'protoInstances' will no longer be required.
     ProtocolRunningInstances protoInstances = 6;
     relationship.Relationship relationship = 7;
 }

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup
 
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.persistence.Done
@@ -15,7 +15,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 class IssuerSetupActorSpec extends UserAgentSpecScaffolding  {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    agentmsg.AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    agentmsg.AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

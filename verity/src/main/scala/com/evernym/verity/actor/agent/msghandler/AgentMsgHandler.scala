@@ -142,6 +142,8 @@ trait AgentMsgHandler
           }
         }
       }
+    } else {
+      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
     }
   }
 

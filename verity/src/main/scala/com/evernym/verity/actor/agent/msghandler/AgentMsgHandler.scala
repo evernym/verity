@@ -12,6 +12,7 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
+import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.actor.{ActorProtocol, InitProtocolReq, SetThreadContext, ThreadContextStoredInProtoActor}
@@ -118,22 +119,31 @@ trait AgentMsgHandler
     case pu: ProtoActorUpdatedWithThreadContext => removeThreadContext(pu.pinstId)
   }
 
+  def isActorStateCleanupEnabled: Boolean =
+    appConfig
+      .getConfigBooleanOption(CommonConfig.AGENT_ACTOR_STATE_CLEANUP_ENABLED)
+      .getOrElse(false)
+
   def migrateThreadContexts(): Unit = {
-    val candidateThreadContexts =
-      state.threadContext.map(_.contexts).getOrElse(Map.empty)
-        .take(migrateThreadContextBatchSize)
-    if (candidateThreadContexts.isEmpty) {
-      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
-    } else {
-      Future {
-        candidateThreadContexts.foreach { case (pinstId, tcd) =>
-          com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
-            val cmd = ForIdentifier(pinstId, SetThreadContext(tcd))
-            java.lang.Thread.sleep(migrateThreadContextBatchItemSleepInterval)
-            ActorProtocol(e.protoDef).region.tell(cmd, self)
+    if (isActorStateCleanupEnabled) {
+      val candidateThreadContexts =
+        state.threadContext.map(_.contexts).getOrElse(Map.empty)
+          .take(migrateThreadContextBatchSize)
+      if (candidateThreadContexts.isEmpty) {
+        stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+      } else {
+        Future {
+          candidateThreadContexts.foreach { case (pinstId, tcd) =>
+            com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
+              val cmd = ForIdentifier(pinstId, SetThreadContext(tcd))
+              java.lang.Thread.sleep(migrateThreadContextBatchItemSleepInterval)
+              ActorProtocol(e.protoDef).region.tell(cmd, self)
+            }
           }
         }
       }
+    } else {
+      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
     }
   }
 

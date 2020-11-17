@@ -143,7 +143,7 @@ message MsgCreated {
 
 message PayloadContext {
     string msgType = 1;
-    string msgPackVersion = 2;
+    string msgPackFormat = 2;
 }
 
 message MsgPayloadStored {
@@ -432,8 +432,8 @@ message ReceivedOrder {
 message ThreadContextStored {
     string pinstId = 1;
     string threadId = 3;
-    string msgPackVersion = 2;
-    string msgTypeFormatVersion = 5;            //NOTE: helps determining agent msg "@type" value
+    string msgPackFormat = 2;
+    string msgTypeDeclarationFormat = 5;        //NOTE: helps determining agent msg "@type" value
     bool usesGenMsgWrapper = 6;                 //NOTE: this is for legacy agent msgs till we support them
     bool usesBundledMsgWrapper = 7;             //NOTE: this is for legacy agent bundled msgs till we support them
     //bool isFirstProtoMsgExchanged = 8;        deprecated
@@ -444,10 +444,12 @@ message FirstProtoMsgSent {
     string pinstId = 1;
 }
 
+//legacy, kept for backward compatability
 message ProtoMsgSenderOrderIncremented {
     string pinstId = 1;
 }
 
+//legacy, kept for backward compatability
 message ProtoMsgReceivedOrderIncremented {
     string pinstId = 1;
     string fromPartiId = 2;
@@ -514,4 +516,8 @@ message WindowRules {
 message WindowActivityDefined {
     option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
     repeated WindowRules windows = 1;
+}
+
+message ProtoActorUpdatedWithThreadContext {
+    string pinstId = 1;
 }

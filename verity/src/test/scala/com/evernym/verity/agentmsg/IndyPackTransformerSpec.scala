@@ -1,7 +1,7 @@
 package com.evernym.verity.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackParam}
@@ -14,7 +14,7 @@ import com.evernym.verity.testkit.util.{Connect_MFV_0_5, Connect_MFV_0_6}
 class IndyPackTransformerSpec extends AgentTransformerSpec {
 
   val typ = "v2"
-  val msgPackVersion: MsgPackVersion = MPV_INDY_PACK
+  val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
   val msgFamilyVersion: MsgFamilyVersion = MFV_0_6
 
   def msgClass: Class[Connect_MFV_0_6] = classOf[Connect_MFV_0_6]
@@ -42,7 +42,7 @@ class IndyPackTransformerSpec extends AgentTransformerSpec {
     "when tried to pack old agent msg with indy pack" - {
       "should be able to successfully do it" in {
         val jsonString = DefaultMsgCodec.toJson(testMsg_0_5)
-        lastPackedMsg = agentMsgTransformer.pack(msgPackVersion,
+        lastPackedMsg = agentMsgTransformer.pack(msgPackFormat,
           jsonString, getEncryptParamFromAliceToAliceCloudAgent,
           PackParam(openWalletIfNotOpened = true))(aliceWap)
       }
@@ -53,7 +53,7 @@ class IndyPackTransformerSpec extends AgentTransformerSpec {
         lazy val unpacked: AgentMsgWrapper = agentMsgTransformer.unpack(lastPackedMsg.msg,
           KeyInfo(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
         val msgType = unpacked.msgType
-        unpacked.msgPackVersion shouldBe msgPackVersion
+        unpacked.msgPackFormat shouldBe msgPackFormat
         msgType.familyName shouldBe MSG_FAMILY_AGENT_PROVISIONING
         msgType.familyVersion shouldBe MFV_0_5
         msgType.msgName shouldBe MSG_TYPE_CONNECT

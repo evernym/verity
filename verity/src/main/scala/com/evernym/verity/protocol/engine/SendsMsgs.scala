@@ -22,10 +22,8 @@ abstract class SendsMsgsForContainer[M](container: ProtocolContainer[_,_,M,_,_,_
     val msgIdReq = env.msgId getOrElse {
       throw new RuntimeException("msgId required while sending protocol outgoing message")
     }
-    val threadIdReq = env.threadId getOrElse {
-      throw new RuntimeException("threadId required while sending protocol outgoing message")
-    }
     //TODO add checks here to make sure the from is correct, and that the recipient is actually an address that can be sent to
-    ProtocolOutgoingMsg(env.msg, env.to, env.frm, msgIdReq, threadIdReq, container.pinstId, container.definition)
+    ProtocolOutgoingMsg(env.msg, env.to, env.frm, msgIdReq, container.pinstId,
+      container.definition, container.threadContextDetailReq)
   }
 }

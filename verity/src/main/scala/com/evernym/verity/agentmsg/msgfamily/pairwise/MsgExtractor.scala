@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.msgcodec.MsgPlusMeta
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackedMsg, UnpackParam}
@@ -24,15 +24,15 @@ class MsgExtractor(val keyInfo: KeyInfo, walletAPI: WalletAPI)(implicit wap: Wal
   def extract(amw: AgentMsgWrapper)(implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {
     extract(
       amw.headAgentMsg.msg,
-      amw.msgPackVersion,
+      amw.msgPackFormat,
       amw.msgType
     )
   }
 
-  def extract(amw: AgentMsgWrapper, mpv: MsgPackVersion, mt: MsgType)(implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {
+  def extract(amw: AgentMsgWrapper, mpf: MsgPackFormat, mt: MsgType)(implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {
     extract(
       amw.headAgentMsg.msg,
-      mpv,
+      mpf,
       mt
     )
   }
@@ -40,18 +40,18 @@ class MsgExtractor(val keyInfo: KeyInfo, walletAPI: WalletAPI)(implicit wap: Wal
   /**
     *
     * @param msg json msg to be mapped to a corresponding native msg
-    * @param mpv msg pack version
+    * @param mpf msg pack format
     * @param mt msg type
     * @param protoReg
     * @return
     */
-  def extract(msg: String, mpv: MsgPackVersion, mt: MsgType)
+  def extract(msg: String, mpf: MsgPackFormat, mt: MsgType)
   (implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {
-    DefaultMsgCodec.decode(msg, mpv, Option(mt))
+    DefaultMsgCodec.decode(msg, mpf, Option(mt))
   }
 
-  def pack(msgPackVersion: MsgPackVersion, json: JsonStr, recipKeys: Set[KeyInfo]): PackedMsg = {
-    amt.pack(msgPackVersion, json, EncryptParam(recipKeys, Option(keyInfo)))
+  def pack(msgPackFormat: MsgPackFormat, json: JsonStr, recipKeys: Set[KeyInfo]): PackedMsg = {
+    amt.pack(msgPackFormat, json, EncryptParam(recipKeys, Option(keyInfo)))
   }
 }
 

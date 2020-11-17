@@ -5,7 +5,7 @@ import java.nio.file.{Path, Paths}
 import com.evernym.verity.actor.{DidPair, Platform}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformerApi, ParseParam, UnpackParam}
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.protocol.engine.{DID, MPV_MSG_PACK, MsgPackVersion, VerKey}
+import com.evernym.verity.protocol.engine.{DID, MPF_MSG_PACK, MsgPackFormat, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.testkit.listener.{Listener, MsgHandler}
@@ -94,9 +94,9 @@ trait CommonMultiJvmSpecs extends BasicFixtureSpec {
     TempSender.sendMessage(context_!.verityUrl(), msg)
   }
 
-  def packMsg(mpv: MsgPackVersion, msg: String,
+  def packMsg(mpf: MsgPackFormat, msg: String,
               recipKeys: Set[VerKey], senderVerKey: Option[VerKey]): Array[Byte] = {
-    AgentMsgTransformerApi.pack(mpv, `context_!`.walletHandle(), msg, recipKeys, senderVerKey).msg
+    AgentMsgTransformerApi.pack(mpf, `context_!`.walletHandle(), msg, recipKeys, senderVerKey).msg
   }
 
   def unpackMsg(msg: Array[Byte], fromVerKey: Option[VerKey]): String = {
@@ -171,9 +171,9 @@ trait CommonPairwiseSpecs
   var did: DidResults.CreateAndStoreMyDidResult = _
 
   def sendMsgToPairwiseByUsingMsgPack(msg: JSONObject): Unit = {
-    val agentMsg = packMsg(MPV_MSG_PACK, msg.toString, Set(remotePairwiseVerKey), Option(did.getVerkey))
-    val fwd = AgentMsgPackagingUtil.buildFwdJsonMsg(MPV_MSG_PACK, remotePairwiseDID, agentMsg)
-    val agencyMsg = packMsg(MPV_MSG_PACK, fwd, Set(context_!.verityPublicVerKey), None)
+    val agentMsg = packMsg(MPF_MSG_PACK, msg.toString, Set(remotePairwiseVerKey), Option(did.getVerkey))
+    val fwd = AgentMsgPackagingUtil.buildFwdJsonMsg(MPF_MSG_PACK, remotePairwiseDID, agentMsg)
+    val agencyMsg = packMsg(MPF_MSG_PACK, fwd, Set(context_!.verityPublicVerKey), None)
 
     sendToTransport(agencyMsg)
   }

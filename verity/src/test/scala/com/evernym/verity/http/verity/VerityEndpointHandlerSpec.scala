@@ -1,7 +1,7 @@
 package com.evernym.verity.http.verity
 
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants._
@@ -52,6 +52,6 @@ class VerityEndpointHandlerSpec
   override lazy val mockNewEdgeAgent: MockEdgeAgent = buildMockEnterpriseEdgeAgent(mockAgencyAdmin)
   override lazy val mockOthersCloudAgent: MockCloudAgentBase = mockConsumerCloudAgent
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+    AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
 
 }

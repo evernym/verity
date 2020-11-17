@@ -1,7 +1,7 @@
 package com.evernym.verity.agentmsg.msgfamily.configs
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
@@ -12,8 +12,8 @@ import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrF
 case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("pkgType", pkgType)
-    MsgPackVersion.fromString(pkgType) match {
-      case MPV_INDY_PACK =>
+    MsgPackFormat.fromString(pkgType) match {
+      case MPF_INDY_PACK =>
         if (recipientKeys.getOrElse(Set.empty).isEmpty)
           throwMissingReqFieldException("recipientKeys")
       case _ => //

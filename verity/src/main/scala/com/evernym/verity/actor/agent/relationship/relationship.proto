@@ -3,7 +3,7 @@ syntax = "proto3";
 import "scalapb/scalapb.proto";
 
 //in the IDE, it shows error for this below import, but it builds successfully
-import "msg_pack_version.proto";
+import "msg_pack_format.proto";
 
 package com.evernym.verity.actor.agent.relationship;
 
@@ -113,7 +113,7 @@ message LegacyRoutingServiceEndpoint {
 
 message PackagingContext {
     option (scalapb.message).companion_extends = "PackagingContextCompanion";
-    MsgPackVersion packVersion = 1;
+    MsgPackFormat packFormat = 1;
 }
 
 enum Tags {

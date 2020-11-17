@@ -52,7 +52,7 @@ class MockAgentActorContext(val system: ActorSystem,
   }
 
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =
-    ProtocolRegistry(protocol.protocols.availableProtocols.entries :+
+    ProtocolRegistry(protocol.protocols.protocolRegistry.entries :+
       ProtocolRegistry.Entry(TicTacToeProtoDef, PinstIdResolution.V0_2): _*)
 
 }

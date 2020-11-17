@@ -8,7 +8,7 @@ trait RestrictedRestApiSpec
     with HeartbeatSpec
     with AppStatusHealthCheckSpec
     with ConfigHealthCheckSpec
-    with AgentRouteFixHealthCheckSpec
+    with ActorStateCleanupHealthCheckSpec
     with ReloadConfigSpec
     with ResourceUsageSpec
     with MetricsSpec { this : EndpointHandlerBaseSpec =>

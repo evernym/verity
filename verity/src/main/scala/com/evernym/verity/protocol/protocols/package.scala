@@ -29,7 +29,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Cre
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.WriteSchemaDefinition
 
 package object protocols {
-  val availableProtocols: ProtocolRegistry[ActorDriverGenParam] = ProtocolRegistry(
+  val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = ProtocolRegistry(
     (AgentProvisioningProtoDef_v_0_5, V0_1, { new AgentProvisioningDriver(_) }),
     (AgentProvisioningProtoDef_v_0_6, V0_1, { new AgentProvisioningDriver(_) }),
     (AgentProvisioningProtoDef_v_0_7, V0_2, { new AgentProvisioningDriver(_) }, OneToOneDomain),
@@ -70,7 +70,7 @@ package object protocols {
   )
 
   def protoDef(protoRef: ProtoRef): ProtoDef = {
-    availableProtocols
+    protocolRegistry
       .entries
       .find(_.protoDef.msgFamily.protoRef == protoRef)
       .getOrElse { throw new NoSuchElementException("protocol def not found for proto ref: " + protoRef) }

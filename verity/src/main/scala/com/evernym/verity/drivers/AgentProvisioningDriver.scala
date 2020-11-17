@@ -23,10 +23,10 @@ class AgentProvisioningDriver(cp: ActorDriverGenParam)
   extends ActorDriver(cp) {
 
   override def signal[A]: SignalHandler[A] = {
-    case SignalEnvelope(apc: AskAgencyPairwiseCreator, _, protoRef, pinstId, _)    =>
+    case SignalEnvelope(apc: AskAgencyPairwiseCreator, protoRef, pinstId, _, _)    =>
       handleCreatePairwiseKey(apc, protoRef, pinstId)
 
-    case SignalEnvelope(apc: AskUserAgentCreator, _, protoRef, pinstId, _)         =>
+    case SignalEnvelope(apc: AskUserAgentCreator, protoRef, pinstId, _, _)         =>
       handleCreateAgent(apc, protoRef, pinstId)
 
     case se @ SignalEnvelope(_: ProvisioningNeeded, _, _, _, _)                    =>

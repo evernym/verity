@@ -5,9 +5,8 @@ import java.util.UUID
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
-import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
-import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackVersion, ThreadContextDetail, TypeFormat}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackFormat, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
@@ -28,7 +27,7 @@ import com.evernym.verity.push_notification.{PushNotifData, PushNotifResponse}
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext}
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 
 trait AgentOutgoingMsgHandler
@@ -44,8 +43,8 @@ trait AgentOutgoingMsgHandler
     case psrp: ProtocolSyncRespMsg      => handleProtocolSyncRespMsg(psrp)
 
     //pinst -> actor protocol container (send method) -> this actor
-    case ProtocolOutgoingMsg(sd: ServiceDecorator, to, _, rmId, tId, pinstId, pDef)
-                                        => handleProtocolServiceDecorator(sd, to, rmId, tId, pDef, pinstId)
+    case ProtocolOutgoingMsg(sd: ServiceDecorator, to, _, rmId, _, pDef, tcd)
+                                        => handleProtocolServiceDecorator(sd, to, rmId, pDef, tcd)
 
     //pinst -> actor protocol container (send method) -> this actor
     case pom: ProtocolOutgoingMsg    => handleProtocolOutgoingMsg(pom)
@@ -78,17 +77,17 @@ trait AgentOutgoingMsgHandler
    */
   def handleProtocolOutgoingMsg(pom: ProtocolOutgoingMsg): Unit = {
     logger.trace(s"sending protocol outgoing message: $pom")
-    handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.threadId, pom.pinstId,
-      pom.protoDef, Option(pom.requestMsgId)))
+    handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.pinstId,
+      pom.protoDef, pom.threadContextDetail, Option(pom.requestMsgId)))
   }
 
   def handleProtocolServiceDecorator(sd: ServiceDecorator,
-                                        to: ParticipantId,
-                                        requestMsgId: MsgId,
-                                        threadId: ThreadId,
-                                        protoDef: ProtoDef,
-                                        pinstId: PinstId): Unit = {
-    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, threadId, pinstId, protoDef, Option(TypeFormat.STANDARD_TYPE_FORMAT))
+                                     to: ParticipantId,
+                                     requestMsgId: MsgId,
+                                     protoDef: ProtoDef,
+                                     tcd: ThreadContextDetail): Unit = {
+    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, protoDef,
+      tcd, Option(TypeFormat.STANDARD_TYPE_FORMAT))
 
       sd match {
       case pushToken: PushToken =>
@@ -123,9 +122,9 @@ trait AgentOutgoingMsgHandler
       msg = ssm.msg,
       to = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, Option(domainId)), //assumption, signal msgs are always sent to domain id participant
       from = selfParticipantId,   //assumption, signal msgs are always sent from self participant id
-      threadId = ssm.threadId,
       pinstId = ssm.pinstId,
       protoDef = protocols.protoDef(ssm.protoRef),
+      threadContextDetail = ssm.threadContextDetail,
       requestMsgId = ssm.requestMsgId
     )
     handleOutgoingMsg(outMsg, isSignalMsg = true)
@@ -139,11 +138,9 @@ trait AgentOutgoingMsgHandler
 
     logger.debug(s"outgoing msg: native msg : " + oam.msg)
 
-    val threadContext = getThreadContext(oam.pinstId)
-    logger.debug("outgoing msg: thread context to be used: " + threadContext)
-
-    val agentMsg = createAgentMsg(oam.msg, oam.threadId, oam.pinstId, oam.protoDef, isSignalMsg=isSignalMsg)
-    logger.debug("outgoing msg: prepared agent msg: " + threadContext)
+    val agentMsg = createAgentMsg(oam.msg, oam.protoDef,
+      oam.context.threadContextDetail, isSignalMsg=isSignalMsg)
+    logger.debug("outgoing msg: prepared agent msg: " + oam.context.threadContextDetail)
 
     if (!isSignalMsg) {
       val myDID = ParticipantUtil.agentId(oam.context.from)
@@ -151,38 +148,29 @@ trait AgentOutgoingMsgHandler
       AgentActivityTracker.track(agentMsg.msgType.msgName, domainId, state.sponsorRel, Some(myDID))
     }
 
-    handleOutgoingMsg(agentMsg, threadContext, oam.context)
+    handleOutgoingMsg(agentMsg, oam.context.threadContextDetail, oam.context)
   }
 
-  def createAgentMsg(msg: Any, threadId: ThreadId, pinstId: PinstId,
-                     protoDef: ProtoDef, msgTypeFormat: Option[TypeFormat]=None,
+  def createAgentMsg(msg: Any,
+                     protoDef: ProtoDef,
+                     threadContextDetail: ThreadContextDetail,
+                     msgTypeFormat: Option[TypeFormat]=None,
                      isSignalMsg: Boolean=false): AgentJsonMsg = {
-
-    if (! isSignalMsg) {
-      val event = ProtoMsgSenderOrderIncremented(pinstId)
-      receiveRecover(event)
-      writeWithoutApply(event)
-    }
 
     def getNewMsgId: MsgId = UUID.randomUUID().toString
 
-    val threadContextResult = Try(getThreadContext(pinstId))
-    val (msgId, mtf, protoMsgDetail) = threadContextResult match {
-      case Success(tcd)                       =>
-        val mId = if (tcd.protoMsgOrderDetail.exists(_.senderOrder == 0)
-          && tcd.protoMsgOrderDetail.exists(_.receivedOrders.isEmpty) ){
+    val (msgId, mtf, protoMsgDetail) = {
+        val mId = if (threadContextDetail.msgOrders.exists(_.senderOrder == 0)
+          && threadContextDetail.msgOrders.exists(_.receivedOrders.isEmpty) ){
           //this is temporary workaround to solve an issue between how
           // thread id is determined by libvcx (and may be by other third parties) vs verity/agency
           // here, we are basically checking if this msg is 'first' protocol msg and in that case
           // the @id of the msg is assigned the thread id itself
-          tcd.threadId
+          threadContextDetail.threadId
         } else {
           getNewMsgId
         }
-        (mId, msgTypeFormat.getOrElse(tcd.msgTypeFormat), tcd.protoMsgOrderDetail)
-      case Failure(_: NoSuchElementException) =>
-        (getNewMsgId, msgTypeFormat.get, None)
-      case Failure(e) => throw e // TODO ryan please check that this is correct
+        (mId, msgTypeFormat.getOrElse(threadContextDetail.msgTypeFormat), threadContextDetail.msgOrders)
     }
 
     //need to find better way to handle this
@@ -193,7 +181,7 @@ trait AgentOutgoingMsgHandler
     val updatedPmd = protoMsgDetail.map { pmd =>
       pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID))
     }
-    buildAgentMsg(msg, msgId, threadId, protoDef, mtf, updatedPmd)
+    buildAgentMsg(msg, msgId, threadContextDetail.threadId, protoDef, mtf, updatedPmd)
   }
 
 
@@ -216,15 +204,10 @@ trait AgentOutgoingMsgHandler
     logger.debug(s"outgoing msg: final agent msg: " + agentJsonStr)
 
     // msg is sent as PLAIN json. Packing is done later if needed.
-    val omp = OutgoingMsgParam(JsonMsg(agentJsonStr), Option(PayloadMetadata(agentJsonMsg.msgType, MPV_PLAIN)))
+    val omp = OutgoingMsgParam(JsonMsg(agentJsonStr), Option(PayloadMetadata(agentJsonMsg.msgType, MPF_PLAIN)))
     sendToWaitingCallerOrSendToNextHop(omp, agentJsonMsg.msgType, mc, threadContext)
   }
 
-  def getThreadContext(pinstId: PinstId): ThreadContextDetail = {
-    val threadContext = state.threadContextDetail(pinstId)
-    logger.debug("stored threadContext: " + threadContext)
-    threadContext
-  }
 
   /**
    * once outgoing message is packed and ready,
@@ -253,13 +236,13 @@ trait AgentOutgoingMsgHandler
     mc.requestMsgId.map(reqMsgId => (reqMsgId, msgRespContext.get(reqMsgId))) match {
       case Some((rmid, Some(MsgRespContext(_, packForVerKey, Some(sar))))) =>
         // pack the message if needed.
-        val updatedOmp = threadContext.msgPackVersion match {
-          case MPV_PLAIN => omp
-          case MPV_INDY_PACK | MPV_MSG_PACK =>
+        val updatedOmp = threadContext.msgPackFormat match {
+          case MPF_PLAIN => omp
+          case MPF_INDY_PACK | MPF_MSG_PACK =>
             // we pack the message if needed.
-            packOutgoingMsg(omp, mc.to, threadContext.msgPackVersion, packForVerKey.map(svk => KeyInfo(Left(svk))))
+            packOutgoingMsg(omp, mc.to, threadContext.msgPackFormat, packForVerKey.map(svk => KeyInfo(Left(svk))))
           case Unrecognized(_) =>
-            throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+            throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
         logger.debug(s"outgoing msg will be sent to waiting caller...")
         sendMsgToWaitingCaller(updatedOmp, rmid, sar)
@@ -290,14 +273,14 @@ trait AgentOutgoingMsgHandler
           (sendStoredMsgToEdge(msgId), NEXT_HOP_MY_EDGE_AGENT)
       }
     } else {
-      // between cloud agents, we don't support sending MPV_PLAIN messages, so default to MPV_INDY_PACK in that case
-      val msgPackVersion =  threadContext.msgPackVersion match {
-        case MPV_PLAIN => MPV_INDY_PACK
+      // between cloud agents, we don't support sending MPF_PLAIN messages, so default to MPF_INDY_PACK in that case
+      val msgPackFormat =  threadContext.msgPackFormat match {
+        case MPF_PLAIN => MPF_INDY_PACK
         case other => other
       }
 
       // pack the message
-      val updatedOmp = packOutgoingMsg(omp, mc.to, msgPackVersion)
+      val updatedOmp = packOutgoingMsg(omp, mc.to, msgPackFormat)
       logger.debug(s"outgoing msg will be stored and sent ...")
       storeOutgoingMsg(updatedOmp, msgId, msgType.msgName, ParticipantUtil.DID(mc.from), thread)
       val sendResult = sendMsgToOtherEntity(updatedOmp, msgId, msgType.msgName, thread)
@@ -338,7 +321,6 @@ trait AgentOutgoingMsgHandler
    * it can be overridden for any special use case
    * (like it is overridden in user agent actor to handle special case around connection)
    * @param ssm
-   * @tparam A
    */
   def handleSendSignalMsg(ssm: SendSignalMsg): Unit = {
     processSendSignalMsg(ssm)
@@ -364,13 +346,13 @@ trait AgentOutgoingMsgHandler
     else false
   }
 
-  def packOutgoingMsg(omp: OutgoingMsgParam, toParticipantId: ParticipantId, msgPackVersion: MsgPackVersion,
+  def packOutgoingMsg(omp: OutgoingMsgParam, toParticipantId: ParticipantId, msgPackFormat: MsgPackFormat,
                       msgSpecificRecipVerKey: Option[KeyInfo]=None): OutgoingMsgParam = {
-    logger.debug(s"packing outgoing message: $omp to $msgPackVersion (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey")
+    logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey")
     val toDID = ParticipantUtil.agentId(toParticipantId)
     val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyInfo(Right(GetVerKeyByDIDParam(toDID, getKeyFromPool = false)))))
-    val packedMsg = msgExtractor.pack(msgPackVersion, omp.jsonMsg_!(), recipKeys)
-    OutgoingMsgParam(packedMsg, omp.metadata.map(x => x.copy(msgPackVersionStr = msgPackVersion.toString)))
+    val packedMsg = msgExtractor.pack(msgPackFormat, omp.jsonMsg_!(), recipKeys)
+    OutgoingMsgParam(packedMsg, omp.metadata.map(x => x.copy(msgPackFormatStr = msgPackFormat.toString)))
   }
 
   /**

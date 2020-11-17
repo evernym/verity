@@ -21,7 +21,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormalizedPhoneNumber, replaceVariables}
 import com.evernym.verity.vault.{EncryptParam, KeyInfo}
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -78,15 +78,15 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
     val createInviteRespMsg = ConnReqMsgHelper.buildRespMsg(connReqUid, threadIdReq,
       inviteDetail, inviteUrl, encodedUrl(inviteUrl), sourceId)(agentMsgContext)
 
-    // if MPV_PLAIN default to INDY_PACK
-    val msgPackVersion = if (agentMsgContext.msgPackVersion == MPV_PLAIN) {
+    // if MPF_PLAIN default to INDY_PACK
+    val msgPackFormat = if (agentMsgContext.msgPackFormat == MPF_PLAIN) {
       (createInviteRespMsg ++ otherRespMsgs).foreach{ msg => ctx.signal(msg) }
-      MPV_INDY_PACK
-    } else agentMsgContext.msgPackVersion
+      MPF_INDY_PACK
+    } else agentMsgContext.msgPackFormat
 
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
-      createInviteRespMsg ++ otherRespMsgs, agentMsgContext.msgPackVersion == MPV_MSG_PACK)
-    buildAgentPackedMsg(msgPackVersion, param)
+      createInviteRespMsg ++ otherRespMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+    buildAgentPackedMsg(msgPackFormat, param)
   }
 
   private def getInviteUrl(uid: MsgId): String = {

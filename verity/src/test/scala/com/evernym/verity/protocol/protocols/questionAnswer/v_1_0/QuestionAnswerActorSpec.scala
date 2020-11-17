@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentPairwiseSpec_V_0_6
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
@@ -13,7 +13,7 @@ class QuestionAnswerActorSpec
   extends UserAgentPairwiseSpec_V_0_6 {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    agentmsg.AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    agentmsg.AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   createKeySpecs(connId1New)
   sendInviteSpecs(connId1New)

@@ -70,7 +70,7 @@ abstract class ActorDriver(cp: ActorDriverGenParam)
    * @return
    */
   def processSignalMsg[A](se: SignalEnvelope[A]): Option[Control] = {
-    val result = sendToForwarder(SignalMsgFromDriver(se.signalMsg, se.threadId, se.protoRef, se.pinstId))
+    val result = sendToForwarder(SignalMsgFromDriver(se.signalMsg, se.protoRef, se.pinstId, se.threadContextDetail))
     trackProgress(se)
     result
   }
@@ -82,7 +82,7 @@ abstract class ActorDriver(cp: ActorDriverGenParam)
    * @return
    */
   def sendSignalMsg[A](sig: SignalEnvelope[A]): Option[Control] = {
-    val outMsg = SendSignalMsg(sig.signalMsg, sig.threadId, sig.protoRef, sig.pinstId, sig.requestMsgId)
+    val outMsg = SendSignalMsg(sig.signalMsg, sig.threadId, sig.protoRef, sig.pinstId, sig.threadContextDetail, sig.requestMsgId)
     val result = sendToForwarder(outMsg)
     trackProgress(sig)
     result

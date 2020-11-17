@@ -11,9 +11,9 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
-import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, ProcessSendSignalMsg, SendSignalMsg}
+import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
 import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
-import com.evernym.verity.actor.agent.relationship.{EndpointType, RelationshipUtil, SelfRelationship}
+import com.evernym.verity.actor.agent.relationship.{EndpointType, RelationshipUtil, SelfRelationship, PackagingContext}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -42,7 +42,7 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 
@@ -118,11 +118,11 @@ class UserAgent(val agentActorContext: AgentActorContext)
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
     // Here, "Driver" means the same thing that the community calls a "Controller".
     // TODO: align with community terminology.
-    case SignalMsgFromDriver(_: ConnReqReceived, _, _, _)                      => Future.successful(None)
-    case SignalMsgFromDriver(sm: SendMsgToRegisteredEndpoint, _, _, _)         => sendAgentMsgToRegisteredEndpoint(sm)
-    case SignalMsgFromDriver(prd: ProvideRecoveryDetails, _, _, _)             => registerRecoveryKey(prd.params.recoveryVk)
-    case SignalMsgFromDriver(_: CreatePairwiseKey, _, _, _)                    => createNewPairwiseEndpoint()
-    case SignalMsgFromDriver(pic: PublicIdentifierCreated, _, _, _)            => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
+    case SignalMsgFromDriver(_: ConnReqReceived, _, _, _)                 => Future.successful(None)
+    case SignalMsgFromDriver(sm: SendMsgToRegisteredEndpoint, _, _, _)    => sendAgentMsgToRegisteredEndpoint(sm)
+    case SignalMsgFromDriver(prd: ProvideRecoveryDetails, _, _, _)        => registerRecoveryKey(prd.params.recoveryVk)
+    case SignalMsgFromDriver(_: CreatePairwiseKey, _, _, _)               => createNewPairwiseEndpoint()
+    case SignalMsgFromDriver(pic: PublicIdentifierCreated, _, _, _)       => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
   }
 
   override final def receiveAgentEvent: Receive = commonEventReceiver orElse eventReceiver orElse msgEventReceiver
@@ -267,7 +267,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
         .filterByKeyIds(ep.authKeyIds.toSeq)
         .map(_.verKey).toSet
-      val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packVersion, verKeys))
+      val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
       ComMethodDetail(ep.`type`, ep.value, cmp)
     }
     CommunicationMethods(comMethods.toSet, withSponsorId)
@@ -294,7 +294,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val pairwiseDIDVerKey = getVerKeyReqViaCache(pd.agentDID)
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pd.agentDID, pairwiseDIDVerKey)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, keyCreatedRespMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
     sendRespMsg(rp, sndr)
   }
 
@@ -343,8 +343,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildAndSendComMethodUpdatedRespMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val comMethodUpdatedRespMsg = UpdateComMethodMsgHelper.buildRespMsg(comMethod.id)(reqMsgContext.agentMsgContext)
-    reqMsgContext.msgPackVersion match {
-      case MPV_PLAIN =>
+    reqMsgContext.msgPackFormat match {
+      case MPF_PLAIN =>
         sender ! comMethodUpdatedRespMsg.head
 
         // to test if http endpoint is working send response also on it.
@@ -355,18 +355,18 @@ class UserAgent(val agentActorContext: AgentActorContext)
               sendMsgToRegisteredEndpoint(
                 PayloadWrapper(
                   jsonMsg.getBytes,
-                  Option(PayloadMetadata(resp.`@type`, MPV_PLAIN))),
+                  Option(PayloadMetadata(resp.`@type`, MPF_PLAIN))),
                 None
               )
             case _ =>
           }
         }
-      case MPV_INDY_PACK | MPV_MSG_PACK =>
+      case MPF_INDY_PACK | MPF_MSG_PACK =>
         val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackVersion, param) (agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormat, param) (agentMsgTransformer, wap)
         sendRespMsg(rp)
       case Unrecognized(_) =>
-        throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+        throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
     }
   }
 
@@ -383,7 +383,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       eep.`type` == comMethod.`type` && eep.value == comMethod.value && {
         (eep.packagingContext, comMethod.packaging) match {
           case (Some(ecmp), Some(newp)) =>
-            ecmp.packVersion.isEqual(newp.pkgType) && newp.recipientKeys.exists(_.exists(verKeys.contains))
+            ecmp.packFormat.isEqual(newp.pkgType) && newp.recipientKeys.exists(_.exists(verKeys.contains))
           case (None, None) => true
           case _ => false
         }
@@ -460,15 +460,15 @@ class UserAgent(val agentActorContext: AgentActorContext)
     Future.traverse(updateMsgStatusByConnsReq.uidsByConns) { uc =>
       val pc = state.relationshipAgentsFindByForDid(uc.pairwiseDID)
       val updateMsgStatusReq =
-        reqMsgContext.msgPackVersion match {
-          case MPV_MSG_PACK =>
+        reqMsgContext.msgPackFormat match {
+          case MPF_MSG_PACK =>
             DefaultMsgCodec.toJson(
               UpdateMsgStatusReqMsg_MFV_0_5(
                 TypeDetail(MSG_TYPE_UPDATE_MSG_STATUS, MTV_1_0, None),
                 updateMsgStatusByConnsReq.statusCode, uc.uids
               )
             )
-          case MPV_INDY_PACK =>
+          case MPF_INDY_PACK =>
             DefaultMsgCodec.toJson(
               UpdateMsgStatusReqMsg_MFV_0_6(
                 MSG_TYPE_DETAIL_UPDATE_MSG_STATUS,
@@ -476,13 +476,13 @@ class UserAgent(val agentActorContext: AgentActorContext)
                 uc.uids
               )
             )
-          case x => throw new RuntimeException("unsupported msg pack version: " + x)
+          case x => throw new RuntimeException("unsupported msg pack format: " + x)
         }
       val authEncParam = EncryptParam(
         Set(KeyInfo(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
         Option(KeyInfo(Left(agentVerKey)))
       )
-      val packedMsg = agentActorContext.agentMsgTransformer.pack(reqMsgContext.msgPackVersion, updateMsgStatusReq, authEncParam)
+      val packedMsg = agentActorContext.agentMsgTransformer.pack(reqMsgContext.msgPackFormat, updateMsgStatusReq, authEncParam)
       val rmi = reqMsgContext.copy()
       rmi.data = reqMsgContext.data.filter(kv => Set(CLIENT_IP_ADDRESS).contains(kv._1))
       val fut = agentActorContext.agentMsgRouter.execute(
@@ -494,10 +494,10 @@ class UserAgent(val agentActorContext: AgentActorContext)
   def buildSuccessfullyUpdatedMsgStatusResp(success: List[(String, Any)], agentVerKey: VerKey):  Map[String, List[String]] = {
     success.map { case (fromDID, respMsg) =>
       val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(respMsg.asInstanceOf[PackedMsg].msg, KeyInfo(Left(agentVerKey)))
-      val msgIds = unpackedAgentMsg.msgPackVersion match {
-        case MPV_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
-        case MPV_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
-        case x              => throw new RuntimeException("unsupported msg pack version: " + x)
+      val msgIds = unpackedAgentMsg.msgPackFormat match {
+        case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
+        case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
+        case x              => throw new RuntimeException("unsupported msg pack format: " + x)
       }
       fromDID -> msgIds
     }.filter(_._2.nonEmpty).toMap
@@ -523,12 +523,12 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
     val msgStatusUpdatedByConnsRespMsg =
       UpdateMsgStatusByConnsMsgHelper.buildRespMsg(successResult, errorResult)(reqMsgContext.agentMsgContext)
-    val wrapInBundledMsg = reqMsgContext.msgPackVersion match {
-      case MPV_MSG_PACK => true
+    val wrapInBundledMsg = reqMsgContext.msgPackFormat match {
+      case MPF_MSG_PACK => true
       case _ => false
     }
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgStatusUpdatedByConnsRespMsg, wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
     sendRespMsg(rp, sndr)
   }
 
@@ -573,7 +573,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         Set(KeyInfo(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
         Option(KeyInfo(Left(agentVerKey)))
       )
-      val packedMsg = agentActorContext.agentMsgTransformer.pack(MPV_MSG_PACK, getMsg, encParam)
+      val packedMsg = agentActorContext.agentMsgTransformer.pack(MPF_MSG_PACK, getMsg, encParam)
       val rmi = reqMsgContext.copy()
       rmi.data = reqMsgContext.data.filter(kv => Set(CLIENT_IP_ADDRESS, MSG_PACK_VERSION).contains(kv._1))
       agentActorContext.agentMsgRouter.execute(
@@ -589,17 +589,17 @@ class UserAgent(val agentActorContext: AgentActorContext)
           val agentVerKey = state.thisAgentVerKeyReq
           val result = respMsgs.map { case (fromDID, respMsg) =>
             val amw = agentActorContext.agentMsgTransformer.unpack(respMsg.msg, KeyInfo(Left(agentVerKey)))
-            val msgs = reqMsgContext.msgPackVersion match {
-              case MPV_MSG_PACK | MPV_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
-              case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack version not supported: " + x))
+            val msgs = reqMsgContext.msgPackFormat match {
+              case MPF_MSG_PACK | MPF_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
+              case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack format not supported: " + x))
             }
             AgentActivityTracker.track(respMsg.metadata.map(_.msgTypeStr).getOrElse(""), domainId, state.sponsorRel, Some(fromDID))
             fromDID -> msgs
           }.toMap
           val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(result)(reqMsgContext.agentMsgContext)
           val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
-            getMsgsByConnsRespMsg, reqMsgContext.agentMsgContext.msgPackVersion == MPV_MSG_PACK)
-          val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackVersion, param)(agentMsgTransformer, wap)
+            getMsgsByConnsRespMsg, reqMsgContext.agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+          val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
           sendRespMsg(rp, sndr)
         } catch {
           case e: Exception =>
@@ -713,27 +713,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
     )
   }
 
-  /**
-   * This function is used in cases when protocol can receive its messages from both 'user agent' and 'user agent pairwise' actor.
-   *
-   * Connecting protocol is initiated from 'user agent' actor, but "accept connection" message is received from 'user agent pairwise' actor.
-   * If we did not sync the thread context, response after accept could not differentiate if
-   * it should respond in REST_PLAN or MSG_PACK or INDY_PACK etc.
-   *
-   */
-  override def handleSendSignalMsg(ssm: SendSignalMsg): Unit = {
-    ssm.msg match {
-      case msg: ConnReqRespMsg_MFV_0_6 =>
-        val threadContextDetail = state.threadContextDetail(ssm.pinstId)
-        val cmd = InternalMsgRouteParam(msg.inviteDetail.senderDetail.DID, StoreThreadContext(ssm.pinstId, threadContextDetail))
-        val fut = agentActorContext.agentMsgRouter.execute(cmd)
-        fut.map { _ =>
-          self ! ProcessSendSignalMsg(ssm)
-        }
-      case _ => processSendSignalMsg(ssm)
-    }
-  }
-
   setAndOpenWalletIfExists(entityId)
 
   /**
@@ -784,7 +763,7 @@ case class DeleteComMethod(value: String, reason: String) extends ActorMessageCl
 
 //response msgs
 case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessageClass
-case class ComMethodsPackaging(pkgType: MsgPackVersion = MPV_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessageClass
+case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessageClass
 case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessageClass
 case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessageClass
 
@@ -834,6 +813,12 @@ trait UserAgentStateUpdateImpl
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {
     state = state.withThreadContext(threadContext)
+  }
+
+  def removeThreadContext(pinstId: PinstId): Unit = {
+    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+    val afterRemoval = curThreadContexts - pinstId
+    state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 
   def addPinst(pri: ProtocolRunningInstances): Unit = {

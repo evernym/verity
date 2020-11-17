@@ -1,12 +1,10 @@
 package com.evernym.verity.agentmsg.msgcodec.jackson
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.ProtoMsgOrderDetail
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, Thread}
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgcodec.{MsgCodec, MsgMetadata, MsgTypeException}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
-import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -63,20 +61,20 @@ object JacksonMsgCodec extends MsgCodec {
     asObject(doc, msgType).set(`@TYPE`, typeJsonObj)
   }
 
-  override def addMetaDataToDoc(doc: JsonNode, msgType: MsgType, msgId: MsgId, threadId: ThreadId, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): JsonNode = {
+  override def addMetaDataToDoc(doc: JsonNode, msgType: MsgType, msgId: MsgId, threadId: ThreadId, msgOrders: Option[MsgOrders]=None): JsonNode = {
     val typeStr = MsgFamily.typeStrFromMsgType(msgType)
     asObject(doc, msgType).put(`@TYPE`, typeStr)
     asObject(doc, msgType).put(`@id`, msgId)
-    addThread(doc, msgType, threadId, protoMsgOrderDetail)
+    addThread(doc, msgType, threadId, msgOrders)
   }
 
-  private def addThread(doc: JsonNode, msgType: MsgType, threadId: ThreadId, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): JsonNode = {
+  private def addThread(doc: JsonNode, msgType: MsgType, threadId: ThreadId, msgOrders: Option[MsgOrders]=None): JsonNode = {
     val threadObjectNode = jacksonMapper.createObjectNode()
     threadObjectNode.put(THREAD_ID, threadId)
     if (doc.hasNonNull("~thread") && doc.get("~thread").hasNonNull("pthid")) {
       threadObjectNode.set(PARENT_THREAD_ID, doc.get("~thread").get("pthid"))
     }
-    protoMsgOrderDetail.foreach { pmod =>
+    msgOrders.foreach { pmod =>
       if (pmod.senderOrder >= 0) {
         threadObjectNode.put(SENDER_ORDER, pmod.senderOrder)
       }
@@ -112,7 +110,7 @@ object JacksonMsgCodec extends MsgCodec {
     jacksonMapper.convertValue(doc, nativeType)
   }
 
-  override def extractMetadata(jsonStr: JsonStr, msgPackVersion: MsgPackVersion): MsgMetadata = {
+  override def extractMetadata(jsonStr: JsonStr, msgPackFormat: MsgPackFormat): MsgMetadata = {
     val jsonNode = jacksonMapper.readTree(jsonStr)
     val msgId = Option(jsonNode.get(`@id`))
       .map(_.textValue())
@@ -121,8 +119,8 @@ object JacksonMsgCodec extends MsgCodec {
       .flatMap(th => Option(th.get(THREAD_ID))
         .map(_.asText()))
 
-    val forRelationship = msgPackVersion match {
-      case MPV_MSG_PACK  => None
+    val forRelationship = msgPackFormat match {
+      case MPF_MSG_PACK  => None
       case _ =>
         Option(
           jacksonMapper

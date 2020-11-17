@@ -92,7 +92,7 @@ trait MsgAndDeliveryHandler {
       addToMsgDetails(mda.uid, nmd)
 
     case meps: MsgPayloadStored =>
-      val metadata = meps.payloadContext.map { pc => PayloadMetadata(pc.msgType, pc.msgPackVersion) }
+      val metadata = meps.payloadContext.map { pc => PayloadMetadata(pc.msgType, pc.msgPackFormat) }
       addToMsgPayloads(meps.uid, PayloadWrapper(meps.payload.toByteArray, metadata))
 
     case me: MsgExpirationTimeUpdated =>

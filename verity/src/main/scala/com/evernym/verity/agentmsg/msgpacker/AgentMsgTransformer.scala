@@ -2,10 +2,9 @@ package com.evernym.verity.agentmsg.msgpacker
 
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackFormat, PayloadMetadata, TypeFormat}
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.vault._
 import org.hyperledger.indy.sdk.wallet.Wallet
 
@@ -17,7 +16,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 class AgentMsgTransformer(val walletAPI: WalletAPI) {
 
-  def pack(msgPackVersion: MsgPackVersion, msg: String, encryptInfo: EncryptParam,
+  def pack(msgPackFormat: MsgPackFormat, msg: String, encryptInfo: EncryptParam,
            packParam: PackParam = PackParam())
           (implicit wap: WalletAccessParam): PackedMsg = {
     walletAPI.executeOpWithWalletInfo("auth/anon crypt",
@@ -29,7 +28,7 @@ class AgentMsgTransformer(val walletAPI: WalletAPI) {
         val future = walletAPI.getVerKeyFromWallet(encryptInfo.recipKeys.head.verKeyDetail)(we)
         val verkey = Await.result(future, Duration.Inf) // fixme ve2028 testing
         val recipKeys = Set(verkey)
-        AgentMsgTransformerApi.pack(msgPackVersion, we.wallet, msg, recipKeys, senderKeyOpt)
+        AgentMsgTransformerApi.pack(msgPackFormat, we.wallet, msg, recipKeys, senderKeyOpt)
       }
     )
   }
@@ -93,7 +92,7 @@ case class AgentBundledMsg(msgs: List[AgentMsg],
   def tailAgentMsgs: List[AgentMsg] = msgs.tail
 }
 
-case class AgentMsgTypeDetail(msgPackVersion: MsgPackVersion,
+case class AgentMsgTypeDetail(msgPackFormat: MsgPackFormat,
                               familyQualifier: MsgFamilyQualifier,
                               familyName: MsgFamilyName,
                               familyVersion: MsgFamilyVersion,
@@ -149,7 +148,7 @@ case class MsgFamilyDetail(familyQualifier: MsgFamilyQualifier,
  */
 trait MsgTransformer {
 
-  def msgPackVersion: MsgPackVersion
+  def msgPackFormat: MsgPackFormat
 
   def pack(wallet: Wallet, msg: String, recipVerKeys: Set[VerKey], senderVerKey: Option[VerKey], packParam: PackParam): PackedMsg
 

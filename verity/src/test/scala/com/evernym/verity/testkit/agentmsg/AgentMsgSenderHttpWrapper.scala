@@ -33,7 +33,7 @@ import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.{Duration, _}
@@ -717,7 +717,7 @@ trait AgentMsgSenderHttpWrapper
                               uids: Option[List[String]] = None,
                               statusCodes: Option[List[String]] = None): Any = {
     implicit val msgPackagingContext: AgentMsgPackagingContext =
-      agentmsg.AgentMsgPackagingContext(MPV_MSG_PACK, MFV_1_0, packForAgencyRoute = true)
+      agentmsg.AgentMsgPackagingContext(MPF_MSG_PACK, MFV_1_0, packForAgencyRoute = true)
     printApiCallStartedMsg(s"send get msgs started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareGetMsgsFromConn(connId, excludePayload, uids, statusCodes),

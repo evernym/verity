@@ -223,6 +223,9 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         case (MSG_FAMILY_AGENT_PROVISIONING, MFV_0_7, "create-edge-agent") =>
             extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
 
+        case (MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, "get-token") =>
+          extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
+
         //this is special case where agent provisioning protocols (0.5 & 0.6)
         // uses native messages but expects synchronous response
         case (MSG_FAMILY_AGENT_PROVISIONING, _, _) => extract(imp, Option(MsgRespConfig(isSyncReq = true)))

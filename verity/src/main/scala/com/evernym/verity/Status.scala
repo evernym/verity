@@ -55,6 +55,8 @@ object Status extends Enumeration {
 
   val AGENT_ALREADY_CREATED                       = statusDetail(ACS_PREFIX, 101, "agent already initialized")
   val AGENT_NOT_YET_CREATED                       = statusDetail(ACS_PREFIX, 102, "agent not yet created")
+  //TODO: can remove once Provisioning 0.5 and 0.6 are removed from the code
+  val PROVISIONING_PROTOCOL_DEPRECATED            = statusDetail(ACS_PREFIX, 103, "provisioning protocol deprecated: needs 0.7 or greater")
 
   val NO_ACCEPTED_CONN_REQ                        = statusDetail(CRS_PREFIX, 101, "no accepted connection request")
   val ACCEPTED_CONN_REQ_EXISTS                    = statusDetail(CRS_PREFIX, 102, "only one accepted connection request can exists with one pairwise relationship")

@@ -96,6 +96,10 @@ object ConfigUtil {
         .withTimeAtStartOfDay())
   }
 
+  def sponsorRequired(appConfig: AppConfig): Boolean =
+    appConfig
+      .getConfigBooleanReq(s"$PROVISIONING.sponsor-required")
+
   private def findSponsorConfig(lookupKey: String, lookupValue: String, appConfig: AppConfig): Option[SponsorDetails] =
       appConfig
           .getObjectListOption(s"$PROVISIONING.sponsors")

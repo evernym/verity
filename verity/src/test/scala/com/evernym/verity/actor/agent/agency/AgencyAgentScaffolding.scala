@@ -8,6 +8,8 @@ import com.evernym.verity.actor.persistence.{ActorDetail, Done, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
+import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
@@ -86,14 +88,13 @@ trait AgencyAgentScaffolding
           expectMsgType[EndpointSet]
         }
       }
-
       "when sent get-token msg" - {
         "should respond with token" in {
-          val (r, pushNotifPayload) = withExpectNewPushNotif(validTestPushNotifToken, {
-            val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId", ComMethodDetail(1, validTestPushNotifToken))
-            aa ! PackedMsgParam(msg, reqMsgContext)
-            expectMsg(Done)
-          })
+          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId")
+          aa ! PackedMsgParam(msg, reqMsgContext)
+          val packedMsg = expectMsgType[PackedMsg]
+          val token = mockEdgeAgent.v_0_1_resp.handleSendToken(packedMsg, mockAgencyAdmin.agencyPublicDid.get.DID)
+          assert(token.sponsorId == "sponsorId")
         }
       }
 

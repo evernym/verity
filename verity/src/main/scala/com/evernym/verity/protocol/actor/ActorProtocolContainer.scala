@@ -587,11 +587,6 @@ case class MsgEnvelope[A](msg: A,
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
 }
 
-trait ServiceDecorator{
-  def msg: Any
-  def deliveryMethod: ComMethodDetail
-}
-
 class MsgForwarder {
   private var _forwarder: Option[ActorRef] = None
   def setForwarder(actorRef: ActorRef): Unit = _forwarder = Option(actorRef)

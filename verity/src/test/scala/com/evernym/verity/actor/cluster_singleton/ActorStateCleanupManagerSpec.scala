@@ -47,7 +47,7 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
     "when sent GetStatus" - {
       "should respond with correct status" in {
         eventually(timeout(Span(20, Seconds)), interval(Span(4, Seconds))) {
-          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus)
+          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus())
           val status = expectMsgType[Status]
           status.registeredRouteStoreActorCount shouldBe shardSize
           status.totalCandidateAgentActors shouldBe totalRouteEntries
@@ -58,7 +58,7 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
     "after some time" - {
       "should have processed all state cleanup" taggedAs UNSAFE_IgnoreLog in {
         eventually(timeout(Span(30, Seconds)), interval(Span(4, Seconds))) {
-          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus)
+          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus())
           val status = expectMsgType[Status]
           status.registeredRouteStoreActorCount shouldBe shardSize
           status.processedRouteStoreActorCount shouldBe shardSize

@@ -13,6 +13,13 @@ import com.evernym.verity.testkit.mock.agent.MockAgent
 trait AgentMsgHandler { this: AgentMsgHelper with MockAgent with HasCloudAgent =>
 
   object v_0_1_resp {
+
+    def handleSendTokenResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): SendToken = {
+      logApiCallProgressMsg("Unpacking send token response")
+      val acm = unpackSendToken(rmw, getDIDToUnsealAgentRespMsg)
+      acm
+    }
+
     def handleSendToken(rmw: PackedMsg, unsealFromDID: DID): SendToken = {
       unpackSendToken(rmw, unsealFromDID)
     }

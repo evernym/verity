@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.evernym.verity.actor.agent.maintenance.{CurrentStatus, GetUpdaterStatus}
+import com.evernym.verity.actor.agent.maintenance.{CurrentStatus, GetExecutorStatus}
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.cluster_singleton.maintenance.{GetStatus, Reset, Status}
 import com.evernym.verity.actor.persistence.Done
@@ -34,12 +34,15 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     platform.singletonParentProxy ? ForActorStateCleanupManager(Reset)
   }
 
-  def getActorStateManagerCleanupStatus: Future[Any] = {
-    platform.singletonParentProxy ? ForActorStateCleanupManager(GetStatus)
+  def getActorStateManagerCleanupStatus(detailOpt: Option[String]): Future[Any] = {
+    val getStatusCmd = if (detailOpt.map(_.toUpperCase).contains(YES)) {
+      GetStatus(includeDetails = true)
+    } else GetStatus()
+    platform.singletonParentProxy ? ForActorStateCleanupManager(getStatusCmd)
   }
 
   def getActorStateCleanupExecutorStatus(entityId: String): Future[Any] = {
-    platform.actorStateCleanupExecutor ? ForIdentifier(entityId, GetUpdaterStatus)
+    platform.actorStateCleanupExecutor ? ForIdentifier(entityId, GetExecutorStatus)
   }
 
   protected val maintenanceRoutes: Route =
@@ -69,10 +72,12 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
                 // After that, we will remove this.
                 path("status") {
                   (get & pathEnd) {
-                    complete {
-                      getActorStateManagerCleanupStatus.map[ToResponseMarshallable] {
-                        case s: Status => handleExpectedResponse(s)
-                        case e => handleUnexpectedResponse(e)
+                    parameters('detail.?) { detailOpt =>
+                      complete {
+                        getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
+                          case s: Status => handleExpectedResponse(s)
+                          case e => handleUnexpectedResponse(e)
+                        }
                       }
                     }
                   }

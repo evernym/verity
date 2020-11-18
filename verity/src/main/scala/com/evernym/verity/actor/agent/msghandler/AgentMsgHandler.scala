@@ -295,4 +295,6 @@ case object MigrateThreadContexts extends ActorMessageObject
 
 case object FixActorState extends ActorMessageObject
 case class CheckActorStateCleanupState(actorDID: DID) extends ActorMessageClass
-case class ActorStateCleanupStatus(forDID: DID, routeFixed: Boolean, threadContextMigrated: Boolean) extends ActorMessageClass
+case class ActorStateCleanupStatus(forDID: DID, routeFixed: Boolean, threadContextMigrated: Boolean) extends ActorMessageClass {
+  def isStateCleanedUp: Boolean = routeFixed && threadContextMigrated
+}

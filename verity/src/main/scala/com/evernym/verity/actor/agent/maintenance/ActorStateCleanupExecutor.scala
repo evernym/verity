@@ -45,7 +45,8 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   override def receiveEvent: Receive = {
     case su: StatusUpdated =>
       routeStoreStatus = Option(RouteStoreStatus(su.agentRouteStoreEntityId, su.totalRoutes, su.processedRoutes))
-    case _: ActorStateCleaned =>
+    case asc: ActorStateCleaned =>
+      processedActorIds += asc.actorId
       routeStoreStatus = routeStoreStatus.map(s => s.copy(totalProcessed = s.totalProcessed + 1))
   }
 
@@ -81,7 +82,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
         val cmd = GetRouteBatch(routeStoreStatusReq.totalCandidates, routeStoreStatusReq.totalProcessed, batchSize)
         agentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
       } else if (batchStatus.isInProgress) {
-        batchStatus.candidates.keySet.foreach { did =>
+        batchStatus.candidates.filter(_._2 == false).keySet.foreach { did =>
           agentMsgRouter.forward(InternalMsgRouteParam(did, CheckActorStateCleanupState(did)), self)
         }
       }
@@ -93,6 +94,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     //then it is no longer needed and should cleanup its persistence
     logger.debug(s"ASC [$persistenceId] [ASCM->ASCE] state cleanup completed for executor '$entityId', " +
       s"and this actor will be destroyed")
+    processedActorIds = Set.empty
     routeStoreStatus = None
     batchStatus = BatchStatus.empty
     deleteMessages(lastSequenceNr)
@@ -134,11 +136,12 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   }
 
   def handleActorStateCleanupStatus(ascs: ActorStateCleanupStatus): Unit = {
-    if (routeStoreStatus.isDefined && ascs.isStateCleanedUp) {
+    if (routeStoreStatus.isDefined && ascs.isStateCleanedUp && ! processedActorIds.contains(ascs.forDID)) {
       handleActorStateCleaned(ActorStateCleaned(ascs.forDID))
     }
   }
 
+  var processedActorIds: Set[String] = Set.empty
   var routeStoreStatus: Option[RouteStoreStatus] = None
   def routeStoreStatusReq: RouteStoreStatus = routeStoreStatus.getOrElse(
     throw new RuntimeException(s"ASC [$persistenceId] routeStoreStatus not yet initialized"))
@@ -176,7 +179,9 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 }
 
 //status of a route store entity candidates
-case class RouteStoreStatus(agentRouteStoreEntityId: EntityId, totalCandidates: Int, totalProcessed: Int) extends ActorMessageClass {
+case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
+                            totalCandidates: Int,
+                            totalProcessed: Int) extends ActorMessageClass {
   def isAllCompleted: Boolean = totalCandidates == totalProcessed
 }
 

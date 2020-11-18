@@ -632,6 +632,55 @@ trait InteractiveSdkFlow {
     }
   }
 
+  def issueCredentialViaOob_1_0(issuer: ApplicationAdminExt,
+                                holder: ApplicationAdminExt,
+                                credValues: Map[String, String],
+                                credDefName: String,
+                                credTag: String)
+                               (implicit scenario: Scenario): Unit = {
+    val issuerSdk = issuer.sdks.head
+    val holderSdk = holder.sdks.head
+    issueCredentialViaOob_1_0(issuerSdk, issuerSdk, holderSdk, holderSdk, credValues, credDefName, credTag)
+  }
+
+  def issueCredentialViaOob_1_0(issuerSdk: VeritySdkProvider,
+                                issuerMsgReceiverSdkProvider: VeritySdkProvider,
+                                holderSdk: VeritySdkProvider,
+                                holderMsgReceiverSdkProvider: VeritySdkProvider,
+                                credValues: Map[String, String],
+                                credDefName: String,
+                                credTag: String)
+                         (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    val holderName = holderSdk.sdkConfig.name
+
+    var relDid = ""
+
+    s"issue credential (1.0) to $holderName from $issuerName via Out-of-band invite" - {
+      val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
+      val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
+
+      s"[$issuerName] start relationship protocol to issue to" in {
+        val relProvisioning = issuerSdk.relationship_1_0("inviter")
+        relProvisioning.create(issuerSdk.context)
+        issuerMsgReceiver.expectMsg("created") { msg =>
+          msg shouldBe an[JSONObject]
+          relDid = msg.getString("did")
+        }
+      }
+
+      s"[$issuerName] start issue-credential using byInvitation" in {
+        val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
+        val issueCred = issuerSdk.issueCredential_1_0(relDid, credDefId, credValues, "comment-123", byInvitation = true)
+        issueCred.offerCredential(issuerSdk.context)
+        issuerMsgReceiver.expectMsg("sent") { msg =>
+
+        }
+      }
+    }
+
+  }
+
   case class CredAttribute(name: String, `mime-type`: Option[String], value: String)
 
   def presentProof_1_0(verifier: ApplicationAdminExt,

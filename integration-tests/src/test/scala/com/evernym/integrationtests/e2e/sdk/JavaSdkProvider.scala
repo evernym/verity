@@ -91,7 +91,9 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
                                    credDefId: String,
                                    credValues: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 =
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 =
     IssueCredential.v1_0(forRelationship, credDefId, credValues.asJava, comment, price)
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 =

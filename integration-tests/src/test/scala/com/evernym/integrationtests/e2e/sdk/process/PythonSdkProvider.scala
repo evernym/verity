@@ -212,7 +212,9 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                    credDefId: String,
                                    credValues: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 = {
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 = {
     new UndefinedIssueCredential_1_0 {
       override def offerCredential(ctx: Context): Unit = {
         executeCmd(ctx,

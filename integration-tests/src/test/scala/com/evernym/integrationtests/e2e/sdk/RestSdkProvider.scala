@@ -377,7 +377,9 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                    credDefId: String,
                                    values: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 = {
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 = {
 
     val credValues: JSONObject = new JSONObject
     for ((key, value) <- values) {

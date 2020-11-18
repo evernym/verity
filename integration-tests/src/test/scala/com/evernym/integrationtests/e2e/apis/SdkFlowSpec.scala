@@ -70,17 +70,21 @@ class SdkFlowSpec
         sdkIssuerSetupInteraction(apps, ledgerUtil)
       }
 
-      "basic interaction" - {
-        sdkAriesInteropInteraction(apps, ledgerUtil)
+//      "basic interaction" - {
+//        sdkBasicInteractions(apps, ledgerUtil)
+//      }
+
+      "oob interaction" - {
+        sdkOobInteractions(apps, ledgerUtil)
       }
 
-      "test metrics" - {
-        testMetricsForVerityInstances(apps)
-      }
-
-      "test message tracking" - {
-        testMessageTrackingForVerityInstances(apps)
-      }
+//      "test metrics" - {
+//        testMetricsForVerityInstances(apps)
+//      }
+//
+//      "test message tracking" - {
+//        testMessageTrackingForVerityInstances(apps)
+//      }
 
       "sdk cleanup" - {
         apps.forEachApplication(cleanupSdk)
@@ -129,7 +133,7 @@ class SdkFlowSpec
     )
   }
 
-  def sdkAriesInteropInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+  def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
 
     val connectionId = UUID.randomUUID().toString
 
@@ -165,6 +169,19 @@ class SdkFlowSpec
       "be",
       requireSig = true
     )
+  }
+
+  def sdkOobInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+    val connectionId = UUID.randomUUID().toString
+
+    issueCredentialViaOob_1_0(
+      apps(verity1),
+      apps(cas1),
+      Map("license_num" -> "123", "name" -> "Bob"),
+      "cred_name1",
+      "tag"
+    )
+
   }
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {

@@ -105,7 +105,9 @@ trait VeritySdkProvider {
                           credDefId: String,
                           credValues: Map[String, String],
                           comment: String,
-                          price: String): IssueCredentialV1_0
+                          price: String = "0",
+                          autoIssue: Boolean = false,
+                          byInvitation: Boolean = false): IssueCredentialV1_0
 
   def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0
 

@@ -270,7 +270,9 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
                                    credDefId: String,
                                    credValues: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 = ???
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 = ???
 }
 
 trait Backup {

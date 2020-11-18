@@ -3,6 +3,7 @@ package com.evernym.verity.actor.agent.agency.agent_provisioning
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
@@ -12,6 +13,7 @@ import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.TimeUtil.IsoDateTime
 import com.evernym.verity.util.{Base64Util, TimeUtil}
 import com.evernym.verity.vault._
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration.Duration
 
@@ -22,6 +24,26 @@ trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase {
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupAgency()
+  }
+  override def overrideConfig: Option[Config] = Option {
+    ConfigFactory parseString {
+      s"""
+      verity.provisioning {
+        sponsors = [
+          {
+            name = "evernym-test-sponsor"
+            id = "evernym-test-sponsorabc123"
+            keys = [{"verKey": "GJ1SzoWzavQYfNL9XkaJdrQejfztN4XqdsiV4ct3LXKL"}]
+            endpoint = "localhost:3456/json-msg"
+            active = true
+          }
+        ]
+        sponsor-required = true
+        token-window = 10 minute
+        cache-used-tokens = true
+    }
+    """
+    }
   }
 
   lazy val AGENCY_PAIRWISE_AGENT_DID: DID = mockEdgeAgent.agencyPairwiseAgentDetailReq.DID

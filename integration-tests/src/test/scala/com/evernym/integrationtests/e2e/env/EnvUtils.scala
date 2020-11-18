@@ -35,6 +35,8 @@ object EnvUtils {
     val APP_NAME_VERITY_2 = "VERITY2"
     val APP_NAME_CAS_1    = "CAS1"
     val APP_NAME_EAS_1    = "EAS1"
+    val APP_NAME_CAS_2    = "CAS2"
+    val APP_NAME_EAS_2    = "EAS2"
 
     override def beforeAll(): Unit = {
       super.beforeAll()

@@ -107,7 +107,7 @@ trait AgencyAgentCommon
   def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = PartialFunction.empty
 
   def identifySponsor(idSponsor: IdentifySponsor): Future[Option[ControlMsg]] = {
-    val sponsorRequired = appConfig.getLoadedConfig.getBoolean(s"$PROVISIONING.sponsor-required")
+    val sponsorRequired = ConfigUtil.sponsorRequired(appConfig)
     val tokenWindow = Duration(appConfig.getLoadedConfig.getString(s"$PROVISIONING.token-window"))
     val cacheUsedTokens = appConfig.getConfigBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
 

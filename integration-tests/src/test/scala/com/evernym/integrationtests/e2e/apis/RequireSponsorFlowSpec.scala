@@ -36,13 +36,14 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.isRunScenario
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.util.HttpListenerUtil
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
+import com.typesafe.config.{Config, ConfigValueFactory}
 
-
-class ApiFlowSpec
+//TODO: This entire file can be removed when agent provisioning 0.5 and 0.6 are removed
+class RequireSponsorFlowSpec
   extends BasicSpecWithIndyCleanup
     with Eventually
     with TempDir
@@ -53,11 +54,16 @@ class ApiFlowSpec
     with ScalaFutures
     with HttpListenerUtil
     with CancelGloballyAfterFailure {
+  override def environmentName: String = "require-sponsor"
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
 
-  override lazy val appConfig: AppConfig = new TestAppConfig
+  private def newPoolNameConfig(): Config = (new TestAppConfig)
+    .config
+    .withValue("verity.lib-indy.ledger.pool-name", ConfigValueFactory.fromAnyRef("require-sponsor-pool"))
+
+  override lazy val appConfig: AppConfig = new TestAppConfig(Some(newPoolNameConfig()))
   lazy val poolConnManager: LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(appConfig)
     pc.open()
@@ -72,7 +78,7 @@ class ApiFlowSpec
   }
 
   val edgeHttpEndpointForPushNotif: PushNotifMsgHttpListener = {
-    new EdgeHttpListenerForPushNotifMsg(appConfig, UrlDetail("localhost:3456/json-msg"))
+    new EdgeHttpListenerForPushNotifMsg(appConfig, UrlDetail("localhost:3457/json-msg"))
   }
 
   val edgeHtppEndpointForSponsors: PushNotifMsgHttpListener = edgeHttpEndpointForPushNotif
@@ -198,6 +204,16 @@ class ApiFlowSpec
       }
     }
 
+    def connectAgencyFailsOldProtocol(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+      s"when sent connect and a sponsor is required" - {
+        "should respond with an error" in {
+          restartAgencyProcessesIfRequired
+          val sdr = expectMsgType[StatusDetailResp](sendConnectWithAgency())
+          sdr.statusMsg shouldBe PROVISIONING_PROTOCOL_DEPRECATED.statusMsg
+        }
+      }
+    }
+
     def connectWithAgency(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent connect msg" - {
         "should be able to connect" in {
@@ -221,6 +237,15 @@ class ApiFlowSpec
         "should respond with connection detail" in {
           restartAgencyProcessesIfRequired
           val cr = sendConnReq_MFV_0_6()
+        }
+      }
+    }
+
+    def createAgentFailsOldProtocol_MFV_0_6(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+      s"when a sponsor is required" - {
+        "should respond with an error" in {
+          val sdr = expectMsgType[StatusDetailResp](sendCreateAgentDeprecated_MFV_0_6())
+          sdr.statusMsg shouldBe PROVISIONING_PROTOCOL_DEPRECATED.statusMsg
         }
       }
     }
@@ -256,21 +281,6 @@ class ApiFlowSpec
       }
     }
 
-    def receiveFwdMsgForSponsor(msgSending: () => Unit)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
-      "when cloud agent receives a msg and has registered a fwd com method a msg" - {
-        "should be forwarded via http to specified endpoint" in {
-          restartAgencyProcessesIfRequired
-          val latestFwdMsg = withLatestPushMessage(edgeHtppEndpointForSponsors, {
-            msgSending()
-          })
-          val fwdMsg: FwdMsg = DefaultMsgCodec.fromJson[FwdMsg](latestFwdMsg)
-          println("latestFwdMsg: " + latestFwdMsg)
-          println(s"fwdMsg: $fwdMsg")
-          fwdMsg.sponseeDetails shouldBe "MCM::FwdIntegration"
-        }
-      }
-    }
-
     def createAgentFailures_MFV_0_7(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent incorrect create agent msg (V0.7)" - {
         "should get problem report" in {
@@ -285,6 +295,16 @@ class ApiFlowSpec
         "should be able to signup" in {
           restartAgencyProcessesIfRequired
           val sr = registerWithAgency()
+        }
+      }
+    }
+
+    def createAgentFailsOldProtocol(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+      s"when a sponsor is required" - {
+        "should respond with an error" in {
+          restartAgencyProcessesIfRequired
+          val sdr = expectMsgType[StatusDetailResp](sendCreateAgent())
+          sdr.statusMsg shouldBe PROVISIONING_PROTOCOL_DEPRECATED.statusMsg
         }
       }
     }
@@ -415,8 +435,8 @@ class ApiFlowSpec
             crm.senderDID shouldBe getMsgSenderDID(connId)
             sendInviteToPhoneNo match {
               case Some(_) =>
-                //TODO: need to finalize if we want to test this
-                //crm.statusCode shouldBe SC_MSG_STATUS_SENT
+              //TODO: need to finalize if we want to test this
+              //crm.statusCode shouldBe SC_MSG_STATUS_SENT
               case None =>
                 crm.statusCode shouldBe MSG_STATUS_CREATED.statusCode
             }
@@ -488,7 +508,7 @@ class ApiFlowSpec
     }
 
     def tryToAnswerSameInvitationAgain_MFV_0_6(connId: String)
-                                      (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+                                              (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent answer invite msg again (for $connId)" - {
         "should respond with an error" in {
           restartAgencyProcessesIfRequired
@@ -567,7 +587,7 @@ class ApiFlowSpec
               val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_6]
               unpackedPayloadMsg.`@type` shouldBe fullExpectedMsgType
               unpackedPayloadMsg.`@msg`.toString()
-            case _ => throw new Exception(s"Unknown msgPackFormat -- ${amw.msgPackFormat}")
+            case _ => throw new Exception(s"Unknown msgPackVersion -- ${amw.msgPackFormat}")
           }
           check(respJsonMsg)
         }
@@ -590,7 +610,7 @@ class ApiFlowSpec
     }
 
     def sendsNewMsgForFwd(connId: String, clientMsgUid: MsgId, msgType: String, msg: String,
-                replyToClientMsgUid: Option[String] = None): Unit = {
+                          replyToClientMsgUid: Option[String] = None): Unit = {
       val replyToMsgId = replyToClientMsgUid.map(clientMsgUid => getMsgUidReq(connId, clientMsgUid))
       val smr = expectMsgType[RemoteMsgSent_MFV_0_6](sendGeneralMsgToConn_MFV_0_6(connId, msgType, msg, replyToMsgId))
       lastSentMsgIdByConnId += (connId -> smr.`@id`)
@@ -656,7 +676,7 @@ class ApiFlowSpec
     }
 
     def sendGetMsgsByConns(hint: String, totalExpectedConnsForMsgs: Int, connsIds: Option[List[String]] = None)
-                         (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+                          (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent get msgs by conns ($hint)" - {
         "should be able to get msgs by conns" in {
           implicit val msgPackagingContext: AgentMsgPackagingContext =
@@ -701,7 +721,7 @@ class ApiFlowSpec
     }
 
     def updateMsgStatusByConns(hint: String, statusCode: String, connIds: Set[String])
-                       (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+                              (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       implicit val msgPackagingContext: AgentMsgPackagingContext =
         AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
       s"when sent update msg status by conns msg ($hint)" - {
@@ -717,18 +737,12 @@ class ApiFlowSpec
       }
     }
 
-    def setupTillAgentCreation(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+    def setupTillAgentCreationFailsDeprecated(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       fetchAgencyIdentity
-      connectWithAgency
-      signupWithAgency
-      createAgent
-    }
-
-    def setupTillAgentCreation_MFV_0_6(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
-      fetchAgencyIdentity
+      connectAgencyFailsOldProtocol
       createKey_MFV_0_6
       connReq_MFV_0_6
-      createAgent_MFV_0_6
+      createAgentFailsOldProtocol_MFV_0_6
     }
 
     def setupTillAgentCreation_MFV_0_7(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
@@ -736,8 +750,7 @@ class ApiFlowSpec
       getToken
       createKey_MFV_0_6
       connReq_MFV_0_6
-      //TODO: This needs to be turned back on when 0.5 and 0.6 are removed and RequireSponsorFlowSpec is deleted
-//      createAgentFailures_MFV_0_7
+      createAgentFailures_MFV_0_7
       createAgent_MFV_0_7
     }
 
@@ -765,158 +778,20 @@ class ApiFlowSpec
   def setupAgency(ae: AgencyAdminEnvironment): Unit = {
     implicit def sc: Scenario = ae.scenario
     s"${ae.scenario.name}" - {
-      "Consumer Agency Admin" - {
+      "Consumer Agency Admin - RequireSponsor" - {
         setupApplication(ae.consumerAgencyAdmin, ledgerUtil)
       }
 
-      "Enterprise Agency Admin" - {
+      "Enterprise Agency Admin - RequireSponsor" - {
         setupApplication(ae.enterpriseAgencyAdmin, ledgerUtil)
       }
     }
   }
 
-  def generalEndToEndFlowScenario(ce: ClientEnvironment)(implicit aae: AgencyAdminEnvironment): Unit = {
+  def oldProvisioningProtocolsFail(ce: ClientEnvironment)(implicit aae: AgencyAdminEnvironment): Unit = {
     implicit def sc: Scenario = ce.scenario
-
     s"${ce.scenario.name}" - {
-
-      "Enterprise" - {
-        ce.enterprise.setupTillAgentCreation
-        ce.enterprise.updateAgentComMethod(TestComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT,
-          Option(s"${edgeHttpEndpointForPackedMsg.listeningUrl}")))
-        ce.enterprise.updateAgentComMethod(TestComMethod("2", COM_METHOD_TYPE_PUSH,
-          Option(s"${edgeHttpEndpointForPushNotif.listeningUrl}")))
-        ce.scenario.connIds.foreach(ce.enterprise.createNewKey_0_5)
-        if (aae.easVerityInstance.setup) {
-          //this is conditional because metrics are exposed on internal api which is only allowed from internal network
-          ce.enterprise.queryMetrics()
-        }
-        //TODO: need to finalize about need of this test case
-        //ce.scenario.connIds.foreach(ce.enterprise.sendInvitationBeforeSettingReqConfigs)
-        ce.enterprise.updateAgentConfig(Set(TestConfigDetail(NAME_KEY, Option(entName)),
-          TestConfigDetail(LOGO_URL_KEY, Option(edgeAgentLogoUrl))))
-        ce.scenario.connIds.foreach(conId => ce.enterprise.sendInvitation_MFV_0_5(conId, includePublicDID = true))
-        ce.scenario.connIds.foreach(ce.enterprise.sentGetMsgAfterSendingInvitation)
-        ce.enterprise.sendGetMsgsByConns("after sending invitation", 2)
-        ce.enterprise.checkExpectedMsgFromEdgeEndpoint("no msg expected", 0)
-      }
-
-      "User" - {
-        ce.user.setupTillAgentCreation
-        ce.user.updateAgentComMethod(TestComMethod("1", COM_METHOD_TYPE_PUSH, Option("FCM:test-123")))
-        ce.scenario.connIds.foreach(ce.user.createNewKey_0_5)
-        ce.scenario.connIds.foreach(ce.user.answerInvitation)
-        ce.scenario.connIds.foreach(ce.user.sentGetMsgAfterAnsweringInvitation)
-        ce.user.sendGetMsgsByConns("after answering invitation", 2)
-        //ce.scenario.connIds.foreach(ce.user.tryToAnswerSameInvitationAgain)
-      }
-
-      "Enterprise" - {
-        ce.enterprise.checkExpectedMsgFromEdgeEndpoint("answer message expected", ce.scenario.connIds.size)
-        ce.scenario.connIds.foreach(ce.enterprise.sendGetMsgAfterItIsAccepted(_, CREATE_MSG_TYPE_CONN_REQ_ANSWER))
-        ce.enterprise.sendGetMsgsByConns("after invitation accepted", 2)
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendsNewMsg_MFV_0_5( connId, CLIENT_MSG_UID_CRED_OFFER_1, CREATE_MSG_TYPE_CRED_OFFER, "cred offer msg"))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_OFFER_1, GetMsgExpectedDetails.buildToCheckLastSentMsg(3)))
-      }
-
-      "User" - {
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_OFFER_1, GetMsgExpectedDetails.buildToCheckLastReceivedMsg(None, 3)))
-          ce.user.updateMsgStatusByConns("mark cred offer msg as reviewed", MSG_STATUS_REVIEWED.statusCode, ce.scenario.connIds)
-          ce.scenario.connIds.foreach( connId =>
-          ce.user.sendsNewMsg_MFV_0_5(connId, CLIENT_MSG_UID_CRED_REQ_1, CREATE_MSG_TYPE_CRED_REQ,
-          "cred request msg", Option(CLIENT_MSG_UID_CRED_OFFER_1)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_REQ_1,
-            GetMsgExpectedDetails.buildToCheckLastSentMsg(4, deliveryDetailSize = 2)))
-      }
-
-      "Enterprise" - {
-        ce.enterprise.checkExpectedMsgFromEdgeEndpoint("cred request msg expected", ce.scenario.connIds.size)
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_REQ_1,
-            GetMsgExpectedDetails.buildToCheckLastReceivedMsg(Option(CLIENT_MSG_UID_CRED_OFFER_1), totalMsgs = 4, deliveryDetailSize = 0)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendsNewMsg_MFV_0_5(connId, CLIENT_MSG_UID_CRED_1, CREATE_MSG_TYPE_CRED,
-          "cred msg", Option(CLIENT_MSG_UID_CRED_REQ_1)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_1, GetMsgExpectedDetails.buildToCheckLastSentMsg(5)))
-      }
-
-      "User" - {
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_1,
-            GetMsgExpectedDetails.buildToCheckLastReceivedMsg(Option(CLIENT_MSG_UID_CRED_REQ_1), 5)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.updateMsgStatus(connId, CLIENT_MSG_UID_CRED_1, MSG_STATUS_ACCEPTED.statusCode))
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgAndCheckStatus(connId, CLIENT_MSG_UID_CRED_1, MSG_STATUS_ACCEPTED.statusCode))
-      }
-
-      "Enterprise" - {
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendsNewMsg_MFV_0_5(connId, CLIENT_MSG_UID_PROOF_REQ_1, CREATE_MSG_TYPE_PROOF_REQ, "proof request msg"))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_PROOF_REQ_1, GetMsgExpectedDetails.buildToCheckLastSentMsg(6)))
-      }
-
-      "User" - {
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_PROOF_REQ_1, GetMsgExpectedDetails.buildToCheckLastReceivedMsg(None, 6)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendsNewMsg_MFV_0_5(connId, CLIENT_MSG_UID_PROOF_1, CREATE_MSG_TYPE_PROOF,
-          "proof msg", Option(CLIENT_MSG_UID_PROOF_REQ_1)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_PROOF_1, GetMsgExpectedDetails.buildToCheckLastSentMsg(7, deliveryDetailSize = 2)))
-      }
-
-      "Enterprise" - {
-        ce.enterprise.checkExpectedMsgFromEdgeEndpoint("proof msg expected", ce.scenario.connIds.size)
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_PROOF_1,
-          GetMsgExpectedDetails.buildToCheckLastReceivedMsg(Option(CLIENT_MSG_UID_PROOF_REQ_1), totalMsgs = 7, deliveryDetailSize = 0)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.updateMsgStatus(connId, CLIENT_MSG_UID_PROOF_1, MSG_STATUS_REVIEWED.statusCode))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgAndCheckStatus(connId, CLIENT_MSG_UID_PROOF_1, MSG_STATUS_REVIEWED.statusCode))
-      }
-
-      "User" - {
-        ce.scenario.connIds.foreach(connId => ce.user.updateConnStatus(connId, CONN_STATUS_DELETED.statusCode))
-      }
-
-      "Enterprise" - {
-        ce.scenario.connIds.foreach(connId =>
-          ce.enterprise.sendsNewMsg_MFV_0_5(connId, CLIENT_MSG_UID_PROOF_REQ_2, CREATE_MSG_TYPE_PROOF_REQ, "proof request msg 2"))
-        ce.scenario.connIds.foreach(connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_PROOF_REQ_2, GetMsgExpectedDetails.buildToCheckLastSentMsg(8)))
-      }
-
-      "User" - {
-        ce.scenario.connIds.foreach(connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_PROOF_REQ_2,
-          GetMsgExpectedDetails.buildToCheckLastReceivedMsg(None, totalMsgs = 8, deliveryDetailSize = 0)))
-      }
-
-      val newConnId = "newConn11"
-      "Redirecting" - {
-        "Enterprise sending invitation" - {
-          ce.enterprise.createNewKey_0_5(newConnId)
-          ce.enterprise.sendInvitation_MFV_0_5(newConnId, includePublicDID = true)
-          ce.enterprise.sendGetMsgsByConns("after sending new invitation", 3)
-        }
-        "Consumer redirecting invitation" - {
-          ce.user.createNewKey_0_5(newConnId)
-          ce.user.redirectInvitation_0_5(ce.scenario.connIds.last, newConnId)
-        }
-        "Enterprise receives conn req redirected" - {
-          ce.enterprise.checkExpectedMsgFromEdgeEndpoint("send redirect resp")
-          ce.enterprise.sendGetMsgAfterItIsAccepted(newConnId, CREATE_MSG_TYPE_CONN_REQ_REDIRECTED, MSG_STATUS_REDIRECTED.statusCode, checkRedirect)
-        }
-      }
-
+      ce.enterprise.setupTillAgentCreationFailsDeprecated
     }
   }
 
@@ -948,51 +823,6 @@ class ApiFlowSpec
         ce.user.sendGetMsgsByConns("after answering invitation", 2)
         ce.scenario.connIds.foreach(ce.user.tryToAnswerSameInvitationAgain_MFV_0_6)
       }
-
-      "Enterprise" - {
-        ce.enterprise.checkExpectedMsgFromEdgeEndpoint("answer msg expected", ce.scenario.connIds.size)
-        ce.scenario.connIds.foreach(ce.enterprise.sendGetMsgAfterItIsAccepted(_, MSG_TYPE_CONN_REQ_ACCEPTED))
-        ce.enterprise.sendGetMsgsByConns("after invitation accepted", 2)
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendsNewMsg_MFV_0_6( connId, CLIENT_MSG_UID_CRED_OFFER_1, CREATE_MSG_TYPE_CRED_OFFER, "cred offer msg"))
-        ce.scenario.connIds.foreach( connId =>
-          ce.enterprise.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_OFFER_1, GetMsgExpectedDetails.buildToCheckLastSentMsg(3)))
-      }
-
-      "User" - {
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_OFFER_1, GetMsgExpectedDetails.buildToCheckLastReceivedMsg(None, 3)))
-        ce.user.updateMsgStatusByConns("mark cred offer msg as reviewed", MSG_STATUS_REVIEWED.statusCode, ce.scenario.connIds)
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendsNewMsg_MFV_0_6(connId, CLIENT_MSG_UID_CRED_REQ_1, CREATE_MSG_TYPE_CRED_REQ,
-            "cred request msg", Option(CLIENT_MSG_UID_CRED_OFFER_1)))
-        ce.scenario.connIds.foreach( connId =>
-          ce.user.sendGetMsgsByConn(connId, CLIENT_MSG_UID_CRED_REQ_1,
-            GetMsgExpectedDetails.buildToCheckLastSentMsg(4, deliveryDetailSize = 2)))
-
-        val msgSender = () =>
-          ce.enterprise.sendsNewMsgForFwd(ce.scenario.connIds.head,  CLIENT_MSG_UID_CRED_OFFER_1, CREATE_MSG_TYPE_CRED_OFFER, "cred offer msg")
-
-        ce.user.updateAgentComMethod(TestComMethod("id", COM_METHOD_TYPE_FWD_PUSH, Some("MCM::FwdIntegration")))
-        ce.user.receiveFwdMsgForSponsor(msgSender)
-      }
-
-      val newConnId = "newConn21"
-      "Redirecting" - {
-        "Enterprise sending invitation" - {
-          ce.enterprise.createNewKey_MFV_0_6(newConnId)
-          ce.enterprise.sendInvitation_MFV_0_6(newConnId, includePublicDID = true)
-          ce.enterprise.sendGetMsgsByConns("after sending new invitation", 3)
-        }
-        "Consumer redirecting invitation" - {
-          ce.user.createNewKey_MFV_0_6(newConnId)
-          ce.user.redirectInvitation_0_6(ce.scenario.connIds.last, newConnId)
-        }
-        "Enterprise receives conn req redirected" - {
-          ce.enterprise.checkExpectedMsgFromEdgeEndpoint("send redirect resp", 3)
-          ce.enterprise.sendGetMsgAfterItIsAccepted(newConnId, MSG_TYPE_CONN_REQ_REDIRECTED, MSG_STATUS_REDIRECTED.statusCode, checkRedirect)
-        }
-      }
     }
   }
 
@@ -1007,20 +837,20 @@ class ApiFlowSpec
   }
 
   //agency environment detail
-  val cas1 = testEnv.instance_!(APP_NAME_CAS_1)
-  val eas1 = testEnv.instance_!(APP_NAME_EAS_1)
+  val cas2 = testEnv.instance_!(APP_NAME_CAS_2)
+  val eas2 = testEnv.instance_!(APP_NAME_EAS_2)
 
-  val consumerAgencyEndpoint = cas1.endpoint
-  val enterpriseAgencyEndpoint = eas1.endpoint
+  val consumerAgencyEndpoint = cas2.endpoint
+  val enterpriseAgencyEndpoint = eas2.endpoint
 
-  val requiredAppInstances: List[AppInstance] = List(cas1.appInstance, eas1.appInstance)
+  val requiredAppInstances: List[AppInstance] = List(cas2.appInstance, eas2.appInstance)
 
   //setup agency
   val agencyScenario = Scenario("Agency setup scenario", requiredAppInstances, suiteTempDir, projectDir)
   val agencyAdminEnv: AgencyAdminEnvironment = AgencyAdminEnvironment(
     agencyScenario,
-    casVerityInstance = testEnv.instance_!(APP_NAME_CAS_1),
-    easVerityInstance = testEnv.instance_!(APP_NAME_EAS_1))
+    casVerityInstance = testEnv.instance_!(APP_NAME_CAS_2),
+    easVerityInstance = testEnv.instance_!(APP_NAME_EAS_2))
   setupAgency(agencyAdminEnv)
 
   //test all apis without server restart in between
@@ -1037,37 +867,18 @@ class ApiFlowSpec
     enterpriseAgencyEndpoint = enterpriseAgencyEndpoint)
 
   if ( isRunScenario("scenario1") ) {
-    generalEndToEndFlowScenario(clientEnv1)(agencyAdminEnv)
+    oldProvisioningProtocolsFail(clientEnv1)(agencyAdminEnv)
   }
 
   if ( isRunScenario("scenario2") ) {
-    //test all apis with agency service restart in between each of them
-    val scenario2 = Scenario(
-      "API caller scenario 2 (agency service restart)",
-      requiredAppInstances,
-      suiteTempDir,
-      projectDir,
-      connIds = Set("connId3", "connId4"),
-      restartAgencyBeforeEachTest = true
-    )
-    val clientEnv2: ClientEnvironment = clientEnv1.copy(scenario = scenario2)
-    generalEndToEndFlowScenario(clientEnv2)(agencyAdminEnv)
-  }
-
-  if ( isRunScenario("scenario3") ) {
-    //test all apis with agency service restart in between each of them
     val scenario3 = Scenario(
-      "API caller scenario 3 (MFV 0.6)",
+      "API caller scenario 2 (MFV 0.6)",
       requiredAppInstances,
       suiteTempDir,
       projectDir,
       connIds = Set("connId5", "connId6")
     )
-    val clientEnv3: ClientEnvironment = clientEnv1.copy(scenario = scenario3)
-    generalEndToEndFlowScenario_MFV_0_6(clientEnv3)(agencyAdminEnv)
+    val clientEnv2: ClientEnvironment = clientEnv1.copy(scenario = scenario3)
+    generalEndToEndFlowScenario_MFV_0_6(clientEnv2)(agencyAdminEnv)
   }
 }
-
-
-class EdgeHttpListenerForPackedMsg(val appConfig: AppConfig, val listeningEndpoint: UrlDetail) extends PackedMsgHttpListener
-class EdgeHttpListenerForPushNotifMsg(val appConfig: AppConfig, val listeningEndpoint: UrlDetail) extends PushNotifMsgHttpListener

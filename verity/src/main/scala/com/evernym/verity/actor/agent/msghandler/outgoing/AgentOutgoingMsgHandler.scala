@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
@@ -17,13 +18,10 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
-import com.evernym.verity.push_notification.{PushNotifData, PushNotifResponse}
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext}
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
 
@@ -41,10 +39,6 @@ trait AgentOutgoingMsgHandler
 
     //[LEGACY] pinst -> actor protocol container (sendRespToCaller method) -> this actor
     case psrp: ProtocolSyncRespMsg      => handleProtocolSyncRespMsg(psrp)
-
-    //pinst -> actor protocol container (send method) -> this actor
-    case ProtocolOutgoingMsg(sd: ServiceDecorator, to, _, rmId, _, pDef, tcd)
-                                        => handleProtocolServiceDecorator(sd, to, rmId, pDef, tcd)
 
     //pinst -> actor protocol container (send method) -> this actor
     case pom: ProtocolOutgoingMsg    => handleProtocolOutgoingMsg(pom)
@@ -79,37 +73,6 @@ trait AgentOutgoingMsgHandler
     logger.trace(s"sending protocol outgoing message: $pom")
     handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.pinstId,
       pom.protoDef, pom.threadContextDetail, Option(pom.requestMsgId)))
-  }
-
-  def handleProtocolServiceDecorator(sd: ServiceDecorator,
-                                     to: ParticipantId,
-                                     requestMsgId: MsgId,
-                                     protoDef: ProtoDef,
-                                     tcd: ThreadContextDetail): Unit = {
-    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, protoDef,
-      tcd, Option(TypeFormat.STANDARD_TYPE_FORMAT))
-
-      sd match {
-      case pushToken: PushToken =>
-        val future = sendPushNotif(
-          Set(sd.deliveryMethod),
-          //TODO: do we want to use requestMsgId here or a new msg id?
-          PushNotifData(requestMsgId, agentMsg.msgType.msgName, sendAsAlertPushNotif = true, Map.empty,
-            Map("type" -> agentMsg.msgType.msgName, "msg" -> agentMsg.jsonStr)),
-          Some(pushToken.msg.sponsorId)
-        )
-        future.map {
-          case pnds: PushNotifResponse if MSG_DELIVERY_STATUS_SENT.hasStatusCode(pnds.statusCode) =>
-            logger.trace(s"push notification sent successfully: $pnds")
-          case pnds: PushNotifResponse if MSG_DELIVERY_STATUS_FAILED.hasStatusCode(pnds.statusCode) =>
-            //TODO: How do we communicate a failed response? Change Actor state?
-            logger.error(s"push notification failed (participantId: $to): $pnds")
-          case x =>
-            //TODO: How do we communicate a failed response? Change Actor state?
-            logger.error(s"push notification failed (participantId: $to): $x")
-        }
-      case x => throw new RuntimeException("unsupported Service Decorator: " + x)
-    }
   }
 
   /**

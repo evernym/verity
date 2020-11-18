@@ -28,13 +28,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   extends BasePersistentActor {
 
   override def receiveCmd: Receive = {
-    case GetUpdaterStatus                       => sender ! CurrentStatus(statusOpt, batchStatus)
+    case GetExecutorStatus                      => sender ! CurrentStatus(routeStoreStatus, batchStatus)
     case prs: ProcessRouteStore                 => handleProcessRouteStore(prs)
     case crtbp: CandidateRoutesToBeProcessed    => processCandidateRoutes(crtbp.dids)
     case ascs: ActorStateCleanupStatus          => handleActorStateCleanupStatus(ascs)
 
-    case ProcessPending if statusOpt.isDefined  => processBatch()
-    case ProcessPending if statusOpt.isEmpty    => //nothing to do
+    case ProcessPending if routeStoreStatus.isDefined  => processBatch()
+    case ProcessPending if routeStoreStatus.isEmpty    => //nothing to do
 
     //below command is received from ActorStateCleanupManager as a response of 'Completed' sent by this actor
     case Done =>
@@ -44,25 +44,25 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 
   override def receiveEvent: Receive = {
     case su: StatusUpdated =>
-      statusOpt = Option(ProcessingStatus(su.agentRouteStoreEntityId, su.totalRoutes, su.processedRoutes))
+      routeStoreStatus = Option(RouteStoreStatus(su.agentRouteStoreEntityId, su.totalRoutes, su.processedRoutes))
     case _: ActorStateCleaned =>
-      statusOpt = statusOpt.map(s => s.copy(totalProcessed = s.totalProcessed + 1))
+      routeStoreStatus = routeStoreStatus.map(s => s.copy(totalProcessed = s.totalProcessed + 1))
   }
 
-  def handleRouteProcessed(asc: ActorStateCleaned): Unit = {
-    logger.debug(s"ASC [$persistenceId] [ASCE->ASCE]: received RouteProcessed: " + asc)
+  def handleActorStateCleaned(asc: ActorStateCleaned): Unit = {
+    logger.debug(s"ASC [$persistenceId] [ASCE->ASCE]: received ActorStateCleaned: " + asc)
     writeAndApply(asc)
-    batchStatus = batchStatus.copy(processed = batchStatus.processed + 1)
+    batchStatus = batchStatus.copy(candidates = batchStatus.candidates ++ Map(asc.actorId -> true))
     if (batchStatus.isCompleted) {
-      batchStatus = BatchProcessingStatus.empty
+      batchStatus = BatchStatus.empty
     }
   }
 
   def handleProcessRouteStore(prs: ProcessRouteStore): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCM->ASCE] received ProcessRouteStore: " + prs)
-    if (statusOpt.isDefined) {
-      logger.debug(s"ASC [$persistenceId] status: " + status)
-      sender ! status
+    if (routeStoreStatus.isDefined) {
+      logger.debug(s"ASC [$persistenceId] status: " + routeStoreStatusReq)
+      sender ! routeStoreStatusReq
     } else {
       val event = StatusUpdated(prs.agentRouteStoreEntityId, prs.totalRoutes)
       logger.debug(s"ASC [$persistenceId] recording event: " + event)
@@ -73,15 +73,15 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   def processBatch(): Unit = {
     if (isActorStateCleanupEnabled) {
       logger.debug(s"ASC [$persistenceId] [ASCE->ASCE] process batch started")
-      if (status.isAllCompleted) { // all routes are processed
-        logger.debug(s"ASC [$persistenceId] state cleanup completed for agent route store entity id: " + status.agentRouteStoreEntityId)
-        singletonParentProxyActor ! ForActorStateCleanupManager(Completed(entityId, status.totalProcessed))
+      if (routeStoreStatusReq.isAllCompleted) { // all routes are processed
+        logger.debug(s"ASC [$persistenceId] state cleanup completed for agent route store entity id: " + routeStoreStatusReq.agentRouteStoreEntityId)
+        singletonParentProxyActor ! ForActorStateCleanupManager(Completed(entityId, routeStoreStatusReq.totalProcessed))
       } else if (batchStatus.isEmpty) { //no batch in progress
         logger.debug(s"ASC [$persistenceId] no batch is in progress: " + batchStatus)
-        val cmd = GetRouteBatch(status.totalCandidates, status.totalProcessed, batchSize)
-        agentRouteStoreRegion ! ForIdentifier(status.agentRouteStoreEntityId, cmd)
+        val cmd = GetRouteBatch(routeStoreStatusReq.totalCandidates, routeStoreStatusReq.totalProcessed, batchSize)
+        agentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
       } else if (batchStatus.isInProgress) {
-        batchStatus.candidateDIDs.foreach { did =>
+        batchStatus.candidates.keySet.foreach { did =>
           agentMsgRouter.forward(InternalMsgRouteParam(did, CheckActorStateCleanupState(did)), self)
         }
       }
@@ -93,12 +93,14 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     //then it is no longer needed and should cleanup its persistence
     logger.debug(s"ASC [$persistenceId] [ASCM->ASCE] state cleanup completed for executor '$entityId', " +
       s"and this actor will be destroyed")
+    routeStoreStatus = None
+    batchStatus = BatchStatus.empty
     deleteMessages(lastSequenceNr)
   }
 
   override def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
-    stopActor()
     super.handleDeleteMsgSuccess(dms)
+    stopActor()
   }
 
   /**
@@ -108,33 +110,39 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
    * @param candidateDIDs candidate DIDs
    */
   def processCandidateRoutes(candidateDIDs: Set[DID]): Unit = {
-    logger.debug(s"ASC [$persistenceId] [ARS->ASCE] received candidates to be processed: " + candidateDIDs.size)
-    candidateDIDs.foreach { did =>
-      logger.debug(s"ASC [$persistenceId] did: " + did)
-      agentMsgRouter.execute(InternalMsgRouteParam(did, FixActorState))
-      agentMsgRouter.forward(InternalMsgRouteParam(did, CheckActorStateCleanupState(did)), self)
-    }
-    if (candidateDIDs.nonEmpty) {
-      batchStatus = batchStatus.copy(candidateDIDs = candidateDIDs, 0)
-    } else {
-      if (status.totalCandidates > 0) {
-        logger.warn(s"ASC [$persistenceId] suspicious, totalCandidates: ${status.totalCandidates}, but received 0")
+    if (routeStoreStatus.isDefined) {
+      logger.debug(s"ASC [$persistenceId] [ARS->ASCE] received candidates to be processed: " + candidateDIDs.size)
+      candidateDIDs.foreach { did =>
+        logger.debug(s"ASC [$persistenceId] did: " + did)
+        agentMsgRouter.execute(InternalMsgRouteParam(did, FixActorState))
+        agentMsgRouter.forward(InternalMsgRouteParam(did, CheckActorStateCleanupState(did)), self)
+      }
+      if (candidateDIDs.nonEmpty) {
+        if (batchStatus.isEmpty) {
+          val updatedCandidates = batchStatus.candidates ++ candidateDIDs.map(_ -> false)
+          batchStatus = batchStatus.copy(candidates = updatedCandidates)
+        }
       } else {
-        logger.debug(s"ASC [$persistenceId] received no candidates to be processed: " + status)
-        writeAndApply(StatusUpdated(status.agentRouteStoreEntityId, status.totalCandidates, status.totalCandidates))
+        if (routeStoreStatusReq.isAllCompleted) {
+          logger.debug(s"ASC [$persistenceId] received no candidates to be processed: " + routeStoreStatusReq)
+          writeAndApply(StatusUpdated(routeStoreStatusReq.agentRouteStoreEntityId, routeStoreStatusReq.totalCandidates, routeStoreStatusReq.totalCandidates))
+        } else {
+          logger.warn(s"ASC [$persistenceId] (totalCandidates: ${routeStoreStatusReq.totalCandidates}, totalProcessed: ${routeStoreStatusReq.totalProcessed}) suspicious, but received 0")
+        }
       }
     }
   }
 
   def handleActorStateCleanupStatus(ascs: ActorStateCleanupStatus): Unit = {
-    if (ascs.routeFixed && ascs.threadContextMigrated) {
-      handleRouteProcessed(ActorStateCleaned(ascs.forDID))
+    if (routeStoreStatus.isDefined && ascs.isStateCleanedUp) {
+      handleActorStateCleaned(ActorStateCleaned(ascs.forDID))
     }
   }
 
-  var statusOpt: Option[ProcessingStatus] = None
-  def status: ProcessingStatus = statusOpt.getOrElse(throw new RuntimeException(s"ASC [$persistenceId] status not yet initialized"))
-  var batchStatus: BatchProcessingStatus = BatchProcessingStatus.empty
+  var routeStoreStatus: Option[RouteStoreStatus] = None
+  def routeStoreStatusReq: RouteStoreStatus = routeStoreStatus.getOrElse(
+    throw new RuntimeException(s"ASC [$persistenceId] routeStoreStatus not yet initialized"))
+  var batchStatus: BatchStatus = BatchStatus.empty
 
   override def persistenceEncryptionKey: String = this.getClass.getSimpleName
 
@@ -167,13 +175,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   private val logger: Logger = LoggingUtil.getLoggerByClass(classOf[ActorStateCleanupExecutor])
 }
 
-//status
-case class ProcessingStatus(agentRouteStoreEntityId: EntityId, totalCandidates: Int, totalProcessed: Int) extends ActorMessageClass {
+//status of a route store entity candidates
+case class RouteStoreStatus(agentRouteStoreEntityId: EntityId, totalCandidates: Int, totalProcessed: Int) extends ActorMessageClass {
   def isAllCompleted: Boolean = totalCandidates == totalProcessed
 }
 
 //incoming message
-case object GetUpdaterStatus extends ActorMessageObject
+case object GetExecutorStatus extends ActorMessageObject
 case class ProcessRouteStore(agentRouteStoreEntityId: String, totalRoutes: Int, processedRoutes: Int = 0) extends ActorMessageClass
 case object Destroy extends ActorMessageObject
 
@@ -184,13 +192,13 @@ object ActorStateCleanupExecutor {
 
 case object ProcessPending extends ActorMessageObject
 
-object BatchProcessingStatus {
-  def empty: BatchProcessingStatus = BatchProcessingStatus(Set.empty, 0)
+object BatchStatus {
+  def empty: BatchStatus = BatchStatus(Map.empty)
 }
-case class BatchProcessingStatus(candidateDIDs: Set[DID], processed: Int) {
-  def isInProgress: Boolean = candidateDIDs.size > processed
-  def isCompleted: Boolean = candidateDIDs.size == processed
-  def isEmpty: Boolean = candidateDIDs.isEmpty
+case class BatchStatus(candidates: Map[DID, Boolean]) {
+  def isInProgress: Boolean = candidates.exists(_._2 == false)
+  def isCompleted: Boolean = candidates.nonEmpty && candidates.forall(_._2 == true)
+  def isEmpty: Boolean = candidates.isEmpty
 }
 
-case class CurrentStatus(statusOpt: Option[ProcessingStatus], batchStatus: BatchProcessingStatus) extends ActorMessageClass
+case class CurrentStatus(routeStoreStatus: Option[RouteStoreStatus], batchStatus: BatchStatus) extends ActorMessageClass

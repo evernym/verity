@@ -7,7 +7,7 @@ import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.persistence.DeleteMessagesSuccess
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.maintenance.{Destroy, ProcessRouteStore, ProcessingStatus}
+import com.evernym.verity.actor.agent.maintenance.{Destroy, ProcessRouteStore, RouteStoreStatus}
 import com.evernym.verity.actor.agent.msgrouter._
 import com.evernym.verity.actor.persistence.{Done, SingletonChildrenPersistentActor}
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
@@ -27,13 +27,13 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   extends SingletonChildrenPersistentActor {
 
   override def receiveCmd: Receive = {
-    case GetStatus                => sender ! Status(registered.size, completed.size, registered.values.sum, completed.values.sum)
+    case gs: GetStatus            => handleGetStatus(gs)
     case r: Register              => handleRegister(r)
     case c: Completed             => handleCompleted(c)
     case ProcessPending           => processPending()
 
-      //receives from LegacyRouteFixer as part of response of 'ProcessRouteStore' command
-    case _ @ (_:ProcessingStatus | _: StatusUpdated)     => //nothing to do
+      //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
+    case _ @ (_:RouteStoreStatus | _: StatusUpdated)     => //nothing to do
     case Reset                    => handleReset()
   }
 
@@ -45,8 +45,17 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       completed += c.entityId -> c.totalProcessedRoutes
   }
 
+  def handleGetStatus(gs: GetStatus): Unit = {
+    val s = Status(registered.size, completed.size, registered.values.sum, completed.values.sum)
+    if (gs.includeDetails) {
+      sender ! s.copy(registeredRouteStores = Some(registered))
+    } else {
+      sender ! s
+    }
+  }
+
   def handleReset(): Unit = {
-    registered.keySet.foreach { entityId =>
+    registered.filter(_._2 > 0).keySet.foreach { entityId =>
       sendMsgToActorStateCleanupExecutor(entityId, Destroy)
       Thread.sleep(40)
     }
@@ -55,8 +64,8 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   }
 
   override def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
-    stopActor()
     super.handleDeleteMsgSuccess(dms)
+    stopActor()
   }
 
   def pendingBatchedRouteStores: Map[EntityId, RoutesCount] =
@@ -126,15 +135,19 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   }
 
   def sendAnyPendingRegistrationRequest(): Unit = {
-    var requestsSent = 0
-    while ( (requestsSent < registrationBatchSize) && (lastRequestedBucketId < totalBuckets-1)) {
+    var candidateEntityIds = Set.empty[String]
+    while ( (candidateEntityIds.size < registrationBatchSize) && (lastRequestedBucketId < totalBuckets-1)) {
       val nextBucketId = lastRequestedBucketId + 1
       lastRequestedBucketId = nextBucketId
       val entityId = "v1" + "-" + UUID.nameUUIDFromBytes(nextBucketId.toString.getBytes).toString
       if (! registered.contains(entityId)) {
+        candidateEntityIds += entityId
+      }
+    }
+    Future {
+      candidateEntityIds.foreach { entityId =>
         agentRouteStoreRegion ! ForIdentifier(entityId, SendAllRouteRegistrationRequest)
-        requestsSent += 1
-        Thread.sleep(registrationBatchItemSleepIntervalInMillis)   //this is to make sure it doesn't hit the database too hard and impact the running system.
+        Thread.sleep(registrationBatchItemSleepIntervalInMillis) //this is to make sure it doesn't hit the database too hard and impact the running system.
       }
     }
   }
@@ -201,12 +214,13 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 case class Status(registeredRouteStoreActorCount: Int,
                   processedRouteStoreActorCount: Int,
                   totalCandidateAgentActors: Int,
-                  totalProcessedAgentActors: Int) extends ActorMessageClass
+                  totalProcessedAgentActors: Int,
+                  registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
 
 //incoming messages
 case class Register(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessageClass
 case object ProcessPending extends ActorMessageObject
-case object GetStatus extends ActorMessageObject
+case class GetStatus(includeDetails: Boolean = false) extends ActorMessageClass
 case object Reset extends ActorMessageObject
 
 //outgoing messages

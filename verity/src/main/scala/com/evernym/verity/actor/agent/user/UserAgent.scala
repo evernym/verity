@@ -61,6 +61,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
   type StateType = UserAgentState
   var state = new UserAgentState
 
+  override def getSponsorRel(domainId: DomainId): Future[Option[SponsorRel]] = Future(state.sponsorRel)
+
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 
   override def incomingMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Any] =
@@ -234,11 +236,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
     } else {
       writeApplyAndSendItBack(ads)
     }
-
-    logger.info(s"setting sponsor for pw: ${ads.agentKeyDID}")
-    agentActorContext
-      .agentMsgRouter
-      .execute(InternalMsgRouteParam(ads.agentKeyDID, SetSponsorRel(state.sponsorRel)))
   }
 
   def handleDeleteComMethod(dcm: DeleteComMethod): Unit = {
@@ -317,9 +314,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     } else forDID
 
     val ipc = buildSetupCreateKeyEndpoint(forDID, endpointDID)
-    val pairwiseEntityId = getNewActorId
-    val resp = userAgentPairwiseRegion ? ForIdentifier(pairwiseEntityId, ipc)
-    userAgentPairwiseRegion ! ForIdentifier(pairwiseEntityId, SetSponsorRel(state.sponsorRel))
+    val resp = userAgentPairwiseRegion ? ForIdentifier(getNewActorId, ipc)
     (resp, endpointDID)
   }
 
@@ -759,6 +754,7 @@ case object GetAllComMethods extends ActorMessageObject
 case object GetPushComMethods extends ActorMessageObject
 case object GetHttpComMethods extends ActorMessageObject
 case object GetFwdComMethods extends ActorMessageObject
+case object GetSponsorRel extends ActorMessageObject
 case class DeleteComMethod(value: String, reason: String) extends ActorMessageClass
 
 //response msgs

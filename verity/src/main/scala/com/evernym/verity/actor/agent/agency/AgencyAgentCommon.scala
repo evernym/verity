@@ -4,7 +4,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
-import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7}
+import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -35,6 +35,8 @@ trait AgencyAgentCommon
     with ShardRegionFromActorContext
     with MsgNotifier
     with LEGACY_connectingSignalHandler {
+
+  override def getSponsorRel(domainId: DomainId): Future[Option[SponsorRel]] = Future(None)
 
   def setAgencyAndOwnerDetail(aDID: DID): Unit = {
     setAgencyDID(aDID)

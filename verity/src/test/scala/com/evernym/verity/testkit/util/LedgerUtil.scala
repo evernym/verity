@@ -7,7 +7,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter, TransactionAuthorAgreement}
-import com.evernym.verity.libindy.LibIndyWalletProvider
+import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util._
@@ -19,20 +19,24 @@ import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 
-class LedgerUtil (
-                   val appConfig: AppConfig,
-                   val poolConnManager: LedgerPoolConnManager,
-                   val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y",
-                   val submitterKeySeed: String = "000000000000000000000000Steward1",
-                   val submitterRole: String = "STEWARD",
-                   val taa: Option[TransactionAuthorAgreement] = None
-) extends CommonSpecUtil {
+class LedgerUtil (val appConfig: AppConfig,
+                  val poolConfigName: Option[String],
+                  val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y",
+                  val submitterKeySeed: String = "000000000000000000000000Steward1",
+                  val submitterRole: String = "STEWARD",
+                  val taa: Option[TransactionAuthorAgreement] = None,
+                  val genesisTxnPath: Option[String] = None) extends CommonSpecUtil {
 
+  lazy val poolConnManager: LedgerPoolConnManager = {
+    val pc = new IndyLedgerPoolConnManager(appConfig, poolConfigName, genesisTxnPath)
+    pc.open()
+    pc
+  }
   // Read requests don't require a particular submitterDID, so here is a random one
   private val privateGetDID: DID = "KZyKVMqt5ShMvxLF1zKM7F"
   private val walletName = submitterDID + "_" + LocalDateTime.now().toString
 
-  private val walletAPI = new WalletAPI(new LibIndyWalletProvider(appConfig), TestUtil, poolConnManager)
+  private lazy val walletAPI = new WalletAPI(new LibIndyWalletProvider(appConfig), TestUtil, poolConnManager)
 
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)
 

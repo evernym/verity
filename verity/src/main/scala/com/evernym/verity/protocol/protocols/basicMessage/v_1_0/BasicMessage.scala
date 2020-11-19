@@ -96,7 +96,7 @@ object BasicMessage {
   def buildMessage(m: MessageReceived): Msg.Message = {
     Msg.Message(
       l10n(locale = m.localization),
-      BaseTiming(out_time = m.sentTime),
+      m.sentTime,
       m.content,
       Some(attachmentObjectsToAttachments(m.attachments.toVector)),
     )
@@ -105,7 +105,7 @@ object BasicMessage {
   def messageToEvt(m: Msg.Message): MessageReceived = {
     MessageReceived(
       m.`~l10n`.locale,
-      m.sent_time.out_time,
+      m.sent_time,
       m.content,
       attachmentsToAttachmentObjects(m.`~attach`.getOrElse(Vector.empty)),
     )

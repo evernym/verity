@@ -9,6 +9,7 @@ import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.relationship.v1_0.{GoalCode, RelationshipV1_0}
 import com.evernym.verity.sdk.protocols.updateconfigs.v0_6.UpdateConfigsV0_6
 import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
@@ -133,6 +134,14 @@ object UndefinedInterfaces {
     override def getThreadId: String = throw new NotImplementedError
   }
 
+  class UndefinedBasicMessage_1_0 extends BasicMessageV1_0 {
+    override def message(context: Context): Unit = throw new NotImplementedError
+    override def messageMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def messageMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def getThreadId: String = throw new NotImplementedError
+  }
+
   class UndefinedIssueCredential_1_0 extends IssueCredentialV1_0 {
     override def proposeCredential(context: Context): Unit = throw new NotImplementedError
     override def proposeCredentialMsg(context: Context): JSONObject = throw new NotImplementedError
@@ -184,5 +193,17 @@ object UndefinedInterfaces {
     override def outOfBandInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
     override def outOfBandInvitationMsgPacked(context: Context, shortInvite: lang.Boolean): Array[Byte] = throw new NotImplementedError
     override def outOfBandInvitationMsgPacked(context: Context, shortInvite: lang.Boolean, goal: GoalCode): Array[Byte] = throw new NotImplementedError
+
+    override def smsConnectionInvitation(context: Context): Unit = throw new NotImplementedError
+    override def smsConnectionInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def smsConnectionInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def smsOutOfBandInvitation(context: Context): Unit = throw new NotImplementedError
+    override def smsOutOfBandInvitation(context: Context, goal: GoalCode): Unit = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
+
+    override def smsOutOfBandInvitationMsg(context: Context, goal: GoalCode): JSONObject = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsgPacked(context: Context, goal: GoalCode): Array[Byte] = throw new NotImplementedError
   }
 }

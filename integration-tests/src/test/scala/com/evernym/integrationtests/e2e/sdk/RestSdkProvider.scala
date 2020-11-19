@@ -27,6 +27,7 @@ import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.relationship.v1_0.{GoalCode, RelationshipV1_0}
 import com.evernym.verity.sdk.protocols.updateconfigs.v0_6.UpdateConfigsV0_6
 import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
@@ -262,6 +263,23 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     new UndefinedCommittedAnswer_1_0 {
       override def status(ctx: Context): Unit = {
         sendHttpGetReq(context, ProtoRef("committedanswer", "1.0"), Option(threadId), Map("~for_relationship" -> forRelationship, "familyQualifier" -> "BzCbsNYhMrjHiqZDTUASHg"))
+      }
+    }
+  }
+
+  override def basicMessage_1_0(forRelationship: DID, content: String, sent_time: String, localization: String): BasicMessageV1_0 = {
+    val messageJson = new JSONObject
+    messageJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
+    messageJson.put("@id", UUID.randomUUID.toString)
+    messageJson.put("~for_relationship", forRelationship)
+    messageJson.put("content", content)
+    messageJson.put("sent_time", sent_time)
+    messageJson.put("localization", "en")
+
+    new UndefinedBasicMessage_1_0 {
+      override def message(ctx: Context): Unit = {
+        println(s"basicMessage message json: ${messageJson.toString}")
+        sendHttpPostReq(context, messageJson.toString, ProtoRef("basicmessage", "1.0"), None)
       }
     }
   }

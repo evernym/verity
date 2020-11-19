@@ -18,6 +18,8 @@ import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.CommittedAnswer
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
+import com.evernym.verity.sdk.protocols.basicmessage.BasicMessage
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.relationship.Relationship
 import com.evernym.verity.sdk.protocols.relationship.v1_0.RelationshipV1_0
 import com.evernym.verity.sdk.protocols.updateconfigs.UpdateConfigs
@@ -73,6 +75,9 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
 
   override def committedAnswer_1_0(forRelationship: DID, threadId: String): CommittedAnswerV1_0 =
     CommittedAnswer.v1_0(forRelationship, threadId)
+
+  override def basicMessage_1_0(forRelationship: DID, content: String, sent_time: String, localization: String): BasicMessageV1_0 =
+    BasicMessage.v1_0(forRelationship, content, sent_time, localization)
 
   override def connecting_1_0(sourceId: String, label: String, base64InviteURL: String): ConnectionsV1_0 = ???
 

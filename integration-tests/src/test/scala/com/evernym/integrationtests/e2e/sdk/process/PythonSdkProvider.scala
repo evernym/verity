@@ -15,6 +15,7 @@ import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.Attribute
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
 import com.evernym.verity.sdk.protocols.relationship.v1_0.{GoalCode, RelationshipV1_0}
 import com.evernym.verity.sdk.protocols.updateconfigs.v0_6.UpdateConfigsV0_6
@@ -181,6 +182,22 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "status",
           Seq(forRelationship, threadId)
+        )
+      }
+    }
+
+  override def basicMessage_1_0(forRelationship: DID,
+                                content: String,
+                                sent_time: String,
+                                localization: String): BasicMessageV1_0 =
+    new UndefinedBasicMessage_1_0 {
+      override def message(ctx: Context): Unit = {
+        executeCmd(
+          ctx,
+          "BasicMessage",
+          this.version,
+          "message",
+          Seq(forRelationship, None, content, sent_time, localization)
         )
       }
     }

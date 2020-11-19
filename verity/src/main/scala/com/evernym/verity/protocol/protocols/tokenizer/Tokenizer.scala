@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, PushToken, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
+import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
 import com.evernym.verity.protocol.protocols.tokenizer.{Token => TokenEvt}
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.Util.getNewEntityId
@@ -39,7 +39,7 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
     ctx.apply(RequestedToken(
       setter=Some(SetRoster(requester=_selfIdx, tokenizer = _otherIdx))
     ))
-    ctx.send(GetToken(c.sponseeId, c.sponsorId, c.pushId))
+    ctx.send(GetToken(c.sponseeId, c.sponsorId))
   }
 
   override def applyEvent: ApplyEvent = {
@@ -87,7 +87,9 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
           setter=Some(SetRoster(requester=_otherIdx, tokenizer=_selfIdx)),
           token=Some(token.asEvent)
         ))
-        ctx.send(PushToken(token, m.pushId))
+
+        /** This will be sent synchronously in the http response*/
+        ctx.send(token)
       case Failure(ex) =>
         ctx.logger.error(ex.toString)
         problemReport(SigningTokenErr.err)
@@ -114,7 +116,7 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
   def problemReport(logErr: String, optMsg: Option[String]=None): Unit = {
     ctx.logger.error(logErr)
     ctx.apply(Failed(logErr))
-    //TODO: eventually, a problem report should be able to be sent. Because of the push com method we are using now, its not
+    ctx.send(ProblemReport(logErr))
   }
 
   def _isRequester(setter: SetRoster): Boolean = setter.requester == _selfIdx

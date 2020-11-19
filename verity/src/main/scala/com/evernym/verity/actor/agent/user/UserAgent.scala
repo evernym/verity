@@ -113,6 +113,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     case GetFwdComMethods                        => sendFwdComMethods()
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
+      //FIXME -> RTM: Ask Devin about this ask pattern
     case GetSponsorRel                           => sender() ! state.sponsorRel
   }
 

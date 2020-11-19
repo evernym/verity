@@ -36,8 +36,6 @@ trait AgencyAgentCommon
     with MsgNotifier
     with LEGACY_connectingSignalHandler {
 
-  override def getSponsorRel(domainId: DomainId): Future[Option[SponsorRel]] = Future(None)
-
   def setAgencyAndOwnerDetail(aDID: DID): Unit = {
     setAgencyDID(aDID)
   }

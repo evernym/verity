@@ -61,8 +61,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
   type StateType = UserAgentState
   var state = new UserAgentState
 
-  override def getSponsorRel(domainId: DomainId): Future[Option[SponsorRel]] = Future(state.sponsorRel)
-
   override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 
   override def incomingMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Any] =
@@ -115,6 +113,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     case GetFwdComMethods                        => sendFwdComMethods()
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
+    case GetSponsorRel                           => sender() ! state.sponsorRel
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
@@ -588,7 +587,12 @@ class UserAgent(val agentActorContext: AgentActorContext)
               case MPF_MSG_PACK | MPF_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
               case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack format not supported: " + x))
             }
-            AgentActivityTracker.track(respMsg.metadata.map(_.msgTypeStr).getOrElse(""), domainId, state.sponsorRel, Some(fromDID))
+            AgentActivityTracker.track(
+              agentActorContext,
+              respMsg.metadata.map(_.msgTypeStr).getOrElse(""),
+              domainId, Some(fromDID),
+              state.sponsorRel
+            )
             fromDID -> msgs
           }.toMap
           val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(result)(reqMsgContext.agentMsgContext)

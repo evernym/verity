@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ProtoMsgSenderOrderIncremented
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
-import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, HasSponsorRel, MsgPackFormat, PayloadMetadata, Thread, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackFormat, PayloadMetadata, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
@@ -29,7 +29,6 @@ import scala.util.{Failure, Success}
 trait AgentOutgoingMsgHandler
   extends SendOutgoingMsg
     with AgentIdentity
-    with HasSponsorRel
     with HasAgentActivity { this: AgentMsgHandler with AgentPersistentActor =>
 
   lazy val defaultSelfRecipKeys = Set(KeyInfo(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
@@ -107,10 +106,7 @@ trait AgentOutgoingMsgHandler
     if (!isSignalMsg) {
       val myDID = ParticipantUtil.agentId(oam.context.from)
       logger.debug(s"outgoing msg: my participant DID: " + myDID)
-      getSponsorRel(domainId).onComplete{
-        case Success(s) => AgentActivityTracker.track(agentMsg.msgType.msgName, domainId, s, Some(myDID))
-        case Failure(s) => logger.warn(s"failure getting sponsor details: $s")
-      }
+      AgentActivityTracker.track(agentActorContext, agentMsg.msgType.msgName, domainId, Some(myDID))
     }
 
     handleOutgoingMsg(agentMsg, oam.context.threadContextDetail, oam.context)

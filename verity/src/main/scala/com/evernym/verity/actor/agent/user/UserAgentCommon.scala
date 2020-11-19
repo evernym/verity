@@ -13,7 +13,7 @@ import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, HasSponsorRel, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
+import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -47,8 +47,7 @@ trait UserAgentCommon
     with AgentMsgHandler
     with ShardRegionFromActorContext
     with MsgStoreAPI
-    with LEGACY_connectingSignalHandler
-    with HasSponsorRel {
+    with LEGACY_connectingSignalHandler {
 
   this: AgentPersistentActor with MsgNotifierForUserAgentCommon =>
 

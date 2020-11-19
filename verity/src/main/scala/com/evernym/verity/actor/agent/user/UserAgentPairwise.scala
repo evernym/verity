@@ -93,13 +93,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     new MsgDeliveryState(maxRetryCount, retryEligibilityCriteriaProvider)
   )
 
-  //FIXME -> RTM: how to better handle mapTo
-  override def getSponsorRel(domainId: DomainId): Future[Option[SponsorRel]] =
-    agentActorContext
-      .agentMsgRouter
-      .execute(InternalMsgRouteParam(domainId, GetSponsorRel))
-      .mapTo[Option[SponsorRel]]
-
   override final def agentCmdReceiver: Receive = commonCmdReceiver orElse cmdReceiver
 
   override def incomingMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Any] =

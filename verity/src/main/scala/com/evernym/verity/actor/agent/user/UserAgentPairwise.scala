@@ -83,7 +83,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with HasAgentActivity
     with FailedMsgRetrier {
 
   type StateType = UserAgentPairwiseState

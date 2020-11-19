@@ -130,9 +130,12 @@ class Platform(val aac: AgentActorContext)
       Props(new LibindyMetricsCollector()),
       name = LIBINDY_METRICS_TRACKER)
     appConfig.getConfigIntOption(CommonConfig.LIBINDY_METRICS_COLLECTION_FREQUENCY) match {
-      case Some(duration) => agentActorContext.system.scheduler.scheduleWithFixedDelay(Duration.Zero,
-        Duration(duration, SECONDS),
-        libindyMetricsTracker, CollectLibindyMetrics())
+      case Some(duration) => {
+        println(duration)
+        agentActorContext.system.scheduler.scheduleWithFixedDelay(Duration.Zero,
+          Duration.create(duration, SECONDS),
+          libindyMetricsTracker, CollectLibindyMetrics())
+      }
       case None => logger.debug(s"${CommonConfig.LIBINDY_METRICS_COLLECTION_FREQUENCY} is not defined in configs." +
         s" Libindy metrics collecting was not scheduled.")
     }
@@ -203,6 +206,7 @@ class Platform(val aac: AgentActorContext)
   }.toMap
 
   createCusterSingletonManagerActor(SingletonParent.props(CLUSTER_SINGLETON_PARENT))
+  val libindyMetricsTracker: ActorRef = createLibindyMetricsCollectorActor()
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")

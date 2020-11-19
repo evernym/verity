@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.metrics.CollectLibindyMetrics
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
@@ -25,11 +26,13 @@ trait MetricsEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   def fetchMetrics(gqp: GetMetricQueryParam): Future[Any] = {
-    if (gqp.offAllNodes) {
-      platform.singletonParentProxy ? GetMetricsOfAllNodes(gqp.filterCriteria)
-    } else {
-      platform.nodeSingleton ? GetNodeMetrics(gqp.filterCriteria)
-    }
+    (platform.libindyMetricsTracker ? CollectLibindyMetrics()).flatMap( _ => {
+      if (gqp.offAllNodes) {
+        platform.singletonParentProxy ? GetMetricsOfAllNodes(gqp.filterCriteria)
+      } else {
+        platform.nodeSingleton ? GetNodeMetrics(gqp.filterCriteria)
+      }
+    })
   }
 
   def resetMetrics(ofAllNodes: Boolean): Future[Any] = {
@@ -57,6 +60,7 @@ trait MetricsEndpointHandler { this: HttpRouteWithPlatform =>
                         case nm: NodeMetricsData => handleExpectedResponse(nm)
                         case e => handleUnexpectedResponse(e)
                       }
+
                     }
                 }
               } ~

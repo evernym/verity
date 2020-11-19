@@ -17,6 +17,7 @@ trait GaugeApi {
   def increment(name: String, duration: Long): Unit
   def incrementWithTags(name: String, tags: Map[String, String] = Map.empty)
   def updateWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty)
+  def update(name: String, value: Long)
 }
 
 
@@ -36,6 +37,10 @@ object GaugeApiImpl extends GaugeApi {
 
   def updateWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty): Unit = {
     initializedGaugeMetric(name).withTags(TagSet.from(tags)).update(value)
+  }
+
+  def update(name: String, value: Long): Unit = {
+    initializedGaugeMetric(name).withoutTags().update(value)
   }
 
   private def gaugeMetric(name: String): Metric.Gauge = Kamon.gauge(name)

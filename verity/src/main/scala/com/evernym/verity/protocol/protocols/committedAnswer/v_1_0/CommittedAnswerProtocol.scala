@@ -86,6 +86,8 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
   }
 
   def receiveQuestion(m: Msg.Question): Unit = {
+    ctx.logger.error(s"MSpence: received question ${m}")
+
     ctx.apply(MyRole(Responder.roleNum))
     ctx.apply(questionToEvt(m))
 
@@ -181,6 +183,8 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
   }
 
   def ask(m: Ctl.AskQuestion): Unit = {
+    ctx.logger.error(s"MSpence: asked question ${m}")
+
     ctx.apply(MyRole(Questioner.roleNum))
     val questionMsg = Msg.Question(
       m.text,

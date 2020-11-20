@@ -56,6 +56,8 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   }
 
   def receiveMessage(m: Msg.Message): Unit = {
+    ctx.logger.error(s"MSpence: receiving basic message ${m}")
+
     ctx.apply(MyRole(Participator.roleNum))
     ctx.apply(messageToEvt(m))
 
@@ -65,10 +67,15 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
       m.content,
       m.`~attach`,
     )
+
+    ctx.logger.error(s"MSpence: signal basic message ${m}")
+
     ctx.signal(signal)
   }
 
   def send(m: Ctl.SendMessage): Unit = {
+    ctx.logger.error(s"MSpence: ${m}")
+
     ctx.apply(MyRole(Participator.roleNum))
     val messageMsg = Msg.Message(
       m.`~l10n`,
@@ -77,6 +84,7 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
       m.`~attach`,
     )
     ctx.apply(messageToEvt(messageMsg))
+    ctx.logger.error(s"MSpence: sent basic message")
     ctx.send(messageMsg, Some(Participator), Some(Participator))
   }
 

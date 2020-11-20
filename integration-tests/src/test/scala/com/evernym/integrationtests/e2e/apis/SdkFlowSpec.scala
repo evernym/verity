@@ -138,23 +138,23 @@ class SdkFlowSpec
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
        GoalCode.ISSUE_VC)
 
-//    issueCredential_1_0(
-//      apps(verity1),
-//      apps(cas1),
-//      connectionId,
-//      Map("license_num" -> "123", "name" -> "Bob"),
-//      "cred_name1",
-//      "tag"
-//    )
-//
-//    presentProof_1_0(
-//      apps(verity1),
-//      apps(cas1),
-//      connectionId,
-//      "proof-request-1",
-//      Seq("name", "license_num")
-//    )
-//
+    issueCredential_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      Map("license_num" -> "123", "name" -> "Bob"),
+      "cred_name1",
+      "tag"
+    )
+
+    presentProof_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("name", "license_num")
+    )
+
     committedAnswer(
       apps(verity1),
       apps(cas1),

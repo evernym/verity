@@ -794,8 +794,11 @@ trait InteractiveSdkFlow {
       val senderSdk = receivingSdk(sender)
       val receiverSdk = receivingSdk(receiver)
 
+
       s"[${sender.name}] send message" in {
+
         val forRel = senderSdk.relationship_!(relationshipId).owningDID
+
         senderSdk.basicMessage_1_0(forRel, content, sent_time, localization)
           .message(senderSdk.context)
       }

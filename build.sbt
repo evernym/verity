@@ -322,7 +322,7 @@ lazy val commonLibraryDependencies = {
     "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
-    "com.evernym.verity" % "verity-sdk" % "0.0.0-SNAPSHOT",
+    "com.evernym.verity" % "verity-sdk" % "0.4.1-fa1eaca7",
     "net.glxn" % "qrgen" % "1.4", // https://mvnrepository.com/artifact/net.glxn/qrgen
     "com.google.guava" % "guava" % "28.1-jre",
 

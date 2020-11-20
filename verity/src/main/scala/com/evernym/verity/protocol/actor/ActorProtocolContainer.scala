@@ -13,7 +13,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore}
+import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
@@ -397,10 +397,13 @@ class ActorProtocolContainer[
       val typeName = SegmentedStateStore.buildTypeName(definition.msgFamily.protoRef, definition.segmentedStateName.get)
       val segmentedStateRegion = ClusterSharding.get(context.system).shardRegion(typeName)
       val futResp = segmentedStateRegion ? ForIdentifier(segmentAddress, cmd)
-      futResp.mapTo[Option[Any]].map(r => postExecution(Right(r))).
-        recover{
-          case e: Exception =>
-            postExecution(Left(e))
+
+      futResp.onComplete {
+        case Success(s) => s match {
+          case x: Option[Any] => postExecution(Right(x))
+          case x: ValidationError => postExecution(Left(x))
+        }
+        case Failure(e) => postExecution(Left(e))
       }
     }
 

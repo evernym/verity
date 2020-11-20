@@ -783,42 +783,6 @@ trait InteractiveSdkFlow {
     }
   }
 
-  def basicMessage(sender: ApplicationAdminExt,
-                   receiver: ApplicationAdminExt,
-                   relationshipId: String,
-                   content: String,
-                   sent_time: String,
-                   localization: String)
-                  (implicit scenario: Scenario): Unit = {
-    s"send message to ${receiver.name} from ${sender.name}" - {
-      val senderSdk = receivingSdk(sender)
-      val receiverSdk = receivingSdk(receiver)
-
-
-      s"[${sender.name}] send message" in {
-
-        val forRel = senderSdk.relationship_!(relationshipId).owningDID
-
-        senderSdk.basicMessage_1_0(forRel, content, sent_time, localization)
-          .message(senderSdk.context)
-      }
-
-      s"[${receiver.name}] check message" in {
-        var tid = ""
-        var forRel = ""
-
-        receiverSdk.expectMsg("received-message") { receivedMessage =>
-          receivedMessage.getString("content") shouldBe "Hello, World!"
-          receivedMessage.getString("sent_time") shouldBe "2018-12-13T17:29:34+0000"
-          receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
-
-          tid = threadId(receivedMessage)
-          forRel = senderSdk.relationship_!(relationshipId).owningDID
-        }
-      }
-    }
-  }
-
 }
 
 object InteractiveSdkFlow {

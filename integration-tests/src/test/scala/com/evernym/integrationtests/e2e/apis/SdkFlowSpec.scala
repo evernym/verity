@@ -165,15 +165,6 @@ class SdkFlowSpec
       "be",
       requireSig = true
     )
-
-    basicMessage(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Hello, World!",
-      "2018-12-13T17:29:34+0000",
-      "en"
-    )
   }
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {

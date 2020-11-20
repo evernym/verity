@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
-import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
+import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.{EndpointType, RelationshipUtil, SelfRelationship, PackagingContext}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -808,7 +808,7 @@ trait UserAgentStateUpdateImpl
     state = state.withAgencyDID(did)
   }
 
-  override def setSponsorRel(rel: SponsorRel): Unit = {
+  def setSponsorRel(rel: SponsorRel): Unit = {
     state = state.withSponsorRel(rel)
   }
 

@@ -2,9 +2,9 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.Props
 import akka.event.LoggingReceive
-import com.evernym.verity.actor.agent.SponsorRel
+import com.evernym.verity.actor.agent.{SponsorRel, RecordingAgentActivity}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity, WindowActivityDefined, WindowRules}
+import com.evernym.verity.actor.{ActorMessageClass, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
@@ -30,15 +30,28 @@ class ActivityTracker(override val appConfig: AppConfig)
  /**
   * actor persistent state object
   */
- class State(_activity: Map[StateKey, AgentActivity]=Map.empty, activityWindow: ActivityWindow=ActivityWindow(Set())) {
-   def activityWindows: ActivityWindow = activityWindow
+ class State(_activity: Map[StateKey, AgentActivity]=Map.empty,
+             _activityWindow: ActivityWindow=ActivityWindow(Set()),
+             _sponsorRel: Option[SponsorRel]=None) {
+
+   def copy(activity: Map[StateKey, AgentActivity]=_activity,
+            activityWindow: ActivityWindow=_activityWindow,
+            sponsorRel: Option[SponsorRel]=None): State = new State(activity, activityWindow, sponsorRel)
+
+   def sponsorRel: Option[SponsorRel] = _sponsorRel
+   def withSponsorRel(sponsorRel: SponsorRel): State =
+     copy(sponsorRel=Some(sponsorRel))
+
+   def activityWindows: ActivityWindow = _activityWindow
+   def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
+
+   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
+   def withAgentActivity(key: StateKey, activity: AgentActivity): State =
+     copy(activity=_activity + (key -> activity))
 
    def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
      s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
-   def copy(newActivity: Map[StateKey, AgentActivity]=_activity, activityWindow: ActivityWindow=activityWindow): State =
-     new State(newActivity, activityWindow)
-   def activity: Map[StateKey, AgentActivity] = _activity
-   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
+
  }
 
   override def beforeStart(): Unit = {
@@ -53,13 +66,14 @@ class ActivityTracker(override val appConfig: AppConfig)
  val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
   case activity: AgentActivity => handleAgentActivity(activity)
   case updateActivityWindows: ActivityWindow => applyEvent(updateActivityWindows.asEvt)
+//  case SetSponsorRel(rel) =>
  }
 
  val receiveEvent: Receive = {
   case r: RecordingAgentActivity =>
-    state = state.copy(newActivity=state.activity + (r.stateKey -> AgentActivity(r)))
+    state = state.withAgentActivity(r.stateKey, AgentActivity(r))
   case w: WindowActivityDefined =>
-     state = state.copy(activityWindow=ActivityWindow.fromEvt(w))
+    state = state.withActivityWindow(ActivityWindow.fromEvt(w))
  }
 
   /**
@@ -111,11 +125,10 @@ class ActivityTracker(override val appConfig: AppConfig)
     val recording = RecordingAgentActivity(
       activity.domainId,
       activity.timestamp,
-      activity.sponsorRel.sponsorId,
+      activity.sponsorRel,
       activity.activityType,
       activity.relId.getOrElse(""),
       state.key(window, activity.id(window.activityType)),
-      activity.sponsorRel.sponseeId,
     )
 
     writeAndApply(recording)
@@ -124,9 +137,16 @@ class ActivityTracker(override val appConfig: AppConfig)
   private def agentTags(behavior: ActiveWindowRules, agentActivity: AgentActivity): Map[String, String] =
     behavior.activityType match {
       case ActiveUsers =>
-        ActiveUsers.tags(agentActivity.sponsorRel.sponsorId, behavior.activityFrequency)
+        ActiveUsers.tags(
+          agentActivity.sponsorRel.getOrElse(SponsorRel.empty).sponsorId,
+          behavior.activityFrequency
+        )
       case ActiveRelationships =>
-        ActiveRelationships.tags(agentActivity.domainId, behavior.activityFrequency, agentActivity.sponsorRel.sponseeId)
+        ActiveRelationships.tags(
+          agentActivity.domainId,
+          behavior.activityFrequency,
+          agentActivity.sponsorRel.getOrElse(SponsorRel.empty).sponseeId
+        )
     }
 }
 
@@ -199,7 +219,7 @@ object ActivityWindow {
 }
 final case class AgentActivity(domainId: DID,
                                timestamp: IsoDateTime,
-                               sponsorRel: SponsorRel,
+                               sponsorRel: Option[SponsorRel]=None,
                                activityType: String,
                                relId: Option[String]=None) extends ActivityTracking {
   def id(behavior: Behavior): Option[String] =
@@ -215,11 +235,13 @@ object AgentActivity {
     new AgentActivity(
       r.domainId,
       r.timestamp,
-      SponsorRel(r.sponsorId, r.sponseeId),
+      r.sponsorRel,
       r.activityType,
       if (r.relId == "") None else Some(r.relId)
     )
 }
+
+case class SetSponsorRel(sponsor: Option[SponsorRel]) extends ActivityTracking
 
 final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior)
 

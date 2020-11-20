@@ -16,7 +16,6 @@ trait AgentStateUpdateInterface {
 
   def setAgentWalletSeed(seed: String): Unit
   def setAgencyDID(did: DID): Unit
-  def setSponsorRel(rel: SponsorRel): Unit
   def addThreadContextDetail(threadContext: ThreadContext): Unit
   def removeThreadContext(pinstId: PinstId): Unit
   def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {

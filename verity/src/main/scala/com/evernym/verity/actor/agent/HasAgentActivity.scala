@@ -33,7 +33,7 @@ trait HasAgentActivity extends ShardRegionCommon {
         case Success(s) =>
           sendToRegion(
             domainId,
-            AgentActivity(domainId, TimeUtil.nowDateString, s.getOrElse(SponsorRel.empty), msgType, relId)
+            AgentActivity(domainId, TimeUtil.nowDateString, s, msgType, relId)
           )
         case Failure(s) => logger.warn(s"failure getting sponsor details: $s")
       }

@@ -386,10 +386,7 @@ case object SetEndpoint extends ActorMessageObject
 
 case object UpdateEndpoint extends ActorMessageObject
 
-trait AgencyAgentStateImpl
-  extends AgentStateImplBase {
-  def sponsorRel: Option[SponsorRel] = None
-}
+trait AgencyAgentStateImpl extends AgentStateImplBase
 
 trait AgencyAgentStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgent =>
@@ -414,9 +411,5 @@ trait AgencyAgentStateUpdateImpl
 
   def addPinst(pri: ProtocolRunningInstances): Unit = {
     state = state.withProtoInstances(pri)
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    //nothing to do
   }
 }

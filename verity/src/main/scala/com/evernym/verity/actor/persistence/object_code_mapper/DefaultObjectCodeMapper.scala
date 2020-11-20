@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.RecordingAgentActivity
 import com.evernym.verity.actor.agent.agency.AgencyAgentState
 import com.evernym.verity.actor.agent.msgrouter.{ActorStateCleaned, StatusUpdated}
 import com.evernym.verity.actor.cluster_singleton.maintenance.{Completed, Registered}

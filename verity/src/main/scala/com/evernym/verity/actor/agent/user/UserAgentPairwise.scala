@@ -10,7 +10,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, SponsorRel}
+import com.evernym.verity.actor.agent.SetupCreateKeyEndpoint
 import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
@@ -947,10 +947,6 @@ trait UserAgentPairwiseStateUpdateImpl
 
   override def setAgencyDID(did: DID): Unit = {
     state = state.withAgencyDID(did)
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    state = state.withSponsorRel(rel)
   }
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {

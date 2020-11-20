@@ -172,7 +172,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         val metrics = getMetricWithTags(metricKeys)
         assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, missingRelId) == 0.0)
         assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, missingRelId) == 0.0)
-        assert(extractTagCount(metrics, window2DayUser, SPONSOR_REL1.sponsorId) == 1.0)
+        assert(extractTagCount(metrics, window2DayUser, SPONSOR_REL1.get.sponsorId) == 1.0)
       }
 
       "should record new activity with multiple relationships" in {
@@ -193,7 +193,7 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         // Tags for relationships
         val metricKeys = windows.map(_.activityType.metricBase)
         val metrics = getMetricWithTags(metricKeys)
-        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID3, Some(SPONSOR_REL2.sponseeId)) == 3.0)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID3, Some(SPONSOR_REL2.get.sponseeId)) == 3.0)
       }
 
       //Test writes metric with multiple windows
@@ -218,8 +218,8 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         // Tags for relationships
         val metricKeys = windows.map(_.activityType.metricBase)
         var metrics = getMetricWithTags(metricKeys)
-        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 1.0)
-        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 1.0)
 
         /*
           2. Increase by 7 day
@@ -232,8 +232,8 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         Thread.sleep(500)
 
         metrics = getMetricWithTags(metricKeys)
-        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 1.0)
-        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 2.0)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 2.0)
         assert(extractTagCount(metrics, window3DayUser, SPONSOR_ID) == 2.0)
 
         /*
@@ -249,18 +249,18 @@ class ActivityTrackerSpec extends PersistentActorSpec with BasicSpec with Before
         Thread.sleep(500)
 
         metrics = getMetricWithTags(metricKeys)
-        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 1.0)
-        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 2.0)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 2.0)
         assert(extractTagCount(metrics, window3DayUser, SPONSOR_ID) == 2.0)
 
         /* Tags for relationships
            Original domainId: The previous activity increased the total metric but each tag was not increased
            New domainId: Increased tag
          */
-        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 1.0)
-        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.sponseeId)) == 2.0)
-        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID2, Some(SPONSOR_REL2.sponseeId)) == 1.0)
-        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID2, Some(SPONSOR_REL2.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID, Some(SPONSOR_REL1.get.sponseeId)) == 2.0)
+        assert(extractTagCount(metrics, windowMonthRel, DOMAIN_ID2, Some(SPONSOR_REL2.get.sponseeId)) == 1.0)
+        assert(extractTagCount(metrics, window7DayRel, DOMAIN_ID2, Some(SPONSOR_REL2.get.sponseeId)) == 1.0)
       }
     }
   }
@@ -337,6 +337,6 @@ object ActivityConstants {
   val REL_ID2: String = "rel-2"
   val REL_ID3: String = "rel-3"
   val DEFAULT_ACTIVITY_TYPE: String = "action-taken"
-  val SPONSOR_REL1: SponsorRel = SponsorRel(SPONSOR_ID, SPONSEE_ID1)
-  val SPONSOR_REL2: SponsorRel = SponsorRel(SPONSOR_ID2, SPONSEE_ID2)
+  val SPONSOR_REL1: Option[SponsorRel] = Some(SponsorRel(SPONSOR_ID, SPONSEE_ID1))
+  val SPONSOR_REL2: Option[SponsorRel] = Some(SponsorRel(SPONSOR_ID2, SPONSEE_ID2))
 }

@@ -497,17 +497,6 @@ message SponsorAssigned {
     string sponsee = 2;
 }
 
-message RecordingAgentActivity {
-    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
-    string domainId = 1;
-    string timestamp = 2;
-    string sponsorId = 3;
-    string activityType = 4;
-    string relId = 5;
-    string stateKey = 6;
-    string sponseeId = 7;
-}
-
 message WindowRules {
     string frequency = 1;
     string behavior = 2;

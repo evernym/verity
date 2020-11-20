@@ -188,10 +188,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
 }
 
-trait AgencyAgentPairwiseStateImpl
-  extends AgentStatePairwiseImplBase {
-  def sponsorRel: Option[SponsorRel] = None
-}
+trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
 
 trait AgencyAgentPairwiseStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
@@ -224,9 +221,5 @@ trait AgencyAgentPairwiseStateUpdateImpl
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {
     state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    //nothing to do
   }
 }

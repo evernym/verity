@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.PresentProofContext
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.States.Complete
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
@@ -78,39 +79,33 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
 
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (_                    , _  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
-    case (States.Initialized(_), _  , msg: Msg.RequestPresentation) => handleMsgRequest(msg)
-    case (States.Initialized()  , None               , msg: Msg.ProposePresentation) =>
-      apply(Role.Verifier.toEvent)
-      handleMsgProposePresentation(msg)
-    case (s: States.RequestSent, _  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
-    case (_: States.ProposalSent, Some(Role.Verifier), msg: Msg.RequestPresentation) => handleMsgRequest(msg)
-    case (_: States.RequestSent , Some(Role.Prover)  , msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
-    case (s: States.RequestSent , Some(Role.Prover)  , msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
-    case (s: State             , r  , msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
-    case (States.Presented(_)  , _  , msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
-    case (_                    , _  , _  : Msg.Ack                ) => //Acks any other time are ignored
-    case (_                     , _                  , msg: Msg.ProposePresentation) => handleMsgProposal(msg)
-    case (_                     , _                  , msg: ProtoMsg               ) => invalidMessageState(msg)
+    case (States.Initialized(_),  _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+    case (States.Initialized(_),  _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentation(msg)
+    case (s: States.RequestSent,  _, msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
+    case (_: States.ProposalSent, _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+    case (_: States.RequestSent,  _, msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
+    case (s: State,               r, msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
+    case (States.Presented(_),    _, msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
+    case (_,                      _, _  : Msg.Ack                ) => //Acks any other time are ignored
+    case (_,                      _, msg: Msg.ProposePresentation) => handleMsgProposal(msg)
+    case (_,                      _, msg: ProtoMsg               ) => invalidMessageState(msg)
   }
 
   override def handleControl: Control ?=> Any = statefulHandleControl
   {
-    case (States.Uninitialized()   , None             , ctl: Ctl.Init            ) => handleCtlInit(ctl)
-    case (s: States.Initialized    , None             , ctl: Ctl.Request         ) => handleCtlRequest(ctl, s.data)
-    case (_: States.RequestReceived , Some(Role.Prover)  , ctl: Ctl.Propose       ) => handleCtlPropose(ctl)
-    case (States.Initialized(_)    , None             , ctl: Ctl.AttachedRequest ) => handleCtlAttachedRequest(ctl)
-    case (s: States.RequestReceived, Some(Role.Prover), msg: Ctl.AcceptRequest   ) => handleCtlAcceptRequest(s, msg)
-    case (s: States.ProposalReceived, Some(Role.Verifier), msg: Ctl.AcceptProposal) => handleCtlAcceptProposal(s, msg)
-    case (_: States.ProposalReceived, Some(Role.Verifier), msg: Ctl.Request       ) => handleCtlRequest(msg)
-    case (s                        , _                , msg: Ctl.Status          ) => handleCtlStatus(s, msg)
-    case (s                        , _                , msg: Ctl.Reject          ) => handleCtlReject(s, msg)
-    case (_: States.RequestSent    , _                , msg: Ctl.InviteShortened ) =>
-      ctx.signal(Sig.Invitation(msg.longInviteUrl, Option(msg.shortInviteUrl), msg.invitationId))
-    case (_: States.RequestSent    , Some(role)       , _: Ctl.InviteShorteningFailed ) =>
-      ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
-      apply(Rejection(role.roleNum, "Shortening failed"))
-    case (s: State                 , _                , msg: CtlMsg              ) => invalidControlState(s, msg)
+    case (States.Uninitialized()    , None,           ctl: Ctl.Init               ) => handleCtlInit(ctl)
+    case (s: States.Initialized     , None,           ctl: Ctl.Request            ) => handleCtlRequest(ctl, s.data)
+    case (States.Initialized(_)     , None,           ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
+    case (_: States.RequestReceived , Some(Prover),   ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
+    case (States.Initialized(_)     , None,           ctl: Ctl.AttachedRequest    ) => handleCtlAttachedRequest(ctl)
+    case (s: States.RequestReceived , Some(Prover),   msg: Ctl.AcceptRequest      ) => handleCtlAcceptRequest(s, msg)
+    case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.AcceptProposal     ) => handleCtlAcceptProposal(s, msg)
+    case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.Request            ) => handleCtlRequest(msg, s.data)
+    case (s                         , _,              msg: Ctl.Status             ) => handleCtlStatus(s, msg)
+    case (s                         , _,              msg: Ctl.Reject             ) => handleCtlReject(s, msg)
+    case (_: States.RequestSent     , _,              msg: Ctl.InviteShortened    ) => ctx.signal(Sig.Invitation(msg.longInviteUrl, Option(msg.shortInviteUrl), msg.invitationId))
+    case (_: States.RequestSent     , Some(role),     _: Ctl.InviteShorteningFailed ) => ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed)); apply(Rejection(role.roleNum, "Shortening failed"))
+    case (s: State                  , _             , msg: CtlMsg              ) => invalidControlState(s, msg)
   }
 
   // *****************************
@@ -242,6 +237,10 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def handleCtlPropose(ctp: Ctl.Propose): Unit = {
+    if (ctx.getRoster.selfRole.isEmpty) {
+      apply(Role.Prover.toEvent)
+    }
+
     val attributes = ctp.attributes.getOrElse(List())
     val predicates = ctp.predicates.getOrElse(List())
 
@@ -345,7 +344,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
         val presentationRequest = Msg.RequestPresentation(
           "",
           Vector(
-            buildAttachment(AttIds.request0, str)
+            buildAttachment(Some(AttIds.request0), str)
           )
         )
 

@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.engine.{Nonce, VerKey}
 import com.evernym.verity.util.TimeUtil.IsoDateTime
 
-case class GetToken(`@type`: String, sponseeId: String, sponsorId: String, pushId: ComMethodDetail)
+case class GetToken(`@type`: String, sponseeId: String, sponsorId: String)
 case class SendToken(`@type`: String,
                      `~thread`: Thread,
                      sponseeId: String,

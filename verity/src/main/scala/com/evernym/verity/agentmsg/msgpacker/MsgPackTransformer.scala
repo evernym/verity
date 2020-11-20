@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutionException
 
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.MessagePackUtil
@@ -15,9 +15,9 @@ import org.hyperledger.indy.sdk.wallet.Wallet
 
 /**
  * this transformer uses 'MessagePack' (https://msgpack.org/index.html) for 'pack' and 'unpack' functions
- * @param msgPackVersion
+ * @param msgPackFormat
  */
-class MsgPackTransformer(val msgPackVersion: MsgPackVersion)
+class MsgPackTransformer(val msgPackFormat: MsgPackFormat)
   extends MsgTransformer {
 
   val logger: Logger = getLoggerByClass(classOf[MsgPackTransformer])

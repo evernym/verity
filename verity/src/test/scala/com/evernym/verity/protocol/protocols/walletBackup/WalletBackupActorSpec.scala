@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.walletBackup
 import java.util.UUID
 
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.testkit.AkkaTestBasic
@@ -29,7 +29,7 @@ class WalletBackupActorSpec
     platform.agentActorContext.appConfig, mockAgencyAdmin)
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.journalFailingOnLargeEvents

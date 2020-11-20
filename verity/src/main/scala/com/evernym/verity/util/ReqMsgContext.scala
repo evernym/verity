@@ -6,7 +6,7 @@ import java.util.UUID
 import com.evernym.verity.constants.Constants.{CLIENT_IP_ADDRESS, MSG_PACK_VERSION}
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.DATA_NOT_FOUND
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgpacker.MsgFamilyDetail
 import com.evernym.verity.protocol.engine.VerKey
@@ -60,9 +60,9 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString, initData: Map[
   def latestDecryptedMsgSenderVerKeyReq: VerKey = getByKeyReq(LATEST_DECRYPTED_MSG_SENDER_VER_KEY)
   def msgFamilyDetailReq: MsgFamilyDetail = getByKeyReq[MsgFamilyDetail](MSG_TYPE_DETAIL)
   def msgFamilyDetail: Option[MsgFamilyDetail] = getByKeyOpt[MsgFamilyDetail](MSG_TYPE_DETAIL)
-  def msgPackVersion: MsgPackVersion = MsgPackVersion.fromString(data.getOrElse(MSG_PACK_VERSION, "n/a").toString)
+  def msgPackFormat: MsgPackFormat = MsgPackFormat.fromString(data.getOrElse(MSG_PACK_VERSION, "n/a").toString)
 
   implicit def agentMsgContext: AgentMsgContext =
-    AgentMsgContext(msgPackVersion, msgFamilyDetailReq.familyVersion, originalMsgSenderVerKeyOpt)
+    AgentMsgContext(msgPackFormat, msgFamilyDetailReq.familyVersion, originalMsgSenderVerKeyOpt)
 }
 

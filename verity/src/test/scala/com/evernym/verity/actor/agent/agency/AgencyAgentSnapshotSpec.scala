@@ -29,7 +29,7 @@ class AgencyAgentSnapshotSpec
   override def overrideConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.AgencyAgent.snapshot {
-        after-n-events = 5
+        after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
       }""")
@@ -44,28 +44,13 @@ class AgencyAgentSnapshotSpec
       "will write snapshot as per configuration" in {
 
         // check current status (at this time, agency agent setup is done)
-        checkPersistentState(5, 1, 1, 0)
+        checkPersistentState(2, 2, 0)
         val keyCreatedEvent = fetchEvent[KeyCreated]()
         checkKeyCreatedEvent(keyCreatedEvent, mockAgencyAdmin.agencyPublicDIDReq)
 
-        //NOTE: each connect message (sendConnectMsg method call below) will
-        // end up in persisting 3 events in AgencyAgent actor (mostly related to thread context, proto msg sent/received orders)
-
-        //send first connection request
+        //send connection request (it doesn't persist any new event)
         sendConnectMsg()
-        checkPersistentState(8, 1, 1, 0)
-
-        //send second connection request
-        sendConnectMsg()
-        checkPersistentState(11, 2, 3, 0)
-
-        //send third connection request
-        sendConnectMsg()
-        checkPersistentState(14, 2, 3, 0)
-
-        //send fourth connection request (snapshot size will still be 2 because of 'keep-n-snapshots' = 2)
-        sendConnectMsg()
-        checkPersistentState(17, 2, 5, 0)
+        checkPersistentState(2, 2, 0)
 
         //restart actor (so that snapshot gets applied)
         restartActor()
@@ -76,7 +61,6 @@ class AgencyAgentSnapshotSpec
 
   def checkPersistentState(expectedPersistedEvents: Int,
                            expectedPersistedSnapshots: Int,
-                           threadContextSize: Int,
                            protoInstancesSize: Int)
   : Unit = {
     eventually(timeout(Span(5, Seconds)), interval(Span(2, Seconds))) {
@@ -86,7 +70,7 @@ class AgencyAgentSnapshotSpec
       actualPersistedSnapshots.size shouldBe expectedPersistedSnapshots
       actualPersistedSnapshots.lastOption.map { snapshot =>
         val state = transformer.undo(snapshot.asInstanceOf[PersistentData]).asInstanceOf[AgencyAgentState]
-        checkSnapshotState(state, threadContextSize, protoInstancesSize)
+        checkSnapshotState(state, protoInstancesSize)
       }
     }
   }
@@ -113,7 +97,6 @@ class AgencyAgentSnapshotSpec
   }
 
   def checkSnapshotState(snap: AgencyAgentState,
-                         threadContextSize: Int,
                          protoInstancesSize: Int): Unit = {
     snap.isEndpointSet shouldBe true
     snap.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
@@ -125,8 +108,8 @@ class AgencyAgentSnapshotSpec
     snap.relationshipReq.myDidDoc.isDefined shouldBe true
     snap.relationshipReq.myDidDoc_!.did shouldBe mockAgencyAdmin.agencyPublicDIDReq
 
-    val expectedThreadContextSize = if (threadContextSize == 0) None else Option(threadContextSize)
-    snap.threadContext.map(_.contexts.size) shouldBe expectedThreadContextSize
+//    val expectedThreadContextSize = if (threadContextSize == 0) None else Option(threadContextSize)
+//    snap.threadContext.map(_.contexts.size) shouldBe expectedThreadContextSize
 
     //this is found only for pairwise actors and only for those protocols
     // which starts (the first message) from self-relationship actor and then
@@ -142,10 +125,9 @@ class AgencyAgentSnapshotSpec
       m.name.startsWith("as_akka_actor_agent_state") &&
       m.tags.getOrElse(Map.empty)("actor_class") == "AgencyAgent"
     }
-    println("stateSizeMetrics: \n" + stateSizeMetrics.mkString("\n"))
     stateSizeMetrics.size shouldBe 12   //histogram metrics
     stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
-      checkStateSizeSum(v.value, 623.0)
+      checkStateSizeSum(v.value, 212.0)
     }
   }
 

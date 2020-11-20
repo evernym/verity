@@ -1,9 +1,9 @@
 syntax = "proto3";
 
 import "scalapb/scalapb.proto";
-import "msg_pack_version.proto";
+import "msg_pack_format.proto";
 import "type_format.proto";
-import "proto_msg_order_detail.proto";
+import "msg_orders.proto";
 
 package com.evernym.verity.actor.agent;
 
@@ -13,9 +13,9 @@ message ThreadContext {
 
 message ThreadContextDetail {
     string threadId = 1;
-    MsgPackVersion msgPackVersion = 2;
+    MsgPackFormat msgPackFormat = 2;
     TypeFormat msgTypeFormat = 3;
     bool usesLegacyGenMsgWrapper = 4;
     bool usesLegacyBundledMsgWrapper = 5;
-    ProtoMsgOrderDetail protoMsgOrderDetail = 6;
+    MsgOrders msgOrders = 6;
 }

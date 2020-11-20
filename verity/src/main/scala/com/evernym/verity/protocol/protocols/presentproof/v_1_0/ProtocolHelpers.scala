@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
+import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.util.OptionUtil
 import com.typesafe.scalalogging.Logger
 
 trait ProtocolHelpers[P,R,M,E,S,I] {
@@ -26,13 +28,32 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
 
   def setRole(myRole: R, theirRole: R)
              (implicit ctx: Context): Roster[R] = {
-    val otherAssignment = theirRole -> ctx.getRoster.otherId()
-    ctx.getRoster.withSelfAssignment(myRole).withAssignmentById(otherAssignment)
+    val r = ctx.getRoster.withSelfAssignment(myRole)
+    if (r.hasOther) {
+      r.withAssignmentById(theirRole -> r.otherId())
+    }
+    else r
   }
 
   def setupParticipantIds(selfId: String, otherId: String)
               (implicit ctx: Context): Roster[R] = {
-    ctx.updatedRoster(Seq(InitParamBase(SELF_ID, selfId), InitParamBase(OTHER_ID, otherId)))
+    Option(ctx.getRoster)
+      .map { r =>
+        OptionUtil.blankOption(selfId)
+        .map(
+          r.withParticipant(_, true)
+        )
+        .getOrElse(r)
+      }
+      .map { r =>
+        OptionUtil.blankOption(otherId)
+        .filterNot(_ == UNKNOWN_OTHER_ID) // We do not want to set the UNKNOWN_OTHER_ID
+        .map(
+          r.withParticipant(_)
+        )
+        .getOrElse(r)
+      }
+      .getOrElse(ctx.getRoster)
   }
 
   def statefulHandleControl(pf: (S, Option[R], Control) ?=> Any)

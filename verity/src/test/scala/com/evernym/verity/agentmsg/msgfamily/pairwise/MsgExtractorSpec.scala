@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
@@ -23,7 +23,7 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
 
   //TODO
   // given a packed message"
-  // extract (MsgPackVersion, ThreadId, AgentMsgType, NativeMsg)"
+  // extract (MsgPackFormat, ThreadId, AgentMsgType, NativeMsg)"
   // for a message in Connecting 0.6"
   // given a native outgoing message"
   // construct a PackedMsg"
@@ -43,7 +43,7 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
     new MsgExtractor(aliceKeyInfo, walletAPI)
   }
 
-  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPV_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyInfo))
+  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyInfo))
 
   def setup(): Unit = {
     //touch each of these lazy vals
@@ -101,28 +101,28 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
 
       "can find for_relationship" in {
         val testJson = makeJson(""" "~for_relationship":"abcd12345",""")
-        DefaultMsgCodec.extractMetadata(testJson, MPV_INDY_PACK).forRelationship shouldBe Some("abcd12345")
+        DefaultMsgCodec.extractMetadata(testJson, MPF_INDY_PACK).forRelationship shouldBe Some("abcd12345")
       }
 
       "none if it don't exist" in {
         val testJson = makeJson("")
-        DefaultMsgCodec.extractMetadata(testJson, MPV_INDY_PACK).forRelationship shouldBe None
+        DefaultMsgCodec.extractMetadata(testJson, MPF_INDY_PACK).forRelationship shouldBe None
       }
 
       "none if empty/blank string" in {
         val testJson = makeJson(""" "~for_relationship":" ",""")
-        DefaultMsgCodec.extractMetadata(testJson, MPV_INDY_PACK).forRelationship shouldBe None
+        DefaultMsgCodec.extractMetadata(testJson, MPF_INDY_PACK).forRelationship shouldBe None
 
         val testJson2 = makeJson(""" "~for_relationship":" ",""")
-        DefaultMsgCodec.extractMetadata(testJson2, MPV_INDY_PACK).forRelationship shouldBe None
+        DefaultMsgCodec.extractMetadata(testJson2, MPF_INDY_PACK).forRelationship shouldBe None
 
         val testJson3 = makeJson(""" "~for_relationship":"     ",""")
-        DefaultMsgCodec.extractMetadata(testJson3, MPV_INDY_PACK).forRelationship shouldBe None
+        DefaultMsgCodec.extractMetadata(testJson3, MPF_INDY_PACK).forRelationship shouldBe None
       }
 
       "none if object" in {
         val testJson = makeJson(""""~for_relationship":{"for_relationship":"test"},""")
-        DefaultMsgCodec.extractMetadata(testJson, MPV_INDY_PACK).forRelationship shouldBe None
+        DefaultMsgCodec.extractMetadata(testJson, MPF_INDY_PACK).forRelationship shouldBe None
       }
     }
   }

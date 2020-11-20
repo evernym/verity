@@ -114,7 +114,7 @@ object Ctl {
 
   trait CreateInvitation extends Ctl
   case class ConnectionInvitation(shortInvite: Option[Boolean]=None) extends CreateInvitation
-  case class OutOfBandInvitation(goalCode: String, goal: String, `request~attach`: Vector[String], shortInvite: Option[Boolean]=None) extends CreateInvitation
+  case class OutOfBandInvitation(goalCode: String, goal: String, shortInvite: Option[Boolean]=None) extends CreateInvitation
   case class SMSConnectionInvitation() extends CreateInvitation
-  case class SMSOutOfBandInvitation(goalCode: String, goal: String, `request~attach`: Vector[String]) extends CreateInvitation
+  case class SMSOutOfBandInvitation(goalCode: String, goal: String) extends CreateInvitation
 }

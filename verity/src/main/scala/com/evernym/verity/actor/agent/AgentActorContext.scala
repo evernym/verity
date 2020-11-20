@@ -19,7 +19,7 @@ import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvi
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
-import com.evernym.verity.protocol.protocols.availableProtocols
+import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.aws_s3.{S3AlpakkaApi, StorageAPI}
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.{Util, UtilBase}
@@ -50,7 +50,7 @@ trait AgentActorContext extends ActorContext {
 
   lazy val remoteMsgSendingSvc: RemoteMsgSendingSvcType = DefaultRemoteMsgSendingSvc
 
-  lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = availableProtocols
+  lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
 
   lazy val smsSvc: SMSSender = _smsSender
 
@@ -99,5 +99,3 @@ class DefaultLedgerSvc(val system: ActorSystem,
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))
   }
 }
-
-

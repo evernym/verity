@@ -2,6 +2,7 @@ syntax = "proto3";
 
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
 
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0;
 
@@ -18,6 +19,14 @@ message Participants {
     option (scalapb.message).extends = "Event";
     string selfId = 1;
     string otherId = 2;
+}
+
+message AgentContext {
+    option (scalapb.message).extends = "Event";
+    google.protobuf.StringValue agentName    = 1;
+    google.protobuf.StringValue logoUrl      = 2;
+    google.protobuf.StringValue agencyVerKey = 3;
+    google.protobuf.StringValue publicDid    = 4;
 }
 
 message RequestGiven {

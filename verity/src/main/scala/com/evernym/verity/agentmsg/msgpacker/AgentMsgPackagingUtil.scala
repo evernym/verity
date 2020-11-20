@@ -3,8 +3,8 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -36,23 +36,23 @@ object AgentMsgPackagingUtil {
 
   /**
    * build packed message for an agent (non considering any prior routing if any)
-   * @param msgPackVersion
+   * @param msgPackFormat
    * @param packMsgParam
    * @param agentMsgTransformer
    * @param wap
    * @return
    */
-  def buildAgentMsg(msgPackVersion: MsgPackVersion, packMsgParam: PackMsgParam)
+  def buildAgentMsg(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam)
                    (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
     runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
       val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
-      agentMsgTransformer.pack(msgPackVersion, agentMsgJson, packMsgParam.encryptParam)
+      agentMsgTransformer.pack(msgPackFormat, agentMsgJson, packMsgParam.encryptParam)
     }
   }
 
   /**
    * packs given unpacked agent message and adds required forward messages on top of it (as per given routing details)
-   * @param msgPackVersion
+   * @param msgPackFormat
    * @param packMsgParam
    * @param fwdRoutes
    * @param fwdMsgTypeVersion
@@ -60,17 +60,17 @@ object AgentMsgPackagingUtil {
    * @param wap
    * @return
    */
-  def buildRoutedAgentMsgFromPackMsgParam(msgPackVersion: MsgPackVersion, packMsgParam: PackMsgParam,
+  def buildRoutedAgentMsgFromPackMsgParam(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam,
                                           fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
                                          (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
 
-    val packedAgentMsg = buildAgentMsg(msgPackVersion, packMsgParam)
-    buildRoutedAgentMsg(msgPackVersion, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
+    val packedAgentMsg = buildAgentMsg(msgPackFormat, packMsgParam)
+    buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
   }
 
   /**
    * packs given packed msg and adds required forward messages on top of it (as per given routing details)
-   * @param msgPackVersion
+   * @param msgPackFormat
    * @param packedMsg
    * @param fwdRoutes
    * @param fwdMsgTypeVersion
@@ -78,22 +78,22 @@ object AgentMsgPackagingUtil {
    * @param wap
    * @return
    */
-  def buildRoutedAgentMsg(msgPackVersion: MsgPackVersion, packedMsg: PackedMsg,
+  def buildRoutedAgentMsg(msgPackFormat: MsgPackFormat, packedMsg: PackedMsg,
                           fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
                          (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
     runWithInternalSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil") {
       var updatedPackedMsg = packedMsg
       fwdRoutes.foreach { fr =>
         val fwdMsg = buildFwdJsonMsg(
-          msgPackVersion,
+          msgPackFormat,
           fr.to,
           updatedPackedMsg.msg,
           fwdMsgTypeVersion = fwdMsgTypeVersion,
           fwdMsgType = packedMsg.metadata.map(_.msgTypeStr)
         )
         updatedPackedMsg = fr.encryptInfo.fold(
-          si => agentMsgTransformer.pack(msgPackVersion, fwdMsg, EncryptParam(Set(si.keyInfo), None)),
-          ei => agentMsgTransformer.pack(msgPackVersion, fwdMsg, ei)
+          si => agentMsgTransformer.pack(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyInfo), None)),
+          ei => agentMsgTransformer.pack(msgPackFormat, fwdMsg, ei)
         )
       }
       updatedPackedMsg
@@ -102,13 +102,13 @@ object AgentMsgPackagingUtil {
 
   /**
    * creates forward message as per given parameters
-   * @param mpv message pack version
+   * @param mpf message pack format
    * @param toDID DID to which the message should be routed to
    * @param msg packed message
    * @param fwdMsgTypeVersion forward message type version
    * @return
    */
-  def buildFwdJsonMsg(mpv: MsgPackVersion,
+  def buildFwdJsonMsg(mpf: MsgPackFormat,
                       toDID: DID,
                       msg: Array[Byte],
                       msgQualifier: MsgFamilyQualifier=EVERNYM_QUALIFIER,
@@ -116,13 +116,13 @@ object AgentMsgPackagingUtil {
                       fwdMsgTypeVersion: String = MTV_1_0,
                       fwdMsgType: Option[String] = None
                      ): String = {
-    mpv match {
-      case MPV_MSG_PACK =>
+    mpf match {
+      case MPF_MSG_PACK =>
         val fwdMsg = DefaultMsgCodec.toJson(
           FwdReqMsg_MFV_0_5(TypeDetail(MSG_TYPE_FWD, fwdMsgTypeVersion), toDID, msg, fwdMsgType)
         )
         buildBundledMsg(List(fwdMsg))
-      case MPV_INDY_PACK =>
+      case MPF_INDY_PACK =>
         val fwdJsValue = new JSONObject(new String(msg))
         val fwd = FwdReqMsg_MFV_1_0_1(
           typeStrFromMsgType(msgQualifier, MSG_FAMILY_ROUTING, fwdMsgTypeVersion, msgName),
@@ -131,7 +131,7 @@ object AgentMsgPackagingUtil {
           fwdMsgType
         )
         DefaultMsgCodec.toJson(fwd)
-      case x            => throw new RuntimeException("unsupported msg pack version: " + x)
+      case x            => throw new RuntimeException("unsupported msg pack format: " + x)
     }
   }
 
@@ -139,13 +139,13 @@ object AgentMsgPackagingUtil {
     * assumption here is that the 'to' field of forward message will contain the given routing key
     * and recipient of this message know how to route based on 'to' being a ver key
     *
-    * @param msgPackVersion message packaging version (message pack or indy pack)
+    * @param msgPackFormat message packaging format (message pack or indy pack)
     * @param msg
     * @param routingKeys
     * @return
     */
   //TODO: come back to this and see if this requires any more refactoring
-  def packMsgForRoutingKeys(msgPackVersion: MsgPackVersion,
+  def packMsgForRoutingKeys(msgPackFormat: MsgPackFormat,
                             msg: Array[Byte],
                             routingKeys: Seq[VerKey],
                             msgType: String
@@ -159,10 +159,10 @@ object AgentMsgPackagingUtil {
           val to = routingKeys.head
           val remaining = routingKeys.tail
           val encryptWith = remaining.head
-          val fwdJsonMsg = buildFwdJsonMsg(MPV_INDY_PACK, to, msg, COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
-          val newPackedMsg = agentMsgTransformer.pack(msgPackVersion, fwdJsonMsg, EncryptParam(Set(KeyInfo(Left(encryptWith))), None))
+          val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg, COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
+          val newPackedMsg = agentMsgTransformer.pack(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyInfo(Left(encryptWith))), None))
           if (remaining.size >= 2) {
-            packMsgForRoutingKeys(msgPackVersion, newPackedMsg.msg, remaining, msgType)
+            packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
           } else {
             newPackedMsg
           }

@@ -7,7 +7,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.MsgPackFormat._
 import com.evernym.verity.actor.agent.user._
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -154,12 +154,12 @@ trait MsgNotifierForStoredMsgs
   }
 
   protected def sendMsgToRegisteredEndpoint(pw: PayloadWrapper, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    pw.metadata.map(_.msgPackVersion) match {
-      case None | Some(MPV_INDY_PACK|MPV_MSG_PACK) =>
+    pw.metadata.map(_.msgPackFormat) match {
+      case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
         sendMsgToRegisteredEndpointLegacy(pw, allComMethods)
-      case Some(MPV_PLAIN)  =>
+      case Some(MPF_PLAIN)  =>
         sendMsgToRegisteredEndpointNew(pw, allComMethods)
-      case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+      case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
     }
   }
 
@@ -170,12 +170,12 @@ trait MsgNotifierForStoredMsgs
         logger.debug("received registered http endpoints: " + httpComMethods)
         httpComMethods.foreach { hcm =>
          logger.debug(s"about to send message to endpoint: " + hcm)
-          pw.metadata.map(_.msgPackVersion) match {
-            case None | Some(MPV_INDY_PACK|MPV_MSG_PACK) =>
+          pw.metadata.map(_.msgPackFormat) match {
+            case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(pw.msg)(UrlDetail(hcm.value))
-            case Some(MPV_PLAIN)  =>
+            case Some(MPF_PLAIN)  =>
               remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
-            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint (legacy): " + hcm)
         }
@@ -190,11 +190,11 @@ trait MsgNotifierForStoredMsgs
         logger.debug("received registered http endpoints: " + httpComMethods)
         httpComMethods.foreach { hcm =>
           logger.debug(s"about to send message to endpoint: " + hcm)
-          val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPV_INDY_PACK)
+          val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
           pkgType match {
-            case MPV_PLAIN =>
+            case MPF_PLAIN =>
               remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
-            case MPV_INDY_PACK | MPV_MSG_PACK =>
+            case MPF_INDY_PACK | MPF_MSG_PACK =>
               val endpointReceipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyInfo(Left(verKey))))
               // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
               val recipKeys = endpointReceipKeys match {
@@ -204,7 +204,7 @@ trait MsgNotifierForStoredMsgs
 
               val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlDetail(hcm.value))
-            case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+            case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint: " + hcm)
         }

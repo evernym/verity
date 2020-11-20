@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{MSG_STATUS_REDIRECTED, REDIRECTED_CONN_REQ_EXISTS}
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -37,7 +37,7 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     def prepareEdgePayloadStoredEventOpt(answerMsgUid: MsgId): Option[MsgPayloadStored] = {
       if (rcrm.keyDlgProof.isEmpty) {
         val (msgName, payload) = ConnectingMsgHelper.buildRedirectPayloadMsg(
-          agentMsgContext.msgPackVersion, rcrm.senderDetail, rcrm.redirectDetail.toString)
+          agentMsgContext.msgPackFormat, rcrm.senderDetail, rcrm.redirectDetail.toString)
         prepareEdgePayloadStoredEvent(answerMsgUid, msgName, payload)
       } else None
     }
@@ -138,18 +138,18 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     val otherRespMsgs = buildSendMsgResp(rcrm.id)
     val redirectRespMsg = RedirectConnReqMsgHelper.buildRespMsg(rcrm.id, threadIdReq, getSourceIdFor(rcrm.replyToMsgId))
     if (rcrm.keyDlgProof.isEmpty) {
-      agentMsgContext.msgPackVersion match {
-        case MPV_INDY_PACK | MPV_PLAIN =>
+      agentMsgContext.msgPackFormat match {
+        case MPF_INDY_PACK | MPF_PLAIN =>
           ctx.signal(RedirectedInviteAnswerMsg_0_6(RedirectPayloadMsg_0_6(rcrm.senderDetail, new JSONObject(rcrm.redirectDetail.toString))))
-        case MPV_MSG_PACK =>
-        case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+        case MPF_MSG_PACK =>
+        case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
       }
     }
     val respMsgs = redirectRespMsg ++ otherRespMsgs
     val param: PackMsgParam = AgentMsgPackagingUtil.buildPackMsgParam(
       encParamBasedOnMsgSender(agentMsgContext.senderVerKey),
-      respMsgs, agentMsgContext.msgPackVersion == MPV_MSG_PACK)
-    buildAgentPackedMsg(agentMsgContext.msgPackVersion, param)
+      respMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+    buildAgentPackedMsg(agentMsgContext.msgPackFormat, param)
   }
 
   def checkNoRedirectedInvitationExists(): Unit = {

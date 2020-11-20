@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_HTTP_ENDPOINT, COM_METHOD_TYPE_PUSH, DEFAULT_INVITE_SENDER_LOGO_URL, DEFAULT_INVITE_SENDER_NAME}
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED_OFFER, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, getNewMsgUniqueId}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
@@ -19,7 +19,7 @@ import org.scalatest.time.{Seconds, Span}
 class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   createKeySpecs(connId1New)
   declineInviteSpecs(connId1New)
@@ -37,7 +37,7 @@ class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
 class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   createKeySpecs(connId1New)
   sendInviteSpecs(connId1New)
@@ -51,7 +51,7 @@ class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 
 class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   val connId = "connId"
   createConnectionSpec(connId)
@@ -140,7 +140,7 @@ trait UserAgentPairwiseSpec_V_0_6
   }
 
   def buildReceivedReqMsg_1_0(pmp: PackMsgParam) : PackedMsg = {
-    preparePackedRequestForAgent(pmp)(MPV_INDY_PACK, mockRemoteEdgeCloudAgent.agentMsgTransformer,
+    preparePackedRequestForAgent(pmp)(MPF_INDY_PACK, mockRemoteEdgeCloudAgent.agentMsgTransformer,
       mockRemoteEdgeCloudAgent.wap)
   }
 

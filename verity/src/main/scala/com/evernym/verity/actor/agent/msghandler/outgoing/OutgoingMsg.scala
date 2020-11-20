@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.msghandler.MsgParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.agent.{PayloadMetadata, ThreadContextDetail}
 import com.evernym.verity.push_notification.PushNotifData
 
 import scala.concurrent.Future
@@ -20,22 +20,24 @@ trait RequestMsgIdProvider {
  * @param from sender participant id
  * @param requestMsgId request msg id for which to which the outgoing message is related to
  */
-case class OutgoingMsgContext(to: ParticipantId, from: ParticipantId, requestMsgId: Option[MsgId]) extends RequestMsgIdProvider
+case class OutgoingMsgContext(to: ParticipantId,
+                              from: ParticipantId,
+                              threadContextDetail: ThreadContextDetail,
+                              requestMsgId: Option[MsgId]) extends RequestMsgIdProvider
 
 object OutgoingMsg {
   def apply[A](msg: A,
                to: ParticipantId,
                from: ParticipantId,
-               threadId: ThreadId,
                pinstId: PinstId,
                protoDef: ProtoDef,
+               threadContextDetail: ThreadContextDetail,
                requestMsgId: Option[MsgId]): OutgoingMsg[A] = {
-    OutgoingMsg(msg, threadId, pinstId, protoDef, OutgoingMsgContext(to, from, requestMsgId))
+    OutgoingMsg(msg, pinstId, protoDef, OutgoingMsgContext(to, from, threadContextDetail, requestMsgId))
   }
 }
 
 case class OutgoingMsg[A](msg: A,
-                          threadId: ThreadId,
                           pinstId: PinstId,
                           protoDef: ProtoDef,
                           context: OutgoingMsgContext)
@@ -47,7 +49,9 @@ case class OutgoingMsg[A](msg: A,
  * @param protoRef - protocol reference
  * @param pinstId - protocol instance id
  */
-case class SendSignalMsg(msg: Any, threadId: ThreadId, protoRef: ProtoRef, pinstId: PinstId, requestMsgId: Option[MsgId]) extends ActorMessageClass
+case class SendSignalMsg(msg: Any, threadId: ThreadId, protoRef: ProtoRef,
+                            pinstId: PinstId, threadContextDetail: ThreadContextDetail,
+                            requestMsgId: Option[MsgId]) extends ActorMessageClass
 
 /**
  * This is sent after any pre processing work is done for received SendSignalMsg

@@ -1,10 +1,10 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.TypeFormat.{LEGACY_TYPE_FORMAT, STANDARD_TYPE_FORMAT}
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.{ProtoMsgOrderDetail, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{MsgOrders, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.ConnectingProtoDef
@@ -68,11 +68,11 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
         "pinst-id-1" ->
           ThreadContextDetail (
             "thread-id-1",
-            MPV_INDY_PACK,
+            MPF_INDY_PACK,
             STANDARD_TYPE_FORMAT,
             usesLegacyGenMsgWrapper = true,
             usesLegacyBundledMsgWrapper = true,
-            protoMsgOrderDetail = Option(ProtoMsgOrderDetail(
+            msgOrders = Option(MsgOrders(
               senderOrder = 1,
               receivedOrders = Map("participant-1" -> 2))
             )
@@ -80,9 +80,9 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
         "pinst-id-2" ->
           ThreadContextDetail (
             "thread-id-1",
-            MPV_MSG_PACK,
+            MPF_MSG_PACK,
             LEGACY_TYPE_FORMAT,
-            protoMsgOrderDetail = Option(ProtoMsgOrderDetail(
+            msgOrders = Option(MsgOrders(
               senderOrder = 2,
               receivedOrders = Map("participant-2" -> 3))
             )

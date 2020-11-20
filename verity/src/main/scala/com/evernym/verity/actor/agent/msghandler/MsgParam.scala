@@ -11,7 +11,7 @@ trait MsgParam {
 
   def validate(): Unit = {
     if (! supportedTypes.contains(givenMsg.getClass)) {
-      throw new InternalServerErrorException(UNHANDLED.statusCode, Option(s"message type not supported: " + givenMsg))
+      throw new InternalServerErrorException(UNHANDLED.statusCode, Option(s"message type not supported: $givenMsg"))
     }
   }
 

@@ -2,8 +2,8 @@ package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
 import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.Version
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, CREATE_MSG_TYPE_REDIRECT_CONN_REQ, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_GET_CONFIGS, MSG_TYPE_GET_MSGS, MSG_TYPE_GET_MSGS_BY_CONNS, MSG_TYPE_MSG_DETAIL, MSG_TYPE_REMOVE_CONFIGS, MSG_TYPE_SEND_MSGS, MSG_TYPE_UPDATE_CONFIGS, MSG_TYPE_UPDATE_CONN_STATUS, MSG_TYPE_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, InviteCreateMsgDetail_MFV_0_5, PairwiseMsgUids, RedirectConnReqMsgDetail_MFV_0_5}
@@ -32,7 +32,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
 
   object v_0_5_req {
 
-    implicit val msgPackVersion: MsgPackVersion = MPV_MSG_PACK
+    implicit val msgPackFormat: MsgPackFormat = MPF_MSG_PACK
 
     def buildCoreSignUpMsgWithVersion(msgTypeVersion: String): PackMsgParam = {
       val agentMsg = SignUp_MFV_0_5(TypeDetail(MSG_TYPE_SIGN_UP, msgTypeVersion))

@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+
+package com.evernym.verity.protocol.protocols.basicMessage.v_1_0;
+
+message Initialized {
+    option (scalapb.message).extends = "Event";
+    string selfIdValue  = 1;
+    string otherIdValue = 2;
+}
+
+message MyRole {
+    option (scalapb.message).extends = "Event";
+    int32  roleNum = 1;
+}
+
+message AttachmentObject {
+    string id               = 1;
+    string mimeType         = 2;
+    string filename         = 3;
+    string data_base64      = 4;
+}
+
+message MessageReceived {
+    option (scalapb.message).extends = "Event";
+    google.protobuf.StringValue localization    = 1;
+    google.protobuf.StringValue sentTime        = 2;
+    string content                              = 3;
+    repeated AttachmentObject attachments       = 4;
+}

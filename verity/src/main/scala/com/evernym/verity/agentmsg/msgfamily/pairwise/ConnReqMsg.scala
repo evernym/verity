@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, _}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, MsgFamilyDetail}
@@ -67,7 +67,7 @@ object ConnReqMsgHelper {
       phoneNo = phoneNo,
       includePublicDID = includePublicDID
     )
-    AgentMessageWrapper(DefaultMsgCodec.toJson(crm), amw.msgPackVersion)
+    AgentMessageWrapper(DefaultMsgCodec.toJson(crm), amw.msgPackFormat)
   }
 
   private def buildReqMsgFrom_MFV_0_6(implicit amw: AgentMsgWrapper): ConnReqMsg = {
@@ -77,9 +77,9 @@ object ConnReqMsgHelper {
   }
 
   def buildReqMsg(implicit amw: AgentMsgWrapper): ConnReqMsg = {
-    (amw.msgPackVersion, amw.headAgentMsgDetail) match {
-      case (MPV_INDY_PACK, MsgFamilyDetail(EVERNYM_QUALIFIER, MSG_FAMILY_CONNECTING, MFV_0_6, MSG_TYPE_CONN_REQ, _, _)) |
-       (MPV_PLAIN, MsgFamilyDetail(EVERNYM_QUALIFIER, MSG_FAMILY_CONNECTING, MFV_0_6, MSG_TYPE_CONN_REQ, _, _))
+    (amw.msgPackFormat, amw.headAgentMsgDetail) match {
+      case (MPF_INDY_PACK, MsgFamilyDetail(EVERNYM_QUALIFIER, MSG_FAMILY_CONNECTING, MFV_0_6, MSG_TYPE_CONN_REQ, _, _)) |
+       (MPF_PLAIN, MsgFamilyDetail(EVERNYM_QUALIFIER, MSG_FAMILY_CONNECTING, MFV_0_6, MSG_TYPE_CONN_REQ, _, _))
               => buildReqMsgFrom_MFV_0_6
       case x  => throw new RuntimeException("conn req builder failed: " + x)
     }
@@ -110,16 +110,16 @@ object ConnReqMsgHelper {
                    urlToInviteDetailEncoded: String,
                    sourceId: Option[String]=None)
                   (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    (respMsgParam.msgPackVersion, respMsgParam.familyVersion) match {
-      case (MPV_MSG_PACK, MFV_0_5) => List(
+    (respMsgParam.msgPackFormat, respMsgParam.familyVersion) match {
+      case (MPF_MSG_PACK, MFV_0_5) => List(
         buildMsgCreatedResp_MFV_0_5(`@id`),
         buildInviteDetailMsgResp_MFV_0_5(inviteDetail, urlToInviteDetail, urlToInviteDetailEncoded))
 
-      case (MPV_INDY_PACK, MFV_0_6) =>
+      case (MPF_INDY_PACK, MFV_0_6) =>
         List(buildConnReqResp_MFV_0_6(`@id`, threadId, inviteDetail, None,
           urlToInviteDetail, urlToInviteDetailEncoded, sourceId))
 
-      case (MPV_PLAIN, MFV_0_6) =>
+      case (MPF_PLAIN, MFV_0_6) =>
         List(buildConnReqResp_MFV_0_6(`@id`, threadId, inviteDetail, Option(inviteDetail.toAbbreviated),
           urlToInviteDetail, urlToInviteDetailEncoded, sourceId))
 

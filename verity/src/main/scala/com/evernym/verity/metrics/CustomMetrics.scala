@@ -91,8 +91,8 @@ object CustomMetrics {
   final val AS_USER_AGENT_ACTIVE_RELATIONSHIPS = s"$AS_USER_AGENT.active.relationships.count"
 
   final val AS_AKKA_ACTOR_TYPE_PREFIX = s"$AS_AKKA_ACTOR.type"
-  final val AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX = s"started.count"
-  final val AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX = s"stopped.count"
+  final val AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX = "started.count"
+  final val AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX = "stopped.count"
 
   final val AS_START_TIME = s"$AS.start-time-in-millis"
 

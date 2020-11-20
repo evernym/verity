@@ -43,7 +43,7 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
       agentActorContext.agentMsgTransformer.unpackAsync(smw.msg, fromKeyInfo,
         UnpackParam(openWalletIfNotOpened = true, isAnonCryptedMsg = true)).flatMap({ amWorker =>
         implicit val amw: AgentMsgWrapper = amWorker
-        smw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackVersion))
+        smw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackFormat))
         addUserResourceUsage(smw.reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_ENDPOINT,
           "POST_agency_msg", None)
         amw.headAgentMsgDetail match {

@@ -1,9 +1,8 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
-import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.protocol.engine.SignatureResult
-import com.evernym.verity.protocol.protocols.tokenizer.State.{TokenCreated, TokenFailed, TokenReceived, TokenRequested}
+import com.evernym.verity.protocol.protocols.tokenizer.State.{TokenCreated, TokenFailed, TokenReceived}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, Requester, SigningTokenErr, Tokenizer}
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, TestWalletHelper}
@@ -34,9 +33,9 @@ class TokenizerSpec
     "should fail signing token" in {s =>
       interaction (s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Failure(SigningTokenErr))
-        s.requester ~ AskForToken(ID, SPONSOR_ID, ComMethodDetail(1, "12345"))
+        s.requester ~ AskForToken(ID, SPONSOR_ID)
         s.tokenizer.state shouldBe a[TokenFailed]
-        s.requester.state shouldBe a[TokenRequested]
+        s.requester.state shouldBe a[TokenFailed]
         val tokenizerFailure = s.tokenizer.state.asInstanceOf[TokenFailed]
         tokenizerFailure.err shouldBe SigningTokenErr.err
       }
@@ -44,7 +43,7 @@ class TokenizerSpec
     "should generate a token" in {s =>
       interaction (s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignatureResult("SIGN".getBytes, "V1")))
-        s.requester ~ AskForToken(ID, SPONSOR_ID, ComMethodDetail(1, "12345"))
+        s.requester ~ AskForToken(ID, SPONSOR_ID)
         s.requester.role shouldBe Requester
         s.tokenizer.role shouldBe Tokenizer
         s.tokenizer.state shouldBe a[TokenCreated]
@@ -57,14 +56,14 @@ class TokenizerSpec
     "should generate a token again" in {s =>
       interaction (s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignatureResult("SIGN".getBytes, "V1")))
-        s.requester ~ AskForToken(ID, SPONSOR_ID, ComMethodDetail(1, ID))
+        s.requester ~ AskForToken(ID, SPONSOR_ID)
         s.tokenizer.role shouldBe Tokenizer
         s.tokenizer.state shouldBe a[TokenCreated]
         val token = s.requester.state.asInstanceOf[TokenReceived]
         token.token.sponseeId shouldBe ID
 
         val id2 = ID + 2
-        s.requester ~ AskForToken(id2, SPONSOR_ID, ComMethodDetail(1, id2))
+        s.requester ~ AskForToken(id2, SPONSOR_ID)
         s.tokenizer.state shouldBe a[TokenCreated]
         val token2 = s.requester.state.asInstanceOf[TokenReceived]
         token2.token.sponseeId shouldBe id2
@@ -76,7 +75,7 @@ class TokenizerSpec
     "should fail if value protocol message contains null" in { s =>
       interaction(s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignatureResult("SIGN".getBytes, "V1")))
-        s.requester ~ AskForToken(null, SPONSOR_ID, ComMethodDetail(1, "ID"))
+        s.requester ~ AskForToken(null, SPONSOR_ID)
         assertFailedState(s.tokenizer.state, "missing argName: sponseeId")
       }
     }

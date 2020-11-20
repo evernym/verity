@@ -54,7 +54,7 @@ class DefaultSMSSender(val config: AppConfig) extends Actor with ActorLogging {
         sender ! SmsSendingFailed(e.respCode, e.respMsg.getOrElse(e.getErrorMsg))
         AppStateManager.recoverIfNeeded(CONTEXT_SMS_OPERATION)
     }).getOrElse {
-      val err = s"none of the providers could send sms to phone_number. For more details take a look at provider specific error messages"
+      val err = "none of the providers could send sms to phone_number. For more details take a look at provider specific error messages"
       sender ! SmsSendingFailed(UNHANDLED.statusCode, err)
       AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_SMS_OPERATION, new SmsSendingFailedException(Option(err)), None)
       throw new InternalServerErrorException(SMS_SENDING_FAILED.statusCode, Option(SMS_SENDING_FAILED.statusMsg),
@@ -65,11 +65,11 @@ class DefaultSMSSender(val config: AppConfig) extends Actor with ActorLogging {
   def logResult(smsSendResultByProvider: Either[HandledErrorException, SmsSent], providerId: String): Unit = {
     smsSendResultByProvider match {
       case Left(em) =>
-        val err = s"could not send sms"
+        val err = "could not send sms"
         logger.error(err, (LOG_KEY_PROVIDER, providerId),
           (LOG_KEY_RESPONSE_CODE, em.respCode), (LOG_KEY_ERR_MSG, em.getErrorMsg))
       case Right(_) =>
-        logger.debug(s"sms sent successfully", (LOG_KEY_PROVIDER, providerId))
+        logger.debug("sms sent successfully", (LOG_KEY_PROVIDER, providerId))
     }
   }
 

@@ -1,6 +1,7 @@
+
 package com.evernym.verity.actor.agent
 
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, SetRoute}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, SetRoute}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.protocol.engine.DID
 
@@ -34,7 +35,11 @@ trait HasSetRoute { this: AgentPersistentActor =>
     Future.sequence(result).map(_.head)
   }
 
-  def buildSetRoute(did: DID, actorTypeId: Int, entityId: String): SetRoute =
+  def getRoute(forDID: DID): Future[Any] = {
+    agentActorContext.agentMsgRouter.execute(GetRoute(forDID))
+  }
+
+  private def buildSetRoute(did: DID, actorTypeId: Int, entityId: String): SetRoute =
     SetRoute(did, ActorAddressDetail(actorTypeId, entityId))
 
 }

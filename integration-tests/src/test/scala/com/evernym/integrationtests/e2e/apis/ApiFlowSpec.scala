@@ -8,7 +8,6 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.common.StatusDetailResp
@@ -37,7 +36,7 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.isRunScenario
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.util.HttpListenerUtil
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
@@ -59,7 +58,6 @@ class ApiFlowSpec
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
 
   override lazy val appConfig: AppConfig = new TestAppConfig
-
   lazy val poolConnManager: LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(appConfig)
     pc.open()
@@ -242,15 +240,8 @@ class ApiFlowSpec
           restartAgencyProcessesIfRequired
           val id = "my-id"
           val sponsorId = "sponsor-token"
-          val latestPushNotif = withLatestPushMessage(edgeHttpEndpointForPushNotif, {
-            sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
-          })
-          val mapper: Map[String, Any] = DefaultMsgCodec.fromJson[Map[String, Any]](latestPushNotif)
-          println("latestPushNotif: " + latestPushNotif)
-          val data = mapper("data").asInstanceOf[Map[String, Any]]
-          val token = DefaultMsgCodec.fromJson[SendToken](data("msg").asInstanceOf[String])
-          println(s"token: $token")
-          data("type") shouldBe "send-token"
+          val token = sendGetToken(id, sponsorId)
+          println("provision token: " + token)
           token.sponseeId shouldBe id
         }
       }
@@ -368,7 +359,7 @@ class ApiFlowSpec
     def updateConnStatus(connId: String, statusCode: String)
                         (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       implicit val msgPackagingContext: AgentMsgPackagingContext =
-        AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+        AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
       s"when sent update connection status (for $connId)" - {
         "should be able to successfully update connection status" in {
           restartAgencyProcessesIfRequired
@@ -558,8 +549,8 @@ class ApiFlowSpec
             getKeyFromPool = false)))
           val amw = mockClientAgent.agentMsgTransformer.unpack(cam.payload.get, unsealKeyInfo)(mockClientAgent.wap)
 
-          val respJsonMsg = amw.msgPackVersion match {
-            case MPV_MSG_PACK =>
+          val respJsonMsg = amw.msgPackFormat match {
+            case MPF_MSG_PACK =>
               val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_5]
               unpackedPayloadMsg.`@type` shouldBe TypeDetail(expectedMsgType, MTV_1_0, Option(PACKAGING_FORMAT_INDY_MSG_PACK))
               val jsonMsg = MessagePackUtil.convertPackedMsgToJsonString(unpackedPayloadMsg.`@msg`)
@@ -568,7 +559,7 @@ class ApiFlowSpec
                 case CREATE_MSG_TYPE_CONN_REQ_REDIRECTED => DefaultMsgCodec.fromJson[RedirectPayloadMsg_0_5](jsonMsg)
               }
               jsonMsg
-            case MPV_INDY_PACK =>
+            case MPF_INDY_PACK =>
               val fullExpectedMsgType = expectedMsgType match {
                 case MSG_TYPE_CONN_REQ_ACCEPTED => MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED
                 case MSG_TYPE_CONN_REQ_REDIRECTED => MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED
@@ -576,7 +567,7 @@ class ApiFlowSpec
               val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_6]
               unpackedPayloadMsg.`@type` shouldBe fullExpectedMsgType
               unpackedPayloadMsg.`@msg`.toString()
-            case _ => throw new Exception(s"Unknown msgPackVersion -- ${amw.msgPackVersion}")
+            case _ => throw new Exception(s"Unknown msgPackFormat -- ${amw.msgPackFormat}")
           }
           check(respJsonMsg)
         }
@@ -669,7 +660,7 @@ class ApiFlowSpec
       s"when sent get msgs by conns ($hint)" - {
         "should be able to get msgs by conns" in {
           implicit val msgPackagingContext: AgentMsgPackagingContext =
-            AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+            AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
           restartAgencyProcessesIfRequired
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val pairwiseDIDs = connsIds.map { cids =>
@@ -701,7 +692,7 @@ class ApiFlowSpec
       s"when sent update msg status msg (for $connId)" - {
         "should be able to update it successfully" in {
           implicit val msgPackagingContext: AgentMsgPackagingContext =
-            AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+            AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
           restartAgencyProcessesIfRequired
           val msgUid = getMsgUidReq(connId, clientMsgUid)
           val umr = updateMsgStatusForConn_MFV_0_5(connId, uids = List(msgUid), statusCode = statusCode)
@@ -712,7 +703,7 @@ class ApiFlowSpec
     def updateMsgStatusByConns(hint: String, statusCode: String, connIds: Set[String])
                        (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       implicit val msgPackagingContext: AgentMsgPackagingContext =
-        AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+        AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
       s"when sent update msg status by conns msg ($hint)" - {
         "should be able to update it successfully" in {
           restartAgencyProcessesIfRequired
@@ -745,7 +736,8 @@ class ApiFlowSpec
       getToken
       createKey_MFV_0_6
       connReq_MFV_0_6
-      createAgentFailures_MFV_0_7
+      //TODO: This needs to be turned back on when 0.5 and 0.6 are removed and RequireSponsorFlowSpec is deleted
+//      createAgentFailures_MFV_0_7
       createAgent_MFV_0_7
     }
 

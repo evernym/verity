@@ -6,7 +6,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.cache.Cache
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg, WalletParam}
 import com.evernym.verity.protocol.engine._
@@ -87,6 +87,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
 
+  //FIXME: RTM -> Check config if sponsor required
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
     case (oa: State.Initialized, _, crm: ConnectReqMsg_MFV_0_5)
                         => handleConnectMsg(crm, oa.parameters)
@@ -130,6 +131,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def handleConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
+    if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
     validateConnectMsg(crm)
     processValidatedConnectMsg(crm, initParameters)
   }
@@ -193,6 +195,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def handleCreateAgentMsg(s:State.Signedup): Unit = {
+    if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
     val fromDID = s.pdd.forDID
     val fromDIDVerKey = getVerKeyReqViaCache(fromDID)
     val aws = s.parameters.paramValueRequired(NEW_AGENT_WALLET_SEED)

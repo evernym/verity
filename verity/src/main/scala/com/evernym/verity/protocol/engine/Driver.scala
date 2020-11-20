@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.util.?=>
@@ -29,4 +30,20 @@ trait Driver {
   def signal[A]: SignalHandler[A]
 }
 
-case class SignalEnvelope[+A](signalMsg: A, threadId: ThreadId, protoRef: ProtoRef, pinstId: PinstId, requestMsgId: Option[MsgId])
+/**
+ *
+ * @param signalMsg the signal message to be sent outside
+ * @param protoRef protocol reference
+ * @param pinstId protocol instance id
+ * @param threadContextDetail thread context detail
+ * @param requestMsgId request msg id
+ * @tparam A
+ */
+case class SignalEnvelope[+A](signalMsg: A,
+                              protoRef: ProtoRef,
+                              pinstId: PinstId,
+                              threadContextDetail: ThreadContextDetail,
+                              requestMsgId: Option[MsgId]) {
+
+  def threadId: ThreadId = threadContextDetail.threadId
+}

@@ -1,10 +1,9 @@
 package com.evernym.verity.agentmsg.msgcodec
 
-import com.evernym.verity.actor.agent.ProtoMsgOrderDetail
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, Thread}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.agent.MsgPackVersion
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.protocol.engine._
 
 import scala.reflect.ClassTag
@@ -14,17 +13,17 @@ trait MsgCodec {
   /**
     *
     * @param jsonStr message json string
-    * @param mpv message pack version
+    * @param mpf message pack format
     * @param legacyType this is for legacy agent msgs where in few scenarios
     *                   the meta data related information is available in a 'wrapper msg' instead
     *                   of the supplied 'msg'
     * @param protoReg protocol registry
     * @return
     */
-  def decode(jsonStr: String, mpv: MsgPackVersion, legacyType: Option[MsgType])(implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {
+  def decode(jsonStr: String, mpf: MsgPackFormat, legacyType: Option[MsgType])(implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {
     //TODO JL shouldn't need to parse the json twice
     val nativeMsg = fromJson(jsonStr, legacyType)
-    val metadata = extractMetadata(jsonStr, mpv)
+    val metadata = extractMetadata(jsonStr, mpf)
     MsgPlusMeta(nativeMsg, metadata)
   }
 
@@ -43,7 +42,7 @@ trait MsgCodec {
     */
   def addLegacyMetaDataToDoc(doc: Document, msgType: MsgType, threadId: ThreadId): Document
 
-  def addMetaDataToDoc(doc: Document, msgType: MsgType, msgId: MsgId, threadId: ThreadId, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): Document
+  def addMetaDataToDoc(doc: Document, msgType: MsgType, msgId: MsgId, threadId: ThreadId, msgOrders: Option[MsgOrders]=None): Document
 
   def toJson[A](value: A): String
 
@@ -74,12 +73,16 @@ trait MsgCodec {
     }
   }
 
-  def extractMetadata(jsonStr: JsonStr, msgPackVersion: MsgPackVersion): MsgMetadata
+  def extractMetadata(jsonStr: JsonStr, msgPackFormat: MsgPackFormat): MsgMetadata
 
-  def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, protoDef: ProtoDef,
-                    msgTypeFormat: TypeFormatLike, protoMsgOrderDetail: Option[ProtoMsgOrderDetail]=None): AgentJsonMsg = {
+  def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, msgFamily: MsgFamily): AgentJsonMsg = {
+    toAgentMsg(value, msgId, threadId, msgFamily, STANDARD_TYPE_FORMAT, None)
+  }
+
+  def toAgentMsg[A](value: A, msgId: MsgId, threadId: ThreadId, msgFamily: MsgFamily,
+                    msgTypeFormat: TypeFormatLike, msgOrders: Option[MsgOrders]=None): AgentJsonMsg = {
     runWithInternalSpan("toAgentMsg", "MsgCodec") {
-      val msgType = protoDef.msgFamily.msgType(value.getClass)
+      val msgType = msgFamily.msgType(value.getClass)
       val doc = value match {
         case s: String  => docFromStr(s)
         case ojb        => toDocument(ojb)
@@ -88,7 +91,7 @@ trait MsgCodec {
       val typedJsonMsg = msgTypeFormat match {
         case _:NoopTypeFormat     => doc
         case _:LegacyTypeFormat   => addLegacyMetaDataToDoc(doc, msgType, threadId)
-        case _:StandardTypeFormat => addMetaDataToDoc(doc, msgType, msgId, threadId, protoMsgOrderDetail)
+        case _:StandardTypeFormat => addMetaDataToDoc(doc, msgType, msgId, threadId, msgOrders)
       }
 
       AgentJsonMsg(typedJsonMsg.toString, msgType)

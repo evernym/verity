@@ -126,7 +126,7 @@ case class Summary(trackingParam: TrackingParam = TrackingParam(),
     (msgName, protoParam.familyName, protoParam.familyVersion) match {
       case (Some(mn), Some(fn), Some(fv)) =>
         val protoRef = ProtoRef(fn, fv)
-        com.evernym.verity.protocol.protocols.availableProtocols.find(protoRef).map { e =>
+        com.evernym.verity.protocol.protocols.protocolRegistry.find(protoRef).map { e =>
           e.protoDef.msgFamily.msgCategory(mn).getOrElse("System/Legacy")
         }
       case _ => None

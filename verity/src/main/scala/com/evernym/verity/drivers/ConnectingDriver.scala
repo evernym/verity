@@ -24,21 +24,19 @@ class ConnectingDriver (cp: ActorDriverGenParam) extends ActorDriver(cp) {
 
     //for now, all below mentioned signals are needs to be sent to original msg forwarder (either user agent or user agent pairwise)
     case sig @ SignalEnvelope(
-          _: ConnReqReceived |
-          _: ConnectionStatusUpdated |
-          _: NotifyUserViaPushNotif |
-          _: SendMsgToRegisteredEndpoint |
-          _: LegacyConnectingSignal
-      ,_,_,_, _) =>
-      processSignalMsg(sig)
+      _: ConnReqReceived |
+      _: ConnectionStatusUpdated |
+      _: NotifyUserViaPushNotif |
+      _: SendMsgToRegisteredEndpoint |
+      _: LegacyConnectingSignal,
+      _,_,_,_) => processSignalMsg(sig)
 
     //these signals will be sent to edge agent
     case sig @ SignalEnvelope(
-    _: ConnReqRespMsg_MFV_0_6 |
-    _: AcceptedInviteAnswerMsg_0_6 |
-    _: RedirectedInviteAnswerMsg_0_6 |
-    _: StatusReport
-    , _, _, _, _) =>
-      sendSignalMsg(sig)
+      _: ConnReqRespMsg_MFV_0_6 |
+      _: AcceptedInviteAnswerMsg_0_6 |
+      _: RedirectedInviteAnswerMsg_0_6 |
+      _: StatusReport,
+      _, _, _, _) => sendSignalMsg(sig)
   }
 }

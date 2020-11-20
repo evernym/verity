@@ -1,15 +1,44 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
+import com.evernym.verity.constants.InitParamConstants.{OTHER_ID, SELF_ID}
+import com.evernym.verity.protocol.engine.{Parameter, Parameters}
 import com.evernym.verity.testkit.BasicSpec
+import org.scalatest.OptionValues
 
 
 
-class PresentProofNonProtocolSpec extends BasicSpec {
+class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
   "Present Proof Protocol Definition" - {
     "should have two roles" in {
       PresentProofDef.roles.size shouldBe 2
       PresentProofDef.roles shouldBe Set(Role.Verifier, Role.Prover)
+    }
+
+    "should create correct Init control message" in {
+      var testSet = Set(
+        Parameter(SELF_ID, "1"),
+        Parameter(OTHER_ID, UNKNOWN_OTHER_ID)
+      )
+
+      val message = PresentProofDef.createInitMsg(Parameters(testSet))
+      message shouldBe an[Ctl.Init]
+      val init = message.asInstanceOf[Ctl.Init]
+      init.otherId shouldBe None
+      init.selfId shouldBe "1"
+
+      testSet = Set(
+        Parameter(SELF_ID, "1"),
+        Parameter(OTHER_ID, "2")
+      )
+
+      val message1 = PresentProofDef.createInitMsg(Parameters(testSet))
+      message1 shouldBe an[Ctl.Init]
+      val init2 = message1.asInstanceOf[Ctl.Init]
+      init2.otherId.value shouldBe "2"
+      init2.selfId shouldBe "1"
+
     }
   }
 
@@ -45,7 +74,6 @@ class PresentProofNonProtocolSpec extends BasicSpec {
         Some(nonRevok)
       )
       val json = DefaultMsgCodec.toJson(pr)
-      println(json)
     }
   }
 

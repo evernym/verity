@@ -8,11 +8,10 @@ import akka.pattern.ask
 import akka.persistence.RecoveryCompleted
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
@@ -127,7 +126,7 @@ class ActorProtocolContainer[
       }
       val reqId = msgIdOpt.getOrElse(UUID.randomUUID().toString)
 
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, s"in-msg-process-started", reqId, inMsg = Option(actualMsg))
+      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "in-msg-process-started", reqId, inMsg = Option(actualMsg))
       submit(msgToBeSent, Option(handleResponse(_, msgIdOpt, senderActorRef)))
   }
 
@@ -163,7 +162,7 @@ class ActorProtocolContainer[
 
   override val appConfig: AppConfig = agentActorContext.appConfig
 
-  def pinstId: PinstId = entityId
+  lazy val pinstId: PinstId = entityId
 
   override final val receiveEvent: Receive = protocolReceiveEvent
 
@@ -173,17 +172,21 @@ class ActorProtocolContainer[
 
   final def protocolReceiveCommandBase: Receive = {
     // flow diagram: ctl + proto, step 16
-    // NOTE: this is when any actor/object wants to send a command with ProtocolCmd wrapper
-    // we can't make a stronger assertion about type because erasure
-    case pc @ ProtocolCmd(MsgEnvelope(msg: Any, msgType, to, frm, msgId, thId), walletSeed, fwder) =>
+    //NOTE: this is when any actor/object wants to send a command with ProtocolCmd wrapper
+    // we can't make a stronger assertion about type because erasure    
+    case pc @ ProtocolCmd(MsgEnvelope(msg: Any, msgType, to, frm, msgId, thId), metadata) =>
       logger.debug(s"$protocolIdForLog received ProtocolCmd: " + pc)
-      setForwarderParams(walletSeed, fwder)
+      storePackagingDetail(metadata.threadContextDetail)
+      setForwarderParams(metadata.walletSeed, metadata.forwarder)
       protocolReceiveCommand(MsgEnvelope(msg, msgType, to, frm, msgId, thId))
 
     // we can't make a stronger assertion about type because erasure
     case msg: Any if protocolReceiveCommand.isDefinedAt(msg) =>
       logger.debug(s"$protocolIdForLog received msg: " + msg)
       protocolReceiveCommand(msg)
+
+    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
+
   }
 
   def changeReceiverToBase(): Unit = {
@@ -209,11 +212,20 @@ class ActorProtocolContainer[
     //TODO: we are purposefully expecting ProtocolCmd, so that sending actor can provide
     // its own reference and still keep the original sender un impacted
     // we should try to find a better way to handle it without ProtocolCmd
-    case ProtocolCmd(_, _walletSeed, fwder) =>
+    case ProtocolCmd(_, metadata) =>
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
-      setForwarderParams(_walletSeed, fwder)
+      setForwarderParams(metadata.walletSeed, metadata.forwarder)
       recoverOrInit()
+
+    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
+  }
+
+  def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
+    if (! state.equals(definition.initialState)) {
+      storePackagingDetail(tcd)
+      sender ! ThreadContextStoredInProtoActor(pinstId)
+    }
   }
 
   def changeReceiverToDataStoring(): Unit = {
@@ -290,6 +302,7 @@ class ActorProtocolContainer[
     MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-param-req-sent",
       "init-msg-id", outMsg = Option("init-req-sent"))
   }
+
   @silent
   override def createServices: Option[Services] = {
     val walletParam = WalletParam(agentActorContext.walletAPI, agentActorContext.walletConfig)
@@ -350,19 +363,9 @@ class ActorProtocolContainer[
 
     def send(pmsg: ProtocolOutgoingMsg): Unit = {
       val fromAgentId = ParticipantUtil.agentId(pmsg.from)
-
-      //TODO: right now assuming that the msg needs to be packed and send to 'to' agent.
-      //but need to come back and decide how would this MsgSender know
-      //if it is a message which needs to be packed and send to 'to' agent.
-      //vs if it is a sms text msg etc
       agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(fromAgentId, pmsg))
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, s"sent-to-agent-actor",
+      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "sent-to-agent-actor",
         pmsg.requestMsgId, outMsg = Option(pmsg.msg))
-
-      //      (msg, to) match {
-      //        case (t: String, Some(PhoneNumber(num))) => ??? //todo use agentActorContext.smsSvc
-      //        case (x, Some(HttpEndpoint(e))) => ??? //TODO  agentActorContext.remoteMsgSendingSvc
-      //      }
     }
 
     //dhh It surprises me to see this feature exposed here. I would have expected it
@@ -411,7 +414,7 @@ class ActorProtocolContainer[
           postExecution(Right(Some(Write(segmentAddress, segmentKey, storageReference))))
         case Success(value) =>
           // TODO the type constraint should make this case un-needed
-          val msg = s"storing information is not a excepted type, unable to process it " +
+          val msg = "storing information is not a excepted type, unable to process it " +
             s"-- it is ${value.getClass.getSimpleName}"
           logger.error(msg)
           postExecution(Left(new Exception(msg)))
@@ -528,13 +531,16 @@ trait MsgQueueServiceProvider {
 }
 
 /**
-  * This is sent by LaunchesProtocol during protocol initialization process.
-  * Protocol actor (via protocol state in it) knows if it has been already initialized or not.
-  * If it is not initialized, then the protocol actor will stash incoming commands and send 'InitProtocolReq' back to those message senders.
-  * And the protocol message forwarder (like UserAgentPairwise) is supposed to handle that 'InitProtocol' command and respond with
-  * @param parameters - set of parameters protocol needs
-  */
-
+ * This is sent by LaunchesProtocol during protocol initialization process.
+ * Protocol actor (via protocol state in it) knows if it has been already initialized or not.
+ * If it is not initialized, then the protocol actor will stash incoming commands and
+ * send 'InitProtocolReq' back to those message senders.
+ * And the protocol message forwarder (like UserAgentPairwise) is supposed to handle
+ * that 'InitProtocol' command and respond with
+ *
+ * @param domainId domain id
+ * @param parameters protocol initialization parameters
+ */
 case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessageClass
 
 /**
@@ -544,6 +550,8 @@ case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends 
   */
 case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessageClass
 
+case class ProtocolCmd(msg: Any, metadata: ProtocolMetadata) extends ActorMessageClass
+
 /*
   walletSeed: actor protocol container needs to access/provide wallet service
   and for that it needs this walletSeed
@@ -552,20 +560,31 @@ case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessageClass
   which is then provided into driver and driver uses it to reach to the same agent (launcher)
   who originally forwarded the msg
  */
-case class ProtocolCmd(msg: Any, walletSeed: String, forwarder: ActorRef) extends ActorMessageClass
+case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
+                            walletSeed: String,
+                            forwarder: ActorRef)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
 
 case class WalletParam(walletAPI: WalletAPI, walletConfig: WalletConfig)
 
-case class MsgEnvelope[A](msg: A, msgType: MsgType, to: ParticipantId, frm: ParticipantId,
-                          msgId: Option[MsgId]=None, thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessageClass {
+/**
+ * incoming msg envelope
+ * @param msg
+ * @param msgType
+ * @param to
+ * @param frm
+ * @param msgId
+ * @param thId
+ * @tparam A
+ */
+case class MsgEnvelope[A](msg: A,
+                          msgType: MsgType,
+                          to: ParticipantId,
+                          frm: ParticipantId,
+                          msgId: Option[MsgId]=None,
+                          thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessageClass {
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
-}
-
-trait ServiceDecorator{
-  def msg: Any
-  def deliveryMethod: ComMethodDetail
 }
 
 class MsgForwarder {
@@ -573,3 +592,7 @@ class MsgForwarder {
   def setForwarder(actorRef: ActorRef): Unit = _forwarder = Option(actorRef)
   def forwarder:Option[ActorRef] = _forwarder
 }
+
+case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
+
+case class ThreadContextStoredInProtoActor(pinstId: PinstId) extends ActorMessageClass

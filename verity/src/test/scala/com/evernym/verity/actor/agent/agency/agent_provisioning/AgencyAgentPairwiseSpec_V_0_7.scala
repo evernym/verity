@@ -3,6 +3,7 @@ package com.evernym.verity.actor.agent.agency.agent_provisioning
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
@@ -12,6 +13,7 @@ import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.TimeUtil.IsoDateTime
 import com.evernym.verity.util.{Base64Util, TimeUtil}
 import com.evernym.verity.vault._
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration.Duration
 
@@ -22,6 +24,26 @@ trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase {
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupAgency()
+  }
+  override def overrideConfig: Option[Config] = Option {
+    ConfigFactory parseString {
+      s"""
+      verity.provisioning {
+        sponsors = [
+          {
+            name = "evernym-test-sponsor"
+            id = "evernym-test-sponsorabc123"
+            keys = [{"verKey": "GJ1SzoWzavQYfNL9XkaJdrQejfztN4XqdsiV4ct3LXKL"}]
+            endpoint = "localhost:3456/json-msg"
+            active = true
+          }
+        ]
+        sponsor-required = true
+        token-window = 10 minute
+        cache-used-tokens = true
+    }
+    """
+    }
   }
 
   lazy val AGENCY_PAIRWISE_AGENT_DID: DID = mockEdgeAgent.agencyPairwiseAgentDetailReq.DID
@@ -120,8 +142,6 @@ class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
       "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
         val expired = TimeUtil.longToDateString(Duration("12 minute").toMillis + TimeUtil.now)
         val checkNow = TimeUtil.nowDateString
-        println(expired)
-        println(checkNow)
         val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, expired, sig(timestamp=expired,vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
         val msg = prepareCreateAgentMsg(
           AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
@@ -224,7 +244,6 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwise
     "when sent first create agent (cloud) msg" - {
       "should respond with AGENT_CREATED msg" in {
         val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-        println(s"val aap = agentRegion($agencyAgentPairwiseEntityId, $agencyAgentPairwiseRegion)")
         val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
         val requesterKeys = RequesterKeys(mockEdgeAgent1.myDIDDetail.did, mockEdgeAgent1.myDIDDetail.verKey)
 
@@ -243,7 +262,6 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwise
     "when sent second create agent (cloud) msg" - {
       "should fail with problem report msg" taggedAs (UNSAFE_IgnoreLog) in {
         val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-        println(s"val aap = agentRegion($agencyAgentPairwiseEntityId, $agencyAgentPairwiseRegion)")
         val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
         val requesterKeys = RequesterKeys(mockEdgeAgent2.myDIDDetail.did, mockEdgeAgent2.myDIDDetail.verKey)
 

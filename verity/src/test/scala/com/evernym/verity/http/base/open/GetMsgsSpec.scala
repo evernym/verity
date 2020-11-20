@@ -2,7 +2,7 @@ package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.Status.StatusDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, HasMsgStore}
@@ -41,7 +41,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
 
     s"when sent GET_MSGS_BY_CONNS 0.6 when there is no msgs ($totalConns:${emc.values.map(_.totalMsgs.toString)})" - {
       "should respond with MSGS_BY_CONNS" in {
-        implicit val msgPackagingContext = AgentMsgPackagingContext(MPV_INDY_PACK, MFV_1_0, packForAgencyRoute = true)
+        implicit val msgPackagingContext = AgentMsgPackagingContext(MPF_INDY_PACK, MFV_1_0, packForAgencyRoute = true)
         buildAgentPostReq(mockEdgeAgent.v_0_6_req.prepareGetMsgsFromConns().msg) ~> epRoutes ~> check {
           status shouldBe OK
           val gm = mockEdgeAgent.v_0_6_resp.handleGetMsgsByConnsResp(PackedMsg(responseAs[Array[Byte]]))
@@ -58,7 +58,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
 
     s"when sent GET_MSGS_BY_CONNS 0.6 by non-existent uuid when there is no msgs ($totalConns:${emc.values.map(_.totalMsgs.toString)})" - {
       "should respond with empty msgs" in {
-        implicit val msgPackagingContext: AgentMsgPackagingContext = AgentMsgPackagingContext(MPV_INDY_PACK, MFV_1_0, packForAgencyRoute = true)
+        implicit val msgPackagingContext: AgentMsgPackagingContext = AgentMsgPackagingContext(MPF_INDY_PACK, MFV_1_0, packForAgencyRoute = true)
         val uids: Option[List[String]] = Some(List("non-existent-uuid"))
         buildAgentPostReq(mockEdgeAgent.v_0_6_req.prepareGetMsgsFromConns(uids=uids).msg) ~> epRoutes ~> check {
           status shouldBe OK

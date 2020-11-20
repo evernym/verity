@@ -14,46 +14,67 @@ object State {
 
   trait HasMyAndTheirDid extends State {
     def myPwDid: String
-    def theirPwDid: String
+    def theirPwDid: Option[String]
   }
 
   trait PostInteractionStarted extends HasMyAndTheirDid
 
-  case class Initialized(myPwDid: String, theirPwDid: String) extends HasMyAndTheirDid {
+  case class Initialized(myPwDid: String,
+                         theirPwDid: Option[String],
+                         agentName: Option[String],
+                         logoUrl: Option[String],
+                         agencyVerkey: Option[String],
+                         publicDid: Option[String]
+                        ) extends HasMyAndTheirDid {
     override def status: String = "Initialized"
   }
 
-  case class ProposalSent(myPwDid: String, theirPwDid: String, credProposed: ProposeCred) extends PostInteractionStarted {
+  case class ProposalSent(myPwDid: String,
+                          theirPwDid: Option[String],
+                          credProposed: ProposeCred) extends PostInteractionStarted {
     override def status: String = "ProposalSent"
   }
-  case class ProposalReceived(myPwDid: String, theirPwDid: String, credProposed: ProposeCred) extends PostInteractionStarted {
+  case class ProposalReceived(myPwDid: String,
+                              theirPwDid: Option[String],
+                              credProposed: ProposeCred) extends PostInteractionStarted {
     override def status: String = "ProposalReceived"
   }
 
-  case class OfferSent(myPwDid: String, theirPwDid: String, credOffer: OfferCred, autoIssue: Boolean) extends PostInteractionStarted {
+  case class OfferSent(myPwDid: String,
+                       theirPwDid: Option[String],
+                       credOffer: OfferCred,
+                       autoIssue: Boolean) extends PostInteractionStarted {
     override def status: String = "OfferSent"
   }
 
-  case class OfferReceived(myPwDid: String, theirPwDid: String, credOffer: OfferCred) extends PostInteractionStarted {
+  case class OfferReceived(myPwDid: String,
+                           theirPwDid: Option[String],
+                           credOffer: OfferCred) extends PostInteractionStarted {
     override def status: String = "OfferReceived"
   }
 
-  case class RequestSent(myPwDid: String, theirPwDid: String,
+  case class RequestSent(myPwDid: String,
+                         theirPwDid: Option[String],
                          credOffer: OfferCred,
                          credRequest: RequestCred) extends PostInteractionStarted  {
     override def status: String = "RequestSent"
   }
 
-  case class RequestReceived(myPwDid: String, theirPwDid: String,
+  case class RequestReceived(myPwDid: String,
+                             theirPwDid: Option[String],
                              credOffer: OfferCred,
                              credRequest: RequestCred) extends PostInteractionStarted {
     override def status: String = "RequestReceived"
   }
 
-  case class IssueCredSent(myPwDid: String, theirPwDid: String, credIssued: IssueCred) extends PostInteractionStarted {
+  case class IssueCredSent(myPwDid: String,
+                           theirPwDid: Option[String],
+                           credIssued: IssueCred) extends PostInteractionStarted {
     override def status: String = "CredSent"
   }
-  case class IssueCredReceived(myPwDid: String, theirPwDid: String, credIssued: IssueCred) extends PostInteractionStarted  {
+  case class IssueCredReceived(myPwDid: String,
+                               theirPwDid: Option[String],
+                               credIssued: IssueCred) extends PostInteractionStarted  {
     override def status: String = "CredReceived"
   }
 

@@ -40,7 +40,7 @@ class UpdateConfigsSpec
       Option{ i: SimpleControllerProviderInputType =>
         new InteractionController(i) {
           override def signal[A]: SignalHandler[A] = {
-            case SignalEnvelope(msg: ConfigResult, threadId, protoRef, pinstId, _) =>
+            case SignalEnvelope(msg: ConfigResult,_,_,_,_) =>
               print(s"SignalEnvelope-StatusReport: $msg")
 
               None

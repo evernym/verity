@@ -1,12 +1,12 @@
 package com.evernym.verity.agentmsg.msgpacker
 
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.protocol.actor.ProtoMsg
 import com.evernym.verity.protocol.engine.{MsgFamilyName, MsgFamilyVersion, MsgName, MsgType, VerKey}
 import com.evernym.verity.protocol.engine.Constants._
 
-case class AgentMsgWrapper(msgPackVersion: MsgPackVersion, agentBundledMsg: AgentBundledMsg) extends ProtoMsg {
+case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg) extends ProtoMsg {
 
   def senderVerKey: Option[VerKey] = agentBundledMsg.senderVerKey
   def recipVerKey: Option[VerKey] = agentBundledMsg.recipVerKey
@@ -36,7 +36,7 @@ case class AgentMsgWrapper(msgPackVersion: MsgPackVersion, agentBundledMsg: Agen
     else false
   }
 
-  def getAgentMsgContext: AgentMsgContext = AgentMsgContext(msgPackVersion, headAgentMsgDetail.familyVersion, senderVerKey)
+  def getAgentMsgContext: AgentMsgContext = AgentMsgContext(msgPackFormat, headAgentMsgDetail.familyVersion, senderVerKey)
 
   def msgType: MsgType = headAgentMsgType
 
@@ -44,11 +44,12 @@ case class AgentMsgWrapper(msgPackVersion: MsgPackVersion, agentBundledMsg: Agen
 
 object AgentMessageWrapper {
 
-  def apply(jsonString: String, msgPackVersion: MsgPackVersion,
-                            senderVerKeyOpt: Option[VerKey]=None): AgentMsgWrapper  = {
+  def apply(jsonString: String,
+            msgPackFormat: MsgPackFormat,
+            senderVerKeyOpt: Option[VerKey]=None): AgentMsgWrapper  = {
     val agentMsg = AgentMsgParseUtil.agentMsg(jsonString)
     val agentMsgs = List(agentMsg)
-    AgentMsgWrapper(msgPackVersion, AgentBundledMsg(agentMsgs, senderVerKeyOpt, None, None))
+    AgentMsgWrapper(msgPackFormat, AgentBundledMsg(agentMsgs, senderVerKeyOpt, None, None))
   }
 
 }

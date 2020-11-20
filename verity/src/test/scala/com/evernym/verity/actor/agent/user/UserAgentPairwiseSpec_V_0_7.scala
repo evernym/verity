@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.{PackMsgParam, PackedMsg}
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -19,7 +19,7 @@ import org.scalatest.time.{Seconds, Span}
 class ConsumerAgentPairwiseBaseSpec_V_0_7 extends UserAgentPairwiseSpec_V_0_7 {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   updateComMethodSpec()
 
@@ -122,7 +122,7 @@ trait UserAgentPairwiseSpec_V_0_7
   }
 
   def buildReceivedReqMsg_1_0(pmp: PackMsgParam) : PackedMsg = {
-    preparePackedRequestForAgent(pmp)(MPV_INDY_PACK, mockRemoteEdgeCloudAgent.agentMsgTransformer,
+    preparePackedRequestForAgent(pmp)(MPF_INDY_PACK, mockRemoteEdgeCloudAgent.agentMsgTransformer,
       mockRemoteEdgeCloudAgent.wap)
   }
 

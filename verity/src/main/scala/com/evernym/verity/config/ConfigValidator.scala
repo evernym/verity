@@ -279,15 +279,15 @@ trait ConfigValidatorBase extends ConfigValidator {
     try {
       val av = config.getAnyRef(confName)
       if (allowedValues.nonEmpty && ! allowedValues.contains(av.toString)) {
-        throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(s"config value is not as expected " +
+        throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option("config value is not as expected " +
           s"(config name: '$confName', actual conf value: '$av', allowed values: '${allowedValues.mkString(", ")}')"))
       }
 
       if (unAllowedValues.nonEmpty && unAllowedValues.contains(av.toString)) {
-        throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(s"config value is not as expected " +
+        throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option("config value is not as expected " +
           s"(config name: '$confName', actual conf value: '$av', un allowed values: '${unAllowedValues.mkString(", ")}' " +
-          s"[NOTE: it might be default value which you don't see in your configuration, " +
-          s"in that case just add this new configuration with some value other than un allowed values])"))
+          "[NOTE: it might be default value which you don't see in your configuration, " +
+          "in that case just add this new configuration with some value other than un allowed values])"))
       }
 
     } catch {
@@ -491,8 +491,8 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
         k.toInt
       } catch {
         case _: NumberFormatException =>
-          throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(s"non numeric character found in " +
-            s"one of the child of parent key $key: $k"))
+          throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option("non numeric character found in " +
+            "one of the child of parent key $key: $k"))
       }
     }
     c.getObject(key).asScala.toSeq.sortWith(_._1.toInt < _._1.toInt)
@@ -587,7 +587,7 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
       }
       val tokenToMultiRules = allTokens.intersect(tokens)
       if (allTokens.intersect(tokens).nonEmpty) {
-        val problem = s"one token can be assigned to only one rule, " +
+        val problem = "one token can be assigned to only one rule, " +
           s"tokens '${tokenToMultiRules.mkString(", ")}' are assigned to more than one rules"
         throw getValidationFailedExc(config.getValue(RULE_TO_TOKENS).origin(), RULE_TO_TOKENS, problem)
       } else {

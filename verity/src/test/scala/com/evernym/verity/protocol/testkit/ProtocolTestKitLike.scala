@@ -81,7 +81,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
 
     def apply[T](block: => T): T = {
 
-      println(s"-----------Starting interaction with: ${envirs.map(_._1.domain.domainId).mkString(", ")}-----------")
+//      println(s"-----------Starting interaction with: ${envirs.map(_._1.domain.domainId).mkString(", ")}-----------")
       val f: () => T = block _
       val result: T = envirs.size match {
 
@@ -333,8 +333,10 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
           domain.lookup_!(myDID)
         }
 
-        domain.startInteractionRel(rel, ctl)
+        val threadId = domain.startInteractionRel(rel, ctl)
 
+        me.currentInteraction = Some(Interaction(myDID, theirDID, Some(threadId)))
+        them.currentInteraction = Some(Interaction(theirDID, myDID, Some(threadId)))
       }
     }
 
@@ -343,14 +345,14 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
     def control(ctl: Control): Unit = {
       val id_testing = MsgIdProvider.getNewMsgId
 
-      println("before container.isEmpty", id_testing)
+//      println("before container.isEmpty", id_testing)
       if (container.isEmpty) {
-        println("before it == OneParty", id_testing)
+//        println("before it == OneParty", id_testing)
         if (it == OneParty) {
           domain.startSoloInteraction(ctl)
         } else {
           if (currentInteraction.isDefined) {
-            println("after currentInteraction.isDefined", id_testing)
+//            println("after currentInteraction.isDefined", id_testing)
             val env = if (currentInteraction.get.threadId.isEmpty) {
               val e = MsgUtil.encloseCtl(ctl)
               val tid = e.threadId
@@ -364,20 +366,10 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
           }
         }
       } else {
-        println("before controller.control(ctl)", id_testing)
+//        println("before controller.control(ctl)", id_testing)
         controller.control(ctl)
       }
     }
-
-    //TODO find another way
-//    def inbound(transform: Any => Any, op: => Unit): Unit = {
-//      container_!.interceptInbound(transform, op)
-//    }
-//
-//    def outbound(transform: Any => Any, op: => Unit): Unit = {
-//      container_!.interceptOutbound(transform, op)
-//    }
-//
 
     // little helpers to help keep test scripts clean and concise
     def backstate = container_!.backstate

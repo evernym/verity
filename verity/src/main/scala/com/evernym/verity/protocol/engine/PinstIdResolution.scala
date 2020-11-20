@@ -27,9 +27,9 @@ trait PinstIdResolver {
   */
 
 object PinstIdResolution {
-  val logger: Logger = getLoggerByName(s"PinstIdResolution")
+  val logger: Logger = getLoggerByName("PinstIdResolution")
 
-  val unknownRelationshipId: String = s"RelationshipId is unknown but required to resolve a PinstId for " +
+  val unknownRelationshipId: String = "RelationshipId is unknown but required to resolve a PinstId for " +
                                         s"${Scope.Relationship} Scope"
   val unknownThreadId: String = s"ThreadId is unknown but required to resolve a PinstId for ${Scope.Adhoc} Scope"
   val unknownContextualId: String = "Cannot use PinstIdResolver.V0_1 without contextualId, see note on contextualId"

@@ -78,7 +78,7 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
   def getMsgPayload(uid: MsgId): Option[PayloadWrapper] = msgPayloads.get(uid)
 
   def getMsgReq(uid: MsgId): Msg = getMsgOpt(uid).getOrElse(
-    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: " + uid)))
+    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: $uid")))
 
   def getReplyToMsgId(msgId: MsgId): Option[MsgId] = {
     refMsgIdToMsgId.get(msgId)
@@ -163,7 +163,7 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
       msgDetails += mda.uid -> nmd
 
     case meps: MsgPayloadStored =>
-      val metadata = meps.payloadContext.map { pc => PayloadMetadata(pc.msgType, pc.msgPackVersion) }
+      val metadata = meps.payloadContext.map { pc => PayloadMetadata(pc.msgType, pc.msgPackFormat) }
       msgPayloads += meps.uid -> PayloadWrapper(meps.payload.toByteArray, metadata)
 
     case me: MsgExpirationTimeUpdated =>

@@ -5,7 +5,7 @@ import java.nio.file.{Files, Path}
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider._
-import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider}
+import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider, VeritySdkProvider}
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 import org.json.JSONObject
@@ -17,20 +17,22 @@ trait ProcessSdkProvider
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
+  import VeritySdkProvider._
+
   private def printOut(output: String, outType: String = "OUTPUT"): Unit = {
-    println(s"====================    ${outType.capitalize}    ====================")
-    println(output)
-    println("====================  END OUTPUT  ====================")
+    debugPrintln(s"====================    ${outType.capitalize}    ====================")
+    debugPrintln(output)
+    debugPrintln("====================  END OUTPUT  ====================")
   }
   private def printScript(script: String): Unit = {
-    println("==================== SCRIPT START ====================")
-    println(script)
-    println("====================  SCRIPT END  ====================")
+    debugPrintln("==================== SCRIPT START ====================")
+    debugPrintln(script)
+    debugPrintln("====================  SCRIPT END  ====================")
   }
 
   case class RunSdkBuilder(script: String, provider: ProcessSdkProvider) {
     def execute(): String = {
-      if(print)printScript(script)
+      printScript(script)
 
       val env = provider.interpreter
       val scriptStream = new ByteArrayInputStream(script.getBytes())
@@ -60,8 +62,8 @@ trait ProcessSdkProvider
           val out = outBuffer.toString
           val err = errBuffer.toString
 
-          if(print && out.nonEmpty) printOut(out)
-          if(print && err.nonEmpty) printOut(err, "ERROR")
+          if(out.nonEmpty) printOut(out)
+          if(err.nonEmpty) printOut(err, "ERROR")
 
         }
 
@@ -138,8 +140,6 @@ trait ProcessSdkProvider
   def sdkConfig: SdkConfig
   def sdkVersion: String =
     sdkConfig.version.getOrElse(throw new Exception("This sdk requires a version to be configured"))
-
-  def print: Boolean = true
 
   def buildScript(imports: String, context: String, cmd: String): String
 

@@ -47,7 +47,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   type StateType = AgencyAgentState
   var state = new AgencyAgentState
 
-  override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
+  override final def receiveAgentCmd: Receive = cmdReceiver
 
   val cmdReceiver: Receive = LoggingReceive.withLabel("cmdReceiver") {
     case saw: SetAgentActorDetail               => setAgentActorDetail(saw)
@@ -404,6 +404,12 @@ trait AgencyAgentStateUpdateImpl
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {
     state = state.withThreadContext(threadContext)
+  }
+
+  def removeThreadContext(pinstId: PinstId): Unit = {
+    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+    val afterRemoval = curThreadContexts - pinstId
+    state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 
   def addPinst(pri: ProtocolRunningInstances): Unit = {

@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_1
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_GET_TOKEN
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
@@ -17,23 +17,23 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
 
   object v_0_1_req {
 
-    implicit val msgPackVersion: MsgPackVersion = MPV_INDY_PACK
+    implicit val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
 
-    def prepareGetToken(id: String, sponsorId: String, pushId: ComMethodDetail): PackedMsg = {
+    def prepareGetToken(id: String, sponsorId: String): PackedMsg = {
       logger.debug("Prepare get token msg for agency (MFV 0.1)")
-      preparePackedRequestForAgent(buildCoreGetTokenMsg(id, sponsorId, pushId))
+      preparePackedRequestForAgent(buildCoreGetTokenMsg(id, sponsorId))
     }
 
-    def prepareGetTokenRoute(id: String, sponsorId: String, pushId: ComMethodDetail): PackedMsg = {
+    def prepareGetTokenRoute(id: String, sponsorId: String): PackedMsg = {
       logger.debug("Prepare get token msg for agency (MFV 0.1)")
-      val agentPayloadMsgs = buildCoreGetTokenMsg(id, sponsorId, pushId)
+      val agentPayloadMsgs = buildCoreGetTokenMsg(id, sponsorId)
       val fwdRoute = FwdRouteMsg(agencyAgentDetailReq.DID, Left(sealParamFromEdgeToAgency))
       preparePackedRequestForRoutes(MFV_1_0, agentPayloadMsgs, List(fwdRoute))
     }
 
-    def buildCoreGetTokenMsg(id: String, sponsorId: String, pushId: ComMethodDetail):
+    def buildCoreGetTokenMsg(id: String, sponsorId: String):
     PackMsgParam = {
-      val agentMsg = GetToken(MSG_TYPE_DETAIL_GET_TOKEN, id, sponsorId, pushId)
+      val agentMsg = GetToken(MSG_TYPE_DETAIL_GET_TOKEN, id, sponsorId)
       AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToAgencyAgent)
     }
 

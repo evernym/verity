@@ -155,7 +155,7 @@ class WalletAPI(walletProvider: WalletProvider,
               logger.error("could not create new key", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
               MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
               throw new InternalServerErrorException(
-              UNHANDLED.statusCode, Option(s"unhandled error while creating new key"))
+              UNHANDLED.statusCode, Option("unhandled error while creating new key"))
           }
         case e: Exception =>
           logger.error("could not create new key", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
@@ -188,13 +188,13 @@ class WalletAPI(walletProvider: WalletProvider,
         case e: Exception if e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
           logger.error("error while storing their key: " + Exceptions.getErrorMsg(e))
           throw new BadRequestErrorException(
-            ALREADY_EXISTS.statusCode, Option(s"'their' pw keys are already in the wallet"))
+            ALREADY_EXISTS.statusCode, Option("'their' pw keys are already in the wallet"))
         case e: Exception =>
           logger.error("could not store their key", ("their_did", stk.theirDID),
             (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
           MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
           throw new InternalServerErrorException(
-            UNHANDLED.statusCode, Option(s"unhandled error while storing their key"))
+            UNHANDLED.statusCode, Option("unhandled error while storing their key"))
       }
     })
   }

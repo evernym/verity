@@ -17,7 +17,7 @@ trait TagLikeCompanion {
       case CLOUD_AGENT_KEY.tagName => CLOUD_AGENT_KEY
       case RECIP_KEY.tagName => RECIP_KEY
       case RECOVERY_KEY.tagName => RECOVERY_KEY
-      case v => throw new UnknownTag("invalid msg pack version found: " + v)
+      case v => throw new UnknownTag("invalid msg pack format found: " + v)
     }
   }
 }

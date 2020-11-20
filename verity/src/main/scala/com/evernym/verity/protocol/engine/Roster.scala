@@ -76,6 +76,12 @@ case class Roster[R](participants: Vector[ParticipantId] = Vector[ParticipantId]
 
   def roleForId(id: ParticipantId): Option[R] = participantIndex(id).flatMap(roleForIdx)
 
+  def hasOther: Boolean = {
+    selfIndex match {
+      case Some(_) => participants.length > 1
+      case None => participants.nonEmpty
+    }
+  }
   /**
     * In two participant protocols, returns the other participant.
     * @param index the participant index that is the basis for other; what is returned is the index that is *not* the supplied index; optional, defaults to self

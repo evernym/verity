@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackParam, PackedMsg}
@@ -68,7 +68,7 @@ trait AgentMsgSpecBase extends BasicSpecWithIndyCleanup with CommonSpecUtil {
 trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
   with AgentMsgSpecBase {
 
-  def msgPackVersion: MsgPackVersion
+  def msgPackFormat: MsgPackFormat
   def msgFamilyVersion: MsgFamilyVersion
   def msgClass: Class[_]
   def msg: Any
@@ -87,7 +87,7 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
         "should be able to pack it" in {
 
           val jsonString = DefaultMsgCodec.toJson(msg)
-          lastPackedMsg = agentMsgTransformer.pack(msgPackVersion,
+          lastPackedMsg = agentMsgTransformer.pack(msgPackFormat,
             jsonString, getEncryptParamFromAliceToAliceCloudAgent,
             PackParam(openWalletIfNotOpened = true))(aliceWap)
         }
@@ -104,7 +104,7 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
       "when tried to unpack msg sent by Alice" - {
         "should be able to unpack it successfully" in {
           val msgType = unpacked.msgType
-          unpacked.msgPackVersion shouldBe msgPackVersion
+          unpacked.msgPackFormat shouldBe msgPackFormat
           msgType.familyName shouldBe MSG_FAMILY_AGENT_PROVISIONING
           msgType.familyVersion shouldBe msgFamilyVersion
           msgType.msgName shouldBe MSG_TYPE_CONNECT

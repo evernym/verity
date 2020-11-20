@@ -4,7 +4,7 @@ import "scalapb/scalapb.proto";
 
 package com.evernym.verity.actor.agent;
 
-message ProtoMsgOrderDetail {
+message MsgOrders {
     int32 senderOrder = 1;
     map<string, int32> receivedOrders = 2;
 }

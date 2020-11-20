@@ -21,6 +21,9 @@ trait ProtocolContextApi[P,R,M,E,S,I]
 
   def signal(signalMsg: Any): Unit
 
+  def threadId: Option[ThreadId] = getInFlight.threadId
+  def `threadId_!`: ThreadId = getInFlight.threadId.getOrElse(throw new RuntimeException("threadId is unknown"))
+
   def getState: S
 
   def getBackstate: Backstate

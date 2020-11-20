@@ -49,7 +49,6 @@ trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
           buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
             status shouldBe OK
             val aps = responseTo[AppStateDetailedResp]
-            println("app state: " + aps)
             aps.currentState shouldBe STATUS_LISTENING
           }
         }
@@ -60,14 +59,16 @@ trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
   def testAppStateHealthCheck(): Unit = {
 
     "when sent get app state api call" - {
-      "should respond with initializing app state" in {
+      "should respond with listening app state" in {
 
         switchAppToListeningSate()
 
-        buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
-          status shouldBe OK
-          val appState = responseTo[AppStateDetailedResp]
-          appState.currentState shouldBe STATUS_LISTENING
+        eventually(timeout(Span(5, Seconds)), interval(Span(2, Seconds))) {
+          buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
+            status shouldBe OK
+            val appState = responseTo[AppStateDetailedResp]
+            appState.currentState shouldBe STATUS_LISTENING
+          }
         }
       }
     }

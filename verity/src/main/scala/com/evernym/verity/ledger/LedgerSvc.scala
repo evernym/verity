@@ -137,9 +137,9 @@ trait LedgerSvc {
       ledgerTxnExecutor.getTAA(submitterDetail)
     } catch {
       case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get taa from the ledger: " + e.getMessage)))
+        s"error while trying to get taa from the ledger: ${e.getMessage}")))
       case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get taa from the ledger:" + e.getMessage)))
+        s"error while trying to get taa from the ledger: ${e.getMessage}")))
     }
   }
 

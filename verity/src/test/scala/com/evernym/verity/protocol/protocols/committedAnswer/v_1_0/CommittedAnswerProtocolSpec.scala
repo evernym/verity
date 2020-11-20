@@ -295,7 +295,7 @@ class CommittedAnswerProtocolSpec
       }
     }
 
-    "Unexpected controll message produces problem report and do not change state" in { s =>
+    "Unexpected control message produces problem report and do not change state" in { s =>
       interaction (s.questioner, s.responder) {
 
         s.questioner ~ testAskQuestion(EXPIRATION_TIME)

@@ -9,7 +9,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ExceptionHandler.handleException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.cluster_singleton.legacyroutefixmanager.LegacyRouteFixManager
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.persistence.Done
@@ -25,6 +24,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
 import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.cluster_singleton.maintenance.ActorStateCleanupManager
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -50,7 +50,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       WatcherManager.name -> WatcherManager.props(appConfig, childActorDetails),
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
-      LegacyRouteFixManager.name -> LegacyRouteFixManager.props(appConfig)
+      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig)
     )
 
   implicit def appConfig: AppConfig = agentActorContext.appConfig
@@ -200,8 +200,8 @@ case class ForResourceWarningStatusMngr(override val cmd: Any) extends ForSingle
 case class ForMetricsHelper(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = METRICS_HELPER
 }
-case class ForLegacyRouteFixManager(override val cmd: Any) extends ForSingletonChild {
-  def getActorName: String = LEGACY_ROUTE_FIX_MANAGER
+case class ForActorStateCleanupManager(override val cmd: Any) extends ForSingletonChild {
+  def getActorName: String = ACTOR_STATE_CLEANUP_MANAGER
 }
 trait ForWatcherManager extends ForSingletonChild
 

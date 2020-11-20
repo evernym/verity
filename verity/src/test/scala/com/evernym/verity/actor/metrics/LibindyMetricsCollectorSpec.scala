@@ -25,18 +25,19 @@ class LibindyMetricsCollectorSpec
     with Eventually {
 
   implicit lazy val system: ActorSystem = AkkaTestBasic.system()
-  lazy val libindyMetricsTracker: ActorRef = platform.libindyMetricsTracker
+  lazy val libindyMetricsCollector: ActorRef = platform.libindyMetricsCollector
   lazy val clientIpAddress: String = "127.0.0.1"
   lazy val reqId: ReqId = UUID.randomUUID().toString
 
-  "LibindyMetricsTracker" - {
+  "LibindyMetricsCollector" - {
 
     "collected metrics from Libindy" - {
       "should be sent to Kamon" in {
-//        libindyMetricsTracker ! CollectLibindyMetrics()
-//        expectMsgType[CollectLibindySuccess]
+        libindyMetricsCollector ! CollectLibindyMetrics()
+        expectMsgType[CollectLibindySuccess]
         val criteria = MetricsFilterCriteria(filtered = false)
-        awaitCond(MetricsReader.getNodeMetrics(criteria).metrics.exists(metricDetail => metricDetail.name.contains("threadpool_active_count")), 100.seconds)
+        awaitCond(MetricsReader.getNodeMetrics(criteria).metrics.exists(
+          metricDetail => metricDetail.name.contains("libindy_threadpool_active_count")), 60.seconds)
       }
     }
   }

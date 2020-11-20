@@ -25,7 +25,7 @@ class LibindyMetricsCollector extends Actor {
     toFuture(Metrics.collectMetrics).onComplete {
       case Success(metrics) =>
         deserializeJsonStringToMap[String, Integer](metrics) foreach (
-          metrics_item => MetricsWriter.gaugeApi.update(metrics_item._1, metrics_item._2.longValue())
+          metrics_item => MetricsWriter.gaugeApi.update(s"libindy_${metrics_item._1}", metrics_item._2.longValue())
           )
         replyTo ! CollectLibindySuccess()
       case Failure(e) =>

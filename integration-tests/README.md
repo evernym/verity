@@ -21,7 +21,6 @@ Note the following:
 * akka actor event storage db (DynamoDB) must be running with tables created with no data (./devops/scripts/dynamodb/clean-setup.sh)
 * wallet storage db (mysql) must be running with db and tables created with no data (./devops/scripts/wallet-storage-mysql/clean-setup.sh)
 * aws s3 (zenko/cloudserver) must be running (./devops/scripts/s3server/start.sh)
-* target/genesis.txt file should be pointing to correct ledger
 
 Reset the ledger, DynamoDB (actor event storage), and MySQL (wallet) before running integration tests.
 

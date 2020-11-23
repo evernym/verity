@@ -22,8 +22,15 @@ trait VcxConnecting
   def connecting_1_0(sourceId: String, label: String, inviteUrl: String): ConnectionsV1_0 = {
     new UndefinedConnections_1_0 {
       override def accept(context: Context): Unit = {
-        val decoded = Base64Util.getBase64Decoded(inviteUrl.split("c_i=", 2).last)
-        val invite = new JSONObject(new String(decoded))
+        val decoded = Base64Util.urlDecodeToStr(
+          Uri(inviteUrl)
+            .query()
+            .getOrElse(
+              "c_i",
+              throw new Exception("Invalid invite URL")
+            )
+        )
+        val invite = new JSONObject(decoded)
         val updatedInvite = invite
           .put("@id", MsgUtil.newMsgId)
         connectingHandle = ConnectionApi.vcxCreateConnectionWithInvite(sourceId, updatedInvite.toString).get()
@@ -43,7 +50,7 @@ trait VcxConnecting
   def connectingWithOutOfBand_1_0(sourceId: String, label: String, inviteUrl: String): ConnectionsV1_0 = {
     new UndefinedConnections_1_0 {
       override def accept(context: Context): Unit = {
-        val decoded = Base64Util.getBase64Decoded(
+        val decoded = Base64Util.urlDecodeToStr(
           Uri(inviteUrl)
             .query()
             .getOrElse(
@@ -72,8 +79,15 @@ trait VcxConnecting
   def outOfBand_1_0(threadId: String, inviteUrl: String): OutOfBandV1_0 = {
     new UndefinedOutOfBand_1_0 {
       override def handshakeReuse(context: Context): Unit = {
-        val decoded = Base64Util.getBase64Decoded(inviteUrl.split("oob=", 2).last)
-        val invite = new JSONObject(new String(decoded))
+        val decoded = Base64Util.urlDecodeToStr(
+          Uri(inviteUrl)
+            .query()
+            .getOrElse(
+              "oob",
+              throw new Exception("Invalid invite URL")
+            )
+        )
+        val invite = new JSONObject(decoded)
         ConnectionApi.connectionSendReuse(outOfBandHandle, invite.toString).get()
       }
     }

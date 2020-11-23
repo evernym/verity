@@ -58,7 +58,8 @@ class MultiTenantSpec
         appEnv.config,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
-        appEnv.ledgerConfig.submitterRole
+        appEnv.ledgerConfig.submitterRole,
+        genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
       )
 
       "application setup" - {

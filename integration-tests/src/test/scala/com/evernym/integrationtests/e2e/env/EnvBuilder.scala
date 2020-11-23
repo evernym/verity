@@ -1,7 +1,7 @@
 package com.evernym.integrationtests.e2e.env
 
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
@@ -73,8 +73,6 @@ object Constants {
   final val LEDGER_PROTOCOL_VERSION = "protocol-version"
 
   final val SEED_CONFLICT_CHECK = "seed-conflict-check"
-
-  final val LOCAL_LEDGER_GENESIS_FILE_PATH = "target/genesis.txt"
 }
 
 import com.evernym.integrationtests.e2e.env.Constants._
@@ -83,6 +81,8 @@ trait IntegrationTestEnvBuilder {
   import IntegrationTestEnvBuilder._
 
   lazy val logger: Logger = getLoggerByClass(classOf[IntegrationTestEnvBuilder])
+
+  val suiteTempDir: Path
 
   //this points to environment name config to be used from "environment.conf"
   //actual spec may override it if it want to use specific configuration
@@ -211,7 +211,7 @@ trait IntegrationTestEnvBuilder {
     val conf = new ConfigReadHelper(ledgerConfig)
 
 
-    val genesisFilePath = resolveGenesisFile(conf, confName)
+    val genesisFilePath = resolveGenesisFile(conf, confName, suiteTempDir)
 
     val trusteeDID = stringReq(conf, LEDGER_GENESIS_SUBMITTER_DID, confName)
     val trusteeSeed = stringReq(conf, LEDGER_GENESIS_SUBMITTER_SEED, confName)
@@ -260,7 +260,7 @@ object IntegrationTestEnvBuilder {
     get(config.getConfigIntOption, { x => Some(x.toInt)}, key, instanceKey)
   }
 
-  def resolveGenesisFile(conf: ConfigReadHelper, confName: String): String = {
+  def resolveGenesisFile(conf: ConfigReadHelper, confName: String, tempDir: Path): String = {
     stringOption(conf, LEDGER_GENESIS_FILE_PATH, confName)
     .map{ p =>
       val rtn = new File(p).getAbsoluteFile
@@ -278,7 +278,10 @@ object IntegrationTestEnvBuilder {
             .getEntity
 
           val genesisContent = EntityUtils.toString(e)
-          val tempFile = Files.createTempFile("genesis-", ".txn")
+
+          val tempFile = tempDir.resolve("genesis.txn")
+//          val tempFile = Files.createTempFile("genesis-", ".txn")
+
           Files.write(tempFile, genesisContent.getBytes)
           tempFile.toFile
         }
@@ -457,12 +460,17 @@ case class VerityInstance(name: String,
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath)
     )
   }
 
   def isRunningLocally: Boolean = setup
 
   def appInstance: AppInstance = AppInstance.fromNameAndType(name, appType)
+
+  override def toString: String = {
+    s"[$name] type:$appType - setup:$setup - endpoint:$endpoint - seed:$seed - jdwp:$jdwpPort"
+  }
 }
 
 object SdkType {
@@ -521,6 +529,10 @@ case class SdkConfig(sdkTypeStr: String,
       case None     => port.map(p => UrlDetail(s"localhost:$p"))
     }
   }
+
+  override def toString: String = {
+    s"[$name] version:$version - port:$port - endpoint:$endpoint - keySeed:$keySeed - agentVerkey:$agentVerkey"
+  }
 }
 
 case class LedgerConfig(genesisFilePath: String,
@@ -529,7 +541,12 @@ case class LedgerConfig(genesisFilePath: String,
                         submitterRole: String,
                         timeout: Int,
                         extendedTimeout: Int,
-                        protocolVersion: Int)
+                        protocolVersion: Int) {
+
+  override def toString: String = {
+    s"[ledger] genesisFile:../${genesisFilePath.substring(genesisFilePath.indexOf("scalatest-runs"))} - submitterDID:$submitterDID - submitterSeed:$submitterSeed - submitterRole:$submitterRole"
+  }
+}
 
 case class IntegrationTestEnv(sdks: Set[SdkConfig],
                               verityInstances: Set[VerityInstance],
@@ -606,9 +623,7 @@ case class IntegrationTestEnv(sdks: Set[SdkConfig],
     * @return
     */
   lazy val commonEnvVars: List[EnvVar] = {
-    val gfpEnvVar = if (isAnyRemoteInstanceExists) {
-      Option(EnvVar("LIB_INDY_POOL_GENESIS_TXN_FILE_LOCATION", s"${ledgerConfig.genesisFilePath}"))
-    } else None
+    val gfpEnvVar = Option(EnvVar("GENESIS_TXN_FILE_LOCATION", s"${ledgerConfig.genesisFilePath}"))
 
     val urlMapperEnvVar = verityInstances.find(_.appType.isType(AppInstance.Consumer)).map { cas =>
       EnvVar("URL_MAPPER_SERVICE_PORT", s"${cas.endpoint.port}")
@@ -659,7 +674,7 @@ case class IntegrationTestEnv(sdks: Set[SdkConfig],
     s"\n<<< test-environment-configuration >>>" + "\n\n" +
       s"  SDKs:\n$sdksStr" + "\n\n" +
       s"  verity-instances:\n$verityInstancesStr" + "\n\n" +
-      s"  ledger-config: " + ledgerConfig
+      s"  ledger-config:\n     " + ledgerConfig
   }
 }
 

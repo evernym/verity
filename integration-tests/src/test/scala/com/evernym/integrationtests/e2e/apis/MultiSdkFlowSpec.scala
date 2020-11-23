@@ -62,7 +62,8 @@ class MultiSdkFlowSpec
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
         Option(appEnv.ledgerConfig.submitterDID),
-        Option(appEnv.ledgerConfig.submitterSeed)
+        Option(appEnv.ledgerConfig.submitterSeed),
+        genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
       )
 
       sdkBasicInteraction(apps, ledgerUtil)

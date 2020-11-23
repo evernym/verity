@@ -20,7 +20,7 @@ def test_genesis_is_avaiable(tries, interval_sec):
         except OSError as e:
             pass
 
-    eprint("Failed to retrieve genesis file after " + tries +" try(s)")
+    eprint("Failed to retrieve genesis file after " + str(tries) +" try(s)")
     return False
 
 def main():

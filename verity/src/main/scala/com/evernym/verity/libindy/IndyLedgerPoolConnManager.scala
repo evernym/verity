@@ -28,7 +28,9 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 
-class IndyLedgerPoolConnManager(appConfig: AppConfig, poolConfigName: Option[String] = None)
+class IndyLedgerPoolConnManager(appConfig: AppConfig,
+                                poolConfigName: Option[String] = None,
+                                genesisFile: Option[String] = None)
   extends ConfigurableLedgerPoolConnManager(appConfig)
     with LibIndyCommon {
 
@@ -40,8 +42,10 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig, poolConfigName: Option[Str
 
   private var heldPoolConn: Option[Pool] = None
 
-  private val configName = poolConfigName
+  private def configName = poolConfigName
     .getOrElse(appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_NAME))
+
+  override val genesisTxnFilePath: String = genesisFile.getOrElse(super.genesisTxnFilePath)
 
   val logger: Logger = getLoggerByClass(classOf[IndyLedgerPoolConnManager])
 

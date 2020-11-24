@@ -71,21 +71,21 @@ class SdkFlowSpec
         sdkIssuerSetupInteraction(apps, ledgerUtil)
       }
 
-//      "basic interaction" - {
-//        sdkBasicInteractions(apps, ledgerUtil)
-//      }
+      "basic interaction" - {
+        sdkBasicInteractions(apps, ledgerUtil)
+      }
 
       "oob interaction" - {
         sdkOobInteractions(apps, ledgerUtil)
       }
 
-//      "test metrics" - {
-//        testMetricsForVerityInstances(apps)
-//      }
-//
-//      "test message tracking" - {
-//        testMessageTrackingForVerityInstances(apps)
-//      }
+      "test metrics" - {
+        testMetricsForVerityInstances(apps)
+      }
+
+      "test message tracking" - {
+        testMessageTrackingForVerityInstances(apps)
+      }
 
       "sdk cleanup" - {
         apps.forEachApplication(cleanupSdk)
@@ -182,6 +182,14 @@ class SdkFlowSpec
       Map("license_num" -> "123", "name" -> "Bob"),
       "cred_name1",
       "tag"
+    )
+
+    presentProofViaOob_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("name", "license_num")
     )
 
   }

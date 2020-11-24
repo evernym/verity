@@ -2,6 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.vcx
 
 import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
+import com.evernym.verity.sdk.protocols.presentproof.common.Predicate
 //import com.evernym.verity.protocol.protocols.vcx.presentProof.v_0_6.ProvingMsgFamily
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg.vcxPayloadObject
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedPresentProof_1_0
@@ -13,10 +14,14 @@ import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.utils.Context
 import org.json.JSONObject
 
-protected trait VcxPresentProof
+trait VcxPresentProof
   extends VcxHolds {
 
-  def presentProof_1_0(forRelationship: DID, name: String, attrs: Attribute*): PresentProofV1_0 = throw new NotImplementedError
+  def presentProof_1_0(forRelationship: String,
+                       name: String,
+                       proofAttrs: Array[Attribute],
+                       proofPredicate: Array[Predicate],
+                       byInvitation: Boolean = false): PresentProofV1_0 = throw new NotImplementedError
 
   def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
@@ -44,6 +49,33 @@ protected trait VcxPresentProof
       }
     }
   }
+
+  def presentProof_1_0(forRelationship: String, threadId: String, offer: String): PresentProofV1_0 =
+    new UndefinedPresentProof_1_0 {
+      override def accept(context: Context): Unit = {
+//        val i = interaction(threadId).asInstanceOf[HolderProofInteraction]
+        val connHandle = connectionHandle(forRelationship)
+
+        val handle = DisclosedProofApi.proofCreateWithRequest(threadId, offer).get
+
+        val creds = new JSONObject(
+          DisclosedProofApi.proofRetrieveCredentials(handle).get()
+        )
+
+        val attrsObject = creds.getJSONObject("attrs")
+        val attrs = attrsObject.keySet()
+        val selectedCredentials = new JSONObject
+        attrs.forEach { el =>
+          val credential = new JSONObject
+          credential.put("credential", attrsObject.getJSONArray(el).get(0))
+          selectedCredentials.put(el, credential)
+        }
+        creds.put("attrs", selectedCredentials)
+        DisclosedProofApi.proofGenerate(handle, creds.toString(), "{}").get()
+        DisclosedProofApi.proofSend(handle, connHandle).get()
+        DisclosedProofApi.proofRelease(handle)
+      }
+    }
 
   def interactProofRequest_1_0(metaData: VcxMsgMetaData, payload: JSONObject): JSONObject = {
     val payloadMsg = vcxPayloadObject(payload)

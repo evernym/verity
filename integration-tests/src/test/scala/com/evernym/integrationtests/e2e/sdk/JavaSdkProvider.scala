@@ -2,14 +2,13 @@ package com.evernym.integrationtests.e2e.sdk
 
 import java.nio.file.Path
 
-import com.evernym.verity.protocol.engine.DID
 import com.evernym.integrationtests.e2e.env.SdkConfig
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.IssueCredential
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.IssuerSetup
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
-import com.evernym.verity.sdk.protocols.outofband.OutOfBand
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.PresentProof
 import com.evernym.verity.sdk.protocols.presentproof.common.Attribute
@@ -91,8 +90,10 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
                                    credDefId: String,
                                    credValues: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 =
-    IssueCredential.v1_0(forRelationship, credDefId, credValues.asJava, comment, price)
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 =
+    IssueCredential.v1_0(forRelationship, credDefId, credValues.asJava, comment, price, autoIssue, byInvitation)
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 =
     IssueCredential.v1_0(forRelationship, threadId)

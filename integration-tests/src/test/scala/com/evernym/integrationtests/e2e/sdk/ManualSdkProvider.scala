@@ -152,7 +152,9 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
                                    credDefId: String,
                                    credValues: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 = ???
+                                   price: String,
+                                   autoIssue: Boolean,
+                                   byInvitation: Boolean): IssueCredentialV1_0 = ???
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 =
     new UndefinedIssueCredential_1_0() {
@@ -186,6 +188,8 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
       }
     }
   }
+
+
 }
 
 object ManualSdkProvider {

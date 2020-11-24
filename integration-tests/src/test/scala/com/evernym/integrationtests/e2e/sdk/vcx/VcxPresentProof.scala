@@ -3,8 +3,6 @@ package com.evernym.integrationtests.e2e.sdk.vcx
 import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 //import com.evernym.verity.protocol.protocols.vcx.presentProof.v_0_6.ProvingMsgFamily
-import com.evernym.verity.util.HashAlgorithm.SHA256
-import com.evernym.verity.util.HashUtil.{safeMultiHash, _}
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg.vcxPayloadObject
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedPresentProof_1_0
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxPresentProof.HolderProofInteraction
@@ -50,7 +48,7 @@ protected trait VcxPresentProof
   def interactProofRequest_1_0(metaData: VcxMsgMetaData, payload: JSONObject): JSONObject = {
     val payloadMsg = vcxPayloadObject(payload)
     payloadMsg.put("msg_ref_id", metaData.msgId)
-    val threadId = safeMultiHash(SHA256, metaData.senderDid).hex
+    val threadId = payloadMsg.getString("thread_id")
     val proofHandle = DisclosedProofApi.proofCreateWithRequest(threadId, payloadMsg.toString()).get()
     val credentials = DisclosedProofApi.proofRetrieveCredentials(proofHandle).get()
     DisclosedProofApi.proofRelease(proofHandle)

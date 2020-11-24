@@ -2,19 +2,19 @@ package com.evernym.integrationtests.e2e.apis
 
 import java.util.UUID
 
-import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
-import com.evernym.verity.testkit.util.LedgerUtil
-import com.evernym.verity.util.StrUtil
 import com.evernym.integrationtests.e2e.env.AppInstance.Verity
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
 import com.evernym.integrationtests.e2e.flow._
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
+import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
+import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
+import com.evernym.verity.testkit.util.LedgerUtil
+import com.evernym.verity.util.StrUtil
 import org.scalatest.concurrent.Eventually
 
 
@@ -59,7 +59,8 @@ class SdkFlowSpec
         appEnv.config,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
-        appEnv.ledgerConfig.submitterRole
+        appEnv.ledgerConfig.submitterRole,
+        genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
       )
 
       "application setup" - {
@@ -71,7 +72,11 @@ class SdkFlowSpec
       }
 
       "basic interaction" - {
-        sdkAriesInteropInteraction(apps, ledgerUtil)
+        sdkBasicInteractions(apps, ledgerUtil)
+      }
+
+      "oob interaction" - {
+        sdkOobInteractions(apps, ledgerUtil)
       }
 
       "test metrics" - {
@@ -129,7 +134,7 @@ class SdkFlowSpec
     )
   }
 
-  def sdkAriesInteropInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+  def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
 
     val connectionId = UUID.randomUUID().toString
 
@@ -174,6 +179,28 @@ class SdkFlowSpec
       "2018-12-13T17:29:34+0000",
       "en"
     )
+  }
+
+  def sdkOobInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+    val connectionId = UUID.randomUUID().toString
+
+    issueCredentialViaOob_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      Map("license_num" -> "123", "name" -> "Bob"),
+      "cred_name1",
+      "tag"
+    )
+
+    presentProofViaOob_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("name", "license_num")
+    )
+
   }
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {

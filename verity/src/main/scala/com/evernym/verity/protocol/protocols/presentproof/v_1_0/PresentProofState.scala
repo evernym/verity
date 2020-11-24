@@ -5,7 +5,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 trait Event
 
 case class StateData(requests: List[ProofRequest] = List(),
-                     proposals: List[Object] = List(),
+                     proposals: List[PresentationPreview] = List(),
                      presentation: Option[ProofPresentation] = None,
                      presentedAttributes: Option[AttributesPresented] = None,
                      verificationResults: Option[String] = None,
@@ -14,6 +14,25 @@ case class StateData(requests: List[ProofRequest] = List(),
                      logoUrl: Option[String] = None,
                      agencyVerkey: Option[String] = None,
                      publicDid: Option[String] = None) {
+
+  def addRequest(request: String): StateData = {
+    addRequest(DefaultMsgCodec.fromJson[ProofRequest](request))
+  }
+
+  def addRequest(request: ProofRequest): StateData = {
+    copy(requests = request :: requests)
+  }
+
+  def addProposal(attrs: Seq[PreviewAttribute], preds: Seq[PreviewPredicate]): StateData = {
+    addProposal(PresentationPreview(
+      attrs.map(a => fromEvent(a)),
+      preds.map(p => fromEvent(p)),
+    ))
+  }
+
+  def addProposal(proposal: PresentationPreview): StateData = {
+    copy(proposals = proposal :: proposals)
+  }
 
   def addPresentation(presentation: String): StateData = {
     copy(presentation = Some(DefaultMsgCodec.fromJson[ProofPresentation](presentation)))
@@ -27,13 +46,31 @@ case class StateData(requests: List[ProofRequest] = List(),
     copy(verificationResults = Some(results))
   }
 
-
   def addAck(status: String): StateData = {
     val wasAcknowledged = status.toUpperCase() match {
       case "OK" => true
       case _ => false
     }
     copy(presentationAcknowledged = wasAcknowledged)
+  }
+
+  def fromEvent(pa: PreviewAttribute): PresentationPreviewAttribute = {
+    PresentationPreviewAttribute(
+      pa.name,
+      pa.credDefId.headOption,
+      pa.mimeType.headOption,
+      pa.value.headOption,
+      pa.referent.headOption
+    )
+  }
+
+  def fromEvent(pp: PreviewPredicate): PresentationPreviewPredicate = {
+    PresentationPreviewPredicate(
+      pp.name,
+      pp.credDefId,
+      pp.predicate,
+      pp.threshold
+    )
   }
 }
 
@@ -57,6 +94,9 @@ object States {
     val req = DefaultMsgCodec.fromJson[ProofRequest](requestStr)
     RequestSent(StateData(requests = List(req)))
   }
+  def initProposalReceived(attrs: Seq[PreviewAttribute], preds: Seq[PreviewPredicate]): ProposalReceived = {
+    ProposalReceived(StateData().addProposal(attrs, preds))
+  }
 
   // Prover States
   case class RequestReceived(data: StateData) extends State with HasData
@@ -66,5 +106,7 @@ object States {
     val req = DefaultMsgCodec.fromJson[ProofRequest](requestStr)
     RequestReceived(StateData(requests = List(req)))
   }
-
+  def initProposalSent(attrs: Seq[PreviewAttribute], preds: Seq[PreviewPredicate]): ProposalSent = {
+    ProposalSent(StateData().addProposal(attrs, preds))
+  }
 }

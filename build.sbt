@@ -9,8 +9,8 @@ import Util.amGitlabCI
 
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
-import SharedLibrary.{LibPack, defaultUpdateSharedLibraries, updateSharedLibraries, managedSharedLibTrigger}
-import Util.{addDeps, buildPackageMappings, cloudrepoUsername, cloudrepoPassword, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
+import SharedLibrary.{LibPack, defaultUpdateSharedLibraries, updateSharedLibraries}
+import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
@@ -21,7 +21,7 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1542"
+val debPkgDepLibIndyMinVersion = "1.15.0~1560"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
@@ -323,6 +323,7 @@ lazy val commonLibraryDependencies = {
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
     "com.evernym.verity" % "verity-sdk" % "0.0.0-SNAPSHOT",
+
     "net.glxn" % "qrgen" % "1.4", // https://mvnrepository.com/artifact/net.glxn/qrgen
     "com.google.guava" % "guava" % "28.1-jre",
 

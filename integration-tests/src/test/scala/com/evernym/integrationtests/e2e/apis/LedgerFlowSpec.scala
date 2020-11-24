@@ -2,6 +2,7 @@ package com.evernym.integrationtests.e2e.apis
 
 import java.util.UUID
 
+import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
@@ -13,6 +14,8 @@ import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory, ConfigUtil => TypesafeConfigUtil}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
@@ -22,12 +25,14 @@ import scala.collection.JavaConverters._
 
 @Integration
 class LedgerFlowSpec extends BasicSpec
-    with Eventually
-    with LibIndyCommon
-    with CommonSpecUtil
-    with ScalaFutures
-    with BeforeAndAfterEach
-    with CancelGloballyAfterFailure {
+  with Eventually
+  with TempDir
+  with IntegrationEnv
+  with LibIndyCommon
+  with CommonSpecUtil
+  with ScalaFutures
+  with BeforeAndAfterEach
+  with CancelGloballyAfterFailure {
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
@@ -35,7 +40,6 @@ class LedgerFlowSpec extends BasicSpec
   override lazy val appConfig = new TestAppConfig
 
   var taaEnabled = false
-  var poolConnManager: LedgerPoolConnManager = newPoolConnManager(taaEnabled)
   var ledgerUtil: LedgerUtil = newLedgerUtil(taaEnabled)
 
   def newConfig(enableTAA: Boolean, poolName: String = UUID.randomUUID().toString): Config = {
@@ -46,23 +50,30 @@ class LedgerFlowSpec extends BasicSpec
   }
 
   def newPoolConnManager(taaEnabled: Boolean): LedgerPoolConnManager = {
-    appConfig.setConfig(newConfig(taaEnabled))
-    val pc = new IndyLedgerPoolConnManager(appConfig)
+    val pc = new IndyLedgerPoolConnManager(
+      appConfig,
+      genesisFile = Some(testEnv.ledgerConfig.genesisFilePath)
+    )
     pc.open()
     pc
   }
 
   def newLedgerUtil(enabled: Boolean, version: String = "1.0.0") : LedgerUtil = {
     val taa = if(enabled) ConfigUtil.findTAAConfig(appConfig, version) else None
-    new LedgerUtil(appConfig, poolConnManager, taa = taa)
+    buildLedgerUtil(
+      appConfig,
+      taa = taa,
+      genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
+    )
   }
 
   def init(taaEnabled: Boolean): Unit = {
-    poolConnManager = newPoolConnManager(taaEnabled)
+    appConfig.setConfig(newConfig(taaEnabled))
     ledgerUtil = newLedgerUtil(taaEnabled)
   }
 
   override def beforeEach(): Unit = {
+    super.beforeEach()
     try {
       init(true)
     } catch {

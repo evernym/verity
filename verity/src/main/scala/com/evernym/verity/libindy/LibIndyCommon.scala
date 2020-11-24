@@ -21,7 +21,8 @@ trait LibIndyCommon {
     liLogger.debug("lib indy dir path: " + lifp)
     lifp
   }
-  val genesisTxnFilePath: String = {
+
+  def genesisTxnFilePath: String = {
     val gptf = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
     gptf
   }

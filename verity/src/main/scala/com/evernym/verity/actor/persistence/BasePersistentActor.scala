@@ -7,23 +7,23 @@ import akka.actor.{ActorRef, Kill, Stash}
 import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
-import com.evernym.verity.constants.Constants._
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.MultiEvent
-import com.evernym.verity.util.Util._
-import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.transformations.transformers.<=>
+import com.evernym.verity.util.Util._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -290,10 +290,10 @@ trait BasePersistentActor
       val curTime = LocalDateTime.now
       val millis = ChronoUnit.MILLIS.between(preStartTime, curTime)
       if (millis > warnRecoveryTime)
-        logger.warn(s"[$actorId] recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
+        logger.warn(s"[$actorId] long actor recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
           (LOG_KEY_PERSISTENCE_ID, persistenceId))
       else
-        logger.debug(s"[$actorId] recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
+        logger.debug(s"[$actorId] actor recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
           (LOG_KEY_PERSISTENCE_ID, persistenceId))
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_RECOVERY)
       postRecoveryCompleted()

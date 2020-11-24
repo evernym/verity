@@ -9,6 +9,7 @@ import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
+import com.evernym.integrationtests.e2e.sdk.vcx.VcxIssueCredential
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
@@ -608,13 +609,6 @@ trait InteractiveSdkFlow {
         holderSdk.issueCredentialComplete_1_0()
       }
 
-      //below was only needed when testing aries interop with IBM's api
-//      s"[$issuerName] received ack" in {
-//        issuerMsgReceiver.expectMsg("ack-received") {resp =>
-//          resp shouldBe an[JSONObject]
-//        }
-//      }
-
       def checkStatus(fromReceiver: VeritySdkProvider with MsgReceiver, expectedStatus: String): Unit = {
         fromReceiver.expectMsg("status-report") {resp =>
           resp shouldBe an[JSONObject]
@@ -634,19 +628,21 @@ trait InteractiveSdkFlow {
 
   def issueCredentialViaOob_1_0(issuer: ApplicationAdminExt,
                                 holder: ApplicationAdminExt,
+                                relationshipId: String,
                                 credValues: Map[String, String],
                                 credDefName: String,
                                 credTag: String)
                                (implicit scenario: Scenario): Unit = {
     val issuerSdk = issuer.sdks.head
     val holderSdk = holder.sdks.head
-    issueCredentialViaOob_1_0(issuerSdk, issuerSdk, holderSdk, holderSdk, credValues, credDefName, credTag)
+    issueCredentialViaOob_1_0(issuerSdk, issuerSdk, holderSdk, holderSdk, relationshipId, credValues, credDefName, credTag)
   }
 
   def issueCredentialViaOob_1_0(issuerSdk: VeritySdkProvider,
                                 issuerMsgReceiverSdkProvider: VeritySdkProvider,
                                 holderSdk: VeritySdkProvider,
                                 holderMsgReceiverSdkProvider: VeritySdkProvider,
+                                relationshipId: String,
                                 credValues: Map[String, String],
                                 credDefName: String,
                                 credTag: String)
@@ -655,6 +651,9 @@ trait InteractiveSdkFlow {
     val holderName = holderSdk.sdkConfig.name
 
     var relDid = ""
+    var inviteUrl = ""
+    var connReq: JSONObject = null
+    var inviteeConnection: ConnectionsV1_0 = null
 
     s"issue credential (1.0) to $holderName from $issuerName via Out-of-band invite" - {
       val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
@@ -673,9 +672,84 @@ trait InteractiveSdkFlow {
         val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
         val issueCred = issuerSdk.issueCredential_1_0(relDid, credDefId, credValues, "comment-123", byInvitation = true)
         issueCred.offerCredential(issuerSdk.context)
+        issuerMsgReceiver.expectMsg("protocol-invitation") { msg =>
+          inviteUrl = msg.getString("inviteURL")
+        }
+      }
+
+      s"[$holderName] accept connection from invite" in {
+        inviteeConnection = holderSdk.connectingWithOutOfBand_1_0(relationshipId, "", inviteUrl)
+        inviteeConnection.accept(holderSdk.context)
+      }
+
+      s"[$issuerName] receive a signal about 'request-received' msg" in {
+        issuerMsgReceiver.expectMsg("request-received") { msg =>
+          connReq = msg
+        }
+      }
+
+      s"[$issuerName] receive a signal about 'response-sent' msg" in {
+        issuerMsgReceiver.expectMsg("response-sent") { connResp =>
+          println("connResp: " + connResp)
+          val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
+          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
+          val theirDID = connReq.getJSONObject("conn").getString("DID")
+          val relData = RelData(relationshipId, connJson.getString("DID"), Option(theirDID))
+          issuerSdk.updateRelationship(relationshipId, relData)
+        }
+      }
+
+      s"[$holderName] receives 'response' message" taggedAs UNSAFE_IgnoreLog in {
+        holderMsgReceiver.expectMsg("response") { response =>
+          val sigData = response.getJSONObject("connection~sig").getString("sig_data")
+          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
+          val myDID = connReq.getJSONObject("conn").getString("DID")
+          val relData = RelData(relationshipId, myDID, Option(connJson.getString("DID")))
+          inviteeConnection.status(holderSdk.context)
+          holderSdk.updateRelationship(relationshipId, relData)
+        }
+      }
+
+      s"[$holderName] request credential from attached offer" in {
+        val offerMsg = {
+          val inviteStr = Base64Util.urlDecodeToStr(
+            Uri(inviteUrl)
+              .query()
+              .getOrElse(
+                "oob",
+                fail("must have oob query parameter")
+              )
+          )
+          Base64Util.decodeToStr(
+            new JSONObject(inviteStr)
+              .getJSONArray("request~attach")
+              .getJSONObject(0)
+              .getJSONObject("data")
+              .getString("base64")
+          )
+        }
+        val tid = threadId(new JSONObject(offerMsg))
+
+        val forRel = holderSdk.relationship_!(relationshipId).owningDID
+        val issue = holderSdk.asInstanceOf[VcxIssueCredential].issueCredential_1_0(forRel, tid, offerMsg)
+        issue.requestCredential(holderSdk.context)
+      }
+
+      s"[$issuerName] issue credential" in {
+        issuerMsgReceiver.expectMsg("accept-request") { askAccept =>
+          val tid = threadId(askAccept)
+          val forRel = issuerSdk.relationship_!(relationshipId).owningDID
+          issuerSdk.issueCredential_1_0(forRel, tid).issueCredential(issuerSdk.context)
+        }
+
         issuerMsgReceiver.expectMsg("sent") { msg =>
 
         }
+      }
+
+      s"[$holderName] receive credential" taggedAs UNSAFE_IgnoreLog in {
+        holderMsgReceiver.expectMsgOnly("cred-received")
+        holderSdk.issueCredentialComplete_1_0()
       }
     }
 

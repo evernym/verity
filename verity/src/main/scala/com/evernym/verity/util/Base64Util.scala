@@ -11,6 +11,7 @@ object Base64Util {
   def getBase64UrlDecoded(str: String): Array[Byte] = Base64.getUrlDecoder.decode(str)
   def getBase64MultiDecoded(str: String): Array[Byte] = Base64.getDecoder.decode(str.replace('_', '/').replace('-', '+'))
 
+  def decodeToStr(str: String): String = new String(getBase64Decoded(str))
   def urlDecodeToStr(str: String): String = new String(getBase64UrlDecoded(str))
 
   def getBase64String(seedOpt: Option[String] = None, length: Int): String = {

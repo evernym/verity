@@ -9,13 +9,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import com.evernym.integrationtests.e2e.env.SdkConfig
+import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, ProtoRef}
-import com.evernym.verity.testkit.listener.Listener
-import com.evernym.verity.util.Base58Util
-import com.evernym.integrationtests.e2e.env.SdkConfig
-import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -33,6 +31,8 @@ import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryConfig, WriteCredentialDefinitionV0_6}
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.{Context, JsonUtil, Util}
+import com.evernym.verity.testkit.listener.Listener
+import com.evernym.verity.util.Base58Util
 import org.hyperledger.indy.sdk.crypto.Crypto
 import org.json.{JSONArray, JSONObject}
 
@@ -391,6 +391,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     credOfferJson.put("~for_relationship", forRelationship)
     credOfferJson.put("cred_def_id", credDefId)
     credOfferJson.put("credential_values", credValues)
+    credOfferJson.put("by_invitation", byInvitation)
 
     new UndefinedIssueCredential_1_0 {
       override def offerCredential(context: Context): Unit = {

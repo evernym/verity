@@ -3,10 +3,10 @@ package com.evernym.integrationtests.e2e.sdk.process
 import java.lang
 import java.nio.file.Path
 
-import com.evernym.verity.protocol.engine.DID
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.InterpreterEnv
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
@@ -232,7 +232,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         "IssueCredential",
         this.version,
         "offerCredential",
-        Seq(forRelationship, None, credDefId, credValues, comment)
+        Seq(forRelationship, None, credDefId, credValues, comment, price, autoIssue, byInvitation)
       )
     }
 

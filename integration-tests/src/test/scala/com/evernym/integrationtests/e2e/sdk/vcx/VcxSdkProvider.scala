@@ -1,8 +1,5 @@
 package com.evernym.integrationtests.e2e.sdk.vcx
 
-import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgFamily}
-import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg._
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
@@ -11,6 +8,9 @@ import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, MsgReceiver}
 import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
+import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.engine.{DID, MsgFamily}
+import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.relationship.v1_0.RelationshipV1_0
@@ -107,7 +107,8 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
                                   => interactCred_1_0(vcxMsg.meta, vcxMsg.msg)
       case "aries" if vcxMsg.payloadMsgType.contains("presentation-request")
                                   => interactProofRequest_1_0(vcxMsg.meta, vcxMsg.msg)
-      case _                      => throw new Exception("Unknown interaction for VCX")
+      case _
+                                  => throw new Exception("Unknown interaction for VCX")
     }
   }
 

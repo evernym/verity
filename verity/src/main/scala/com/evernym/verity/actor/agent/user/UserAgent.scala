@@ -158,9 +158,9 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val packagingContext = cmu.packaging.map(p => PackagingContext(p.pkgType))
     val endpoint: EndpointADTUntyped = cmu.typ match {
       case EndpointType.PUSH        => PushEndpoint(cmu.id, cmu.value)
+      case EndpointType.SPR_PUSH    => SponsorPushEndpoint(cmu.id, cmu.value)
       case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
       case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
-      case EndpointType.SPR_PUSH    => SponsorPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
     }
     state = state.copy(relationship = state.relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint))
   }

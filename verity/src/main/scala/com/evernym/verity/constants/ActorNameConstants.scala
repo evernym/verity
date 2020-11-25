@@ -20,7 +20,7 @@ object ActorNameConstants {
   val ITEM_CONTAINER_REGION_ACTOR_NAME = "ItemContainer"
   val MSG_TRACER_REGION_ACTOR_NAME = "MsgTracer"
   val MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME = "MsgProgressTracker"
-  val LEGACY_ROUTE_UPDATER = "LegacyRouteUpdater"
+  val ACTOR_STATE_CLEANUP_EXECUTOR = "ActorStateCleanupExecutor"
   val RESOURCE_USAGE_TRACKER = "resource-usage-tracker"
   val LIBINDY_METRICS_TRACKER = "LibindyMetricsTracker"
 
@@ -34,7 +34,7 @@ object ActorNameConstants {
   val WATCHER_MANAGER = "watcher-manager"
   val USER_AGENT_PAIRWISE_ACTOR_WATCHER = "user-agent-pairwise-actor-watcher"
   val METRICS_HELPER = "metrics-helper"
-  val LEGACY_ROUTE_FIX_MANAGER = "legacy-route-fix-manager"
+  val ACTOR_STATE_CLEANUP_MANAGER = "actor-state-cleanup-manager"
 
   //actor path/name related
   val SHARDED_ACTOR_PATH_PREFIX = "/system/sharding"

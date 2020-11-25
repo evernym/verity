@@ -5,6 +5,7 @@ import java.util.UUID
 import com.evernym.verity.util.ExceptionUtil
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedProvision_0_7
+import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.WalletConfigKey
 import com.evernym.sdk.vcx.VcxException
 import com.evernym.sdk.vcx.utils.UtilsApi
@@ -16,6 +17,8 @@ import com.evernym.verity.sdk.wallet.DefaultWalletConfig
 import org.json.JSONObject
 
 protected trait VcxProvision {
+  implicit val shouldPrintDebug: Boolean
+
   def sdkConfig: SdkConfig
 
   def provisionImpl(context: Context): Context = {
@@ -35,7 +38,7 @@ protected trait VcxProvision {
       .put("wallet_key", walletVal._2)
       .put("pool_name", UUID.randomUUID().toString)
 
-    println("provisionConfig: " + provisionConfig.toString())
+    debugPrintln("provisionConfig: " + provisionConfig.toString())
     val config = new JSONObject(
       UtilsApi.vcxAgentProvisionAsync(provisionConfig.toString()).get
     )

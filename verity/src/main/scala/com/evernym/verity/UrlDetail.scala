@@ -41,7 +41,7 @@ object UrlDetail {
             //only retry with 'http' if no protocol is given but it does include some port
             (e.getMessage.startsWith("no protocol: ") && urlStr.contains(":")) ||
               (e.getMessage.startsWith("unknown protocol: ") && !urlStr.contains("://")) =>
-          apply(HTTP_PROTOCOL + s"://" + urlStr)
+          apply(HTTP_PROTOCOL + "://" + urlStr)
       case x @ (_: MalformedURLException | _: RuntimeException) =>
         throw new InvalidComMethodException(Option(s"invalid http endpoint: '$urlStr' reason: ${x.getMessage}"))
     }

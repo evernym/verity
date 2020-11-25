@@ -7,7 +7,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -26,14 +26,14 @@ import org.scalatest.time.{Seconds, Span}
 
 class ConsumerUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
   establishConnByAnsweringInvite()
   sendReceiveMsgSpecs()
 }
 
 class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
   establishConnBySendAndReceivingInviteResp()
   sendReceiveMsgSpecs()
 }
@@ -105,7 +105,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
           Option(KeyInfo(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
         )
 
-        val msg = buildReceivedReqMsg_V_0_5(AgentPackMsgUtil(msgs, theirAgentEncParam)(mockEdgeAgent.v_0_5_req.msgPackVersion))
+        val msg = buildReceivedReqMsg_V_0_5(AgentPackMsgUtil(msgs, theirAgentEncParam)(mockEdgeAgent.v_0_5_req.msgPackFormat))
         uap ! wrapAsPackedMsgParam(msg)
         expectMsgType[PackedMsg]
       }
@@ -389,7 +389,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
           val mtd = TypeDetail(MSG_TYPE_GET_MSGS, MTV_1_0)
           val msg = GetMsgsReqMsg_MFV_0_5(mtd, None)
           val pme = MsgEnvelope(msg, msg.typedMsg.msgType, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID)
-          connectingRegion ! ForIdentifier(connectingActorId, ProtocolCmd(pme, null, null))
+          connectingRegion ! ForIdentifier(connectingActorId, ProtocolCmd(pme, null))
           val srm = expectMsgType[ProtocolSyncRespMsg]
           val msgs = srm.msg.asInstanceOf[List[MsgDetail]]
         }

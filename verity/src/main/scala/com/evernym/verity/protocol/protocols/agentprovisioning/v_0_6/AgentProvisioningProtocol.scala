@@ -2,9 +2,9 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.AGENT_ALREADY_CREATED
+import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.evernym.verity.actor._
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg, WalletParam}
 import com.evernym.verity.protocol.engine._
@@ -89,6 +89,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def handleCreateAgentMsg(ca: CreateAgentReqMsg_MFV_0_6, oa: State.Initialized): Unit = {
+    if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
     val fromDID = ca.fromDID
     val fromDIDVerKey = ca.fromDIDVerKey
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_SEED)

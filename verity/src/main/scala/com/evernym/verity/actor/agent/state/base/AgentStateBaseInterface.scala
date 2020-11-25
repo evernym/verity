@@ -18,20 +18,27 @@ trait AgentStateUpdateInterface {
   def setAgencyDID(did: DID): Unit
   def setSponsorRel(rel: SponsorRel): Unit
   def addThreadContextDetail(threadContext: ThreadContext): Unit
-  def addPinst(pri: ProtocolRunningInstances): Unit
-
+  def removeThreadContext(pinstId: PinstId): Unit
   def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
     val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
     val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
     addThreadContextDetail(ThreadContext(contexts = updatedThreadContextDetails))
   }
 
+  //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
+  //the below mentioned 'addPinst' will no longer be required.
+  def addPinst(pri: ProtocolRunningInstances): Unit
+
+  //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
+  //the below mentioned 'addPinst' will no longer be required.
   def addPinst(protoRef: ProtoRef, pinstId: PinstId): Unit = {
     val curProtoInstances = state.protoInstances.map(_.instances).getOrElse(Map.empty)
     val updatedProtoInstances = curProtoInstances ++ Map(protoRef.toString -> pinstId)
     addPinst(ProtocolRunningInstances(instances = updatedProtoInstances))
   }
 
+  //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
+  //the below mentioned 'addPinst' will no longer be required.
   def addPinst(inst: (ProtoRef, PinstId)): Unit = addPinst(inst._1, inst._2)
 }
 
@@ -43,6 +50,9 @@ trait AgentStateUpdateInterface {
 trait AgentStateInterface extends State {
 
   def threadContext: Option[ThreadContext]
+
+  //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
+  //the below mentioned 'addPinst' will no longer be required.
   def protoInstances: Option[ProtocolRunningInstances]
 
   def relationship: Option[Relationship]
@@ -53,9 +63,16 @@ trait AgentStateInterface extends State {
   def agencyDID: Option[DID]
   def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))
 
+  /**
+   * represents key id for the current/this agent
+   * currently it is a DID associated with the agent's ver key
+   *
+   * @return
+   */
   def thisAgentKeyId: Option[KeyId]
 
-  def threadContextDetail(pinstId: PinstId): ThreadContextDetail
+  def threadContextDetail(pinstId: PinstId): Option[ThreadContextDetail]
+  def threadContextDetailReq(pinstId: PinstId): ThreadContextDetail
   def threadContextsContains(pinstId: PinstId): Boolean
 
   def getPinstId(protoDef: ProtoDef): Option[PinstId]

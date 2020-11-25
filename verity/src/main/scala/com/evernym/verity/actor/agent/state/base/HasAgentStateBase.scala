@@ -16,8 +16,12 @@ trait AgentStateImplBase extends AgentStateInterface {
   def threadContext: Option[ThreadContext]
   def threadContextReq: ThreadContext = threadContext.getOrElse(
     throw new RuntimeException("thread context not available"))
-  def threadContextDetail(pinstId: PinstId): ThreadContextDetail =
+
+  def threadContextDetail(pinstId: PinstId): Option[ThreadContextDetail] =
+    threadContext.flatMap(_.contexts.get(pinstId))
+  def threadContextDetailReq(pinstId: PinstId): ThreadContextDetail =
     threadContextReq.contexts(pinstId)
+
   def threadContextsContains(pinstId: PinstId): Boolean =
     threadContext.exists(_.contexts.contains(pinstId))
 

@@ -1,19 +1,23 @@
 package com.evernym.integrationtests.e2e.env
 
 import java.io.File
+import java.nio.file.{Files, Path}
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.{AppConfig, ConfigReadHelper}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.util.CollectionUtil.containsDuplicates
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
+import com.evernym.verity.config.{AppConfig, ConfigReadHelper}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.util.CollectionUtil.containsDuplicates
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.util.EntityUtils
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -60,6 +64,7 @@ object Constants {
   final val LEDGER_CONFIG = "ledger-config"
   final val LEDGER_CONFIGS = "ledger-configs"
   final val LEDGER_GENESIS_FILE_PATH = "genesis-file-path"
+  final val LEDGER_GENESIS_IP_ADDR = "genesis-ip-addr"
   final val LEDGER_GENESIS_SUBMITTER_DID = "submitter-did"
   final val LEDGER_GENESIS_SUBMITTER_SEED = "submitter-seed"
   final val LEDGER_GENESIS_SUBMITTER_ROLE = "submitter-role"
@@ -68,8 +73,6 @@ object Constants {
   final val LEDGER_PROTOCOL_VERSION = "protocol-version"
 
   final val SEED_CONFLICT_CHECK = "seed-conflict-check"
-
-  final val LOCAL_LEDGER_GENESIS_FILE_PATH = "target/genesis.txt"
 }
 
 import com.evernym.integrationtests.e2e.env.Constants._
@@ -78,6 +81,8 @@ trait IntegrationTestEnvBuilder {
   import IntegrationTestEnvBuilder._
 
   lazy val logger: Logger = getLoggerByClass(classOf[IntegrationTestEnvBuilder])
+
+  val suiteTempDir: Path
 
   //this points to environment name config to be used from "environment.conf"
   //actual spec may override it if it want to use specific configuration
@@ -204,9 +209,10 @@ trait IntegrationTestEnvBuilder {
     val confName = testEnvConfigReadHelper.getConfigStringOption(LEDGER_CONFIG).getOrElse("default")
     val ledgerConfig = integrationTestConfig.config.getConfig(s"$LEDGER_CONFIGS.$confName")
     val conf = new ConfigReadHelper(ledgerConfig)
-    val genesisFilePath = stringReq(conf, LEDGER_GENESIS_FILE_PATH, confName)
-    val absGenesisFilePath = new File(genesisFilePath)
-    assert(absGenesisFilePath.exists())
+
+
+    val genesisFilePath = resolveGenesisFile(conf, confName, suiteTempDir)
+
     val trusteeDID = stringReq(conf, LEDGER_GENESIS_SUBMITTER_DID, confName)
     val trusteeSeed = stringReq(conf, LEDGER_GENESIS_SUBMITTER_SEED, confName)
     val trusteeRole = stringReq(conf, LEDGER_GENESIS_SUBMITTER_ROLE, confName)
@@ -252,6 +258,36 @@ object IntegrationTestEnvBuilder {
 
   def intOption(config: ConfigReadHelper, key: String, instanceKey: String): Option[Int] = {
     get(config.getConfigIntOption, { x => Some(x.toInt)}, key, instanceKey)
+  }
+
+  def resolveGenesisFile(conf: ConfigReadHelper, confName: String, tempDir: Path): String = {
+    stringOption(conf, LEDGER_GENESIS_FILE_PATH, confName)
+    .map{ p =>
+      val rtn = new File(p).getAbsoluteFile
+      assert(rtn.getAbsoluteFile.exists())
+      rtn
+    }
+    .orElse{
+      stringOption(conf, LEDGER_GENESIS_IP_ADDR, confName)
+        .map(addr => s"http://$addr:5679/genesis.txt")
+        .map { u =>
+          val e = HttpClientBuilder
+            .create
+            .build
+            .execute(new HttpGet(u))
+            .getEntity
+
+          val genesisContent = EntityUtils.toString(e)
+
+          val tempFile = tempDir.resolve("genesis.txn")
+//          val tempFile = Files.createTempFile("genesis-", ".txn")
+
+          Files.write(tempFile, genesisContent.getBytes)
+          tempFile.toFile
+        }
+    }
+    .map(_.getPath)
+    .getOrElse(throw new Exception("Must have Genesis Configuration"))
   }
 }
 
@@ -408,6 +444,8 @@ case class VerityInstance(name: String,
     */
 
   lazy val specificEnvVars: List[EnvVar] = {
+    val randSeed = (appType.systemName + endpoint.port.toString + System.currentTimeMillis.toString).hashCode
+    val rand = new Random(randSeed)
     List(
       EnvVar("APP_ACTOR_SYSTEM_NAME", appType.systemName),
       EnvVar("POOL_NAME", s"${name}_pool"),
@@ -420,14 +458,19 @@ case class VerityInstance(name: String,
       EnvVar("VERITY_ENDPOINT_PORT", endpoint.port),
       EnvVar("VERITY_DOMAIN_URL_PREFIX", endpoint, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
-      EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + Random.nextInt(1000), uniqueValueAcrossEnv = true),
-      EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + Random.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath)
     )
   }
 
   def isRunningLocally: Boolean = setup
 
   def appInstance: AppInstance = AppInstance.fromNameAndType(name, appType)
+
+  override def toString: String = {
+    s"[$name] type:$appType - setup:$setup - endpoint:$endpoint - seed:$seed - jdwp:$jdwpPort"
+  }
 }
 
 object SdkType {
@@ -486,6 +529,10 @@ case class SdkConfig(sdkTypeStr: String,
       case None     => port.map(p => UrlDetail(s"localhost:$p"))
     }
   }
+
+  override def toString: String = {
+    s"[$name] version:$version - port:$port - endpoint:$endpoint - keySeed:$keySeed - agentVerkey:$agentVerkey"
+  }
 }
 
 case class LedgerConfig(genesisFilePath: String,
@@ -494,7 +541,12 @@ case class LedgerConfig(genesisFilePath: String,
                         submitterRole: String,
                         timeout: Int,
                         extendedTimeout: Int,
-                        protocolVersion: Int)
+                        protocolVersion: Int) {
+
+  override def toString: String = {
+    s"[ledger] genesisFile:../${genesisFilePath.substring(genesisFilePath.indexOf("scalatest-runs"))} - submitterDID:$submitterDID - submitterSeed:$submitterSeed - submitterRole:$submitterRole"
+  }
+}
 
 case class IntegrationTestEnv(sdks: Set[SdkConfig],
                               verityInstances: Set[VerityInstance],
@@ -571,9 +623,7 @@ case class IntegrationTestEnv(sdks: Set[SdkConfig],
     * @return
     */
   lazy val commonEnvVars: List[EnvVar] = {
-    val gfpEnvVar = if (isAnyRemoteInstanceExists) {
-      Option(EnvVar("LIB_INDY_POOL_GENESIS_TXN_FILE_LOCATION", s"${ledgerConfig.genesisFilePath}"))
-    } else None
+    val gfpEnvVar = Option(EnvVar("GENESIS_TXN_FILE_LOCATION", s"${ledgerConfig.genesisFilePath}"))
 
     val urlMapperEnvVar = verityInstances.find(_.appType.isType(AppInstance.Consumer)).map { cas =>
       EnvVar("URL_MAPPER_SERVICE_PORT", s"${cas.endpoint.port}")
@@ -624,7 +674,7 @@ case class IntegrationTestEnv(sdks: Set[SdkConfig],
     s"\n<<< test-environment-configuration >>>" + "\n\n" +
       s"  SDKs:\n$sdksStr" + "\n\n" +
       s"  verity-instances:\n$verityInstancesStr" + "\n\n" +
-      s"  ledger-config: " + ledgerConfig
+      s"  ledger-config:\n     " + ledgerConfig
   }
 }
 

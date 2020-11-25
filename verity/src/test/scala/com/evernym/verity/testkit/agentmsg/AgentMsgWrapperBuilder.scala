@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_CREATE_AGENT
@@ -19,7 +19,7 @@ trait AgentMsgWrapperBuilder extends CommonSpecUtil {
 
   def buildCreateAgentMsgWrapper_MFV_0_6(fromDID: DID, fromDIDVerKey: VerKey): AgentMsgWrapper = {
     val carm = CreateAgentReqMsg_MFV_0_6(MSG_TYPE_DETAIL_CREATE_AGENT, fromDID: DID, fromDIDVerKey: VerKey)
-    AgentMessageWrapper(DefaultMsgCodec.toJson(carm), MPV_INDY_PACK)
+    AgentMessageWrapper(DefaultMsgCodec.toJson(carm), MPF_INDY_PACK)
   }
 }
 

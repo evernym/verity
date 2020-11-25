@@ -79,7 +79,7 @@ trait SegmentedStateContext[P,R,M,E,S,I] extends SegmentedStateContextApi { this
       finalizeState()
       addToMsgQueue(SegmentStorageComplete())
     case Left(e) =>
-      logger.error("error during storing segments: " + e.toString)
+      logger.warn("error during storing segments: " + e.toString)
       abortTransaction()
       addToMsgQueue(SegmentStorageFailed())
   }

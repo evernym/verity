@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
+import com.evernym.verity.constants.InitParamConstants.{NAME, _}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -15,17 +16,30 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
     new PresentProof()(context)
   }
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID)
+  override val initParamNames: Set[ParameterName] = Set(
+    SELF_ID,
+    OTHER_ID,
+
+    // Needed for OOB invite
+    NAME,
+    LOGO_URL,
+    AGENCY_DID_VER_KEY,
+    MY_PUBLIC_DID
+  )
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(
     p.paramValueRequired(SELF_ID),
-    p.paramValueRequired(OTHER_ID)
+    p.paramValue(OTHER_ID).filterNot(_ == UNKNOWN_OTHER_ID),
+    p.paramValue(NAME),
+    p.paramValue(LOGO_URL),
+    p.paramValue(AGENCY_DID_VER_KEY),
+    p.paramValue(MY_PUBLIC_DID),
   )
 
 
   override def initialState: State = States.Uninitialized()
 
-  override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess)
+  override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess, AccessVerKey)
 }
 
 object AttIds {
@@ -58,6 +72,7 @@ object ProblemReportCodes {
   val presentationCreationFailure = "presentation-creation-failure"
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
+  val shorteningFailed = "shortening-failed"
 }
 
 object Role {

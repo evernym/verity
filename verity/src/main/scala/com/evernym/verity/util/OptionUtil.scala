@@ -2,10 +2,12 @@ package com.evernym.verity.util
 
 import java.util.{Map => JavaMap}
 
+import kanela.agent.libs.io.vavr.API.Success
+
 import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
-
 import scala.language.implicitConversions
+import scala.util.{Failure, Try}
 
 object OptionUtil {
   // JAVA Collections
@@ -113,4 +115,11 @@ object OptionUtil {
   }
 
   implicit def optionToEmptyStr(v: Option[String]): String = ""
+
+  def toTry[T](opt: Option[T], noneException: Option[Throwable] = None): Try[T] = {
+    opt match {
+      case Some(v) => Try(v)
+      case None => Failure(noneException.getOrElse(new Exception("Converted None to Try")))
+    }
+  }
 }

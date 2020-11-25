@@ -73,7 +73,7 @@ class LibIndyWalletProvider(val appConfig: AppConfig) extends LibIndyCommon with
       new LibIndyWalletExt(wallet)
     } catch {
       case e: Exception if e.getCause.isInstanceOf[WalletAlreadyOpenedException] =>
-        throw WalletAlreadyOpened(s"wallet already opened: " + id)
+        throw WalletAlreadyOpened(s"wallet already opened: '$id''")
       case e: Exception if e.getCause.isInstanceOf[WalletNotFoundException] =>
         throw WalletDoesNotExist(s"wallet does not exist: '$id'")
       case e: Exception if e.getCause.isInstanceOf[IOException] &&
@@ -82,7 +82,7 @@ class LibIndyWalletProvider(val appConfig: AppConfig) extends LibIndyCommon with
       case e: Exception if e.getCause.isInstanceOf[InvalidStateException] =>
         throw WalletInvalidState(s"error while opening wallet: '$id'")
       case e: Exception =>
-        throw WalletNotOpened(s"error while opening wallet '$id': " + e.toString)
+        throw WalletNotOpened(s"error while opening wallet '$id': ${e.toString}")
     }
   }
 
@@ -107,7 +107,7 @@ class LibIndyWalletProvider(val appConfig: AppConfig) extends LibIndyCommon with
         walletConfig.buildCredentials(encryptionKey))
     } catch {
       //TODO: shall we catch only specific exception?
-      case e: Exception => throw WalletNotDeleted(s"error while deleting wallet '$id' : " + e.toString)
+      case e: Exception => throw WalletNotDeleted(s"error while deleting wallet '$id' : ${e.toString}")
     }
   }
 

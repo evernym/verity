@@ -1,7 +1,7 @@
 package com.evernym.verity.agentmsg.msgpacker
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.JsonUtil.getDeserializedJson
@@ -17,20 +17,20 @@ object AgentMsgTransformerApi {
 
   val logger: Logger = getLoggerByName("AgentMsgTransformerApi")
 
-  private val msgPackTransformer: MsgTransformer = new MsgPackTransformer(MPV_MSG_PACK)
-  private val indyPackTransformer: MsgTransformer = new IndyPackTransformer(MPV_INDY_PACK)
+  private val msgPackTransformer: MsgTransformer = new MsgPackTransformer(MPF_MSG_PACK)
+  private val indyPackTransformer: MsgTransformer = new IndyPackTransformer(MPF_INDY_PACK)
 
-  def msgTransformer(mpv: MsgPackVersion): MsgTransformer = {
-    mpv match {
-      case MPV_MSG_PACK   => msgPackTransformer
-      case MPV_INDY_PACK  => indyPackTransformer
-      case _ => throw new RuntimeException("given msg-pack version is not supported: " + mpv)
+  def msgTransformer(mpf: MsgPackFormat): MsgTransformer = {
+    mpf match {
+      case MPF_MSG_PACK   => msgPackTransformer
+      case MPF_INDY_PACK  => indyPackTransformer
+      case _ => throw new RuntimeException("given msg-pack format is not supported: " + mpf)
     }
   }
 
-  def pack(mpv: MsgPackVersion, wallet: Wallet, msg: String,
+  def pack(mpf: MsgPackFormat, wallet: Wallet, msg: String,
            recipVerKeys: Set[String], senderVerKey: Option[VerKey], packParam: PackParam = PackParam()): PackedMsg = {
-    msgTransformer(mpv).pack(wallet, msg, recipVerKeys, senderVerKey, packParam)
+    msgTransformer(mpf).pack(wallet, msg, recipVerKeys, senderVerKey, packParam)
   }
 
   def unpack(wallet: Wallet, msg: Array[Byte], fromVerKeyOpt: Option[VerKey],
@@ -43,7 +43,7 @@ object AgentMsgTransformerApi {
     }
 
     val unpackedMsg = transformer.unpack(wallet, msg, fromVerKey, unpackParam)
-    AgentMsgWrapper(transformer.msgPackVersion, unpackedMsg)
+    AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
   }
 
   //set of keys to be present in any indy packed json message

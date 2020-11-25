@@ -53,7 +53,7 @@ object JsonUtil {
   def jsonArray(item: String): String = jsonArray(Set(item))
 
   def jsonArray(items: Set[String]): String = {
-    """[""" + items.map(i => s""""$i"""").mkString(s",") + """]"""
+    """[""" + items.map(i => s""""$i"""").mkString(",") + """]"""
   }
 
 }

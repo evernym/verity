@@ -33,7 +33,8 @@ import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.agentmsg.tokenizer.SendToken
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.{Duration, _}
@@ -263,7 +264,7 @@ trait AgentMsgSenderHttpWrapper
 
   def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
     val response = createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
-    println("response: " + response)
+//    println("response: " + response)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {
@@ -427,6 +428,23 @@ trait AgentMsgSenderHttpWrapper
     r
   }
 
+  // TODO: can be removed with Provisioning 0.5 and 0.6 are removed.
+  def sendCreateAgentDeprecated_MFV_0_6(): Any = {
+    printApiCallStartedMsg(s"create agent started...")
+    val fromDID = mockClientAgent.myDIDDetail.did
+    printApiCallStartedMsg(s"get verkey from wallet started...")
+    val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
+    printApiCallStartedMsg(s"get verkey from wallet finished...")
+    printApiCallStartedMsg(s"send post request with packed message started...")
+    val r = sendPostRequestWithPackedMsg(
+      mockClientAgent.v_0_6_req.prepareCreateAgentMsgForAgency(
+        mockClientAgent.agencyPairwiseAgentDetailReq.DID, fromDID, fromDIDVerKey),
+      Option(mockClientAgent.v_0_6_resp.handleAgentCreatedResp))
+    printApiCallStartedMsg(s"send post request with packed message finished...")
+    printApiCallFinishedMsg(s"agent creation finished: " + r)
+    r
+  }
+
   def sendCreateAgent_MFV_0_6(): AgentCreated_MFV_0_6 = {
     printApiCallStartedMsg(s"create agent started...")
     val fromDID = mockClientAgent.myDIDDetail.did
@@ -496,16 +514,24 @@ trait AgentMsgSenderHttpWrapper
     r.asInstanceOf[AgentCreated_MFV_0_7]
   }
 
-  def sendGetToken(id: String, sponsorId: String, comMethod: String): Unit = {
+  def sendGetToken(id: String, sponsorId: String): SendToken = {
     printApiCallStartedMsg(s"get token started 0.1...")
     printApiCallStartedMsg(s"agency did: ${mockClientAgent.agencyAgentDetailReq.DID}")
     val r = sendPostRequestWithPackedMsg(
-      mockClientAgent.v_0_1_req.prepareGetTokenRoute(
-        id,
-        sponsorId,
-        ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod)),
-      None)
+      mockClientAgent.v_0_1_req.prepareGetTokenRoute(id, sponsorId),
+      Option(mockClientAgent.v_0_1_resp.handleSendTokenResp))
     printApiCallFinishedMsg(s"get token finished: " + r)
+    r.asInstanceOf[SendToken]
+  }
+
+  // TODO: can be removed with Provisioning 0.5 and 0.6 are removed.
+  def registerWithAgencyDeprecatedProvisioning(): Any = {
+    printApiCallStartedMsg(s"register started...")
+    val r = sendPostRequestWithPackedMsg(
+      mockClientAgent.v_0_5_req.prepareSignUpMsgForAgency,
+      Option(mockClientAgent.v_0_5_resp.handleSignedUpResp))
+    printApiCallFinishedMsg(s"register finished: " + r)
+    r
   }
 
   def registerWithAgency(): Any = {
@@ -668,7 +694,6 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def checkServiceMetric(metrics: String): Unit = {
-    println(metrics)
     require(metrics.contains("as_endpoint_http_agent_msg_count"))
     require(metrics.contains("as_endpoint_http_agent_msg_succeed_count"))
     require(metrics.contains("as_endpoint_http_agent_msg_failed_count"))
@@ -703,15 +728,14 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def checkMessageTrackingData(messageTrackingData: String): Unit = {
-    //println(messageTrackingData)
     //require(messageTrackingData.contains("as_endpoint_http_agent_msg_count"))
   }
 
   def getMessageTrackingData(id: String="global", withEvents: String = "Y", inHtml: String = "N"): String = {
-    printApiCallStartedMsg(s"query message tracking data started ($id) ...")
+//    printApiCallStartedMsg(s"query message tracking data started ($id) ...")
     val r = sendGetRequest(Some(checkMessageTrackingData))(url,
       s"$agencyInternalPathPrefix/msg-progress-tracker/$id?withEvents=$withEvents&inHtml=$inHtml")
-    printApiCallStartedMsg(s"query message tracking data finished ($id)")
+//    printApiCallStartedMsg(s"query message tracking data finished ($id)")
     r.asInstanceOf[String]
   }
 
@@ -719,7 +743,7 @@ trait AgentMsgSenderHttpWrapper
                               uids: Option[List[String]] = None,
                               statusCodes: Option[List[String]] = None): Any = {
     implicit val msgPackagingContext: AgentMsgPackagingContext =
-      agentmsg.AgentMsgPackagingContext(MPV_MSG_PACK, MFV_1_0, packForAgencyRoute = true)
+      agentmsg.AgentMsgPackagingContext(MPF_MSG_PACK, MFV_1_0, packForAgencyRoute = true)
     printApiCallStartedMsg(s"send get msgs started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareGetMsgsFromConn(connId, excludePayload, uids, statusCodes),

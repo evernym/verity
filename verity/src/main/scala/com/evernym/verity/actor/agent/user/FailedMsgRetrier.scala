@@ -5,7 +5,7 @@ import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
 import com.evernym.verity.actor.ActorMessageObject
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{PackedMsgParam, RestMsgParam}
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.CommonConfig._
@@ -67,7 +67,7 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
     logger.debug(s"[$persistenceId]: pending msgs during retry undelivered msg: " + pendingMsgs)
     if (pendingMsgs.nonEmpty) {
       getBatchedRecords(pendingMsgs).foreach { uid =>
-        sendMsgToTheirAgent(uid, isItARetryAttempt = true, msgPackVersion(uid))
+        sendMsgToTheirAgent(uid, isItARetryAttempt = true, msgPackFormat(uid))
       }
     } else {
       handleNoMsgToRetry()
@@ -121,13 +121,13 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   lazy val defaultBatchSize: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_BATCH_SIZE).getOrElse(30)
   lazy val maxRetryCount: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_MAX_RETRY_COUNT).getOrElse(5)
 
-  def msgPackVersion(msgId: MsgId): MsgPackVersion
+  def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class
   def scheduledJobInitialDelay: Int
   def scheduledJobInterval: Int
   def getMsgIdsEligibleForRetries: Set[MsgId]
   def updateUndeliveredMsgCountMetrics(): Unit
-  def sendMsgToTheirAgent(uid: MsgId, isItARetryAttempt: Boolean, mpv: MsgPackVersion): Future[Any]
+  def sendMsgToTheirAgent(uid: MsgId, isItARetryAttempt: Boolean, mpf: MsgPackFormat): Future[Any]
   def agentCmdReceiver: Receive
   def addItemToWatcher(itemId: ItemId): Unit
   def removeItemFromWatcher(itemId: ItemId): Unit

@@ -9,6 +9,8 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpCoreContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -19,6 +21,8 @@ public class Listener {
     private Integer port;
     private MsgHandler handler;
     private HttpServer server;
+
+    final Logger logger = LoggerFactory.getLogger(Listener.class);
 
     public Listener(Integer port, MsgHandler handler) {
         this.port = port;
@@ -83,12 +87,12 @@ public class Listener {
             }
             String target = request.getRequestLine().getUri();
             Header host = request.getFirstHeader(HttpHeaders.HOST);
-            System.out.println("Got request for " + method + " " + host.getValue() + target);
+            logger.debug("Got request for " + method + " " + host.getValue() + target);
 
             if (request instanceof HttpEntityEnclosingRequest) {
                 HttpEntity entity = ((HttpEntityEnclosingRequest) request).getEntity();
                 byte[] entityContent = EntityUtils.toByteArray(entity);
-                System.out.println("Dispatching enclosed request entity to handler");
+                logger.debug("Dispatching enclosed request entity to handler");
                 Listener.this.handler.handler(entityContent);
             }
 
@@ -96,7 +100,7 @@ public class Listener {
             HttpConnection conn = coreContext.getConnection(HttpConnection.class);
             response.setStatusCode(HttpStatus.SC_OK);
             response.setEntity(new StringEntity("Success", StandardCharsets.UTF_8));
-            System.out.println(conn + ": serving data \"Success\"");
+            logger.debug(conn + ": serving data \"Success\"");
         }
     }
 }

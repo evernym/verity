@@ -1,14 +1,17 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
-import com.evernym.verity.protocol.engine.msg.{GivenDomainId, PersistenceFailure}
+import com.evernym.verity.protocol.engine.msg.{GivenDomainId, PersistenceFailure, StoreThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
@@ -70,7 +73,11 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   private val partiMsg = new PartiMsg
 
-  case class Backstate(roster: Roster[R]=Roster(), stateVersion: Int=0, domainId: Option[DomainId]=None) {
+  case class Backstate(roster: Roster[R]=Roster(),
+                       stateVersion: Int=0,
+                       domainId: Option[DomainId]=None,
+                       packagingContext: Option[PackagingContext] = None,
+                       msgOrders: Option[MsgOrders] = None) {
     def advanceVersion: Backstate = {
       this.copy(stateVersion = this.stateVersion + 1)
     }
@@ -163,12 +170,6 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
-  protected def applySystemEvent: ProtoSystemEvent ?=> Backstate = {
-    case SetDomainId(id) =>
-      shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
-  }
-
-
   def setupInflightMsg[A](msgId: Option[MsgId], threadId: Option[ThreadId],
                           sender: SenderLike[R], segment: Option[Any] = None)(f: => A): A = {
     inFlight = inFlight.map(_.copy(msgId = msgId, threadId = threadId)).orElse(
@@ -253,11 +254,17 @@ trait ProtocolContext[P,R,M,E,S,I]
             withLog("handle protocol message", msg, Tag.red) {
               try {
                 checkIfProtocolMsg(msg)
+                incrementReceivedOrder(frm)
                 protocol.handleProtoMsg(getState, sender.role, msg)
               } catch {
                 case me: MatchError =>
                   recordWarn(s"no protocol message handler for: ${me.getMessage}")
-                  throw new NoProtocolMsgHandler(state.toString, sender.role.toString, msg.toString, me)
+                  throw new NoProtocolMsgHandler(
+                    state.getClass.getSimpleName,
+                    sender.role.map(_.toString).getOrElse("UNKNOWN"),
+                    msg.getClass.getSimpleName,
+                    me
+                  )
               }
             }
           }
@@ -313,9 +320,54 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  protected def applySystemEvent: ProtoSystemEvent ?=> Backstate = {
+    case SetDomainId(id) =>
+      shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
+
+    case pcs: PackagingContextSet =>
+      val pc = PackagingContext.init(pcs)
+      shadowBackState.getOrElse(Backstate()).copy(packagingContext = Option(pc))
+
+    case lpcs: LegacyPackagingContextSet =>
+      val pc = shadowBackState.getOrElse(Backstate()).packagingContext
+      val updatedPc = pc.map(_.updateLegacyPackagingContext(lpcs))
+      shadowBackState.getOrElse(Backstate()).copy(packagingContext = updatedPc)
+
+    case ros: ReceivedOrdersSet =>
+      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val updated = mrod.copy(receivedOrders = ros.receivedOrders)
+      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+
+    case sos: SenderOrderSet =>
+      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val updated = mrod.copy(senderOrder = sos.order)
+      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+
+    case mroi: ReceivedOrderIncremented =>
+      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val curValue = mrod.receivedOrders.getOrElse(mroi.fromPartiId, -1)
+      val updated = mrod.copy(receivedOrders = mrod.receivedOrders ++ Map(mroi.fromPartiId -> (curValue + 1)))
+      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+
+    case _: SenderOrderIncremented =>
+      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val updated = mrod.copy(senderOrder = mrod.senderOrder + 1)
+      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+  }
+
   def handleInternalSystemMsg(sysMsg: InternalSystemMsg): Any = {
     sysMsg match {
-      case GivenDomainId(id) => apply(SetDomainId(id))
+      case GivenDomainId(id)           => apply(SetDomainId(id))
+      case stc: StoreThreadContext     =>
+        val curPackagingContext = backstate.packagingContext
+        if (curPackagingContext.isEmpty) {
+          apply(PackagingContextSet(stc.pd.msgPackFormat.value))
+          apply(LegacyPackagingContextSet(stc.pd.msgTypeDeclarationFormat.value, stc.pd.usesLegacyGenMsgWrapper, stc.pd.usesLegacyBundledMsgWrapper))
+        }
+        stc.senderOrder.foreach(so => apply(SenderOrderSet(so)))
+        stc.receivedOrder.foreach { receivedOrder =>
+          apply(ReceivedOrdersSet(receivedOrder))
+        }
     }
   }
 
@@ -375,7 +427,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
     shadowState = Some(state)
     shadowBackState = Some(backstate)
-    record(s"updated shadow state", state)
+    record("updated shadow state", state)
   }
 
   private def advanceStateVersion(): Unit = {
@@ -449,7 +501,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     getRoster.participantIdForRole(_fromRole).getOrElse(throw new InvalidState(s"role $fromRole not assigned"))
   } getOrElse getRoster.selfId_!
 
-  def recipPartiId(toRole: Option[R]=None) = toRole.map { _toRole =>
+  def recipPartiId(toRole: Option[R]=None): ParticipantId = toRole.map { _toRole =>
     getRoster.participantIdForRole(_toRole).getOrElse(throw new InvalidState(s"role $toRole not assigned"))
   } getOrElse getRoster.otherId()
 
@@ -465,6 +517,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def send[T](msg: M, toRole: Option[R]=None, fromRole: Option[R]=None): Unit = {
     checkIfProtocolMsg(msg)
+    incrementSenderOrder()
     val env = prepareEnvelope(msg, toRole, fromRole)
     withLog ("sending message to participant", env) {
       val pmsg = sendsMsgs.prepare(env)
@@ -474,10 +527,24 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def signal(signal: Any): Unit = {
     checkIfSignalMsg(signal)
-    if(driver.isDefined) {
-      val sm = SignalEnvelope(signal, _threadId_!, definition.msgFamily.protoRef, pinstId, inFlight.flatMap(_.msgId))
+    if (driver.isDefined) {
+      val sm = SignalEnvelope(signal, definition.msgFamily.protoRef,
+        pinstId, threadContextDetailReq, inFlight.flatMap(_.msgId))
       signalOutbox.add(sm)
     }
+  }
+
+  def threadContextDetailReq: ThreadContextDetail = {
+    val packagingContext = getBackstate.packagingContext.getOrElse(PackagingContext())
+    val msgOrders = getBackstate.msgOrders
+    ThreadContextDetail(
+      _threadId_!,
+      packagingContext.msgPackFormat,
+      packagingContext.msgTypeDeclarationFormat,
+      packagingContext.usesLegacyGenMsgWrapper,
+      packagingContext.usesLegacyBundledMsgWrapper,
+      msgOrders
+    )
   }
 
   def updatedRoster(params: Seq[InitParamBase]): Roster[R] = {
@@ -525,6 +592,29 @@ trait ProtocolContext[P,R,M,E,S,I]
     if (! result) {
       throw new RuntimeException(s"'${msg.getClass.getSimpleName}' not registered as a '$msgCategory' message in ${definition.msgFamily.protoRef}")
     }
+  }
+
+  def storePackagingDetail(tc: ThreadContextDetail): Unit = {
+    if (backstate.packagingContext.isEmpty) {
+      val pc = PackagingContext(
+        tc.msgPackFormat,
+        tc.msgTypeFormat,
+        tc.usesLegacyGenMsgWrapper,
+        tc.usesLegacyBundledMsgWrapper
+      )
+      submit(
+        StoreThreadContext(pc,
+          tc.msgOrders.map(_.senderOrder),
+          tc.msgOrders.map(_.receivedOrders)))
+    }
+  }
+
+  def incrementReceivedOrder(senderPartiId: ParticipantId): Unit = {
+    apply(ReceivedOrderIncremented(senderPartiId))
+  }
+
+  def incrementSenderOrder(): Unit = {
+    apply(SenderOrderIncremented())
   }
 
   /**
@@ -583,8 +673,32 @@ class SegmentTypeNotMatched(msg: Option[String]=None) extends RuntimeException(m
 
 abstract class NoHandler(msg: String, me: MatchError) extends RuntimeException(msg, me)
 
-class NoControlHandler(ctl: String, me: MatchError) extends NoHandler(s"no control handler found for control message `$ctl`", me)
-class NoEventHandler(state: String, role: String, event: String, me: MatchError) extends NoHandler(s"no event handler found for event `$event` in state `$state` with role `$role`", me)
-class NoSystemMsgHandler(sysMsg: String, me: MatchError) extends NoHandler(s"no system msg handler found for system message `$sysMsg`", me)
+class NoControlHandler(ctl: String, me: MatchError)
+  extends NoHandler(s"no control handler found for control message `$ctl`", me)
+
+class NoEventHandler(state: String, role: String, event: String, me: MatchError)
+  extends NoHandler(s"no event handler found for event `$event` in state `$state` with role `$role`", me)
+
+class NoSystemMsgHandler(sysMsg: String, me: MatchError)
+  extends NoHandler(s"no system msg handler found for system message `$sysMsg`", me)
+
 class NoProtocolMsgHandler(state: String, role: String, msg: String, me: MatchError)
   extends NoHandler(s"no protocol msg handler found for message `$msg` in state `$state` with role `$role`", me)
+
+object PackagingContext {
+  def init(pcs: PackagingContextSet): PackagingContext =
+    PackagingContext(MsgPackFormat.fromValue(pcs.msgPackFormat))
+}
+
+case class PackagingContext(msgPackFormat: MsgPackFormat = MPF_INDY_PACK,
+                            msgTypeDeclarationFormat: TypeFormat = STANDARD_TYPE_FORMAT,
+                            usesLegacyGenMsgWrapper: Boolean = false,
+                            usesLegacyBundledMsgWrapper: Boolean = false) {
+
+  def updateLegacyPackagingContext(lpcs: LegacyPackagingContextSet): PackagingContext =
+    copy(
+      msgTypeDeclarationFormat = TypeFormat.fromValue(lpcs.msgTypeDeclarationFormat),
+      usesLegacyGenMsgWrapper = lpcs.usesLegacyGenMsgWrapper,
+      usesLegacyBundledMsgWrapper = lpcs.usesLegacyBundledMsgWrapper
+    )
+}

@@ -10,7 +10,7 @@ mkdir -p target/
 until [ $tryCount -ge $maxTries ]
 do
    ((tryCount=tryCount+1))
-   echo "Fetching from ${POOL_IP} port 5678 (try ${tryCount} of ${maxTries})"
+   echo "Fetching from ${POOL_IP} port 5679 (try ${tryCount} of ${maxTries})"
    sleep 2
    curl -sf http://"${POOL_IP}":5679/genesis.txt > target/genesis.txt && break
    echo "Failed to fetch pool information"

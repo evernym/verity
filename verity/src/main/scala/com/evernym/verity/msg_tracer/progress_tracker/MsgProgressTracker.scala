@@ -61,7 +61,7 @@ trait MsgProgressTracker extends HasActorResponseTimeout { this: MsgTraceProvide
       if (isTrackingStarted(trackingId)) {
         sendToProgressTrackerRegion(trackingId, GetRecordedRequests(reqId, domainTrackingId, relTrackingId, withEvents))
       } else {
-        Future.failed(new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"tracking not started")))
+        Future.failed(new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("tracking not started")))
       }
     }
 

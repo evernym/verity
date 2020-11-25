@@ -6,7 +6,7 @@ import akka.testkit.TestKit
 import com.evernym.verity.Status._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.drivers.TicTacToeAI
-import com.evernym.verity.protocol.engine.MPV_MSG_PACK
+import com.evernym.verity.protocol.engine.MPF_MSG_PACK
 import com.evernym.verity.protocol.protocols.tictactoe.Board
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{CellValue, X}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{Move, OfferAccept}
@@ -131,7 +131,7 @@ trait TicTacToeSpecs
   def buildAndSendOfferMsg(): Unit = {
     //packed msg for remote verity edge agent
     val offerMsg = TempMsg.buildMsgWrapper_0_5("MESSAGE", TempTicTacToeMsg.createOfferMsg(threadId.get))
-    val packedOfferMsg = packMsg(MPV_MSG_PACK, offerMsg.toString, Set(getRemoteEdgePairwiseVerKey), Option(did.getVerkey))
+    val packedOfferMsg = packMsg(MPF_MSG_PACK, offerMsg.toString, Set(getRemoteEdgePairwiseVerKey), Option(did.getVerkey))
 
     //msg for sender's cloud agent
     val sendMsg = TempMsg.createBundledSendMsg_0_5(packedOfferMsg, "general")
@@ -143,7 +143,7 @@ trait TicTacToeSpecs
   def buildAndSendMoveMsg(value: String, atPosition: String): Unit = {
     //packed msg for remote verity edge agent
     val offerMsg = TempMsg.buildMsgWrapper_0_5("MESSAGE", TempTicTacToeMsg.createMoveMsg(value, atPosition, threadId))
-    val packedOfferMsg = packMsg(MPV_MSG_PACK, offerMsg.toString, Set(getRemoteEdgePairwiseVerKey), Option(did.getVerkey))
+    val packedOfferMsg = packMsg(MPF_MSG_PACK, offerMsg.toString, Set(getRemoteEdgePairwiseVerKey), Option(did.getVerkey))
 
     //msg for sender's cloud agent
     val sendMsg = TempMsg.createBundledSendMsg_0_5(packedOfferMsg, "general")

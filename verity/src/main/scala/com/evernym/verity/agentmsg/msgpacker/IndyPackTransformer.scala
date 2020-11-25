@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutionException
 
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.MsgPackVersion
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.VerKey
@@ -17,9 +17,9 @@ import org.hyperledger.indy.sdk.wallet.{Wallet, WalletItemNotFoundException}
 /**
  * this uses 'indy' (https://github.com/hyperledger/indy-sdk/blob/master/libindy/src/api/crypto.rs)
  * for 'pack' and 'unpack' functions
- * @param msgPackVersion
+ * @param msgPackFormat
  */
-class IndyPackTransformer(val msgPackVersion: MsgPackVersion)
+class IndyPackTransformer(val msgPackFormat: MsgPackFormat)
   extends MsgTransformer {
 
   val logger: Logger = getLoggerByClass(classOf[IndyPackTransformer])

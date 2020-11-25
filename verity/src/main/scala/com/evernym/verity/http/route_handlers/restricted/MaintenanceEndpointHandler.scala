@@ -7,9 +7,9 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.evernym.verity.actor.agent.msgrouter.{CurrentStatus, GetUpdaterStatus}
-import com.evernym.verity.actor.cluster_singleton.ForLegacyRouteFixManager
-import com.evernym.verity.actor.cluster_singleton.legacyroutefixmanager.{GetStatus, Reset, Status}
+import com.evernym.verity.actor.agent.maintenance.{CurrentStatus, GetExecutorStatus}
+import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
+import com.evernym.verity.actor.cluster_singleton.maintenance.{GetStatus, Reset, Status}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.{ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, RefreshConfigOnAllNodes, RefreshNodeConfig}
@@ -30,16 +30,19 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def resetLegacyRouteFix: Future[Any] = {
-    platform.singletonParentProxy ? ForLegacyRouteFixManager(Reset)
+  def resetActorStateCleanupManager: Future[Any] = {
+    platform.singletonParentProxy ? ForActorStateCleanupManager(Reset)
   }
 
-  def getLegacyRouteFixStatus: Future[Any] = {
-    platform.singletonParentProxy ? ForLegacyRouteFixManager(GetStatus)
+  def getActorStateManagerCleanupStatus(detailOpt: Option[String]): Future[Any] = {
+    val getStatusCmd = if (detailOpt.map(_.toUpperCase).contains(YES)) {
+      GetStatus(includeDetails = true)
+    } else GetStatus()
+    platform.singletonParentProxy ? ForActorStateCleanupManager(getStatusCmd)
   }
 
-  def getAgentRouteStoreFixStatus(entityId: String): Future[Any] = {
-    platform.legacyRouteUpdater ? ForIdentifier(entityId, GetUpdaterStatus)
+  def getActorStateCleanupExecutorStatus(entityId: String): Future[Any] = {
+    platform.actorStateCleanupExecutor ? ForIdentifier(entityId, GetExecutorStatus)
   }
 
   protected val maintenanceRoutes: Route =
@@ -63,15 +66,18 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
                     }
                   }
                 }
-              } ~ pathPrefix("agent-route-fix") {
-                //TODO: this 'agent-route-fix' is added temporarily until
-                //the agent route migration work is complete. After that, we will remove this.
+              } ~ pathPrefix("actor-state-cleanup") {
+                //TODO: this 'actor-state-cleanup' is added temporarily until
+                // the agent state cleanup (route migration etc) work is complete.
+                // After that, we will remove this.
                 path("status") {
                   (get & pathEnd) {
-                    complete {
-                      getLegacyRouteFixStatus.map[ToResponseMarshallable] {
-                        case s: Status => handleExpectedResponse(s)
-                        case e => handleUnexpectedResponse(e)
+                    parameters('detail.?) { detailOpt =>
+                      complete {
+                        getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
+                          case s: Status => handleExpectedResponse(s)
+                          case e => handleUnexpectedResponse(e)
+                        }
                       }
                     }
                   }
@@ -79,19 +85,19 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
                   path("reset") {
                     (post & pathEnd) {
                       complete {
-                        resetLegacyRouteFix.map[ToResponseMarshallable] {
+                        resetActorStateCleanupManager.map[ToResponseMarshallable] {
                           case Done => OK
                           case e => handleUnexpectedResponse(e)
                         }
                       }
                     }
                   } ~
-                    pathPrefix("updater") {
+                    pathPrefix("executor") {
                       pathPrefix(Segment) { updaterEntityId =>
                         path("status") {
                           (get & pathEnd) {
                             complete {
-                              getAgentRouteStoreFixStatus(updaterEntityId).map[ToResponseMarshallable] {
+                              getActorStateCleanupExecutorStatus(updaterEntityId).map[ToResponseMarshallable] {
                                 case s: CurrentStatus => handleExpectedResponse(s)
                                 case e => handleUnexpectedResponse(e)
                               }

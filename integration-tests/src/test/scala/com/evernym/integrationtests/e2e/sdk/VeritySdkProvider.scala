@@ -32,6 +32,7 @@ trait VeritySdkProvider {
     val error = s"Protocol - $protocolName - is not supported by the ${this.getClass.getSimpleName} provider -- $msg"
     throw new UnsupportedOperationException(error)
   }
+  implicit val shouldPrintDebug = false
 
   var publicDID: Option[String] = None
 
@@ -104,7 +105,9 @@ trait VeritySdkProvider {
                           credDefId: String,
                           credValues: Map[String, String],
                           comment: String,
-                          price: String): IssueCredentialV1_0
+                          price: String = "0",
+                          autoIssue: Boolean = false,
+                          byInvitation: Boolean = false): IssueCredentialV1_0
 
   def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0
 
@@ -192,5 +195,9 @@ object VeritySdkProvider {
       case SdkType.Rest   => new RestSdkProvider(c)
       case _ => throw new Exception("Unknown SDK type, must by a known type")
     }
+  }
+
+  def debugPrintln(x: Any)(implicit shouldPrint: Boolean): Unit = {
+    if(shouldPrint) println(x)
   }
 }

@@ -1,8 +1,8 @@
 package com.evernym.verity.actor
 
-import com.evernym.verity.actor.agent.msgrouter.LegacyRouteUpdater
-import com.evernym.verity.constants.ActorNameConstants.LEGACY_ROUTE_UPDATER
+import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupExecutor
+import com.evernym.verity.constants.ActorNameConstants.ACTOR_STATE_CLEANUP_EXECUTOR
 
 trait MaintenanceRegionActors { this: Platform =>
-  val legacyRouteUpdater = createRegion(LEGACY_ROUTE_UPDATER, LegacyRouteUpdater.props(appConfig, agentActorContext.agentMsgRouter))
+  val actorStateCleanupExecutor = createRegion(ACTOR_STATE_CLEANUP_EXECUTOR, ActorStateCleanupExecutor.props(appConfig, agentActorContext.agentMsgRouter))
 }

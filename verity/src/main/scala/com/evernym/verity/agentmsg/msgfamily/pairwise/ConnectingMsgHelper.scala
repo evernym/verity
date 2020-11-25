@@ -1,8 +1,8 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
 import com.evernym.verity.Status.{MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED}
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK}
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -40,13 +40,13 @@ object ConnectingMsgHelper {
       msgDetail.keyDlgProof)
   }
 
-  def buildInviteAnswerPayloadMsg(msgPackVersion: MsgPackVersion, connReqAnswerMsg: ConnReqAnswerMsg, sourceId: Option[String]=None): (MsgName, String) = {
-    msgPackVersion match {
-      case MPV_MSG_PACK =>
+  def buildInviteAnswerPayloadMsg(msgPackFormat: MsgPackFormat, connReqAnswerMsg: ConnReqAnswerMsg, sourceId: Option[String]=None): (MsgName, String) = {
+    msgPackFormat match {
+      case MPF_MSG_PACK =>
         val internalPayloadMsg = convertNativeMsgToPackedMsg(InviteAnswerPayloadMsg(connReqAnswerMsg.senderDetail))
         val msgType = TypeDetail(CREATE_MSG_TYPE_CONN_REQ_ANSWER, MTV_1_0, Option (PACKAGING_FORMAT_INDY_MSG_PACK))
         (DefaultMsgCodec.toJson(msgType), DefaultMsgCodec.toJson(PayloadMsg_MFV_0_5(msgType, internalPayloadMsg)))
-      case MPV_INDY_PACK =>
+      case MPF_INDY_PACK =>
         val msgType = connReqAnswerMsg.answerStatusCode match {
           case MSG_STATUS_ACCEPTED.statusCode   => MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED
             //right now, only accepted message is what gets send to inviter
@@ -54,29 +54,29 @@ object ConnectingMsgHelper {
         }
         val internalPayloadMsg = new JSONObject(DefaultMsgCodec.toJson(InviteAnswerPayloadMsg(connReqAnswerMsg.senderDetail)))
         (DefaultMsgCodec.toJson(msgType), DefaultMsgCodec.toJson(PayloadMsg_MFV_0_6(msgType, internalPayloadMsg, sourceId)))
-      case x            => throw new RuntimeException("unsupported msg pack version: " + x)
+      case x            => throw new RuntimeException("unsupported msg pack format: " + x)
     }
   }
 
-  def buildRedirectPayloadMsg(msgPackVersion: MsgPackVersion, senderDetail: SenderDetail, redirectDetail: String): (MsgName, String) = {
-    msgPackVersion match {
-      case MPV_MSG_PACK =>
+  def buildRedirectPayloadMsg(msgPackFormat: MsgPackFormat, senderDetail: SenderDetail, redirectDetail: String): (MsgName, String) = {
+    msgPackFormat match {
+      case MPF_MSG_PACK =>
        val internalPayloadMsg = convertNativeMsgToPackedMsg(RedirectPayloadMsg_0_5(senderDetail, new JSONObject(redirectDetail)))
         val msgType = TypeDetail(CREATE_MSG_TYPE_CONN_REQ_REDIRECTED, MTV_1_0, Option (PACKAGING_FORMAT_INDY_MSG_PACK))
         (DefaultMsgCodec.toJson(msgType), DefaultMsgCodec.toJson(PayloadMsg_MFV_0_5(msgType, internalPayloadMsg)))
 
-      case MPV_INDY_PACK =>
+      case MPF_INDY_PACK =>
         val internalPayloadMsg = new JSONObject(DefaultMsgCodec.toJson(
           RedirectPayloadMsg_0_6(senderDetail, new JSONObject(redirectDetail))))
         (MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED,
           DefaultMsgCodec.toJson(PayloadMsg_MFV_0_6(MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED, internalPayloadMsg))
         )
-      case x            => throw new RuntimeException("unsupported msg pack version: " + x)
+      case x            => throw new RuntimeException("unsupported msg pack format: " + x)
     }
   }
 
   def buildConnReqAnswerMsgForRemoteCloudAgent(
-                                                version: MsgPackVersion,
+                                                version: MsgPackFormat,
                                                 uid: MsgId,
                                                 answerStatusCode: String,
                                                 replyToMsgId: String,
@@ -86,7 +86,7 @@ object ConnectingMsgHelper {
                                               ): List[Any] = {
 
     version match {
-      case MPV_MSG_PACK =>
+      case MPF_MSG_PACK =>
         List(
           CreateMsgReqMsg_MFV_0_5(
             TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0),
@@ -94,7 +94,7 @@ object ConnectingMsgHelper {
           AnswerInviteMsgDetail_MFV_0_5(TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
             senderDetail, senderAgencyDetail, answerStatusCode, None))
 
-      case MPV_INDY_PACK =>
+      case MPF_INDY_PACK =>
         answerStatusCode match {
           case MSG_STATUS_ACCEPTED.statusCode =>
             List(ConnReqAcceptedMsg_MFV_0_6(
@@ -115,12 +115,12 @@ object ConnectingMsgHelper {
               senderAgencyDetail,
               replyToMsgId))
         }
-      case x            => throw new RuntimeException("unsupported msg pack version: " + x)
+      case x            => throw new RuntimeException("unsupported msg pack format: " + x)
     }
   }
 
   def buildRedirectedConnReqMsgForRemoteCloudAgent(
-                                                version: MsgPackVersion,
+                                                version: MsgPackFormat,
                                                 uid: MsgId,
                                                 replyToMsgId: String,
                                                 redirectDetail: JSONObject,
@@ -130,7 +130,7 @@ object ConnectingMsgHelper {
                                               ): List[Any] = {
 
     version match {
-      case MPV_MSG_PACK =>
+      case MPF_MSG_PACK =>
         List(
           CreateMsgReqMsg_MFV_0_5(
             TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0),
@@ -138,12 +138,12 @@ object ConnectingMsgHelper {
           RedirectConnReqMsgDetail_MFV_0_5(TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
             senderDetail, senderAgencyDetail, redirectDetail, None))
 
-      case MPV_INDY_PACK =>
+      case MPF_INDY_PACK =>
         List(
           ConnReqRedirectedMsg_MFV_0_6(
           MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED, uid, `~thread`=Thread(Option(threadId)),
             sendMsg = false, redirectDetail, replyToMsgId, senderDetail, senderAgencyDetail))
-      case x            => throw new RuntimeException("unsupported msg pack version: " + x)
+      case x            => throw new RuntimeException("unsupported msg pack format: " + x)
     }
   }
 

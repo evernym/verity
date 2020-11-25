@@ -16,7 +16,7 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.config.CommonConfig.REST_API_ENABLED
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.protocol.engine.{MsgType, ProtoRef}
+import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
 import com.evernym.verity.{ActorErrorResp, Status}
 import org.json.JSONObject
@@ -101,7 +101,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   def buildGetStatusMsg(msgType: MsgType, params: Map[String, String]): String = {
     val jsonMsg = new JSONObject
     msgType.normalizedMsgType
-    jsonMsg.put("@type", s"did:sov:${msgType.familyQualifier};spec/${msgType.familyName}/${msgType.familyVersion}/${msgType.msgName}")
+    jsonMsg.put("@type", MsgFamily.typeStrFromMsgType(msgType))
     jsonMsg.put("@id", UUID.randomUUID.toString)
     params.foreach{case (key, value) =>
       jsonMsg.put(key, value)

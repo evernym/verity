@@ -112,8 +112,6 @@ class MetricsEndpointHandlerSpec extends BasicSpec with ScalatestRouteTest {
   def assert(expectedMetricsResult: MetricsResult, actualMetricsResult: MetricsResult): Unit = {
     val expected = expectedMetricsResult.metrics
     val actual = actualMetricsResult.metrics
-    println("expected metrics: " + expected)
-    println("actual metrics: " + actual)
     expected.forall(e => e._2 == actual(e._1)) shouldBe true
   }
 

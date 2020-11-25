@@ -1,7 +1,7 @@
 package com.evernym.verity.http.consumer
 
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
@@ -60,7 +60,7 @@ class ConsumerEndpointHandlerSpec
   override lazy val mockNewEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(mockConsumerAgencyAdmin)
   override lazy val mockOthersCloudAgent: MockCloudAgentBase = mockEntCloudAgent
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+    AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
 
   lazy val actualLongUrl = "http://actual.long.url/invite?t=394i4i3"
   lazy val shortenedUrl: String = HashUtil.hash(SHA256_trunc4)(actualLongUrl).hex

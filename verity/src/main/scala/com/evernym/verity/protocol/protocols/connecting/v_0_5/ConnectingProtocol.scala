@@ -70,7 +70,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,Pro
   def handleControl: Control ?=> Any = {
     case ip: Init                                 => handleInitParams(ip)
     case scrm: SendConnReqMsg                     => sendConnReqMsg(scrm.uid)
-    case smrca: SendMsgToRemoteCloudAgent         => sendMsgToRemoteCloudAgent(smrca.uid, smrca.msgPackVersion)
+    case smrca: SendMsgToRemoteCloudAgent         => sendMsgToRemoteCloudAgent(smrca.uid, smrca.msgPackFormat)
     case smea: SendMsgToEdgeAgent                 => sendMsgToEdgeAgent(smea.uid)
     case mss: MsgSentSuccessfully                 => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                    => handleMsgSendingFailed(msf)

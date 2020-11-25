@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.{MsgPackVersion, TypeFormat}
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_PLAIN
+import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, PackedMsg}
 import com.evernym.verity.protocol.engine.MsgFamily._
@@ -25,12 +25,12 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
 
   def msgToBeProcessed: AgentMsgWrapper = givenMsg match {
     case amw: AgentMsgWrapper  => amw
-    case rmp: RestMsgParam     => AgentMessageWrapper(rmp.msg, MPV_PLAIN)
+    case rmp: RestMsgParam     => AgentMessageWrapper(rmp.msg, MPF_PLAIN)
   }
 
-  def msgPackVersion: Option[MsgPackVersion] = givenMsg match {
-    case amw: AgentMsgWrapper   => Option(amw.msgPackVersion)
-    case _: RestMsgParam        => Option(MPV_PLAIN)
+  def msgPackFormat: Option[MsgPackFormat] = givenMsg match {
+    case amw: AgentMsgWrapper   => Option(amw.msgPackFormat)
+    case _: RestMsgParam        => Option(MPF_PLAIN)
   }
 
   def msgFormat: Option[TypeFormat] = givenMsg match {
@@ -48,7 +48,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
     case _: RestMsgParam        => false
   }
 
-  def msgPackVersionReq: MsgPackVersion = msgPackVersion.getOrElse(
+  def msgPackFormatReq: MsgPackFormat = msgPackFormat.getOrElse(
     throw new RuntimeException("message pack version required, but not available")
   )
 
@@ -63,14 +63,14 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
  * but the message is for a certain relationship,
  * @param msgToBeSent
  * @param threadId
- * @param msgPackVersion
- * @param msgTypeFormat
+ * @param msgPackFormat
+ * @param msgTypeDeclarationFormat
  */
 case class MsgForRelationship[A](msgToBeSent: TypedMsgLike[A],
                                  threadId: ThreadId,
                                  senderParticipantId: ParticipantId,
-                                 msgPackVersion: Option[MsgPackVersion],
-                                 msgTypeFormat: Option[TypeFormat],
+                                 msgPackFormat: Option[MsgPackFormat],
+                                 msgTypeDeclarationFormat: Option[TypeFormat],
                                  msgRespConfig: Option[MsgRespConfig],
                                  reqMsgContext: Option[ReqMsgContext]=None
                                 ) extends ActorMessageClass
@@ -104,11 +104,16 @@ case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
  * pinst -> signal -> actor driver -> agent actor -> signal msg handler
  *
  * @param signalMsg
- * @param threadId
  * @param protoRef
  * @param pinstId
+ * @param threadContextDetail
  */
-case class SignalMsgFromDriver(signalMsg: Any, threadId: ThreadId, protoRef: ProtoRef, pinstId: PinstId) extends ActorMessageClass
+case class SignalMsgFromDriver(signalMsg: Any,
+                               protoRef: ProtoRef,
+                               pinstId: PinstId,
+                               threadContextDetail: ThreadContextDetail) extends ActorMessageClass {
+  def threadId: ThreadId = threadContextDetail.threadId
+}
 
 
 /*

@@ -20,9 +20,8 @@ import scala.concurrent.Future
 trait LEGACY_connectingSignalHandler { this: UserAgentCommon =>
 
   def handleLegacySignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
-    case SignalMsgFromDriver(am: AddMsg, _, _, pinstId) =>
-      val threadContext = getThreadContext(pinstId)
-      val thread = Option(Thread(Option(threadContext.threadId)))
+    case SignalMsgFromDriver(am: AddMsg, _, _, tcd) =>
+      val thread = Option(Thread(Option(tcd.threadId)))
       LEGACY_storeMsg(
         am.msgId,
         am.msgType,

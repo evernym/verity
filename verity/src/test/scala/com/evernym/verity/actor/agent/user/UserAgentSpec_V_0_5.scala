@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
@@ -14,7 +14,7 @@ class UserAgentSpec_V_0_5 extends UserAgentSpecScaffolding {
   import mockEdgeAgent.v_0_5_resp._
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
-    AgentMsgPackagingContext(MPV_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
+    AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

@@ -43,7 +43,6 @@ class ActorMessageSerializerSpec extends BasicSpec {
 
   def checkSerialization(messages: Map[Class[_], AnyRef], patternMatcher: PartialFunction[Any, Any]): Unit = {
     messages.foreach { case (clazz, msg) =>
-      println("message: " + msg)
       msg.isInstanceOf[ActorMessage] shouldBe true
 
       //confirms, correct serializer is getting selected (in our case, it should beAkkaSerializer)

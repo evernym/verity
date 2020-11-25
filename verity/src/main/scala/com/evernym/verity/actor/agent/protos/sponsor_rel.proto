@@ -5,7 +5,7 @@ import "scalapb/scalapb.proto";
 package com.evernym.verity.actor.agent;
 
 message SponsorRel {
-    option (scalapb.message).companion_extends = "com.evernym.verity.actor.agent.SponsorRelCompanion";
+    option (scalapb.message).companion_extends = "SponsorRelCompanion";
     string sponsorId = 1;
     string sponseeId = 2;
 }

@@ -18,6 +18,7 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefini
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandDef
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofDef
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerDefinition
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.RelationshipDef
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeProtoDef
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerDefinition
@@ -28,7 +29,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Cre
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.WriteSchemaDefinition
 
 package object protocols {
-  val availableProtocols: ProtocolRegistry[ActorDriverGenParam] = ProtocolRegistry(
+  val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = ProtocolRegistry(
     (AgentProvisioningProtoDef_v_0_5, V0_1, { new AgentProvisioningDriver(_) }),
     (AgentProvisioningProtoDef_v_0_6, V0_1, { new AgentProvisioningDriver(_) }),
     (AgentProvisioningProtoDef_v_0_7, V0_2, { new AgentProvisioningDriver(_) }, OneToOneDomain),
@@ -38,6 +39,8 @@ package object protocols {
     (RelationshipDef, V0_2, {new RelationshipDriver(_)}),
 
     (OutOfBandDef, V0_2, {new OutOfBandDriver(_)}),
+
+    (BasicMessageDefinition, V0_1, { new BasicMessageDriver(_) }),
 
     (ConnectingProtoDef_v_0_5, V0_1, {new ConnectingDriver(_)}),
     (ConnectingProtoDef_v_0_6, V0_1, {new ConnectingDriver(_)}),
@@ -67,7 +70,7 @@ package object protocols {
   )
 
   def protoDef(protoRef: ProtoRef): ProtoDef = {
-    availableProtocols
+    protocolRegistry
       .entries
       .find(_.protoDef.msgFamily.protoRef == protoRef)
       .getOrElse { throw new NoSuchElementException("protocol def not found for proto ref: " + protoRef) }

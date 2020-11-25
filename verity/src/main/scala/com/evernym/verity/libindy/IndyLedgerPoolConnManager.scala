@@ -28,7 +28,9 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 
-class IndyLedgerPoolConnManager(appConfig: AppConfig, poolConfigName: Option[String] = None)
+class IndyLedgerPoolConnManager(appConfig: AppConfig,
+                                poolConfigName: Option[String] = None,
+                                genesisFile: Option[String] = None)
   extends ConfigurableLedgerPoolConnManager(appConfig)
     with LibIndyCommon {
 
@@ -40,8 +42,10 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig, poolConfigName: Option[Str
 
   private var heldPoolConn: Option[Pool] = None
 
-  private val configName = poolConfigName
+  private def configName = poolConfigName
     .getOrElse(appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_NAME))
+
+  override val genesisTxnFilePath: String = genesisFile.getOrElse(super.genesisTxnFilePath)
 
   val logger: Logger = getLoggerByClass(classOf[IndyLedgerPoolConnManager])
 
@@ -60,7 +64,7 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig, poolConfigName: Option[Str
         createPoolLedgerConfigJSONParameter.toJson).get
     } catch {
       case e: Exception =>
-        val errorMsg = s"error while creating ledger " +
+        val errorMsg = "error while creating ledger " +
           s"pool config file (detail => ${Exceptions.getErrorMsg(e)})"
         AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg))
     }
@@ -79,22 +83,22 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig, poolConfigName: Option[Str
       appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_TIMEOUT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("timeout") = timeout
-        case Some(_) => throw new RuntimeException(s"ledger pool config's timeout must be an integer greater than 0")
+        case Some(_) => throw new RuntimeException("ledger pool config's timeout must be an integer greater than 0")
       }
       appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_EXTENDED_TIMEOUT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("extended_timeout") = timeout
-        case Some(_) => throw new RuntimeException(s"ledger pool config's extended_timeout must be an integer greater than 0")
+        case Some(_) => throw new RuntimeException("ledger pool config's extended_timeout must be an integer greater than 0")
       }
       appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_LIMIT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("conn_limit") = timeout
-        case Some(_) => throw new RuntimeException(s"ledger pool config's conn_limit must be an integer greater than 0")
+        case Some(_) => throw new RuntimeException("ledger pool config's conn_limit must be an integer greater than 0")
       }
       appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_ACTIVE_TIMEOUT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("conn_active_timeout") = timeout
-        case Some(_) => throw new RuntimeException(s"ledger pool config's conn_active_timeout must be an integer greater than 0")
+        case Some(_) => throw new RuntimeException("ledger pool config's conn_active_timeout must be an integer greater than 0")
       }
       // Convert the poolConfig from a mutable Map to an immutable Map and then to a JSON string
       val poolConfigJson = DefaultMsgCodec.toJson(poolConfig.toMap)

@@ -37,7 +37,7 @@ trait PushNotifMsgHttpListener
       case MediaTypes.`application/json` =>
         handleJsonMsgReq
       case _ =>
-        println("non binary message received")
+        // non-binary message received
         reject
     }
   }

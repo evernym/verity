@@ -3,8 +3,8 @@ package com.evernym.verity.actor.agent.msgrouter
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.event.LoggingReceive
-import com.evernym.verity.actor.cluster_singleton.fixlegacyroutes.Registered
-import com.evernym.verity.actor.cluster_singleton.legacyroutefixmanager.{AlreadyCompleted, AlreadyRegistered, Register}
+import com.evernym.verity.actor.cluster_singleton.maintenance.{AlreadyCompleted, AlreadyRegistered, Register}
+import com.evernym.verity.actor.cluster_singleton.maintenance.Registered
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, RouteSet}
 import com.evernym.verity.config.{AppConfig, CommonConfig}
@@ -35,9 +35,9 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
     case gr: GetRoute => handleGetRoute(gr)
 
-    case GetPotentialLegacyRouteSummary => sender ! Register(entityId, legacyRouteFixCandidates().size)
+    case SendAllRouteRegistrationRequest => sender ! Register(entityId, getAllRouteDIDs().size)
 
-    case grd: GetPotentialLegacyRouteBatch => handleGetCandidatesToFixLegacyRoutes(grd)
+    case grd: GetRouteBatch => handleGetRouteBatch(grd)
 
     case _ @ (_: Registered | AlreadyRegistered | AlreadyCompleted) => //nothing to do
   }
@@ -47,18 +47,15 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
       routes = routes.updated(rs.forDID, ActorAddressDetail(rs.actorTypeId, rs.address))
   }
 
-  def legacyRouteFixCandidates(totalSize:Int = routes.size) : Set[String] = {
-    val actorTypeIds = Set(
-      LEGACY_ACTOR_TYPE_USER_AGENT_ACTOR, LEGACY_ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR,
-      ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR)
-    routes.take(totalSize).filter(c => actorTypeIds.contains(c._2.actorTypeId)).keySet
+  def getAllRouteDIDs(totalCandidates:Int = routes.size) : Set[String] = {
+    routes.take(totalCandidates).keySet
   }
 
-  def handleGetCandidatesToFixLegacyRoutes(grd: GetPotentialLegacyRouteBatch): Unit = {
-    logger.debug(s"LRF [$persistenceId] [LRU->ARS] received GetPotentialLegacyRouteBatch: " + grd)
-    val candidates = legacyRouteFixCandidates(grd.totalCandidates).slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+  def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
+    logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
+    val candidates = getAllRouteDIDs(grd.totalCandidates).slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
     val resp = CandidateRoutesToBeProcessed(candidates)
-    logger.debug(s"LRF [$persistenceId] sending response: " + resp)
+    logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
   }
 
@@ -97,8 +94,8 @@ case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessa
 //cmds
 case class SetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessageClass
 case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds) extends ActorMessageClass
-case class GetPotentialLegacyRouteBatch(totalCandidates: Int, fromIndex: Int, batchSize: Int) extends ActorMessageClass
-case object GetPotentialLegacyRouteSummary extends ActorMessageObject
+case class GetRouteBatch(totalCandidates: Int, fromIndex: Int, batchSize: Int) extends ActorMessageClass
+case object SendAllRouteRegistrationRequest extends ActorMessageObject
 
 //response msgs
 case class RouteAlreadySet(forDID: DID) extends ActorMessageClass

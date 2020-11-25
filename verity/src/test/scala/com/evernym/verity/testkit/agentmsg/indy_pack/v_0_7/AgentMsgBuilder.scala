@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_INDY_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MFV_1_0, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
@@ -19,7 +19,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
 
   object v_0_7_req {
 
-    implicit val msgPackVersion: MsgPackVersion = MPV_INDY_PACK
+    implicit val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
 
     def prepareCreateAgentMsgForAgency(forDID: DID, requesterKeys: RequesterKeys, token: Option[ProvisionToken]): PackedMsg = {
       logger.debug("Prepare create agent msg for agency (MFV 0.7)")

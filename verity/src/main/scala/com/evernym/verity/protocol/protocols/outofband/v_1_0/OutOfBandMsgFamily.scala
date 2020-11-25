@@ -1,9 +1,12 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.util.{Base64Util, MsgIdProvider}
 
 object OutOfBandMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.COMMUNITY_QUALIFIER
@@ -13,7 +16,8 @@ object OutOfBandMsgFamily extends MsgFamily {
   override protected val protocolMsgs: Map[MsgName, Class[_]] = Map(
     "handshake-reuse"                   -> classOf[Msg.HandshakeReuse],
     "handshake-reuse-accepted"          -> classOf[Msg.HandshakeReuseAccepted],
-    "problem-report"                    -> classOf[Msg.ProblemReport]
+    "problem-report"                    -> classOf[Msg.ProblemReport],
+    "invitation"                        -> classOf[Msg.OutOfBandInvitation]
   )
 
   override protected val controlMsgs: Map[MsgName, Class[_]] = Map(
@@ -57,6 +61,26 @@ object Msg {
       )
     )
   }
+
+  case class OutOfBandInvitation(label: String,
+                                 goal_code: String,
+                                 goal: String,
+                                 `request~attach`: Vector[AttachmentDescriptor],
+                                 service: Vector[ServiceFormatted],
+                                 profileUrl: Option[String],
+                                 public_did: Option[String]) extends Msg {
+    val `@id`: String = MsgIdProvider.getNewMsgId
+    val `@type`: String = MsgFamily.typeStrFromMsgType(OutOfBandMsgFamily.msgType(getClass))
+
+    // TODO - this should be dynamic (configurable?) but for now it is hardcoded
+    val handshake_protocols: Vector[String] = Vector("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/")
+  }
+
+  def prepareInviteUrl(invitation: OutOfBandInvitation, urlEndpoint: String): String = {
+    val inv = DefaultMsgCodec.toJson(invitation)
+    urlEndpoint + "?oob=" + Base64Util.getBase64UrlEncoded(inv.getBytes) // FIXME use a lib to build a correct URL
+  }
+
 }
 
 sealed trait State

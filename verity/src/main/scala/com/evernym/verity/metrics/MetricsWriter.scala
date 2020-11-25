@@ -1,7 +1,7 @@
 package com.evernym.verity.metrics
 
 import kamon.Kamon
-import kamon.metric.Metric
+import kamon.metric.{MeasurementUnit, Metric}
 import kamon.tag.TagSet
 
 /**
@@ -52,21 +52,22 @@ object GaugeApiImpl extends GaugeApi {
 }
 
 trait HistogramApi {
-  def record(name: String, value: Long): Unit
-  def recordWithTag(name: String, value: Long, tag: (String, String)): Unit
-  def recordWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty): Unit
+  def record(name: String, unit: MeasurementUnit, value: Long): Unit
+  def recordWithTag(name: String, unit: MeasurementUnit, value: Long, tag: (String, String)): Unit
+  def recordWithTags(name: String, unit: MeasurementUnit, value: Long, tags: Map[String, String] = Map.empty): Unit
 }
 
 object HistogramApiImpl extends HistogramApi {
-  override def record(name: String, value: Long): Unit = initializedHistogramMetric(name).withoutTags().record(value)
+  override def record(name: String, unit: MeasurementUnit, value: Long): Unit =
+    initializedHistogramMetric(name).withoutTags().record(value)
 
-  def recordWithTag(name: String, value: Long, tag: (String, String)): Unit = {
+  def recordWithTag(name: String, unit: MeasurementUnit, value: Long, tag: (String, String)): Unit = {
     initializedHistogramMetric(name)
       .withTag(tag._1, tag._2)
       .record(value)
   }
 
-  def recordWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty): Unit = {
+  def recordWithTags(name: String, unit: MeasurementUnit, value: Long, tags: Map[String, String] = Map.empty): Unit = {
     initializedHistogramMetric(name).withTags(TagSet.from(tags)).record(value)
   }
 

@@ -18,11 +18,26 @@ object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role,
 
   override val roles: Set[Role] = Set(Issuer(), Holder())
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID, MY_PAIRWISE_DID, THEIR_PAIRWISE_DID)
+  override val initParamNames: Set[ParameterName] = Set(
+    SELF_ID,
+    OTHER_ID,
+    MY_PAIRWISE_DID,
+    THEIR_PAIRWISE_DID,
+
+    // Needed for OOB invite
+    NAME,
+    LOGO_URL,
+    AGENCY_DID_VER_KEY,
+    MY_PUBLIC_DID
+  )
 
   override def createInitMsg(params: Parameters): Control = Ctl.Init(params)
 
-  override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess)
+  override val requiredAccess: Set[AccessRight] = Set(
+    AnonCreds,
+    LedgerReadAccess,
+    AccessVerKey
+  )
 }
 
 sealed trait Role
@@ -37,4 +52,5 @@ object ProblemReportCodes {
   val credentialRequestCreation = "credential-request-creation"
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
+  val shorteningFailed = "shortening-failed"
 }

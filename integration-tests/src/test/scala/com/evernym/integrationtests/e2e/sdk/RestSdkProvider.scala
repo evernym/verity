@@ -9,13 +9,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import com.evernym.integrationtests.e2e.env.SdkConfig
+import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, ProtoRef}
-import com.evernym.verity.testkit.listener.Listener
-import com.evernym.verity.util.Base58Util
-import com.evernym.integrationtests.e2e.env.SdkConfig
-import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -33,22 +31,25 @@ import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryConfig, WriteCredentialDefinitionV0_6}
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.{Context, JsonUtil, Util}
+import com.evernym.verity.testkit.listener.Listener
+import com.evernym.verity.util.Base58Util
 import org.hyperledger.indy.sdk.crypto.Crypto
 import org.json.{JSONArray, JSONObject}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 
-class HandlersForBothResponseTypes(handler: JSONObject => Unit){
+class HandlersForBothResponseTypes(handler: JSONObject => Unit)(implicit debugPrint: Boolean){
+  import VeritySdkProvider._
 
   def handleMessage(context: Context, rawMessage: Array[Byte]): Unit = {
     val message: JSONObject = try {
       val msg = Util.unpackMessage(context, rawMessage)
-      println(s"Received PACKED msg: $msg")
+      debugPrintln(s"Received PACKED msg: $msg")
       throw new Exception("error")
     } catch {
       case _ : WalletException =>
-        println(s"Received PLAIN REST msg: ${new JSONObject(new String(rawMessage))}")
+        debugPrintln(s"Received PLAIN REST msg: ${new JSONObject(new String(rawMessage))}")
         new JSONObject(new String(rawMessage))
     }
     handler(message)
@@ -58,6 +59,8 @@ class HandlersForBothResponseTypes(handler: JSONObject => Unit){
 class RestSdkProvider(val sdkConfig: SdkConfig)
   extends BaseSdkProvider
     with ListeningSdkProvider {
+
+  import VeritySdkProvider._
   /**
     * Check that the sdk is available (ex. on class path, installed or whatever)
     */
@@ -98,11 +101,11 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedIssuerSetup_0_6 {
       override def create(context: Context): Unit = {
-        println(s"issuer setup json: ${createJson.toString}")
+        debugPrintln(s"issuer setup json: ${createJson.toString}")
         sendHttpPostReq(context, createJson.toString, ProtoRef("issuer-setup", "0.6"), Option(UUID.randomUUID.toString))
       }
       override def currentPublicIdentifier(context: Context): Unit = {
-        println(s"issuer setup json: ${currentPublicIdentifierJson.toString}")
+        debugPrintln(s"issuer setup json: ${currentPublicIdentifierJson.toString}")
         sendHttpPostReq(context, currentPublicIdentifierJson.toString, ProtoRef("issuer-setup", "0.6"),
           Option(UUID.randomUUID.toString))
       }
@@ -159,12 +162,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedUpdateConfigs_0_6 {
       override def update(ctx: Context): Unit = {
-        println(s"update logo&name json: ${updateConfigsJson.toString}")
+        debugPrintln(s"update logo&name json: ${updateConfigsJson.toString}")
         sendHttpPostReq(context, updateConfigsJson.toString, ProtoRef("update-configs", "0.6"),
           Option(UUID.randomUUID.toString))
       }
       override def status(ctx: Context): Unit = {
-        println(s"get logo&name json")
+        debugPrintln(s"get logo&name json")
         sendHttpGetReq(context, ProtoRef("update-configs", "0.6"), None)
       }
     }
@@ -173,7 +176,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = {
     new UndefinedUpdateConfigs_0_6 {
       override def status(ctx: Context): Unit = {
-        println(s"get logo&name json")
+        debugPrintln(s"get logo&name json")
         sendHttpGetReq(context, ProtoRef("update-configs", "0.6"), None)
       }
     }
@@ -188,7 +191,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit = {
-        println(s"write schema json: ${writeSchemaJson.toString}")
+        debugPrintln(s"write schema json: ${writeSchemaJson.toString}")
         sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
       }
     }
@@ -211,7 +214,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit = {
-        println(s"write cred def json: ${writeCredDefJson.toString}")
+        debugPrintln(s"write cred def json: ${writeCredDefJson.toString}")
         sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
       }
     }
@@ -234,7 +237,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedCommittedAnswer_1_0 {
       override def ask(ctx: Context): Unit = {
-        println(s"committedanswer ask json: ${askJson.toString}")
+        debugPrintln(s"committedanswer ask json: ${askJson.toString}")
         sendHttpPostReq(context, askJson.toString, ProtoRef("committedanswer", "1.0"), Option(UUID.randomUUID.toString))
       }
     }
@@ -249,7 +252,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedCommittedAnswer_1_0 {
       override def answer(ctx: Context): Unit = {
-        println(s"committedanswer answer json: ${answerJson.toString}")
+        debugPrintln(s"committedanswer answer json: ${answerJson.toString}")
         sendHttpPostReq(context, answerJson.toString, ProtoRef("committedanswer", "1.0"), Option(threadId))
       }
     }
@@ -272,8 +275,8 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     val restApiUrlPrefix = s"${context.verityUrl()}/api/${context.domainDID}/${protoRef.msgFamilyName}/${protoRef.msgFamilyVersion}"
     val restApiUrlThreadSuffix = threadId.map(tid => s"/$tid").getOrElse("")
     val restApiUrl: String = restApiUrlPrefix + restApiUrlThreadSuffix
-    println("# POST rest api url: " + restApiUrl)
-    println(s"# JSON msg sent: $jsonMsg")
+    debugPrintln("# POST rest api url: " + restApiUrl)
+    debugPrintln(s"# JSON msg sent: $jsonMsg")
     val result = Http()(system).singleRequest(
       HttpRequest(
         method = HttpMethods.POST,
@@ -283,14 +286,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     )
 
     val httpResponse = Await.result(result, httpTimeout)
-    println(s"# POST Response:${httpResponse.status} ${httpResponse.entity}")
+    debugPrintln(s"# POST Response:${httpResponse.status} ${httpResponse.entity}")
   }
 
   def sendHttpGetReq(ctx: Context, protoRef: ProtoRef, threadId: Option[String], parameters: Map[String, String] = Map.empty): Unit = {
     val restApiUrlPrefix = s"${context.verityUrl()}/api/${context.domainDID}/${protoRef.msgFamilyName}/${protoRef.msgFamilyVersion}"
     val restApiUrlThreadSuffix = threadId.map(tid => s"/$tid").getOrElse("")
     val restApiUrl = restApiUrlPrefix + restApiUrlThreadSuffix + encodeGetParameters(parameters)
-    println("# GET rest api url: " + restApiUrl)
+    debugPrintln("# GET rest api url: " + restApiUrl)
     val result = Http()(system).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
@@ -300,7 +303,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     val httpResponse = Await.result(result, httpTimeout)
 
-    println(s"# GET Response:${httpResponse.status} ${httpResponse.entity}")
+    debugPrintln(s"# GET Response:${httpResponse.status} ${httpResponse.entity}")
     receiveMsgFromResponse(httpResponse)
   }
 
@@ -326,7 +329,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedRelationship_1_0 {
       override def create(context: Context): Unit = {
-        println(s"relationship create json: ${createJson.toString}")
+        debugPrintln(s"relationship create json: ${createJson.toString}")
         sendHttpPostReq(context, createJson.toString, ProtoRef("relationship", "1.0"), None)
       }
     }
@@ -342,7 +345,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
         connInvitation.put("~for_relationship", forRelationship)
         connInvitation.put("shortInvite", shortInvite)
 
-        println(s"relationship connectionInvitation json: ${connInvitation.toString}")
+        debugPrintln(s"relationship connectionInvitation json: ${connInvitation.toString}")
         sendHttpPostReq(context, connInvitation.toString, ProtoRef("relationship", "1.0"), Option(threadId))
       }
       override def outOfBandInvitation(context: Context, shortInvite: lang.Boolean, goal: GoalCode): Unit = {
@@ -354,7 +357,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
           .put("goal", goal.goalName())
           .put("shortInvite", shortInvite)
 
-        println(s"relationship outOfBandInvitation json: ${oobJsonMsg.toString}")
+        debugPrintln(s"relationship outOfBandInvitation json: ${oobJsonMsg.toString}")
         sendHttpPostReq(context, oobJsonMsg.toString, ProtoRef("relationship", "1.0"), Option(threadId))
       }
     }
@@ -374,7 +377,9 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                    credDefId: String,
                                    values: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 = {
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 = {
 
     val credValues: JSONObject = new JSONObject
     for ((key, value) <- values) {
@@ -386,10 +391,11 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     credOfferJson.put("~for_relationship", forRelationship)
     credOfferJson.put("cred_def_id", credDefId)
     credOfferJson.put("credential_values", credValues)
+    credOfferJson.put("by_invitation", byInvitation)
 
     new UndefinedIssueCredential_1_0 {
       override def offerCredential(context: Context): Unit = {
-        println(s"send credential offer json: ${credOfferJson.toString}")
+        debugPrintln(s"send credential offer json: ${credOfferJson.toString}")
         sendHttpPostReq(context, credOfferJson.toString, ProtoRef("issue-credential", "1.0"), Option(UUID.randomUUID.toString))
       }
     }
@@ -409,12 +415,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     new UndefinedIssueCredential_1_0 {
 
       override def issueCredential(ctx: Context): Unit = {
-        println(s"issue credential json: ${issueCredJson.toString}")
+        debugPrintln(s"issue credential json: ${issueCredJson.toString}")
         sendHttpPostReq(context, issueCredJson.toString, ProtoRef("issue-credential", "1.0"), Option(threadId))
       }
 
       override def status(ctx: Context): Unit = {
-        println(s"issue credential status json: ${credStatusJson.toString}")
+        debugPrintln(s"issue credential status json: ${credStatusJson.toString}")
         sendHttpGetReq(context, ProtoRef("issue-credential", "1.0"), Option(threadId),
           Map("~for_relationship" -> forRelationship, "familyQualifier" -> "BzCbsNYhMrjHiqZDTUASHg", "msgName" -> "status"))
       }
@@ -434,7 +440,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     new UndefinedPresentProof_1_0 {
       override def request(ctx: Context): Unit = {
-        println(s"present proof request json: ${proofReqJson.toString}")
+        debugPrintln(s"present proof request json: ${proofReqJson.toString}")
         sendHttpPostReq(context, proofReqJson.toString, ProtoRef("present-proof", "1.0"), Option(UUID.randomUUID.toString))
       }
     }

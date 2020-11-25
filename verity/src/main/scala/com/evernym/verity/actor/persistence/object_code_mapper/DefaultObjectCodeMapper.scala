@@ -2,8 +2,8 @@ package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.agency.AgencyAgentState
-import com.evernym.verity.actor.agent.msgrouter.{RouteProcessed, StatusUpdated}
-import com.evernym.verity.actor.cluster_singleton.fixlegacyroutes.{Completed, Registered}
+import com.evernym.verity.actor.agent.msgrouter.{ActorStateCleaned, StatusUpdated}
+import com.evernym.verity.actor.cluster_singleton.maintenance.{Completed, Registered}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
 import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
 import com.evernym.verity.protocol.protocols.committedAnswer.{v_1_0 => committedAnswer_v10}
@@ -18,7 +18,7 @@ import com.evernym.verity.protocol.protocols.trustping.{v_1_0 => trustping_v10}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef_v06}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
-import com.evernym.verity.protocol.{SetDomainId, SetPinstId}
+import com.evernym.verity.protocol.{LegacyPackagingContextSet, PackagingContextSet, ReceivedOrderIncremented, ReceivedOrdersSet, SenderOrderIncremented, SenderOrderSet, SetDomainId, SetPinstId}
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
 
@@ -83,7 +83,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     51 -> ProtocolObserverAdded,
     52 -> ConnectionStatusUpdated,
     53 -> ProtocolIdDetailSet,
-    54 -> ThreadContextStored,
+    54 -> ThreadContextStored,    //no more used for new data, kept here for backward compatibility
     55 -> SetPinstId, //NOTE: this is not used anymore, but we'll have to keep it for backward compatibility
     56 -> walletBackup.WalletBackupInitialized,
     57 -> walletBackup.ProvisionRequested,
@@ -229,8 +229,8 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     189 -> trustping_v10.SentResponse,
     190 -> trustping_v10.ReceivedResponse,
 
-    191 -> ProtoMsgSenderOrderIncremented,
-    192 -> ProtoMsgReceivedOrderIncremented,
+    191 -> ProtoMsgSenderOrderIncremented,    //no more used for new data, kept here for backward compatibility
+    192 -> ProtoMsgReceivedOrderIncremented,  //no more used for new data, kept here for backward compatibility
 
     193 -> outOfBand_v10.Initialized,
     194 -> outOfBand_v10.ConnectionReuseRequested,
@@ -241,7 +241,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     197 -> Registered,
     198 -> Completed,
     199 -> StatusUpdated,
-    200 -> RouteProcessed,
+    200 -> ActorStateCleaned,
 
     201 -> RecordingAgentActivity,
 
@@ -253,7 +253,17 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     206 -> basicMessage_v10.Initialized,
     207 -> basicMessage_v10.MyRole,
-    208 -> basicMessage_v10.MessageReceived
+    208 -> basicMessage_v10.MessageReceived,
+
+    209 -> presentProof_v10.AgentContext,
+
+    210 -> PackagingContextSet,
+    211 -> LegacyPackagingContextSet,
+    212 -> SenderOrderSet,
+    213 -> ReceivedOrdersSet,
+    214 -> SenderOrderIncremented,
+    215 -> ReceivedOrderIncremented,
+    216 -> ProtoActorUpdatedWithThreadContext
   )
 
 }

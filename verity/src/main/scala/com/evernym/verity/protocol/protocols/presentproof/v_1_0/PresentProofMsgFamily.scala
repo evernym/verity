@@ -21,13 +21,16 @@ object PresentProofMsgFamily
   )
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
-    "Init"              -> classOf[Ctl.Init],
-    "request"           -> classOf[Ctl.Request],
-    "present"           -> classOf[Ctl.AcceptRequest],
-    "accept-proposal"   -> classOf[Ctl.AcceptProposal],
-    "propose"           -> classOf[Ctl.Propose],
-    "reject"            -> classOf[Ctl.Reject],
-    "status"            -> classOf[Ctl.Status],
+    "Init"                     -> classOf[Ctl.Init],
+    "request-invitation"       -> classOf[Ctl.AttachedRequest],
+    "request"                  -> classOf[Ctl.Request],
+    "present"                  -> classOf[Ctl.AcceptRequest],
+    "accept-proposal"          -> classOf[Ctl.AcceptProposal],
+    "propose"                  -> classOf[Ctl.Propose],
+    "reject"                   -> classOf[Ctl.Reject],
+    "status"                   -> classOf[Ctl.Status],
+    "invite-shortened"         -> classOf[Ctl.InviteShortened],
+    "invite-shortening-failed" -> classOf[Ctl.InviteShorteningFailed],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -36,6 +39,8 @@ object PresentProofMsgFamily
     classOf[Sig.PresentationResult]   -> "presentation-result",
     classOf[Sig.ProblemReport]        -> "problem-report",
     classOf[Sig.StatusReport]         -> "status-report",
+    classOf[Sig.Invitation]           -> "protocol-invitation",
+    classOf[Sig.ShortenInvite]        -> "shorten-invite",
   )
 }
 
@@ -43,11 +48,32 @@ case class PresentationPreviewAttribute(name: String,
                                         cred_def_id: Option[String],
                                         `mime-type`: Option[String],
                                         value: Option[String],
-                                        referent: Option[String])
+                                        referent: Option[String]) {
+  def toEvent: PreviewAttribute = {
+    PreviewAttribute (
+      name,
+      cred_def_id.toSeq,
+      `mime-type`.toSeq,
+      value.toSeq,
+      referent.toSeq
+    )
+  }
+}
+
 case class PresentationPreviewPredicate(name: String,
                                         cred_def_id: String,
                                         predicate: String,
-                                        threshold: String)
+                                        threshold: Int) {
+  def toEvent: PreviewPredicate = {
+    PreviewPredicate(
+      name,
+      cred_def_id,
+      predicate,
+      threshold
+    )
+  }
+}
+
 case class PresentationPreview(attributes: Seq[PresentationPreviewAttribute],
                                predicates: Seq[PresentationPreviewPredicate],
                                `@type`: String = "https://didcomm.org/present-proof/1.0/presentation-preview")
@@ -79,30 +105,42 @@ package object Msg {
 // Control Messages
 sealed trait CtlMsg extends Control with MsgBase
 package object Ctl {
-  case class Init(selfId: ParameterValue, otherId: ParameterValue) extends CtlMsg
+  case class Init(selfId: ParameterValue,
+                  otherId: Option[ParameterValue],
+                  agentName: Option[ParameterValue],
+                  logoUrl: Option[ParameterValue],
+                  agencyVerkey: Option[ParameterValue],
+                  publicDid: Option[ParameterValue]
+                 ) extends CtlMsg
+  case class AttachedRequest(request: Msg.RequestPresentation) extends CtlMsg
   case class Request(name: String,
                      proof_attrs: Option[List[ProofAttribute]],
                      proof_predicates: Option[List[ProofPredicate]],
-                     revocation_interval: Option[RevocationInterval]) extends CtlMsg
+                     revocation_interval: Option[RevocationInterval],
+                     by_invitation: Option[Boolean]=None,
+                    ) extends CtlMsg
   case class AcceptRequest(selfAttestedAttrs: Map[String, String]=Map.empty) extends CtlMsg
-  case class AcceptProposal() extends CtlMsg
+  case class AcceptProposal(name: Option[String], non_revoked: Option[RevocationInterval]) extends CtlMsg
   case class Propose(attributes: Option[List[PresentationPreviewAttribute]],
                      predicates: Option[List[PresentationPreviewPredicate]],
                      comment: String) extends CtlMsg
   case class Reject(reason: Option[String]) extends CtlMsg
   case class Status() extends CtlMsg
-
+  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends CtlMsg
+  case class InviteShorteningFailed(invitationId: String, reason: String) extends CtlMsg
 }
 
 // Signal Messages
 sealed trait SigMsg
 case class Problem(code: Int, error: String)
 package object Sig {
+  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SigMsg
   case class ReviewRequest(proof_request: ProofRequest, can_fulfill: Boolean) extends SigMsg
   case class ReviewProposal(attributes: Seq[PresentationPreviewAttribute],
                             predicates: Seq[PresentationPreviewPredicate],
                             comment: String) extends SigMsg
   case class PresentationResult(verification_result: String, requested_presentation: AttributesPresented) extends SigMsg
+  case class ShortenInvite(invitationId: String, inviteURL: String) extends SigMsg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
   case class StatusReport(status: String, results: Option[PresentationResult], error: Option[Problem])
 

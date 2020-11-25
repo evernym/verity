@@ -2,6 +2,7 @@ syntax = "proto3";
 
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
 
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0;
 
@@ -18,6 +19,14 @@ message Participants {
     option (scalapb.message).extends = "Event";
     string selfId = 1;
     string otherId = 2;
+}
+
+message AgentContext {
+    option (scalapb.message).extends = "Event";
+    google.protobuf.StringValue agentName    = 1;
+    google.protobuf.StringValue logoUrl      = 2;
+    google.protobuf.StringValue agencyVerKey = 3;
+    google.protobuf.StringValue publicDid    = 4;
 }
 
 message RequestGiven {
@@ -43,6 +52,35 @@ message PresentationGiven {
 message PresentationAck {
     option (scalapb.message).extends = "Event";
     string status = 1;
+}
+
+message PreviewAttribute {
+    option (scalapb.message).extends = "Event";
+    string name = 1;
+    repeated string credDefId = 2; // optional
+    repeated string mimeType = 3; // optional
+    repeated string value = 4; // optional
+    repeated string referent = 5; // optional
+}
+
+message PreviewPredicate {
+    option (scalapb.message).extends = "Event";
+    string name = 1;
+    string credDefId = 2;
+    string predicate = 3;
+    int32 threshold = 4;
+}
+
+message PresentationProposed {
+    option (scalapb.message).extends = "Event";
+    repeated PreviewAttribute attributes = 1;
+    repeated PreviewPredicate predicates = 2;
+}
+
+message ProposeReceived {
+    option (scalapb.message).extends = "Event";
+    repeated PreviewAttribute attributes = 1;
+    repeated PreviewPredicate predicates = 2;
 }
 
 message AttributesGiven {

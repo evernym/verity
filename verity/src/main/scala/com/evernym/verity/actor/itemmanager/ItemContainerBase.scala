@@ -55,7 +55,7 @@ trait ItemContainerBase
     case mcsc: MigratedContainerStorageCleaned =>
       //if the requesting container also had all events cleaned up, then, it should just ignore this message
       logMsg(s"received $mcsc in non configured state (mostly this would be " +
-        s"stale container who already cleaned up its storage), this will be ignored", DebugLevel)
+        "stale container who already cleaned up its storage), this will be ignored", DebugLevel)
 
     case am: ActorMessage => unhandledMsg(am, ItemContainerStaleOrConfigNotYetSet)
   }
@@ -305,7 +305,7 @@ trait ItemContainerBase
     containerIdsForPendingStorageCleaning.foreach { migratedContainerEntityId =>
       if (entityId == migratedContainerEntityId) {
         handleUnsupportedCondition(s"$entityId container got in corrupted state as it contains " +
-          s"self reference in these migrated containers: " + migratedContainers)
+          s"self reference in these migrated containers: $migratedContainers")
       } else {
         sendInternalCmdToItemContainer(CleanStorage(entityId), migratedContainerEntityId)
       }
@@ -603,8 +603,9 @@ trait ItemContainerBase
   def migratedContainerStorageCleaned(mcsc: MigratedContainerStorageCleaned): Unit = {
     logMsg("migrated container storage cleaned received: " + mcsc, DebugLevel)
     if (! migratedContainers.contains(mcsc.entityId)) {
-      handleUnsupportedCondition(s"container $entityId requested to mark ${mcsc.entityId} container's storage as cleaned " +
-        s"before it is marked as migration completed")
+      val msg = s"container $entityId requested to mark ${mcsc.entityId} container's storage as cleaned " +
+        "before it is marked as migration completed"
+      handleUnsupportedCondition(msg)
     } else {
       writeAndApply(mcsc)
     }
@@ -618,7 +619,7 @@ trait ItemContainerBase
         cleanStorageRequestedByContainerIds = cleanStorageRequestedByContainerIds + cs.requestedByItemContainerId
         deleteMessages(lastSequenceNr)    //this will delete all events of this actor
       case (true, false) =>
-        logMsg(s"clean storage won't be processed as migration is not started or not yet marked as finished", DebugLevel)
+        logMsg("clean storage won't be processed as migration is not started or not yet marked as finished", DebugLevel)
       case (false, _)   =>
         logMsg(s"clean storage won't be processed as the same is pending for ${pendingStorageCleanup.mkString(", ")} container(s)", DebugLevel)
     }

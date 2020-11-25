@@ -7,7 +7,7 @@ import com.evernym.verity.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
-import com.evernym.verity.actor.agent.MsgPackVersion.{MPV_INDY_PACK, MPV_MSG_PACK, MPV_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -116,7 +116,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
     case (_, _, ip: Init                        ) => handleInitParams(ip)                               // d -> *
     case (_, _, m: SendConnReqMsg               ) => sendConnReqMsg(m.uid)                              // ic -> ic
-    case (_, _, m: SendMsgToRemoteCloudAgent    ) => sendMsgToRemoteCloudAgent(m.uid, m.msgPackVersion) // ac -> ac
+    case (_, _, m: SendMsgToRemoteCloudAgent    ) => sendMsgToRemoteCloudAgent(m.uid, m.msgPackFormat) // ac -> ac
     case (_, _, m: SendMsgToEdgeAgent           ) => sendMsgToEdgeAgent(m.uid)                          //ic -> ic
     case (_, _, m: MsgSentSuccessfully          ) => handleMsgSentSuccessfully(m)                       // ic -> ic, ac -> ac
     case (_, _, m: MsgSendingFailed             ) => handleMsgSendingFailed(m)                          // ic -> ic, ac -> ac
@@ -146,15 +146,15 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       edgePairwiseKey.verKey)(walletDetail.walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
     val pm = handleConnReqMsg(ccamw, Option(cc.sourceId))
-    amw.msgPackVersion match {
-      case MPV_PLAIN => // do nothing
-      case MPV_INDY_PACK | MPV_MSG_PACK =>
+    amw.msgPackFormat match {
+      case MPF_PLAIN => // do nothing
+      case MPF_INDY_PACK | MPF_MSG_PACK =>
         fut.map { _ =>
           ctx.SERVICES_DEPRECATED.msgQueueServiceProvider.addToMsgQueue(
             SendMsgToRegisteredEndpoint(MsgIdProvider.getNewMsgId, pm.msg, None)
           )
         }
-      case Unrecognized(_) => throw new RuntimeException("unsupported msgPackVersion: Unrecognized can't be used here")
+      case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
     }
     pm
   }
@@ -186,8 +186,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       Set(KeyInfo(Left(createKeyReqMsg.forDIDVerKey))),
       Option(KeyInfo(Left(pairwiseKeyCreated.verKey)))
     )
-    val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackVersion == MPV_MSG_PACK)
-    buildAgentMsg(agentMsgContext.msgPackVersion, param)
+    val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+    buildAgentMsg(agentMsgContext.msgPackFormat, param)
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

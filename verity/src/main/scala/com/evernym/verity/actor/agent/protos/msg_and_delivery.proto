@@ -50,7 +50,7 @@ message PayloadMetadata {
     option (scalapb.message).companion_extends = "PayloadMetadataCompanion";
     option (scalapb.message).extends = "PayloadMetadataBase";
     string msgTypeStr = 1;
-    string msgPackVersionStr = 2;
+    string msgPackFormatStr = 2;
 }
 
 message MsgDeliveryDetail {

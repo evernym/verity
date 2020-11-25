@@ -21,7 +21,8 @@ trait LibIndyCommon {
     liLogger.debug("lib indy dir path: " + lifp)
     lifp
   }
-  val genesisTxnFilePath: String = {
+
+  def genesisTxnFilePath: String = {
     val gptf = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
     gptf
   }
@@ -34,7 +35,7 @@ trait LibIndyCommon {
       LibIndy.init(libIndyDirPath)
     } catch {
       case e: Exception =>
-        val errorMsg = s"unable to initialize lib-indy library: " + Exceptions.getErrorMsg(e)
+        val errorMsg = s"unable to initialize lib-indy library: ${Exceptions.getErrorMsg(e)}"
         AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_LIB_INDY_INIT, e, Option(errorMsg))
     }
   }

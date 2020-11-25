@@ -1,7 +1,7 @@
 package com.evernym.verity.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackVersion
-import com.evernym.verity.actor.agent.MsgPackVersion.MPV_MSG_PACK
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.protocol.engine.Constants._
@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.util.Connect_MFV_0_5
 class MsgPackTransformerSpec extends AgentTransformerSpec {
 
   val typ = "v1"
-  val msgPackVersion: MsgPackVersion = MPV_MSG_PACK
+  val msgPackFormat: MsgPackFormat = MPF_MSG_PACK
   val msgFamilyVersion: MsgFamilyVersion = MFV_0_5
 
   def msgClass: Class[Connect_MFV_0_5] = classOf[Connect_MFV_0_5]

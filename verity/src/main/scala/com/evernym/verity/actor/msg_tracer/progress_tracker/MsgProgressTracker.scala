@@ -105,7 +105,7 @@ class MsgProgressTracker(val appConfig: AppConfig) extends BaseNonPersistentActo
       finishTracking()
     } else {
       ct.trackForMinutes.foreach(setTrackingExpiryTime)
-      sender ! TrackingConfigured(s"tracking will be finished at: " + finishTrackingAt)
+      sender ! TrackingConfigured(s"tracking will be finished at: $finishTrackingAt")
       finishTrackingIfExceededTime()
     }
   }

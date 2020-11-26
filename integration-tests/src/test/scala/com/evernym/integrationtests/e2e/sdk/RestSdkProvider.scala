@@ -20,7 +20,7 @@ import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.OutOfBand
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
-import com.evernym.verity.sdk.protocols.presentproof.common.Attribute
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
@@ -430,13 +430,18 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def issueCredentialComplete_1_0(): Unit = ???
 
-  override def presentProof_1_0(forRelationship: DID, name: String, attrs: Attribute*): PresentProofV1_0 = {
+  override def presentProof_1_0(forRelationship: String,
+                                name: String,
+                                proofAttrs: Array[Attribute],
+                                proofPredicate: Array[Predicate],
+                                byInvitation: Boolean = false): PresentProofV1_0 = {
     val proofReqJson = new JSONObject
     proofReqJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request")
     proofReqJson.put("@id", UUID.randomUUID.toString)
     proofReqJson.put("~for_relationship", forRelationship)
     proofReqJson.put("name", name)
-    proofReqJson.put("proof_attrs", JsonUtil.makeArray(attrs.toArray))
+    proofReqJson.put("proof_attrs", JsonUtil.makeArray(proofAttrs.toArray))
+    proofReqJson.put("by_invitation", byInvitation)
 
     new UndefinedPresentProof_1_0 {
       override def request(ctx: Context): Unit = {

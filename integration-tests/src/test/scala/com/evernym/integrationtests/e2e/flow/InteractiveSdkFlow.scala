@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
-import com.evernym.integrationtests.e2e.sdk.vcx.VcxIssueCredential
+import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
@@ -755,6 +755,161 @@ trait InteractiveSdkFlow {
 
   }
 
+  def presentProofViaOob_1_0(verifier: ApplicationAdminExt,
+                             prover: ApplicationAdminExt,
+                             relationshipId: String,
+                             proofName: String,
+                             attributes: Seq[String])
+                             (implicit scenario: Scenario): Unit = {
+    val verifierSdk = verifier.sdks.head
+    val proverSdk = prover.sdks.head
+    presentProofViaOob_1_0(verifierSdk, verifierSdk, proverSdk, proverSdk, relationshipId, proofName, attributes)
+  }
+
+  def presentProofViaOob_1_0(verifierSdk: VeritySdkProvider,
+                             verifierMsgReceiverSdkProvider: VeritySdkProvider,
+                             proverSdk: VeritySdkProvider,
+                             proverMsgReceiverSdkProvider: VeritySdkProvider,
+                             relationshipId: String,
+                             proofName: String,
+                             attributes: Seq[String])
+                             (implicit scenario: Scenario): Unit = {
+    val verifierName = verifierSdk.sdkConfig.name
+    val proverName = proverSdk.sdkConfig.name
+
+    var relDid = ""
+    var inviteUrl = ""
+    var connReq: JSONObject = null
+    var inviteeConnection: ConnectionsV1_0 = null
+
+    s"present proof (1.0) to $proverName from $verifierName via Out-of-band invite" - {
+      val verifierMsgReceiver = receivingSdk(Option(verifierMsgReceiverSdkProvider))
+      val holderMsgReceiver = receivingSdk(Option(proverMsgReceiverSdkProvider))
+
+      s"[$verifierName] start relationship protocol to issue to" in {
+        val relProvisioning = verifierSdk.relationship_1_0("inviter")
+        relProvisioning.create(verifierSdk.context)
+        verifierMsgReceiver.expectMsg("created") { msg =>
+          msg shouldBe an[JSONObject]
+          relDid = msg.getString("did")
+        }
+      }
+
+      s"[$verifierName] start present-proof using byInvitation" in {
+        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+
+        val restriction = RestrictionBuilder
+          .blank()
+          .issuerDid(issuerDID)
+          .build()
+
+        val nameAttr = PresentProofV1_0.attribute("name", restriction)
+        val numAttr = PresentProofV1_0.attribute("license_num", restriction)
+
+        val t = Array(nameAttr, numAttr)
+
+        verifierSdk
+          .presentProof_1_0(relDid, proofName, Array(nameAttr, numAttr), Array.empty, true)
+          .request(verifierSdk.context)
+
+          verifierMsgReceiver.expectMsg("protocol-invitation") { msg =>
+          inviteUrl = msg.getString("inviteURL")
+        }
+      }
+
+      s"[$proverName] accept connection from invite" in {
+        inviteeConnection = proverSdk.connectingWithOutOfBand_1_0(relationshipId, "", inviteUrl)
+        inviteeConnection.accept(proverSdk.context)
+      }
+
+      s"[$verifierName] receive a signal about 'request-received' msg" in {
+        verifierMsgReceiver.expectMsg("request-received") { msg =>
+          connReq = msg
+        }
+      }
+
+      s"[$verifierName] receive a signal about 'response-sent' msg" in {
+        verifierMsgReceiver.expectMsg("response-sent") { connResp =>
+          println("connResp: " + connResp)
+          val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
+          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
+          val theirDID = connReq.getJSONObject("conn").getString("DID")
+          val relData = RelData(relationshipId, connJson.getString("DID"), Option(theirDID))
+          verifierSdk.updateRelationship(relationshipId, relData)
+        }
+      }
+
+      s"[$proverName] receives 'response' message" taggedAs UNSAFE_IgnoreLog in {
+        holderMsgReceiver.expectMsg("response") { response =>
+          val sigData = response.getJSONObject("connection~sig").getString("sig_data")
+          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
+          val myDID = connReq.getJSONObject("conn").getString("DID")
+          val relData = RelData(relationshipId, myDID, Option(connJson.getString("DID")))
+          inviteeConnection.status(proverSdk.context)
+          proverSdk.updateRelationship(relationshipId, relData)
+        }
+      }
+
+      s"[$proverName] present proof from attached offer" in {
+        val requestMsg = {
+          val inviteStr = Base64Util.urlDecodeToStr(
+            Uri(inviteUrl)
+              .query()
+              .getOrElse(
+                "oob",
+                fail("must have oob query parameter")
+              )
+          )
+          Base64Util.decodeToStr(
+            new JSONObject(inviteStr)
+              .getJSONArray("request~attach")
+              .getJSONObject(0)
+              .getJSONObject("data")
+              .getString("base64")
+          )
+        }
+        val tid = threadId(new JSONObject(requestMsg))
+
+        val forRel = proverSdk.relationship_!(relationshipId).owningDID
+        val proof = proverSdk.asInstanceOf[VcxPresentProof].presentProof_1_0(forRel, tid, requestMsg)
+        proof.accept(proverSdk.context)
+      }
+
+      s"[$verifierName] receive presentation" in {
+        val forRel = verifierSdk.relationship_!(relationshipId).owningDID
+        var tid = ""
+
+        var presentation = new JSONObject()
+
+        verifierMsgReceiver.expectMsg("presentation-result") { result =>
+          tid = threadId(result)
+          result.getString("verification_result") shouldBe "ProofValidated"
+
+          presentation = result.getJSONObject("requested_presentation")
+
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("license_num")
+            .getString("value") shouldBe "123"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("name")
+            .getString("value") shouldBe "Bob"
+        }
+
+        verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
+        verifierMsgReceiver.expectMsg("status-report") { status =>
+          status.getString("status") shouldBe "Complete"
+          val presentationAgain = status
+            .getJSONObject("results")
+            .getJSONObject("requested_presentation")
+          presentationAgain.toString shouldBe presentation.toString
+        }
+      }
+    }
+
+  }
+
   case class CredAttribute(name: String, `mime-type`: Option[String], value: String)
 
   def presentProof_1_0(verifier: ApplicationAdminExt,
@@ -797,7 +952,7 @@ trait InteractiveSdkFlow {
         val numAttr = PresentProofV1_0.attribute("license_num", restriction)
 
         verifierSdk
-          .presentProof_1_0(forRel, proofName, nameAttr, numAttr)
+          .presentProof_1_0(forRel, proofName, Array(nameAttr, numAttr), Array.empty)
           .request(verifierSdk.context)
       }
 

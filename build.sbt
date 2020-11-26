@@ -25,7 +25,7 @@ val debPkgDepLibIndyMinVersion = "1.15.0~1605"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1542"
+val libIndyVer = "1.15.0~1605"
 val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),
@@ -254,7 +254,7 @@ lazy val commonLibraryDependencies = {
 
     "com.twitter" %% "chill-akka" % "0.9.5",
 
-    "org.hyperledger" % "indy" % "1.15.0-dev-1542",   //debPkgDepLibIndyMinVersion,
+    "org.hyperledger" % "indy" % "1.15.0-dev-1605",   //debPkgDepLibIndyMinVersion,
 
     "org.json" % "json" % "20180813",
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",

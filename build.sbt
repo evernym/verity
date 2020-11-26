@@ -21,7 +21,7 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1560"
+val debPkgDepLibIndyMinVersion = "1.15.0~1605"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions

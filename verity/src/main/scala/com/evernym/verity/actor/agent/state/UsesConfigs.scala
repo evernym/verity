@@ -48,8 +48,7 @@ trait UsesConfigs extends HasAppConfig {
 
   def getCachedConfigDetails: Map[String, AgentConfig] = {
     agentCache.getUnexpiredCachedObjectsByFetcherId(AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID).
-      map(co => co.key.toString -> AgentConfig(co.value.map(_.toString).orNull, co.createdDateTime)).
-      toMap
+      map(co => co._1 -> AgentConfig(co._2.value.map(_.toString).orNull, co._2.createdDateTime))
   }
 
   def getMissingConfigsFromUserAgent(configs: Set[GetConfigDetail]): Future[AgentConfigs] = {

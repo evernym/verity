@@ -158,8 +158,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       case e: E =>
         val result = try {
           protocol.applyEvent(getState, getRoster, e)
-        }
-        catch {
+        } catch {
           case me: MatchError =>
             recordWarn(s"no event handler for: ${me.getMessage}")
             throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.toString, me)
@@ -321,6 +320,8 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   protected def applySystemEvent: ProtoSystemEvent ?=> Backstate = {
+    case SetPinstId(_) => shadowBackState.getOrElse(Backstate()) // kept it for backward compatibility
+
     case SetDomainId(id) =>
       shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
 

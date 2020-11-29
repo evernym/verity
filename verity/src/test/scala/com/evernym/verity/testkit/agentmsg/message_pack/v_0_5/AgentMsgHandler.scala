@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackedMsg, UnpackParam}
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.testkit.{BasicSpecBase, Matchers}
+import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV_0_5, GeneralMsgCreatedResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
 import com.evernym.verity.testkit.mock.HasCloudAgent
 import com.evernym.verity.testkit.mock.agent.MockAgent

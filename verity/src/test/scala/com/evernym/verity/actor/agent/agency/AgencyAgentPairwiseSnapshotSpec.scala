@@ -2,14 +2,14 @@ package com.evernym.verity.actor.agent.agency
 
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpecBase
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
-import com.evernym.verity.actor.agent.relationship.AnywiseRelationship
-import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.persistence.stdPersistenceId
+import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
-import com.evernym.verity.actor.{KeyCreated, PersistentEventMsg, PersistentMsg}
+import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, PersistentEventMsg, PersistentMsg, agentRegion}
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
-import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_REGION_ACTOR_NAME
+import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.transformations.transformers.IdentityTransformer
@@ -19,8 +19,8 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.time.{Seconds, Span}
 
 
-class AgencyAgentSnapshotSpec
-  extends AgencyAgentScaffolding
+class AgencyAgentPairwiseSnapshotSpec
+  extends AgencyAgentPairwiseSpecBase
     with HasTransformationRegistry
     with OverrideConfig {
 
@@ -28,7 +28,7 @@ class AgencyAgentSnapshotSpec
 
   override def overrideConfig: Option[Config] = Option(
     ConfigFactory.parseString(
-      """verity.persistent-actor.base.AgencyAgent.snapshot {
+      """verity.persistent-actor.base.AgencyAgentPairwise.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
@@ -37,23 +37,28 @@ class AgencyAgentSnapshotSpec
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
-  agencySetupSpecs()
+  import mockEdgeAgent.v_0_5_req._
+  import mockEdgeAgent.v_0_5_resp._
 
-  "AgencyAgent actor" - {
+  var pairwiseDID: DID = _
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    setupAgency()
+  }
+
+  "AgencyAgentPairwise actor" - {
     "as its state changes" - {
       "will write snapshot as per configuration" in {
 
-        // check current status (at this time, agency agent setup is done)
-        checkPersistentState(2, 2, 0)
-        val keyCreatedEvent = fetchEvent[KeyCreated]()
-        checkKeyCreatedEvent(keyCreatedEvent, mockAgencyAdmin.agencyPublicDIDReq)
+        fetchAgencyKey()
 
         //send connection request (it doesn't persist any new event)
         sendConnectMsg()
-        checkPersistentState(2, 2, 0)
+        checkPersistentState(2, 2, 1)
 
         //restart actor (so that snapshot gets applied)
-        restartActor()
+        restartActor(aap)
         checkStateSizeMetrics()
       }
     }
@@ -69,17 +74,28 @@ class AgencyAgentSnapshotSpec
       val actualPersistedSnapshots = snapTestKit.persistedInStorage(persId).map(_._2)
       actualPersistedSnapshots.size shouldBe expectedPersistedSnapshots
       actualPersistedSnapshots.lastOption.map { snapshot =>
-        val state = transformer.undo(snapshot.asInstanceOf[PersistentMsg]).asInstanceOf[AgencyAgentState]
+        val state = transformer.undo(snapshot.asInstanceOf[PersistentMsg]).asInstanceOf[AgencyAgentPairwiseState]
         checkSnapshotState(state, protoInstancesSize)
       }
     }
   }
 
+  lazy val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
+
+
+  def fetchAgencyKey(): Unit = {
+    aa ! GetLocalAgencyIdentity()
+    val dd = expectMsgType[AgencyPublicDid]
+    mockEdgeAgent.handleFetchAgencyKey(dd)
+  }
+
   def sendConnectMsg(): Unit = {
-    import mockEdgeAgent.v_0_5_req._
-    val msg = prepareConnectMsg(useRandomDetails = true)
+    val msg = prepareConnectMsg()
     aa ! PackedMsgParam(msg, reqMsgContext)
-    expectMsgType[PackedMsg]
+    val pm = expectMsgType[PackedMsg]
+    val connectedResp = handleConnectedResp(pm)
+    pairwiseDID = connectedResp.withPairwiseDID
+    setPairwiseEntityId(pairwiseDID)
   }
 
   def fetchEvent[T](): T = {
@@ -96,17 +112,16 @@ class AgencyAgentSnapshotSpec
     keyCreated.forDID shouldBe expectedForDID
   }
 
-  def checkSnapshotState(snap: AgencyAgentState,
+  def checkSnapshotState(snap: AgencyAgentPairwiseState,
                          protoInstancesSize: Int): Unit = {
-    snap.isEndpointSet shouldBe true
     snap.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
     snap.agentWalletSeed shouldBe Option(agencyAgentEntityId)
-    snap.thisAgentKeyId shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
-    snap.agencyDID shouldBe snap.thisAgentKeyId
+    snap.thisAgentKeyId should not be mockAgencyAdmin.agencyPublicDid.map(_.DID)
+    snap.agencyDID should not be snap.thisAgentKeyId
 
-    snap.relationshipReq.name shouldBe AnywiseRelationship.empty.name
+    snap.relationshipReq.name shouldBe "pairwise"
     snap.relationshipReq.myDidDoc.isDefined shouldBe true
-    snap.relationshipReq.myDidDoc_!.did shouldBe mockAgencyAdmin.agencyPublicDIDReq
+    snap.thisAgentKeyId.contains(snap.relationshipReq.myDidDoc_!.did) shouldBe true
 
     //this is found only for pairwise actors and only for those protocols
     // which starts (the first message) from self-relationship actor and then
@@ -120,11 +135,11 @@ class AgencyAgentSnapshotSpec
     val currentMetrics = MetricsReader.getNodeMetrics().metrics
     val stateSizeMetrics = currentMetrics.filter { m =>
       m.name.startsWith("as_akka_actor_agent_state") &&
-      m.tags.getOrElse(Map.empty)("actor_class") == "AgencyAgent"
+      m.tags.getOrElse(Map.empty)("actor_class") == "AgencyAgentPairwise"
     }
     stateSizeMetrics.size shouldBe 12   //histogram metrics
     stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
-      checkStateSizeSum(v.value, 212.0)
+      checkStateSizeSum(v.value, 380.0)
     }
   }
 
@@ -136,13 +151,13 @@ class AgencyAgentSnapshotSpec
   }
 
   lazy val transformer = createPersistenceTransformerV1(encrKey, new IdentityTransformer)
-  lazy val persId = stdPersistenceId(AGENCY_AGENT_REGION_ACTOR_NAME, agencyAgentEntityId)
+  lazy val persId = stdPersistenceId(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME, agencyAgentPairwiseEntityId)
   lazy val encrKey = {
-    val secret = Util.saltedHashedName(agencyAgentEntityId + "actor-wallet", appConfig)
+    val secret = Util.saltedHashedName(agencyAgentPairwiseEntityId + "actor-wallet", appConfig)
     Util.getEventEncKey(secret, appConfig)
   }
 
-  val eventTransformation = legacyEventTransformer
-  val snapshotTransformation = persistenceTransformerV1
+  lazy val eventTransformation = legacyEventTransformer
+  lazy val snapshotTransformation = persistenceTransformerV1
   override lazy val persistenceEncryptionKey: String = encrKey
 }

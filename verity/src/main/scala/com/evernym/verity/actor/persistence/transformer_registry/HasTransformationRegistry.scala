@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.transformer_registry
 
-import com.evernym.verity.actor.PersistentData
+import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.transformations.transformers._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.transformations.transformers.v1._
@@ -20,9 +20,8 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
 
   /**
    * new persistence transformer, optimized compared to legacy event/state transformers
-   * TODO: 'CodeMsgExtractor' code needs to be reviewed and finalized before getting used
    */
-  lazy val persistenceTransformerV1: Any <=> PersistentData =
+  lazy val persistenceTransformerV1: Any <=> PersistentMsg =
     createPersistenceTransformerV1(persistenceEncryptionKey, schemaEvolTransformation)
 
   /**

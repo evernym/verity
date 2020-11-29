@@ -11,7 +11,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
@@ -224,7 +223,9 @@ class ActorProtocolContainer[
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)
-      sender ! ThreadContextStoredInProtoActor(pinstId)
+      sender ! ThreadContextStoredInProtoActor(pinstId, definition.msgFamily.protoRef)
+    } else {
+      sender ! ThreadContextNotStoredInProtoActor(pinstId, definition.msgFamily.protoRef)
     }
   }
 
@@ -598,4 +599,5 @@ class MsgForwarder {
 
 case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
 
-case class ThreadContextStoredInProtoActor(pinstId: PinstId) extends ActorMessageClass
+case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
+case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass

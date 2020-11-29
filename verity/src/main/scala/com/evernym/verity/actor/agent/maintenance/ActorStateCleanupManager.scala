@@ -1,21 +1,16 @@
-package com.evernym.verity.actor.cluster_singleton.maintenance
-
-import java.util.UUID
+package com.evernym.verity.actor.agent.maintenance
 
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
-import akka.persistence.DeleteMessagesSuccess
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.maintenance.{Destroy, ProcessRouteStore, RouteStoreStatus}
 import com.evernym.verity.actor.agent.msgrouter._
-import com.evernym.verity.actor.persistence.{Done, SingletonChildrenPersistentActor}
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
+import com.evernym.verity.actor.persistence.{Done, SingletonChildrenPersistentActor, Stop}
+import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.logging.LoggingUtil
-import com.typesafe.scalalogging.Logger
+import com.typesafe.config.ConfigValueFactory
 
 import scala.concurrent.Future
 
@@ -24,17 +19,22 @@ import scala.concurrent.Future
  * @param appConfig application configuration object
  */
 class ActorStateCleanupManager(val appConfig: AppConfig)
-  extends SingletonChildrenPersistentActor {
+  extends SingletonChildrenPersistentActor
+    with ActorStateCleanupBase {
 
   override def receiveCmd: Receive = {
-    case gs: GetStatus            => handleGetStatus(gs)
-    case r: Register              => handleRegister(r)
-    case c: Completed             => handleCompleted(c)
-    case ProcessPending           => processPending()
+    case gs: GetManagerStatus       => handleGetStatus(gs)
+    case r: RegisteredRouteSummary  => handleRegister(r)
+    case c: Completed               => handleCompleted(c)
+    case ProcessPending             => processPending()
+    case Reset                      => handleReset()
 
-      //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
+    case EnableConfig               => updateConfig(enable = true)
+    case DisableConfig              => updateConfig(enable = false)
+
+    //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
     case _ @ (_:RouteStoreStatus | _: StatusUpdated)     => //nothing to do
-    case Reset                    => handleReset()
+    case d: Destroyed             => handleDestroyed(d)
   }
 
   override def receiveEvent: Receive = {
@@ -43,30 +43,79 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
     case c: Completed  =>
       completed += c.entityId -> c.totalProcessedRoutes
+
+    case ed: ExecutorDeleted =>
+      executorDestroyed += ed.entityId
   }
 
-  def handleGetStatus(gs: GetStatus): Unit = {
-    val s = Status(registered.size, completed.size, registered.values.sum, completed.values.sum)
+  def updateConfig(enable: Boolean): Unit = {
+    val updatedConfig = appConfig
+      .config
+      .withValue(AGENT_ACTOR_STATE_CLEANUP_ENABLED, ConfigValueFactory.fromAnyRef(enable))
+      .withValue(MIGRATE_THREAD_CONTEXTS_ENABLED, ConfigValueFactory.fromAnyRef(enable))
+    AppConfigWrapper.setConfig(updatedConfig)
+    val cs = ConfigStatus(
+      appConfig.getConfigBooleanReq(AGENT_ACTOR_STATE_CLEANUP_ENABLED),
+      appConfig.getConfigBooleanReq(MIGRATE_THREAD_CONTEXTS_ENABLED)
+    )
+    sender ! cs
+  }
+
+  def handleGetStatus(gs: GetManagerStatus): Unit = {
+    val s = ManagerStatus(registered.size, completed.size, registered.values.sum, completed.values.sum)
     if (gs.includeDetails) {
-      sender ! s.copy(registeredRouteStores = Some(registered))
+      sender ! s.copy(registeredRouteStores = Some(registered), resetStatus = Option(resetStatus))
     } else {
       sender ! s
     }
   }
 
   def handleReset(): Unit = {
-    registered.filter(_._2 > 0).keySet.foreach { entityId =>
-      sendMsgToActorStateCleanupExecutor(entityId, Destroy)
-      Thread.sleep(40)
+    if (! resetStatus.isInProgress) {
+      val candidates = registered.filter(_._2 > 0).keySet
+      if (candidates.nonEmpty) {
+        resetStatus = ResetStatus(isInProgress = true, candidates.map(_ -> false).toMap)
+        sendDestroyExecutor()
+      } else {
+        completeResetProcess()
+      }
+    } else if (resetStatus.isAllExecutorDestroyed) {
+      completeResetProcess()
     }
-    deleteMessages(lastSequenceNr)
     sender ! Done
   }
 
-  override def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
-    super.handleDeleteMsgSuccess(dms)
+  def sendDestroyExecutor(): Unit = {
+    resetStatus.executorStatus.find(_._2 == false).foreach { case (entityId, _) =>
+      sendMsgToActorStateCleanupExecutor(entityId, Destroy)
+    }
+  }
+
+  def handleDestroyed(d: Destroyed): Unit = {
+    writeAndApply(ExecutorDeleted(d.entityId))
+    if (resetStatus.isInProgress) {
+      resetStatus = resetStatus.copy(executorStatus = resetStatus.executorStatus ++ Map(d.entityId -> true))
+      if (resetStatus.isAllExecutorDestroyed) {
+        completeResetProcess()
+      } else {
+        sendDestroyExecutor()
+      }
+    }
+  }
+
+  def completeResetProcess(): Unit = {
+    deleteEventsInBatches()
+  }
+
+  def postAllEventDeleted(): Unit = {
+    resetStatus = ResetStatus.empty
+    registered = Map.empty
+    completed = Map.empty
+    lastRequestedBucketId = -1
+    toSeqNoDeleted = 0
     stopActor()
   }
+
 
   def pendingBatchedRouteStores: Map[EntityId, RoutesCount] =
     registered
@@ -75,6 +124,17 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       .take(processorBatchSize)
 
   def processPending(): Unit = {
+    processRoutes()
+    deleteCompletedExecutors()
+  }
+
+  def deleteCompletedExecutors(): Unit = {
+//    (completed.keySet -- executorDestroyed).foreach { eid =>
+//      sendMsgToActorStateCleanupExecutor(eid, Destroy)
+//    }
+  }
+
+  def processRoutes(): Unit = {
     if (isActorStateCleanupEnabled) {
       if (registered.size != totalBuckets) {
         logger.debug(s"ASC [$persistenceId] all agent route store entity ids are not yet registered...")
@@ -99,14 +159,12 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     actorStateCleanupExecutorRegion ! ForIdentifier(agentRouteStoreEntityId, msg)
   }
 
-  def actorStateCleanupExecutorRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(ACTOR_STATE_CLEANUP_EXECUTOR)
-
   /**
    * agent msg router actor registering with this manager so that
    * its route can be fixed
    * @param r register
    */
-  def handleRegister(r: Register): Unit = {
+  def handleRegister(r: RegisteredRouteSummary): Unit = {
     if (completed.contains(r.entityId)) {
       sender ! AlreadyCompleted
     } else if (registered.contains(r.entityId)) {
@@ -117,6 +175,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
         handleCompleted(Completed(r.entityId, r.totalCandidateRoutes), duringRegistration = true)
       }
     }
+    sender ! Stop()   //stop route store actor
   }
 
   /**
@@ -130,8 +189,11 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     } else if (! duringRegistration) {
       sender ! AlreadyCompleted
     }
-    if (c.totalProcessedRoutes > 0)
-      sendMsgToActorStateCleanupExecutor(c.entityId, Destroy)
+    if (c.totalProcessedRoutes > 0) {
+      //uncomment below line if you want to delete all events of the
+      // 'ActorStateCleanupExecutor' actor with entity id 'c.entityId'
+      //sendMsgToActorStateCleanupExecutor(c.entityId, Destroy)
+    }
   }
 
   def sendAnyPendingRegistrationRequest(): Unit = {
@@ -139,27 +201,29 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     while ( (candidateEntityIds.size < registrationBatchSize) && (lastRequestedBucketId < totalBuckets-1)) {
       val nextBucketId = lastRequestedBucketId + 1
       lastRequestedBucketId = nextBucketId
-      val entityId = "v1" + "-" + UUID.nameUUIDFromBytes(nextBucketId.toString.getBytes).toString
+      val entityId = RoutingAgentBucketMapperV1.entityIdByBucketId(nextBucketId)
       if (! registered.contains(entityId)) {
         candidateEntityIds += entityId
       }
     }
     Future {
       candidateEntityIds.foreach { entityId =>
-        agentRouteStoreRegion ! ForIdentifier(entityId, SendAllRouteRegistrationRequest)
+        agentRouteStoreRegion ! ForIdentifier(entityId, GetRegisteredRouteSummary)
         Thread.sleep(registrationBatchItemSleepIntervalInMillis) //this is to make sure it doesn't hit the database too hard and impact the running system.
       }
     }
   }
 
-  //this is internal actor for short period of time and doesn't contain any sensitive data
-  override def persistenceEncryptionKey: String = this.getClass.getSimpleName
+  lazy val actorStateCleanupExecutorRegion: ActorRef =
+    ClusterSharding.get(context.system).shardRegion(ACTOR_STATE_CLEANUP_EXECUTOR)
 
   type PersistenceId = String
   type RoutesCount = Int
 
+  var executorDestroyed: Set[EntityId] = Set.empty
   var completed: Map[EntityId, RoutesCount] = Map.empty
   var registered: Map[EntityId, RoutesCount] = Map.empty
+  var resetStatus: ResetStatus = ResetStatus.empty
 
   //currently, based on the sharding strategy, there can be only max 100 sharded actors
   // might have created with below versioning scheme
@@ -196,12 +260,6 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
   scheduleJob("periodic_job", scheduledJobInitialDelay, scheduledJobInterval, ProcessPending)
 
-  def isActorStateCleanupEnabled: Boolean =
-    appConfig
-      .getConfigBooleanOption(CommonConfig.AGENT_ACTOR_STATE_CLEANUP_ENABLED)
-      .getOrElse(false)
-
-  private val logger: Logger = LoggingUtil.getLoggerByClass(classOf[ActorStateCleanupManager])
 }
 
 /**
@@ -211,16 +269,23 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
  * @param totalCandidateAgentActors total candidate agent-actors (belonging to all registered routing actors)
  * @param totalProcessedAgentActors total processed agent-actors (out of totalCandidateAgentActors)
  */
-case class Status(registeredRouteStoreActorCount: Int,
-                  processedRouteStoreActorCount: Int,
-                  totalCandidateAgentActors: Int,
-                  totalProcessedAgentActors: Int,
-                  registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
+case class ManagerStatus(registeredRouteStoreActorCount: Int,
+                         processedRouteStoreActorCount: Int,
+                         totalCandidateAgentActors: Int,
+                         totalProcessedAgentActors: Int,
+                         resetStatus: Option[ResetStatus] = None,
+                         registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
+
+object ResetStatus {
+  def empty: ResetStatus = ResetStatus(isInProgress = false, Map.empty)
+}
+case class ResetStatus(isInProgress: Boolean, executorStatus: Map[EntityId, Boolean]) {
+  def isAllExecutorDestroyed: Boolean = executorStatus.forall(_._2 == true)
+}
 
 //incoming messages
-case class Register(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessageClass
-case object ProcessPending extends ActorMessageObject
-case class GetStatus(includeDetails: Boolean = false) extends ActorMessageClass
+case class RegisteredRouteSummary(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessageClass
+case class GetManagerStatus(includeDetails: Boolean = false) extends ActorMessageClass
 case object Reset extends ActorMessageObject
 
 //outgoing messages
@@ -231,3 +296,7 @@ object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER
   def props(appConfig: AppConfig): Props = Props(new ActorStateCleanupManager(appConfig))
 }
+
+case object EnableConfig extends ActorMessageObject
+case object DisableConfig extends ActorMessageObject
+case class ConfigStatus(actorStateCleanupEnabled: Boolean, migrateThreadContextEnabled: Boolean) extends ActorMessageClass

@@ -493,13 +493,18 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildSuccessfullyUpdatedMsgStatusResp(success: List[(String, Any)], agentVerKey: VerKey):  Map[String, List[String]] = {
     success.map { case (fromDID, respMsg) =>
-      val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(respMsg.asInstanceOf[PackedMsg].msg, KeyInfo(Left(agentVerKey)))
-      val msgIds = unpackedAgentMsg.msgPackFormat match {
-        case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
-        case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
-        case x              => throw new RuntimeException("unsupported msg pack format: " + x)
+      respMsg match {
+        case pm: PackedMsg =>
+          val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(pm.msg, KeyInfo(Left(agentVerKey)))
+          val msgIds = unpackedAgentMsg.msgPackFormat match {
+            case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
+            case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
+            case x              => throw new RuntimeException("unsupported msg pack format: " + x)
+          }
+          fromDID -> msgIds
+        case other =>
+          throw new RuntimeException("unexpected error: " + other.toString)
       }
-      fromDID -> msgIds
     }.filter(_._2.nonEmpty).toMap
   }
 

@@ -32,9 +32,9 @@ object PinstIdResolution {
   val unknownRelationshipId: String = "RelationshipId is unknown but required to resolve a PinstId for " +
                                         s"${Scope.Relationship} Scope"
   val unknownThreadId: String = s"ThreadId is unknown but required to resolve a PinstId for ${Scope.Adhoc} Scope"
-  val unknownContextualId: String = "Cannot use PinstIdResolver.V0_1 without contextualId, see note on contextualId"
+  val unknownContextualId: String = "Cannot use PinstIdResolver.DEPRECATED_V0_1 without contextualId, see note on contextualId"
   val protocolIdSuffixUsed: String = "protocolIdSuffix was not None - protocolIdSuffix is deprecated SHOULD only " +
-                                        "be used by protocols using V0_1 will not be used in pinstId calculations"
+                                        "be used by protocols using DEPRECATED_V0_1 will not be used in pinstId calculations"
   val unknownProtoRef: String = "The ProtoRef is required for all V0.2 pinstId resolutions. pinstId is un-calculable" +
                                 "without the ProtoRef"
   val unknownDomainId: String = "The domainId is required for all V0.2 pinstId resolutions. pinstId is un-calculable" +
@@ -44,7 +44,7 @@ object PinstIdResolution {
     * Original algorithm. Deeply flowed and only allows a limited set of protocols to run. But as of now
     * most protocols use it and need it.
     */
-  val V0_1: PinstIdResolver = new PinstIdResolver {
+  val DEPRECATED_V0_1: PinstIdResolver = new PinstIdResolver {
     override def resolve(protoDef: ProtoDef,
                          domainId: DomainId,
                          relationshipId: Option[RelationshipId],

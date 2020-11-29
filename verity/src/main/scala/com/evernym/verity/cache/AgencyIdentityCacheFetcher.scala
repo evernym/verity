@@ -29,7 +29,7 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, config: App
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[Any, Any]] = {
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
     val gadcp = kd.key.asInstanceOf[GetAgencyIdentityCacheParam]
     val gadFutResp = agentMsgRouter.execute(InternalMsgRouteParam(gadcp.localAgencyDID, gadcp.gad))
     gadFutResp.map {

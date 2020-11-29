@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
@@ -15,7 +15,7 @@ import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
+import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.{EndpointADT, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, Relationship, RelationshipUtil, RoutingServiceEndpoint, Tags}
 import com.evernym.verity.actor.agent.state._
@@ -51,14 +51,11 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFa
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened,
-  InviteShorteningFailed => IssueCredInviteShorteningFailed}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened, InviteShorteningFailed => IssueCredInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{ShortenInvite => IssueCredShortenInvite}
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened,
-  InviteShorteningFailed => PresentProofInviteShorteningFailed}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened, InviteShorteningFailed => PresentProofInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.{ShortenInvite => PresentProofShortenInvite}
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened => RelInviteShortened,
-  InviteShorteningFailed => RelInviteShorteningFailed, SMSSendingFailed, SMSSent}
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSSendingFailed, SMSSent, InviteShortened => RelInviteShortened, InviteShorteningFailed => RelInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite => RelShortenInvite}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
@@ -353,7 +350,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   }
 
   override def postUpdateConfig(tupdateConf: TypedMsg[UpdateConfigReqMsg], senderVerKey: Option[VerKey]): Unit = {
-    agentCache.deleteFromCache(tupdateConf.msg.configs.map(_.name))
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
     tupdateConf.msg.configs.filter(_.name == configName).foreach { c =>
@@ -595,6 +591,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           case x => throw new RuntimeException("unsupported condition: " + x)
         }
       }.recover {
+        case e: InternalServerErrorException
+          if e.respCode == DATA_NOT_FOUND.statusCode && e.respMsg.contains("payload not found") =>
+          val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
+          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
         case e: Exception =>
           logger.error("send msg failed unexpectedly",
             (LOG_KEY_UID, uid),

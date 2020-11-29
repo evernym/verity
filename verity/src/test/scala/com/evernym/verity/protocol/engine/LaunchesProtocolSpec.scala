@@ -57,7 +57,7 @@ class LaunchesProtocolSpec extends BasicSpec {
     new LaunchesProtocol {
       override def contextualId: Option[String] = None
       override def domainId: DomainId = "f4ba2b9d-f50a-498e-8095-8deb361434ea"
-      override protected def protocolRegistry: ProtoReg = ProtocolRegistry(protoDefs map { Entry(_, PinstIdResolution.V0_1) }: _*)
+      override protected def protocolRegistry: ProtoReg = ProtocolRegistry(protoDefs map { Entry(_, PinstIdResolution.DEPRECATED_V0_1) }: _*)
     }
   }
 

@@ -91,6 +91,15 @@ trait ActorCommon
   def handleCommand(actualCmdReceiver: Receive): Receive = {
     case GetActorDetail => sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
 
+    case s: Start          =>
+      if (s.sendResp)
+        sender ! Done
+
+    case s: Stop           =>
+      if (s.sendResp)
+        sender ! Done
+      stopActor()
+
     case ReceiveTimeout => handleReceiveTimeout()
 
     case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
@@ -127,3 +136,5 @@ abstract class SerializableObject extends Serializable with ActorMessageObject
 case object Done extends SerializableObject
 case object NotFound extends SerializableObject
 case object AlreadyDone extends SerializableObject
+case class Stop(sendResp: Boolean = false) extends ActorMessageObject
+case class Start(sendResp: Boolean = false) extends ActorMessageObject

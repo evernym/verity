@@ -8,40 +8,35 @@ class ProtoBufSerializer
 
   override def identifier: Int = 99
 
-  //mostly we we'll have only one event (EncryptedEvent) which will come at this level for serialization,
-  // so if we want, we can just use empty string as manifest and it will work
-  // but just in case if we have to support more events in future,
-  // we can give numbers to different types of events.
-
-  val TRANSFORMED_MULTI_EVENTS_MANIFEST = "0"
-  val TRANSFORMED_EVENT_MANIFEST = "1"
-  val TRANSFORMED_STATE_MANIFEST = "2"
-  val PERSISTENT_DATA_MANIFEST = "3"
+  val PERSISTENT_MULTI_EVENT_MSG_MANIFEST = "0"
+  val PERSISTENT_EVENT_MSG_MANIFEST = "1"
+  val PERSISTENT_STATE_MSG_MANIFEST = "2"
+  val PERSISTENT_MSG_MANIFEST = "3"
 
   override def manifest(o: AnyRef): String = {
     o match {
-      case _: TransformedMultiEvent => TRANSFORMED_MULTI_EVENTS_MANIFEST
-      case _: TransformedEvent      => TRANSFORMED_EVENT_MANIFEST
-      case _: TransformedState      => TRANSFORMED_STATE_MANIFEST
-      case _: PersistentData        => PERSISTENT_DATA_MANIFEST
+      case _: PersistentMultiEventMsg => PERSISTENT_MULTI_EVENT_MSG_MANIFEST
+      case _: PersistentEventMsg      => PERSISTENT_EVENT_MSG_MANIFEST
+      case _: PersistentStateMsg      => PERSISTENT_STATE_MSG_MANIFEST
+      case _: PersistentMsg           => PERSISTENT_MSG_MANIFEST
     }
   }
 
   override def toBinary(o: AnyRef): Array[Byte] = {
     o match {
-      case te: TransformedMultiEvent  => te.toByteArray
-      case te: TransformedEvent       => te.toByteArray
-      case ts: TransformedState       => ts.toByteArray
-      case pd: PersistentData         => pd.toByteArray
+      case te: PersistentMultiEventMsg  => te.toByteArray
+      case te: PersistentEventMsg       => te.toByteArray
+      case ts: PersistentStateMsg       => ts.toByteArray
+      case pd: PersistentMsg            => pd.toByteArray
     }
   }
 
   def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
     manifest match {
-      case TRANSFORMED_MULTI_EVENTS_MANIFEST  => TransformedMultiEvent.parseFrom(bytes)
-      case TRANSFORMED_EVENT_MANIFEST         => TransformedEvent.parseFrom(bytes)
-      case TRANSFORMED_STATE_MANIFEST         => TransformedState.parseFrom(bytes)
-      case PERSISTENT_DATA_MANIFEST           => PersistentData.parseFrom(bytes)
+      case PERSISTENT_MULTI_EVENT_MSG_MANIFEST  => PersistentMultiEventMsg.parseFrom(bytes)
+      case PERSISTENT_EVENT_MSG_MANIFEST        => PersistentEventMsg.parseFrom(bytes)
+      case PERSISTENT_STATE_MSG_MANIFEST        => PersistentStateMsg.parseFrom(bytes)
+      case PERSISTENT_MSG_MANIFEST              => PersistentMsg.parseFrom(bytes)
     }
   }
 }

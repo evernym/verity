@@ -93,7 +93,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
 
       "when tried to restart actor" - {
         "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
-          restartSpecs(aap)
+          restartActor(aap)
         }
       }
     }

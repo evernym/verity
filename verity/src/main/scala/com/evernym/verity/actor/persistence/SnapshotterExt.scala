@@ -2,7 +2,7 @@ package com.evernym.verity.actor.persistence
 
 import akka.persistence._
 import com.evernym.verity
-import com.evernym.verity.actor.{PersistentData, State, TransformedState}
+import com.evernym.verity.actor.{PersistentMsg, State, PersistentStateMsg}
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
 import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT, AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter
@@ -95,16 +95,8 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
         ("selection_criteria", dss.criteria))
 
     case dsf: DeleteSnapshotsFailure =>
-      logger.error("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+      logger.warn("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dsf.criteria), (LOG_KEY_ERR_MSG, dsf.cause))
-
-    case dms: DeleteMessagesSuccess =>
-      logger.debug("old messages deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
-        ("toSequenceNr", dms.toSequenceNr))
-
-    case dmf: DeleteMessagesFailure =>
-      logger.error("could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
-        ("toSequenceNr", dmf.toSequenceNr), (LOG_KEY_ERR_MSG, dmf.cause))
   }
 
   /**
@@ -120,21 +112,21 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
   def defaultSnapshotOfferReceiver: Receive = {
     case so: SnapshotOffer =>
       val state = so.snapshot match {
-        case ts: TransformedState =>    //legacy persisted state
-          lookupTransformer(ts.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_STATE)).undo(ts)
-        case pd: PersistentData =>      //for newly persisted state
-          lookupTransformer(pd.transformationId).undo(pd)
+        case psm: PersistentStateMsg =>     //legacy persisted state
+          lookupTransformer(psm.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_STATE)).undo(psm)
+        case pm: PersistentMsg =>           //for newly persisted state
+          lookupTransformer(pm.transformationId).undo(pm)
         case x => throw new RuntimeException("snapshot type not supported: " + x.getClass)
       }
       receiveSnapshot(state)
   }
 
   /**
-   * gets called after any event gets persisted by this actor
+   * gets called after event handler is called (post recovery, not during recovery)
    * to determine if a snapshot needs to be persisted or not
    *
    */
-  def saveSnapshotIfNeeded(): Unit = {
+  override def saveSnapshotIfNeeded(): Unit = {
     persistenceConfig.snapshotEveryNEvents match {
       case Some(v) if v > 0 && (lastSequenceNr % v) == 0  => saveSnapshotStateIfAvailable()
       case _                                              => None
@@ -152,10 +144,11 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
   }
 
   /**
-   * this is to be called manually/explicitly by implementing class
+   * this can be called manually/explicitly by implementing class
+   * in case of no auto snapshot configuration
    */
   final def saveSnapshotStateIfAvailable(): Unit = {
-    snapshotState.foreach{ state =>
+    snapshotState.foreach { state =>
       // This is a good generic place the track a metric on snapshot size but it will not be helpful until snapshot is
       // enabled. I have moved to agent common so we can gather metrics before we enable snapshotting
 //      state match {
@@ -169,7 +162,7 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
   /**
    * transformer used for state persistence
    */
-  lazy val stateTransformer: Any <=> PersistentData = persistenceTransformerV1
+  lazy val stateTransformer: Any <=> PersistentMsg = persistenceTransformerV1
 
   /**
    * serialize, encrypt and then save the given snapshot
@@ -186,13 +179,11 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
     }
   }
 
-  final override def postPersist(): Unit = saveSnapshotIfNeeded()
-
-  final override def postPersistAsync(): Unit = saveSnapshotIfNeeded()
-
   final override def receiveRecover: Receive = defaultSnapshotOfferReceiver orElse handleEvent
 
   final override def receiveCommand: Receive =
-    handleCommand(cmdHandler) orElse snapshotCallbackCommandHandler orElse receiveCmdBase
+    handleCommand(cmdHandler) orElse
+      snapshotCallbackCommandHandler orElse
+      receiveCmdBase
 
 }

@@ -30,10 +30,10 @@ class KeyValueMapperFetcher(val as: ActorSystem, appConfig: AppConfig) extends A
 
 
   override def getKeyDetailMapping(kds: Set[KeyDetail]): Set[KeyMapping] = {
-    kds.map(kd => KeyMapping(kd, kd.key, kd.key))
+    kds.map(kd => KeyMapping(kd, kd.key.toString, kd.key.toString))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[Any, Any]] = {
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
     val gdFut = singletonParentProxyActor ? ForKeyValueMapper(GetValue(kd.key.toString))
     gdFut map {
       case Some(v: String) => Map(kd.key.toString -> v)

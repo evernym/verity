@@ -329,6 +329,7 @@ trait CommonConfig {
     s"$AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB.interval-in-seconds"
 
   val MIGRATE_THREAD_CONTEXTS = s"$VERITY.agent.migrate-thread-contexts"
+  val MIGRATE_THREAD_CONTEXTS_ENABLED = s"$MIGRATE_THREAD_CONTEXTS.enabled"
   val MIGRATE_THREAD_CONTEXTS_BATCH_SIZE = s"$MIGRATE_THREAD_CONTEXTS.batch-size"
   val MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS =
     s"$MIGRATE_THREAD_CONTEXTS.batch-item-sleep-interval-in-millis"

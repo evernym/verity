@@ -342,6 +342,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
 
+  /**
+   * state to be snapshotted
+   *
+   * @return
+   */
+  override def snapshotState: Option[AgencyAgentState] =
+    if (state.threadContext.forall(_.contexts.isEmpty)) Option(state) else None
 }
 
 //response

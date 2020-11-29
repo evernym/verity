@@ -2,15 +2,16 @@ package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
 
-import akka.actor.{Actor, ActorRef, PoisonPill, Props}
+import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.cluster.sharding.ClusterSharding
+import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, CheckActorStateCleanupState, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
-import com.evernym.verity.actor.cluster_singleton.maintenance.{GetStatus, Status}
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{ActorDetail, BaseNonPersistentActor, GetActorDetail}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
@@ -47,8 +48,8 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
     "when sent GetStatus" - {
       "should respond with correct status" in {
         eventually(timeout(Span(20, Seconds)), interval(Span(4, Seconds))) {
-          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus())
-          val status = expectMsgType[Status]
+          platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
+          val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
           status.totalCandidateAgentActors shouldBe totalRouteEntries
         }
@@ -58,8 +59,8 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
     "after some time" - {
       "should have processed all state cleanup" taggedAs UNSAFE_IgnoreLog in {
         eventually(timeout(Span(30, Seconds)), interval(Span(4, Seconds))) {
-          platform.singletonParentProxy ! ForActorStateCleanupManager(GetStatus())
-          val status = expectMsgType[Status]
+          platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
+          val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
           status.processedRouteStoreActorCount shouldBe shardSize
           status.totalCandidateAgentActors shouldBe totalRouteEntries
@@ -122,10 +123,13 @@ object DummyAgentActor {
   def props: Props = Props(new DummyAgentActor)
 }
 
-class DummyAgentActor extends Actor {
-  override def receive: Receive = {
-    case FixActorState                      => //nothing
+class DummyAgentActor extends BaseNonPersistentActor {
+  override def receiveCmd: Receive = {
+    case fas: FixActorState                 =>
+      sender ! InitialActorState(fas.actorID, 0)
     case CheckActorStateCleanupState(did)   =>
-      sender ! ActorStateCleanupStatus(did, routeFixed = true, threadContextMigrated = true)
+      sender ! ActorStateCleanupStatus(did, isRouteFixed = true, isAllThreadContextMigrated = true, 1, 0)
   }
+
+  override def appConfig: AppConfig = ???
 }

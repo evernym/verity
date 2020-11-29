@@ -1,6 +1,6 @@
 package com.evernym.verity.transformations.transformers
 
-import com.evernym.verity.actor.PersistentData
+import com.evernym.verity.actor.PersistentMsg
 
 package object v1 {
   /**
@@ -17,7 +17,7 @@ package object v1 {
    */
   def createPersistenceTransformerV1(persistenceEncryptionKey: String,
                                      schemaEvolutionTransformation: Any <=> Any
-                                    ): Any <=> PersistentData = {
+                                    ): Any <=> PersistentMsg = {
 
     schemaEvolutionTransformation andThen
       DefaultProtoBufTransformerV1 andThen

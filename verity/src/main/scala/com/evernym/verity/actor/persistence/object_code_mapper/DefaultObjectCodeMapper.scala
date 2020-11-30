@@ -267,7 +267,10 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     219 -> ExecutorDeleted,
     220 -> BatchSizeRecorded,
 
-    221 -> AgencyAgentPairwiseState
+    221 -> AgencyAgentPairwiseState,
+
+    222 -> presentProof_v10.PresentationProposed,
+    223 -> presentProof_v10.ProposeReceived
   )
 
 }

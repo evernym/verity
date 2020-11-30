@@ -161,10 +161,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   //this is for backward compatibility
   val legacyEventReceiver: Receive = {
-    case rkd: TheirAgentKeyDlgProofSet =>
-      val lrd = LegacyRoutingDetail(null, agentKeyDID = rkd.DID, agentVerKey = rkd.delegatedKey, rkd.signature)
-      updateLegacyRelationshipState(null, lrd)
 
+    //includes details of 'their' cloud agent (agent DID, agent key and delegation proof signature)
+    case rkd: TheirAgentKeyDlgProofSet =>
+      val lrd = LegacyRoutingDetail("", agentKeyDID = rkd.DID, agentVerKey = rkd.delegatedKey, rkd.signature)
+      updateLegacyRelationshipState("", lrd)
+
+    //includes details of 'their' edge pairwise DID and 'their' cloud agent DID
     case rcd: TheirAgentDetailSet =>
       val theirDidDoc = state.relationship.flatMap(_.theirDidDoc.map(_.copy(did = rcd.DID)))
       state = state
@@ -175,6 +178,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         .getOrElse(state)
       state = state.withConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
 
+    //includes details of 'their' agency
     case rad: TheirAgencyIdentitySet =>
       //TODO This can be more easily done by teaching the LegacyRoutingServiceEndpoint and RoutingServiceEndpoint how to do the conversion.
       val updatedDidDoc = state.relationship.flatMap(_.theirDidDoc.map { tdd =>

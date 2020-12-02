@@ -33,8 +33,9 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     case DisableConfig              => updateConfig(enable = false)
 
     //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
-    case _ @ (_:RouteStoreStatus | _: StatusUpdated)     => //nothing to do
-    case d: Destroyed             => handleDestroyed(d)
+    case _: StatusUpdated           => //nothing to do
+    case d: Destroyed               => handleDestroyed(d)
+    case rss: RouteStoreStatus      => inProgress += rss.agentRouteStoreEntityId -> rss.totalProcessed
   }
 
   override def receiveEvent: Receive = {
@@ -42,6 +43,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       registered += r.entityId -> r.totalCandidateRoutes
 
     case c: Completed  =>
+      inProgress -= c.entityId
       completed += c.entityId -> c.totalProcessedRoutes
 
     case ed: ExecutorDeleted =>
@@ -62,7 +64,11 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   }
 
   def handleGetStatus(gs: GetManagerStatus): Unit = {
-    val s = ManagerStatus(registered.size, completed.size, registered.values.sum, completed.values.sum)
+    val s = ManagerStatus(
+      registered.size,
+      completed.size,
+      registered.values.sum,
+      completed.values.sum + inProgress.values.sum)
     if (gs.includeDetails) {
       sender ! s.copy(registeredRouteStores = Some(registered), resetStatus = Option(resetStatus))
     } else {
@@ -111,6 +117,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     resetStatus = ResetStatus.empty
     registered = Map.empty
     completed = Map.empty
+    inProgress = Map.empty
     lastRequestedBucketId = -1
     toSeqNoDeleted = 0
     stopActor()
@@ -222,6 +229,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
   var executorDestroyed: Set[EntityId] = Set.empty
   var completed: Map[EntityId, RoutesCount] = Map.empty
+  var inProgress: Map[EntityId, RoutesCount] = Map.empty
   var registered: Map[EntityId, RoutesCount] = Map.empty
   var resetStatus: ResetStatus = ResetStatus.empty
 

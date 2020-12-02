@@ -51,23 +51,8 @@ trait AgentMsgHandler
     case FixActorState(did)                       => fixActorState(did)
     case CheckActorStateCleanupState(did)         => checkActorStateCleanupState(did)
     case MigrateThreadContexts                    => migrateThreadContexts()
-    case tcsipa: ThreadContextStoredInProtoActor  =>
-      threadContextMigrationStatus.get(tcsipa.pinstId).foreach { migrationStatus =>
-        val successResp = (migrationStatus.successResponseFromProtoActors + tcsipa.protoRef).map(_.toString).toSeq
-        val nonSuccessResp = migrationStatus.nonSuccessResponseFromProtoActors.map(_.toString).toSeq
-        writeAndApply(ThreadContextMigrationStatusUpdated(tcsipa.pinstId, successResp, nonSuccessResp))
-      }
-    case tcns: ThreadContextNotStoredInProtoActor =>
-      threadContextMigrationStatus.get(tcns.pinstId).foreach { curStatus =>
-        val successResp = curStatus.successResponseFromProtoActors.map(_.toString).toSeq
-        val nonSuccessResp = (curStatus.nonSuccessResponseFromProtoActors + tcns.protoRef).map(_.toString).toSeq
-        val event = ThreadContextMigrationStatusUpdated(tcns.pinstId, successResp, nonSuccessResp)
-        if (curStatus.candidateProtoActors.size == nonSuccessResp.size) {
-          writeAndApply(event)
-        } else {
-          applyEvent(event)
-        }
-      }
+    case tcm: ThreadContextStoredInProtoActor     => handleThreadContextMigrated(tcm.pinstId, tcm.protoRef)
+    case tcnm: ThreadContextNotStoredInProtoActor => handleThreadContextNotMigrated(tcnm.pinstId, tcnm.protoRef)
   }
 
   override final def receiveCmd: Receive =
@@ -149,10 +134,42 @@ trait AgentMsgHandler
       }
   }
 
+  lazy val migrateThreadContextMaxAttemptPerPinstProtoRef: Int =
+    appConfig
+      .getConfigIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
+      .getOrElse(5)
+
   def isMigrateThreadContextsEnabled: Boolean =
     appConfig
       .getConfigBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
       .getOrElse(false)
+
+  def handleThreadContextMigrated(pinstId: PinstId, protoRef: ProtoRef): Unit = {
+    threadContextMigrationStatus.get(pinstId).foreach { migrationStatus =>
+      val successResp = (migrationStatus.successResponseFromProtoActors + protoRef).map(_.toString).toSeq
+      val nonSuccessResp = migrationStatus.nonSuccessResponseFromProtoActors.map(_.toString).toSeq
+      writeAndApply(ThreadContextMigrationStatusUpdated(pinstId, successResp, nonSuccessResp))
+    }
+  }
+
+  def handleThreadContextMigrationAttemptExceeded(attempt: Int, pinstId: PinstId, protoRef: ProtoRef): Unit = {
+    logger.warn(s"[$persistenceId] max attempt ($attempt) exceeded for thread context migration for " +
+      s"pinst $pinstId and proto ref $protoRef")
+    handleThreadContextNotMigrated(pinstId, protoRef)
+  }
+
+  def handleThreadContextNotMigrated(pinstId: PinstId, protoRef: ProtoRef): Unit = {
+    threadContextMigrationStatus.get(pinstId).foreach { curStatus =>
+      val successResp = curStatus.successResponseFromProtoActors.map(_.toString).toSeq
+      val nonSuccessResp = (curStatus.nonSuccessResponseFromProtoActors + protoRef).map(_.toString).toSeq
+      val event = ThreadContextMigrationStatusUpdated(pinstId, successResp, nonSuccessResp)
+      if (curStatus.candidateProtoActors.size == nonSuccessResp.size) {
+        writeAndApply(event)
+      } else {
+        applyEvent(event)
+      }
+    }
+  }
 
   def migrateThreadContexts(): Unit = {
     if (isMigrateThreadContextsEnabled) {
@@ -166,34 +183,38 @@ trait AgentMsgHandler
           candidateThreadContexts.foreach { case (pinstId, tcd) =>
             val candidateProtoActors = com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
               val migrationStatus = threadContextMigrationStatus.get(pinstId)
-              val s = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
-              val ns = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
-              val respReceivedFromProtoRefs = s ++ ns
-              if (! respReceivedFromProtoRefs.contains(e.protoDef.msgFamily.protoRef)) {
+              val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
+              val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
+              val respReceivedFromProtoActors = successResp ++ nonSuccessResp
+              if (! respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
                 val cmd = ForIdentifier(pinstId, SetThreadContext(tcd))
                 val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, contextualId)
                 if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
-                  e.protoDef -> Option(cmd)
-                } else e.protoDef -> None
-              } else e.protoDef -> None
+                  e -> Option(cmd)
+                } else e -> None
+              } else e -> None
             }.filter(_._2.isDefined)
 
             if (! threadContextMigrationStatus.contains(pinstId)) {
-              if (candidateProtoActors.size <= 7) {
-                logger.debug(s"[$persistenceId] all candidates are of pinst id resolution DEPRECATED_V01")
-              } else {
-                logger.debug(s"[$persistenceId] all candidates are of pinst id resolution V02")
-              }
-              val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.msgFamily.protoRef.toString))
+              val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
+              val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
+              logger.info(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
+              val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
               applyEvent(event)
               writeWithoutApply(event)
             }
 
-            candidateProtoActors.foreach { case (pd, cmdOpt) =>
-              ActorProtocol(pd).region.tell(cmdOpt.get, self)
-              java.lang.Thread.sleep(migrateThreadContextBatchItemSleepInterval)
+            candidateProtoActors.foreach { case (e, cmdOpt) =>
+              val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
+              val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
+              if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
+                ActorProtocol(e.protoDef).region.tell(cmdOpt.get, self)
+                threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
+                java.lang.Thread.sleep(migrateThreadContextBatchItemSleepInterval)
+              } else {
+                handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
+              }
             }
-
           }
         }
       }
@@ -204,6 +225,8 @@ trait AgentMsgHandler
 
   type ResponseReceived = Boolean
   var threadContextMigrationStatus: Map[PinstId, ThreadContextMigrationStatus] = Map.empty
+  type PinstProtoRefStr = String
+  var threadContextMigrationAttempt: Map[PinstProtoRefStr, Int] = Map.empty
   /**
    * in memory state, stores information required to send response
    * to a synchronous requests

@@ -172,6 +172,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     singletonParentProxyActor ! ForActorStateCleanupManager(Destroyed(entityId))
     agentActorCleanupState = Map.empty
     routeStoreStatus = None
+    recordedBatchSize = BatchSize(-1, -1)
     batchStatus = BatchStatus.empty
     toSeqNoDeleted = 0
     stopActor()
@@ -222,10 +223,10 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   var agentActorCleanupState: Map[DID, CleanupStatus] = Map.empty
   var routeStoreStatus: Option[RouteStoreStatus] = None
   var recordedBatchSize: BatchSize = BatchSize(-1, -1)
-
+  var batchStatus: BatchStatus = BatchStatus.empty
+  
   def routeStoreStatusReq: RouteStoreStatus = routeStoreStatus.getOrElse(
     throw new RuntimeException(s"ASC [$persistenceId] routeStoreStatus not yet initialized"))
-  var batchStatus: BatchStatus = BatchStatus.empty
 
   lazy val batchSize: Int =
     appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
@@ -265,9 +266,7 @@ case class CleanupStatus(threadContexts: Int,
 //incoming message
 case object Destroy extends ActorMessageObject
 case class GetExecutorStatus(includeDetails: Boolean = false) extends ActorMessageClass
-case class ProcessRouteStore(agentRouteStoreEntityId: EntityId,
-                             totalRoutes: Int,
-                             processedRoutes: Int = 0) extends ActorMessageClass
+case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int) extends ActorMessageClass
 
 object ActorStateCleanupExecutor {
   def props(appConfig: AppConfig, agentMsgRouter: AgentMsgRouter): Props =

@@ -254,7 +254,7 @@ lazy val commonLibraryDependencies = {
 
     "com.twitter" %% "chill-akka" % "0.9.5",
 
-    "org.hyperledger" % "indy" % "1.15.0-dev-1605",   //debPkgDepLibIndyMinVersion,
+    "org.hyperledger" % "indy" % "1.16.0-rc-161",   //debPkgDepLibIndyMinVersion,
 
     "org.json" % "json" % "20180813",
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",

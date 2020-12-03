@@ -220,6 +220,10 @@ class ActorProtocolContainer[
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
   }
 
+  /**
+   * handles thread context migration
+   * @param tcd thread context detail
+   */
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)

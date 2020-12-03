@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.maintenance
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, CheckActorStateCleanupState, FixActorState}
+import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{GetRouteBatchResult, _}
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.persistence.{BasePersistentActor, Done, Stop}
@@ -71,7 +71,12 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 
   def handleInitialActorState(ias: InitialActorState): Unit = {
     if (! agentActorCleanupState.contains(ias.actorId)) {
-      writeAndApply(ActorStateStored(ias.actorId, ias.threadContexts))
+      val event = ActorStateStored(ias.actorId, ias.threadContexts)
+      applyEvent(event)
+      writeWithoutApply(event)
+      agentActorCleanupState.get(ias.actorId).foreach { cs =>
+        agentActorCleanupState += (ias.actorId -> cs.copy(fixReqSent = true))
+      }
     }
   }
 
@@ -87,6 +92,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
           applyEvent(event)
           writeWithoutApply(event)
         }
+        sendProcessPending()
       }
     } else {
       logger.error(s"unexpected situation, received asc: $asc, without an initial state")
@@ -103,6 +109,8 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       logger.debug(s"ASC [$persistenceId] recording event: " + event)
       writeApplyAndSendItBack(event)
     }
+    actorStateCleanupManager = Option(sender)
+    sendProcessPending()
   }
 
   def isAllActorStateCleanedUp: Boolean =
@@ -141,11 +149,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   }
 
   def sendFixOrCheckActorStateCleanupCmd(did: DID): Unit = {
-    if (agentActorCleanupState.contains(did)) {
-      agentMsgRouter.forward(InternalMsgRouteParam(did, CheckActorStateCleanupState(did)), self)
-    } else {
-      agentMsgRouter.forward(InternalMsgRouteParam(did, FixActorState(did)), self)
-    }
+    agentMsgRouter.forward(InternalMsgRouteParam(did, FixActorState(did, self)), self)
   }
 
   def sendGetNextRouteBatchCmd(): Unit = {
@@ -167,6 +171,8 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       s"and this actor will be destroyed")
     deleteEventsInBatches()
   }
+
+  def sendProcessPending(): Unit = self ! ProcessPending
 
   def postAllEventDeleted(): Unit = {
     singletonParentProxyActor ! ForActorStateCleanupManager(Destroyed(entityId))
@@ -215,11 +221,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   def handleActorStateCleanupStatus(ascs: ActorStateCleanupStatus): Unit = {
     if (routeStoreStatus.isDefined && ascs.isStateCleanedUp &&
         ! processedActorIds.contains(ascs.actorID)) {
+      actorStateCleanupManager.foreach(_ ! routeStoreStatusReq)
       agentMsgRouter.execute(InternalMsgRouteParam(ascs.actorID, Stop()))   //stop agent actor
       handleActorStateCleaned(ActorStateCleaned(ascs.actorID, ascs.successfullyMigratedCount, ascs.nonMigratedCount))
     }
   }
 
+  var actorStateCleanupManager: Option[ActorRef] = None
   var agentActorCleanupState: Map[DID, CleanupStatus] = Map.empty
   var routeStoreStatus: Option[RouteStoreStatus] = None
   var recordedBatchSize: BatchSize = BatchSize(-1, -1)
@@ -261,7 +269,8 @@ case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
 case class CleanupStatus(threadContexts: Int,
                          isCleaned: Boolean,
                          successfullyMigratedCount: Int,
-                         nonMigratedCount: Int)
+                         nonMigratedCount: Int,
+                         fixReqSent: Boolean = false)
 
 //incoming message
 case object Destroy extends ActorMessageObject

@@ -78,6 +78,13 @@ case object RefreshConfigOnAllNodes extends ActorMessageObject
 case object RefreshNodeConfig extends ActorMessageObject
 case object NodeConfigRefreshed extends ActorMessageObject
 
+case object ConfigOverridden extends ActorMessageObject
+case object ConfigOverrideFailed extends ActorMessageObject
+
+case class OverrideConfigOnAllNodes(configStr: String) extends ActorMessageClass
+case class OverrideNodeConfig(configStr: String) extends ActorMessageClass
+case object NodeConfigOverridden extends ActorMessageObject
+
 case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessageClass
 case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessageClass
 

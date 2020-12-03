@@ -6,11 +6,11 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, parameters, path, pathPrefix, put, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.evernym.verity.actor.agent.maintenance.{ConfigStatus, DisableConfig, EnableConfig, ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset}
+import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset}
 import com.evernym.verity.actor.cluster_singleton.{ActionStatus, ForActorStateCleanupManager, ForRouteMaintenanceHelper, GetStatus, MaintenanceCmdWrapper, RestartAllActors}
 import com.evernym.verity.actor.persistence.{AlreadyDone, Done, Stop}
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.{ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, RefreshConfigOnAllNodes, RefreshNodeConfig}
+import com.evernym.verity.actor.{ConfigOverridden, ConfigRefreshed, ForIdentifier, NodeConfigOverridden, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 
@@ -25,6 +25,14 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
       platform.singletonParentProxy ? RefreshConfigOnAllNodes
     } else {
       platform.nodeSingleton ? RefreshNodeConfig
+    }
+  }
+
+  def overrideConfig(onAllNodes: String, str: String): Future[Any] = {
+    if (onAllNodes == YES) {
+      platform.singletonParentProxy ? OverrideConfigOnAllNodes(str)
+    } else {
+      platform.nodeSingleton ? OverrideNodeConfig(str)
     }
   }
 
@@ -112,69 +120,62 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
                         }
                       }
                     }
-                  }
+                  } ~
+                    path("override") {
+                      (put & pathEnd & entity(as[String])) { configStr =>
+                        parameters('onAllNodes ? "Y") { onAllNodes =>
+                          complete {
+                            overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
+                              case NodeConfigOverridden => OK
+                              case ConfigOverridden => OK
+                              case e => handleUnexpectedResponse(e)
+                            }
+                          }
+                        }
+                      }
+                    }
                 } ~ pathPrefix("actor-state-cleanup") {
                   //TODO: this 'actor-state-cleanup' is added temporarily until
                   // the agent state cleanup (route migration etc) work is complete.
                   // After that, we will remove this.
-                  path("enable") {
-                    (post & pathEnd) {
-                      complete {
-                        updateActorStateCleanupConfig(EnableConfig).map[ToResponseMarshallable] {
-                          case cs: ConfigStatus => handleExpectedResponse(cs)
-                          case e => handleUnexpectedResponse(e)
+                  path("status") {
+                    (get & pathEnd) {
+                      parameters('detail.?) { detailOpt =>
+                        complete {
+                          getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
+                            case s: ManagerStatus => handleExpectedResponse(s)
+                            case e => handleUnexpectedResponse(e)
+                          }
                         }
                       }
                     }
                   } ~
-                    path("disable") {
+                    path("reset") {
                       (post & pathEnd) {
                         complete {
-                          updateActorStateCleanupConfig(DisableConfig).map[ToResponseMarshallable] {
-                            case cs: ConfigStatus => handleExpectedResponse(cs)
+                          resetActorStateCleanupManager.map[ToResponseMarshallable] {
+                            case Done => OK
                             case e => handleUnexpectedResponse(e)
                           }
                         }
                       }
                     } ~
-                      path("status") {
-                        (get & pathEnd) {
-                          parameters('detail.?) { detailOpt =>
-                            complete {
-                              getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
-                                case s: ManagerStatus => handleExpectedResponse(s)
-                                case e => handleUnexpectedResponse(e)
-                              }
-                            }
-                          }
-                        }
-                      } ~
-                        path("reset") {
-                          (post & pathEnd) {
-                            complete {
-                              resetActorStateCleanupManager.map[ToResponseMarshallable] {
-                                case Done => OK
-                                case e => handleUnexpectedResponse(e)
-                              }
-                            }
-                          }
-                        } ~
-                          pathPrefix("executor") {
-                            pathPrefix(Segment) { updaterEntityId =>
-                              path("status") {
-                                (get & pathEnd) {
-                                  parameters('detail.?) { detailOpt =>
-                                    complete {
-                                      getActorStateCleanupExecutorStatus(updaterEntityId, detailOpt).map[ToResponseMarshallable] {
-                                        case s: ExecutorStatus => handleExpectedResponse(s)
-                                        case e => handleUnexpectedResponse(e)
-                                      }
-                                    }
+                      pathPrefix("executor") {
+                        pathPrefix(Segment) { updaterEntityId =>
+                          path("status") {
+                            (get & pathEnd) {
+                              parameters('detail.?) { detailOpt =>
+                                complete {
+                                  getActorStateCleanupExecutorStatus(updaterEntityId, detailOpt).map[ToResponseMarshallable] {
+                                    case s: ExecutorStatus => handleExpectedResponse(s)
+                                    case e => handleUnexpectedResponse(e)
                                   }
                                 }
                               }
                             }
                           }
+                        }
+                      }
                 }
             }
           }

@@ -595,6 +595,10 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  /**
+   * stores packaging detail if it is not already stored/persisted
+   * @param tc
+   */
   def storePackagingDetail(tc: ThreadContextDetail): Unit = {
     if (backstate.packagingContext.isEmpty) {
       val pc = PackagingContext(

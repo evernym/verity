@@ -127,6 +127,18 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           logger.error("could not refresh config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
+    case oc: OverrideConfigOnAllNodes =>
+      logger.debug(s"override config on nodes: $nodes")
+      val f = sendCmdToAllNodeSingletonsWithReducedFuture(OverrideNodeConfig(oc.configStr))
+      val sndr = sender()
+      f.onComplete{
+        case Success(_) =>
+          sndr ! ConfigOverridden
+        case Failure(e) =>
+          sndr ! ConfigOverrideFailed
+          logger.error("could not override config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+      }
+
     case getMetricsOfAllNode: GetMetricsOfAllNodes =>
       logger.debug(s"fetching metrics from nodes: $nodes")
       val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(getMetricsOfAllNode.filters))

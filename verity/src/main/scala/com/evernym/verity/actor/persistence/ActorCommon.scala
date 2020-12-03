@@ -70,7 +70,8 @@ trait ActorCommon
   }
 
   def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
-    genericLogger.error(s"[$actorId]: crashed and about to restart => message being processed while error happened: $message\n" +
+    genericLogger.error(s"[$actorId]: crashed and about to restart => " +
+      s"message being processed while error happened: $message, " +
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
   }
 
@@ -89,18 +90,17 @@ trait ActorCommon
   }
 
   def handleCommand(actualCmdReceiver: Receive): Receive = {
-    case GetActorDetail => sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
+    case GetActorDetail     =>
+      sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
 
-    case s: Start          =>
-      if (s.sendResp)
-        sender ! Done
+    case s: Start           =>
+      if (s.sendResp) sender ! Done
 
-    case s: Stop           =>
-      if (s.sendResp)
-        sender ! Done
+    case s: Stop            =>
+      if (s.sendResp) sender ! Done
       stopActor()
 
-    case ReceiveTimeout => handleReceiveTimeout()
+    case ReceiveTimeout     => handleReceiveTimeout()
 
     case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
       try {

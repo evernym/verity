@@ -240,7 +240,7 @@ class ApiFlowSpec
           restartAgencyProcessesIfRequired
           val id = "my-id"
           val sponsorId = "sponsor-token"
-          val token = sendGetToken(id, sponsorId)
+          val token = sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
           println("provision token: " + token)
           token.sponseeId shouldBe id
         }

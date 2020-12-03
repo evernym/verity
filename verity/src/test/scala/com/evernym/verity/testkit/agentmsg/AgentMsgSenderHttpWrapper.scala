@@ -34,6 +34,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
+import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.{Duration, _}
@@ -513,12 +514,16 @@ trait AgentMsgSenderHttpWrapper
     r.asInstanceOf[AgentCreated_MFV_0_7]
   }
 
-  def sendGetToken(id: String, sponsorId: String): SendToken = {
+  def sendGetToken(id: String, sponsorId: String, comMethod: String): SendToken = {
     printApiCallStartedMsg(s"get token started 0.1...")
     printApiCallStartedMsg(s"agency did: ${mockClientAgent.agencyAgentDetailReq.DID}")
     val r = sendPostRequestWithPackedMsg(
-      mockClientAgent.v_0_1_req.prepareGetTokenRoute(id, sponsorId),
+      mockClientAgent.v_0_1_req.prepareGetTokenRoute(
+        id,
+        sponsorId,
+        ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod)),
       Option(mockClientAgent.v_0_1_resp.handleSendTokenResp))
+
     printApiCallFinishedMsg(s"get token finished: " + r)
     r.asInstanceOf[SendToken]
   }

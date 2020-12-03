@@ -35,6 +35,7 @@ import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
+import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -593,6 +594,11 @@ case class MsgEnvelope[A](msg: A,
                           msgId: Option[MsgId]=None,
                           thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessageClass {
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
+}
+
+trait ServiceDecorator{
+  def msg: Any
+  def deliveryMethod: ComMethodDetail
 }
 
 class MsgForwarder {

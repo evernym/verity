@@ -33,7 +33,7 @@ sealed trait Msg extends MsgBase
 object Msg {
 
   case class Message(`~l10n`: l10n = l10n(locale = Some("en")),
-                      sent_time: BaseTiming,
+                      sent_time: String,
                       content: String = "",
                      `~attach`: Option[Vector[Attachment]] = None,
                      ) extends Msg
@@ -47,7 +47,7 @@ object Ctl {
   case class Init(selfId: ParameterValue, otherId: ParameterValue) extends Ctl
 
   case class SendMessage(`~l10n`: l10n = l10n(locale = Some("en")),
-                         sent_time: BaseTiming,
+                         sent_time: String,
                          content: String = "",
                          `~attach`: Option[Vector[Attachment]] = None,
                         ) extends Ctl
@@ -58,7 +58,7 @@ sealed trait SignalMsg
 
 object Signal {
   case class ReceivedMessage(`~l10n`: l10n,
-                            sent_time: BaseTiming,
+                            sent_time: String,
                             content: String,
                              `~attach`: Option[Vector[Attachment]]
                             ) extends SignalMsg

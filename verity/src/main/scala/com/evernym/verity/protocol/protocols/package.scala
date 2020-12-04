@@ -40,7 +40,7 @@ package object protocols {
 
     (OutOfBandDef, V0_2, {new OutOfBandDriver(_)}),
 
-    (BasicMessageDefinition, DEPRECATED_V0_1, { new BasicMessageDriver(_) }),
+    (BasicMessageDefinition, V0_2, { new BasicMessageDriver(_) }),
 
     (ConnectingProtoDef_v_0_5, DEPRECATED_V0_1, {new ConnectingDriver(_)}),
     (ConnectingProtoDef_v_0_6, DEPRECATED_V0_1, {new ConnectingDriver(_)}),

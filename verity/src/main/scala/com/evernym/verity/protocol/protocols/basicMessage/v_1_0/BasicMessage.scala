@@ -79,7 +79,7 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
       m.`~attach`,
     )
     ctx.apply(messageToEvt(messageMsg))
-    ctx.send(messageMsg, Some(Participator), Some(Participator))
+    ctx.send(messageMsg)
   }
 
   // Helper Functions

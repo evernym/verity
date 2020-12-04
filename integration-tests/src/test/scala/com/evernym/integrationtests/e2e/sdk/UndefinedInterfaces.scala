@@ -117,6 +117,22 @@ object UndefinedInterfaces {
     override def getThreadId: String = throw new NotImplementedError
   }
 
+  class UndefinedBasicMessage_1_0 extends BasicMessageV1_0 {
+    override def ask(context: Context): Unit = throw new NotImplementedError
+    override def askMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def askMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def answer(context: Context): Unit = throw new NotImplementedError
+    override def answerMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def answerMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def status(context: Context): Unit = throw new NotImplementedError
+    override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def statusMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def getThreadId: String = throw new NotImplementedError
+  }
+
   class UndefinedCommittedAnswer_1_0 extends CommittedAnswerV1_0 {
     override def ask(context: Context): Unit = throw new NotImplementedError
     override def askMsg(context: Context): JSONObject = throw new NotImplementedError
@@ -192,6 +208,7 @@ object UndefinedInterfaces {
     override def smsOutOfBandInvitation(context: Context): Unit = throw new NotImplementedError
     override def smsOutOfBandInvitation(context: Context, goal: GoalCode): Unit = throw new NotImplementedError
     override def smsOutOfBandInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
+
     override def smsOutOfBandInvitationMsg(context: Context, goal: GoalCode): JSONObject = throw new NotImplementedError
     override def smsOutOfBandInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
     override def smsOutOfBandInvitationMsgPacked(context: Context, goal: GoalCode): Array[Byte] = throw new NotImplementedError

@@ -85,7 +85,7 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     )
     ctx.apply(messageToEvt(messageMsg))
     ctx.logger.error(s"MSpence: sent basic message")
-    ctx.send(messageMsg, Some(Participator), Some(Participator))
+    ctx.send(messageMsg)
   }
 
   // Helper Functions

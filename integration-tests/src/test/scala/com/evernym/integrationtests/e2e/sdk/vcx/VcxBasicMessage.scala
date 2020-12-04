@@ -40,11 +40,14 @@ protected trait VcxBasicMessage
     )
 
     new JSONObject()
-      .put("@type", MsgFamily.typeStrFromMsgType(BasicMessageMsgFamily, "send-message"))
+      .put("@type", MsgFamily.typeStrFromMsgType(BasicMessageMsgFamily, "received-message"))
       .put("~thread",
         new JSONObject()
           .put("thid", threadId)
       )
+      .put("~l10n", payloadMsg.getJSONObject("~l10n"))
+      .put("sent_time", payloadMsg.getString("sent_time"))
+      .put("content", payloadMsg.getString("content"))
   }
 }
 

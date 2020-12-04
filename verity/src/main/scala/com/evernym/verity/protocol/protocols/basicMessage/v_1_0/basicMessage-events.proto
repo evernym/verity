@@ -27,7 +27,7 @@ message AttachmentObject {
 message MessageReceived {
     option (scalapb.message).extends = "Event";
     google.protobuf.StringValue localization    = 1;
-    google.protobuf.StringValue sentTime        = 2;
+    string sentTime                             = 2;
     string content                              = 3;
     repeated AttachmentObject attachments       = 4;
 }

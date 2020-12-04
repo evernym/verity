@@ -26,11 +26,11 @@ class WalletVerKeyCacheFetcher(val walletAPI: WalletAPI, config: AppConfig) exte
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Map[Any, Any] = {
+  override def getByKeyDetail(kd: KeyDetail): Map[String, Any] = {
     val gvp = kd.key.asInstanceOf[GetWalletVerKeyParam]
     val verKeyOpt = walletAPI.getVerKeyOption(
       KeyInfo(Right(GetVerKeyByDIDParam(gvp.did, getKeyFromPool = gvp.getFromPool))))(gvp.wap)
-    val result: Option[Map[Any, Any]] = verKeyOpt.map(vk => Map(gvp.did -> vk))
+    val result: Option[Map[String, Any]] = verKeyOpt.map(vk => Map(gvp.did -> vk))
     result.getOrElse(Map.empty)
   }
 

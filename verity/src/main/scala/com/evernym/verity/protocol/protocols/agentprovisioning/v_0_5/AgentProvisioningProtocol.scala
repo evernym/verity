@@ -87,7 +87,6 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
 
-  //FIXME: RTM -> Check config if sponsor required
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
     case (oa: State.Initialized, _, crm: ConnectReqMsg_MFV_0_5)
                         => handleConnectMsg(crm, oa.parameters)

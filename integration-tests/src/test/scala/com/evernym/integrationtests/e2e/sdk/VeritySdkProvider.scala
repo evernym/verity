@@ -6,11 +6,8 @@ import java.util.UUID
 import com.evernym.integrationtests.e2e.env.{SdkConfig, SdkType}
 import com.evernym.integrationtests.e2e.sdk.process.{NodeSdkProvider, PythonSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
-<<<<<<< HEAD
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
-=======
 import com.evernym.verity.protocol.engine.DID
->>>>>>> origin/master
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6

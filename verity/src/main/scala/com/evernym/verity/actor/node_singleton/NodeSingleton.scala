@@ -10,6 +10,9 @@ import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.util.Util._
+import com.typesafe.config.ConfigFactory
+
+import scala.reflect.io.File
 
 
 object NodeSingleton {
@@ -41,6 +44,17 @@ class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor {
       AppConfigWrapper.reload()
       sender ! NodeConfigRefreshed
       logger.info(s"configuration refresh done !!")
+
+    case onc: OverrideNodeConfig =>
+      logger.info(s"configuration override started...")
+      try {
+        val newConfig = ConfigFactory.parseString(onc.configStr)
+        AppConfigWrapper.setConfig(newConfig.withFallback(AppConfigWrapper.config))
+        sender ! NodeConfigRefreshed
+        logger.info(s"configuration override done !!")
+      } finally {
+
+      }
 
     case getNodeMetrics: GetNodeMetrics =>
       logger.debug(s"fetching metrics data...")

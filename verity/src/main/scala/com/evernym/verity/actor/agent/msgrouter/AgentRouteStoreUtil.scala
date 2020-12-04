@@ -10,18 +10,20 @@ import scala.util.Random
 trait RoutingAgentBucketMapper {
   def versionId: String
 
-  protected def getBucketId(forDID: DID)(implicit numberOfBuckets: Int): String
+  protected def bucketIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): Int
 
-  def getBucketEntityId(forDID: DID)(implicit numberOfBuckets: Int): String =
-    versionId + "-" + getBucketId(forDID)
+  final def entityIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): String =
+    entityIdByBucketId(bucketIdByRouteDID(did))
+
+  final def entityIdByBucketId(bucketId: Int): String =
+    versionId + "-" + UUID.nameUUIDFromBytes(bucketId.toString.getBytes).toString
 }
 
 object RoutingAgentBucketMapperV1 extends RoutingAgentBucketMapper {
   val versionId = "v1"
 
-  override def getBucketId(did: DID)(implicit numberOfBuckets: Int): String = {
-    val bucketId = (math.abs(did.hashCode) % numberOfBuckets).toString
-    UUID.nameUUIDFromBytes(bucketId.getBytes).toString
+  override def bucketIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): Int = {
+    math.abs(did.hashCode) % numberOfBuckets
   }
 }
 
@@ -45,11 +47,11 @@ trait RoutingAgentUtil {
   def latestBucketMapperVersionId: String = latestBucketMapper.versionId
   def oldBucketMapperVersionIds: Set[String] = oldBucketMappers.map(_.versionId)
 
-  def getBucketEntityId(did: DID): String = latestBucketMapper.getBucketEntityId(did)
+  def getBucketEntityId(did: DID): String = latestBucketMapper.entityIdByRouteDID(did)
 
   def getBucketPersistenceId(did: DID, versionId: String): String = {
     allBucketMappers.find(_.versionId == versionId).map { bm =>
-      bm.getBucketEntityId(did)
+      bm.entityIdByRouteDID(did)
     }.getOrElse {
       throw new RuntimeException("no bucket mapper found with version id: " + versionId)
     }

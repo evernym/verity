@@ -54,13 +54,13 @@ class WalletAPI(walletProvider: WalletProvider,
     result
   }
 
-  private def addToOpenedWalletIfReq(wap: WalletAccessParam, w: WalletExt): Unit = {
+  private def addToOpenedWalletIfReq(wap: WalletAccessParam, w: WalletExt): Unit = synchronized {
     if (! wallets.contains(wap.getUniqueKey) && ! wap.closeAfterUse) {
       wallets += wap.getUniqueKey -> w
     }
   }
 
-  private def _executeOpWithWalletAccessDetail[T](opContext: String, openWalletIfNotExists: Boolean, op: WalletExt => T)
+  private def _executeOpWithWalletAccessDetail[T](opContext: String, op: WalletExt => T)
                                                  (implicit wap: WalletAccessParam): T = {
 
     //for multi-node environment, there would scenarios where a wallet got opened on one node
@@ -72,7 +72,6 @@ class WalletAPI(walletProvider: WalletProvider,
       addToOpenedWalletIfReq(wap, ow)
       ow
     } else wallets(wap.getUniqueKey)
-
     try {
       _executeOpWithWallet(opContext, op)
     } finally {
@@ -87,7 +86,7 @@ class WalletAPI(walletProvider: WalletProvider,
   def executeOpWithWalletInfo[T](opContext: String, openWalletIfNotExists: Boolean, op: WalletExt => T)
                                 (implicit wap: WalletAccessParam): T = {
     runWithInternalSpan(s"executeOpWithWalletInfo($opContext)", "WalletAPI") {
-      _executeOpWithWalletAccessDetail(opContext, openWalletIfNotExists, op)(wap)
+      _executeOpWithWalletAccessDetail(opContext, op)(wap)
     }
   }
 

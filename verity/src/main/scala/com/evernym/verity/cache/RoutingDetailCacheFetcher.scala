@@ -36,7 +36,7 @@ class RoutingDetailCacheFetcher (val as: ActorSystem, config: AppConfig) extends
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[Any, Any]] = {
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
     val gr = kd.key.asInstanceOf[GetRoute]
     val bucketId = RoutingAgentUtil.getBucketEntityId(gr.forDID)
     val startTime = LocalDateTime.now

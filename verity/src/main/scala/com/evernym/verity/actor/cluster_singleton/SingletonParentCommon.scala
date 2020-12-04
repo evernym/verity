@@ -24,7 +24,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
 import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.cluster_singleton.maintenance.ActorStateCleanupManager
+import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -50,7 +50,8 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       WatcherManager.name -> WatcherManager.props(appConfig, childActorDetails),
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
-      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig)
+      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig),
+      RouteMaintenanceHelper.name -> RouteMaintenanceHelper.props(appConfig, agentActorContext.agentMsgRouter)
     )
 
   implicit def appConfig: AppConfig = agentActorContext.appConfig
@@ -126,6 +127,18 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           logger.error("could not refresh config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
+    case oc: OverrideConfigOnAllNodes =>
+      logger.debug(s"override config on nodes: $nodes")
+      val f = sendCmdToAllNodeSingletonsWithReducedFuture(OverrideNodeConfig(oc.configStr))
+      val sndr = sender()
+      f.onComplete{
+        case Success(_) =>
+          sndr ! ConfigOverridden
+        case Failure(e) =>
+          sndr ! ConfigOverrideFailed
+          logger.error("could not override config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+      }
+
     case getMetricsOfAllNode: GetMetricsOfAllNodes =>
       logger.debug(s"fetching metrics from nodes: $nodes")
       val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(getMetricsOfAllNode.filters))
@@ -171,8 +184,10 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   lazy val childActorDetails: Set[WatcherChildActorDetail] = {
     Set(
-      WatcherChildActorDetail(USER_AGENT_PAIRWISE_WATCHER_ENABLED, UserAgentPairwiseActorWatcher.name,
-        UserAgentPairwiseActorWatcher.props(userAgentPairwiseRegionName, appConfig)))
+      WatcherChildActorDetail(USER_AGENT_PAIRWISE_WATCHER_ENABLED,
+        UserAgentPairwiseActorWatcher.name,
+        UserAgentPairwiseActorWatcher.props(userAgentPairwiseRegionName, appConfig))
+    )
   }
 
   def createChildActors(): Unit = {
@@ -208,5 +223,7 @@ trait ForWatcherManager extends ForSingletonChild
 case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWatcherManager {
   def getActorName: String = USER_AGENT_PAIRWISE_ACTOR_WATCHER
 }
-
+case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
+  def getActorName: String = ROUTE_MAINTENANCE_HELPER
+}
 case object NodeAddedToClusterSingleton extends ActorMessageObject

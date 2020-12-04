@@ -28,7 +28,7 @@ class VerKeyCacheFetcher(val ledgerSvc: LedgerSvc, appConfig: AppConfig) extends
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[Any, Any]] = {
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
     val gvkp = kd.key.asInstanceOf[GetVerKeyParam]
     val gvkpFut = ledgerSvc.getNymDataFut(gvkp.submitterDetail, gvkp.did, ledgerSvc.VER_KEY)
     gvkpFut.map {

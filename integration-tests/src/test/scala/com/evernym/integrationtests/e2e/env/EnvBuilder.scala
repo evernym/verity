@@ -544,7 +544,15 @@ case class LedgerConfig(genesisFilePath: String,
                         protocolVersion: Int) {
 
   override def toString: String = {
-    s"[ledger] genesisFile:../${genesisFilePath.substring(genesisFilePath.indexOf("scalatest-runs"))} - submitterDID:$submitterDID - submitterSeed:$submitterSeed - submitterRole:$submitterRole"
+    val shortGenFile = {
+      if (genesisFilePath.contains("scalatest-runs")) {
+        genesisFilePath.substring(genesisFilePath.indexOf("scalatest-runs"))
+      }
+      else {
+        genesisFilePath
+      }
+    }
+    s"[ledger] genesisFile: ../$shortGenFile - submitterDID:$submitterDID - submitterSeed:$submitterSeed - submitterRole:$submitterRole"
   }
 }
 

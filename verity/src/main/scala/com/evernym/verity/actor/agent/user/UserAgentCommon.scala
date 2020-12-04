@@ -276,11 +276,13 @@ trait UserAgentCommon
   lazy val periodicCleanupScheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(900)
 
-  scheduleJob(
-    "CheckPeriodicCleanupTasks",
-    periodicCleanupScheduledJobInitialDelay,
-    periodicCleanupScheduledJobInterval,
-    CheckPeriodicCleanupTasks)
+  //Disabling this job for now, as anyhow the configuration on which
+  //'CheckPeriodicCleanupTasks' msg handling logic depends is not turned on yet.
+//  scheduleJob(
+//    "CheckPeriodicCleanupTasks",
+//    periodicCleanupScheduledJobInitialDelay,
+//    periodicCleanupScheduledJobInterval,
+//    CheckPeriodicCleanupTasks)
 
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
 

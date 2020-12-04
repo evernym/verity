@@ -43,7 +43,7 @@ trait AgencyAgentPairwiseSpecBase
     agencyAgentPairwiseEntityId = addressDetail.get.address
   }
 
-  protected def restartSpecs(aap: agentRegion): Unit = {
+  protected def restartActor(aap: agentRegion): Unit = {
     aap ! PoisonPill
     expectNoMessage()
     Thread.sleep(1000)

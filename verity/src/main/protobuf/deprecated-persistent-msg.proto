@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+// We need this proto buf message definition for existing persisted events.
+// This is the old class that was serialized (accidentally) by java serialization.
+// This should not be used for any new events and only exists for existing event deserialization.
+// The package should be what is mentioned below, we can't change the package, class name or field name as well
+// to make it deserializable.
+
+package com.evernym.agency.common.actor;
+
+message TransformedMultiEvents {
+    repeated TransformedEvent events = 1;
+};
+
+message TransformedEvent {
+    int32 transformationId = 1;
+    int32 eventCode = 2;
+    bytes data = 3;
+}

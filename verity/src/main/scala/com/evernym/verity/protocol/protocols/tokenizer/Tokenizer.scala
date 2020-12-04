@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
+import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, PushToken, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
 import com.evernym.verity.protocol.protocols.tokenizer.{Token => TokenEvt}
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.Util.getNewEntityId
@@ -20,8 +20,10 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
   extends Protocol[Tokenizer,Role,Msg,Any,TokenizerState,String](TokenizerDefinition) {
 
   override def handleProtoMsg: (TokenizerState, Option[Role], Msg) ?=> Any = {
-    case (_: State.Initialized | _: State.TokenCreated, _, m: GetToken) => withTokenEvt(m, generateToken)
-    case (_: State.TokenRequested, Some(Tokenizer), m: TokenMsg) => withTokenEvt(m, receivedToken)
+    case (_: State.Initialized | _: State.TokenCreated, _, m: GetToken) =>
+      withTokenEvt(m, generateToken)
+    case (_: State.TokenRequested | _: State.TokenReceived, Some(Tokenizer), m: TokenMsg) =>
+      withTokenEvt(m, receivedToken)
     case (_, Some(Tokenizer), m: ProblemReport) => ctx.apply(Failed(m.msg))
   }
 
@@ -41,7 +43,7 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
     ctx.apply(RequestedToken(
       setter=Some(SetRoster(requester=_selfIdx, tokenizer = _otherIdx))
     ))
-    ctx.send(GetToken(c.sponseeId, c.sponsorId))
+    ctx.send(GetToken(c.sponseeId, c.sponsorId, c.pushId))
   }
 
   override def applyEvent: ApplyEvent = {
@@ -58,7 +60,7 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
       setRoles(e.setter.get)
     )
 
-    case (_: State.TokenRequested, _, e: ReceivedToken) =>
+    case (_: State.TokenRequested | _: State.TokenReceived, _, e: ReceivedToken) =>
       State.TokenReceived(fromTokenEvt(e.token.get))
 
     case (_, _, e: Failed) =>
@@ -93,6 +95,8 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
         MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROVISION_TOKEN_COUNT, Map("sponsorId" -> m.sponsorId))
         /** This will be sent synchronously in the http response*/
         ctx.send(token)
+        /** Will be sent via push notification */
+        ctx.send(PushToken(token, m.pushId))
       case Failure(ex) =>
         ctx.logger.error(ex.toString)
         problemReport(SigningTokenErr.err)

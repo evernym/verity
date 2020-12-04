@@ -1,6 +1,6 @@
 package com.evernym.verity.transformations.transformers
 
-import com.evernym.verity.actor.{TransformedEvent, TransformedState}
+import com.evernym.verity.actor.{PersistentEventMsg, PersistentStateMsg}
 
 package object legacy {
 
@@ -24,7 +24,7 @@ package object legacy {
    * @param persistenceEncryptionKey encryption key
    * @return
    */
-  def createLegacyEventTransformer(persistenceEncryptionKey: String): Any <=> TransformedEvent = {
+  def createLegacyEventTransformer(persistenceEncryptionKey: String): Any <=> PersistentEventMsg = {
 
     val legacyEncryptor = new LegacyAESEncryptionTransformer(persistenceEncryptionKey)
     val legacyPersistenceTransformer = new LegacyEventPersistenceTransformer(LEGACY_PERSISTENCE_TRANSFORMATION_ID)
@@ -40,7 +40,7 @@ package object legacy {
    * @param persistenceEncryptionKey encryption key
    * @return
    */
-  def createLegacyStateTransformer(persistenceEncryptionKey: String): Any <=> TransformedState = {
+  def createLegacyStateTransformer(persistenceEncryptionKey: String): Any <=> PersistentStateMsg = {
 
     val legacyEncryptor = new LegacyAESEncryptionTransformer(persistenceEncryptionKey)
     val legacyPersistenceTransformer = new LegacyStatePersistenceTransformer(LEGACY_PERSISTENCE_TRANSFORMATION_ID)

@@ -48,11 +48,32 @@ case class PresentationPreviewAttribute(name: String,
                                         cred_def_id: Option[String],
                                         `mime-type`: Option[String],
                                         value: Option[String],
-                                        referent: Option[String])
+                                        referent: Option[String]) {
+  def toEvent: PreviewAttribute = {
+    PreviewAttribute (
+      name,
+      cred_def_id.toSeq,
+      `mime-type`.toSeq,
+      value.toSeq,
+      referent.toSeq
+    )
+  }
+}
+
 case class PresentationPreviewPredicate(name: String,
                                         cred_def_id: String,
                                         predicate: String,
-                                        threshold: String)
+                                        threshold: Int) {
+  def toEvent: PreviewPredicate = {
+    PreviewPredicate(
+      name,
+      cred_def_id,
+      predicate,
+      threshold
+    )
+  }
+}
+
 case class PresentationPreview(attributes: Seq[PresentationPreviewAttribute],
                                predicates: Seq[PresentationPreviewPredicate],
                                `@type`: String = "https://didcomm.org/present-proof/1.0/presentation-preview")
@@ -99,7 +120,7 @@ package object Ctl {
                      by_invitation: Option[Boolean]=None,
                     ) extends CtlMsg
   case class AcceptRequest(selfAttestedAttrs: Map[String, String]=Map.empty) extends CtlMsg
-  case class AcceptProposal() extends CtlMsg
+  case class AcceptProposal(name: Option[String], non_revoked: Option[RevocationInterval]) extends CtlMsg
   case class Propose(attributes: Option[List[PresentationPreviewAttribute]],
                      predicates: Option[List[PresentationPreviewPredicate]],
                      comment: String) extends CtlMsg

@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.agent.user.GetConfigs
 import com.evernym.verity.protocol.Control

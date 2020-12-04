@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.relationship.AnywiseRelationship
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.persistence.stdPersistenceId
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
-import com.evernym.verity.actor.{KeyCreated, PersistentData, TransformedEvent}
+import com.evernym.verity.actor.{KeyCreated, PersistentEventMsg, PersistentMsg}
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_REGION_ACTOR_NAME
 import com.evernym.verity.metrics.MetricsReader
@@ -69,7 +69,7 @@ class AgencyAgentSnapshotSpec
       val actualPersistedSnapshots = snapTestKit.persistedInStorage(persId).map(_._2)
       actualPersistedSnapshots.size shouldBe expectedPersistedSnapshots
       actualPersistedSnapshots.lastOption.map { snapshot =>
-        val state = transformer.undo(snapshot.asInstanceOf[PersistentData]).asInstanceOf[AgencyAgentState]
+        val state = transformer.undo(snapshot.asInstanceOf[PersistentMsg]).asInstanceOf[AgencyAgentState]
         checkSnapshotState(state, protoInstancesSize)
       }
     }
@@ -83,12 +83,12 @@ class AgencyAgentSnapshotSpec
   }
 
   def fetchEvent[T](): T = {
-    val rawEvent = persTestKit.expectNextPersistedType[TransformedEvent](persId)
+    val rawEvent = persTestKit.expectNextPersistedType[PersistentEventMsg](persId)
     eventTransformation.undo(rawEvent).asInstanceOf[T]
   }
 
   def fetchSnapshot(): AgencyAgentState = {
-    val rawEvent = snapTestKit.expectNextPersistedType[PersistentData](persId)
+    val rawEvent = snapTestKit.expectNextPersistedType[PersistentMsg](persId)
     snapshotTransformation.undo(rawEvent).asInstanceOf[AgencyAgentState]
   }
 
@@ -107,9 +107,6 @@ class AgencyAgentSnapshotSpec
     snap.relationshipReq.name shouldBe AnywiseRelationship.empty.name
     snap.relationshipReq.myDidDoc.isDefined shouldBe true
     snap.relationshipReq.myDidDoc_!.did shouldBe mockAgencyAdmin.agencyPublicDIDReq
-
-//    val expectedThreadContextSize = if (threadContextSize == 0) None else Option(threadContextSize)
-//    snap.threadContext.map(_.contexts.size) shouldBe expectedThreadContextSize
 
     //this is found only for pairwise actors and only for those protocols
     // which starts (the first message) from self-relationship actor and then

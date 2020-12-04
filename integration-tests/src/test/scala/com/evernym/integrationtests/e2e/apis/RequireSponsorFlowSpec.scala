@@ -64,13 +64,13 @@ class RequireSponsorFlowSpec
     .withValue("verity.lib-indy.ledger.pool-name", ConfigValueFactory.fromAnyRef("require-sponsor-pool"))
 
   override lazy val appConfig: AppConfig = new TestAppConfig(Some(newPoolNameConfig()))
-  lazy val poolConnManager: LedgerPoolConnManager = {
-    val pc = new IndyLedgerPoolConnManager(appConfig)
-    pc.open()
-    pc
-  }
 
-  lazy val ledgerUtil = new LedgerUtil(appConfig, poolConnManager, taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"))
+  lazy val ledgerUtil = new LedgerUtil(
+    appConfig,
+    None,
+    taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
+    genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
+  )
 
   val edgeHttpEndpointForPackedMsg: PackedMsgHttpListener = {
     val edgeAgent= testEnv.sdk_!("eas-edge-agent")
@@ -265,7 +265,7 @@ class RequireSponsorFlowSpec
           restartAgencyProcessesIfRequired
           val id = "my-id"
           val sponsorId = "sponsor-token"
-          val token = sendGetToken(id, sponsorId)
+          val token = sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
           println("provision token: " + token)
           token.sponseeId shouldBe id
         }

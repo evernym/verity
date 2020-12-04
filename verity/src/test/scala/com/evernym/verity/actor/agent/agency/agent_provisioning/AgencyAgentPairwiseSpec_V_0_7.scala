@@ -133,7 +133,7 @@ class AgencyAgentCreateNewCloudAgent extends AgencyAgentPairwiseSpec_V_0_7 {
   createCloudAgentTest()
   "when tried to restart actor" - {
     "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-      restartSpecs(aap)
+      restartActor(aap)
     }
   }
 }

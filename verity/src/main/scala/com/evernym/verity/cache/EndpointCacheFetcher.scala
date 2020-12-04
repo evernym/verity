@@ -30,7 +30,7 @@ class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, config: AppConfig) extends
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[Any, Any]] = {
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
     val gep = kd.key.asInstanceOf[GetEndpointParam]
     val gepFut = ledgerSvc.getAttribFut(gep.submitterDetail, gep.did, ledgerSvc.URL)
     gepFut.map {

@@ -9,8 +9,8 @@ import Util.amGitlabCI
 
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
-import SharedLibrary.{LibPack, defaultUpdateSharedLibraries, updateSharedLibraries, managedSharedLibTrigger}
-import Util.{addDeps, buildPackageMappings, cloudrepoUsername, cloudrepoPassword, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
+import SharedLibrary.{LibPack, defaultUpdateSharedLibraries, updateSharedLibraries}
+import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
@@ -21,11 +21,11 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1542"
+val debPkgDepLibIndyMinVersion = "1.15.0~1560"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1542"
+val libIndyVer = "1.15.0~1560"
 val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),
@@ -254,7 +254,7 @@ lazy val commonLibraryDependencies = {
 
     "com.twitter" %% "chill-akka" % "0.9.5",
 
-    "org.hyperledger" % "indy" % "1.15.0-dev-1542",   //debPkgDepLibIndyMinVersion,
+    "org.hyperledger" % "indy" % "1.15.0-dev-1560",   //debPkgDepLibIndyMinVersion,
 
     "org.json" % "json" % "20180813",
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",
@@ -322,7 +322,7 @@ lazy val commonLibraryDependencies = {
     "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
-    "com.evernym.verity" % "verity-sdk" % "0.4.1-fa1eaca7",
+    "com.evernym.verity" % "verity-sdk" % "0.4.4-f5a828d8",
     "net.glxn" % "qrgen" % "1.4", // https://mvnrepository.com/artifact/net.glxn/qrgen
     "com.google.guava" % "guava" % "28.1-jre",
 

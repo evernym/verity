@@ -11,9 +11,8 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore}
+import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
@@ -36,6 +35,7 @@ import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
+import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -221,10 +221,16 @@ class ActorProtocolContainer[
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
   }
 
+  /**
+   * handles thread context migration
+   * @param tcd thread context detail
+   */
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)
-      sender ! ThreadContextStoredInProtoActor(pinstId)
+      sender ! ThreadContextStoredInProtoActor(pinstId, definition.msgFamily.protoRef)
+    } else {
+      sender ! ThreadContextNotStoredInProtoActor(pinstId, definition.msgFamily.protoRef)
     }
   }
 
@@ -398,10 +404,13 @@ class ActorProtocolContainer[
       val typeName = SegmentedStateStore.buildTypeName(definition.msgFamily.protoRef, definition.segmentedStateName.get)
       val segmentedStateRegion = ClusterSharding.get(context.system).shardRegion(typeName)
       val futResp = segmentedStateRegion ? ForIdentifier(segmentAddress, cmd)
-      futResp.mapTo[Option[Any]].map(r => postExecution(Right(r))).
-        recover{
-          case e: Exception =>
-            postExecution(Left(e))
+
+      futResp.onComplete {
+        case Success(s) => s match {
+          case x: Option[Any] => postExecution(Right(x))
+          case x: ValidationError => postExecution(Left(x))
+        }
+        case Failure(e) => postExecution(Left(e))
       }
     }
 
@@ -588,6 +597,11 @@ case class MsgEnvelope[A](msg: A,
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
 }
 
+trait ServiceDecorator{
+  def msg: Any
+  def deliveryMethod: ComMethodDetail
+}
+
 class MsgForwarder {
   private var _forwarder: Option[ActorRef] = None
   def setForwarder(actorRef: ActorRef): Unit = _forwarder = Option(actorRef)
@@ -596,4 +610,5 @@ class MsgForwarder {
 
 case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
 
-case class ThreadContextStoredInProtoActor(pinstId: PinstId) extends ActorMessageClass
+case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
+case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass

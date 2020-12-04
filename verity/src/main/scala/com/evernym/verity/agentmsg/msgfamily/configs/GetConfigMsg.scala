@@ -27,7 +27,7 @@ object GetConfigsMsgHelper {
   def buildReqMsg(implicit amw: AgentMsgWrapper): GetConfigsReqMsg = {
     amw.headAgentMsgDetail.familyVersion match {
       case MFV_0_5 => buildReqMsgFrom_MFV_0_5
-      case x => throw new RuntimeException("get config resq builder failed: " + x)
+      case x => throw new RuntimeException("get config req builder failed: " + x)
     }
   }
 

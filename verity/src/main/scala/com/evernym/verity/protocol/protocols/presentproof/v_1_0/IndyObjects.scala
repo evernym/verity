@@ -132,6 +132,33 @@ object ProofRequestUtil {
     }
   }
 
+  def proposalToProofRequest(proposal: PresentationPreview, name: String, revocationInterval: Option[RevocationInterval]): Try[ProofRequest] = {
+    val nonce = Anoncreds.generateNonce().get()
+    val requestedAttrs = Try(attrReferentsForPreview(proposal.attributes))
+    val requestedPred = Try(predReferentsForPreview(proposal.predicates))
+
+    val requested = requestedAttrs match {
+      case Success(attrs) => requestedPred.map((attrs, _))
+      case Failure(exception) => Failure(exception)
+    }
+
+    requested match {
+      case Success((attrs, preds)) =>
+        Success(
+          ProofRequest(
+            nonce,
+            name,
+            "1.0",
+            attrs,
+            preds,
+            revocationInterval,
+            Some("1.0")
+          )
+        )
+      case Failure(exception) => Failure(exception)
+    }
+  }
+
   def attrReferents(list: Seq[ProofAttribute]): Map[String, ProofAttribute] = {
     val names = list
       .map{
@@ -162,11 +189,79 @@ object ProofRequestUtil {
       .toMap
   }
 
+  def attrReferentsForPreview(list: Seq[PresentationPreviewAttribute]): Map[String, ProofAttribute] = {
+    val names = list.map(_.name)
+
+    val proofAttrList = list.map(attr => {
+      val restrictions = attr.cred_def_id.map(credDefId =>
+        List(RestrictionsV1(
+          schema_id = None,
+          schema_issuer_did = None,
+          schema_name = None,
+          schema_version = None,
+          issuer_did = None,
+          cred_def_id = Some(credDefId)
+        ))
+      )
+
+      ProofAttribute(
+        Some(attr.name),
+        None,
+        restrictions,
+        None,
+        restrictions.isEmpty
+      )
+    })
+
+    val dups = names
+      .groupBy(identity)
+      .map(x=> x._1 -> x._2.size)
+      .collect{case (x, y) if y > 1 => x -> y}
+      .map(x => x._1 -> (1, x._2))
+
+    names
+      .foldLeft((dups, Seq[String]())){ (accum, name) =>
+        val (dupsMap, nameSeq) = accum
+        dupsMap.get(name) match {
+          case Some((count, total)) =>
+            (dupsMap + (name -> (count + 1, total))
+              , nameSeq :+ s"$name[$count]")
+          case None => (dupsMap, nameSeq :+ name)
+        }
+      }
+      ._2
+      .zip(proofAttrList)
+      .toMap
+  }
+
   def predReferents(list: Seq[ProofPredicate]): Map[String, ProofPredicate] = {
     list
       .map (_.name)
       .zip(list)
       .toMap
+  }
+
+  def predReferentsForPreview(list: Seq[PresentationPreviewPredicate]): Map[String, ProofPredicate] = {
+    list
+      .map (_.name)
+      .zip{
+        list.map(pred =>
+          ProofPredicate(
+            pred.name,
+            pred.predicate,
+            pred.threshold,
+            Some(List(RestrictionsV1(
+              schema_id = None,
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = None,
+              cred_def_id = Some(pred.cred_def_id)
+            ))),
+            None
+          )
+        )
+      }.toMap
   }
 
 }

@@ -48,14 +48,21 @@ trait AgentCommon
 
   override def postSuccessfulActorRecovery(): Unit = {
     Option(state).foreach { s =>
-      val stateSize = s.serializedSize
-      if (stateSize >= 0) { // so only states that can calculate size are part the metric
-        MetricsWriter.histogramApi.recordWithTag(
-          AS_ACTOR_AGENT_STATE_SIZE,
-          MeasurementUnit.information.bytes,
-          stateSize,
-          "actor_class" -> this.getClass.getSimpleName,
-        )
+      try {
+        val stateSize = s.serializedSize
+        if (stateSize >= 0) { // so only states that can calculate size are part the metric
+          MetricsWriter.histogramApi.recordWithTag(
+            AS_ACTOR_AGENT_STATE_SIZE,
+            MeasurementUnit.information.bytes,
+            stateSize,
+            "actor_class" -> this.getClass.getSimpleName,
+          )
+        }
+      } catch {
+        case e: RuntimeException =>
+          logger.error(s"[$persistenceId] error occurred while calculating state size => " +
+            s"state: $s, error: ${e.getMessage}, exception stack trace: " +
+            s"${Exceptions.getStackTraceAsSingleLineString(e)}")
       }
     }
   }

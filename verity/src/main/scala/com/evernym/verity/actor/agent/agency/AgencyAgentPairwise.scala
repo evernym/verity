@@ -36,7 +36,8 @@ import scala.concurrent.Future
 class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
     with AgencyAgentPairwiseStateUpdateImpl
-    with PairwiseConnState {
+    with PairwiseConnState
+    with AgentSnapshotter[AgencyAgentPairwiseState] {
 
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
@@ -70,8 +71,10 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     case ads: AgentDetailSet => handleSetupRelationship(ads.agentKeyDID, ads.forDID)
 
     //kept it for backward compatibility
-    case ac:AgentCreated    => handleSetupRelationship(ac.agentKeyDID, ac.forDID)
-    case _: SignedUp        => //nothing to do, kept it for backward compatibility
+    case ac:AgentCreated      =>
+      if (state.relationship.isEmpty && ac.forDID.nonEmpty && ac.agentKeyDID.nonEmpty)
+        handleSetupRelationship(ac.agentKeyDID, ac.forDID)
+    case _ @ (_: OwnerSetForAgent | _: SignedUp) => //nothing to do, kept it for backward compatibility
   }
 
   def handleSetupRelationship(myPairwiseDID: DID, theirPairwiseDID: DID): Unit = {
@@ -186,6 +189,14 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
+
+  /**
+   * state to be snapshotted
+   *
+   * @return
+   */
+  override def snapshotState: Option[AgencyAgentPairwiseState] =
+    if (state.threadContext.forall(_.contexts.isEmpty)) Option(state) else None
 }
 
 trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase

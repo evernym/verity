@@ -2,7 +2,7 @@ package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.RecordingAgentActivity
-import com.evernym.verity.actor.agent.agency.AgencyAgentState
+import com.evernym.verity.actor.agent.agency.{AgencyAgentState, AgencyAgentPairwiseState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorStateCleaned, StatusUpdated}
 import com.evernym.verity.actor.cluster_singleton.maintenance.{Completed, Registered}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
@@ -264,7 +264,16 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     213 -> ReceivedOrdersSet,
     214 -> SenderOrderIncremented,
     215 -> ReceivedOrderIncremented,
-    216 -> ProtoActorUpdatedWithThreadContext
+    216 -> ThreadContextMigrationStarted,
+    217 -> ThreadContextMigrationStatusUpdated,
+    218 -> ActorStateStored,
+    219 -> ExecutorDeleted,
+    220 -> BatchSizeRecorded,
+
+    221 -> AgencyAgentPairwiseState,
+
+    222 -> presentProof_v10.PresentationProposed,
+    223 -> presentProof_v10.ProposeReceived
   )
 
 }

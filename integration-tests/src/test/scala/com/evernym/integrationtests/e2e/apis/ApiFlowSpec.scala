@@ -58,13 +58,13 @@ class ApiFlowSpec
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
 
   override lazy val appConfig: AppConfig = new TestAppConfig
-  lazy val poolConnManager: LedgerPoolConnManager = {
-    val pc = new IndyLedgerPoolConnManager(appConfig)
-    pc.open()
-    pc
-  }
 
-  lazy val ledgerUtil = new LedgerUtil(appConfig, poolConnManager, taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"))
+  lazy val ledgerUtil = new LedgerUtil(
+    appConfig,
+    None,
+    taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
+    genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
+  )
 
   val edgeHttpEndpointForPackedMsg: PackedMsgHttpListener = {
     val edgeAgent= testEnv.sdk_!("eas-edge-agent")
@@ -240,7 +240,7 @@ class ApiFlowSpec
           restartAgencyProcessesIfRequired
           val id = "my-id"
           val sponsorId = "sponsor-token"
-          val token = sendGetToken(id, sponsorId)
+          val token = sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
           println("provision token: " + token)
           token.sponseeId shouldBe id
         }

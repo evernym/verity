@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
+import com.evernym.verity.protocol.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Read, ReadStorage, Write, WriteStorage}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
@@ -51,7 +52,15 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   override lazy val journalContext: JournalContext = pce.parentLogContext + pinstId.take(5)
   val sendsMsgs: SendsMsgs = new SendsMsgsForContainer[M](this) {
 
-    def send(pmsg: ProtocolOutgoingMsg): Unit = pce.system.handleOutMsg(pmsg.envelope)
+    def send(pmsg: ProtocolOutgoingMsg): Unit = {
+      pmsg match {
+        case ProtocolOutgoingMsg(s: ServiceDecorator, to, from, mId, tId, pId, pDef) =>
+          pce.system.handleOutMsg(ProtocolOutgoingMsg(s.msg, to, from, mId, tId, pId, pDef).envelope)
+
+        case pom: ProtocolOutgoingMsg  => pce.system.handleOutMsg(pom.envelope)
+
+      }
+    }
 
     override def sendSMS(toPhoneNumber: String, msg: String): Future[String] = ???
   }

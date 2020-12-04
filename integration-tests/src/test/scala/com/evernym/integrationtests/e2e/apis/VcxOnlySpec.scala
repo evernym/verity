@@ -19,6 +19,7 @@ import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
 import com.evernym.verity.sdk.utils.ContextBuilder
+import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
@@ -47,10 +48,12 @@ class VcxOnlySpec
   val cas1 = testEnv.instance_!(APP_NAME_CAS_1).appInstance
 
   runScenario("vcxOnlyFlow") {
-    lazy val ledgerUtil: LedgerUtil = LedgerClient.buildLedgerUtil(
+    lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
       appEnv.config,
-      Option(testEnv.ledgerConfig.submitterDID),
-      Option(testEnv.ledgerConfig.submitterSeed)
+      Option(appEnv.ledgerConfig.submitterDID),
+      Option(appEnv.ledgerConfig.submitterSeed),
+      appEnv.ledgerConfig.submitterRole,
+      genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
     )
 
     implicit val scenario: Scenario = Scenario(

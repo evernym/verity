@@ -20,14 +20,14 @@ class EventSerializerValidatorSpec extends BasicSpec {
 
     "when given an event with configured serializer as 'protoser'" - {
       "should be validated successfully" in {
-        val events = List(TransformedEvent(), TransformedState(), TransformedMultiEvent())
+        val events = List(PersistentEventMsg(), PersistentStateMsg(), PersistentMultiEventMsg())
         events.foreach { event =>
           PersistenceSerializerValidator.validate(event, testConfig)
         }
       }
     }
 
-    "when given an event with configured serrializer as NON protobuf serializer" - {
+    "when given an event with configured serializer as NON protobuf serializer" - {
       "should throw InvalidSerializerFound exception" in {
         val ite = EventWithInvalidProtoSerBinding("test")
         intercept[InvalidSerializerFound] {

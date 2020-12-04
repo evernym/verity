@@ -3,15 +3,15 @@ package com.evernym.integrationtests.e2e.sdk
 import java.nio.file.Path
 import java.util.UUID
 
-import com.evernym.verity.protocol.engine.DID
 import com.evernym.integrationtests.e2e.env.{SdkConfig, SdkType}
 import com.evernym.integrationtests.e2e.sdk.process.{NodeSdkProvider, PythonSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
-import com.evernym.verity.sdk.protocols.presentproof.common.Attribute
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
@@ -105,16 +105,19 @@ trait VeritySdkProvider {
                           credDefId: String,
                           credValues: Map[String, String],
                           comment: String,
-                          price: String): IssueCredentialV1_0
+                          price: String = "0",
+                          autoIssue: Boolean = false,
+                          byInvitation: Boolean = false): IssueCredentialV1_0
 
   def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0
 
   def issueCredentialComplete_1_0(): Unit
 
-
-  def presentProof_1_0(forRelationship: DID,
+  def presentProof_1_0(forRelationship: String,
                        name: String,
-                       attrs: Attribute*): PresentProofV1_0
+                       proofAttrs: Array[Attribute],
+                       proofPredicate: Array[Predicate],
+                       byInvitation: Boolean = false): PresentProofV1_0
 
   def presentProof_1_0(forRelationship: DID,
                        threadId: String): PresentProofV1_0

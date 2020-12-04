@@ -5,12 +5,6 @@ import "scalapb/scalapb.proto";
 
 package com.evernym.verity.actor;
 
-message TransformedState {
-    int32 transformationId = 1;
-    int32 typeCode = 2;
-    bytes data = 3;
-};
-
 message BucketDetail {
     int32 id = 1;
     int32 usedCount = 2;

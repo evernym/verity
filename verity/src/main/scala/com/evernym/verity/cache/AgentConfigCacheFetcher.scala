@@ -30,7 +30,7 @@ class AgentConfigCacheFetcher(val agentMsgRouter: AgentMsgRouter, config: AppCon
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[Any, Any]] = {
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
     val gcp = kd.key.asInstanceOf[GetConfigCacheParam]
     val confFutResp = agentMsgRouter.execute(InternalMsgRouteParam(gcp.agentDID, gcp.gc))
     confFutResp map {
@@ -39,7 +39,7 @@ class AgentConfigCacheFetcher(val agentMsgRouter: AgentMsgRouter, config: AppCon
     }
   }
 
-  override def throwRequiredKeysNotFoundException(reqKeysNotFound: Set[Any]): HandledErrorException = {
+  override def throwRequiredKeysNotFoundException(reqKeysNotFound: Set[String]): HandledErrorException = {
     throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("required configs not yet set: " + reqKeysNotFound.mkString(", ")))
   }
 }

@@ -130,8 +130,8 @@ class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
       }
 
       "when tried to restart actor" - {
-        "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-          restartSpecs(aap)
+        "should be successful and respond" taggedAs UNSAFE_IgnoreAkkaEvents in {
+          restartActor(aap)
         }
       }
     }

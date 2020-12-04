@@ -14,7 +14,7 @@ class PinstIdResolutionSpec extends BasicSpec {
   "V0_1" - {
     "set pinstId resolution" - {
       "first" in {
-        val pinstId = PinstIdResolution.V0_1.resolve(
+        val pinstId = PinstIdResolution.DEPRECATED_V0_1.resolve(
           null, //Not used in this version
           "",  // Not used in this version
           None,
@@ -25,7 +25,7 @@ class PinstIdResolutionSpec extends BasicSpec {
         pinstId shouldBe "6886be7356d0307b636d4c1ca4c2a433"
       }
       "second" in {
-        val pinstId = PinstIdResolution.V0_1.resolve(
+        val pinstId = PinstIdResolution.DEPRECATED_V0_1.resolve(
           null, //Not used in this version
           "",  // Not used in this version
           None,
@@ -38,7 +38,7 @@ class PinstIdResolutionSpec extends BasicSpec {
       "for agent scoped protocols, it ignores provided thread id" in {
         //basically, if protocol scope is agent, it should ignore
         // provided thread id and use default thread id
-        val pinstId1 = PinstIdResolution.V0_1.resolve(
+        val pinstId1 = PinstIdResolution.DEPRECATED_V0_1.resolve(
           WalletBackupProtoDef,
           "",  // Not used in this version
           None,
@@ -47,7 +47,7 @@ class PinstIdResolutionSpec extends BasicSpec {
           Some("S7Ne8wV7T1XNRYpFwS2wgw")
         )
 
-        val pinstId2 = PinstIdResolution.V0_1.resolve(
+        val pinstId2 = PinstIdResolution.DEPRECATED_V0_1.resolve(
           WalletBackupProtoDef,
           "",  // Not used in this version
           None,

@@ -9,20 +9,18 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import com.evernym.integrationtests.e2e.env.SdkConfig
+import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, ProtoRef}
-import com.evernym.verity.testkit.listener.Listener
-import com.evernym.verity.util.Base58Util
-import com.evernym.integrationtests.e2e.env.SdkConfig
-import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.OutOfBand
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
-import com.evernym.verity.sdk.protocols.presentproof.common.Attribute
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
@@ -33,6 +31,8 @@ import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryConfig, WriteCredentialDefinitionV0_6}
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.{Context, JsonUtil, Util}
+import com.evernym.verity.testkit.listener.Listener
+import com.evernym.verity.util.Base58Util
 import org.hyperledger.indy.sdk.crypto.Crypto
 import org.json.{JSONArray, JSONObject}
 
@@ -377,7 +377,9 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                    credDefId: String,
                                    values: Map[String, String],
                                    comment: String,
-                                   price: String): IssueCredentialV1_0 = {
+                                   price: String = "0",
+                                   autoIssue: Boolean = false,
+                                   byInvitation: Boolean = false): IssueCredentialV1_0 = {
 
     val credValues: JSONObject = new JSONObject
     for ((key, value) <- values) {
@@ -389,6 +391,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     credOfferJson.put("~for_relationship", forRelationship)
     credOfferJson.put("cred_def_id", credDefId)
     credOfferJson.put("credential_values", credValues)
+    credOfferJson.put("by_invitation", byInvitation)
 
     new UndefinedIssueCredential_1_0 {
       override def offerCredential(context: Context): Unit = {
@@ -427,13 +430,18 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def issueCredentialComplete_1_0(): Unit = ???
 
-  override def presentProof_1_0(forRelationship: DID, name: String, attrs: Attribute*): PresentProofV1_0 = {
+  override def presentProof_1_0(forRelationship: String,
+                                name: String,
+                                proofAttrs: Array[Attribute],
+                                proofPredicate: Array[Predicate],
+                                byInvitation: Boolean = false): PresentProofV1_0 = {
     val proofReqJson = new JSONObject
     proofReqJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request")
     proofReqJson.put("@id", UUID.randomUUID.toString)
     proofReqJson.put("~for_relationship", forRelationship)
     proofReqJson.put("name", name)
-    proofReqJson.put("proof_attrs", JsonUtil.makeArray(attrs.toArray))
+    proofReqJson.put("proof_attrs", JsonUtil.makeArray(proofAttrs.toArray))
+    proofReqJson.put("by_invitation", byInvitation)
 
     new UndefinedPresentProof_1_0 {
       override def request(ctx: Context): Unit = {

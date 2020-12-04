@@ -89,7 +89,7 @@ class DeadDropSpec
     }
   }
 
-  override val defaultPinstIdResolver = PinstIdResolution.V0_1
+  override val defaultPinstIdResolver = PinstIdResolution.DEPRECATED_V0_1
 
   lazy val appConfig = new TestAppConfig()
 

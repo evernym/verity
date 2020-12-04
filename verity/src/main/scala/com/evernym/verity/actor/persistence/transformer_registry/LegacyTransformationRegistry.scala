@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.transformer_registry
 
-import com.evernym.verity.actor.{TransformedEvent, TransformedState}
+import com.evernym.verity.actor.{PersistentEventMsg, PersistentStateMsg}
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.transformations.transformers.legacy._
 
@@ -13,10 +13,10 @@ import com.evernym.verity.transformations.transformers.legacy._
  */
 trait LegacyTransformationRegistry { this: HasTransformationRegistry =>
 
-  lazy val legacyEventTransformer: Any <=> TransformedEvent =
+  lazy val legacyEventTransformer: Any <=> PersistentEventMsg =
     createLegacyEventTransformer(persistenceEncryptionKey)
 
-  lazy val legacyStateTransformer: Any <=> TransformedState =
+  lazy val legacyStateTransformer: Any <=> PersistentStateMsg =
     createLegacyStateTransformer(persistenceEncryptionKey)
 
   /**

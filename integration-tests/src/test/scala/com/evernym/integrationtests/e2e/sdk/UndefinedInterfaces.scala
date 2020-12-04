@@ -184,5 +184,16 @@ object UndefinedInterfaces {
     override def outOfBandInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
     override def outOfBandInvitationMsgPacked(context: Context, shortInvite: lang.Boolean): Array[Byte] = throw new NotImplementedError
     override def outOfBandInvitationMsgPacked(context: Context, shortInvite: lang.Boolean, goal: GoalCode): Array[Byte] = throw new NotImplementedError
+
+    override def smsConnectionInvitation(context: Context): Unit = throw new NotImplementedError
+    override def smsConnectionInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def smsConnectionInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def smsOutOfBandInvitation(context: Context): Unit = throw new NotImplementedError
+    override def smsOutOfBandInvitation(context: Context, goal: GoalCode): Unit = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsg(context: Context, goal: GoalCode): JSONObject = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsgPacked(context: Context, goal: GoalCode): Array[Byte] = throw new NotImplementedError
   }
 }

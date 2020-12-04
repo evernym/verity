@@ -1,6 +1,6 @@
 package com.evernym.verity.transformations.transformers
 
-import com.evernym.verity.actor.PersistentData
+import com.evernym.verity.actor.PersistentMsg
 import com.google.protobuf.ByteString
 
 /**
@@ -12,13 +12,13 @@ import com.google.protobuf.ByteString
  * @param transformationId transformation id to be stored in persisted data
  *                         which will be used in reversing/undo the transformation
  */
-class PersistenceTransformer(transformationId: Int) extends (Array[Byte] <=> PersistentData) {
+class PersistenceTransformer(transformationId: Int) extends (Array[Byte] <=> PersistentMsg) {
 
-  override val execute: Array[Byte] => PersistentData = { msg =>
-    PersistentData(transformationId,  ByteString.copyFrom(msg))
+  override val execute: Array[Byte] => PersistentMsg = { msg =>
+    PersistentMsg(transformationId,  ByteString.copyFrom(msg))
   }
 
-  override val undo: PersistentData => Array[Byte] = { pd =>
+  override val undo: PersistentMsg => Array[Byte] = { pd =>
     pd.data.toByteArray
   }
 }

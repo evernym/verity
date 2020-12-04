@@ -8,6 +8,7 @@ import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 
 import scala.language.implicitConversions
+import scala.util.matching.Regex
 
 object Scope {
   sealed trait ProtocolScope
@@ -147,6 +148,16 @@ trait ProtoContainerEvent extends ProtoSystemEvent
 case class MultiEvent(evts: Seq[Any]) extends ProtoSystemEvent
 
 case class InitParamBase(name: String, value: String)
+
+object ProtoRef {
+  val VALID_PROTO_REF_REG_EX: Regex = "(.*)\\[(.*)\\]".r
+
+  def fromString(str: String): ProtoRef =
+    str match {
+      case VALID_PROTO_REF_REG_EX(msgFamilyName, msgFamilyVersion) => ProtoRef(msgFamilyName, msgFamilyVersion)
+      case _ => throw new RuntimeException("invalid proto ref string: " + str)
+    }
+}
 
 case class ProtoRef(msgFamilyName: MsgFamilyName, msgFamilyVersion: MsgFamilyVersion) {
   override def toString: String = s"$msgFamilyName[$msgFamilyVersion]"

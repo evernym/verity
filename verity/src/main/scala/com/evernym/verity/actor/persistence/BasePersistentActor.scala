@@ -7,7 +7,8 @@ import akka.actor.{ActorRef, Kill, Stash}
 import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
-import com.evernym.verity.constants.Constants._
+import com.evernym.agency.common.actor.{TransformedEvent, TransformedMultiEvents}
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
@@ -17,11 +18,11 @@ import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
-import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.transformations.transformers.<=>
 
@@ -52,8 +53,8 @@ trait BasePersistentActor
 
   val defaultReceiveTimeoutInSeconds = 600
   val entityCategory: String = PERSISTENT_ACTOR_BASE
-  override lazy val entityName: String = self.path.parent.parent.name
 
+  override lazy val entityName: String = self.path.parent.parent.name
   override lazy val actorId: String = entityName + "-" + entityId
   override lazy val persistenceId: String = actorId
 
@@ -62,10 +63,6 @@ trait BasePersistentActor
   def emptyEventHandler(event: Any): Unit = {}
 
   def applyEvent(evt: Any): Unit = receiveRecover(evt)
-
-  def postPersist(): Unit = {}
-
-  def postPersistAsync(): Unit = {}
 
   final override def persist[A](event: A)(handler: A => Unit): Unit = {
     val exception = new RuntimeException("call 'persistExt' instead")
@@ -87,7 +84,7 @@ trait BasePersistentActor
   /**
    * transformer used for event persistence
    */
-  lazy val eventTransformer: Any <=> TransformedEvent = legacyEventTransformer
+  lazy val eventTransformer: Any <=> PersistentEventMsg = legacyEventTransformer
 
   /**
    * transforms given event by using a "transformer" to a
@@ -98,10 +95,9 @@ trait BasePersistentActor
    * @return
    */
   def transformedEvent(evt: Any): Any = {
-
     try {
       evt match {
-        case x: MultiEvent   => TransformedMultiEvent(x.evts.map(eventTransformer.execute))
+        case x: MultiEvent   => PersistentMultiEventMsg(x.evts.map(eventTransformer.execute))
         case e               => eventTransformer.execute(e)
       }
     } catch {
@@ -135,11 +131,6 @@ trait BasePersistentActor
       logger.trace(eventDetail + " event persisted", ("event", event.getClass.getSimpleName),
         (LOG_KEY_PERSISTENCE_ID, persistenceId))
       trackPersistenceSuccess()
-      if (sync) {
-        postPersist()
-      } else {
-        postPersistAsync()
-      }
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_PERSIST)
     }
 
@@ -271,18 +262,12 @@ trait BasePersistentActor
   }
 
   def handleEvent: Receive = {
-
-    case RecoveryCompleted            => handleRecoveryCompleted()
-
-    case tmes: TransformedMultiEvents => handleTransformedEvents(tmes.events)
-
-    case tme: TransformedMultiEvent   => handleTransformedEvents(tme.events)
-
-    case te: TransformedEvent         => handleTransformedEvents(Seq(te))
-
-    case pd: PersistentData           => handlePersistedData(pd)
-
-    case evt: Any                     => applyReceivedEvent(evt)
+    case RecoveryCompleted              => handleRecoveryCompleted()
+    case tmes: TransformedMultiEvents   => handleTransformedEvents(tmes.events)   //for legacy/deprecated java serialized event
+    case pmem: PersistentMultiEventMsg  => handlePersistentEvents(pmem.events)
+    case pem: PersistentEventMsg        => handlePersistentEvents(Seq(pem))
+    case pm: PersistentMsg              => handlePersistedMsg(pm)
+    case evt: Any                       => applyReceivedEvent(evt)
   }
 
   def handleRecoveryCompleted(): Unit = {
@@ -290,10 +275,10 @@ trait BasePersistentActor
       val curTime = LocalDateTime.now
       val millis = ChronoUnit.MILLIS.between(preStartTime, curTime)
       if (millis > warnRecoveryTime)
-        logger.warn(s"[$actorId] recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
+        logger.warn(s"[$actorId] long actor recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
           (LOG_KEY_PERSISTENCE_ID, persistenceId))
       else
-        logger.debug(s"[$actorId] recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
+        logger.debug(s"[$actorId] actor recovery completed (total events: $lastSequenceNr, time taken (in millis):  $millis",
           (LOG_KEY_PERSISTENCE_ID, persistenceId))
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_RECOVERY)
       postRecoveryCompleted()
@@ -327,7 +312,13 @@ trait BasePersistentActor
     incrementTotalRecoveredEvents()
   }
 
-  def handlePersistedData(pd: PersistentData): Unit = {
+  def handlePersistentEvents(tes: Seq[PersistentEventMsg]): Unit = {
+    val events = tes.map(untransformedEvent)
+    events.foreach(applyReceivedEvent)
+    incrementTotalRecoveredEvents()
+  }
+
+  def handlePersistedMsg(pd: PersistentMsg): Unit = {
     val evt = untransformedEvent(pd)
     applyReceivedEvent(evt)
     incrementTotalRecoveredEvents()
@@ -347,8 +338,11 @@ trait BasePersistentActor
   private def untransformedEvent(persistedEvent: Any): Any = {
     try {
       val event = persistedEvent match {
-        case te: TransformedEvent => lookupTransformer(te.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(te)
-        case pd: PersistentData   => lookupTransformer(pd.transformationId).undo(pd)
+        case te: TransformedEvent     =>
+          val pem = PersistentEventMsg(te.transformationId, te.eventCode, te.data)
+          lookupTransformer(pem.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(pem)
+        case pem: PersistentEventMsg  => lookupTransformer(pem.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(pem)
+        case pm: PersistentMsg        => lookupTransformer(pm.transformationId).undo(pm)
       }
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_DECRYPTION)
       event
@@ -361,13 +355,18 @@ trait BasePersistentActor
     }
   }
 
+  def saveSnapshotIfNeeded(): Unit = {}
+
   def applyReceivedEvent(evt: Any): Unit = {
     try {
       receiveEvent(evt)
+      if (recoveryFinished) {  //we don't want to save snapshot while actor is in process of recovery
+        saveSnapshotIfNeeded()
+      }
       logger.trace("event recovered", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
     } catch {
       case e: Exception =>
-        logger.error(s"event not handled by event receiver: ${e.getMessage}", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+        logger.error(s"[$persistenceId] event not handled by event receiver: ${e.getMessage}", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         throw e
     }
@@ -429,7 +428,7 @@ trait BasePersistentActor
   }
 
   def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
-    logger.error("could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+    logger.warn("could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
       ("seq_num", dmf.toSequenceNr), (LOG_KEY_ERR_MSG, dmf.cause))
   }
 

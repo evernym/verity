@@ -17,7 +17,7 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
 
   //TODO GENERAL CONVERSION from PackedMsg to native (case class) and visa versa
 
-  implicit val protoReg: ProtocolRegistry[_] = engine.ProtocolRegistry(Entry(ConnectingProtoDef_V_0_6, PinstIdResolution.V0_1))
+  implicit val protoReg: ProtocolRegistry[_] = engine.ProtocolRegistry(Entry(ConnectingProtoDef_V_0_6, PinstIdResolution.DEPRECATED_V0_1))
 
   val typ = "both"
 

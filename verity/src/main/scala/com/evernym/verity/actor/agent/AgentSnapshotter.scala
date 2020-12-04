@@ -16,13 +16,6 @@ trait AgentSnapshotter[T <: State] extends SnapshotterExt[T] { this: BasePersist
   var state: T
 
   /**
-   * state to be snapshotted
-   *
-   * @return
-   */
-  override def snapshotState: Option[T] = Option(state)
-
-  /**
    * a snapshot handler (used during actor recovery)
    *
    * @return

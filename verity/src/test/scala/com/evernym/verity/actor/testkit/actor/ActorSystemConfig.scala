@@ -96,10 +96,10 @@ trait ActorSystemConfig {
           }
 
           serialization-bindings {
-            "com.evernym.verity.actor.TransformedMultiEvent" = protoser
-            "com.evernym.verity.actor.TransformedEvent" = protoser
-            "com.evernym.verity.actor.TransformedState" = protoser
-            "com.evernym.verity.actor.PersistentData" = protoser
+            "com.evernym.verity.actor.PersistentMultiEventMsg" = protoser
+            "com.evernym.verity.actor.PersistentEventMsg" = protoser
+            "com.evernym.verity.actor.PersistentStateMsg" = protoser
+            "com.evernym.verity.actor.PersistentMsg" = protoser
             "com.evernym.verity.actor.ActorMessage" = kryo-akka
           }
 

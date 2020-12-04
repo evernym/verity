@@ -32,7 +32,6 @@ object ActorNameConstants {
   val RESOURCE_WARNING_STATUS_MNGR = "user-warning-status-mngr"
   val WATCHER_MANAGER = "watcher-manager"
   val USER_AGENT_PAIRWISE_ACTOR_WATCHER = "user-agent-pairwise-actor-watcher"
-  val METRICS_HELPER = "metrics-helper"
   val ACTOR_STATE_CLEANUP_MANAGER = "actor-state-cleanup-manager"
   val ROUTE_MAINTENANCE_HELPER = "route-maintenance-helper"
 

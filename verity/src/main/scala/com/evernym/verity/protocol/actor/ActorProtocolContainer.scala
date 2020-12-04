@@ -245,6 +245,7 @@ class ActorProtocolContainer[
       stash()
   }
 
+  //FIXME -> RTM: Add documentation for this
   //dhh I'd like to understand the significance of changing receive behavior.
   // Is this part of the issue Jason wrote about with futures, where we are
   // going into different modes at different points in a sequence of actions

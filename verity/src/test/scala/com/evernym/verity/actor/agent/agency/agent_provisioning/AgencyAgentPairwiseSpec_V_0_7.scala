@@ -1,71 +1,19 @@
 package com.evernym.verity.actor.agent.agency.agent_provisioning
 
-import com.evernym.verity.Base64Encoded
-import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
+import com.evernym.verity.actor.agent.SponsorRel
+import com.evernym.verity.actor.agent.agency.{GetLocalAgencyIdentity, UserAgentCreatorHelper}
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
-import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
+import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg.msgpacker.PackedMsg
-import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.TimeUtil.IsoDateTime
-import com.evernym.verity.util.{Base64Util, TimeUtil}
-import com.evernym.verity.vault._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.evernym.verity.util.TimeUtil
 
 import scala.concurrent.duration.Duration
 
-trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase {
-
-  lazy val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    setupAgency()
-  }
-  override def overrideConfig: Option[Config] = Option {
-    ConfigFactory parseString {
-      s"""
-      verity.provisioning {
-        sponsors = [
-          {
-            name = "evernym-test-sponsor"
-            id = "evernym-test-sponsorabc123"
-            keys = [{"verKey": "GJ1SzoWzavQYfNL9XkaJdrQejfztN4XqdsiV4ct3LXKL"}]
-            endpoint = "localhost:3456/json-msg"
-            active = true
-          }
-        ]
-        sponsor-required = true
-        token-window = 10 minute
-        cache-used-tokens = true
-    }
-    """
-    }
-  }
-
-  lazy val AGENCY_PAIRWISE_AGENT_DID: DID = mockEdgeAgent.agencyPairwiseAgentDetailReq.DID
-  lazy val AGENT_VK: VerKey = mockEdgeAgent.getVerKeyFromWallet(AGENCY_PAIRWISE_AGENT_DID)
-  lazy val SPONSOR_KEYS: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam(seed=Some("000000000000000000000000Trustee1")))
-  val SPONSOR_ID = "evernym-test-sponsorabc123"
-  val INACTIVE_SPONSOR_ID = "inactive-sponsor-id"
-  val DID: DID = mockEdgeAgent.myDIDDetail.did
-  val VK: VerKey = mockEdgeAgent.getVerKeyFromWallet(DID)
-  val REQUESTER_KEYS: RequesterKeys = RequesterKeys(DID, VK)
-  val NONCE = "123"
-  val ID = "myId"
-  val TIME_STAMP: IsoDateTime = TimeUtil.nowDateString
-  def sig(nonce: String=NONCE, timestamp: String=TIME_STAMP, id: String=ID, sponsorId: String=SPONSOR_ID, vk: VerKey=AGENT_VK): Base64Encoded = {
-    val encrypted = walletAPI.signMsg {
-      SignMsgParam(KeyInfo(
-        Left(vk)),
-        (nonce + timestamp + id + sponsorId).getBytes()
-      )
-    }
-    Base64Util.getBase64Encoded(encrypted)
-  }
+trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase with UserAgentCreatorHelper {
 
   def agencyAgentPairwiseSetup(edgeAgent: MockEdgeAgent=mockEdgeAgent, name: String="mockEdgeAgent"): Unit = {
     var pairwiseDID: DID = null
@@ -99,97 +47,90 @@ trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase {
 }
 
 class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
-  import mockEdgeAgent.v_0_7_req._
   import mockEdgeAgent.v_0_7_resp._
 
   def createAgentFailures(): Unit = {
     "when sent create agent msg where sponsor is inactive" - {
       "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
-        val requesterDetails = Some(ProvisionToken(ID, INACTIVE_SPONSOR_ID, NONCE, TIME_STAMP, sig(), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel("inactive", "whatever"),
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          TimeUtil.nowDateString
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
 
     "when sent create agent msg before connecting where token is needed" - {
       "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, None
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel.empty,
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          TimeUtil.nowDateString
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
 
     "when sent create agent msg before connecting where sponsor is not found" - {
       "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
-        val requesterDetails = Some(ProvisionToken(ID, "Not Found", NONCE, TIME_STAMP, sig(), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel("not found", "whatever"),
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          TimeUtil.nowDateString
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
 
     "when sent create agent msg with timeout" - {
       "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
-        val expired = TimeUtil.longToDateString(Duration("12 minute").toMillis + TimeUtil.now)
-        val checkNow = TimeUtil.nowDateString
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, expired, sig(timestamp=expired,vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel("inactive", "whatever"),
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          TimeUtil.longToDateString(Duration("12 minute").toMillis + TimeUtil.now)
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
 
   }
-  agencyAgentPairwiseSetup()
   createAgentFailures()
 }
 
 class AgencyAgentCreateNewCloudAgent extends AgencyAgentPairwiseSpec_V_0_7 {
 
-  import mockEdgeAgent.v_0_7_req._
   import mockEdgeAgent.v_0_7_resp._
 
-  def createCloudAgent(): Unit = {
+  def createCloudAgentTest(): Unit = {
     "when sent first create agent (cloud) msg" - {
       "should respond with AGENT_CREATED msg" in {
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
-        )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        val agentCreated = handleAgentCreatedResp(pm)
-        agentCreated.selfDID shouldBe REQUESTER_KEYS.fromDID
+        createCloudAgent(SponsorRel("sponsor1", "id"), sponsorKeys().verKey, getNonce)
       }
     }
 
     "when sent create agent msg after connecting" - {
       "should respond with error agent already created" taggedAs (UNSAFE_IgnoreLog) in {
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel("sponsor1", "id"),
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          TimeUtil.nowDateString
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
   }
-  agencyAgentPairwiseSetup()
-  createCloudAgent()
+  createCloudAgentTest()
   "when tried to restart actor" - {
     "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
       restartSpecs(aap)
@@ -199,61 +140,60 @@ class AgencyAgentCreateNewCloudAgent extends AgencyAgentPairwiseSpec_V_0_7 {
 
 class AgencyAgentCreateNewEdgeAgent extends AgencyAgentPairwiseSpec_V_0_7 {
 
-  import mockEdgeAgent.v_0_7_req._
   import mockEdgeAgent.v_0_7_resp._
 
-  def createEdgeAgent(): Unit = {
+  def createEdgeAgentTest(): Unit = {
     "when sent first create agent (edge) msg 0.7" - {
-      "should respond with AGENT_CREATED msg" taggedAs (UNSAFE_IgnoreLog)  in {
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateEdgeAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, VK, requesterDetails
+      "should respond with AGENT_CREATED msg with new domainId" taggedAs (UNSAFE_IgnoreLog)  in {
+        val agent = newEdgeAgent()
+        val agentDid = createCloudAgent(
+          SponsorRel("sponsor1", "id"),
+          sponsorKeys().verKey,
+          getNonce,
+          agent,
+          TimeUtil.nowDateString,
+          isEdgeAgent=true
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        val agentCreated = handleAgentCreatedResp(pm)
-        agentCreated.selfDID should not be REQUESTER_KEYS.fromDID
+        agentDid should not be agent.myDIDDetail.did
       }
     }
 
     "when sent create agent msg after connecting" - {
       "should respond with error agent already created" taggedAs (UNSAFE_IgnoreLog) in {
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val msg = prepareCreateAgentMsg(
-          AGENCY_PAIRWISE_AGENT_DID, REQUESTER_KEYS, requesterDetails
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel("sponsor1", "id"),
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          TimeUtil.nowDateString,
+          isEdgeAgent=true
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
   }
-  agencyAgentPairwiseSetup()
-  createEdgeAgent()
-
+  createEdgeAgentTest()
 }
 
 class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwiseSpec_V_0_7 {
-//  import mockEdgeAgent.v_0_7_req._
-//  import mockEdgeAgent.v_0_7_resp._
+  import mockEdgeAgent.v_0_7_resp._
 
   lazy val mockEdgeAgent1: MockEdgeAgent = buildMockConsumerEdgeAgent(platform.agentActorContext.appConfig, mockAgencyAdmin)
   lazy val mockEdgeAgent2: MockEdgeAgent = buildMockConsumerEdgeAgent(platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val nonce: String = getNonce
+  lazy val commonTime: IsoDateTime = TimeUtil.nowDateString
 
   def createFirstAgent(): Unit = {
     "when sent first create agent (cloud) msg" - {
       "should respond with AGENT_CREATED msg" in {
-        val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val requesterKeys = RequesterKeys(mockEdgeAgent1.myDIDDetail.did, mockEdgeAgent1.myDIDDetail.verKey)
-
-        val msg = mockEdgeAgent1.v_0_7_req.prepareCreateAgentMsg(
-          mockEdgeAgent1.agencyPairwiseAgentDetailReq.DID, requesterKeys, requesterDetails
+        val selfDID = createCloudAgent(
+          SponsorRel("sponsor1", "id"),
+          sponsorKeys().verKey,
+          nonce,
+          mockEdgeAgent1,
+          commonTime
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        val agentCreated = mockEdgeAgent1.v_0_7_resp.handleAgentCreatedResp(pm)
-        agentCreated.selfDID shouldBe requesterKeys.fromDID
+        selfDID shouldBe mockEdgeAgent1.myDIDDetail.did
       }
     }
   }
@@ -261,22 +201,19 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwise
   def createSecondAgent(): Unit = {
     "when sent second create agent (cloud) msg" - {
       "should fail with problem report msg" taggedAs (UNSAFE_IgnoreLog) in {
-        val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-        val requesterDetails = Some(ProvisionToken(ID, SPONSOR_ID, NONCE, TIME_STAMP, sig(vk=SPONSOR_KEYS.verKey), SPONSOR_KEYS.verKey))
-        val requesterKeys = RequesterKeys(mockEdgeAgent2.myDIDDetail.did, mockEdgeAgent2.myDIDDetail.verKey)
-
-        val msg = mockEdgeAgent2.v_0_7_req.prepareCreateAgentMsg(
-          mockEdgeAgent2.agencyPairwiseAgentDetailReq.DID, RequesterKeys(DID, VK), requesterDetails
+        val sentCreateAgent = sendCreateAgent(
+          SponsorRel("sponsor1", "id"),
+          sponsorKeys().verKey,
+          getNonce,
+          mockEdgeAgent,
+          commonTime,
+          isEdgeAgent=true
         )
-        aap ! PackedMsgParam(msg, reqMsgContext)
-        val pm = expectMsgType[PackedMsg]
-        mockEdgeAgent2.v_0_7_resp.handleCreateAgentProblemReport(pm)
+        handleCreateAgentProblemReport(sentCreateAgent.msg)
       }
     }
   }
 
-  agencyAgentPairwiseSetup(mockEdgeAgent1, "mockEdgeAgent1")
   createFirstAgent()
-  agencyAgentPairwiseSetup(mockEdgeAgent2, "mockEdgeAgent2")
   createSecondAgent()
 }

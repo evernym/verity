@@ -92,7 +92,7 @@ class Platform(val aac: AgentActorContext)
   val activityTrackerRegion: ActorRef = createRegion(
     ACTIVITY_TRACKER_REGION_ACTOR_NAME,
     buildProp(
-      Props(new ActivityTracker(agentActorContext.appConfig)),
+      Props(new ActivityTracker(agentActorContext.appConfig, agentActorContext.agentMsgRouter)),
       Option(ACTOR_DISPATCHER_NAME_ACTIVITY_TRACKER)
   ))
 

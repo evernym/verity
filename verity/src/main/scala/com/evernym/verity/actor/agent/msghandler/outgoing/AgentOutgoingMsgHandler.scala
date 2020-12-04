@@ -19,6 +19,7 @@ import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext}
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
@@ -105,8 +106,12 @@ trait AgentOutgoingMsgHandler
 
     if (!isSignalMsg) {
       val myDID = ParticipantUtil.agentId(oam.context.from)
+      val selfDID = oam match {
+        case OutgoingMsg(AgentCreated(selfDID, _), _, _, _) => selfDID
+        case _ => domainId
+      }
       logger.debug(s"outgoing msg: my participant DID: " + myDID)
-      AgentActivityTracker.track(agentActorContext, agentMsg.msgType.msgName, domainId, Some(myDID))
+      AgentActivityTracker.track(agentMsg.msgType.msgName, selfDID, Some(myDID))
     }
 
     handleOutgoingMsg(agentMsg, oam.context.threadContextDetail, oam.context)

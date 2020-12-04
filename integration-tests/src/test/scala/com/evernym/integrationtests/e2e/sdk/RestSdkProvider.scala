@@ -20,7 +20,7 @@ import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.OutOfBand
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
-import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
@@ -457,6 +457,18 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
         sendHttpGetReq(context, ProtoRef("present-proof", "1.0"), Option(threadId),
           Map("~for_relationship" -> forRelationship, "familyQualifier" -> "BzCbsNYhMrjHiqZDTUASHg", "msgName" -> "status"))
       }
+
+      override def acceptProposal(context: Context): Unit = {
+        val json = new JSONObject
+        json.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/accept-proposal")
+        json.put("@id", UUID.randomUUID.toString)
+        json.put("~for_relationship", forRelationship)
+        json.put("name", "Accepted proposal")
+
+        sendHttpPostReq(context, json.toString, ProtoRef("present-proof", "1.0"), Option(threadId))
+      }
     }
   }
+
+  override def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 = ???
 }

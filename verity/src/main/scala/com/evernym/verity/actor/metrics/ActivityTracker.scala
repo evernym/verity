@@ -47,7 +47,6 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
    def sponsorRel: Option[SponsorRel] = _sponsorRel
    def withSponsorRel(sponsorRel: SponsorRel): State =
      copy(sponsorRel=Some(sponsorRel))
-//   copy(sponsorRel=Some(sponsorRel), attemptedSponsorRetrieval=true)
    /**
     * A sponsor can be undefined. If activity occurs and there is no sponsor
     */

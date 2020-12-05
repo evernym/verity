@@ -10,6 +10,7 @@ import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, Complete
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
+import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
 
@@ -31,9 +32,12 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
     case _: StatusUpdated           => //nothing to do
     case d: Destroyed               => handleDestroyed(d)
+
     case rss: RouteStoreStatus      =>
-      if (! completed.contains(rss.agentRouteStoreEntityId))
+      if (! completed.contains(rss.agentRouteStoreEntityId)) {
         inProgress += rss.agentRouteStoreEntityId -> rss.totalProcessed
+        cleanupStatus ++= rss.inProgressCleanupStatus
+      }
   }
 
   override def receiveEvent: Receive = {
@@ -42,6 +46,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
     case c: Completed  =>
       inProgress -= c.entityId
+      cleanupStatus -= c.entityId
       completed += c.entityId -> c.totalProcessedRoutes
 
     case ed: ExecutorDeleted =>
@@ -53,7 +58,8 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       registered.size,
       registered.values.sum,
       completed.size,
-      completed.values.sum + inProgress.values.sum)
+      completed.values.sum + inProgress.values.sum,
+      cleanupStatus)
     if (gs.includeDetails) {
       sender ! s.copy(registeredRouteStores = Some(registered), resetStatus = Option(resetStatus))
     } else {
@@ -103,6 +109,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     registered = Map.empty
     completed = Map.empty
     inProgress = Map.empty
+    cleanupStatus = Map.empty
     lastRequestedBucketId = -1
     toSeqNoDeleted = 0
     stopActor()
@@ -215,6 +222,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   var executorDestroyed: Set[EntityId] = Set.empty
   var completed: Map[EntityId, RoutesCount] = Map.empty
   var inProgress: Map[EntityId, RoutesCount] = Map.empty
+  var cleanupStatus: Map[DID, CleanupStatus] = Map.empty
   var registered: Map[EntityId, RoutesCount] = Map.empty
   var resetStatus: ResetStatus = ResetStatus.empty
 
@@ -266,6 +274,7 @@ case class ManagerStatus(registeredRouteStoreActorCount: Int,
                          totalCandidateAgentActors: Int,
                          processedRouteStoreActorCount: Int,
                          totalProcessedAgentActors: Int,
+                         inProgressCleanupStatus: Map[DID, CleanupStatus],
                          resetStatus: Option[ResetStatus] = None,
                          registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
 

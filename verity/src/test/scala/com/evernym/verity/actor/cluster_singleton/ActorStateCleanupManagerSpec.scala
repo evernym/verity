@@ -125,9 +125,9 @@ object DummyAgentActor {
 
 class DummyAgentActor extends BaseNonPersistentActor {
   override def receiveCmd: Receive = {
-    case fas: FixActorState                 =>
-      fas.senderActorRef ! InitialActorState(fas.actorID, 0)
-      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorID, isRouteFixed = true, isAllThreadContextMigrated = true, 1, 0)
+    case fas: FixActorState             =>
+      fas.senderActorRef ! InitialActorState(fas.actorDID, 0)
+      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, pendingThreadContextToBeMigrated = 0, 1, 0)
   }
 
   override def appConfig: AppConfig = ???

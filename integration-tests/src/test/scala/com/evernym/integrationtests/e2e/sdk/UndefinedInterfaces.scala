@@ -8,6 +8,7 @@ import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
 import com.evernym.verity.sdk.protocols.relationship.v1_0.{GoalCode, RelationshipV1_0}
 import com.evernym.verity.sdk.protocols.updateconfigs.v0_6.UpdateConfigsV0_6
@@ -102,9 +103,9 @@ object UndefinedInterfaces {
     override def requestMsg(context: Context): JSONObject = throw new NotImplementedError
     override def requestMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
-    override def accept(context: Context): Unit = throw new NotImplementedError
-    override def acceptMsg(context: Context): JSONObject = throw new NotImplementedError
-    override def acceptMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+     def accept(context: Context): Unit = throw new NotImplementedError
+     def acceptMsg(context: Context): JSONObject = throw new NotImplementedError
+     def acceptMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
     override def status(context: Context): Unit = throw new NotImplementedError
     override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
@@ -115,20 +116,24 @@ object UndefinedInterfaces {
     override def rejectMsgPacked(context: Context, s: String): Array[Byte] = throw new NotImplementedError
 
     override def getThreadId: String = throw new NotImplementedError
+
+    override def propose(context: Context): Unit = throw new NotImplementedError
+    override def proposeMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def proposeMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def acceptRequest(context: Context): Unit = throw new NotImplementedError
+    override def acceptRequestMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def acceptRequestMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def acceptProposal(context: Context): Unit = throw new NotImplementedError
+    override def acceptProposalMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def acceptProposalMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
   }
 
   class UndefinedBasicMessage_1_0 extends BasicMessageV1_0 {
-    override def ask(context: Context): Unit = throw new NotImplementedError
-    override def askMsg(context: Context): JSONObject = throw new NotImplementedError
-    override def askMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def answer(context: Context): Unit = throw new NotImplementedError
-    override def answerMsg(context: Context): JSONObject = throw new NotImplementedError
-    override def answerMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def status(context: Context): Unit = throw new NotImplementedError
-    override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
-    override def statusMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+    override def message(context: Context): Unit = throw new NotImplementedError
+    override def messageMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def messageMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
     override def getThreadId: String = throw new NotImplementedError
   }

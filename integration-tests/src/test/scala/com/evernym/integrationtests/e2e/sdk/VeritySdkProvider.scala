@@ -137,6 +137,11 @@ trait VeritySdkProvider {
 
   def committedAnswer_1_0(forRelationship: DID,
                           threadId: String): CommittedAnswerV1_0
+
+  def basicMessage_1_0(forRelationship: DID,
+                       content: String,
+                       sentTime: String,
+                       localization: String): BasicMessageV1_0
 }
 
 trait DataHolderSdkProvider {

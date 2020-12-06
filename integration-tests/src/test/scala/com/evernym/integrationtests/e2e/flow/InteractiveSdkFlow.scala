@@ -872,7 +872,7 @@ trait InteractiveSdkFlow {
 
         val forRel = proverSdk.relationship_!(relationshipId).owningDID
         val proof = proverSdk.asInstanceOf[VcxPresentProof].presentProof_1_0(forRel, tid, requestMsg)
-        proof.accept(proverSdk.context)
+//        proof.accept(proverSdk.context)
       }
 
       s"[$verifierName] receive presentation" in {
@@ -965,7 +965,7 @@ trait InteractiveSdkFlow {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
 
         holderSdk.presentProof_1_0(forRel, tid)
-          .accept(holderSdk.context)
+//          .accept(holderSdk.context)
       }
       s"[$verifierName] receive presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
@@ -1058,6 +1058,38 @@ trait InteractiveSdkFlow {
 
       }
 
+    }
+  }
+
+  def basicMessage(sender: ApplicationAdminExt,
+                   receiver: ApplicationAdminExt,
+                   relationshipId: String,
+                   content: String,
+                   sentTime: String,
+                   localization: String)
+                     (implicit scenario: Scenario): Unit = {
+    s"send message to ${receiver.name} from ${sender.name}" - {
+      val senderSdk = receivingSdk(sender)
+      val receiverSdk = receivingSdk(receiver)
+
+      s"[${sender.name}] send message" in {
+        val forRel = senderSdk.relationship_!(relationshipId).owningDID
+        senderSdk.basicMessage_1_0(forRel, content, sentTime, localization)
+          .message(senderSdk.context)
+      }
+      s"[${receiver.name}] check message" in {
+        var tid = ""
+        var forRel = ""
+
+        receiverSdk.expectMsg("received-message") { receivedAnswer =>
+          receivedAnswer.getString("content") shouldBe "Hello, World!"
+          receivedAnswer.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
+          receivedAnswer.getJSONObject("~l10n").getString("locale") shouldBe "en"
+
+          tid = threadId(receivedAnswer)
+          forRel = senderSdk.relationship_!(relationshipId).owningDID
+        }
+      }
     }
   }
 

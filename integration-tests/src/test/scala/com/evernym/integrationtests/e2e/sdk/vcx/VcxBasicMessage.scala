@@ -29,7 +29,7 @@ protected trait VcxBasicMessage
   def interactMessage(metaData: VcxMsgMetaData, payload: JSONObject): JSONObject = {
     val payloadMsg = vcxPayloadObject(payload)
     payloadMsg.put("msg_ref_id", metaData.msgId)
-    val threadId = payloadMsg.getJSONObject("~thread").getString("thid")
+    val threadId = payloadMsg.getString("@id")
 
     updateInteraction(
       threadId -> HolderBasicMessage(

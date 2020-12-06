@@ -15,6 +15,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, ProtoRef}
 import com.evernym.verity.sdk.exceptions.WalletException
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
@@ -216,6 +217,26 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
       override def write(ctx: Context): Unit = {
         debugPrintln(s"write cred def json: ${writeCredDefJson.toString}")
         sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
+      }
+    }
+  }
+
+  override def basicMessage_1_0(forRelationship: DID,
+                                content: String,
+                                sentTime: String,
+                                localization: String): BasicMessageV1_0 = {
+    val askJson = new JSONObject
+    askJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
+    askJson.put("@id", UUID.randomUUID.toString)
+    askJson.put("~for_relationship", forRelationship)
+    askJson.put("content", content)
+    askJson.put("sent_time", sentTime)
+    askJson.put("localization", new JSONObject().put("locale", localization))
+
+    new UndefinedBasicMessage_1_0 {
+      override def message(ctx: Context): Unit = {
+        debugPrintln(s"basicmessage message json: ${askJson.toString}")
+        sendHttpPostReq(context, askJson.toString, ProtoRef("basicmessage", "1.0"), Option(UUID.randomUUID.toString))
       }
     }
   }
@@ -459,4 +480,5 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
       }
     }
   }
+
 }

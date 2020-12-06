@@ -113,25 +113,25 @@ class SdkFlowSpec
       "/logo_url.ico"
     )
 
-    val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
-    writeSchema(
-      sdk,
-      ledgerUtil,
-      schemaName,
-      "0.1",
-      "license_num",
-      "name"
-    )
-
-    writeCredDef(
-      sdk,
-      "cred_name1",
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName,
-      "0.1",
-      ledgerUtil
-    )
+//    val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
+//    writeSchema(
+//      sdk,
+//      ledgerUtil,
+//      schemaName,
+//      "0.1",
+//      "license_num",
+//      "name"
+//    )
+//
+//    writeCredDef(
+//      sdk,
+//      "cred_name1",
+//      "tag",
+//      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+//      schemaName,
+//      "0.1",
+//      ledgerUtil
+//    )
   }
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -143,32 +143,41 @@ class SdkFlowSpec
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
        GoalCode.ISSUE_VC)
 
-    issueCredential_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      Map("license_num" -> "123", "name" -> "Bob"),
-      "cred_name1",
-      "tag"
-    )
+//    issueCredential_1_0(
+//      apps(verity1),
+//      apps(cas1),
+//      connectionId,
+//      Map("license_num" -> "123", "name" -> "Bob"),
+//      "cred_name1",
+//      "tag"
+//    )
+//
+//    presentProof_1_0(
+//      apps(verity1),
+//      apps(cas1),
+//      connectionId,
+//      "proof-request-1",
+//      Seq("name", "license_num")
+//    )
 
-    presentProof_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "proof-request-1",
-      Seq("name", "license_num")
-    )
+//    committedAnswer(
+//      apps(verity1),
+//      apps(cas1),
+//      connectionId,
+//      "To be or to not be?",
+//      "The second classic philosophical questions",
+//      Seq("be", "not be"),
+//      "be",
+//      requireSig = true
+//    )
 
-    committedAnswer(
+    basicMessage(
       apps(verity1),
       apps(cas1),
       connectionId,
-      "To be or to not be?",
-      "The second classic philosophical questions",
-      Seq("be", "not be"),
-      "be",
-      requireSig = true
+      "Hello, World!",
+      "2018-1-19T01:24:00-000",
+      "en"
     )
   }
 

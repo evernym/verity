@@ -78,6 +78,7 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
   with VcxProvision
   with VcxConnecting
   with VcxCommittedAnswer
+  with VcxBasicMessage
   with Eventually {
 
   override def sdkType: String = "VCX"
@@ -101,6 +102,8 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
                                   => vcxMsg.payloadInnerMsg.get
       case "aries" if vcxMsg.payloadInnerMsgType.exists(_.contains("question"))
                                   => interactQuestion(vcxMsg.meta, vcxMsg.msg)
+      case "aries" if vcxMsg.payloadInnerMsgType.exists(_.contains("basicmessage"))
+                                  => interactMessage(vcxMsg.meta, vcxMsg.msg)
       case "aries" if vcxMsg.payloadMsgType.contains("credential-offer")
                                   => interactCredOffer_1_0(vcxMsg.meta, vcxMsg.msg)
       case "aries" if vcxMsg.payloadMsgType.contains("credential")

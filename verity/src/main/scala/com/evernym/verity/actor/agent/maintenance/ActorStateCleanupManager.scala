@@ -36,7 +36,11 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     case rss: RouteStoreStatus      =>
       if (! completed.contains(rss.agentRouteStoreEntityId)) {
         inProgress += rss.agentRouteStoreEntityId -> rss.totalProcessed
-        cleanupStatus ++= rss.inProgressCleanupStatus
+        if (rss.inProgressCleanupStatus.isEmpty) {
+          cleanupStatus -= rss.agentRouteStoreEntityId
+        } else {
+          cleanupStatus += rss.agentRouteStoreEntityId -> rss.inProgressCleanupStatus
+        }
       }
   }
 
@@ -115,7 +119,6 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     stopActor()
   }
 
-
   def pendingBatchedRouteStores: Map[EntityId, RoutesCount] =
     registered
       .filter(r => ! completed.contains(r._1))
@@ -150,6 +153,8 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
             Thread.sleep(processorBatchItemSleepIntervalInMillis) //this is to make sure it doesn't hit the database too hard and impact the running system.
           }
         }
+      } else {
+        stopAllScheduledJobs()
       }
     }
   }
@@ -222,7 +227,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   var executorDestroyed: Set[EntityId] = Set.empty
   var completed: Map[EntityId, RoutesCount] = Map.empty
   var inProgress: Map[EntityId, RoutesCount] = Map.empty
-  var cleanupStatus: Map[DID, CleanupStatus] = Map.empty
+  var cleanupStatus: Map[EntityId, Map[DID, CleanupStatus]] = Map.empty
   var registered: Map[EntityId, RoutesCount] = Map.empty
   var resetStatus: ResetStatus = ResetStatus.empty
 
@@ -274,7 +279,7 @@ case class ManagerStatus(registeredRouteStoreActorCount: Int,
                          totalCandidateAgentActors: Int,
                          processedRouteStoreActorCount: Int,
                          totalProcessedAgentActors: Int,
-                         inProgressCleanupStatus: Map[DID, CleanupStatus],
+                         inProgressCleanupStatus: Map[EntityId, Map[DID, CleanupStatus]],
                          resetStatus: Option[ResetStatus] = None,
                          registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
 

@@ -48,12 +48,11 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       routeStoreStatus = Option(RouteStoreStatus(su.agentRouteStoreEntityId, su.totalRoutes, su.processedRoutes))
 
     case ass: ActorStateStored =>
-      agentActorCleanupState += (ass.actorId -> CleanupStatus(ass.threadContexts, ass.threadContexts, 0, 0))
+      agentActorCleanupState += (ass.actorId -> CleanupStatus(ass.threadContexts, 0, 0))
 
     case asc: ActorStateCleaned =>
       agentActorCleanupState.get(asc.actorId).foreach { aacs =>
         agentActorCleanupState += (asc.actorId -> aacs.copy(
-          pendingThreadContextToBeMigrated = 0,
           successfullyMigratedCount = asc.successfullyMigratedCount,
           nonMigratedCount = asc.nonMigratedCount))
         routeStoreStatus = routeStoreStatus.map(s => s.copy(totalProcessed = s.totalProcessed + 1))
@@ -141,13 +140,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
         sendGetNextRouteBatchCmd()
       } else if (batchStatus.isInProgress) {
         batchStatus.candidates.filter(_._2 == false).keySet.foreach { did =>
-          sendFixOrCheckActorStateCleanupCmd(did)
+          sendFixActorStateCleanupCmd(did)
         }
       }
     }
   }
 
-  def sendFixOrCheckActorStateCleanupCmd(did: DID): Unit = {
+  def sendFixActorStateCleanupCmd(did: DID): Unit = {
     agentMsgRouter.forward(InternalMsgRouteParam(did, FixActorState(did, self)), self)
   }
 
@@ -183,7 +182,11 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     stopActor()
   }
 
-  def processedActorIds: Set[EntityId] = agentActorCleanupState.filter(_._2.isCleaned == true).keySet
+  /**
+   * agent actor's whose state has been cleaned
+   * @return
+   */
+  def processedActorIds: Set[EntityId] = agentActorCleanupState.filter(_._2.actorStateCleaned == true).keySet
 
   /**
    * sends UpdateRoute command to agent actors (UserAgent and UserAgentPairwise)
@@ -198,7 +201,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     if (routeStoreStatus.isDefined) {
       targetCandidateDIDs.foreach { did =>
         logger.debug(s"ASC [$persistenceId] did: " + did)
-        sendFixOrCheckActorStateCleanupCmd(did)
+        sendFixActorStateCleanupCmd(did)
       }
       if (targetCandidateDIDs.nonEmpty) {
         if (batchStatus.isEmpty) {
@@ -219,17 +222,19 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 
   def handleActorStateCleanupStatus(ascs: ActorStateCleanupStatus): Unit = {
     agentActorCleanupState.get(ascs.actorDID).foreach { acs =>
-      agentActorCleanupState += ascs.actorDID ->
-        acs.copy(
-          pendingThreadContextToBeMigrated = ascs.pendingThreadContextToBeMigrated,
+      if (routeStoreStatus.isDefined && ascs.isRouteFixed && acs.totalThreadContexts > 0 && ! acs.actorStateCleaned) {
+        val updatedStatus = acs.copy(
           successfullyMigratedCount = ascs.successfullyMigratedCount,
           nonMigratedCount = ascs.nonMigratedCount
         )
-      actorStateCleanupManager.foreach(_ ! routeStoreStatusExtended)
-    }
-    val isActorStateCleaned = routeStoreStatus.isDefined && ascs.isStateCleanedUp && ! processedActorIds.contains(ascs.actorDID)
-    if (isActorStateCleaned) {
-      onActorStateCleanup(ascs.actorDID, ascs.successfullyMigratedCount, ascs.nonMigratedCount)
+        agentActorCleanupState += ascs.actorDID -> updatedStatus
+
+        if (acs.totalThreadContexts == updatedStatus.totalProcessed) {
+          onActorStateCleanup(ascs.actorDID, ascs.successfullyMigratedCount, ascs.nonMigratedCount)
+        }
+
+        actorStateCleanupManager.foreach(_ ! routeStoreStatusExtended)
+      }
     }
   }
 
@@ -248,7 +253,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     throw new RuntimeException(s"ASC [$persistenceId] routeStoreStatus not yet initialized"))
 
   def routeStoreStatusExtended: RouteStoreStatus = {
-    val inProgressCleanupStatus = agentActorCleanupState.filter(_._2.isCleaned == false)
+    val inProgressCleanupStatus = agentActorCleanupState.filter(_._2.actorStateCleaned == false)
     routeStoreStatusReq.copy(inProgressCleanupStatus = inProgressCleanupStatus)
   }
 
@@ -283,11 +288,11 @@ case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
   def isAllCompleted: Boolean = totalCandidates == totalProcessed
 }
 
-case class CleanupStatus(totalThreadContextsToBeMigrated: Int,
-                         pendingThreadContextToBeMigrated: Int,
+case class CleanupStatus(totalThreadContexts: Int,
                          successfullyMigratedCount: Int,
                          nonMigratedCount: Int) {
-  def isCleaned: Boolean = pendingThreadContextToBeMigrated == 0
+  def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
+  def actorStateCleaned: Boolean = totalThreadContexts == totalProcessed
 }
 
 //incoming message

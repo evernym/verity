@@ -139,7 +139,7 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
     if (routeSetStatus.isEmpty) {
       actorStateCleanupExecutor = Option(sndrActorRef)
       routeSetStatus = Option(RouteSetStatus(did, isSet = false))
-      sndrActorRef ! InitialActorState(did, state.threadContext.map(_.contexts.size).getOrElse(0))
+      sndrActorRef ! InitialActorState(did, getTotalThreadContextSize)
       state.myDid.foreach { myDID =>
         if (did == myDID) {
           routeSetStatus = Option(RouteSetStatus(did, isSet = true))
@@ -156,24 +156,29 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
   }
 
   def checkActorStateCleanupState(forceSendCurStatus: Boolean): Unit = {
-    val pendingThreadContextSize = state.threadContext.map(tc => tc.contexts.size).getOrElse(0)
+    val pendingThreadContextSize = getPendingThreadContextSize
     routeSetStatus match {
       case Some(rss) if forceSendCurStatus || pendingThreadContextSize == 0 =>
         actorStateCleanupExecutor.foreach { sndr =>
           sndr ! ActorStateCleanupStatus(
             rss.did,
             isRouteFixed = rss.isSet,
-            pendingThreadContextToBeMigrated = pendingThreadContextSize,
             threadContextMigrationStatus.count(_._2.isSuccessfullyMigrated),
             threadContextMigrationStatus.count(_._2.isNotMigrated))
         }
-        if (pendingThreadContextSize == 0 ) {
+        if (rss.isSet && pendingThreadContextSize == 0) {
           finishThreadContextMigration()
         }
       case _ =>
         //nothing to do
     }
   }
+
+  def getTotalThreadContextSize: Int = getMigratedThreadContextSize + getPendingThreadContextSize
+
+  def getMigratedThreadContextSize: Int = threadContextMigrationStatus.count(_._2.isAllRespReceived)
+
+  def getPendingThreadContextSize: Int = state.threadContext.map(_.contexts.size).getOrElse(0)
 
   def finishThreadContextMigration(): Unit = {
     stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
@@ -242,10 +247,9 @@ case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorM
 case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessageClass
 case class ActorStateCleanupStatus(actorDID: DID,
                                    isRouteFixed: Boolean,
-                                   pendingThreadContextToBeMigrated: Int,
                                    successfullyMigratedCount: Int,
                                    nonMigratedCount: Int) extends ActorMessageClass {
-  def isStateCleanedUp: Boolean = isRouteFixed && pendingThreadContextToBeMigrated == 0
+  def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
 }
 
 case class ThreadContextMigrationStatus(candidateProtoActors: Set[ProtoRef],

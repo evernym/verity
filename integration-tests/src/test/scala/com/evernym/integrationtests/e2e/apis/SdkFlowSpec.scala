@@ -120,7 +120,8 @@ class SdkFlowSpec
       schemaName,
       "0.1",
       "license_num",
-      "name"
+      "first_name",
+      "last_name"
     )
 
     writeCredDef(
@@ -147,7 +148,7 @@ class SdkFlowSpec
       apps(verity1),
       apps(cas1),
       connectionId,
-      Map("license_num" -> "123", "name" -> "Bob"),
+      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
       "cred_name1",
       "tag"
     )
@@ -157,7 +158,7 @@ class SdkFlowSpec
       apps(cas1),
       connectionId,
       "proof-request-1",
-      Seq("name", "license_num")
+      Seq("first_name", "last_name", "license_num")
     )
 
     committedAnswer(
@@ -179,7 +180,7 @@ class SdkFlowSpec
       apps(verity1),
       apps(cas1),
       connectionId,
-      Map("license_num" -> "123", "name" -> "Bob"),
+      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
       "cred_name1",
       "tag"
     )
@@ -189,7 +190,7 @@ class SdkFlowSpec
       apps(cas1),
       connectionId,
       "proof-request-1",
-      Seq("name", "license_num")
+      Seq("first_name", "last_name", "license_num")
     )
 
   }

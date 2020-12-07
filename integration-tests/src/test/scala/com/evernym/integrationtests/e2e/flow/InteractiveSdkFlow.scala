@@ -803,7 +803,7 @@ trait InteractiveSdkFlow {
           .issuerDid(issuerDID)
           .build()
 
-        val nameAttr = PresentProofV1_0.attribute("name", restriction)
+        val nameAttr = PresentProofV1_0.attribute(Array("first_name", "last_name"), restriction)
         val numAttr = PresentProofV1_0.attribute("license_num", restriction)
 
         val t = Array(nameAttr, numAttr)
@@ -893,8 +893,12 @@ trait InteractiveSdkFlow {
             .getString("value") shouldBe "123"
           presentation
             .getJSONObject("revealed_attrs")
-            .getJSONObject("name")
+            .getJSONObject("first_name")
             .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
         }
 
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
@@ -942,11 +946,12 @@ trait InteractiveSdkFlow {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
         val credDefId = verifierSdk.data_!(credDefIdKey("cred_name1", "tag"))
 
-        val nameAttr = PresentProofV1_0.proposedAttribute("name", credDefId, "Bob")
+        val firstNameAttr = PresentProofV1_0.proposedAttribute("first_name", credDefId, "Bob")
+        val lastNameAttr = PresentProofV1_0.proposedAttribute("last_name", credDefId, "Marley")
         val numAttr = PresentProofV1_0.proposedAttribute("license_num", credDefId, "123")
 
         holderSdk
-          .presentProof_1_0(forRel, Array(nameAttr, numAttr), Array.empty)
+          .presentProof_1_0(forRel, Array(firstNameAttr, lastNameAttr, numAttr), Array.empty)
           .propose(verifierSdk.context)
       }
 
@@ -994,8 +999,12 @@ trait InteractiveSdkFlow {
             .getString("value") shouldBe "123"
           presentation
             .getJSONObject("revealed_attrs")
-            .getJSONObject("name")
+            .getJSONObject("first_name")
             .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
         }
 
 //        verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)

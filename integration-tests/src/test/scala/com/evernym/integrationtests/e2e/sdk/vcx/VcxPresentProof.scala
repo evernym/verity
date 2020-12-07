@@ -1,8 +1,11 @@
 package com.evernym.integrationtests.e2e.sdk.vcx
 
+import java.util.UUID
+
 import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
-import com.evernym.verity.sdk.protocols.presentproof.common.Predicate
+import com.evernym.verity.sdk.protocols.presentproof.common.{Predicate, ProposedAttribute, ProposedPredicate}
+import org.json.JSONArray
 //import com.evernym.verity.protocol.protocols.vcx.presentProof.v_0_6.ProvingMsgFamily
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg.vcxPayloadObject
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedPresentProof_1_0
@@ -17,6 +20,29 @@ import org.json.JSONObject
 trait VcxPresentProof
   extends VcxHolds {
 
+  def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 = {
+    new UndefinedPresentProof_1_0 {
+      override def propose(context: Context): Unit = {
+        val connHandle = connectionHandle(forRelationship)
+
+        val proposal = new JSONObject
+        proposal.put(
+          "attributes",
+          proofAttrs.foldLeft(new JSONArray) {(json, attr) => json.put(attr.toJson)}
+        )
+        proposal.put(
+          "predicates",
+          proofPredicates.foldLeft(new JSONArray) {(json, pred) => json.put(pred.toJson)}
+        )
+
+        val handle = DisclosedProofApi.proofCreateProposal(UUID.randomUUID.toString, proposal.toString, "Proposal").get
+
+        DisclosedProofApi.proofSendProposal(handle, connHandle).get
+        DisclosedProofApi.proofRelease(handle)
+      }
+    }
+  }
+
   def presentProof_1_0(forRelationship: String,
                        name: String,
                        proofAttrs: Array[Attribute],
@@ -25,7 +51,7 @@ trait VcxPresentProof
 
   def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
-      override def accept(context: Context): Unit = {
+      override def acceptRequest(context: Context): Unit = {
         val i = interaction(threadId).asInstanceOf[HolderProofInteraction]
         val connHandle = connectionHandle(i.owningDid)
 
@@ -52,7 +78,7 @@ trait VcxPresentProof
 
   def presentProof_1_0(forRelationship: String, threadId: String, offer: String): PresentProofV1_0 =
     new UndefinedPresentProof_1_0 {
-      override def accept(context: Context): Unit = {
+      override def acceptRequest(context: Context): Unit = {
 //        val i = interaction(threadId).asInstanceOf[HolderProofInteraction]
         val connHandle = connectionHandle(forRelationship)
 

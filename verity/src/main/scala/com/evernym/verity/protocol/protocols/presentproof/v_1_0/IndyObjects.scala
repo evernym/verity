@@ -89,10 +89,13 @@ case class PredicateUsed(cred_id: String, timestamp: Option[Long])
 case class ProofPresentation(requested_proof:RequestedProof2, identifiers: Seq[Identifier])
 case class Identifier(schema_id: String, cred_def_id: String, rev_reg_id: Option[String], timestamp: Option[Int])
 case class RequestedProof2(revealed_attrs: Map[String, RevealedAttr],
+                           revealed_attr_groups: Option[Map[String, RevealedAttrGroup]],
                            self_attested_attrs: Map[String, String],
                            unrevealed_attrs: Map[String, UnrevealedAttr],
                            predicates: Map[String, Predicate])
 case class RevealedAttr(sub_proof_index: Int, raw: String, encoded: String)
+case class RevealedAttrGroup(sub_proof_index: Int, values: Map[String, RevealedAttrGroupValue])
+case class RevealedAttrGroupValue(raw: String, encoded: String)
 case class UnrevealedAttr(sub_proof_index: Int)
 case class Predicate(sub_proof_index: Int)
 

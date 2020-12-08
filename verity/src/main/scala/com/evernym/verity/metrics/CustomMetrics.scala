@@ -78,6 +78,11 @@ object CustomMetrics {
   /**
    * this is the total number of active users (AU)
    */
+  final val AS_NEW_PROVISION_TOKEN_COUNT = s"$AS_USER_AGENT.new.provision.token.count"
+
+  /**
+   * this is the total number of active users (AU)
+   */
   final val AS_NEW_USER_AGENT_COUNT = s"$AS_USER_AGENT.new.users.count"
 
   /**

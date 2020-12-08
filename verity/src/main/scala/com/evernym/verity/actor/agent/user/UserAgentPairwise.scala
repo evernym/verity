@@ -78,7 +78,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with HasAgentActivity
     with FailedMsgRetrier {
 
   type StateType = UserAgentPairwiseState
@@ -132,7 +131,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     case ppgm: ProcessPersistedSendRemoteMsg                => processPersistedSendRemoteMsg(ppgm)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
-    case s: SetSponsorRel                                   => if (state.sponsorRel.isEmpty) setSponsorDetail(s.rel)
   }
 
   override final def receiveAgentEvent: Receive =
@@ -153,8 +151,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
       state = state.withConnectionStatus(ConnectionStatus(answerStatusCode = csu.statusCode))
-    case sa: SponsorAssigned               =>
-      setSponsorRel(SponsorRel(sa.id, sa.sponsee))
   }
 
   //this is for backward compatibility
@@ -900,13 +896,6 @@ case class ProcessPersistedSendRemoteMsg(
                                           reqHelperData: InternalReqHelperData) extends ActorMessageClass
 
 case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessageClass
-case class SetSponsorRel(rel: SponsorRel) extends ActorMessageClass
-
-object SetSponsorRel {
-  def apply(rel: Option[SponsorRel]): SetSponsorRel =
-    new SetSponsorRel(rel.getOrElse(SponsorRel.empty))
-}
-
 
 trait UserAgentPairwiseStateImpl
   extends AgentStatePairwiseImplBase
@@ -932,10 +921,6 @@ trait UserAgentPairwiseStateUpdateImpl
 
   override def setAgencyDID(did: DID): Unit = {
     state = state.withAgencyDID(did)
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    state = state.withSponsorRel(rel)
   }
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {

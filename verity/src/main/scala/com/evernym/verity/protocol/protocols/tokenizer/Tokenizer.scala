@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROVISION_TOKEN_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine.util.?=>
@@ -90,6 +92,7 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
           token=Some(token.asEvent)
         ))
 
+        MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROVISION_TOKEN_COUNT, Map("sponsorId" -> m.sponsorId))
         /** This will be sent synchronously in the http response*/
         ctx.send(token)
         /** Will be sent via push notification */

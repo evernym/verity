@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent
 
 import com.evernym.verity.actor.{ForIdentifier, ShardRegionCommon}
-import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity, SetSponsorRel}
+import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity}
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.DomainId
@@ -29,9 +29,6 @@ trait HasAgentActivity extends ShardRegionCommon {
 
     def setWindows(domainId: DomainId, windows: ActivityWindow): Unit =
       sendToRegion(domainId, windows)
-
-    def setSponsor(domainId: DomainId, sponsor: SetSponsorRel): Unit =
-      sendToRegion(domainId, sponsor)
   }
 
 }

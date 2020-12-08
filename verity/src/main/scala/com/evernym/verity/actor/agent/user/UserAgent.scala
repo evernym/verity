@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
-import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
+import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -45,7 +45,6 @@ import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
-import com.evernym.verity.actor.metrics.SetSponsorRel
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -231,7 +230,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def sendSponsorDetails(): Unit =
-    AgentActivityTracker.setSponsor(domainId, SetSponsorRel(state.sponsorRel))
+    sender() ! state.sponsorRel.getOrElse(SponsorRel.empty)
 
   def handleAgentDetailSet(ads: AgentDetailSet): Unit = {
     if (state.relationshipAgentsContains(AgentDetail(ads.forDID, ads.agentKeyDID))) {

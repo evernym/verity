@@ -32,7 +32,6 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
  /**
   * actor persistent state object
   */
- //FIXME: RTM -> State needs to match new snapshotting format
  class State(_activity: Map[StateKey, AgentActivity]=Map.empty,
              _activityWindow: ActivityWindow=ActivityWindow(Set()),
              _sponsorRel: Option[SponsorRel]=None,
@@ -82,8 +81,8 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
  }
 
   val waitingForSponsor: Receive = LoggingReceive.withLabel("waitingForSponsor") {
-    case setSponsor: SetSponsorRel =>
-      applyEvent(setSponsor);
+    case sponsorRel: SponsorRel =>
+      applyEvent(sponsorRel)
       context.become(receiveCmd)
       unstashAll()
     case msg =>
@@ -97,11 +96,8 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
   case w: WindowActivityDefined =>
     state = state.withActivityWindow(ActivityWindow.fromEvt(w))
   case s: SponsorRel =>
-     state = state.withSponsorRel(s)
-  case SetSponsorRel(Some(s)) =>
-    state = state.withSponsorRel(s)
-  case SetSponsorRel(None) =>
-     state = state.withAttemptedSponsorRetrieval()
+    if (s.equals(SponsorRel.empty)) state = state.withAttemptedSponsorRetrieval()
+    else state = state.withSponsorRel(s)
 
  }
 
@@ -112,7 +108,7 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
     logger.trace(s"getting sponsor info, activity: $activity")
     stash()
     context.become(waitingForSponsor)
-    agentMsgRouter.execute(InternalMsgRouteParam(activity.domainId, GetSponsorRel))
+    agentMsgRouter.forward(InternalMsgRouteParam(activity.domainId, GetSponsorRel), self)
   }
 
   /**
@@ -277,8 +273,6 @@ object AgentActivity {
       if (r.relId == "") None else Some(r.relId)
     )
 }
-
-case class SetSponsorRel(sponsor: Option[SponsorRel]) extends ActivityTracking
 
 final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior)
 

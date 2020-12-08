@@ -143,6 +143,9 @@ trait AgentOutgoingMsgHandler
     logger.debug("outgoing msg: prepared agent msg: " + oam.context.threadContextDetail)
 
     if (!isSignalMsg) {
+      /* When the AgencyAgentPairwise is creating a User Agent, activity should be tracked for the newly created agent
+         not the AgencyAgentPairwise. The key in AgentCreated is the domainId of the new agent
+      */
       val myDID = ParticipantUtil.agentId(oam.context.from)
       val selfDID = oam match {
         case OutgoingMsg(AgentCreated(selfDID, _), _, _, _) => selfDID

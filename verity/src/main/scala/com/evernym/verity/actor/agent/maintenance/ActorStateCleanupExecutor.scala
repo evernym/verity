@@ -48,11 +48,12 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       routeStoreStatus = Option(RouteStoreStatus(su.agentRouteStoreEntityId, su.totalRoutes, su.processedRoutes))
 
     case ass: ActorStateStored =>
-      agentActorCleanupState += (ass.actorId -> CleanupStatus(ass.threadContexts, 0, 0))
+      agentActorCleanupState += (ass.actorId -> CleanupStatus(ass.threadContexts, ass.threadContexts, 0, 0))
 
     case asc: ActorStateCleaned =>
       agentActorCleanupState.get(asc.actorId).foreach { aacs =>
         agentActorCleanupState += (asc.actorId -> aacs.copy(
+          pendingCount = 0,
           successfullyMigratedCount = asc.successfullyMigratedCount,
           nonMigratedCount = asc.nonMigratedCount))
         routeStoreStatus = routeStoreStatus.map(s => s.copy(totalProcessed = s.totalProcessed + 1))
@@ -224,6 +225,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     agentActorCleanupState.get(ascs.actorDID).foreach { acs =>
       if (routeStoreStatus.isDefined && ascs.isRouteFixed && acs.totalThreadContexts > 0 && ! acs.actorStateCleaned) {
         val updatedStatus = acs.copy(
+          pendingCount = ascs.pendingCount,
           successfullyMigratedCount = ascs.successfullyMigratedCount,
           nonMigratedCount = ascs.nonMigratedCount
         )
@@ -289,6 +291,7 @@ case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
 }
 
 case class CleanupStatus(totalThreadContexts: Int,
+                         pendingCount: Int,
                          successfullyMigratedCount: Int,
                          nonMigratedCount: Int) {
   def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount

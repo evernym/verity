@@ -1,25 +1,26 @@
 package com.evernym.verity.actor.node_singleton
 
+import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor._
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done}
+import com.evernym.verity.actor.maintenance.ReadOnlyPersistentActor
+import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
 import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
 
-import scala.reflect.io.File
-
 
 object NodeSingleton {
   def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
 }
 
-class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor {
+class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor with HasActorResponseTimeout {
 
   def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
     singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
@@ -96,9 +97,19 @@ class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor {
       AppStateManager.drain(context.system)
       sender ! DrainInitiated
       logger.info(s"draining in progress !!")
+
+    case ForReadOnlyPersistentActor(actorTypeName, actorEntityId, cmd) =>
+      val id = actorTypeName + actorEntityId
+      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, actorTypeName, actorEntityId), id)
+      val sndr = sender()
+      val fut = ar ? cmd
+      fut.map(r => sndr ! r)
   }
 
+  def getRequiredActor(props: Props, name: String): ActorRef =
+    context.child(name).getOrElse(context.actorOf(props, name))
 }
 
 case object DrainNode extends ActorMessageObject
 case object DrainInitiated extends ActorMessageObject
+case class ForReadOnlyPersistentActor(actorTypeName: String, actorEntityId: String, cmd: Any) extends ActorMessageClass

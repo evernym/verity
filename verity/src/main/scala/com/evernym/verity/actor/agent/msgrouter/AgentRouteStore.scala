@@ -58,7 +58,9 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
-    val candidates = getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds).slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+    val candidates =
+      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
+      .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
     val resp = GetRouteBatchResult(entityId, candidates)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp

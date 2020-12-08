@@ -33,12 +33,12 @@ class Pusher(config: AppConfig) extends Actor with ActorLogging {
       spn.comMethods.foreach { cm =>
         try {
           val (pusher, regId) = PusherUtil.extractServiceProviderAndRegId(cm, config, spn.sponsorId)
-          logger.debug(s"about to send push notification to: $regId", (LOG_KEY_REG_ID, regId))
+          logger.debug(s"[sponsorId: ${spn.sponsorId}] about to send push notification", (LOG_KEY_REG_ID, regId))
           val notifParam = PushNotifParam(cm.value, regId, spn.sendAsAlertPushNotif, spn.notifData, spn.extraData)
           val pushFutureResp = pusher.push(notifParam)(context.system)
           val sndr = sender()
           pushFutureResp.map { r =>
-            logger.debug(s"push notification send response (regId: $regId): " + r,
+            logger.debug(s"[sponsorId: ${spn.sponsorId}] push notification send response: " + r,
               (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
               (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
             if (r.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
@@ -49,7 +49,7 @@ class Pusher(config: AppConfig) extends Actor with ActorLogging {
                   getOrElse(PUSH_COM_METHOD_WARN_ON_ERROR_LIST)
               if (pushNotifWarnOnErrorList.contains(r.detail.orNull)) {
                 // Do not degrade state for certain push notification errors
-                logger.warn("push notification failed with response: " + r,
+                logger.warn(s"[sponsorId: ${spn.sponsorId}] push notification failed with response: " + r,
                   (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
                   (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
               } else {
@@ -60,13 +60,13 @@ class Pusher(config: AppConfig) extends Actor with ActorLogging {
             sndr ! r
           }.recover {
             case e: Exception =>
-              val errMsg = "could not send push notification"
+              val errMsg = s"[sponsorId: ${spn.sponsorId}] could not send push notification"
               logger.error(errMsg, ("com_method", cm), (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
               sndr ! PushNotifResponse(cm.value, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.getMessage), Option(errMsg))
           }
         } catch {
           case e: BadRequestErrorException =>
-            val errMsg = "could not send push notification"
+            val errMsg = s"[sponsorId: ${spn.sponsorId}] could not send push notification"
             logger.error(errMsg, ("com_method", cm), (LOG_KEY_STATUS_CODE, e.respCode),
               (LOG_KEY_RESPONSE_CODE, e.respCode), (LOG_KEY_ERR_MSG, e.getErrorMsg))
             sender ! PushNotifResponse(cm.value, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString), Option(errMsg))
@@ -115,7 +115,7 @@ trait PushServiceProvider {
 
 object PusherUtil  {
 
-  def buildFirebasePusher(appConfig: AppConfig): Option[PushServiceProvider] = {
+  private def buildFirebasePusher(appConfig: AppConfig): Option[PushServiceProvider] = {
     if (appConfig.getConfigBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
       val key = appConfig.getConfigStringReq(FCM_API_KEY)
       val host = appConfig.getConfigStringReq(FCM_API_HOST)
@@ -124,19 +124,17 @@ object PusherUtil  {
     } else None
   }
 
-  def buildMockPusher(config: AppConfig): Option[PushServiceProvider] = {
+  private def buildMockPusher(config: AppConfig): Option[PushServiceProvider] = {
     //This MCM (Mock Cloud Messaging) is only enabled in integration test
     val isMCMEnabled = config.getConfigBooleanOption(MCM_ENABLED).getOrElse(false)
     if (isMCMEnabled) Option(MockPusher) else None
   }
 
-  def supportedPushNotifProviders(config: AppConfig, sponsorId: Option[String]=None): PushNotifProviders = {
+  private def supportedPushNotifProviders(config: AppConfig): PushNotifProviders = {
     val providers = (buildFirebasePusher(config) ++ buildMockPusher(config)).toList
     val providerId = providers.map(_.comMethodPrefix).mkString("|")
     PushNotifProviders(s"($providerId):(.*)".r, providers)
   }
-
-
 
   def extractServiceProviderAndRegId(comMethod: ComMethodDetail,
                                      config: AppConfig,
@@ -167,21 +165,16 @@ object PusherUtil  {
   }
 
   def sponsorPushProvider(config: AppConfig, sponsorId: String): Option[PushServiceProvider]  = {
-    val t = ConfigUtil.findSponsorConfigWithId(sponsorId, config)
-      .orElse(throw new InvalidComMethodException(Some("Unable to find sponsor details, unable to push to sponsor " +
-        "push service")))
+    ConfigUtil.findSponsorConfigWithId(sponsorId, config)
+      .orElse(throw new InvalidComMethodException(Some("Unable to find sponsor details, unable to push to sponsor push service")))
       .flatMap(_.pushService)
       .map { x =>
         x.service match {
-          case "fcm" =>
-            new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path))
-          case "mock" =>
-            MockPusher
-          case t => throw new InvalidComMethodException(Some(s"Unexpected push service type '$t', " +
-            "this type is not supported"))
+          case "fcm"  => new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path))
+          case "mock" => MockPusher
+          case t      => throw new InvalidComMethodException(Some(s"Unexpected push service type '$t', this type is not supported"))
         }
       }
-    t
   }
 
   def checkIfValidPushComMethod(comMethodValue: ComMethodDetail, config: AppConfig): Unit =
@@ -193,7 +186,9 @@ object PusherUtil  {
       case CREATE_MSG_TYPE_TOKEN_XFER_REQ => "tokenTransferRequest"
       case x => x
     }
-    val capitalizeMsg = if (msgTypeToBeUsed == msgTypeToBeUsed.toUpperCase) msgTypeToBeUsed else camelToCapitalize(msgTypeToBeUsed)
+    val capitalizeMsg =
+      if (msgTypeToBeUsed == msgTypeToBeUsed.toUpperCase) msgTypeToBeUsed
+      else camelToCapitalize(msgTypeToBeUsed)
     val vowels = Set('a', 'e', 'i', 'o', 'u')
     val prefixed = if (vowels.contains(capitalizeMsg.head.toLower)) "an " else "a "
     prefixed + capitalizeMsg
@@ -201,16 +196,29 @@ object PusherUtil  {
 }
 
 object Pusher {
-  def props(config: AppConfig): Props = Props(classOf[Pusher], config)
+  def props(config: AppConfig): Props = Props(new Pusher(config))
 }
 
-case class PushNotifResponse(comMethodValue: String, statusCode: String, statusDetail: Option[String], detail: Option[String]) {
+case class PushNotifResponse(comMethodValue: String,
+                             statusCode: String,
+                             statusDetail: Option[String],
+                             detail: Option[String]) extends ActorMessageClass {
   require (Set(MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT).map(_.statusCode).contains(statusCode),
     "invalid push notification response status code")
 }
 
 case class PushNotifProviders(validRegEx:Regex, providers: List[PushServiceProvider])
 
-abstract class PushServiceParam
-case class PushNotifParam(cm: String, regId: String, sendAsAlertPushNotif: Boolean,
-                          notifData: Map[String, Any], extraData: Map[String, Any])
+/**
+ *
+ * @param comMethodValue com method value provided during com-method/endpoint registration
+ * @param regId actual registration id provided by push notification service provider
+ * @param sendAsAlertPushNotif
+ * @param notifData
+ * @param extraData
+ */
+case class PushNotifParam(comMethodValue: String,
+                          regId: String,
+                          sendAsAlertPushNotif: Boolean,
+                          notifData: Map[String, Any],
+                          extraData: Map[String, Any])

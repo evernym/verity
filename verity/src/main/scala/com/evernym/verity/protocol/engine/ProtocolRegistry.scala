@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.protocol.CtlEnvelope
+import com.evernym.verity.protocol.engine.PinstIdResolution.DEPRECATED_V0_1
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.util.?=>
@@ -20,6 +21,11 @@ import scala.language.implicitConversions
   * @tparam A type of the input parameter to the driverGen function in Entry
   */
 case class ProtocolRegistry[-A](entries: Entry[A]*) {
+
+  require(
+    entries.count(_.pinstIdResol == DEPRECATED_V0_1) <= 6,
+    "new protocols should use 'V0_2' instead of 'DEPRECATED_V0_1' as a pinst id resolver"
+  )
 
   // "Driver" here is the same thing as the concept of a "controller" from
   // https://github.com/hyperledger/aries-rfcs/tree/master/concepts/0003-protocols#controllers?

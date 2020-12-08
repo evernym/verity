@@ -124,7 +124,7 @@ class FirebasePusher(serviceParam: FirebasePushServiceParam) extends PushService
           .mapAsync(1)(response => Unmarshal(response.entity).to[String])
           .runWith(Sink.head)
     } yield {
-      handleResponse(notifParam.cm, response, notifParam.regId)
+      handleResponse(notifParam.comMethodValue, response, notifParam.regId)
     }
   }
 }

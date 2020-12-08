@@ -31,7 +31,7 @@ class AgencyAgentPairwiseSnapshotSpec
       """verity.persistent-actor.base.AgencyAgentPairwise.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
-        delete-events-on-snapshots = false
+        delete-events-on-snapshots = true
       }""")
     .withFallback(EventSourcedBehaviorTestKit.config)
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
@@ -53,12 +53,15 @@ class AgencyAgentPairwiseSnapshotSpec
 
         fetchAgencyKey()
 
-        //send connection request (it doesn't persist any new event)
+        //send connection request (it will persist two new events: ProtocolIdDetailSet and AgentDetailSet)
         sendConnectMsg()
-        checkPersistentState(2, 2, 1)
+        checkPersistentState(0, 2, 1)
 
         //restart actor (so that snapshot gets applied)
         restartActor(aap)
+        checkPersistentState(0, 2, 1)
+
+        //check metrics
         checkStateSizeMetrics()
       }
     }

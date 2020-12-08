@@ -2,12 +2,15 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.pattern.ask
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, parameters, path, pathPrefix, put, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset}
 import com.evernym.verity.actor.cluster_singleton.{ActionStatus, ForActorStateCleanupManager, ForRouteMaintenanceHelper, GetStatus, MaintenanceCmdWrapper, RestartAllActors}
+import com.evernym.verity.actor.maintenance.{PersistentData, SendPersistedData}
+import com.evernym.verity.actor.node_singleton.ForReadOnlyPersistentActor
 import com.evernym.verity.actor.persistence.{AlreadyDone, Done, Stop}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.{ConfigOverridden, ConfigRefreshed, ForIdentifier, NodeConfigOverridden, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
@@ -63,6 +66,151 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     platform.actorStateCleanupExecutor ? ForIdentifier(entityId, getStatusCmd)
   }
 
+  def getPersistentActorEvents(actorTypeName: String, actorEntityId: String, reload: String): Future[Any] = {
+    if (reload == YES) {
+      platform.nodeSingleton ! ForReadOnlyPersistentActor(actorTypeName, actorEntityId, Stop)
+    }
+    platform.nodeSingleton ? ForReadOnlyPersistentActor(actorTypeName, actorEntityId, SendPersistedData)
+  }
+
+  private val routeMaintenanceRoutes: Route =
+    pathPrefix("route" / "task") {
+      pathPrefix(Segment) { taskId =>
+        path("restart-all-actors") {
+          (post & pathEnd) {
+            parameters('actorTypeIds ? "1,2,3,4,5,6") { actorTypeIds =>
+              complete {
+                val cmd = RestartAllActors(actorTypeIds, restartTaskIfAlreadyRunning = false)
+                sendToRouteMaintenanceHelper(taskId, cmd).map[ToResponseMarshallable] {
+                  case Done | AlreadyDone => OK
+                  case e => handleUnexpectedResponse(e)
+                }
+              }
+            }
+          }
+        } ~
+          path("stop") {
+            (post & pathEnd) {
+              complete {
+                sendToRouteMaintenanceHelper(taskId, Stop(sendResp = true)).map[ToResponseMarshallable] {
+                  case Done => OK
+                  case e => handleUnexpectedResponse(e)
+                }
+              }
+            }
+          } ~
+          path("status") {
+            (get & pathEnd) {
+              complete {
+                sendToRouteMaintenanceHelper(taskId, GetStatus).map[ToResponseMarshallable] {
+                  case s: ActionStatus => handleExpectedResponse(s)
+                  case e => handleUnexpectedResponse(e)
+                }
+              }
+            }
+          }
+      }
+    }
+
+  private val actorStateCleanupMaintenanceRoutes: Route =
+    pathPrefix("actor-state-cleanup") {
+      //TODO: this 'actor-state-cleanup' is added temporarily until
+      // the agent state cleanup (route migration etc) work is complete.
+      // After that, we will remove this.
+      path("status") {
+        (get & pathEnd) {
+          parameters('detail.?) { detailOpt =>
+            complete {
+              getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
+                case s: ManagerStatus => handleExpectedResponse(s)
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        }
+      } ~
+        path("reset") {
+          (post & pathEnd) {
+            complete {
+              resetActorStateCleanupManager.map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        } ~
+        pathPrefix("executor") {
+          pathPrefix(Segment) { updaterEntityId =>
+            path("status") {
+              (get & pathEnd) {
+                parameters('detail.?) { detailOpt =>
+                  complete {
+                    getActorStateCleanupExecutorStatus(updaterEntityId, detailOpt).map[ToResponseMarshallable] {
+                      case s: ExecutorStatus => handleExpectedResponse(s)
+                      case e => handleUnexpectedResponse(e)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+    }
+
+  private val persistentActorMaintenanceRoutes: Route =
+    pathPrefix("persistent-actor") {
+      pathPrefix(Segment / Segment) { (actorTypeName, actorEntityId) =>
+        path("data") {
+          (get & pathEnd) {
+            parameters('reload ? "N", 'asHtml ? "N") { (reload, inHtml) =>
+              complete {
+                getPersistentActorEvents(actorTypeName, actorEntityId, reload)
+                  .map[ToResponseMarshallable] {
+                  case pe: PersistentData =>
+                    val allRecords = pe.snapshotStat ++ pe.events
+                    if (inHtml == YES) {
+                      val resp = allRecords.map(_.toString).mkString("<br><br>")
+                      HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
+                    } else handleExpectedResponse(allRecords.map(_.toString))
+                  case e => handleUnexpectedResponse(e)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+  private val configMaintenanceRoutes: Route =
+    pathPrefix("config") {
+      path("reload") {
+        (put & pathEnd) {
+          parameters('onAllNodes ? "N") { onAllNodes =>
+            complete {
+              reloadConfig(onAllNodes).map[ToResponseMarshallable] {
+                case NodeConfigRefreshed => OK
+                case ConfigRefreshed => OK
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        }
+      } ~
+        path("override") {
+          (put & pathEnd & entity(as[String])) { configStr =>
+            parameters('onAllNodes ? "Y") { onAllNodes =>
+              complete {
+                overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
+                  case NodeConfigOverridden => OK
+                  case ConfigOverridden => OK
+                  case e => handleUnexpectedResponse(e)
+                }
+              }
+            }
+          }
+        }
+    }
+
   protected val maintenanceRoutes: Route =
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
@@ -70,113 +218,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
               checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-              pathPrefix("route" / "task") {
-                pathPrefix(Segment) { taskId =>
-                  path("restart-all-actors") {
-                    (post & pathEnd) {
-                      parameters('actorTypeIds ? "1,2,3,4,5,6") { actorTypeIds =>
-                        complete {
-                          val cmd = RestartAllActors(actorTypeIds, restartTaskIfAlreadyRunning = false)
-                          sendToRouteMaintenanceHelper(taskId, cmd).map[ToResponseMarshallable] {
-                            case Done | AlreadyDone => OK
-                            case e => handleUnexpectedResponse(e)
-                          }
-                        }
-                      }
-                    }
-                  } ~
-                    path("stop") {
-                      (post & pathEnd) {
-                        complete {
-                          sendToRouteMaintenanceHelper(taskId, Stop(sendResp = true)).map[ToResponseMarshallable] {
-                            case Done => OK
-                            case e => handleUnexpectedResponse(e)
-                          }
-                        }
-                      }
-                    } ~
-                      path("status") {
-                        (get & pathEnd) {
-                          complete {
-                            sendToRouteMaintenanceHelper(taskId, GetStatus).map[ToResponseMarshallable] {
-                              case s: ActionStatus => handleExpectedResponse(s)
-                              case e => handleUnexpectedResponse(e)
-                            }
-                          }
-                        }
-                      }
-                    }
-              } ~
-                pathPrefix("config") {
-                  path("reload") {
-                    (put & pathEnd) {
-                      parameters('onAllNodes ? "N") { onAllNodes =>
-                        complete {
-                          reloadConfig(onAllNodes).map[ToResponseMarshallable] {
-                            case NodeConfigRefreshed => OK
-                            case ConfigRefreshed => OK
-                            case e => handleUnexpectedResponse(e)
-                          }
-                        }
-                      }
-                    }
-                  } ~
-                    path("override") {
-                      (put & pathEnd & entity(as[String])) { configStr =>
-                        parameters('onAllNodes ? "Y") { onAllNodes =>
-                          complete {
-                            overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
-                              case NodeConfigOverridden => OK
-                              case ConfigOverridden => OK
-                              case e => handleUnexpectedResponse(e)
-                            }
-                          }
-                        }
-                      }
-                    }
-                } ~ pathPrefix("actor-state-cleanup") {
-                  //TODO: this 'actor-state-cleanup' is added temporarily until
-                  // the agent state cleanup (route migration etc) work is complete.
-                  // After that, we will remove this.
-                  path("status") {
-                    (get & pathEnd) {
-                      parameters('detail.?) { detailOpt =>
-                        complete {
-                          getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
-                            case s: ManagerStatus => handleExpectedResponse(s)
-                            case e => handleUnexpectedResponse(e)
-                          }
-                        }
-                      }
-                    }
-                  } ~
-                    path("reset") {
-                      (post & pathEnd) {
-                        complete {
-                          resetActorStateCleanupManager.map[ToResponseMarshallable] {
-                            case Done => OK
-                            case e => handleUnexpectedResponse(e)
-                          }
-                        }
-                      }
-                    } ~
-                      pathPrefix("executor") {
-                        pathPrefix(Segment) { updaterEntityId =>
-                          path("status") {
-                            (get & pathEnd) {
-                              parameters('detail.?) { detailOpt =>
-                                complete {
-                                  getActorStateCleanupExecutorStatus(updaterEntityId, detailOpt).map[ToResponseMarshallable] {
-                                    case s: ExecutorStatus => handleExpectedResponse(s)
-                                    case e => handleUnexpectedResponse(e)
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                }
+              routeMaintenanceRoutes ~ actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes ~ persistentActorMaintenanceRoutes
             }
           }
         }

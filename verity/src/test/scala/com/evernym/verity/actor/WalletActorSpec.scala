@@ -19,11 +19,12 @@ class WalletActorSpec extends TestKitBase
 
     "creating WalletActor" - {
       "should create and open wallet" in {
-        val walletActor =
+        val walletActor = {
           agentActorContext.system.actorOf(Props(new WalletActor(agentActorContext.appConfig)), name = "WALLET_ACTOR")
 
-        walletActor ! DeleteWallet()
-        expectMsgType[WalletDeleted]
+        }
+        walletActor ! DeleteWallet
+        expectMsgType[WalletDeleted.type]
 
       }
     }

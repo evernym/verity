@@ -4,6 +4,7 @@ package com.evernym.verity.actor.wallet
 import akka.actor.Actor
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.persistence.BaseNonPersistentActor
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper, ConfigUtil}
 import com.evernym.verity.libindy.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -13,16 +14,17 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
 
-case class DeleteWallet() extends ActorMessageClass
-case class WalletDeleted() extends ActorMessageClass
+case object DeleteWallet extends ActorMessageClass
+case object WalletDeleted extends ActorMessageClass
 
-class WalletActor(appConfig: AppConfig, walletProvider: WalletProvider = new LibIndyWalletProvider(AppConfigWrapper))
+class WalletActor(appConfig: AppConfig)
   extends Actor {
 
   val logger: Logger = getLoggerByClass(classOf[WalletActor])
   val defaultReceiveTimeoutInSeconds = 600
   def entityId: String = self.path.name
   def entityName: String = self.path.parent.name
+  var walletProvider: WalletProvider = new LibIndyWalletProvider(appConfig)
   var walletExt: WalletExt = null
   val encryptionKey = generateWalletKey()
   val walletConfig = buildWalletConfig(appConfig)
@@ -66,9 +68,9 @@ class WalletActor(appConfig: AppConfig, walletProvider: WalletProvider = new Lib
     walletProvider.generateKey(Option(getWalletKeySeed(entityId, appConfig)))
 
   final override def receive = {
-    case DeleteWallet() => {
+    case DeleteWallet => {
       deleteWallet()
-      sender ! WalletDeleted()
+      sender ! WalletDeleted
       context.stop(self)
     }
   }

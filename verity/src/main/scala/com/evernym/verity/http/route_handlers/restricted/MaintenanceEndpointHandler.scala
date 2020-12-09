@@ -2,18 +2,15 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.pattern.ask
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, parameters, path, pathPrefix, put, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset}
 import com.evernym.verity.actor.cluster_singleton.{ActionStatus, ForActorStateCleanupManager, ForRouteMaintenanceHelper, GetStatus, MaintenanceCmdWrapper, RestartAllActors}
-import com.evernym.verity.actor.maintenance.{PersistentData, SendPersistedData}
-import com.evernym.verity.actor.node_singleton.ForReadOnlyPersistentActor
 import com.evernym.verity.actor.persistence.{AlreadyDone, Done, Stop}
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.{ConfigOverridden, ConfigRefreshed, ForIdentifier, NodeConfigOverridden, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
+import com.evernym.verity.actor.{ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 
@@ -66,13 +63,6 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     platform.actorStateCleanupExecutor ? ForIdentifier(entityId, getStatusCmd)
   }
 
-  def getPersistentActorEvents(actorTypeName: String, actorEntityId: String, reload: String): Future[Any] = {
-    if (reload == YES) {
-      platform.nodeSingleton ! ForReadOnlyPersistentActor(actorTypeName, actorEntityId, Stop)
-    }
-    platform.nodeSingleton ? ForReadOnlyPersistentActor(actorTypeName, actorEntityId, SendPersistedData)
-  }
-
   private val routeMaintenanceRoutes: Route =
     pathPrefix("route" / "task") {
       pathPrefix(Segment) { taskId =>
@@ -92,7 +82,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           path("stop") {
             (post & pathEnd) {
               complete {
-                sendToRouteMaintenanceHelper(taskId, Stop(sendResp = true)).map[ToResponseMarshallable] {
+                sendToRouteMaintenanceHelper(taskId, Stop(sendBackConfirmation = true)).map[ToResponseMarshallable] {
                   case Done => OK
                   case e => handleUnexpectedResponse(e)
                 }
@@ -157,30 +147,6 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
         }
     }
 
-  private val persistentActorMaintenanceRoutes: Route =
-    pathPrefix("persistent-actor") {
-      pathPrefix(Segment / Segment) { (actorTypeName, actorEntityId) =>
-        path("data") {
-          (get & pathEnd) {
-            parameters('reload ? "N", 'asHtml ? "N") { (reload, inHtml) =>
-              complete {
-                getPersistentActorEvents(actorTypeName, actorEntityId, reload)
-                  .map[ToResponseMarshallable] {
-                  case pe: PersistentData =>
-                    val allRecords = pe.snapshotStat ++ pe.events
-                    if (inHtml == YES) {
-                      val resp = allRecords.map(_.toString).mkString("<br><br>")
-                      HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
-                    } else handleExpectedResponse(allRecords.map(_.toString))
-                  case e => handleUnexpectedResponse(e)
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
   private val configMaintenanceRoutes: Route =
     pathPrefix("config") {
       path("reload") {
@@ -195,20 +161,20 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
             }
           }
         }
-      } ~
-        path("override") {
-          (put & pathEnd & entity(as[String])) { configStr =>
-            parameters('onAllNodes ? "Y") { onAllNodes =>
-              complete {
-                overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
-                  case NodeConfigOverridden => OK
-                  case ConfigOverridden => OK
-                  case e => handleUnexpectedResponse(e)
-                }
-              }
-            }
-          }
-        }
+      }
+//      ~ path("override") {
+//          (put & pathEnd & entity(as[String])) { configStr =>
+//            parameters('onAllNodes ? "Y") { onAllNodes =>
+//              complete {
+//                overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
+//                  case NodeConfigOverridden => OK
+//                  case ConfigOverridden => OK
+//                  case e => handleUnexpectedResponse(e)
+//                }
+//              }
+//            }
+//          }
+//        }
     }
 
   protected val maintenanceRoutes: Route =
@@ -218,7 +184,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
               checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-              routeMaintenanceRoutes ~ actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes ~ persistentActorMaintenanceRoutes
+              routeMaintenanceRoutes ~ actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes
             }
           }
         }

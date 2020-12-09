@@ -7,7 +7,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
-import com.evernym.verity.actor.maintenance.ReadOnlyPersistentActor
+import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
 import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
 import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
@@ -98,11 +98,10 @@ class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor wit
       sender ! DrainInitiated
       logger.info(s"draining in progress !!")
 
-    case ForReadOnlyPersistentActor(actorTypeName, actorEntityId, cmd) =>
-      val id = actorTypeName + actorEntityId
-      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, actorTypeName, actorEntityId), id)
+    case p: PersistentActorQueryParam =>
+      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam), p.actorParam.id)
       val sndr = sender()
-      val fut = ar ? cmd
+      val fut = ar ? p.cmd
       fut.map(r => sndr ! r)
   }
 
@@ -112,4 +111,5 @@ class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor wit
 
 case object DrainNode extends ActorMessageObject
 case object DrainInitiated extends ActorMessageObject
-case class ForReadOnlyPersistentActor(actorTypeName: String, actorEntityId: String, cmd: Any) extends ActorMessageClass
+case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
+  extends ActorMessageClass

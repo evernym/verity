@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.state.base
 import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
 import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, KeyId, Relationship}
-import com.evernym.verity.actor.agent.{ConnectionStatus, ProtocolRunningInstances, SponsorRel, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{ConnectionStatus, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
 
 /**

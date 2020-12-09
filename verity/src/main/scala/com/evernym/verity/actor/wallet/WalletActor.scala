@@ -6,41 +6,49 @@ import java.time.temporal.ChronoUnit
 import akka.actor.Actor
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.config.{AppConfigWrapper, ConfigUtil}
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper, ConfigUtil}
 import com.evernym.verity.libindy.{LibIndyWalletExt, LibIndyWalletProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.vault.WalletUtil.{buildWalletConfig, getWalletKeySeed, getWalletName}
 import com.evernym.verity.vault.{WalletAccessParam, WalletAlreadyOpened, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
 
 case class DeleteWallet() extends ActorMessageClass
+case class WalletDeleted() extends ActorMessageClass
 
-class WalletActor(walletProvider: WalletProvider = new LibIndyWalletProvider(AppConfigWrapper))
+class WalletActor(appConfig: AppConfig, walletProvider: WalletProvider = new LibIndyWalletProvider(AppConfigWrapper))
   extends Actor {
 
   val logger: Logger = getLoggerByClass(classOf[WalletActor])
+  val defaultReceiveTimeoutInSeconds = 600
+  def entityId: String = self.path.name
+  def entityName: String = self.path.parent.name
+//  def actorId: String = entityId
   var walletExt: WalletExt = null
-  var wap: WalletAccessParam = null
+  val encryptionKey = generateWalletKey()
+  val walletConfig = buildWalletConfig(appConfig)
+  val walletName = getWalletName(entityId, appConfig)
 
   def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
     appConfig, defaultReceiveTimeoutInSeconds,
-    normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+    "base", entityName, entityId)
 
-  def createWallet(wap: WalletAccessParam): Unit = {
+  def createWallet(): Unit = {
     runWithInternalSpan(s"createWallet", "WalletActor") {
-      walletProvider.create(wap.walletName, wap.encryptionKey, wap.walletConfig)
+      walletProvider.create(walletName, encryptionKey, walletConfig)
     }
   }
 
-  def openWallet(wap: WalletAccessParam): Unit = {
+  def openWallet(): Unit = {
     runWithInternalSpan(s"openWallet", "WalletActor") {
       try {
-        walletExt = walletProvider.open(wap.walletName, wap.encryptionKey, wap.walletConfig)
+        walletExt = walletProvider.open(walletName, encryptionKey, walletConfig)
       } catch {
         case e: WalletAlreadyOpened => logger.debug(e.message)
         case _: WalletDoesNotExist =>
-          walletProvider.createAndOpen(wap.walletName, wap.encryptionKey, wap.walletConfig)
+          walletProvider.createAndOpen(walletName, encryptionKey, walletConfig)
       }
     }
   }
@@ -55,15 +63,21 @@ class WalletActor(walletProvider: WalletProvider = new LibIndyWalletProvider(App
     }
   }
 
+  def generateWalletKey(): String =
+    walletProvider.generateKey(Option(getWalletKeySeed(entityId, appConfig)))
+
   final override def receive = {
-    case DeleteWallet() => postStop()
+    case DeleteWallet() => {
+      postStop()
+      sender ! WalletDeleted()
+    }
   }
 
   @throws(classOf[Exception])
   //#lifecycle-hooks
   override def preStart(): Unit = {
     context.setReceiveTimeout(entityReceiveTimeout)
-    openWallet(wap)
+    openWallet()
   }
 
   @throws(classOf[Exception])

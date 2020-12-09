@@ -16,7 +16,6 @@ trait AgentStateUpdateInterface {
 
   def setAgentWalletSeed(seed: String): Unit
   def setAgencyDID(did: DID): Unit
-  def setSponsorRel(rel: SponsorRel): Unit
   def addThreadContextDetail(threadContext: ThreadContext): Unit
   def removeThreadContext(pinstId: PinstId): Unit
   def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
@@ -58,7 +57,6 @@ trait AgentStateInterface extends State {
   def relationship: Option[Relationship]
   def relationshipReq: Relationship = relationship.getOrElse(throw new RuntimeException("relationship not found"))
 
-  def sponsorRel: Option[SponsorRel]
   def agentWalletSeed: Option[String]
   def agencyDID: Option[DID]
   def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))

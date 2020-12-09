@@ -35,6 +35,7 @@ import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
+import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -220,6 +221,10 @@ class ActorProtocolContainer[
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
   }
 
+  /**
+   * handles thread context migration
+   * @param tcd thread context detail
+   */
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)
@@ -246,6 +251,7 @@ class ActorProtocolContainer[
       stash()
   }
 
+  //TODO -> RTM: Add documentation for this
   //dhh I'd like to understand the significance of changing receive behavior.
   // Is this part of the issue Jason wrote about with futures, where we are
   // going into different modes at different points in a sequence of actions
@@ -589,6 +595,11 @@ case class MsgEnvelope[A](msg: A,
                           msgId: Option[MsgId]=None,
                           thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessageClass {
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
+}
+
+trait ServiceDecorator{
+  def msg: Any
+  def deliveryMethod: ComMethodDetail
 }
 
 class MsgForwarder {

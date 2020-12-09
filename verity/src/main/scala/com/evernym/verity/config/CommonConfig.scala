@@ -49,8 +49,6 @@ trait CommonConfig {
   val VAULT_PORT = s"$VAULT.port"
   val VAULT_TLS = s"$VAULT.tls"
 
-  val URL_MAPPER_API_ENABLED = s"$VERITY.url-mapper-api.enabled"
-
   val URL_MAPPER_SVC = s"$SERVICES.url-mapper-service"
   val URL_MAPPER_SVC_ENDPOINT = s"$URL_MAPPER_SVC.endpoint"
   val URL_MAPPER_SVC_ENDPOINT_HOST = s"$URL_MAPPER_SVC_ENDPOINT.host"
@@ -170,8 +168,11 @@ trait CommonConfig {
   val VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$CACHE.get-ver-key-cache-expiration-time-in-seconds"
   val ENDPOINT_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$CACHE.endpoint-cache-expiration-time-in-seconds"
 
+  val INTERNAL_API_URL_MAPPER_ENABLED = s"$VERITY.url-mapper-api.enabled"
+
   private val INTERNAL_API = s"$VERITY.internal-api"
   val INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES = s"$INTERNAL_API.allowed-from-ip-addresses"
+  val INTERNAL_API_PERSISTENT_DATA_ENABLED = s"$INTERNAL_API.persistent-data.enabled"
 
   val PERSISTENCE = s"$VERITY.persistence"
   val PERSISTENCE_USE_ASYNC_MSG_FORWARD = s"$PERSISTENCE.use-async-for-msg-forward-feature"
@@ -330,6 +331,7 @@ trait CommonConfig {
 
   val MIGRATE_THREAD_CONTEXTS = s"$VERITY.agent.migrate-thread-contexts"
   val MIGRATE_THREAD_CONTEXTS_ENABLED = s"$MIGRATE_THREAD_CONTEXTS.enabled"
+  val MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF = s"$MIGRATE_THREAD_CONTEXTS.max-attempt-per-pinst-proto-ref"
   val MIGRATE_THREAD_CONTEXTS_BATCH_SIZE = s"$MIGRATE_THREAD_CONTEXTS.batch-size"
   val MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS =
     s"$MIGRATE_THREAD_CONTEXTS.batch-item-sleep-interval-in-millis"

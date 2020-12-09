@@ -1,23 +1,26 @@
 package com.evernym.verity.http.route_handlers.configured
 
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.config.CommonConfig.URL_MAPPER_API_ENABLED
+import com.evernym.verity.config.CommonConfig._
 
 /**
  * api routes which are available if enabled via configuration
  */
 
 trait ConfiguredApiRoutes
-  extends UrlMapperEndpointHandler {
+  extends UrlMapperEndpointHandler
+    with PersistentDataEndpointHandler {
 
   protected val configuredApiRoutes: Route =
-    urlMapperRouteIfEnabled(URL_MAPPER_API_ENABLED)
+    routeIfConfigEnabled(INTERNAL_API_URL_MAPPER_ENABLED, urlMapperRoute) ~
+      routeIfConfigEnabled(INTERNAL_API_PERSISTENT_DATA_ENABLED, persistentActorMaintenanceRoutes)
 
-  def urlMapperRouteIfEnabled(configName: String): Route = {
-    if (appConfig.getConfigBooleanOption(configName).contains(true)) {
-      urlMapperRoute
-    } else RouteDirectives.reject
+  def routeIfConfigEnabled(configName: String, route: Route): Route = {
+    val confValue = appConfig.getConfigBooleanOption(configName)
+    if (confValue.contains(true)) route
+    else RouteDirectives.reject
   }
 }
 

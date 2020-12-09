@@ -2,25 +2,26 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import akka.pattern.ask
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.SpanUtil._
-import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
-import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, SponsorRel}
 import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.{EndpointADT, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, Relationship, RelationshipUtil, RoutingServiceEndpoint, Tags}
+import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
+import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
+import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
+import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, SponsorRel, _}
+import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
-import com.evernym.verity.actor.cluster_singleton.{ForMetricsHelper, ForUserAgentPairwiseActorWatcher, MetricsCountUpdated, UpdateCountMetrics, UpdateFailedAttemptCount, UpdateFailedMsgCount, UpdateUndeliveredMsgCount}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.InternalReqHelperData
@@ -31,12 +32,12 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
-import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
@@ -48,9 +49,6 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUpdated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
-import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened, InviteShorteningFailed => IssueCredInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{ShortenInvite => IssueCredShortenInvite}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened, InviteShorteningFailed => PresentProofInviteShorteningFailed}
@@ -80,7 +78,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with HasAgentActivity
     with FailedMsgRetrier {
 
   type StateType = UserAgentPairwiseState
@@ -134,7 +131,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     case ppgm: ProcessPersistedSendRemoteMsg                => processPersistedSendRemoteMsg(ppgm)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
-    case s: SetSponsorRel                                   => if (state.sponsorRel.isEmpty) setSponsorDetail(s.rel)
   }
 
   override final def receiveAgentEvent: Receive =
@@ -155,8 +151,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
       state = state.withConnectionStatus(ConnectionStatus(answerStatusCode = csu.statusCode))
-    case sa: SponsorAssigned               =>
-      setSponsorRel(SponsorRel(sa.id, sa.sponsee))
   }
 
   //this is for backward compatibility
@@ -258,34 +252,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           Set(CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER),
           Set(theirRoutingTarget))
       case _                           => RetryEligibilityCriteria()
-    }
-  }
-
-  override def updateUndeliveredMsgCountMetrics(): Unit = {
-    msgDeliveryState.foreach { mds =>
-      sendUpdateMetrics(UpdateUndeliveredMsgCount(entityId, AS_USER_AGENT_MSG_UNDELIVERED_COUNT, mds.getUndeliveredMsgCounts))
-    }
-  }
-
-  override def updateFailedAttemptCountMetrics(): Unit = {
-    msgDeliveryState.foreach { mds =>
-      sendUpdateMetrics(UpdateFailedAttemptCount(entityId, AS_USER_AGENT_MSG_FAILED_ATTEMPT_COUNT, mds.getFailedAttemptCounts))
-    }
-  }
-
-  override def updateFailedMsgCountMetrics(): Unit = {
-    msgDeliveryState.foreach { mds =>
-      sendUpdateMetrics(UpdateFailedMsgCount(entityId, AS_USER_AGENT_MSG_FAILED_COUNT, mds.getFailedMsgCounts))
-    }
-  }
-
-  def sendUpdateMetrics(msg: UpdateCountMetrics): Unit = {
-    val failedMsgCountMetricFut = singletonParentProxyActor ? ForMetricsHelper(msg)
-    failedMsgCountMetricFut.map {
-      case r: MetricsCountUpdated =>
-        logger.debug(s"successfully updated ${r.metricsName}: " + r.totalCount)
-    }.recover {
-      case e: Exception => logger.error("error while updating metrics: " + Exceptions.getErrorMsg(e))
     }
   }
 
@@ -930,13 +896,6 @@ case class ProcessPersistedSendRemoteMsg(
                                           reqHelperData: InternalReqHelperData) extends ActorMessageClass
 
 case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessageClass
-case class SetSponsorRel(rel: SponsorRel) extends ActorMessageClass
-
-object SetSponsorRel {
-  def apply(rel: Option[SponsorRel]): SetSponsorRel =
-    new SetSponsorRel(rel.getOrElse(SponsorRel.empty))
-}
-
 
 trait UserAgentPairwiseStateImpl
   extends AgentStatePairwiseImplBase
@@ -962,10 +921,6 @@ trait UserAgentPairwiseStateUpdateImpl
 
   override def setAgencyDID(did: DID): Unit = {
     state = state.withAgencyDID(did)
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    state = state.withSponsorRel(rel)
   }
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {

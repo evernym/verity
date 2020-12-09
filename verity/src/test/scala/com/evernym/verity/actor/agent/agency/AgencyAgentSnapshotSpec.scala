@@ -54,6 +54,9 @@ class AgencyAgentSnapshotSpec
 
         //restart actor (so that snapshot gets applied)
         restartActor()
+        checkPersistentState(2, 2, 0)
+
+        //check metrics for state size
         checkStateSizeMetrics()
       }
     }

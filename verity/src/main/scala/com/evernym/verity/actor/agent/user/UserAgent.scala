@@ -13,7 +13,7 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
 import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
-import com.evernym.verity.actor.agent.relationship.{EndpointType, RelationshipUtil, SelfRelationship, PackagingContext}
+import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -113,6 +113,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     case GetFwdComMethods                        => sendFwdComMethods()
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
+    case GetSponsorRel                           => sendSponsorDetails()
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
@@ -228,17 +229,15 @@ class UserAgent(val agentActorContext: AgentActorContext)
     Future.successful(Option(ControlMsg(RecoveryKeyRegistered())))
   }
 
+  def sendSponsorDetails(): Unit =
+    sender() ! state.sponsorRel.getOrElse(SponsorRel.empty)
+
   def handleAgentDetailSet(ads: AgentDetailSet): Unit = {
     if (state.relationshipAgentsContains(AgentDetail(ads.forDID, ads.agentKeyDID))) {
       sender ! Done
     } else {
       writeApplyAndSendItBack(ads)
     }
-
-    logger.info(s"setting sponsor for pw: ${ads.agentKeyDID}")
-    agentActorContext
-      .agentMsgRouter
-      .execute(InternalMsgRouteParam(ads.agentKeyDID, SetSponsorRel(state.sponsorRel)))
   }
 
   def handleDeleteComMethod(dcm: DeleteComMethod): Unit = {
@@ -317,9 +316,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     } else forDID
 
     val ipc = buildSetupCreateKeyEndpoint(forDID, endpointDID)
-    val pairwiseEntityId = getNewActorId
-    val resp = userAgentPairwiseRegion ? ForIdentifier(pairwiseEntityId, ipc)
-    userAgentPairwiseRegion ! ForIdentifier(pairwiseEntityId, SetSponsorRel(state.sponsorRel))
+    val resp = userAgentPairwiseRegion ? ForIdentifier(getNewActorId, ipc)
     (resp, endpointDID)
   }
 
@@ -598,7 +595,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
               case MPF_MSG_PACK | MPF_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
               case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack format not supported: " + x))
             }
-            AgentActivityTracker.track(respMsg.metadata.map(_.msgTypeStr).getOrElse(""), domainId, state.sponsorRel, Some(fromDID))
+            val msgType = respMsg.metadata.map(_.msgTypeStr).getOrElse("")
+            AgentActivityTracker.track(msgType, domainId, Some(fromDID))
             fromDID -> msgs
           }.toMap
           val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(result)(reqMsgContext.agentMsgContext)
@@ -764,6 +762,7 @@ case object GetAllComMethods extends ActorMessageObject
 case object GetPushComMethods extends ActorMessageObject
 case object GetHttpComMethods extends ActorMessageObject
 case object GetFwdComMethods extends ActorMessageObject
+case object GetSponsorRel extends ActorMessageObject
 case class DeleteComMethod(value: String, reason: String) extends ActorMessageClass
 
 //response msgs
@@ -812,7 +811,7 @@ trait UserAgentStateUpdateImpl
     state = state.withAgencyDID(did)
   }
 
-  override def setSponsorRel(rel: SponsorRel): Unit = {
+  def setSponsorRel(rel: SponsorRel): Unit = {
     state = state.withSponsorRel(rel)
   }
 

@@ -8,9 +8,9 @@ import com.evernym.verity.actor.agent.msgrouter._
 import com.evernym.verity.actor.persistence.{Done, SingletonChildrenPersistentActor, Stop}
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper, CommonConfig}
+import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.typesafe.config.ConfigValueFactory
+import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
 
@@ -29,12 +29,19 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     case ProcessPending             => processPending()
     case Reset                      => handleReset()
 
-    case EnableConfig               => updateConfig(enable = true)
-    case DisableConfig              => updateConfig(enable = false)
-
     //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
-    case _ @ (_:RouteStoreStatus | _: StatusUpdated)     => //nothing to do
-    case d: Destroyed             => handleDestroyed(d)
+    case _: StatusUpdated           => //nothing to do
+    case d: Destroyed               => handleDestroyed(d)
+
+    case rss: RouteStoreStatus      =>
+      if (! completed.contains(rss.agentRouteStoreEntityId)) {
+        inProgress += rss.agentRouteStoreEntityId -> rss.totalProcessed
+        if (rss.inProgressCleanupStatus.isEmpty) {
+          cleanupStatus -= rss.agentRouteStoreEntityId
+        } else {
+          cleanupStatus += rss.agentRouteStoreEntityId -> rss.inProgressCleanupStatus
+        }
+      }
   }
 
   override def receiveEvent: Receive = {
@@ -42,27 +49,21 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       registered += r.entityId -> r.totalCandidateRoutes
 
     case c: Completed  =>
+      inProgress -= c.entityId
+      cleanupStatus -= c.entityId
       completed += c.entityId -> c.totalProcessedRoutes
 
     case ed: ExecutorDeleted =>
       executorDestroyed += ed.entityId
   }
 
-  def updateConfig(enable: Boolean): Unit = {
-    val updatedConfig = appConfig
-      .config
-      .withValue(AGENT_ACTOR_STATE_CLEANUP_ENABLED, ConfigValueFactory.fromAnyRef(enable))
-      .withValue(MIGRATE_THREAD_CONTEXTS_ENABLED, ConfigValueFactory.fromAnyRef(enable))
-    AppConfigWrapper.setConfig(updatedConfig)
-    val cs = ConfigStatus(
-      appConfig.getConfigBooleanReq(AGENT_ACTOR_STATE_CLEANUP_ENABLED),
-      appConfig.getConfigBooleanReq(MIGRATE_THREAD_CONTEXTS_ENABLED)
-    )
-    sender ! cs
-  }
-
   def handleGetStatus(gs: GetManagerStatus): Unit = {
-    val s = ManagerStatus(registered.size, completed.size, registered.values.sum, completed.values.sum)
+    val s = ManagerStatus(
+      registered.size,
+      registered.values.sum,
+      completed.size,
+      completed.values.sum + inProgress.values.sum,
+      cleanupStatus)
     if (gs.includeDetails) {
       sender ! s.copy(registeredRouteStores = Some(registered), resetStatus = Option(resetStatus))
     } else {
@@ -111,11 +112,12 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     resetStatus = ResetStatus.empty
     registered = Map.empty
     completed = Map.empty
+    inProgress = Map.empty
+    cleanupStatus = Map.empty
     lastRequestedBucketId = -1
     toSeqNoDeleted = 0
     stopActor()
   }
-
 
   def pendingBatchedRouteStores: Map[EntityId, RoutesCount] =
     registered
@@ -151,6 +153,8 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
             Thread.sleep(processorBatchItemSleepIntervalInMillis) //this is to make sure it doesn't hit the database too hard and impact the running system.
           }
         }
+      } else {
+        stopAllScheduledJobs()
       }
     }
   }
@@ -186,7 +190,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   def handleCompleted(c: Completed, duringRegistration: Boolean = false): Unit = {
     if (! completed.contains(c.entityId)) {
       writeAndApply(c)
-    } else if (! duringRegistration) {
+    } else if (duringRegistration) {
       sender ! AlreadyCompleted
     }
     if (c.totalProcessedRoutes > 0) {
@@ -222,6 +226,8 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
   var executorDestroyed: Set[EntityId] = Set.empty
   var completed: Map[EntityId, RoutesCount] = Map.empty
+  var inProgress: Map[EntityId, RoutesCount] = Map.empty
+  var cleanupStatus: Map[EntityId, Map[DID, CleanupStatus]] = Map.empty
   var registered: Map[EntityId, RoutesCount] = Map.empty
   var resetStatus: ResetStatus = ResetStatus.empty
 
@@ -265,14 +271,15 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 /**
  *
  * @param registeredRouteStoreActorCount total 'agent route store' actor who registered with this actor
- * @param processedRouteStoreActorCount total 'agent route store' actor processed (out of registeredRouteStoreActorCount)
  * @param totalCandidateAgentActors total candidate agent-actors (belonging to all registered routing actors)
+ * @param processedRouteStoreActorCount total 'agent route store' actor processed (out of registeredRouteStoreActorCount)
  * @param totalProcessedAgentActors total processed agent-actors (out of totalCandidateAgentActors)
  */
 case class ManagerStatus(registeredRouteStoreActorCount: Int,
-                         processedRouteStoreActorCount: Int,
                          totalCandidateAgentActors: Int,
+                         processedRouteStoreActorCount: Int,
                          totalProcessedAgentActors: Int,
+                         inProgressCleanupStatus: Map[EntityId, Map[DID, CleanupStatus]],
                          resetStatus: Option[ResetStatus] = None,
                          registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
 
@@ -296,7 +303,3 @@ object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER
   def props(appConfig: AppConfig): Props = Props(new ActorStateCleanupManager(appConfig))
 }
-
-case object EnableConfig extends ActorMessageObject
-case object DisableConfig extends ActorMessageObject
-case class ConfigStatus(actorStateCleanupEnabled: Boolean, migrateThreadContextEnabled: Boolean) extends ActorMessageClass

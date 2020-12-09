@@ -5,10 +5,10 @@ import java.util.UUID
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
-import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, CheckActorStateCleanupState, FixActorState}
+import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
 import com.evernym.verity.actor.persistence.{ActorDetail, BaseNonPersistentActor, GetActorDetail}
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
+import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
 import com.evernym.verity.config.AppConfig
@@ -57,13 +57,13 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
     }
 
     "after some time" - {
-      "should have processed all state cleanup" taggedAs UNSAFE_IgnoreLog in {
+      "should have processed all state cleanup" taggedAs (UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
         eventually(timeout(Span(30, Seconds)), interval(Span(4, Seconds))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
-          status.processedRouteStoreActorCount shouldBe shardSize
           status.totalCandidateAgentActors shouldBe totalRouteEntries
+          status.processedRouteStoreActorCount shouldBe shardSize
           status.totalProcessedAgentActors shouldBe totalRouteEntries
         }
       }
@@ -125,10 +125,9 @@ object DummyAgentActor {
 
 class DummyAgentActor extends BaseNonPersistentActor {
   override def receiveCmd: Receive = {
-    case fas: FixActorState                 =>
-      sender ! InitialActorState(fas.actorID, 0)
-    case CheckActorStateCleanupState(did)   =>
-      sender ! ActorStateCleanupStatus(did, isRouteFixed = true, isAllThreadContextMigrated = true, 1, 0)
+    case fas: FixActorState             =>
+      fas.senderActorRef ! InitialActorState(fas.actorDID, 1)
+      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 1, 0)
   }
 
   override def appConfig: AppConfig = ???

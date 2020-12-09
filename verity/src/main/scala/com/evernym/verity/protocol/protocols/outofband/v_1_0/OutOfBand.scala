@@ -1,10 +1,10 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import akka.http.scaladsl.model.Uri
+import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -57,7 +57,7 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
       ctx.apply(ConnectionReuseRequested())
     } catch {
       case e: Exception =>
-        ctx.logger.warn(s"Reuse handling failed: ${e.getMessage}", e)
+        ctx.logger.warn(s"Reuse handling failed: ${e.getMessage}")
         ctx.signal(Signal.buildProblemReport(s"Message $m has invalid 'inviteUrl` field",
         "invalid-reuse-message"))
     }

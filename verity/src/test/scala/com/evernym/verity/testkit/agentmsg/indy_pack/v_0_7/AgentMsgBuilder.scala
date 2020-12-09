@@ -40,9 +40,9 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
       AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToGivenDID(forDID))
     }
 
-    def prepareCreateEdgeAgentMsg(forDID: DID, requesterVk: VerKey, requesterDetails: Option[ProvisionToken])
+    def prepareCreateEdgeAgentMsg(forDID: DID, requesterKeys: RequesterKeys, requesterDetails: Option[ProvisionToken])
     : PackedMsg = {
-      preparePackedRequestForAgent(buildCoreCreateEdgeAgentMsg(forDID, requesterVk, requesterDetails))
+      preparePackedRequestForAgent(buildCoreCreateEdgeAgentMsg(forDID, requesterKeys.fromVerKey, requesterDetails))
     }
 
     def buildCoreCreateEdgeAgentMsg(forDID: DID, requesterVk: VerKey, requesterDetails: Option[ProvisionToken]):

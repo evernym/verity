@@ -20,6 +20,7 @@ export VERITY_KAMON_STATE_PAGE_PORT=$((EAS_KAMON_STATE_PAGE_PORT_BASE+CUR_NODE_N
 export VERITY_KAMON_ENVIRONMENT_SERVICE="EAS-$CUR_NODE_NUMBER"
 export VERITY_DYNAMODB_JOURNAL_TABLE="agency_akka_eas"
 export VERITY_DYNAMODB_SNAPSHOT_TABLE="agency_akka_snapshot_eas"
+export GENESIS_TXN_FILE_LOCATION="target/genesis.txt"
 
 for i in $(eval echo "{1..$TOTAL_NODES}")
 do

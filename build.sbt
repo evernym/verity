@@ -25,7 +25,7 @@ val debPkgDepLibIndyMinVersion = "1.15.0~1560"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1542"
+val libIndyVer = "1.15.0~1560"
 val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),
@@ -254,7 +254,7 @@ lazy val commonLibraryDependencies = {
 
     "com.twitter" %% "chill-akka" % "0.9.5",
 
-    "org.hyperledger" % "indy" % "1.15.0-dev-1542",   //debPkgDepLibIndyMinVersion,
+    "org.hyperledger" % "indy" % "1.15.0-dev-1560",   //debPkgDepLibIndyMinVersion,
 
     "org.json" % "json" % "20180813",
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",
@@ -322,11 +322,11 @@ lazy val commonLibraryDependencies = {
     "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
-    "com.evernym.verity" % "verity-sdk" % "0.4.4-f5a828d8",
+    "com.evernym.verity" % "verity-sdk" % "0.4.5-5d6e211e",
     "net.glxn" % "qrgen" % "1.4", // https://mvnrepository.com/artifact/net.glxn/qrgen
     "com.google.guava" % "guava" % "28.1-jre",
 
-    "com.evernym" % "vcx" % "0.9.2.771",
+    "com.evernym" % "vcx" % "0.10.1.1100",
 
     //post akka 2.6 upgrade, had to add below dependencies test dependency with akka http version
     //need to come back to this and see if there is better way to fix it

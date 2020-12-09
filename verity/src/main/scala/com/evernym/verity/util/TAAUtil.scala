@@ -1,7 +1,7 @@
 package com.evernym.verity.util
 
 import com.evernym.verity.Exceptions.InvalidValueException
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 
 import scala.util.Try

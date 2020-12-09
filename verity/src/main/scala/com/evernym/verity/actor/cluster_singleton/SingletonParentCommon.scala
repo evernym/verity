@@ -5,14 +5,16 @@ import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.pattern.ask
 import akka.util.Timeout
+import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ExceptionHandler.handleException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
-import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
+import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
@@ -23,8 +25,6 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
 import com.evernym.verity.util.Util._
-import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -46,7 +46,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
   def allSingletonPropsMap: Map[String, Props] =
     Map(
       KeyValueMapper.name -> KeyValueMapper.props,
-      MetricsHelper.name -> MetricsHelper.props(appConfig),
       WatcherManager.name -> WatcherManager.props(appConfig, childActorDetails),
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
@@ -127,6 +126,18 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           logger.error("could not refresh config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
+    case oc: OverrideConfigOnAllNodes =>
+      logger.debug(s"override config on nodes: $nodes")
+      val f = sendCmdToAllNodeSingletonsWithReducedFuture(OverrideNodeConfig(oc.configStr))
+      val sndr = sender()
+      f.onComplete{
+        case Success(_) =>
+          sndr ! ConfigOverridden
+        case Failure(e) =>
+          sndr ! ConfigOverrideFailed
+          logger.error("could not override config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+      }
+
     case getMetricsOfAllNode: GetMetricsOfAllNodes =>
       logger.debug(s"fetching metrics from nodes: $nodes")
       val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(getMetricsOfAllNode.filters))
@@ -199,9 +210,6 @@ case class ForResourceBlockingStatusMngr(override val cmd: Any) extends ForSingl
 }
 case class ForResourceWarningStatusMngr(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = RESOURCE_WARNING_STATUS_MNGR
-}
-case class ForMetricsHelper(override val cmd: Any) extends ForSingletonChild {
-  def getActorName: String = METRICS_HELPER
 }
 case class ForActorStateCleanupManager(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = ACTOR_STATE_CLEANUP_MANAGER

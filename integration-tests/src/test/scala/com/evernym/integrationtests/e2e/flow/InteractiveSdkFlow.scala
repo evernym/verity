@@ -803,7 +803,7 @@ trait InteractiveSdkFlow {
           .issuerDid(issuerDID)
           .build()
 
-        val nameAttr = PresentProofV1_0.attribute("name", restriction)
+        val nameAttr = PresentProofV1_0.attribute(Array("first_name", "last_name"), restriction)
         val numAttr = PresentProofV1_0.attribute("license_num", restriction)
 
         val t = Array(nameAttr, numAttr)
@@ -872,7 +872,7 @@ trait InteractiveSdkFlow {
 
         val forRel = proverSdk.relationship_!(relationshipId).owningDID
         val proof = proverSdk.asInstanceOf[VcxPresentProof].presentProof_1_0(forRel, tid, requestMsg)
-        proof.accept(proverSdk.context)
+        proof.acceptRequest(proverSdk.context)
       }
 
       s"[$verifierName] receive presentation" in {
@@ -893,8 +893,12 @@ trait InteractiveSdkFlow {
             .getString("value") shouldBe "123"
           presentation
             .getJSONObject("revealed_attrs")
-            .getJSONObject("name")
+            .getJSONObject("first_name")
             .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
         }
 
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
@@ -948,13 +952,14 @@ trait InteractiveSdkFlow {
           .issuerDid(issuerDID)
           .build()
 
-        val nameAttr = PresentProofV1_0.attribute("name", restriction)
+        val nameAttr = PresentProofV1_0.attribute(Array("first_name", "last_name"), restriction)
         val numAttr = PresentProofV1_0.attribute("license_num", restriction)
 
         verifierSdk
           .presentProof_1_0(forRel, proofName, Array(nameAttr, numAttr), Array.empty)
           .request(verifierSdk.context)
       }
+
 
       s"[$holderName] send a proof presentation" taggedAs UNSAFE_IgnoreLog in {
         var tid = ""
@@ -965,7 +970,7 @@ trait InteractiveSdkFlow {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
 
         holderSdk.presentProof_1_0(forRel, tid)
-          .accept(holderSdk.context)
+          .acceptRequest(holderSdk.context)
       }
       s"[$verifierName] receive presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
@@ -974,6 +979,7 @@ trait InteractiveSdkFlow {
         var presentation = new JSONObject()
 
         verifierMsgReceiver.expectMsg("presentation-result") { result =>
+          println(s"Presentation result: ${result.toString(2)}")
           tid = threadId(result)
           result.getString("verification_result") shouldBe "ProofValidated"
 
@@ -985,8 +991,12 @@ trait InteractiveSdkFlow {
             .getString("value") shouldBe "123"
           presentation
             .getJSONObject("revealed_attrs")
-            .getJSONObject("name")
+            .getJSONObject("first_name")
             .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
         }
 
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
@@ -997,6 +1007,109 @@ trait InteractiveSdkFlow {
             .getJSONObject("requested_presentation")
           presentationAgain.toString shouldBe presentation.toString
         }
+      }
+    }
+  }
+
+  def presentProof_1_0_with_proposal(verifier: ApplicationAdminExt,
+                                     holder: ApplicationAdminExt,
+                                     relationshipId: String,
+                                     proofName: String,
+                                     attributes: Seq[String])
+                                    (implicit scenario: Scenario): Unit = {
+    val verifierSdk = verifier.sdks.head
+    val holderSdk = holder.sdks.head
+
+    presentProof_1_0_with_proposal(verifierSdk, verifierSdk, holderSdk, holderSdk, relationshipId, proofName, attributes)
+  }
+
+  def presentProof_1_0_with_proposal(verifierSdk: VeritySdkProvider,
+                                     verifierMsgReceiverSdk: VeritySdkProvider,
+                                     holderSdk: VeritySdkProvider,
+                                     holderMsgReceiverSdk: VeritySdkProvider,
+                                     relationshipId: String,
+                                     proofName: String,
+                                     attributes: Seq[String])
+                                    (implicit scenario: Scenario): Unit = {
+    val holderName = holderSdk.sdkConfig.name
+    val verifierName = verifierSdk.sdkConfig.name
+    s"present proof with proposal from $holderName verifier $verifierName on relationship ($relationshipId)" - {
+      val verifierMsgReceiver = receivingSdk(Option(verifierMsgReceiverSdk))
+      val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdk))
+
+      s"[$holderName] propose a proof presentation" in {
+        val forRel = holderSdk.relationship_!(relationshipId).owningDID
+        val credDefId = verifierSdk.data_!(credDefIdKey("cred_name1", "tag"))
+
+        val firstNameAttr = PresentProofV1_0.proposedAttribute("first_name", credDefId, "Bob")
+        val lastNameAttr = PresentProofV1_0.proposedAttribute("last_name", credDefId, "Marley")
+        val numAttr = PresentProofV1_0.proposedAttribute("license_num", credDefId, "123")
+
+        holderSdk
+          .presentProof_1_0(forRel, Array(firstNameAttr, lastNameAttr, numAttr), Array.empty)
+          .propose(verifierSdk.context)
+      }
+
+      s"[$verifierName] accept the proof proposal" in {
+        val forRel = verifierSdk.relationship_!(relationshipId).owningDID
+
+        var tid = ""
+        verifierMsgReceiver.expectMsg("review-proposal") { proposal =>
+          println(s"Proposal received: ${proposal.toString(2)}")
+          tid = threadId(proposal)
+        }
+
+        verifierSdk
+          .presentProof_1_0(forRel, tid)
+          .acceptProposal(verifierSdk.context)
+      }
+
+      s"[$holderName] send a proof presentation" taggedAs UNSAFE_IgnoreLog in {
+        var tid = ""
+        holderMsgReceiver.expectMsg("ask-accept") { askAccept =>
+          tid = threadId(askAccept)
+        }
+
+        val forRel = holderSdk.relationship_!(relationshipId).owningDID
+
+        holderSdk.presentProof_1_0(forRel, tid)
+          .acceptRequest(holderSdk.context)
+      }
+      s"[$verifierName] receive presentation" in {
+        val forRel = verifierSdk.relationship_!(relationshipId).owningDID
+        var tid = ""
+
+        var presentation = new JSONObject()
+
+        verifierMsgReceiver.expectMsg("presentation-result") { result =>
+          println(s"Presentation result: ${result.toString(2)}")
+          tid = threadId(result)
+          result.getString("verification_result") shouldBe "ProofValidated"
+
+          presentation = result.getJSONObject("requested_presentation")
+
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("license_num")
+            .getString("value") shouldBe "123"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("first_name")
+            .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
+        }
+
+        //        verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
+        //        verifierMsgReceiver.expectMsg("status-report") { status =>
+        //          status.getString("status") shouldBe "Complete"
+        //          val presentationAgain = status
+        //            .getJSONObject("results")
+        //            .getJSONObject("requested_presentation")
+        //          presentationAgain.toString shouldBe presentation.toString
+        //        }
       }
     }
   }

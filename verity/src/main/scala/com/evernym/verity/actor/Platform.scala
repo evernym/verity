@@ -22,6 +22,7 @@ import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
+import com.evernym.verity.actor.wallet.WalletActor
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.actor.ActorProtocol
@@ -95,6 +96,11 @@ class Platform(val aac: AgentActorContext)
       Props(new ActivityTracker(agentActorContext.appConfig, agentActorContext.agentMsgRouter)),
       Option(ACTOR_DISPATCHER_NAME_ACTIVITY_TRACKER)
   ))
+
+  //wallet actor
+  val walletActorRegion: ActorRef = createRegion(
+    WALLET_REGION_ACTOR_NAME,
+    buildProp(Props(new WalletActor(agentActorContext.appConfig)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)))
 
   object agentPairwise extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {

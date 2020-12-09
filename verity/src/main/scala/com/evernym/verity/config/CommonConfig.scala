@@ -49,8 +49,6 @@ trait CommonConfig {
   val VAULT_PORT = s"$VAULT.port"
   val VAULT_TLS = s"$VAULT.tls"
 
-  val URL_MAPPER_API_ENABLED = s"$VERITY.url-mapper-api.enabled"
-
   val URL_MAPPER_SVC = s"$SERVICES.url-mapper-service"
   val URL_MAPPER_SVC_ENDPOINT = s"$URL_MAPPER_SVC.endpoint"
   val URL_MAPPER_SVC_ENDPOINT_HOST = s"$URL_MAPPER_SVC_ENDPOINT.host"
@@ -170,8 +168,11 @@ trait CommonConfig {
   val VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$CACHE.get-ver-key-cache-expiration-time-in-seconds"
   val ENDPOINT_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$CACHE.endpoint-cache-expiration-time-in-seconds"
 
+  val INTERNAL_API_URL_MAPPER_ENABLED = s"$VERITY.url-mapper-api.enabled"
+
   private val INTERNAL_API = s"$VERITY.internal-api"
   val INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES = s"$INTERNAL_API.allowed-from-ip-addresses"
+  val INTERNAL_API_PERSISTENT_DATA_ENABLED = s"$INTERNAL_API.persistent-data.enabled"
 
   val PERSISTENCE = s"$VERITY.persistence"
   val PERSISTENCE_USE_ASYNC_MSG_FORWARD = s"$PERSISTENCE.use-async-for-msg-forward-feature"

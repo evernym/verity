@@ -8,7 +8,7 @@ import com.evernym.verity.logging.LoggingUtil
 import com.typesafe.scalalogging.Logger
 
 /**
- * This actor can be used as sharded or non sharded persistent actor for read purposes only.
+ * This actor can be used as sharded or non sharded actor for read purposes only.
  * If used as non sharded, then based on where (actor context) this actor gets created,
  *  there can be multiple instances of same persistent actor ('actorTypeName' and 'actorEntityId')
  *  on different nodes or at different path in same actor system.
@@ -16,17 +16,14 @@ import com.typesafe.scalalogging.Logger
  * This actor can be used to read/retrieve all snapshots/events of any persistent actor
  * for read, analyze or other similar purposes (like migrating those events to a new persistent actor etc)
  *
+ * Once this actor is started, it won't read any new events added to the given persistence id
+ * by its original actor until this actor gets restarted.
+ *
  * @param appConfig application config
- * @param actorTypeName for sharded actor it would be shard region name
- * @param actorEntityId entity id of the actor
+ * @param actorParam actor param
  */
 
-//TODO: As of now, this actor is extending from 'DefaultPersistenceEncryption'
-// so it will be able to read only those actors which extends/uses 'DefaultPersistenceEncryption'
-// for other actors we'll have to tweak this actor to also take 'persistenceEncryptionKey'
-// as it's construction parameter and override it.
-
-class ReadOnlyPersistentActor(val appConfig: AppConfig, actorTypeName: String, actorEntityId: String)
+class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
   extends BasePersistentActor
     with SnapshotterExt[State]
     with DefaultPersistenceEncryption {
@@ -47,8 +44,17 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorTypeName: String, a
   var snapshot: Option[Any] = None
   var events: List[Any] = List.empty
 
-  override lazy val entityName: String = actorTypeName
-  override lazy val entityId: String = actorEntityId
+  //persistence id is calculated based on 'entityName' and 'entityId'
+  override lazy val entityName: String = actorParam.actorTypeName
+
+  //if target actor is using 'DefaultPersistenceEncryption'
+  // then this actor specifically needs to know 'entityId' which is used
+  // in calculating symmetric encryption key
+  override lazy val entityId: String = actorParam.actorEntityId
+
+  override def getEventEncryptionKeyWithoutWallet: String =
+    actorParam.persEncKeyConfPath.map(appConfig.getConfigStringReq)
+      .getOrElse(super.getEventEncryptionKeyWithoutWallet)
 
   val logger: Logger = LoggingUtil.getLoggerByClass(classOf[ReadOnlyPersistentActor])
 
@@ -66,6 +72,10 @@ case object SendPersistedData extends ActorMessageObject
 case class PersistentData(snapshotStat: Option[Any], events: List[Any]) extends ActorMessageClass
 
 object ReadOnlyPersistentActor {
-  def prop(appConfig: AppConfig, actorTypeName: String, actorEntityId: String): Props =
-    Props(new ReadOnlyPersistentActor(appConfig, actorTypeName, actorEntityId))
+  def prop(appConfig: AppConfig, actorParam: ActorParam): Props =
+    Props(new ReadOnlyPersistentActor(appConfig, actorParam))
+}
+
+case class ActorParam(actorTypeName: String, actorEntityId: String, persEncKeyConfPath: Option[String]=None) {
+  def id: String = actorTypeName + actorEntityId
 }

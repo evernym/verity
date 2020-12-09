@@ -47,12 +47,10 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
       routes = routes.updated(rs.forDID, ActorAddressDetail(rs.actorTypeId, rs.address))
   }
 
-  lazy val sortedRoutes: Map[String, ActorAddressDetail] = routes.toSeq.sortBy(_._1).toMap
-
-  def getAllRouteDIDs(totalCandidates:Int = sortedRoutes.size, actorTypeIds: List[Int] = List.empty) : Set[String] = {
-    sortedRoutes
-      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2.actorTypeId))
+  def getAllRouteDIDs(totalCandidates:Int = routes.size, actorTypeIds: List[Int] = List.empty) : Set[String] = {
+    routes
       .take(totalCandidates)
+      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2.actorTypeId))
       .keySet
   }
 

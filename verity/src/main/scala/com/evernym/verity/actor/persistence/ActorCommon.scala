@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorRef, PoisonPill, ReceiveTimeout}
 import com.evernym.verity.actor.metrics.ActorMetrics
-import com.evernym.verity.actor.{ActorMessage, ActorMessageObject, ExceptionHandler, HasActorMsgScheduler}
+import com.evernym.verity.actor.{ActorMessage, ActorMessageClass, ActorMessageObject, ExceptionHandler, HasActorMsgScheduler}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.protocol.protocols.HasAppConfig
@@ -94,10 +94,10 @@ trait ActorCommon
       sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
 
     case s: Start           =>
-      if (s.sendResp) sender ! Done
+      if (s.sendBackConfirmation) sender ! Done
 
     case s: Stop            =>
-      if (s.sendResp) sender ! Done
+      if (s.sendBackConfirmation) sender ! Done
       stopActor()
 
     case ReceiveTimeout     => handleReceiveTimeout()
@@ -136,5 +136,5 @@ abstract class SerializableObject extends Serializable with ActorMessageObject
 case object Done extends SerializableObject
 case object NotFound extends SerializableObject
 case object AlreadyDone extends SerializableObject
-case class Stop(sendResp: Boolean = false) extends ActorMessageObject
-case class Start(sendResp: Boolean = false) extends ActorMessageObject
+case class Stop(sendBackConfirmation: Boolean = false) extends ActorMessageClass
+case class Start(sendBackConfirmation: Boolean = false) extends ActorMessageClass

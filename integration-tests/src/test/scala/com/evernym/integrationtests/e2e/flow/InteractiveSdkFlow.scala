@@ -872,11 +872,8 @@ trait InteractiveSdkFlow {
 
         val forRel = proverSdk.relationship_!(relationshipId).owningDID
         val proof = proverSdk.asInstanceOf[VcxPresentProof].presentProof_1_0(forRel, tid, requestMsg)
-<<<<<<< HEAD
-//        proof.accept(proverSdk.context)
-=======
+
         proof.acceptRequest(proverSdk.context)
->>>>>>> origin/master
       }
 
       s"[$verifierName] receive presentation" in {

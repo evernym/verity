@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+
+import "sponsor_rel.proto";
+
+package com.evernym.verity.actor.agent;
+
+message RecordingAgentActivity {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
+    string domainId = 1;
+    string timestamp = 2;
+    SponsorRel sponsorRel = 3;
+    string activityType = 4;
+    string relId = 5;
+    string stateKey = 6;
+}
+

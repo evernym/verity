@@ -5,6 +5,7 @@
 //import akka.actor.{ActorRef, ActorSystem, Props}
 //import akka.testkit.{ImplicitSender, TestKit}
 //import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
+//import com.evernym.verity.testkit.BasicSpec
 //import com.evernym.verity.texter._
 //
 //import scala.concurrent.duration.{Duration, FiniteDuration}

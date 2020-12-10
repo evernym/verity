@@ -113,25 +113,26 @@ class SdkFlowSpec
       "/logo_url.ico"
     )
 
-//    val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
-//    writeSchema(
-//      sdk,
-//      ledgerUtil,
-//      schemaName,
-//      "0.1",
-//      "license_num",
-//      "name"
-//    )
-//
-//    writeCredDef(
-//      sdk,
-//      "cred_name1",
-//      "tag",
-//      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-//      schemaName,
-//      "0.1",
-//      ledgerUtil
-//    )
+    val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
+    writeSchema(
+      sdk,
+      ledgerUtil,
+      schemaName,
+      "0.1",
+      "license_num",
+      "first_name",
+      "last_name"
+    )
+
+    writeCredDef(
+      sdk,
+      "cred_name1",
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName,
+      "0.1",
+      ledgerUtil
+    )
   }
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -143,33 +144,41 @@ class SdkFlowSpec
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
        GoalCode.ISSUE_VC)
 
-//    issueCredential_1_0(
-//      apps(verity1),
-//      apps(cas1),
-//      connectionId,
-//      Map("license_num" -> "123", "name" -> "Bob"),
-//      "cred_name1",
-//      "tag"
-//    )
-//
-//    presentProof_1_0(
-//      apps(verity1),
-//      apps(cas1),
-//      connectionId,
-//      "proof-request-1",
-//      Seq("name", "license_num")
-//    )
+    issueCredential_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
+      "cred_name1",
+      "tag"
+    )
 
-//    committedAnswer(
-//      apps(verity1),
-//      apps(cas1),
-//      connectionId,
-//      "To be or to not be?",
-//      "The second classic philosophical questions",
-//      Seq("be", "not be"),
-//      "be",
-//      requireSig = true
-//    )
+    presentProof_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("first_name", "last_name", "license_num")
+    )
+
+    presentProof_1_0_with_proposal(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("first_name", "last_name", "license_num")
+    )
+
+    committedAnswer(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "To be or to not be?",
+      "The second classic philosophical questions",
+      Seq("be", "not be"),
+      "be",
+      requireSig = true
+    )
 
     basicMessage(
       apps(verity1),
@@ -188,7 +197,7 @@ class SdkFlowSpec
       apps(verity1),
       apps(cas1),
       connectionId,
-      Map("license_num" -> "123", "name" -> "Bob"),
+      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
       "cred_name1",
       "tag"
     )
@@ -198,7 +207,7 @@ class SdkFlowSpec
       apps(cas1),
       connectionId,
       "proof-request-1",
-      Seq("name", "license_num")
+      Seq("first_name", "last_name", "license_num")
     )
 
   }

@@ -4,12 +4,14 @@ import akka.actor.ActorRef
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
-import com.evernym.verity.actor.agent.msgrouter.ActorAddressDetail
+import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.actor.{ActorProtocol, SetThreadContext, ThreadContextNotStoredInProtoActor, ThreadContextStoredInProtoActor}
 import com.evernym.verity.protocol.engine.{DID, PinstId, PinstIdResolution, ProtoRef}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 
 import scala.concurrent.Future
 
@@ -20,47 +22,92 @@ import scala.concurrent.Future
 trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor =>
 
   def cleanupCmdHandler: Receive = {
+    case FixThreadMigrationState                  => fixThreadMigrationState()
     case FixActorState(did, sndrActorRef)         => fixActorState(did, sndrActorRef)
-    case CheckActorStateCleanupState              => checkActorStateCleanupState()
+    case cs: CheckActorStateCleanupState          => checkActorStateCleanupState(cs.sendCurrentStatus)
     case MigrateThreadContexts                    => migrateThreadContexts()
     case rss: RouteSetStatus                      => handleRouteSet(rss)
     case tcm: ThreadContextStoredInProtoActor     => handleThreadContextMigrated(tcm.pinstId, tcm.protoRef)
     case tcnm: ThreadContextNotStoredInProtoActor => handleThreadContextNotMigrated(tcnm.pinstId, tcnm.protoRef)
   }
 
+  /**
+   * this is because in few cases until the agent actor completely recovers, it doesn't have
+   * all members of state evaluated and calculation of pinst id fails
+   * hence, this function would be called once per actor start (immediately after all recovered events applied)
+   */
+  def fixThreadMigrationState(): Unit = {
+    //only proceed if there are any pending thread context to be migrated
+    if (getPendingThreadContextSize > 0) {
+      threadContextMigrationStatus.foreach { case (pinstId, tcms) =>
+        //only proceed if thread context exists for the given pinst id
+        getThreadContexts.get(pinstId).foreach { _ =>
+          val caldPinstId = getCalcPinstIdForBasicMsgProtoDef(pinstId)
+          val updatedStatus = tcms.copy(
+            candidateProtoActors = buildProtoRefs(pinstId, tcms.candidateProtoActors, Option(caldPinstId)),
+            successResponseFromProtoActors = buildProtoRefs(pinstId, tcms.successResponseFromProtoActors, Option(caldPinstId)),
+            nonSuccessResponseFromProtoActors = buildProtoRefs(pinstId, tcms.nonSuccessResponseFromProtoActors, Option(caldPinstId))
+          )
+          threadContextMigrationStatus += pinstId -> updatedStatus
+          if (updatedStatus.isAllRespReceived) {
+            removeThreadContext(pinstId)
+          }
+        }
+      }
+    }
+  }
+
+  def getCalcPinstIdForBasicMsgProtoDef(pinstId: PinstId): PinstId = {
+    val tcd = state.threadContext.map(_.contexts).getOrElse(Map.empty).get(pinstId)
+    PinstIdResolution.V0_2.resolve(BasicMessageDefinition, domainId, relationshipId, tcd.map(_.threadId), None, contextualId)
+  }
+
+  def buildProtoRefs(pinstId: PinstId, protoRefStrs: Seq[String]): Set[ProtoRef] = {
+    val protoRefSet = protoRefStrs.map(ProtoRef.fromString).toSet
+    buildProtoRefs(pinstId, protoRefSet)
+  }
+
+  def buildProtoRefs(pinstId: PinstId, protoRefSet: Set[ProtoRef], calcPinstIdOpt: Option[PinstId]=None): Set[ProtoRef] = {
+    if (! isSuccessfullyRecovered) {
+      protoRefSet
+    } else {
+      val calcPinstId = calcPinstIdOpt.getOrElse(getCalcPinstIdForBasicMsgProtoDef(pinstId))
+      if (pinstId == calcPinstId) protoRefSet
+      else protoRefSet - BasicMessageDefinition.msgFamily.protoRef
+    }
+  }
+
   def cleanupEventReceiver: Receive = {
-    case tcmc: ThreadContextMigrationStarted =>
-      if (tcmc.candidateProtoActors.nonEmpty) {
-        val protoRefs = tcmc.candidateProtoActors.map(ProtoRef.fromString).toSet
-        threadContextMigrationStatus += (tcmc.pinstId -> ThreadContextMigrationStatus(protoRefs, Set.empty, Set.empty))
+    case tcms: ThreadContextMigrationStarted =>
+      if (tcms.candidateProtoActors.nonEmpty) {
+        val protoRefs = buildProtoRefs(tcms.pinstId, tcms.candidateProtoActors)
+        threadContextMigrationStatus += (tcms.pinstId -> ThreadContextMigrationStatus(protoRefs, Set.empty, Set.empty))
       }
 
-    case tcmc: ThreadContextMigrationStatusUpdated =>
-      threadContextMigrationStatus.get(tcmc.pinstId).foreach { migrationStatus =>
-        val updatedStatus = migrationStatus.copy(
-          successResponseFromProtoActors = tcmc.successResponseFromProtoActors.map(ProtoRef.fromString).toSet,
-          nonSuccessResponseFromProtoActors = tcmc.nonSuccessResponseFromProtoActors.map(ProtoRef.fromString).toSet)
+    case tcmsu: ThreadContextMigrationStatusUpdated =>
+      threadContextMigrationStatus.get(tcmsu.pinstId).foreach { curStatus =>
+        val updatedStatus = curStatus.copy(
+          successResponseFromProtoActors = buildProtoRefs(tcmsu.pinstId, tcmsu.successResponseFromProtoActors),
+          nonSuccessResponseFromProtoActors = buildProtoRefs(tcmsu.pinstId, tcmsu.nonSuccessResponseFromProtoActors))
         if (updatedStatus.isAllRespReceived) {
-          removeThreadContext(tcmc.pinstId)
-          threadContextMigrationStatus -= tcmc.pinstId
-        } else {
-          threadContextMigrationStatus += (tcmc.pinstId -> updatedStatus)
+          removeThreadContext(tcmsu.pinstId)
         }
+        threadContextMigrationStatus += (tcmsu.pinstId -> updatedStatus)
       }
   }
 
   def handleRouteSet(rss: RouteSetStatus): Unit = {
+    logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received routeSetStatus: " + routeSetStatus)
     routeSetStatus = Option(rss)
-    checkActorStateCleanupState()
+    checkActorStateCleanupState(forceSendCurStatus = false)
   }
 
   def handleThreadContextMigrated(pinstId: PinstId, protoRef: ProtoRef): Unit = {
-    threadContextMigrationStatus.get(pinstId).foreach { migrationStatus =>
-      val successResp = (migrationStatus.successResponseFromProtoActors + protoRef).map(_.toString).toSeq
-      val nonSuccessResp = migrationStatus.nonSuccessResponseFromProtoActors.map(_.toString).toSeq
-      writeAndApply(ThreadContextMigrationStatusUpdated(pinstId, successResp, nonSuccessResp))
-    }
-    sendCheckActorStateCleanupState()
+    handleThreadContextMigrationStateChange(pinstId, Option(protoRef))
+  }
+
+  def handleThreadContextNotMigrated(pinstId: PinstId, protoRef: ProtoRef): Unit = {
+    handleThreadContextMigrationStateChange(pinstId, None, Option(protoRef))
   }
 
   def handleThreadContextMigrationAttemptExceeded(attempt: Int, pinstId: PinstId, protoRef: ProtoRef): Unit = {
@@ -69,25 +116,30 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
     handleThreadContextNotMigrated(pinstId, protoRef)
   }
 
-  def handleThreadContextNotMigrated(pinstId: PinstId, protoRef: ProtoRef): Unit = {
+  def handleThreadContextMigrationStateChange(pinstId: PinstId,
+                                              migratedToProtoRef: Option[ProtoRef]=None,
+                                              notMigratedToProtoRef: Option[ProtoRef]=None): Unit = {
     threadContextMigrationStatus.get(pinstId).foreach { curStatus =>
-      val successResp = curStatus.successResponseFromProtoActors.map(_.toString).toSeq
-      val nonSuccessResp = (curStatus.nonSuccessResponseFromProtoActors + protoRef).map(_.toString).toSeq
-      val event = ThreadContextMigrationStatusUpdated(pinstId, successResp, nonSuccessResp)
-      if (curStatus.candidateProtoActors.size == nonSuccessResp.size) {
-        writeAndApply(event)
-      } else {
+      if (! curStatus.isAllRespReceived) {
+        val successResp = (curStatus.successResponseFromProtoActors ++ migratedToProtoRef).map(_.toString).toSeq
+        val nonSuccessResp = (curStatus.nonSuccessResponseFromProtoActors ++ notMigratedToProtoRef).map(_.toString).toSeq
+        val totalResp = successResp ++ nonSuccessResp
+        val event = ThreadContextMigrationStatusUpdated(pinstId, successResp, nonSuccessResp)
         applyEvent(event)
+        if (curStatus.candidateProtoActors.size == totalResp.size) {
+          writeWithoutApply(event)
+        }
+        checkActorStateCleanupState(forceSendCurStatus = false)
       }
     }
-    sendCheckActorStateCleanupState()
   }
 
   def migrateThreadContexts(): Unit = {
+    logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
     if (isMigrateThreadContextsEnabled) {
-      val candidateThreadContexts =
-        state.threadContext.map(_.contexts).getOrElse(Map.empty)
-          .take(migrateThreadContextBatchSize)
+      scheduleThreadContextMigrationJobIfNotScheduled()
+      val pendingThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+      val candidateThreadContexts = pendingThreadContexts.take(migrateThreadContextBatchSize)
       if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
         finishThreadContextMigration()
       } else {
@@ -138,58 +190,57 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
   }
 
   def fixActorState(did: DID, sndrActorRef: ActorRef): Unit = {
+    logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received fixActorState, routeSetStatus: " + routeSetStatus)
     if (routeSetStatus.isEmpty) {
       actorStateCleanupExecutor = Option(sndrActorRef)
       routeSetStatus = Option(RouteSetStatus(did, isSet = false))
-      sndrActorRef ! InitialActorState(did, state.threadContext.map(_.contexts.size).getOrElse(0))
-      state.myDid.map(myDID => setRoute(myDID))
-      sendCheckActorStateCleanupState()
-      migrateThreadContexts()
-    }
-  }
-
-  def sendCheckActorStateCleanupState(): Unit = {
-    val pendingThreadContexts = state.threadContext.map(tc => tc.contexts).getOrElse(Map.empty)
-    if (pendingThreadContexts.size <= 1) {
-      val isReadyToCheckState = pendingThreadContexts.keySet.headOption.forall { pinstId =>
-        threadContextMigrationStatus.get(pinstId).exists { v =>
-          v.candidateProtoActors.size -1 == v.successResponseFromProtoActors.size + v.nonSuccessResponseFromProtoActors.size
-        }
-      }
-      if (isReadyToCheckState)
-        self ! CheckActorStateCleanupState
-    }
-  }
-
-  def checkActorStateCleanupState(): Unit = {
-    val pendingThreadContextSize = state.threadContext.map(tc => tc.contexts.size).getOrElse(0)
-    if (pendingThreadContextSize == 0) {
-      routeSetStatus.foreach { rss =>
-        state.myDid match {
-          case Some(did) if did != rss.did && !routeSetStatus.exists(_.isSet) =>
-            getRoute(did).mapTo[Option[ActorAddressDetail]].map { r =>
-              if (r.isDefined) {
-                self ! RouteSetStatus(rss.did, isSet = true)
-                postActorStateCleanup(rss.did)
-              }
-            }
-          case _ => postActorStateCleanup(rss.did)
+      sndrActorRef ! InitialActorState(did, getTotalThreadContextSize)
+      state.myDid.foreach { myDID =>
+        if (did == myDID) {
+          routeSetStatus = Option(RouteSetStatus(did, isSet = true))
+        } else {
+          setRoute(myDID).map {
+            case _: RouteSet | _: RouteAlreadySet =>
+              self ! RouteSetStatus(did, isSet = true)
+          }
         }
       }
     }
+    checkActorStateCleanupState(forceSendCurStatus = true)
+    migrateThreadContexts()
   }
 
-  def postActorStateCleanup(did: DID): Unit = {
-    actorStateCleanupExecutor.foreach { sndr =>
-      sndr ! ActorStateCleanupStatus(
-        did,
-        isRouteFixed = true,
-        isAllThreadContextMigrated = true,
-        threadContextMigrationStatus.count(_._2.successResponseFromProtoActors.size == 1),
-        threadContextMigrationStatus.count(_._2.successResponseFromProtoActors.size != 1))
-      finishThreadContextMigration()
+  def checkActorStateCleanupState(forceSendCurStatus: Boolean): Unit = {
+    val pendingThreadContextSize = getPendingThreadContextSize
+    logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] called checkActorStateCleanupState =>" +
+      " forceSendCurStatus: " + forceSendCurStatus +
+      ", pendingThreadContextSize: " + pendingThreadContextSize +
+      ", routeSetStatus: " + routeSetStatus)
+    routeSetStatus match {
+      case Some(rss) if forceSendCurStatus || pendingThreadContextSize == 0 =>
+        actorStateCleanupExecutor.foreach { sndr =>
+          sndr ! ActorStateCleanupStatus(
+            rss.did,
+            isRouteFixed = rss.isSet,
+            getPendingThreadContextSize,
+            threadContextMigrationStatus.count(_._2.isSuccessfullyMigrated),
+            threadContextMigrationStatus.count(_._2.isNotMigrated))
+        }
+        if (rss.isSet && pendingThreadContextSize == 0) {
+          finishThreadContextMigration()
+        }
+      case _ =>
+        //nothing to do
     }
   }
+
+  def getTotalThreadContextSize: Int = getMigratedThreadContextSize + getPendingThreadContextSize
+
+  def getMigratedThreadContextSize: Int = threadContextMigrationStatus.count(_._2.isAllRespReceived)
+
+  def getThreadContexts: Map[PinstId, ThreadContextDetail] = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+
+  def getPendingThreadContextSize: Int = getThreadContexts.size
 
   def finishThreadContextMigration(): Unit = {
     stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
@@ -197,7 +248,6 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
     threadContextMigrationAttempt = Map.empty
     actorStateCleanupExecutor = None
     routeSetStatus = None
-
   }
 
   type ResponseReceived = Boolean
@@ -242,29 +292,38 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
       .getOrElse(false)
 
 
-  scheduleJob(
-    MIGRATE_SCHEDULED_JOB_ID,
-    migrateThreadContextScheduledJobInitialDelay,
-    migrateThreadContextScheduledJobInterval,
-    MigrateThreadContexts)
+  scheduleThreadContextMigrationJobIfNotScheduled()
+
+  def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {
+    scheduleJob(
+      MIGRATE_SCHEDULED_JOB_ID,
+      migrateThreadContextScheduledJobInitialDelay,
+      migrateThreadContextScheduledJobInterval,
+      MigrateThreadContexts)
+  }
+
+  self ! FixThreadMigrationState
 }
 
 case object MigrateThreadContexts extends ActorMessageObject
-
-case class FixActorState(actorID: DID, senderActorRef: ActorRef) extends ActorMessageClass
-case object CheckActorStateCleanupState extends ActorMessageClass
-case class ActorStateCleanupStatus(actorID: DID,
+case object FixThreadMigrationState extends ActorMessageObject
+case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorMessageClass
+case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessageClass
+case class ActorStateCleanupStatus(actorDID: DID,
                                    isRouteFixed: Boolean,
-                                   isAllThreadContextMigrated: Boolean,
+                                   pendingCount: Int,
                                    successfullyMigratedCount: Int,
                                    nonMigratedCount: Int) extends ActorMessageClass {
-  def isStateCleanedUp: Boolean = isRouteFixed && isAllThreadContextMigrated
+  def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
 }
 
 case class ThreadContextMigrationStatus(candidateProtoActors: Set[ProtoRef],
                                         successResponseFromProtoActors: Set[ProtoRef],
                                         nonSuccessResponseFromProtoActors: Set[ProtoRef]) {
-  def isAllRespReceived: Boolean = candidateProtoActors.size == (successResponseFromProtoActors.size + nonSuccessResponseFromProtoActors.size)
+  def isAllRespReceived: Boolean = candidateProtoActors.size ==
+    (successResponseFromProtoActors.size + nonSuccessResponseFromProtoActors.size)
+  def isSuccessfullyMigrated: Boolean = successResponseFromProtoActors.nonEmpty
+  def isNotMigrated: Boolean = isAllRespReceived && successResponseFromProtoActors.isEmpty
 }
 
 case class RouteSetStatus(did: DID, isSet: Boolean) extends ActorMessageObject

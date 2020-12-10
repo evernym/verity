@@ -10,11 +10,12 @@ import com.typesafe.scalalogging.Logger
 
 trait ActorStateCleanupBase { this: BasePersistentActor =>
 
-  def deleteEventsInBatches(fromSeqNo: Long = toSeqNoDeleted): Unit = {
-    val nextBatchToSeqNo = fromSeqNo + deleteEventBatchSize
+  def deleteEventsInBatches(lastDeletedToSeqNo: Long = toSeqNoDeleted): Unit = {
+    val nextBatchToSeqNo = lastDeletedToSeqNo + deleteEventBatchSize
     val toSeqNo = if (nextBatchToSeqNo > lastSequenceNr) lastSequenceNr else nextBatchToSeqNo
     if (toSeqNo > 0) {
-      logger.debug(s"[$persistenceId] => lastSeqNo: $lastSequenceNr, from -> $fromSeqNo, to-> $toSeqNo")
+      logger.debug(s"[$persistenceId] => totalEvents: $lastSequenceNr, " +
+        s"lastDeletedToSeqNo -> $lastDeletedToSeqNo, nowDeleteToSeqNo-> $toSeqNo")
       deleteMessages(toSeqNo)
     } else {
       postAllEventDeleted()
@@ -23,6 +24,7 @@ trait ActorStateCleanupBase { this: BasePersistentActor =>
 
   override def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
     toSeqNoDeleted = dms.toSequenceNr
+    deleteEventBatchSize += deleteEventBatchSizeModifier
     if (dms.toSequenceNr == lastSequenceNr) {
       postAllEventDeleted()
     } else {
@@ -31,8 +33,10 @@ trait ActorStateCleanupBase { this: BasePersistentActor =>
   }
 
   override def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
-    logger.debug(s"could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+    logger.info(s"could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
       ("seq_num", dmf.toSequenceNr), (LOG_KEY_ERR_MSG, dmf.cause))
+    deleteEventBatchSize -= deleteEventBatchSizeModifier*2
+    if (deleteEventBatchSize <= 0) deleteEventBatchSize = deleteEventBatchSizeModifier
     deleteEventsInBatches()
   }
 
@@ -49,7 +53,8 @@ trait ActorStateCleanupBase { this: BasePersistentActor =>
   def postAllEventDeleted(): Unit
 
   var toSeqNoDeleted: Long = 0
-  val deleteEventBatchSize = 50
+  var deleteEventBatchSize = 50
+  val deleteEventBatchSizeModifier = 50
 }
 
 

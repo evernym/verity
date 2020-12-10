@@ -44,21 +44,27 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
   override val receiveEvent: Receive = {
     case rs: RouteSet =>
-      routes = routes.updated(rs.forDID, ActorAddressDetail(rs.actorTypeId, rs.address))
+      val aad = ActorAddressDetail(rs.actorTypeId, rs.address)
+      routes = routes.updated(rs.forDID, aad)
+      routesByInsertionOrder = routesByInsertionOrder :+ (rs.forDID, aad.actorTypeId)
   }
 
-  lazy val sortedRoutes: Map[String, ActorAddressDetail] = routes.toSeq.sortBy(_._1).toMap
+  var routesByInsertionOrder: List[(DID, Int)] = List.empty
 
-  def getAllRouteDIDs(totalCandidates:Int = sortedRoutes.size, actorTypeIds: List[Int] = List.empty) : Set[String] = {
-    sortedRoutes
-      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2.actorTypeId))
+  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
+                      actorTypeIds: List[Int] = List.empty): Set[String] = {
+    routesByInsertionOrder
       .take(totalCandidates)
-      .keySet
+      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
+      .map(_._1)
+      .toSet
   }
 
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
-    val candidates = getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds).slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+    val candidates =
+      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
+      .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
     val resp = GetRouteBatchResult(entityId, candidates)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
@@ -98,7 +104,8 @@ case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessa
 
 //cmds
 case class SetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessageClass
-case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds) extends ActorMessageClass
+case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
+  extends ActorMessageClass
 case class GetRouteBatch(totalCandidates: Int,
                          fromIndex: Int,
                          batchSize: Int,

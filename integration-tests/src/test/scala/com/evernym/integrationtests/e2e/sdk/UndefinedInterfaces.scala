@@ -103,9 +103,9 @@ object UndefinedInterfaces {
     override def requestMsg(context: Context): JSONObject = throw new NotImplementedError
     override def requestMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
-     def accept(context: Context): Unit = throw new NotImplementedError
-     def acceptMsg(context: Context): JSONObject = throw new NotImplementedError
-     def acceptMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+    override def acceptRequest(context: Context): Unit = throw new NotImplementedError
+    override def acceptRequestMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def acceptRequestMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
     override def status(context: Context): Unit = throw new NotImplementedError
     override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
@@ -115,19 +115,15 @@ object UndefinedInterfaces {
     override def rejectMsg(context: Context, s: String): JSONObject = throw new NotImplementedError
     override def rejectMsgPacked(context: Context, s: String): Array[Byte] = throw new NotImplementedError
 
-    override def getThreadId: String = throw new NotImplementedError
-
     override def propose(context: Context): Unit = throw new NotImplementedError
     override def proposeMsg(context: Context): JSONObject = throw new NotImplementedError
     override def proposeMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
-    override def acceptRequest(context: Context): Unit = throw new NotImplementedError
-    override def acceptRequestMsg(context: Context): JSONObject = throw new NotImplementedError
-    override def acceptRequestMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
     override def acceptProposal(context: Context): Unit = throw new NotImplementedError
     override def acceptProposalMsg(context: Context): JSONObject = throw new NotImplementedError
     override def acceptProposalMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedBasicMessage_1_0 extends BasicMessageV1_0 {

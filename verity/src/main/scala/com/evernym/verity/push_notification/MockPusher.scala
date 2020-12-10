@@ -30,13 +30,13 @@ object MockPusher extends PushServiceProvider {
 
   def push(notifParam: PushNotifParam)
           (implicit system: ActorSystem): Future[PushNotifResponse] = {
-    logger.debug(s"Mock push notification -> cm: ${notifParam.cm}, regId: ${notifParam.regId}, " +
+    logger.debug(s"Mock push notification -> cm: ${notifParam.comMethodValue}, regId: ${notifParam.regId}, " +
       s"notifData: ${notifParam.notifData}, extraData: ${notifParam.extraData}")
     val pushContent = createPushContent(notifParam)
     val pushNotifPayload = PushNotifPayload(notifParam.sendAsAlertPushNotif, notifParam.notifData, notifParam.extraData, pushContent)
     addToPushedMsgs(notifParam.regId, pushNotifPayload)
     sendMessageToEndpoint(notifParam.regId, pushNotifPayload)
-    Future(PushNotifResponse(notifParam.cm, MSG_DELIVERY_STATUS_SENT.statusCode, None, None))
+    Future(PushNotifResponse(notifParam.comMethodValue, MSG_DELIVERY_STATUS_SENT.statusCode, None, None))
   }
 
   def addToPushedMsgs(regId: String, pushNotifPayload: PushNotifPayload): Unit = {

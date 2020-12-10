@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
-import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof}
+import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof, VcxBasicMessage}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
@@ -1078,6 +1078,31 @@ trait InteractiveSdkFlow {
           .message(senderSdk.context)
       }
       s"[${receiver.name}] check message" in {
+        var tid = ""
+        var forRel = ""
+
+        receiverSdk.expectMsg("received-message") { receivedAnswer =>
+          receivedAnswer.getString("content") shouldBe "Hello, World!"
+          receivedAnswer.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
+          receivedAnswer.getJSONObject("~l10n").getString("locale") shouldBe "en"
+
+          tid = threadId(receivedAnswer)
+          forRel = senderSdk.relationship_!(relationshipId).owningDID
+        }
+      }
+    }
+    s"send message to ${receiver.name} from ${sender.name}" - {
+      val receiverSdk = receivingSdk(sender)
+      val senderSdk = receivingSdk(receiver)
+      s"[${receiver.name}] send message" in {
+        val forRel = senderSdk.relationship_!(relationshipId).owningDID
+
+        val tid = "12345"
+
+        senderSdk.asInstanceOf[VcxBasicMessage].basicMessage_1_0(forRel, tid, content, sentTime, localization)
+          .message(senderSdk.context)
+      }
+      s"[${sender.name}] check message" in {
         var tid = ""
         var forRel = ""
 

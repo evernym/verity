@@ -1193,19 +1193,15 @@ trait InteractiveSdkFlow {
           .message(senderSdk.context)
       }
       s"[${receiver.name}] check message" in {
-        var tid = ""
-        var forRel = ""
-        var test = senderSdk.publicDID.get
 
         receiverSdk.expectMsg("received-message") { receivedMessage =>
 
-          receivedMessage.getString("relationship")
           receivedMessage.getString("content") shouldBe "Hello, World!"
           receivedMessage.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
           receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
 
-          tid = threadId(receivedMessage)
-          forRel = senderSdk.relationship_!(relationshipId).owningDID
+          val forRel = receiverSdk.relationship_!(relationshipId).owningDID
+          receivedMessage.getString("relationship") shouldBe forRel
         }
       }
     }
@@ -1221,19 +1217,16 @@ trait InteractiveSdkFlow {
           .message(senderSdk.context)
       }
       s"[${sender.name}] check message" in {
-        var tid = ""
         var forRel = ""
-        var test = receiverSdk.publicDID.get
 
         receiverSdk.expectMsg("received-message") { receivedMessage =>
 
-          receivedMessage.getString("relationship")
           receivedMessage.getString("content") shouldBe "Hello, World!"
           receivedMessage.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
           receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
 
-          forRel = senderSdk.relationship_!(relationshipId).owningDID
-          tid = threadId(receivedMessage)
+          val forRel = receiverSdk.relationship_!(relationshipId).owningDID
+          receivedMessage.getString("relationship") shouldBe forRel
         }
       }
     }

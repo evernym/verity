@@ -47,7 +47,6 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
     ctx.signal(Signal.ConnectionReused(m.`~thread`, ctx.getRoster.selfId_!))
   }
 
-
   def handleReuse(m: Reuse): Unit = {
     try {
       val decoded = Base64Util.getBase64UrlDecoded(Uri(m.inviteUrl).query().getOrElse("oob", ""))

@@ -60,6 +60,7 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     ctx.apply(messageToEvt(m))
 
     val signal = Signal.ReceivedMessage(
+      ctx.getRoster.selfId_!,
       m.`~l10n`,
       m.sent_time,
       m.content,

@@ -35,7 +35,7 @@ trait VcxBasicMessage
           .put("content", content)
 
         val messageOptionsJSON = new JSONObject ()
-          .put("sg_type", "basicmessage")
+          .put("msg_type", "basicmessage")
           .put("msg_title", "Test")
 
         val connHandle = connectionHandle(forRelationship)
@@ -67,11 +67,11 @@ trait VcxBasicMessage
         new JSONObject()
           .put("thid", threadId)
       )
+      .put("relationship", metaData.did.get)
       .put("~l10n", payloadMsg.getJSONObject("~l10n"))
       .put("sent_time", payloadMsg.getString("sent_time"))
       .put("content", payloadMsg.getString("content"))
   }
-
 
 }
 

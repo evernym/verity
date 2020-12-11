@@ -38,6 +38,7 @@ val akkaVer = "2.6.8"
 val akkaHttpVer = "10.1.12"
 val akkaMgtVer = "1.0.8"
 val alpAkkaVer = "2.0.1"
+val indyWrapperVer = "1.16.0-rc-161"
 val jacksonVer = "2.11.1"
 val kamonVer = "2.1.6"
 val dispatchVer = "0.13.1"
@@ -49,6 +50,8 @@ val sdnotifyVer = "1.3" // NOTE: Do not downgrade SDNotify to 1.1!
 //test dependency versions
 val scalatestVer = "3.2.0"
 val mockitoVer = "1.14.8"
+val veritySdkVer = "0.4.4-f5a828d8"
+val vcxWrapperVer = "0.9.2.771"
 
 // compiler plugin versions
 val silencerVersion = "1.6.0"
@@ -254,7 +257,7 @@ lazy val commonLibraryDependencies = {
 
     "com.twitter" %% "chill-akka" % "0.9.5",
 
-    "org.hyperledger" % "indy" % "1.16.0-rc-161",   //debPkgDepLibIndyMinVersion,
+    "org.hyperledger" % "indy" % indyWrapperVer,   //debPkgDepLibIndyMinVersion,
 
     "org.json" % "json" % "20180813",
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",
@@ -322,11 +325,14 @@ lazy val commonLibraryDependencies = {
     "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
-    "com.evernym.verity" % "verity-sdk" % "0.4.4-f5a828d8",
-    "net.glxn" % "qrgen" % "1.4", // https://mvnrepository.com/artifact/net.glxn/qrgen
+
+    "com.evernym.verity" % "verity-sdk" % veritySdkVer
+      exclude ("org.hyperledger", "indy"),
+
+    "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "28.1-jre",
 
-    "com.evernym" % "vcx" % "0.9.2.771",
+    "com.evernym" % "vcx" % vcxWrapperVer,
 
     //post akka 2.6 upgrade, had to add below dependencies test dependency with akka http version
     //need to come back to this and see if there is better way to fix it

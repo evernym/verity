@@ -161,13 +161,13 @@ class SdkFlowSpec
       Seq("first_name", "last_name", "license_num")
     )
 
-//    presentProof_1_0_with_proposal(
-//      apps(verity1),
-//      apps(cas1),
-//      connectionId,
-//      "proof-request-1",
-//      Seq("first_name", "last_name", "license_num")
-//    )
+    presentProof_1_0_with_proposal(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("first_name", "last_name", "license_num")
+    )
 
     committedAnswer(
       apps(verity1),

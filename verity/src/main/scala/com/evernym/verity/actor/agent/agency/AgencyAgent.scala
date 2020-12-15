@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.user.AgentProvisioningDone
+import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.cache._
 import com.evernym.verity.config.CommonConfig
@@ -63,6 +63,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
         AgentProvisioningDefinition,
         apd.threadId
       )
+    case GetSponsorRel => sender() ! SponsorRel.empty
   }
 
   override val receiveActorInitSpecificCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {

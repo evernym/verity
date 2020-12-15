@@ -8,7 +8,7 @@ import akka.pattern.ask
 import akka.persistence.RecoveryCompleted
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, HasAgentActivity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
@@ -16,13 +16,13 @@ import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmente
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.libindy.{LedgerAccessApi, WalletAccessLibindy}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.msg.GivenDomainId
+import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
@@ -35,7 +35,9 @@ import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
-import com.evernym.verity.actor.agent.user.ComMethodDetail
+import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -79,6 +81,7 @@ class ActorProtocolContainer[
 
   override def domainId: DomainId = backstate.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
   override lazy val logger: Logger = getAgentIdentityLoggerByName(this, s"${definition.msgFamily.protoRef.toString}")
+  def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
 
   override def receiveRecover: Receive = {
     /**
@@ -187,6 +190,10 @@ class ActorProtocolContainer[
 
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
 
+    case s: SponsorRel =>
+      if (!s.equals(SponsorRel.empty)) submit(GivenSponsorRel(s))
+      val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> definition.msgFamily.protoRef.toString)
+      MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
   }
 
   def changeReceiverToBase(): Unit = {
@@ -208,6 +215,8 @@ class ActorProtocolContainer[
         logger.debug(s"$protocolIdForLog protocol instance initialized successfully")
       }
       changeReceiverToBase()
+      // Ask for sponsor details from domain and record metric for initialized protocol
+      agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
 
     //TODO: we are purposefully expecting ProtocolCmd, so that sending actor can provide
     // its own reference and still keep the original sender un impacted

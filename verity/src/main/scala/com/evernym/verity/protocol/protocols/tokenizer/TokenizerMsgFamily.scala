@@ -4,7 +4,7 @@ import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.ServiceDecorator
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_1, MSG_FAMILY_TOKEN_PROVISIONING}
+import com.evernym.verity.protocol.engine.Constants.MFV_0_1
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.ProvisioningToken
@@ -13,7 +13,7 @@ import com.evernym.verity.util.TimeUtil.IsoDateTime
 
 object TokenizerMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
-  override val name: MsgFamilyName = MSG_FAMILY_TOKEN_PROVISIONING
+  override val name: MsgFamilyName = "token-provisioning"
   override val version: MsgFamilyVersion = MFV_0_1
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(

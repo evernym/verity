@@ -73,11 +73,11 @@ trait MetricsFlow {
    *              to filter our required metrics
    * @return
    */
-  private def filterRequiredMetrics(metrics: List[MetricDetail], names: Set[String]=Set.empty): List[MetricDetail] = {
+  def filterRequiredMetrics(metrics: List[MetricDetail], names: Set[String]=Set.empty): List[MetricDetail] = {
     metrics.filter(md => names.exists(md.name.contains))
   }
 
-  private def dumpMetrics(metrics: List[MetricDetail], aae: ApplicationAdminExt): Unit = {
+  def dumpMetrics(metrics: List[MetricDetail], aae: ApplicationAdminExt): Unit = {
     val jsonStr = DefaultMsgCodec.toJson(metrics)
     ReportDumpUtil.dumpData("Metrics", jsonStr, "metrics.json", aae)
   }

@@ -23,13 +23,14 @@ import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTr
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
 import com.evernym.verity.actor.wallet.WalletActor
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 class Platform(val aac: AgentActorContext)
   extends MsgTracingRegionActors
@@ -100,7 +101,12 @@ class Platform(val aac: AgentActorContext)
   //wallet actor
   val walletActorRegion: ActorRef = createRegion(
     WALLET_REGION_ACTOR_NAME,
-    buildProp(Props(new WalletActor(agentActorContext.appConfig)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)))
+    buildProp(Props(new WalletActor(agentActorContext.appConfig)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)),
+    passivateIdleEntityAfter = appConfig.getConfigIntOption(CommonConfig.WALLET_ACTOR_PASSIVATE_TIME) match {
+      case Some(duration) => duration.second
+      case None => 10.minute
+    }
+  )
 
   object agentPairwise extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {

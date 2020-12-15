@@ -31,7 +31,7 @@ object TimeUtil {
 
   def dateStrToMillis(date: IsoDateTime): Long = DateTime.parse(date).withZone(DateTimeZone.UTC).getMillis
 
-  def toMonth(time: IsoDateTime): Int = TimeZoneUtil
+  def toMonth(time: IsoDateTime=nowDateString): Int = TimeZoneUtil
     .getUTCZonedDateTimeFromMillis(dateStrToMillis(time))
     .getMonthValue
 

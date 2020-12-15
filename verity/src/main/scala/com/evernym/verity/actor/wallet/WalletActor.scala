@@ -21,7 +21,6 @@ class WalletActor(appConfig: AppConfig)
   extends Actor {
 
   val logger: Logger = getLoggerByClass(classOf[WalletActor])
-  val defaultReceiveTimeoutInSeconds = 600
   def entityId: String = self.path.name
   def entityName: String = self.path.parent.name
   var walletProvider: WalletProvider = new LibIndyWalletProvider(appConfig)
@@ -29,10 +28,6 @@ class WalletActor(appConfig: AppConfig)
   val encryptionKey = generateWalletKey()
   val walletConfig = buildWalletConfig(appConfig)
   val walletName = getWalletName(entityId, appConfig)
-
-  def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
-    appConfig, defaultReceiveTimeoutInSeconds,
-    "base", entityName, entityId)
 
   def createWallet(): Unit = {
     runWithInternalSpan(s"createWallet", "WalletActor") {
@@ -78,7 +73,6 @@ class WalletActor(appConfig: AppConfig)
   @throws(classOf[Exception])
   //#lifecycle-hooks
   override def preStart(): Unit = {
-    context.setReceiveTimeout(entityReceiveTimeout)
     openWallet()
   }
 

@@ -1,8 +1,8 @@
 package com.evernym.verity.config
 
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, ActivityWindow, Behavior, CalendarMonth, VariableDuration}
-import com.evernym.verity.actor.persistence.PersistentActorConfigUtil.logger
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
@@ -154,6 +154,20 @@ object ConfigUtil {
 
     ActivityWindow(au ++ ar)
   }
+
+  def sponsorMetricTagEnabled(config: AppConfig): Boolean =
+    config.getConfigBooleanReq(PROTOCOL_TAG_USES_SPONSOR)
+
+  def sponseeMetricTagEnabled(config: AppConfig): Boolean =
+    config.getConfigBooleanReq(PROTOCOL_TAG_USES_SPONSEE)
+
+  def getSponsorRelTag(config: AppConfig, sponsorRel: SponsorRel): Map[String, String] = {
+    var a: Map[String, String] = Map()
+    if(sponsorMetricTagEnabled(config)) a = a ++ Map("sponsorId" -> sponsorRel.sponsorId)
+    if(sponseeMetricTagEnabled(config)) a = a ++ Map("sponseeId" -> sponsorRel.sponseeId)
+    a
+  }
+
 
 
   /**

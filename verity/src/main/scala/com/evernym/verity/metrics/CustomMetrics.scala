@@ -95,6 +95,10 @@ object CustomMetrics {
    */
   final val AS_USER_AGENT_ACTIVE_RELATIONSHIPS = s"$AS_USER_AGENT.active.relationships.count"
 
+  private final val AS_PROTOCOL = s"$AS_AKKA_ACTOR.protocol"
+
+  final val AS_NEW_PROTOCOL_COUNT = s"$AS_PROTOCOL.count"
+
   final val AS_AKKA_ACTOR_TYPE_PREFIX = s"$AS_AKKA_ACTOR.type"
   final val AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX = "started.count"
   final val AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX = "stopped.count"
@@ -130,6 +134,8 @@ object CustomMetrics {
       AS_USER_AGENT_MSG_UNDELIVERED_COUNT,
       AS_ACTIVE_USER_AGENT_COUNT,
       AS_USER_AGENT_ACTIVE_RELATIONSHIPS,
+      AS_NEW_PROTOCOL_COUNT,
+      AS_NEW_PROVISION_TOKEN_COUNT,
     )
     metricsToBeInitialized.foreach(MetricsWriter.gaugeApi.updateWithTags(_, value = 0))
   }

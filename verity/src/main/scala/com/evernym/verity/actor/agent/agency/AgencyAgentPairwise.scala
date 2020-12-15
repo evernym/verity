@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseImplBase, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.user.AgentProvisioningDone
+import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -54,6 +54,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
         AgentProvisioningDefinition,
         apd.threadId
       )
+    case GetSponsorRel => sender() ! SponsorRel.empty
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {

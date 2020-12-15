@@ -19,7 +19,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
 
-
   lazy val aap: agentRegion = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
 
   def sponsorKeys(seed: String="000000000000000000000000Trustee1"): NewKeyCreated =
@@ -29,19 +28,28 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
     super.beforeAll()
     setupAgency()
   }
+
   override def overrideConfig: Option[Config] = Option {
     ConfigFactory parseString {
       s"""
-      verity.metrics.activity-tracking {
-        active-user {
-          time-windows = ["15 d", "30 d", "7 d", "1 d", "9 min", "2 d", "3 d"]
-          monthly-window = true
-          enabled = true
+      verity.metrics {
+        protocol {
+          tags {
+            uses-sponsor = true
+            uses-sponsee = true
+          }
         }
-        active-relationships {
-          time-windows = ["7 d"]
-          monthly-window = true
-          enabled = true
+        activity-tracking {
+          active-user {
+            time-windows = ["15 d", "30 d", "7 d", "1 d", "9 min", "2 d", "3 d"]
+            monthly-window = true
+            enabled = true
+          }
+          active-relationships {
+            time-windows = ["7 d"]
+            monthly-window = true
+            enabled = true
+          }
         }
       }
       verity.provisioning {

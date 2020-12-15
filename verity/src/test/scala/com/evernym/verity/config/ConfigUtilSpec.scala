@@ -1,9 +1,11 @@
 package com.evernym.verity.config
 
-import com.evernym.verity.actor.metrics.{ActiveWindowRules, VariableDuration, ActiveRelationships, ActiveUsers, CalendarMonth}
+import com.evernym.verity.actor.agent.SponsorRel
+import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import com.evernym.verity.testkit.BasicSpec
+
 import scala.concurrent.duration.Duration
 
 class ConfigUtilSpec extends BasicSpec {
@@ -106,6 +108,67 @@ class ConfigUtilSpec extends BasicSpec {
           ActiveWindowRules(CalendarMonth, ActiveRelationships),
         )
         assert(windows.windows == expectedWindows)
+      }
+    }
+
+    "when dealing with sponsor rel configs" - {
+      def activityConfig(sponsorId: Boolean=false, sponseeId: Boolean=false) = {
+        ConfigFactory.parseString(
+          s"""
+            |verity {
+            |   metrics {
+            |     protocol {
+            |       tags {
+            |        uses-sponsor=$sponsorId
+            |        uses-sponsee=$sponseeId
+            |      }
+            |     }
+            |   }
+            | }
+            |""".stripMargin)
+      }
+
+      "should check sponsor flag" in {
+        // doesn't use sponsor
+        val noSponsor = new TestAppConfig(Some(activityConfig()), true)
+        assert(!ConfigUtil.sponsorMetricTagEnabled(noSponsor))
+
+        // uses sponsor
+        val hasSponsor = new TestAppConfig(Some(activityConfig(sponsorId=true)), true)
+        assert(ConfigUtil.sponsorMetricTagEnabled(hasSponsor))
+      }
+
+      "should check sponsee flag" in {
+        // doesn't use sponsor
+        val noSponsee = new TestAppConfig(Some(activityConfig()), true)
+        assert(!ConfigUtil.sponseeMetricTagEnabled(noSponsee))
+
+        // uses sponsor
+        val hasSponsee = new TestAppConfig(Some(activityConfig(sponseeId=true)), true)
+        assert(ConfigUtil.sponseeMetricTagEnabled(hasSponsee))
+      }
+
+      "should get sponsorRelTag" in {
+        val sponsorRel = SponsorRel("my-name", "her-name")
+        // doesn't use sponsor or sponsee
+        var testConfig = new TestAppConfig(Some(activityConfig()), true)
+        var tags = ConfigUtil.getSponsorRelTag(testConfig, sponsorRel)
+        assert(tags.isEmpty)
+
+        // uses sponsor but not sponsee
+        testConfig = new TestAppConfig(Some(activityConfig(sponsorId=true)), true)
+        tags = ConfigUtil.getSponsorRelTag(testConfig, sponsorRel)
+        assert(tags == Map("sponsorId" -> sponsorRel.sponsorId))
+
+        // uses sponsee but not sponsor
+        testConfig = new TestAppConfig(Some(activityConfig(sponseeId=true)), true)
+        tags = ConfigUtil.getSponsorRelTag(testConfig, sponsorRel)
+        assert(tags == Map("sponseeId" -> sponsorRel.sponseeId))
+
+        // uses both
+        testConfig = new TestAppConfig(Some(activityConfig(sponsorId=true, sponseeId=true)), true)
+        tags = ConfigUtil.getSponsorRelTag(testConfig, sponsorRel)
+        assert(tags == Map("sponsorId" -> sponsorRel.sponsorId, "sponseeId" -> sponsorRel.sponseeId))
       }
     }
   }

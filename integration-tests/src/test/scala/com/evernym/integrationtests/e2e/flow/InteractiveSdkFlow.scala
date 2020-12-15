@@ -13,6 +13,8 @@ import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentP
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
@@ -26,11 +28,12 @@ import com.evernym.verity.util.{Base64Util, OptionUtil}
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.time.{Seconds, Span}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
-trait InteractiveSdkFlow {
+trait InteractiveSdkFlow extends MetricsFlow {
   this: BasicSpec with TempDir with Eventually =>
 
   import InteractiveSdkFlow._
@@ -1174,6 +1177,30 @@ trait InteractiveSdkFlow {
     }
   }
 
+  // The 'expectedMetricCount' will change depending how many times the app scenario ran a specific protocol
+  def validateProtocolMetrics(app: ApplicationAdminExt,
+                              protoRef: String,
+                              expectedMetricCount: Double,
+                              dumpToFile: Boolean=false): Unit = {
+    s"${app.name} validating protocol metrics" - {
+      s"[$protoRef] validation" in {
+        //Get metrics for specific app
+        val allNodeMetrics = app.getAllNodeMetrics()
+        allNodeMetrics.data.headOption.nonEmpty shouldBe true
+        val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
+        if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
+        val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
+        val baseMetric = currentNodeMetrics
+          .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
+          .find(_.tags.get == tag)
+          .get
+
+        //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
+        if (baseMetric.value != expectedMetricCount)
+          fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+      }
+    }
+  }
 }
 
 object InteractiveSdkFlow {

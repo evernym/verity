@@ -44,14 +44,20 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
   override val receiveEvent: Receive = {
     case rs: RouteSet =>
-      routes = routes.updated(rs.forDID, ActorAddressDetail(rs.actorTypeId, rs.address))
+      val aad = ActorAddressDetail(rs.actorTypeId, rs.address)
+      routes = routes.updated(rs.forDID, aad)
+      routesByInsertionOrder = routesByInsertionOrder :+ (rs.forDID, aad.actorTypeId)
   }
 
-  def getAllRouteDIDs(totalCandidates:Int = routes.size, actorTypeIds: List[Int] = List.empty) : Set[String] = {
-    routes
+  var routesByInsertionOrder: List[(DID, Int)] = List.empty
+
+  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
+                      actorTypeIds: List[Int] = List.empty): Set[String] = {
+    routesByInsertionOrder
       .take(totalCandidates)
-      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2.actorTypeId))
-      .keySet
+      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
+      .map(_._1)
+      .toSet
   }
 
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
@@ -98,7 +104,8 @@ case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessa
 
 //cmds
 case class SetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessageClass
-case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds) extends ActorMessageClass
+case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
+  extends ActorMessageClass
 case class GetRouteBatch(totalCandidates: Int,
                          fromIndex: Int,
                          batchSize: Int,

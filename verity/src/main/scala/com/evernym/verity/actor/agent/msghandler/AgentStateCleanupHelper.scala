@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
 import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.config.CommonConfig
@@ -21,6 +22,7 @@ import scala.concurrent.Future
 trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor =>
 
   def cleanupCmdHandler: Receive = {
+    case FixThreadMigrationState                  => fixThreadMigrationState()
     case FixActorState(did, sndrActorRef)         => fixActorState(did, sndrActorRef)
     case cs: CheckActorStateCleanupState          => checkActorStateCleanupState(cs.sendCurrentStatus)
     case MigrateThreadContexts                    => migrateThreadContexts()
@@ -29,12 +31,50 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
     case tcnm: ThreadContextNotStoredInProtoActor => handleThreadContextNotMigrated(tcnm.pinstId, tcnm.protoRef)
   }
 
-  def buildProtoRefs(pinstId: PinstId, protoRefStrs: Seq[String]): Set[ProtoRef] = {
+  /**
+   * this is because in few cases until the agent actor completely recovers, it doesn't have
+   * all members of state evaluated and calculation of pinst id fails
+   * hence, this function would be called once per actor start (immediately after all recovered events applied)
+   */
+  def fixThreadMigrationState(): Unit = {
+    //only proceed if there are any pending thread context to be migrated
+    if (getPendingThreadContextSize > 0) {
+      threadContextMigrationStatus.foreach { case (pinstId, tcms) =>
+        //only proceed if thread context exists for the given pinst id
+        getThreadContexts.get(pinstId).foreach { _ =>
+          val caldPinstId = getCalcPinstIdForBasicMsgProtoDef(pinstId)
+          val updatedStatus = tcms.copy(
+            candidateProtoActors = buildProtoRefs(pinstId, tcms.candidateProtoActors, Option(caldPinstId)),
+            successResponseFromProtoActors = buildProtoRefs(pinstId, tcms.successResponseFromProtoActors, Option(caldPinstId)),
+            nonSuccessResponseFromProtoActors = buildProtoRefs(pinstId, tcms.nonSuccessResponseFromProtoActors, Option(caldPinstId))
+          )
+          threadContextMigrationStatus += pinstId -> updatedStatus
+          if (updatedStatus.isAllRespReceived) {
+            removeThreadContext(pinstId)
+          }
+        }
+      }
+    }
+  }
+
+  def getCalcPinstIdForBasicMsgProtoDef(pinstId: PinstId): PinstId = {
     val tcd = state.threadContext.map(_.contexts).getOrElse(Map.empty).get(pinstId)
-    val calcPinstId = PinstIdResolution.V0_2.resolve(BasicMessageDefinition, domainId, relationshipId, tcd.map(_.threadId), None, contextualId)
+    PinstIdResolution.V0_2.resolve(BasicMessageDefinition, domainId, relationshipId, tcd.map(_.threadId), None, contextualId)
+  }
+
+  def buildProtoRefs(pinstId: PinstId, protoRefStrs: Seq[String]): Set[ProtoRef] = {
     val protoRefSet = protoRefStrs.map(ProtoRef.fromString).toSet
-    if (pinstId == calcPinstId) protoRefSet
-    else protoRefSet - BasicMessageDefinition.msgFamily.protoRef
+    buildProtoRefs(pinstId, protoRefSet)
+  }
+
+  def buildProtoRefs(pinstId: PinstId, protoRefSet: Set[ProtoRef], calcPinstIdOpt: Option[PinstId]=None): Set[ProtoRef] = {
+    if (! isSuccessfullyRecovered) {
+      protoRefSet
+    } else {
+      val calcPinstId = calcPinstIdOpt.getOrElse(getCalcPinstIdForBasicMsgProtoDef(pinstId))
+      if (pinstId == calcPinstId) protoRefSet
+      else protoRefSet - BasicMessageDefinition.msgFamily.protoRef
+    }
   }
 
   def cleanupEventReceiver: Receive = {
@@ -198,7 +238,9 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
 
   def getMigratedThreadContextSize: Int = threadContextMigrationStatus.count(_._2.isAllRespReceived)
 
-  def getPendingThreadContextSize: Int = state.threadContext.map(_.contexts.size).getOrElse(0)
+  def getThreadContexts: Map[PinstId, ThreadContextDetail] = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+
+  def getPendingThreadContextSize: Int = getThreadContexts.size
 
   def finishThreadContextMigration(): Unit = {
     stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
@@ -259,10 +301,12 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
       migrateThreadContextScheduledJobInterval,
       MigrateThreadContexts)
   }
+
+  self ! FixThreadMigrationState
 }
 
 case object MigrateThreadContexts extends ActorMessageObject
-
+case object FixThreadMigrationState extends ActorMessageObject
 case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorMessageClass
 case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessageClass
 case class ActorStateCleanupStatus(actorDID: DID,

@@ -5,7 +5,6 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.engine.{DID, PinstIdPair, ProtoDef}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
@@ -49,6 +48,8 @@ trait BaseProtocolActorSpec
         threadContextDetailOpt))
   }
 
+  //checks if the message is coming from correct controller actor
+  //not a perfect way may be, so we can refactor this if we don't like or it doesn't work in all the cases
   def expectMsgTypeFrom[T](id: String)(implicit t: ClassTag[T]): T = {
     val m = expectMsgType[T]
     assert(lastSender.toString().contains(id), s"msg received from different controller")

@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrF
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefinition
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.{QuestionAnswerDefinition, QuestionAnswerMsgFamily}
+import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily
 import com.evernym.verity.util.MsgIdProvider
 
 object MsgFamilyUtil {
@@ -50,10 +51,10 @@ object MsgFamilyUtil {
   val MSG_TYPE_AGENT_CREATED = "AGENT_CREATED"
 
   val MSG_TYPE_GET_TOKEN = "get-token"
-  val MSG_TYPE_DETAIL_GET_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, MSG_TYPE_GET_TOKEN)
+  val MSG_TYPE_DETAIL_GET_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, TokenizerMsgFamily.name, TokenizerMsgFamily.version, MSG_TYPE_GET_TOKEN)
 
   val MSG_TYPE_SEND_TOKEN = "send-token"
-  val MSG_TYPE_DETAIL_SEND_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, MSG_TYPE_SEND_TOKEN)
+  val MSG_TYPE_DETAIL_SEND_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, TokenizerMsgFamily.name, TokenizerMsgFamily.version, MSG_TYPE_SEND_TOKEN)
 
 
   val MSG_TYPE_CONN_REQ = "CONN_REQUEST"

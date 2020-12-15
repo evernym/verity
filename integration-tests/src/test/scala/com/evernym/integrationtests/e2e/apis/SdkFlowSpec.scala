@@ -2,6 +2,7 @@ package com.evernym.integrationtests.e2e.apis
 
 import java.util.UUID
 
+import com.evernym.integrationtests.e2e.apis.SdkFlowSpec.metricKey
 import com.evernym.integrationtests.e2e.env.AppInstance.Verity
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
@@ -9,6 +10,12 @@ import com.evernym.integrationtests.e2e.flow._
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.protocol.engine.MsgFamily
+import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerMsgFamily
+import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
 import com.evernym.verity.testkit.BasicSpec
@@ -179,6 +186,19 @@ class SdkFlowSpec
       "be",
       requireSig = true
     )
+
+    sdkBasicInteractionsMetricCount(apps)
+  }
+
+  private def sdkBasicInteractionsMetricCount(apps: ScenarioAppEnvironment): Unit = {
+    //The 'expectedMetricCount' will change depending how many times the app scenario ran a specific protocol
+    Set(
+      (ConnectionsMsgFamily, 2),
+      (CommittedAnswerMsgFamily, 1),
+      (OutOfBandMsgFamily, 1),
+      (PresentProofMsgFamily, 2),
+      (IssueCredMsgFamily, 1)
+    ).foreach(x => validateProtocolMetrics(apps(verity1), metricKey(x._1), expectedMetricCount=x._2))
   }
 
   def sdkOobInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -227,4 +247,7 @@ object SdkFlowSpec {
 
     env.copy(sdks=specified)
   }
+
+  def metricKey(msgFamily: MsgFamily): String = s"${msgFamily.name}[${msgFamily.version}]"
+
 }

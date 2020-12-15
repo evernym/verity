@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.agency.UserAgentCreatorHelper
 import com.evernym.verity.actor.agent.{HasAgentActivity, SponsorRel}
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.metrics.ActivityConstants._
+import com.evernym.verity.metrics.MetricHelpers._
 import com.evernym.verity.metrics.TestReporter.awaitReport
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
@@ -36,7 +36,8 @@ class ActivityTrackerSpec
       "should record activity with multiple users" in {
         val sponsorRel1: SponsorRel = SponsorRel(SPONSOR_ID, SPONSEE_ID)
         val sponsorRel2: SponsorRel = SponsorRel(SPONSOR_ID2, SPONSEE_ID)
-        val activityTracker: DID = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
+        val ea = newEdgeAgent()
+        val activityTracker: DID = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce, ea)
         val user2: DID = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
         val user3: DID = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
 
@@ -269,6 +270,33 @@ class ActivityTrackerSpec
     Try(metrics(window.activityType.metricBase)).map(_.tag(window, id, relId)).getOrElse(Some(0.0)).getOrElse(0.0)
 
 
+
+  override def actorSystem: ActorSystem = system
+}
+
+case class MetricWithTags(name: String, totalValue: Double, tags: Map[TagSet, Double]) {
+  def tag(window: ActiveWindowRules, id: String, relId: Option[String]=None): Option[Double] = {
+    val baseMap = Map( "frequency" -> window.activityFrequency.toString, window.activityType.idType -> id )
+    val optRelMap = relId.map(x => Map("sponseeId" -> x)).getOrElse(Map.empty) ++ baseMap
+    tags.get(TagSet.from(optRelMap))
+  }
+}
+
+object MetricHelpers {
+  val SPONSOR_ID: String = "sponsor1.1"
+  val SPONSOR_ID2: String = "sponsor2"
+  val SPONSOR_ID3: String = "sponsor3"
+  val SPONSOR_ID4: String = "sponsor4"
+  val SPONSOR_ID5: String = "sponsor5"
+  val SPONSOR_ID6: String = "sponsor6"
+  val SPONSOR_ID7: String = "sponsor7"
+  val SPONSOR_ID8: String = "sponsor8"
+  val SPONSEE_ID: String = "sponsee"
+  val REL_ID1: String = "rel-1"
+  val REL_ID2: String = "rel-2"
+  val REL_ID3: String = "rel-3"
+  val DEFAULT_ACTIVITY_TYPE: String = "action-taken"
+
   def getMetricWithTags(names: Set[String]): Map[String, MetricWithTags] = {
     val report = awaitReport(JavaDuration.ofSeconds(5))
     assert(report != null)
@@ -285,29 +313,4 @@ class ActivityTrackerSpec
         MetricWithTags( g.name, totalMetricCount, tags)
       }).toMap
   }
-  override def actorSystem: ActorSystem = system
-}
-
-case class MetricWithTags(name: String, totalValue: Double, tags: Map[TagSet, Double]) {
-  def tag(window: ActiveWindowRules, id: String, relId: Option[String]=None): Option[Double] = {
-    val baseMap = Map( "frequency" -> window.activityFrequency.toString, window.activityType.idType -> id )
-    val optRelMap = relId.map(x => Map("sponseeId" -> x)).getOrElse(Map.empty) ++ baseMap
-    tags.get(TagSet.from(optRelMap))
-  }
-}
-
-object ActivityConstants {
-  val SPONSOR_ID: String = "sponsor1.1"
-  val SPONSOR_ID2: String = "sponsor2"
-  val SPONSOR_ID3: String = "sponsor3"
-  val SPONSOR_ID4: String = "sponsor4"
-  val SPONSOR_ID5: String = "sponsor5"
-  val SPONSOR_ID6: String = "sponsor6"
-  val SPONSOR_ID7: String = "sponsor7"
-  val SPONSOR_ID8: String = "sponsor8"
-  val SPONSEE_ID: String = "sponsee"
-  val REL_ID1: String = "rel-1"
-  val REL_ID2: String = "rel-2"
-  val REL_ID3: String = "rel-3"
-  val DEFAULT_ACTIVITY_TYPE: String = "action-taken"
 }

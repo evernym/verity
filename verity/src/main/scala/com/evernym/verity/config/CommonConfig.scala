@@ -190,6 +190,10 @@ trait CommonConfig {
   private val ACTIVITY_TRACKING = s"$METRICS.activity-tracking"
   val ACTIVE_USER_METRIC = s"$ACTIVITY_TRACKING.active-user"
   val ACTIVE_RELATIONSHIP_METRIC = s"$ACTIVITY_TRACKING.active-relationships"
+  private val PROTOCOL_METRIC = s"$METRICS.protocol"
+  val PROTOCOL_TAG = s"$PROTOCOL_METRIC.tags"
+  val PROTOCOL_TAG_USES_SPONSOR = s"$PROTOCOL_TAG.uses-sponsor"
+  val PROTOCOL_TAG_USES_SPONSEE = s"$PROTOCOL_TAG.uses-sponsee"
 
   private val METRICS_TARGET  = s"$METRICS.target"
   val METRICS_TARGET_AKKA_SYSTEM = s"$METRICS_TARGET.akka-system"

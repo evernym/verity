@@ -12,6 +12,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{DID, DomainId}
+import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
 import com.typesafe.scalalogging.Logger
 
@@ -222,7 +223,7 @@ case object ActiveRelationships extends AgentBehavior {
  * */
 trait FrequencyType
 case object CalendarMonth extends FrequencyType {
-  override def toString: String = "monthly"
+  override def toString: String = s"monthly-${TimeUtil.toMonth(TimeUtil.nowDateString)}"
 }
 case class VariableDuration(duration: Duration) extends FrequencyType {
   override def toString: String = duration.toString

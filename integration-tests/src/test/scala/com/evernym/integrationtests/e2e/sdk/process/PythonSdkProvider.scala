@@ -159,7 +159,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, content, sentTime, localization)
+          Seq(forRelationship, None, content, sentTime, localization)
         )
       }
     }

@@ -157,7 +157,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, None, content, sentTime, localization)
+          Seq(forRelationship, content, sentTime, localization)
         )
     }
   }

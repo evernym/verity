@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent
 
 import com.evernym.verity.actor.{ForIdentifier, ShardRegionCommon}
 import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity}
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.DomainId
@@ -24,8 +25,10 @@ trait HasAgentActivity extends ShardRegionCommon {
           )
     }
 
-    def newAgent(sponsorId: Option[String]=None): Unit =
-      MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_USER_AGENT_COUNT, Map("sponsorId" -> sponsorId))
+    def newAgent(sponsorRel: Option[SponsorRel]): Unit = {
+      val tags = sponsorRel.map(s => ConfigUtil.getSponsorRelTag(appConfig, s)).getOrElse(Map())
+      MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_USER_AGENT_COUNT, tags)
+    }
 
     def setWindows(domainId: DomainId, windows: ActivityWindow): Unit =
       sendToRegion(domainId, windows)

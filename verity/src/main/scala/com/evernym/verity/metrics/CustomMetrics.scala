@@ -78,11 +78,6 @@ object CustomMetrics {
   /**
    * this is the total number of active users (AU)
    */
-  final val AS_NEW_PROVISION_TOKEN_COUNT = s"$AS_USER_AGENT.new.provision.token.count"
-
-  /**
-   * this is the total number of active users (AU)
-   */
   final val AS_NEW_USER_AGENT_COUNT = s"$AS_USER_AGENT.new.users.count"
 
   /**
@@ -135,7 +130,6 @@ object CustomMetrics {
       AS_ACTIVE_USER_AGENT_COUNT,
       AS_USER_AGENT_ACTIVE_RELATIONSHIPS,
       AS_NEW_PROTOCOL_COUNT,
-      AS_NEW_PROVISION_TOKEN_COUNT,
     )
     metricsToBeInitialized.foreach(MetricsWriter.gaugeApi.updateWithTags(_, value = 0))
   }

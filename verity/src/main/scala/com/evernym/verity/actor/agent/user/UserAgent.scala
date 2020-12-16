@@ -644,7 +644,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     }
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
-    AgentActivityTracker.newAgent(sponsorRel.map(_.sponsorId))
+    AgentActivityTracker.newAgent(sponsorRel)
 
     setRouteFut map {
       case _: RouteSet  => sndr ! resp

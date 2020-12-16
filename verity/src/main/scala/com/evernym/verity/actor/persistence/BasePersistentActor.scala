@@ -16,7 +16,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
@@ -219,7 +219,7 @@ trait BasePersistentActor
     entityId.replace("$", "")
   }
 
-  def entityReceiveTimeout: Duration = PersistentActorConfigUtil.getReceiveTimeout(
+  def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
     appConfig, defaultReceiveTimeoutInSeconds,
     normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
 

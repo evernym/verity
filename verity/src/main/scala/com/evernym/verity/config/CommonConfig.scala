@@ -144,6 +144,8 @@ trait CommonConfig {
   val SALT_WALLET_ENCRYPTION = s"$SALT.wallet-encryption"
   val SALT_EVENT_ENCRYPTION = s"$SALT.event-encryption"
 
+  val WALLET_ACTOR_PASSIVATE_TIME = s"$VERITY.wallet-actor-passivate-time"
+
   private val SECRET = s"$VERITY.secret"
   val SECRET_ROUTING_AGENT = s"$SECRET.routing-agent"
   val SECRET_URL_STORE = s"$SECRET.url-mapper-actor"
@@ -241,6 +243,7 @@ trait CommonConfig {
   val ACTOR_DISPATCHER_NAME_USER_AGENT = s"$ACTOR_DISPATCHER_NAME.user-agent-dispatcher"
   val ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE = s"$ACTOR_DISPATCHER_NAME.user-agent-pairwise-dispatcher"
   val ACTOR_DISPATCHER_NAME_ACTIVITY_TRACKER = s"$ACTOR_DISPATCHER_NAME.activity-tracker-dispatcher"
+  val ACTOR_DISPATCHER_NAME_WALLET_ACTOR = s"$ACTOR_DISPATCHER_NAME.wallet-dispatcher"
 
   val APP_STATE_MANAGER = s"$VERITY.app-state-manager"
   val APP_STATE_MANAGER_STATE = s"$APP_STATE_MANAGER.state"

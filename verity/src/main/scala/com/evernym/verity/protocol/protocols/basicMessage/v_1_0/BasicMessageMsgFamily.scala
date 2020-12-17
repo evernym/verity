@@ -57,9 +57,10 @@ object Ctl {
 sealed trait SignalMsg
 
 object Signal {
-  case class ReceivedMessage(`~l10n`: l10n,
-                            sent_time: String,
-                            content: String,
+  case class ReceivedMessage(relationship: DID,
+                             `~l10n`: l10n,
+                             sent_time: String,
+                             content: String,
                              `~attach`: Option[Vector[Attachment]]
                             ) extends SignalMsg
 }

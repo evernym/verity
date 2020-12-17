@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
-import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof}
+import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof, VcxBasicMessage}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
@@ -875,6 +875,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         val forRel = proverSdk.relationship_!(relationshipId).owningDID
         val proof = proverSdk.asInstanceOf[VcxPresentProof].presentProof_1_0(forRel, tid, requestMsg)
+
         proof.acceptRequest(proverSdk.context)
       }
 
@@ -973,6 +974,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
 
         holderSdk.presentProof_1_0(forRel, tid)
+
           .acceptRequest(holderSdk.context)
       }
       s"[$verifierName] receive presentation" in {
@@ -1176,6 +1178,63 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
     }
   }
+
+  def basicMessage(sender: ApplicationAdminExt,
+                   receiver: ApplicationAdminExt,
+                   relationshipId: String,
+                   content: String,
+                   sentTime: String,
+                   localization: String)
+                     (implicit scenario: Scenario): Unit = {
+    s"send message to ${receiver.name} from ${sender.name}" - {
+      val senderSdk = receivingSdk(sender)
+      val receiverSdk = receivingSdk(receiver)
+
+      s"[${sender.name}] send message" in {
+        val forRel = senderSdk.relationship_!(relationshipId).owningDID
+        senderSdk.basicMessage_1_0(forRel, content, sentTime, localization)
+          .message(senderSdk.context)
+      }
+      s"[${receiver.name}] check message" in {
+
+        receiverSdk.expectMsg("received-message") { receivedMessage =>
+
+          receivedMessage.getString("content") shouldBe "Hello, World!"
+          receivedMessage.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
+          receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
+
+          val forRel = receiverSdk.relationship_!(relationshipId).owningDID
+          receivedMessage.getString("relationship") shouldBe forRel
+        }
+      }
+    }
+    s"send message to ${receiver.name} from ${sender.name}" - {
+      val receiverSdk = receivingSdk(sender)
+      val senderSdk = receivingSdk(receiver)
+      s"[${receiver.name}] send message" in {
+        val forRel = senderSdk.relationship_!(relationshipId).owningDID
+
+        val tid = "12345"
+
+        senderSdk.asInstanceOf[VcxBasicMessage].basicMessage_1_0(forRel, tid, content, sentTime, localization)
+          .message(senderSdk.context)
+      }
+      s"[${sender.name}] check message" in {
+        var forRel = ""
+
+        receiverSdk.expectMsg("received-message") { receivedMessage =>
+
+          receivedMessage.getString("content") shouldBe "Hello, World!"
+          receivedMessage.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
+          receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
+
+          val forRel = receiverSdk.relationship_!(relationshipId).owningDID
+          receivedMessage.getString("relationship") shouldBe forRel
+        }
+      }
+    }
+  }
+
 
   // The 'expectedMetricCount' will change depending how many times the app scenario ran a specific protocol
   def validateProtocolMetrics(app: ApplicationAdminExt,

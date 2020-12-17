@@ -187,6 +187,15 @@ class SdkFlowSpec
       requireSig = true
     )
 
+    basicMessage(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Hello, World!",
+      "2018-1-19T01:24:00-000",
+      "en"
+    )
+
     sdkBasicInteractionsMetricCount(apps)
   }
 

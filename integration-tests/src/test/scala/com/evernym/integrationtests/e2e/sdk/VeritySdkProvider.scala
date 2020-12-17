@@ -35,7 +35,7 @@ trait VeritySdkProvider {
     val error = s"Protocol - $protocolName - is not supported by the ${this.getClass.getSimpleName} provider -- $msg"
     throw new UnsupportedOperationException(error)
   }
-  implicit val shouldPrintDebug = false
+  implicit val shouldPrintDebug = true
 
   var publicDID: Option[String] = None
 

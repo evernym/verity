@@ -88,7 +88,7 @@ trait MsgFamily {
   def msgType(msgName: MsgName): MsgType = MsgType(qualifier, name, version, msgName)
   def msgType(cls: Class[_]): MsgType = msgType(lookupAllMsgName(cls))
 
-  def typedMsg[A](msg: A): TypedMsg[A] = {
+  def typedMsg[A](msg: A): TypedMsg = {
     val msgType = MsgType(qualifier, name, version, lookupInputMsgName(msg.getClass))
     TypedMsg(msg, msgType)
   }

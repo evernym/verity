@@ -1,17 +1,17 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.actor.ConnectionStatusUpdated
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{MsgName, _}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
+import com.evernym.verity.protocol.engine.{MsgName, _}
+import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
-import com.evernym.verity.protocol.protocols.connecting.common.{AddMsg, ConnReqReceived, NotifyUserViaPushNotif, Role, SendConnReqMsg, SendMsgToEdgeAgent, SendMsgToRegisteredEndpoint, SendMsgToRemoteCloudAgent, StatusReport, UpdateDeliveryStatus, UpdateMsg, UpdateMsgExpirationTime_MFV_0_6}
 import com.evernym.verity.util.Util._
 
 
@@ -111,7 +111,7 @@ object ConnectingProtoDef
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def protocolIdSuffix[A](typedMsg: TypedMsgLike[A]): Option[String] = {
+  override def protocolIdSuffix(typedMsg: TypedMsgLike): Option[String] = {
     (typedMsg.msgType.msgName, typedMsg.msg) match {
       case (MSG_TYPE_CREATE_CONNECTION, amw: AgentMsgWrapper) =>
         val ccm = CreateConnectionMsgHelper.buildReqMsgFrom_MFV_0_6(amw)

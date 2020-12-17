@@ -100,19 +100,64 @@ class ExtractEventsActorSpec
 //        }
 //        events.last shouldBe an[ExtractionComplete]
 //        events.slice(0, events.size - 1).foreach(_ shouldBe an[ExtractedEvent])
-      }
-
-    }
-
-  //overriding agent msg routing mapping to make the flow working
-  // (from actor protocol container to the 'mock controller')
-  override lazy val mockRouteStoreActorTypeToRegions = Map(
-    ACTOR_TYPE_USER_AGENT_ACTOR -> createRegion(MOCK_CONTROLLER_REGION_NAME, MockIssueCredControllerActor.props(appConfig))
-  )
-}
-
-object MockIssueCredControllerActor {
-  def props(ac: AppConfig): Props = Props(new MockIssueCredControllerActor(ac))
-}
-
-class MockIssueCredControllerActor(val appConfig: AppConfig) extends MockControllerActorBase
+//      }
+//
+//      "single event stream should return the single event" in {
+//        val CTRL_ID_1: String = CommonSpecUtil.generateNewDid().DID
+//        val CTRL_ID_2: String = CommonSpecUtil.generateNewDid().DID     //domain 2 controller
+//        val CTRL_ID_OTHER: String = CommonSpecUtil.generateNewDid().DID
+//
+//
+//        // Start first protocol
+//        sendToMockController(
+//          CTRL_ID_1,
+//          buildSetupController(
+//            CTRL_ID_1,
+//            Option(CTRL_ID_OTHER),
+//            IssueCredentialProtoDef)
+//        )
+//        expectMsg(Done)
+//
+//        sendToMockController(CTRL_ID_1, SendControlMsg(Propose(credDefId, credValue)))
+//        expectMsgTypeFrom[Sent](CTRL_ID_1)
+//
+//        // Start second protocol that will copy the first protocol
+//        sendToMockController(
+//          CTRL_ID_2,
+//          buildSetupController(
+//            CTRL_ID_2,
+//            Option(CTRL_ID_OTHER),
+//            IssueCredentialProtoDef
+//          )
+//        )
+//        expectMsg(Done)
+//        sendToMockController(CTRL_ID_1, FromProtocol(CTRL_ID_1))
+//
+////        system.actorOf(ExtractEventsActor.prop(
+////          appConfig,
+////          "issue-credential-1.0-protocol",
+////          CTRL_ID_1,
+////          testActor)
+////        )
+////        val events = receiveWhile(5 seconds, .25 seconds) {
+////          case e: ExtractedEvent => e
+////          case e: ExtractionComplete => e
+////        }
+////        events.last shouldBe an[ExtractionComplete]
+////        events.slice(0, events.size - 1).foreach(_ shouldBe an[ExtractedEvent])
+//      }
+//
+//    }
+//
+//  //overriding agent msg routing mapping to make the flow working
+//  // (from actor protocol container to the 'mock controller')
+//  override lazy val mockRouteStoreActorTypeToRegions = Map(
+//    ACTOR_TYPE_USER_AGENT_ACTOR -> createRegion(MOCK_CONTROLLER_REGION_NAME, MockIssueCredControllerActor.props(appConfig))
+//  )
+//}
+//
+//object MockIssueCredControllerActor {
+//  def props(ac: AppConfig): Props = Props(new MockIssueCredControllerActor(ac))
+//}
+//
+//class MockIssueCredControllerActor(val appConfig: AppConfig) extends MockControllerActorBase

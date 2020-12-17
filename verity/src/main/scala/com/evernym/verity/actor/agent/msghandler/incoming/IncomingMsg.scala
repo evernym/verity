@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
+import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, PackedMsg}
 import com.evernym.verity.protocol.engine.MsgFamily._
 import com.evernym.verity.protocol.engine._
@@ -66,7 +66,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
  * @param msgPackFormat
  * @param msgTypeDeclarationFormat
  */
-case class MsgForRelationship[A](msgToBeSent: TypedMsgLike[A],
+case class MsgForRelationship(msgToBeSent: TypedMsgLike,
                                  threadId: ThreadId,
                                  senderParticipantId: ParticipantId,
                                  msgPackFormat: Option[MsgPackFormat],

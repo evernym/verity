@@ -50,34 +50,34 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
     }
   }
 
-  private def buildProtocolActorCmd[A](pinstId: PinstId,
+  private def buildProtocolActorCmd(pinstId: PinstId,
                                        threadContextDetail: ThreadContextDetail,
-                                       msgEnvelope: MsgEnvelope[A]): Any = {
+                                       msgEnvelope: MsgEnvelope): Any = {
     val cmd = ProtocolCmd(msgEnvelope, ProtocolMetadata(threadContextDetail, walletSeed, self))
     ForIdentifier(pinstId, cmd)
   }
 
-  def tellProtocol[A](pinstIdPair: PinstIdPair,
+  def tellProtocol(pinstIdPair: PinstIdPair,
                       threadContextDetail: ThreadContextDetail,
-                      msgEnvelope: MsgEnvelope[A],
+                      msgEnvelope: MsgEnvelope,
                       sndr: ActorRef = sender()): Any = {
     // flow diagram: ctl + proto, step 15 -- Message given to protocol subsystem.
     val cmd = buildProtocolActorCmd(pinstIdPair.id, threadContextDetail, msgEnvelope)
     ActorProtocol(pinstIdPair.protoDef).region.tell(cmd, sndr)
   }
 
-  def askProtocols[T,A](relationshipId: Option[RelationshipId],
+  def askProtocols[T](relationshipId: Option[RelationshipId],
                         threadId: ThreadId,
-                        msgEnvelope: MsgEnvelope[A],
+                        msgEnvelope: MsgEnvelope,
                         threadContextDetail: ThreadContextDetail): Option[Future[T]] = {
     pinstIdForMsg(msgEnvelope, relationshipId, threadId).map { x =>
       askProtocolDirectly(x.id, threadContextDetail, msgEnvelope)(x.protoDef)
     }.asInstanceOf[Option[Future[T]]] //TODO this seems really brittle!
   }
 
-  def askProtocolDirectly[A](pinstId: PinstId,
+  def askProtocolDirectly(pinstId: PinstId,
                              threadContextDetail: ThreadContextDetail,
-                             msgEnvelope: MsgEnvelope[A])(protoDef: ProtoDef): Future[Any] = {
+                             msgEnvelope: MsgEnvelope)(protoDef: ProtoDef): Future[Any] = {
     val cmd = buildProtocolActorCmd(pinstId, threadContextDetail, msgEnvelope)
     ActorProtocol(protoDef).region ? cmd
   }

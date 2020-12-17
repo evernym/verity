@@ -1,20 +1,20 @@
 package com.evernym.verity.actor.protocols
 
 import akka.actor.ActorRef
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, AgentActorContext, MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, InternalMsgRouteParam, SetRoute}
+import com.evernym.verity.actor.agent.user.GetSponsorRel
+import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.user.GetSponsorRel
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
-import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PAIRWISE_DID, MY_PUBLIC_DID, NAME, OTHER_ID, SELF_ID, THEIR_PAIRWISE_DID}
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.actor.{InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.engine
-import com.evernym.verity.protocol.engine.{DID, DomainId, HasLogger, Parameter, PinstIdPair, ProtocolOutgoingMsg, TypedMsgLike}
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.MsgIdProvider
 import com.typesafe.scalalogging.Logger
 
@@ -111,7 +111,7 @@ trait MockControllerActorBase
     tellProtocol(controllerData.pinstIdPair, controllerData.threadContextDetail, msgEnvelope, self)
   }
 
-  def buildMsgEnvelope[A](typedMsg: TypedMsgLike[A]): MsgEnvelope[A] = {
+  def buildMsgEnvelope[A](typedMsg: TypedMsgLike): MsgEnvelope = {
     MsgEnvelope(typedMsg.msg, typedMsg.msgType, selfParticipantId,
       senderParticipantId, Option(MsgIdProvider.getNewMsgId), Option(controllerData.threadContextDetail.threadId))
   }

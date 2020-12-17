@@ -86,12 +86,12 @@ package object engine {
     }
   }
 
-  trait TypedMsgLike[A] {
-    def msg: A
+  trait TypedMsgLike {
+    def msg: Any
     def msgType: MsgType
   }
 
-  case class TypedMsg[A](msg: A, msgType: MsgType) extends TypedMsgLike[A]
+  case class TypedMsg(msg: Any, msgType: MsgType) extends TypedMsgLike
 
 }
 

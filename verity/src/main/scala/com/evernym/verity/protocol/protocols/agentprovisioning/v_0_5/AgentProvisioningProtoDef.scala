@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 
-import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._
@@ -52,7 +52,7 @@ object AgentProvisioningProtoDef
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def protocolIdSuffix[A](typedMsg: TypedMsgLike[A]): Option[String] = {
+  override def protocolIdSuffix(typedMsg: TypedMsgLike): Option[String] = {
     typedMsg.msgType.msgName match {
       case MSG_TYPE_CONNECT => Option(getNewActorId)
       case _                => None

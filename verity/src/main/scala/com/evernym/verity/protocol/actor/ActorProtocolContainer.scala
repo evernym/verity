@@ -1,25 +1,27 @@
 package com.evernym.verity.protocol.actor
 
-import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import akka.persistence.RecoveryCompleted
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, HasAgentActivity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, SponsorRel, ThreadContextDetail}
+import com.evernym.verity.{ActorResponse, ServiceEndpoint}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
+import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
-import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.libindy.{LedgerAccessApi, WalletAccessLibindy}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
@@ -33,15 +35,11 @@ import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
-import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.ActorResponse
-import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricsWriter
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
+import java.util.UUID
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 /**
@@ -107,7 +105,7 @@ class ActorProtocolContainer[
   }
 
   def protocolReceiveCommand: Receive = {
-    case m @ (_:MsgWithSegment | _: Control | _:MsgEnvelope[_]) =>
+    case m @ (_:MsgWithSegment | _: Control | _:MsgEnvelope) =>
       val (msgIdOpt, actualMsg, msgToBeSent) = m match {
         case c: Control =>
           // flow diagram: ctl.nothread, step 17 -- Control message without thread gets default.
@@ -597,13 +595,13 @@ case class WalletParam(walletAPI: WalletAPI, walletConfig: WalletConfig)
  * @param thId
  * @tparam A
  */
-case class MsgEnvelope[A](msg: A,
-                          msgType: MsgType,
-                          to: ParticipantId,
-                          frm: ParticipantId,
-                          msgId: Option[MsgId]=None,
-                          thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessageClass {
-  def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
+case class MsgEnvelope(msg: Any,
+                       msgType: MsgType,
+                       to: ParticipantId,
+                       frm: ParticipantId,
+                       msgId: Option[MsgId]=None,
+                       thId: Option[ThreadId]=None) extends TypedMsgLike with ActorMessageClass {
+  def typedMsg: TypedMsg = TypedMsg(msg, msgType)
 }
 
 trait ServiceDecorator{

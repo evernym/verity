@@ -1,27 +1,27 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
-import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE}
 import com.evernym.verity.Exceptions.UnauthorisedErrorException
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
+import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.msghandler.outgoing.OutgoingMsgParam
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespConfig, MsgRespContext}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
+import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgParam, ProtoParam, TrackingParam}
 import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, SendRemoteMsgHelper}
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdMsgHelper
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackedMsg, ParseParam, UnpackParam}
 import com.evernym.verity.config.AgentAuthKeyUtil
+import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE}
 import com.evernym.verity.protocol.actor.MsgEnvelope
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.vault.VerifySigByVerKeyParam
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -38,7 +38,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     case rm: RestMsgParam             => handleRestMsg(rm)
 
     //edge agent -> agency routing service -> self rel actor (user agent actor) -> this actor (pairwise agent actor)
-    case mfr: MsgForRelationship[_]   => handleMsgForRel(mfr)
+    case mfr: MsgForRelationship   => handleMsgForRel(mfr)
 
     //pinst -> actor driver -> this actor
     case mfd: SignalMsgFromDriver     => handleSignalMsgFromDriver(mfd)
@@ -207,7 +207,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     // THIS IS A STOPGAP AND SHOULD NOT BE EXPANDED
     val imp = STOP_GAP_MsgTypeMapper.changedMsgParam(aimp)
 
-    val (msgToBeSent: TypedMsg[_], threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
+    val (msgToBeSent: TypedMsg, threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
       (imp.msgType.familyName, imp.msgType.familyVersion, imp.msgType.msgName) match {
 
         //this is special case where connecting protocols (0.5 & 0.6)
@@ -261,16 +261,16 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     }
   }
 
-  protected def sendTypedMsgToProtocol[A](tmsg: TypedMsgLike[A],
-                                          relationshipId: Option[RelationshipId],
-                                          threadId: ThreadId,
-                                          senderParticipantId: ParticipantId,
-                                          msgRespConfig: Option[MsgRespConfig],
-                                          msgPackFormat: Option[MsgPackFormat],
-                                          msgTypeDeclarationFormat: Option[TypeFormat],
-                                          usesLegacyGenMsgWrapper: Boolean=false,
-                                          usesLegacyBundledMsgWrapper: Boolean=false)
-                                          (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
+  protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,
+                                       relationshipId: Option[RelationshipId],
+                                       threadId: ThreadId,
+                                       senderParticipantId: ParticipantId,
+                                       msgRespConfig: Option[MsgRespConfig],
+                                       msgPackFormat: Option[MsgPackFormat],
+                                       msgTypeDeclarationFormat: Option[TypeFormat],
+                                       usesLegacyGenMsgWrapper: Boolean=false,
+                                       usesLegacyBundledMsgWrapper: Boolean=false)
+                                       (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
     // flow diagram: ctl + proto, step 14
     val msgEnvelope = buildMsgEnvelope(tmsg, threadId, senderParticipantId)
     val pair = pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipId, threadId)
@@ -367,7 +367,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg[_], ThreadId, Option[DID], Option[MsgRespConfig]) = {
+  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
@@ -386,7 +386,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     rmc
   }
 
-  def buildMsgEnvelope[A](typedMsg: TypedMsgLike[A], threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope[A] = {
+  def buildMsgEnvelope(typedMsg: TypedMsgLike, threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope = {
     MsgEnvelope(typedMsg.msg, typedMsg.msgType, selfParticipantId,
       senderParticipantId, Option(getNewMsgId), Option(threadId))
   }
@@ -439,7 +439,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * which is sent from user/agency agent actor.
    * @param mfr message for relationship
    */
-  def handleMsgForRel(mfr: MsgForRelationship[_]): Unit = {
+  def handleMsgForRel(mfr: MsgForRelationship): Unit = {
     // flow diagram: ctl + proto, step 13
     logger.debug(s"msg for relationship received in $persistenceId: " + mfr)
     mfr.reqMsgContext.foreach { rmc: ReqMsgContext =>

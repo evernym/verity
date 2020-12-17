@@ -19,7 +19,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
-import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, SponsorRel, _}
+import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
@@ -319,10 +319,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)
   }
 
-  override def postUpdateConfig(tupdateConf: TypedMsg[UpdateConfigReqMsg], senderVerKey: Option[VerKey]): Unit = {
+  override def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
-    tupdateConf.msg.configs.filter(_.name == configName).foreach { c =>
+    tupdateConf.configs.filter(_.name == configName).foreach { c =>
       val msgs = Set(
         UpdateMsgExpirationTime_MFV_0_5(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt),
         UpdateMsgExpirationTime_MFV_0_6(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt))

@@ -35,6 +35,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
   lazy val userAgentRegionActor: ActorRef = platform.userAgentRegion
   lazy val userAgentPairwiseRegionActor: ActorRef = platform.userAgentPairwiseRegion
   lazy val activityTrackerRegionActor: ActorRef = platform.activityTrackerRegion
+  lazy val walletRegionActor: ActorRef = platform.walletActorRegion
 
   lazy val itemManagerRegionActor: ActorRef = platform.itemManagerRegion
   lazy val itemContainerRegionActor: ActorRef = platform.itemContainerRegion

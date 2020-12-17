@@ -16,6 +16,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 
 object ConfigUtil {
@@ -167,4 +168,77 @@ object ConfigUtil {
     a
   }
 
+
+
+  /**
+   * reads 'receive timeout' configuration
+   *
+   * @param appConfig
+   * @param defaultReceiveTimeoutInSeconds
+   * @param entityCategory
+   * @param entityName
+   * @param entityId
+   * @return receive timeout
+   */
+  def getReceiveTimeout(appConfig: AppConfig,
+                        defaultReceiveTimeoutInSeconds: Int,
+                        entityCategory: String,
+                        entityName: String,
+                        entityId: String): Duration = {
+
+    val confValue = getConfIntValue(appConfig, entityCategory, entityName, entityId, RECEIVE_TIMEOUT_SECONDS)
+    val timeout = confValue.getOrElse(defaultReceiveTimeoutInSeconds)
+    if (timeout > 0) timeout.seconds else Duration.Undefined
+  }
+
+
+  //TODO: there are some code duplication, need to find a better way to fix it
+
+  def getConfIntValue(appConfig: AppConfig,
+                              entityCategory: String,
+                              entityName: String,
+                              entityId: String,
+                              confName: String): Option[Int] = {
+    val entityIdReceiveTimeout: Option[Int] =
+      safeGetAppConfigIntOption(s"$entityCategory.$entityName.$entityId.$confName", appConfig)
+    val entityNameReceiveTimeout: Option[Int] =
+      safeGetAppConfigIntOption(s"$entityCategory.$entityName.$confName", appConfig)
+    val categoryReceiveTimeout: Option[Int] =
+      safeGetAppConfigIntOption(s"$entityCategory.$confName", appConfig)
+
+    entityIdReceiveTimeout orElse entityNameReceiveTimeout orElse categoryReceiveTimeout
+  }
+
+  def getConfBooleanValue(appConfig: AppConfig,
+                                  entityCategory: String,
+                                  entityName: String,
+                                  entityId: String,
+                                  confName: String): Option[Boolean] = {
+    val entityIdReceiveTimeout: Option[Boolean] =
+      safeGetAppConfigBooleanOption(s"$entityCategory.$entityName.$entityId.$confName", appConfig)
+    val entityNameReceiveTimeout: Option[Boolean] =
+      safeGetAppConfigBooleanOption(s"$entityCategory.$entityName.$confName", appConfig)
+    val categoryReceiveTimeout: Option[Boolean] =
+      safeGetAppConfigBooleanOption(s"$entityCategory.$confName", appConfig)
+
+    entityIdReceiveTimeout orElse entityNameReceiveTimeout orElse categoryReceiveTimeout
+  }
+
+  private def safeGetAppConfigIntOption(key: String, appConfig: AppConfig): Option[Int] =
+    try {
+      appConfig.getConfigIntOption(key)
+    } catch {
+      case e: ConfigException =>
+        logger.warn(s"exception during getting key: $key from config: $e")
+        None
+    }
+
+  private def safeGetAppConfigBooleanOption(key: String, appConfig: AppConfig): Option[Boolean] =
+    try {
+      appConfig.getConfigBooleanOption(key)
+    } catch {
+      case e: ConfigException =>
+        logger.warn(s"exception during getting key: $key from config: $e")
+        None
+    }
 }

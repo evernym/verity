@@ -8,7 +8,8 @@ import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-import com.evernym.verity.actor.wallet.{DeleteWallet, WalletDeleted}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, DeleteWallet, WalletDeleted}
+import com.evernym.verity.vault.NewKeyCreated
 class WalletActorSpec extends TestKitBase
   with ProvidesMockPlatform
   with BasicSpec
@@ -23,7 +24,9 @@ class WalletActorSpec extends TestKitBase
 
     "creating WalletActor" - {
       "should create and open wallet" in {
-        walletActor ! DeleteWallet
+        walletActor ! CreateNewKey
+        val keys = expectMsgType[NewKeyCreated]
+        walletActor ! CreateWallet(keys.did, keys.verKey)
         expectMsgType[WalletDeleted.type]
 
       }

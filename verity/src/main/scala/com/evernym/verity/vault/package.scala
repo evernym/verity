@@ -1,5 +1,6 @@
 package com.evernym.verity
 
+import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -96,7 +97,7 @@ package object vault {
 
 
   //response
-  case class NewKeyCreated(did: DID, verKey: VerKey)
+  case class NewKeyCreated(did: DID, verKey: VerKey)  extends ActorMessageClass
   case class TheirKeyCreated(did: DID, verKey: VerKey)
   case class ValidLedgerResponse(resp: String)
   case class LedgerResponse(resp: Any)

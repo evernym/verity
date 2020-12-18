@@ -11,7 +11,8 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.actor.resourceusagethrottling.helper.LogLevelValidator._
-import com.evernym.verity.util.{SubnetUtilsExt, ThrottledLogger}
+import com.evernym.verity.logging.ThrottledLogger
+import com.evernym.verity.util.SubnetUtilsExt
 import com.evernym.verity.util.Util._
 import com.typesafe.scalalogging.Logger
 

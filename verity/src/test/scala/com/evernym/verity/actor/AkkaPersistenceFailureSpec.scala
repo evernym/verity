@@ -7,14 +7,12 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerEr
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
 import com.evernym.verity.Status._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.walletBackup.BackupStored
 import com.evernym.verity.testkit.BasicSpec
 import com.google.protobuf.ByteString
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.Logger
 
 class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
 
@@ -75,7 +73,6 @@ class DummyActor extends BasePersistentActor {
 
   lazy val appConfig: AppConfig = new TestAppConfig
   var didData: Map[String, String] = Map.empty
-  val logger: Logger = getLoggerByClass(getClass)
 
   override def persistenceEncryptionKey: String = "test-key"
 

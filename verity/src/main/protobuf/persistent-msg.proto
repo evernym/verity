@@ -12,24 +12,8 @@ message PersistentMsg {
     bytes data = 2;
 };
 
-//This message is the legacy persistent message used to store only 'events'
-//This message is used by legacy transformer (legacyEventTransformer)
-message PersistentEventMsg {
-    int32 transformationId = 1;
-    int32 typeCode = 2;
-    bytes data = 3;
-};
-
-//This message is the legacy persistent message used to store only 'snapshots'
-//This message is used by legacy transformer (legacyStateTransformer)
-message PersistentStateMsg {
-    int32 transformationId = 1;
-    int32 typeCode = 2;
-    bytes data = 3;
-};
-
 //This message is a wrapper message to store multiple 'events' (used in protocol actors)
-//The 'events' member is used by legacy transformer (legacyEventTransformer)
+//The 'events' member is used by LATEST/NEW transformer (persistenceTransformerV1)
 message PersistentMultiEventMsg {
-    repeated PersistentEventMsg events = 1;
+    repeated PersistentMsg events = 1;
 };

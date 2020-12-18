@@ -1,7 +1,10 @@
 package com.evernym.verity.actor.agent
 
 import com.evernym.verity.actor.State
+import com.evernym.verity.actor.agent.state.base.AgentStateInterface
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotterExt}
+import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 
 /**
  * a base agent snapshotter trait to be added/included in different agent actor
@@ -11,7 +14,8 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotterExt
  *
  * @tparam T
  */
-trait AgentSnapshotter[T <: State] extends SnapshotterExt[T] { this: BasePersistentActor =>
+trait AgentSnapshotter[T <: State with AgentStateInterface]
+  extends SnapshotterExt[T] { this: BasePersistentActor =>
 
   var state: T
 
@@ -23,4 +27,22 @@ trait AgentSnapshotter[T <: State] extends SnapshotterExt[T] { this: BasePersist
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
     case as => state = as.asInstanceOf[T]
   }
+
+  /**
+   * state to be snapshotted
+   *
+   * @return
+   */
+  override def snapshotState: Option[T] = {
+    //as the thread context migration related information is not part of the agent state,
+    // snapshot should be only taken when all thread contexts are migrated
+    if (state.currentThreadContexts.isEmpty && isThreadContextMigrationFinished) {
+      Option(state)
+    } else {
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT)
+      None
+    }
+  }
+
+  def isThreadContextMigrationFinished: Boolean
 }

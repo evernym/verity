@@ -2,7 +2,7 @@ package com.evernym.verity.actor.testkit
 
 import java.util.UUID
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, PoisonPill}
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.Exceptions.HandledErrorException
@@ -21,6 +21,7 @@ import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEd
 import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingSvcListener
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import org.scalatest.concurrent.Eventually
 
 trait AgentSpecHelper
@@ -133,4 +134,11 @@ trait AgentSpecHelper
     expectMsgType[EndpointSet]
   }
 
+  protected def restartActor(ar: agentRegion): Unit = {
+    ar ! PoisonPill
+    expectNoMessage()
+    Thread.sleep(1000)
+    ar ! GetActorDetail
+    expectMsgType[ActorDetail]
+  }
 }

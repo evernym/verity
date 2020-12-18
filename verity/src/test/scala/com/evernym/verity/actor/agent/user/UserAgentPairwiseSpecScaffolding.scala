@@ -115,8 +115,8 @@ trait UserAgentPairwiseSpecScaffolding
     val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
 
     ua ! SetupAgentEndpoint(userDID, agentPairwiseKey.did)
-
     expectMsg(Done)
+
     mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
   }
 

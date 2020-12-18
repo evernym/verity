@@ -48,11 +48,12 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       routeStoreStatus = Option(RouteStoreStatus(su.agentRouteStoreEntityId, su.totalRoutes, su.processedRoutes))
 
     case ass: ActorStateStored =>
-      agentActorCleanupState += (ass.actorId -> CleanupStatus(ass.threadContexts, ass.threadContexts, 0, 0))
+      agentActorCleanupState += (ass.actorId -> CleanupStatus(isRouteSet=false, ass.threadContexts, ass.threadContexts, 0, 0))
 
     case asc: ActorStateCleaned =>
       agentActorCleanupState.get(asc.actorId).foreach { aacs =>
         agentActorCleanupState += (asc.actorId -> aacs.copy(
+          isRouteSet = true,
           pendingCount = 0,
           successfullyMigratedCount = asc.successfullyMigratedCount,
           nonMigratedCount = asc.nonMigratedCount))
@@ -74,7 +75,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       val event = ActorStateStored(ias.actorId, ias.threadContexts)
       applyEvent(event)
       writeWithoutApply(event)
-      if (ias.threadContexts == 0)
+      if (ias.threadContexts == 0 && ias.isRouteSet)
         onActorStateCleanup(ias.actorId, 0, 0)
     }
   }
@@ -168,18 +169,17 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     //then it is no longer needed and should cleanup its persistence
     logger.debug(s"ASC [$persistenceId] [ASCM->ASCE] state cleanup completed for executor '$entityId', " +
       s"and this actor will be destroyed")
-    deleteEventsInBatches()
+    deleteMessagesExtended(lastSequenceNr)
   }
 
   def sendProcessPending(): Unit = self ! ProcessPending
 
-  def postAllEventDeleted(): Unit = {
+  override def postAllMsgsDeleted(): Unit = {
     singletonParentProxyActor ! ForActorStateCleanupManager(Destroyed(entityId))
     agentActorCleanupState = Map.empty
     routeStoreStatus = None
     recordedBatchSize = BatchSize(-1, -1)
     batchStatus = BatchStatus.empty
-    toSeqNoDeleted = 0
     stopActor()
   }
 
@@ -215,7 +215,8 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
             routeStoreStatusReq.totalCandidates, routeStoreStatusReq.totalCandidates))
         } else {
           logger.warn(s"ASC [$persistenceId] (totalCandidates: ${routeStoreStatusReq.totalCandidates}, " +
-            s"totalProcessed: ${routeStoreStatusReq.totalProcessed}) suspicious, but received 0")
+            s"totalProcessed: ${routeStoreStatusReq.totalProcessed}) suspicious, " +
+            s"expected candidates but received 0")
         }
       }
     }
@@ -223,8 +224,9 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 
   def handleActorStateCleanupStatus(ascs: ActorStateCleanupStatus): Unit = {
     agentActorCleanupState.get(ascs.actorDID).foreach { acs =>
-      if (routeStoreStatus.isDefined && ascs.isRouteFixed && acs.totalThreadContexts > 0 && ! acs.actorStateCleaned) {
+      if (routeStoreStatus.isDefined && ascs.isRouteFixed && ! acs.actorStateCleaned) {
         val updatedStatus = acs.copy(
+          isRouteSet = ascs.isRouteFixed,
           pendingCount = ascs.pendingCount,
           successfullyMigratedCount = ascs.successfullyMigratedCount,
           nonMigratedCount = ascs.nonMigratedCount
@@ -241,7 +243,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   }
 
   def onActorStateCleanup(actorDID: DID, successfullyMigrated: Int, nonMigrated: Int): Unit = {
-    agentMsgRouter.execute(InternalMsgRouteParam(actorDID, Stop()))   //stop agent actor
+    //agentMsgRouter.execute(InternalMsgRouteParam(actorDID, Stop()))   //stop agent actor
     handleActorStateCleaned(ActorStateCleaned(actorDID, successfullyMigrated, nonMigrated))
   }
 
@@ -290,12 +292,13 @@ case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
   def isAllCompleted: Boolean = totalCandidates == totalProcessed
 }
 
-case class CleanupStatus(totalThreadContexts: Int,
+case class CleanupStatus(isRouteSet: Boolean,
+                         totalThreadContexts: Int,
                          pendingCount: Int,
                          successfullyMigratedCount: Int,
                          nonMigratedCount: Int) {
   def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
-  def actorStateCleaned: Boolean = totalThreadContexts == totalProcessed
+  def actorStateCleaned: Boolean = isRouteSet && (totalThreadContexts == totalProcessed)
 }
 
 //incoming message
@@ -323,6 +326,6 @@ case class ExecutorStatus(routeStoreStatus: Option[RouteStoreStatus],
 
 case class Destroyed(entityId: EntityId) extends ActorMessageClass
 
-case class InitialActorState(actorId: DID, threadContexts: Int) extends ActorMessageClass
+case class InitialActorState(actorId: DID, isRouteSet: Boolean, threadContexts: Int) extends ActorMessageClass
 
 case class BatchSize(last: Int, current: Int)

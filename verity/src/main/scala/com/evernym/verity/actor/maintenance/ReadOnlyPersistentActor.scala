@@ -4,8 +4,8 @@ import akka.actor.Props
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, State}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.logging.LoggingUtil
-import com.typesafe.scalalogging.Logger
+
+import scala.concurrent.duration._
 
 /**
  * This actor can be used as sharded or non sharded actor for read purposes only.
@@ -29,20 +29,18 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
     with DefaultPersistenceEncryption {
 
   override def receiveCmd: Receive = {
-    case SendPersistedData => sender ! PersistentData(snapshot, events)
-    case cmd => logger.warn("read only persistent actor does not support command: " + cmd)
+    case SendPersistedData => sender ! PersistentDataWrapper(data)
   }
 
   override def receiveEvent: Receive = {
-    case evt => events = events :+ evt
+    case evt => data = data :+ PersistentData(lastSequenceNr, evt)
   }
 
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
-    case state => snapshot = Option(state)
+    case state => data = data :+ PersistentData(lastSequenceNr, state)
   }
 
-  var snapshot: Option[Any] = None
-  var events: List[Any] = List.empty
+  var data: List[PersistentData] = List.empty
 
   //persistence id is calculated based on 'entityName' and 'entityId'
   override lazy val entityName: String = actorParam.actorTypeName
@@ -51,31 +49,42 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
   // then this actor specifically needs to know 'entityId' which is used
   // in calculating symmetric encryption key
   override lazy val entityId: String = actorParam.actorEntityId
+  override def recoverFromSnapshot: Boolean = actorParam.recoverFromSnapshot
 
   override def getEventEncryptionKeyWithoutWallet: String =
     actorParam.persEncKeyConfPath.map(appConfig.getConfigStringReq)
       .getOrElse(super.getEventEncryptionKeyWithoutWallet)
 
-  val logger: Logger = LoggingUtil.getLoggerByClass(classOf[ReadOnlyPersistentActor])
-
   //We don't want this read only actor to write/persist any state/event
   // hence override these functions to throw exception if at all accidentally used by this actor
-  override def writeAndApply(evt: Any): Unit = ???
-  override def writeWithoutApply(evt: Any): Unit = ???
-  override def asyncWriteAndApply(evt: Any): Unit = ???
-  override def asyncWriteWithoutApply(evt: Any): Unit = ???
-  override def snapshotState: Option[State] = ???
+  override def writeAndApply(evt: Any): Unit =
+    throw new UnsupportedOperationException("read only actor doesn't support persistence")
+  override def writeWithoutApply(evt: Any): Unit =
+    throw new UnsupportedOperationException("read only actor doesn't support persistence")
+  override def asyncWriteAndApply(evt: Any): Unit =
+    throw new UnsupportedOperationException("read only actor doesn't support persistence")
+  override def asyncWriteWithoutApply(evt: Any): Unit =
+    throw new UnsupportedOperationException("read only actor doesn't support persistence")
+  override def snapshotState: Option[State] = None
+
+  context.setReceiveTimeout(5.minutes)
 }
 
 case object SendPersistedData extends ActorMessageObject
 
-case class PersistentData(snapshotStat: Option[Any], events: List[Any]) extends ActorMessageClass
+case class PersistentData(lastSeqNo: Long, event: Any) {
+  override def toString: String = s"$lastSeqNo: $event"
+}
+case class PersistentDataWrapper(data: List[PersistentData]) extends ActorMessageClass
 
 object ReadOnlyPersistentActor {
   def prop(appConfig: AppConfig, actorParam: ActorParam): Props =
     Props(new ReadOnlyPersistentActor(appConfig, actorParam))
 }
 
-case class ActorParam(actorTypeName: String, actorEntityId: String, persEncKeyConfPath: Option[String]=None) {
+case class ActorParam(actorTypeName: String,
+                      actorEntityId: String,
+                      recoverFromSnapshot: Boolean = true,
+                      persEncKeyConfPath: Option[String]=None) {
   def id: String = actorTypeName + actorEntityId
 }

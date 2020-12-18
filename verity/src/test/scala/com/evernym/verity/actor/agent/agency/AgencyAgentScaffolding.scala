@@ -1,10 +1,8 @@
 package com.evernym.verity.actor.agent.agency
 
-import akka.actor.PoisonPill
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
@@ -104,16 +102,8 @@ trait AgencyAgentScaffolding
   protected def restartSpecs(): Unit = {
     "when tried to restart actor" - {
       "should be successful and respond" taggedAs UNSAFE_IgnoreAkkaEvents in {
-        restartActor()
+        restartActor(aa)
       }
     }
-  }
-
-  def restartActor(): Unit = {
-    aa ! PoisonPill
-    expectNoMessage()
-    Thread.sleep(1000)
-    aa ! GetActorDetail
-    expectMsgType[ActorDetail]
   }
 }

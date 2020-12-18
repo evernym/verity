@@ -342,14 +342,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
-
-  /**
-   * state to be snapshotted
-   *
-   * @return
-   */
-  override def snapshotState: Option[AgencyAgentState] =
-    if (state.threadContext.forall(_.contexts.isEmpty)) Option(state) else None
 }
 
 //response
@@ -412,8 +404,7 @@ trait AgencyAgentStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

@@ -46,8 +46,11 @@ trait AgentCommon
   type StateType <: AgentStateInterface
   def state: StateType
 
+  var isThreadContextMigrationFinished: Boolean = false
+
   override def postSuccessfulActorRecovery(): Unit = {
     Option(state).foreach { s =>
+      isThreadContextMigrationFinished = state.currentThreadContextSize == 0
       try {
         val stateSize = s.serializedSize
         if (stateSize >= 0) { // so only states that can calculate size are part the metric
@@ -67,7 +70,7 @@ trait AgentCommon
     }
   }
 
-  lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
+  override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
 
   def agentActorContext: AgentActorContext
   def agentWalletSeed: Option[String] = state.agentWalletSeed

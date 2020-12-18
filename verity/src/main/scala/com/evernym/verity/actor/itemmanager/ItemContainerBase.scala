@@ -16,10 +16,8 @@ import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.{HasLogger, VerKey}
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.TimeZoneUtil._
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -28,13 +26,10 @@ import scala.util.{Failure, Success}
 trait ItemContainerBase
   extends BasePersistentActor
     with ItemCommandHandlerBase
-    with DefaultPersistenceEncryption
-    with HasLogger {
+    with DefaultPersistenceEncryption {
 
   import context._
   implicit def appConfig: AppConfig
-
-  val logger: Logger = getLoggerByClass(classOf[ItemContainerBase])
 
   override def receiveCmdHandler: Receive = {
     val conditionalReceiveCmd = if (itemContainerConfig.isEmpty) receiveCmdBeforeItemConfigSet

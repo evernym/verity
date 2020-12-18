@@ -8,13 +8,11 @@ import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessageClass, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{DID, DomainId}
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
 
@@ -29,42 +27,41 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
   type StateKey = String
   type StateType = State
   var state = new State
-  val logger: Logger = getLoggerByClass(classOf[ActivityTracker])
+
  /**
   * actor persistent state object
   */
- class State(_activity: Map[StateKey, AgentActivity]=Map.empty,
+  class State(_activity: Map[StateKey, AgentActivity]=Map.empty,
              _activityWindow: ActivityWindow=ActivityWindow(Set()),
              _sponsorRel: Option[SponsorRel]=None,
              _attemptedSponsorRetrieval: Boolean=false) {
 
-   def copy(activity: Map[StateKey, AgentActivity]=_activity,
+    def copy(activity: Map[StateKey, AgentActivity]=_activity,
             activityWindow: ActivityWindow=_activityWindow,
             sponsorRel: Option[SponsorRel]=None,
             attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
      new State(activity, activityWindow, sponsorRel, attemptedSponsorRetrieval)
 
-   def sponsorRel: Option[SponsorRel] = _sponsorRel
-   def withSponsorRel(sponsorRel: SponsorRel): State =
-     copy(sponsorRel=Some(sponsorRel))
-   /**
-    * A sponsor can be undefined. If activity occurs and there is no sponsor
-    */
-   def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
-   def withAttemptedSponsorRetrieval(): State =
-     copy(attemptedSponsorRetrieval=true)
+    def sponsorRel: Option[SponsorRel] = _sponsorRel
+    def withSponsorRel(sponsorRel: SponsorRel): State =
+      copy(sponsorRel=Some(sponsorRel))
+    /**
+     * A sponsor can be undefined. If activity occurs and there is no sponsor
+     */
+    def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
+    def withAttemptedSponsorRetrieval(): State =
+      copy(attemptedSponsorRetrieval=true)
 
-   def activityWindows: ActivityWindow = _activityWindow
-   def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
+     def activityWindows: ActivityWindow = _activityWindow
+     def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
 
-   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
-   def withAgentActivity(key: StateKey, activity: AgentActivity): State =
-     copy(activity=_activity + (key -> activity))
+    def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
+    def withAgentActivity(key: StateKey, activity: AgentActivity): State =
+      copy(activity=_activity + (key -> activity))
 
-   def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
-     s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
-
- }
+    def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
+      s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
+  }
 
   override def beforeStart(): Unit = {
     super.beforeStart()

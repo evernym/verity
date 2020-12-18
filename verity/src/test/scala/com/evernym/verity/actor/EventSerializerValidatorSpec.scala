@@ -20,7 +20,7 @@ class EventSerializerValidatorSpec extends BasicSpec {
 
     "when given an event with configured serializer as 'protoser'" - {
       "should be validated successfully" in {
-        val events = List(PersistentEventMsg(), PersistentStateMsg(), PersistentMultiEventMsg())
+        val events = List(DeprecatedEventMsg(), DeprecatedStateMsg(), PersistentMultiEventMsg())
         events.foreach { event =>
           PersistenceSerializerValidator.validate(event, testConfig)
         }

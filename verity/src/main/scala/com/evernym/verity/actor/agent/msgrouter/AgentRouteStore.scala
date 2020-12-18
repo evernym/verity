@@ -9,9 +9,8 @@ import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, Registered, RouteSet}
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.{DID, HasLogger}
-import com.typesafe.scalalogging.Logger
+import com.evernym.verity.protocol.engine.DID
+
 
 /**
  * stores agent routing details (it DOESN'T do any message routing itself)
@@ -23,8 +22,7 @@ import com.typesafe.scalalogging.Logger
  * @param appConfig application config
  */
 class AgentRouteStore(implicit val appConfig: AppConfig)
-  extends BasePersistentActor
-    with HasLogger {
+  extends BasePersistentActor {
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case sr: SetRoute if routes.contains(sr.forDID) => sender ! RouteAlreadySet(sr.forDID)
@@ -89,7 +87,6 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
   var routes: Map[String, ActorAddressDetail] = Map.empty
 
-  val logger: Logger = getLoggerByClass(getClass)
   val routingAgentRegion: ActorRef = ClusterSharding(context.system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
   override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 }

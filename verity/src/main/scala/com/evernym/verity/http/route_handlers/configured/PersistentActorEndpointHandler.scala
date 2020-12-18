@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, handleExceptions, logRequestResult, pathPrefix, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.maintenance.{ActorParam, PersistentData, SendPersistedData}
+import com.evernym.verity.actor.maintenance.{ActorParam, PersistentDataWrapper, SendPersistedData}
 import com.evernym.verity.actor.node_singleton.PersistentActorQueryParam
 import com.evernym.verity.actor.persistence.Stop
 import com.evernym.verity.constants.Constants._
@@ -15,15 +15,16 @@ import com.evernym.verity.http.route_handlers.PlatformServiceProvider
 
 import scala.concurrent.Future
 
-trait PersistentDataEndpointHandler
+trait PersistentActorEndpointHandler
   extends HttpRouteBase
     with PlatformServiceProvider {
 
-  def getPersistentActorEvents(reload: String,
-                               actorTypeName: String,
+  def getPersistentActorEvents(actorTypeName: String,
                                actorEntityId: String,
+                               reload: String,
+                               recoverFromSnapshot: String,
                                persEncKeyConfPath: Option[String]): Future[Any] = {
-    val actorParam = ActorParam(actorTypeName, actorEntityId, persEncKeyConfPath)
+    val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKeyConfPath)
     if (reload == YES) {
       platform.nodeSingleton ! PersistentActorQueryParam(actorParam, Stop())
     }
@@ -41,16 +42,16 @@ trait PersistentDataEndpointHandler
                 pathPrefix(Segment / Segment) { (actorTypeName, actorEntityId) =>
                   path("data") {
                     (get & pathEnd) {
-                      parameters('asHtml ? "N", 'reload ? "N", 'persEncKeyConfPath.?) { (inHtml, reload, persEncKeyConfPath) =>
+                      parameters('asHtml ? "N", 'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
+                        (inHtml, reload, recoverFromSnapshot, persEncKeyConfPath) =>
                         complete {
-                          getPersistentActorEvents(reload, actorTypeName, actorEntityId, persEncKeyConfPath)
+                          getPersistentActorEvents(actorTypeName, actorEntityId, reload, recoverFromSnapshot, persEncKeyConfPath)
                             .map[ToResponseMarshallable] {
-                              case pe: PersistentData =>
-                                val allRecords = pe.snapshotStat ++ pe.events
+                              case pdw: PersistentDataWrapper =>
                                 if (inHtml == YES) {
-                                  val resp = allRecords.map(_.toString).mkString("<br><br>")
+                                  val resp = pdw.data.map(_.toString).mkString("<br><br>")
                                   HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
-                                } else handleExpectedResponse(allRecords.map(_.toString))
+                                } else handleExpectedResponse(pdw.data.map(_.toString))
                               case e => handleUnexpectedResponse(e)
                             }
                         }
@@ -59,7 +60,6 @@ trait PersistentDataEndpointHandler
                   }
                 }
               }
-
             }
           }
         }

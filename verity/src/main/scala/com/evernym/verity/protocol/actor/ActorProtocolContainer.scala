@@ -8,7 +8,7 @@ import akka.pattern.ask
 import akka.persistence.RecoveryCompleted
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, HasAgentActivity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, SponsorRel, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}

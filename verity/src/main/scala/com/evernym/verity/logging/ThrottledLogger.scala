@@ -1,5 +1,6 @@
-package com.evernym.verity.util
+package com.evernym.verity.logging
 
+import com.evernym.verity.util.{LogUtil, Util}
 import com.typesafe.scalalogging.Logger
 import org.slf4j.event.Level
 
@@ -44,7 +45,7 @@ abstract class ThrottledLoggerBase[ID](val min_period: FiniteDuration,
           cache.put(id, Metadata(meta.lastLogged, meta.unloggedCount + 1))
         } else {
           if (meta.unloggedCount > 0) {
-            rawLog(level, id, s"${message} and got ${meta.unloggedCount} more similar message(s) in last $period")
+            rawLog(level, id, s"$message and got ${meta.unloggedCount} more similar message(s) in last $period")
           } else {
             rawLog(level, id, message)
           }

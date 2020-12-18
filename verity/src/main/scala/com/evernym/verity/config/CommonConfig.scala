@@ -61,10 +61,6 @@ trait CommonConfig {
   val URL_SHORTENER_SVC = s"$SERVICES.url-shortener-service"
   val URL_SHORTENER_SVC_SELECTED = s"$URL_SHORTENER_SVC.selected"
 
-  val SNAPSHOT_AFTER_N_EVENTS = "snapshot.after-n-events"
-  val KEEP_N_SNAPSHOTS = "snapshot.keep-n-snapshots"
-  val DELETE_EVENTS_ON_SNAPSHOTS = "snapshot.delete-events-on-snapshots"
-
   private val YOURLS = s"$URL_SHORTENER_SVC.yourls"
   val YOURLS_API_URL = s"$YOURLS.api-url"
   val YOURLS_API_SIGNATURE = s"$YOURLS.signature"
@@ -178,6 +174,7 @@ trait CommonConfig {
 
   val PERSISTENCE = s"$VERITY.persistence"
   val PERSISTENCE_USE_ASYNC_MSG_FORWARD = s"$PERSISTENCE.use-async-for-msg-forward-feature"
+  val PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES = s"$PERSISTENCE.snapshot.max-item-size-in-bytes"
 
   private val KAMON = "kamon"
   val KAMON_ENV = s"$KAMON.environment"
@@ -283,7 +280,12 @@ trait CommonConfig {
   val USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS = s"$USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB.initial-delay-in-seconds"
   val USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS = s"$USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB.interval-in-seconds"
 
-  val USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB = s"$VERITY.agent.periodic-cleanup-scheduled-job"
+  val VERITY_AGENT = s"$VERITY.agent"
+
+  val AGENT_STATE_MESSAGES_CLEANUP = s"$VERITY_AGENT.state.messages.cleanup"
+  val AGENT_STATE_MESSAGES_CLEANUP_ENABLED = s"$AGENT_STATE_MESSAGES_CLEANUP.enabled"
+
+  val USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB = s"$VERITY_AGENT.periodic-cleanup-scheduled-job"
   val USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS = s"$USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB.initial-delay-in-seconds"
   val USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS = s"$USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB.interval-in-seconds"
 
@@ -291,23 +293,28 @@ trait CommonConfig {
 
   val PROVISIONING_SPONSORS = s"$PROVISIONING.sponsors"
 
-  val AGENT_AUTHENTICATION = s"$VERITY.agent.authentication"
+  val AGENT_AUTHENTICATION = s"$VERITY_AGENT.authentication"
   val AGENT_AUTHENTICATION_ENABLED = s"$AGENT_AUTHENTICATION.enabled"
   val AGENT_AUTHENTICATION_KEYS = s"$AGENT_AUTHENTICATION.keys"
 
-  val AGENT_MAX_TIME_TO_RETAIN_SEEN_MSG = s"$VERITY.agent.msg-store.max-time-to-retain-seen-msgs-in-minutes"
-
   val RECEIVE_TIMEOUT_SECONDS = "receive-timeout-seconds"
+  val RECOVER_FROM_SNAPSHOT = "recover-from-snapshots"
+  val SNAPSHOT_AFTER_N_EVENTS = "snapshot.after-n-events"
+  val KEEP_N_SNAPSHOTS = "snapshot.keep-n-snapshots"
+  val DELETE_EVENTS_ON_SNAPSHOTS = "snapshot.delete-events-on-snapshots"
+
   val PERSISTENT_ACTOR = s"$VERITY.persistent-actor"
   val PERSISTENT_ACTOR_BASE = s"$PERSISTENT_ACTOR.base"
   val PERSISTENT_SINGLETON_CHILDREN = s"$PERSISTENT_ACTOR.singleton-children"
   val PERSISTENT_PROTOCOL_CONTAINER = s"$PERSISTENT_ACTOR.protocol-container"
+
   val PERSISTENT_ACTOR_BASE_RECEIVE_TIMEOUT_SECONDS = s"$PERSISTENT_ACTOR_BASE.$RECEIVE_TIMEOUT_SECONDS"
   val PERSISTENT_SINGLETON_CHILDREN_RECEIVE_TIMEOUT_SECONDS = s"$PERSISTENT_SINGLETON_CHILDREN.$RECEIVE_TIMEOUT_SECONDS"
   val PERSISTENT_PROTOCOL_CONTAINER_RECEIVE_TIMEOUT_SECONDS = s"$PERSISTENT_PROTOCOL_CONTAINER.$RECEIVE_TIMEOUT_SECONDS"
+
   val PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS = s"$PERSISTENT_ACTOR.warn-recovery-time-milliseconds"
 
-  val AGENT_ACTOR_STATE_CLEANUP = s"$VERITY.agent.actor-state-cleanup"
+  val AGENT_ACTOR_STATE_CLEANUP = s"$VERITY_AGENT.actor-state-cleanup"
   val AGENT_ACTOR_STATE_CLEANUP_ENABLED = s"$AGENT_ACTOR_STATE_CLEANUP.enabled"
 
   val AAS_CLEANUP_MANAGER = s"$AGENT_ACTOR_STATE_CLEANUP.manager"
@@ -336,7 +343,7 @@ trait CommonConfig {
   val AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS =
     s"$AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB.interval-in-seconds"
 
-  val MIGRATE_THREAD_CONTEXTS = s"$VERITY.agent.migrate-thread-contexts"
+  val MIGRATE_THREAD_CONTEXTS = s"$VERITY_AGENT.migrate-thread-contexts"
   val MIGRATE_THREAD_CONTEXTS_ENABLED = s"$MIGRATE_THREAD_CONTEXTS.enabled"
   val MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF = s"$MIGRATE_THREAD_CONTEXTS.max-attempt-per-pinst-proto-ref"
   val MIGRATE_THREAD_CONTEXTS_BATCH_SIZE = s"$MIGRATE_THREAD_CONTEXTS.batch-size"

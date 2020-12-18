@@ -3,6 +3,7 @@ package com.evernym.verity.actor.persistence.object_code_mapper
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, AgencyAgentState}
+import com.evernym.verity.actor.agent.user.{UserAgentPairwiseState, UserAgentState}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
 import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
 import com.evernym.verity.protocol.protocols.committedAnswer.{v_1_0 => committedAnswer_v10}
@@ -272,7 +273,10 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     222 -> presentProof_v10.PresentationProposed,
     223 -> presentProof_v10.ProposeReceived,
-    224 -> SponsorRel
+    224 -> SponsorRel,
+
+    225 -> UserAgentState,
+    226 -> UserAgentPairwiseState
   )
 
 }

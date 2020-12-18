@@ -1,6 +1,6 @@
 package com.evernym.verity.transformations.transformers.legacy
 
-import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, DefaultStateCodeMapper, ObjectCodeMapperBase}
+import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.transformations.transformers.<=>
 import scalapb.GeneratedMessage
 
@@ -21,7 +21,3 @@ class LegacyProtoBufTransformer(objectCodeMapper: ObjectCodeMapperBase)
   }
 
 }
-
-object LegacyEventProtoBufTransformer extends LegacyProtoBufTransformer(DefaultObjectCodeMapper)
-
-object LegacyStateProtoBufTransformer extends LegacyProtoBufTransformer(DefaultStateCodeMapper)

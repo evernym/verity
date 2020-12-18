@@ -27,7 +27,7 @@ trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase with Use
     }
 
     s"when sent CREATE_KEY msg ($name)" - {
-      "should respond with KEY_CREATED msg" taggedAs (UNSAFE_IgnoreLog)  in {
+      "should respond with KEY_CREATED msg" taggedAs UNSAFE_IgnoreLog  in {
         val msg = edgeAgent.v_0_6_req.prepareConnectCreateKey(
           edgeAgent.myDIDDetail.did, edgeAgent.myDIDDetail.verKey, edgeAgent.agencyAgentDetailReq.DID
         )

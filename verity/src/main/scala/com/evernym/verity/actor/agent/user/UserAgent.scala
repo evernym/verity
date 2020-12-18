@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
-import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
+import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -56,7 +56,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
-    with MsgNotifierForUserAgent {
+    with MsgNotifierForUserAgent
+    with AgentSnapshotter[UserAgentState] {
 
   type StateType = UserAgentState
   var state = new UserAgentState
@@ -820,8 +821,7 @@ trait UserAgentStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

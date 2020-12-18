@@ -2,12 +2,15 @@ package com.evernym.verity.actor.persistence
 
 import akka.persistence._
 import com.evernym.verity
-import com.evernym.verity.actor.{PersistentMsg, State, PersistentStateMsg}
+import com.evernym.verity.actor.{DeprecatedStateMsg, PersistentMsg, State}
+import com.evernym.verity.config.CommonConfig.PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
-import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT, AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT}
+import com.evernym.verity.logging.ThrottledLogger
+import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.transformations.transformers.<=>
-import com.evernym.verity.util.Util.logger
+
+import scala.concurrent.duration._
 
 
 /**
@@ -51,16 +54,11 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    * configuration object to decide persistence behaviour (like shall it use snapshots etc)
    * @return
    */
-  lazy val persistenceConfig: PersistenceConfig = {
-    if (snapshotAfterNEvents.exists(_ > 0) && keepNSnapshots.exists(_ < 1)) {
-      throw new RuntimeException("keepNSnapshots should be greater than 0 (if snapshotAfterNEvents is greater than 0)")
-    }
-    PersistenceConfig (
-      allowOnlyEvents = false,
-      allowOnlySnapshots = false,
+  lazy val snapshotConfig: SnapshotConfig = {
+    SnapshotConfig (
       snapshotEveryNEvents = snapshotAfterNEvents orElse None,            //by default snapshot is NOT enabled
       keepNSnapshots = keepNSnapshots orElse Option(1),                   //if snapshot enabled, by default it will keep 1 snapshot
-      deleteEventsOnSnapshot = deleteEventsOnSnapshots.getOrElse(false)   //if snapshot enabled, by default it will delete events on snapshot
+      deleteEventsOnSnapshot = deleteEventsOnSnapshots.getOrElse(false)   //if snapshot enabled, by default it won't delete events on snapshot
     )
   }
 
@@ -69,34 +67,45 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    * can be overridden by implementing class if any change is required
    * @return
    */
-  def snapshotCallbackCommandHandler: Receive = {
+  def snapshotCallbackHandler: Receive = {
 
     case SaveSnapshotSuccess(metadata) =>
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT)
+      isSnapshotExists = true
       logger.debug("snapshot saved successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("metadata", metadata))
-      ActorMetrics.incrementGauge(AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT)
-      (persistenceConfig.keepNSnapshots, persistenceConfig.snapshotEveryNEvents).zipped.foreach {
-        (keepNSnapshot, snapshotEveryNEvents) => {
-          val maxSequenceNr = metadata.sequenceNr - (keepNSnapshot * snapshotEveryNEvents)
-          if (maxSequenceNr > 0)
-            deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr))
-        }
+      snapshotConfig.getDeleteSnapshotCriteria(metadata.sequenceNr).foreach { ssc =>
+        MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_ATTEMPT_COUNT)
+        deleteSnapshots(ssc)
       }
-      if (persistenceConfig.deleteEventsOnSnapshot)
+      if (snapshotConfig.deleteEventsOnSnapshot) {
         deleteMessages(metadata.sequenceNr)
+      }
 
     case SaveSnapshotFailure(metadata, reason) =>
-      logger.error("could not save snapshot", (LOG_KEY_PERSISTENCE_ID, persistenceId),
-        ("metadata", metadata), (LOG_KEY_ERR_MSG, reason))
       MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT)
+      logger.warn("could not save snapshot", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+        ("metadata", metadata), (LOG_KEY_ERR_MSG, reason))
 
     case dss: DeleteSnapshotsSuccess =>
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
       logger.debug("old snapshots deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dss.criteria))
 
     case dsf: DeleteSnapshotsFailure =>
-      logger.warn("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
+      logger.info("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dsf.criteria), (LOG_KEY_ERR_MSG, dsf.cause))
+
+    case dss: DeleteSnapshotSuccess =>
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
+      logger.debug("old snapshot deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+        ("sequenceNr", dss.metadata.sequenceNr))
+
+    case dsf: DeleteSnapshotFailure =>
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
+      logger.info("could not delete old snapshot", (LOG_KEY_PERSISTENCE_ID, persistenceId),
+        ("sequenceNr", dsf.metadata.sequenceNr), (LOG_KEY_ERR_MSG, dsf.cause))
   }
 
   /**
@@ -111,12 +120,13 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    */
   def defaultSnapshotOfferReceiver: Receive = {
     case so: SnapshotOffer =>
+      isSnapshotExists = true
       val state = so.snapshot match {
-        case psm: PersistentStateMsg =>     //legacy persisted state
-          lookupTransformer(psm.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_STATE)).undo(psm)
+        case dsm: DeprecatedStateMsg =>     //legacy persisted state
+          lookupTransformer(dsm.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_STATE)).undo(dsm)
         case pm: PersistentMsg =>           //for newly persisted state
           lookupTransformer(pm.transformationId).undo(pm)
-        case x => throw new RuntimeException("snapshot type not supported: " + x.getClass)
+        case x => throw new RuntimeException("snapshot state type not supported: " + x.getClass)
       }
       receiveSnapshot(state)
   }
@@ -126,35 +136,44 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    * to determine if a snapshot needs to be persisted or not
    *
    */
-  override def saveSnapshotIfNeeded(): Unit = {
-    persistenceConfig.snapshotEveryNEvents match {
-      case Some(v) if v > 0 && (lastSequenceNr % v) == 0  => saveSnapshotStateIfAvailable()
-      case _                                              => None
+  override def snapshotPostStateChangeIfNeeded(): Unit = {
+    snapshotConfig.snapshotEveryNEvents match {
+      case Some(n) if n > 0 && lastSequenceNr % n == 0 => saveSnapshotStateIfAvailable()
+      case _                                           => None
     }
   }
 
   /**
-   * reason for overriding is that we wanted to make sure that
-   * snapshots gets encrypted before it goes to the persistence layer.
+   * gets called post actor recovery completed (during actor start/restart)
+   * and snapshot will be only saved if there is no snapshot saved/offered so far
+   * and number of events already greater than equal to 'snapshotEveryNEvents'
+   */
+  override def snapshotPostActorRecovery(): Unit = {
+    snapshotConfig.snapshotEveryNEvents match {
+      case Some(n) if n > 0 && lastSequenceNr >= n && ! isSnapshotExists => saveSnapshotStateIfAvailable()
+      case _                                                             => None
+    }
+  }
+
+  /**
+   * reason for overriding this method is that we wanted to make sure that
+   * snapshots gets encrypted before it goes to the persistence layer
+   * and so exposed other corresponding methods to be called to save snapshot
    *
    * @param snapshot state to be snapshotted
    */
   final override def saveSnapshot(snapshot: Any): Unit = {
-    transformAndSaveSnapshot(snapshot)
+    throw new RuntimeException("purposefully overridden to force calling 'saveSnapshotStateIfAvailable' instead")
   }
 
   /**
-   * this can be called manually/explicitly by implementing class
+   * apart from getting called implicitly based on snapshot configuration
+   * this method can be called manually/explicitly by implementing class
    * in case of no auto snapshot configuration
    */
   final def saveSnapshotStateIfAvailable(): Unit = {
+    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_ATTEMPT_COUNT)
     snapshotState.foreach { state =>
-      // This is a good generic place the track a metric on snapshot size but it will not be helpful until snapshot is
-      // enabled. I have moved to agent common so we can gather metrics before we enable snapshotting
-//      state match {
-//        case s: GeneratedMessage =>
-//          MetricsWriter.histogramApi.record(AS_ACTOR_AGENT_STATE_SIZE, s.serializedSize)
-//      }
       transformAndSaveSnapshot(state)
     }
   }
@@ -165,25 +184,46 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
   lazy val stateTransformer: Any <=> PersistentMsg = persistenceTransformerV1
 
   /**
-   * serialize, encrypt and then save the given snapshot
+   * transform (serialize, encrypt) and then save the given state as a snapshot
    *
    * @param state state to be snapshotted
    */
-  def transformAndSaveSnapshot(state: Any): Unit = {
+  private def transformAndSaveSnapshot(state: Any): Unit = {
     state match {
       case s: State =>
         val ts = stateTransformer.execute(s)
-        PersistenceSerializerValidator.validate(ts, appConfig)
-        super.saveSnapshot(ts)
-      case other    => throw new RuntimeException(s"'${other.getClass.getName}' is not a 'State'")
+        if (ts.serializedSize <= maxItemSize) {
+          PersistenceSerializerValidator.validate(ts, appConfig)
+          super.saveSnapshot(ts)
+        } else {
+          MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_MAX_SIZE_EXCEEDED_CURRENT_COUNT)
+          throttledLogger.info(SnapshotSizeExceeded(persistenceId),
+            s"[$persistenceId] snapshot not saved because state size '${s.serializedSize}' " +
+            s"exceeded max allowed size '$maxItemSize'")
+          s.summary().foreach { stateSummary =>
+            throttledLogger.info(SnapshotSizeExceededSummary(persistenceId),
+              s"[$persistenceId] state summary: $stateSummary")
+          }
+        }
+      case other    => throw new RuntimeException(s"'${other.getClass.getName}' is not a supported 'State'")
     }
   }
+
+  lazy val maxItemSize: Int =
+    appConfig.getConfigIntOption(PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES)
+      .getOrElse(190000)
 
   final override def receiveRecover: Receive = defaultSnapshotOfferReceiver orElse handleEvent
 
   final override def receiveCommand: Receive =
     handleCommand(cmdHandler) orElse
-      snapshotCallbackCommandHandler orElse
+      snapshotCallbackHandler orElse
       receiveCmdBase
 
+  var isSnapshotExists: Boolean = false
+  private val throttledLogger = new ThrottledLogger[SnapshotterLogMessages](logger, min_period = 30.minutes)
 }
+
+sealed trait SnapshotterLogMessages
+case class SnapshotSizeExceeded(persistenceId: String) extends SnapshotterLogMessages
+case class SnapshotSizeExceededSummary(persistenceId: String) extends SnapshotterLogMessages

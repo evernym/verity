@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+
+package com.evernym.verity.actor;
+
+message MockState {
+    option (scalapb.message).extends = "com.evernym.verity.actor.State";
+    string data = 1;
+}

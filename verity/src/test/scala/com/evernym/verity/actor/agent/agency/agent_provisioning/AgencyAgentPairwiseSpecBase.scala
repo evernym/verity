@@ -1,11 +1,9 @@
 package com.evernym.verity.actor.agent.agency.agent_provisioning
 
-import akka.actor.PoisonPill
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
-import com.evernym.verity.actor.{ForIdentifier, agentRegion}
+import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
@@ -41,13 +39,5 @@ trait AgencyAgentPairwiseSpecBase
     val addressDetail = expectMsgType[Option[ActorAddressDetail]]
     addressDetail.isDefined shouldBe true
     agencyAgentPairwiseEntityId = addressDetail.get.address
-  }
-
-  protected def restartActor(aap: agentRegion): Unit = {
-    aap ! PoisonPill
-    expectNoMessage()
-    Thread.sleep(1000)
-    aap ! GetActorDetail
-    expectMsgType[ActorDetail]
   }
 }

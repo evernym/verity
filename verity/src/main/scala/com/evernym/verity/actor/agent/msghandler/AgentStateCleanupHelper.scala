@@ -19,7 +19,8 @@ import scala.concurrent.Future
 /**
  * contains code related to thread context migration and making sure proper routes are setup
  */
-trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor =>
+trait AgentStateCleanupHelper {
+  this: AgentMsgHandler with AgentPersistentActor =>
 
   def cleanupCmdHandler: Receive = {
     case FixThreadMigrationState                  => fixThreadMigrationState()
@@ -58,7 +59,7 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
   }
 
   def getCalcPinstIdForBasicMsgProtoDef(pinstId: PinstId): PinstId = {
-    val tcd = state.threadContext.map(_.contexts).getOrElse(Map.empty).get(pinstId)
+    val tcd = state.currentThreadContexts.get(pinstId)
     PinstIdResolution.V0_2.resolve(BasicMessageDefinition, domainId, relationshipId, tcd.map(_.threadId), None, contextualId)
   }
 
@@ -69,6 +70,7 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
 
   def buildProtoRefs(pinstId: PinstId, protoRefSet: Set[ProtoRef], calcPinstIdOpt: Option[PinstId]=None): Set[ProtoRef] = {
     if (! isSuccessfullyRecovered) {
+      //meaning this code is executing while actor is recovering existing events
       protoRefSet
     } else {
       val calcPinstId = calcPinstIdOpt.getOrElse(getCalcPinstIdForBasicMsgProtoDef(pinstId))
@@ -99,7 +101,7 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
   def handleRouteSet(rss: RouteSetStatus): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received routeSetStatus: " + routeSetStatus)
     routeSetStatus = Option(rss)
-    checkActorStateCleanupState(forceSendCurStatus = false)
+    checkActorStateCleanupState(forceSendCurStatus = true)
   }
 
   def handleThreadContextMigrated(pinstId: PinstId, protoRef: ProtoRef): Unit = {
@@ -125,21 +127,20 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
         val nonSuccessResp = (curStatus.nonSuccessResponseFromProtoActors ++ notMigratedToProtoRef).map(_.toString).toSeq
         val totalResp = successResp ++ nonSuccessResp
         val event = ThreadContextMigrationStatusUpdated(pinstId, successResp, nonSuccessResp)
-        applyEvent(event)
-        if (curStatus.candidateProtoActors.size == totalResp.size) {
-          writeWithoutApply(event)
-        }
+        cleanupEventReceiver(event)
         checkActorStateCleanupState(forceSendCurStatus = false)
+        if (curStatus.candidateProtoActors.size == totalResp.size) {
+          writeAndApply(event)
+        }
       }
     }
   }
 
   def migrateThreadContexts(): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
-    if (isMigrateThreadContextsEnabled) {
+    if (isMigrateThreadContextsEnabled && routeSetStatus.isDefined) {
       scheduleThreadContextMigrationJobIfNotScheduled()
-      val pendingThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-      val candidateThreadContexts = pendingThreadContexts.take(migrateThreadContextBatchSize)
+      val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
       if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
         finishThreadContextMigration()
       } else {
@@ -172,7 +173,7 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
             val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
             logger.debug(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
             val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
-            applyEvent(event)
+            cleanupEventReceiver(event)
             writeWithoutApply(event)
           }
 
@@ -193,8 +194,8 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
     logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received fixActorState, routeSetStatus: " + routeSetStatus)
     if (routeSetStatus.isEmpty) {
       actorStateCleanupExecutor = Option(sndrActorRef)
-      routeSetStatus = Option(RouteSetStatus(did, isSet = false))
-      sndrActorRef ! InitialActorState(did, getTotalThreadContextSize)
+      routeSetStatus = Option(RouteSetStatus(did, isSet = state.myDid.isEmpty))
+      sndrActorRef ! InitialActorState(did, state.myDid.isEmpty, getTotalThreadContextSize)
       state.myDid.foreach { myDID =>
         if (did == myDID) {
           routeSetStatus = Option(RouteSetStatus(did, isSet = true))
@@ -222,12 +223,12 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
           sndr ! ActorStateCleanupStatus(
             rss.did,
             isRouteFixed = rss.isSet,
-            getPendingThreadContextSize,
+            pendingThreadContextSize,
             threadContextMigrationStatus.count(_._2.isSuccessfullyMigrated),
             threadContextMigrationStatus.count(_._2.isNotMigrated))
-        }
-        if (rss.isSet && pendingThreadContextSize == 0) {
-          finishThreadContextMigration()
+          if (rss.isSet && pendingThreadContextSize == 0) {
+            finishThreadContextMigration()
+          }
         }
       case _ =>
         //nothing to do
@@ -238,7 +239,7 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
 
   def getMigratedThreadContextSize: Int = threadContextMigrationStatus.count(_._2.isAllRespReceived)
 
-  def getThreadContexts: Map[PinstId, ThreadContextDetail] = state.threadContext.map(_.contexts).getOrElse(Map.empty)
+  def getThreadContexts: Map[PinstId, ThreadContextDetail] = state.currentThreadContexts
 
   def getPendingThreadContextSize: Int = getThreadContexts.size
 
@@ -248,6 +249,8 @@ trait AgentStateCleanupHelper { this: AgentMsgHandler with AgentPersistentActor 
     threadContextMigrationAttempt = Map.empty
     actorStateCleanupExecutor = None
     routeSetStatus = None
+    isThreadContextMigrationFinished = true
+    snapshotPostStateChangeIfNeeded()
   }
 
   type ResponseReceived = Boolean

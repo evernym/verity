@@ -76,11 +76,12 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       val candidates = registered.filter(_._2 > 0).keySet
       if (candidates.nonEmpty) {
         resetStatus = ResetStatus(isInProgress = true, candidates.map(_ -> false).toMap)
-        sendDestroyExecutor()
       } else {
         completeResetProcess()
       }
-    } else if (resetStatus.isAllExecutorDestroyed) {
+    }
+    sendDestroyExecutor()
+    if (resetStatus.isAllExecutorDestroyed) {
       completeResetProcess()
     }
     sender ! Done
@@ -105,17 +106,16 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   }
 
   def completeResetProcess(): Unit = {
-    deleteEventsInBatches()
+    deleteMessagesExtended(lastSequenceNr)
   }
 
-  def postAllEventDeleted(): Unit = {
+  override def postAllMsgsDeleted(): Unit = {
     resetStatus = ResetStatus.empty
     registered = Map.empty
     completed = Map.empty
     inProgress = Map.empty
     cleanupStatus = Map.empty
     lastRequestedBucketId = -1
-    toSeqNoDeleted = 0
     stopActor()
   }
 

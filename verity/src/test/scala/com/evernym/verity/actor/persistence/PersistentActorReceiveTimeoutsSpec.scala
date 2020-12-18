@@ -18,7 +18,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-
 class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
   import TestActor._
 
@@ -245,7 +244,6 @@ import TestActor._
 
 
 class TestBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
-  val logger: Logger = getLoggerByClass(classOf[TestBaseActor])
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
@@ -264,7 +262,6 @@ class TestBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
 }
 
 class TestSingletonChildActor(val appConfig: AppConfig) extends SingletonChildrenPersistentActor {
-  val logger: Logger = getLoggerByClass(classOf[TestSingletonChildActor])
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>

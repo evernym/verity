@@ -21,7 +21,6 @@ import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.util.Util._
-import com.evernym.verity.vault._
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
@@ -46,8 +45,11 @@ trait AgentCommon
   type StateType <: AgentStateInterface
   def state: StateType
 
+  var isThreadContextMigrationFinished: Boolean = false
+
   override def postSuccessfulActorRecovery(): Unit = {
     Option(state).foreach { s =>
+      isThreadContextMigrationFinished = state.currentThreadContextSize == 0
       try {
         val stateSize = s.serializedSize
         if (stateSize >= 0) { // so only states that can calculate size are part the metric
@@ -67,7 +69,7 @@ trait AgentCommon
     }
   }
 
-  lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
+  override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
 
   def agentActorContext: AgentActorContext
   def agentWalletSeed: Option[String] = state.agentWalletSeed
@@ -104,7 +106,6 @@ trait AgentCommon
   def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
     try {
       updateAgentWalletSeed(actorEntityId)
-      openWalletIfExists(wap)
       logger.debug(s"wallet successfully initialized and opened for actorEntityId: $actorEntityId")
     } catch {
       case e: Exception =>
@@ -118,20 +119,6 @@ trait AgentCommon
     if (agentWalletSeed.nonEmpty && ! agentWalletSeed.contains(actorEntityId))
       throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet seed already set to different value"))
     setAgentWalletSeed(actorEntityId)
-  }
-
-  def openWalletIfExists(wap: WalletAccessParam): Boolean = {
-    try {
-      agentActorContext.walletAPI.openWallet(wap)
-      true
-    } catch {
-      case _: WalletAlreadyOpened =>
-        logger.debug(s"wallet ${wap.walletName} is already open")
-        true
-      case _: WalletDoesNotExist | _: WalletInvalidState =>
-        //nothing to do if wallet is not yet created
-        false
-    }
   }
 
   def setAgentActorDetail(forDID: DID): Future[Any] = {

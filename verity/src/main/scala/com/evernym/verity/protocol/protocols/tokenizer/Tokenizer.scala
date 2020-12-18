@@ -1,15 +1,10 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
-import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
-import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROVISION_TOKEN_COUNT
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, PushToken, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
 import com.evernym.verity.protocol.protocols.tokenizer.{Token => TokenEvt}
 import com.evernym.verity.util.TimeUtil
@@ -20,10 +15,7 @@ import scala.util.{Failure, Success}
 trait TokenizerEvt
 
 class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String])
-  extends Protocol[Tokenizer,Role,Msg,Any,TokenizerState,String](TokenizerDefinition)
-    with HasAppConfig {
-
-  override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
+  extends Protocol[Tokenizer,Role,Msg,Any,TokenizerState,String](TokenizerDefinition) {
 
   override def handleProtoMsg: (TokenizerState, Option[Role], Msg) ?=> Any = {
     case (_: State.Initialized | _: State.TokenCreated, _, m: GetToken) =>
@@ -98,14 +90,6 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
           token=Some(token.asEvent)
         ))
 
-        //TODO: appConfig should not be used because its a deprecated service, find solution
-        var tags: Map[String, String] = Map()
-        try {
-          tags = tags ++ ConfigUtil.getSponsorRelTag(appConfig, SponsorRel(m.sponsorId, m.sponseeId))
-        } catch {
-          case x: RuntimeException if x.getMessage == "services are not available" =>
-        }
-        MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROVISION_TOKEN_COUNT, tags)
         /** This will be sent synchronously in the http response*/
         ctx.send(token)
         /** Will be sent via push notification */

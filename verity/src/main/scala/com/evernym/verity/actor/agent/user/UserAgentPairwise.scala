@@ -19,7 +19,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
-import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, SponsorRel, _}
+import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
@@ -30,7 +30,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -61,6 +61,7 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -78,7 +79,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with FailedMsgRetrier {
+    with FailedMsgRetrier
+    with AgentSnapshotter[UserAgentPairwiseState] {
 
   type StateType = UserAgentPairwiseState
   var state = new UserAgentPairwiseState
@@ -928,8 +930,7 @@ trait UserAgentPairwiseStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

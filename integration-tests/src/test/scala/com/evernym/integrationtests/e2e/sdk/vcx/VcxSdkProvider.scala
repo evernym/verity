@@ -11,6 +11,7 @@ import com.evernym.sdk.vcx.wallet.WalletApi
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.relationship.v1_0.RelationshipV1_0
@@ -78,6 +79,7 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
   with VcxProvision
   with VcxConnecting
   with VcxCommittedAnswer
+  with VcxBasicMessage
   with Eventually {
 
   override def sdkType: String = "VCX"
@@ -101,6 +103,8 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
                                   => vcxMsg.payloadInnerMsg.get
       case "aries" if vcxMsg.payloadInnerMsgType.exists(_.contains("question"))
                                   => interactQuestion(vcxMsg.meta, vcxMsg.msg)
+      case "aries" if vcxMsg.payloadInnerMsgType.exists(_.contains("basicmessage"))
+                                  => interactMessage(vcxMsg.meta, vcxMsg.msg)
       case "aries" if vcxMsg.payloadMsgType.contains("credential-offer")
                                   => interactCredOffer_1_0(vcxMsg.meta, vcxMsg.msg)
       case "aries" if vcxMsg.payloadMsgType.contains("credential")
@@ -274,6 +278,11 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
                                    price: String = "0",
                                    autoIssue: Boolean = false,
                                    byInvitation: Boolean = false): IssueCredentialV1_0 = ???
+
+  override def basicMessage_1_0(forRelationship: DID,
+                                content: String,
+                                sentTime: String,
+                                localization: String): BasicMessageV1_0 = ???
 }
 
 trait Backup {

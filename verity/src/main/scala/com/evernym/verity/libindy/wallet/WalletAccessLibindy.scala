@@ -1,5 +1,6 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.wallet
 
+import com.evernym.verity.actor.wallet.{SignLedgerRequest, SignMsg, StoreTheirKey, VerifySigByVerKey}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine._
@@ -14,7 +15,7 @@ import scala.util.{Failure, Success, Try}
 class WalletAccessLibindy(protected val appConfig: AppConfig,
                           protected val walletApi: WalletAPI,
                           protected val selfParticipantId: ParticipantId)
-                         (implicit val wap: WalletAccessParam)
+                         (implicit val wap: WalletAPIParam)
   extends WalletAccess with AnonCredRequestsApi {
 
   import WalletAccess._
@@ -41,7 +42,7 @@ class WalletAccessLibindy(protected val appConfig: AppConfig,
 
     Try {
       val verKey = getVerKeyFromParticipantId(selfParticipantId)
-      val toSign = SignMsgParam(KeyInfo(Left(verKey)), msg)
+      val toSign = SignMsg(KeyInfo(Left(verKey)), msg)
       val signed = walletApi.signMsg(toSign)
 
       SignatureResult(signed, verKey)
@@ -53,7 +54,7 @@ class WalletAccessLibindy(protected val appConfig: AppConfig,
     val submitter = Submitter(submitterDID, Some(wap))
 
     Try(Await.result(
-      walletApi.signLedgerRequest(SubmitReqParam(ledgerRequest, submitter)),
+      walletApi.signLedgerRequest(SignLedgerRequest(ledgerRequest, submitter)),
       maxWaitTime
     ))
   }
@@ -80,7 +81,7 @@ class WalletAccessLibindy(protected val appConfig: AppConfig,
   // libindy currently supports only one VerKey per DID
   // we check the VerKey used belongs to the party who signed the message.
     Try({
-      val toVerify = VerifySigByVerKeyParam(verKeyUsed, msg, sig)
+      val toVerify = VerifySigByVerKey(verKeyUsed, msg, sig)
       walletApi.verifySigWithVerKey(toVerify).verified
     })
   }
@@ -92,7 +93,7 @@ class WalletAccessLibindy(protected val appConfig: AppConfig,
   }
 
   override def storeTheirDid(did: DID, verKey: VerKey): Try[Unit] = {
-    Try(walletApi.storeTheirKey(StoreTheirKeyParam(did, verKey)))
+    Try(walletApi.storeTheirKey(StoreTheirKey(did, verKey)))
   }
 
 }

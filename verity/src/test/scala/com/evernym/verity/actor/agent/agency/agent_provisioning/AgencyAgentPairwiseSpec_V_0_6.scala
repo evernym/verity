@@ -5,8 +5,8 @@ import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 

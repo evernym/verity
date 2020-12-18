@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
+import com.evernym.verity.actor.wallet.{NewKeyCreated, StoreTheirKey}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
@@ -21,7 +22,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily._
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util.Util.getNewActorId
-import com.evernym.verity.vault.{NewKeyCreated, StoreTheirKeyParam, WalletAccessParam}
+import com.evernym.verity.vault.WalletAPIParam
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -149,11 +150,10 @@ trait AgencyAgentCommon
     Future.successful(None)
   }
 
-  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, seed: String): NewKeyCreated  = {
-    val wap = WalletAccessParam(seed, agentActorContext.walletAPI, agentActorContext.walletConfig,
-      agentActorContext.appConfig, closeAfterUse=false)
-    agentActorContext.walletAPI.createAndOpenWallet(wap)
-    agentActorContext.walletAPI.storeTheirKey(StoreTheirKeyParam(requesterDid, requesterVerKey))(wap)
+  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, walletId: String): NewKeyCreated  = {
+    val wap = WalletAPIParam(walletId)
+    agentActorContext.walletAPI.createWallet(wap)
+    agentActorContext.walletAPI.storeTheirKey(StoreTheirKey(requesterDid, requesterVerKey))(wap)
     agentActorContext.walletAPI.createNewKey()(wap)
   }
 

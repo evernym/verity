@@ -126,7 +126,7 @@ object DummyAgentActor {
 class DummyAgentActor extends BaseNonPersistentActor {
   override def receiveCmd: Receive = {
     case fas: FixActorState             =>
-      fas.senderActorRef ! InitialActorState(fas.actorDID, 1)
+      fas.senderActorRef ! InitialActorState(fas.actorDID, isRouteSet = true, 1)
       fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 1, 0)
   }
 

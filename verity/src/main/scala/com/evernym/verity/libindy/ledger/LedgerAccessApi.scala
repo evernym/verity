@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.ledger
 
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.SpanUtil._

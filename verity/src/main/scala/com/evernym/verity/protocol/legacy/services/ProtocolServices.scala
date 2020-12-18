@@ -9,7 +9,7 @@ import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.protocol.actor.{MsgQueueServiceProvider, WalletParam}
 import com.evernym.verity.protocol.engine.{DID, RecordsEvents, SERVICES_DEPRECATION_DATE, SendsMsgs, VerKey}
 import com.evernym.verity.texter.SMSSender
-import com.evernym.verity.vault.{WalletAPI, WalletAccessParam, WalletConfig, WalletDetail}
+import com.evernym.verity.vault.{WalletAPI, WalletAPIParam, WalletConfig, AgentWalletAPI}
 
 /** General services provided to protocols.
   *
@@ -63,13 +63,13 @@ trait DEPRECATED_HasWallet {
   lazy val walletAPI: WalletAPI = walletParam.walletAPI
   lazy val walletConfig: WalletConfig = walletParam.walletConfig
 
-  var walletDetail: WalletDetail = _
+  var walletDetail: AgentWalletAPI = _
 
   def initWalletDetail(seed: String): Unit = {
-    walletDetail = WalletDetail(walletAPI, walletConfig, seed)
+    walletDetail = AgentWalletAPI(walletAPI, seed)
   }
 
-  implicit lazy val wap: WalletAccessParam = WalletAccessParam(walletDetail, appConfig, closeAfterUse = false)
+  implicit lazy val wap: WalletAPIParam = WalletAPIParam(walletDetail.walletId)
 
   lazy val walletVerKeyCacheHelper: WalletVerKeyCacheHelper = {
     new WalletVerKeyCacheHelper(wap, walletDetail.walletAPI, appConfig)

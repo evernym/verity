@@ -6,7 +6,7 @@ import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 object ShardUtil {
 

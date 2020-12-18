@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, TransactionAuthorAgreement}
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyCommon}
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.util.LedgerUtil
 

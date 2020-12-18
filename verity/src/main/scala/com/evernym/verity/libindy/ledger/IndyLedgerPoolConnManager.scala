@@ -1,8 +1,8 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.ledger
 
 import java.util.concurrent.TimeUnit
 
-import com.evernym.verity.constants.Constants.{LEDGER_TXN_PROTOCOL_V1, LEDGER_TXN_PROTOCOL_V2}
+import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.apphealth.AppStateConstants._
@@ -10,14 +10,15 @@ import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSy
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
 import com.evernym.verity.config.{AppConfig, CommonConfig, ConfigUtil}
+import com.evernym.verity.constants.Constants.{LEDGER_TXN_PROTOCOL_V1, LEDGER_TXN_PROTOCOL_V2}
 import com.evernym.verity.ledger._
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{HashUtil, Util}
 import com.evernym.verity.vault.WalletAPI
-import com.evernym.verity.Exceptions
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.pool.Pool
 import org.hyperledger.indy.sdk.pool.PoolJSONParameters.CreatePoolLedgerConfigJSONParameter

@@ -4,7 +4,6 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.persistence.object_code_mapper.DefaultObjectCodeMapper
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.transformations.transformers._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.transformations.transformers.v1._
 
@@ -38,9 +37,10 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     "DefaultLegacyEventProtoBufTransformer" - {
       "when tried to 'execute' and 'undo'" - {
         "should provide desired result" in {
+          val transformer = new LegacyProtoBufTransformer(DefaultObjectCodeMapper)
           val event = KeyCreated("forDID")
-          val transformed = LegacyEventProtoBufTransformer.execute(event)
-          LegacyEventProtoBufTransformer.undo(transformed) shouldBe event
+          val transformed = transformer.execute(event)
+          transformer.undo(transformed) shouldBe event
         }
       }
     }
@@ -91,9 +91,10 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     "DefaultProtoBufTransformer" - {
       "when tried to 'execute' and 'undo'" - {
         "should provide desired result" in {
+          val transformer = new ProtoBufTransformerV1(DefaultObjectCodeMapper)
           val event = KeyCreated("forDID")
-          val transformed = DefaultProtoBufTransformerV1.execute(event)
-          val untransformed = DefaultProtoBufTransformerV1.undo(transformed)
+          val transformed = transformer.execute(event)
+          val untransformed = transformer.undo(transformed)
           untransformed shouldBe event
         }
       }
@@ -105,7 +106,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     "LegacyEventCompositeTransformer" - {
       "should work properly" in {
 
-        val compositeTransformer = createLegacyEventTransformer("secret")
+        val compositeTransformer = createLegacyEventTransformer("secret", DefaultObjectCodeMapper)
 
         val event = KeyCreated("forDID")
         val transformed = compositeTransformer.execute(event)
@@ -116,7 +117,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     }
 
     "persistence transformer v1" - {
-      val compositeTransformer = createPersistenceTransformerV1("secret", new IdentityTransformer)
+      val compositeTransformer = createPersistenceTransformerV1("secret")
 
       val event = KeyCreated("forDID")
       val transformed = compositeTransformer.execute(event)

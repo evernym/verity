@@ -11,10 +11,10 @@ import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{BAD_REQUEST, UNHANDLED}
 import com.evernym.verity.actor.agent.SpanUtil._
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -63,7 +63,7 @@ trait HttpRemoteMsgSendingSvc extends RemoteMsgSendingSvc {
 
   def sendPlainTextMsgToRemoteEndpoint(payload: String, method: HttpMethod = HttpMethods.POST)
                                       (implicit ud: UrlDetail): Future[Either[HandledErrorException, String]] = {
-    logger.info(s"Sending ${method} to uri ${ud.host}:${ud.port}/${ud.path}")
+    logger.info(s"Sending $method to uri ${ud.host}:${ud.port}/${ud.path}")
     val req = HttpRequest(
       method = method,
       uri = s"/${ud.path}",

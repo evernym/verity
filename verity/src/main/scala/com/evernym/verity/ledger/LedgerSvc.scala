@@ -7,7 +7,8 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.{DID, WalletAccess}
 import com.evernym.verity.util.TimeZoneUtil._
-import com.evernym.verity.vault.WalletAccessParam
+import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.service.WalletParam
 
 import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -46,16 +47,16 @@ case class CredDefV1(id: String,
 
 trait Submitter {
   def did: DID
-  def wap: Option[WalletAccessParam]
+  def wap: Option[WalletAPIParam]
 }
 object Submitter {
-  def apply(did: DID, wap: Option[WalletAccessParam]): Submitter = WriteSubmitter(did, wap)
+  def apply(did: DID, wap: Option[WalletAPIParam]): Submitter = WriteSubmitter(did, wap)
   def apply(): Submitter = ReadSubmitter()
 }
-case class WriteSubmitter(did: DID, wap: Option[WalletAccessParam]) extends Submitter
+case class WriteSubmitter(did: DID, wap: Option[WalletAPIParam]) extends Submitter
 case class ReadSubmitter() extends Submitter {
   override def did: DID = null
-  override def wap: Option[WalletAccessParam] = None
+  override def wap: Option[WalletAPIParam] = None
 }
 
 

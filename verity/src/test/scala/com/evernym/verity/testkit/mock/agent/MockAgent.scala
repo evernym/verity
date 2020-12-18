@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.AgentDIDDetail
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, StoreTheirKey}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
@@ -28,7 +29,7 @@ trait MockAgent extends HasWalletHelper with HasAppConfig {
 
   def setupWallet(): Unit = {
     //creates public DID and ver key and store it into its wallet
-    walletAPI.createNewKey(CreateNewKeyParam(seed = Option(myDIDDetail.DIDSeed)))
+    walletAPI.createNewKey(CreateNewKey(seed = Option(myDIDDetail.DIDSeed)))
   }
 
   def init(): Unit = {
@@ -67,7 +68,7 @@ trait MockAgent extends HasWalletHelper with HasAppConfig {
 
   def addNewKey(seedOpt: Option[String]=None): NewKeyCreated = {
     val seed = seedOpt orElse Option(UUID.randomUUID().toString.replace("-", ""))
-    walletAPI.createNewKey(CreateNewKeyParam(seed = seed))
+    walletAPI.createNewKey(CreateNewKey(seed = seed))
   }
 
   def addNewLocalPairwiseKey(connId: String): MockPairwiseConnDetail = {
@@ -83,7 +84,7 @@ trait MockAgent extends HasWalletHelper with HasAppConfig {
 
   def storeTheirKey(did: DID, verKey: VerKey): Unit = {
     logger.debug(s"Store their key for did: $did")
-    val skp = StoreTheirKeyParam(did, verKey)
+    val skp = StoreTheirKey(did, verKey)
     walletAPI.storeTheirKey(skp)(wap)
   }
 

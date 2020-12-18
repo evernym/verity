@@ -2,14 +2,9 @@ package com.evernym.verity.protocol.testkit
 
 import java.util.UUID
 
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
-import com.evernym.verity.util.Util
-import com.evernym.verity.vault.WalletUtil._
-import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import org.scalatest.Outcome
 import org.scalatest.FixtureTestSuite
 
@@ -60,10 +55,6 @@ trait TestsProtocols[P,R,M,E,S,I] {
   def sendProtoMsg(sender: Container, to: Container, msg: M): Unit = {
     sender.submit(Envelope1(msg, to.participantId, sender.participantId, None))
   }
-
-  private val appConfig: AppConfig = AppConfigWrapper
-  val walletAPI = new WalletAPI(new LibIndyWalletProvider(appConfig), Util, new IndyLedgerPoolConnManager(appConfig))
-  val walletConfig: WalletConfig = buildWalletConfig(appConfig)
 
   def newContainer(system: SimpleProtocolSystem,
                    partiId: ParticipantId=UUID.randomUUID.toString,

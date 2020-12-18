@@ -17,6 +17,7 @@ import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.engine.Constants._
@@ -115,7 +116,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
     val verifResult = walletDetail.walletAPI.verifySigWithVerKey(
-      VerifySigByVerKeyParam(signedByVerKey, challenge, sig))
+      VerifySigByVerKey(signedByVerKey, challenge, sig))
     if (! verifResult.verified) {
       val errorMsgPrefix = if (isEdgeAgentsKeyDlgProof) "local" else "remote"
       val errorMsg = errorMsgPrefix + " agent key delegation proof verification failed"

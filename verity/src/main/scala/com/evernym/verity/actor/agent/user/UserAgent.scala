@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
-import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
+import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -21,13 +21,12 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.libindy.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -45,6 +44,8 @@ import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
+import com.evernym.verity.actor.wallet.{CreateNewKey, PackedMsg, StoreTheirKey}
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -56,7 +57,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
-    with MsgNotifierForUserAgent {
+    with MsgNotifierForUserAgent
+    with AgentSnapshotter[UserAgentState] {
 
   type StateType = UserAgentState
   var state = new UserAgentState
@@ -264,7 +266,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       else state.myDidDoc_!.endpoints_!.endpoints
     val comMethods = endpoints.map { ep =>
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
-        .filterByKeyIds(ep.authKeyIds.toSeq)
+        .filterByKeyIds(ep.authKeyIds)
         .map(_.verKey).toSet
       val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
       ComMethodDetail(ep.`type`, ep.value, cmp)
@@ -309,8 +311,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val forVerKey = verKeyOpt.getOrElse(getVerKeyReqViaCache(forDID))
 
     val endpointDID = if (! isEdgeAgent) {
-      val pairwiseKeyResult = agentActorContext.walletAPI.createNewKey(CreateNewKeyParam())
-      agentActorContext.walletAPI.storeTheirKey(StoreTheirKeyParam(forDID, forVerKey), ignoreIfAlreadyExists = true)
+      val pairwiseKeyResult = agentActorContext.walletAPI.createNewKey(CreateNewKey())
+      agentActorContext.walletAPI.storeTheirKey(StoreTheirKey(forDID, forVerKey, ignoreIfAlreadyExists = true))
       writeAndApply(AgentDetailSet(forDID, pairwiseKeyResult.did))
       pairwiseKeyResult.did
     } else forDID
@@ -644,7 +646,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     }
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
-    AgentActivityTracker.newAgent(sponsorRel.map(_.sponsorId))
+    AgentActivityTracker.newAgent(sponsorRel)
 
     setRouteFut map {
       case _: RouteSet  => sndr ! resp
@@ -820,8 +822,7 @@ trait UserAgentStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

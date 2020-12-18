@@ -1,4 +1,4 @@
-package com.evernym.verity.util
+package com.evernym.verity.logging
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.testkit.BasicSpec

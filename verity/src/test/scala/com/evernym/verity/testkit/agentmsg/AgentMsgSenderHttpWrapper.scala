@@ -17,7 +17,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgParseUtil, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.metrics.AllNodeMetricsData
@@ -35,6 +35,7 @@ import com.evernym.verity.UrlDetail
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.{Duration, _}
@@ -488,8 +489,8 @@ trait AgentMsgSenderHttpWrapper
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
     printApiCallStartedMsg(s"get verkey from wallet finished...")
     printApiCallStartedMsg(s"create sponsor keys...")
-    implicit val wap: WalletAccessParam = mockClientAgent.wap
-    lazy val sponsorKeys: NewKeyCreated = mockClientAgent.walletAPI.createNewKey(CreateNewKeyParam(seed=Some("000000000000000000000000Trustee1")))
+    implicit val wap: WalletAPIParam = mockClientAgent.wap
+    lazy val sponsorKeys: NewKeyCreated = mockClientAgent.walletAPI.createNewKey(CreateNewKey(seed=Some("000000000000000000000000Trustee1")))
 
     val id = "my-id"
     val sponsorId = "evernym-test-sponsorabc123"
@@ -497,7 +498,7 @@ trait AgentMsgSenderHttpWrapper
     val timestamp = TimeUtil.nowDateString
 
     val encrypted = mockClientAgent.walletAPI.signMsg {
-      SignMsgParam(KeyInfo(
+      SignMsg(KeyInfo(
         Left(sponsorKeys.verKey)),
         (nonce + timestamp + id + sponsorId).getBytes()
       )

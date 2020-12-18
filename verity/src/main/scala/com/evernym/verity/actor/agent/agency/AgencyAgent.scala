@@ -14,6 +14,7 @@ import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, Relatio
 import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.cache._
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -25,7 +26,6 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
-import com.evernym.verity.vault._
 import com.evernym.verity.{Exceptions, UrlDetail}
 
 import scala.concurrent.Future
@@ -141,8 +141,9 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def createKey(ck: CreateKey): Unit = {
     if (state.relationship.isEmpty) {
       logger.debug("agency agent key setup starting...")
-      setAndCreateAndOpenWallet()
-      val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKeyParam(seed = ck.seed))
+      setAgentWalletSeed(entityId)
+      agentActorContext.walletAPI.createWallet(wap)
+      val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKey(seed = ck.seed))
       writeAndApply(KeyCreated(createdKey.did))
       val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, createdKey.did))
       val sndr = sender()
@@ -157,13 +158,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     } else {
       logger.warn("agency agent key setup is already done, returning forbidden response")
       throw new ForbiddenErrorException()
-    }
-  }
-
-  def setAndCreateAndOpenWallet(): Unit = {
-    setAgentWalletSeed(entityId)
-    if (! openWalletIfExists(wap)) {
-      agentActorContext.walletAPI.createAndOpenWallet(wap)
     }
   }
 
@@ -342,14 +336,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
-
-  /**
-   * state to be snapshotted
-   *
-   * @return
-   */
-  override def snapshotState: Option[AgencyAgentState] =
-    if (state.threadContext.forall(_.contexts.isEmpty)) Option(state) else None
 }
 
 //response
@@ -412,8 +398,7 @@ trait AgencyAgentStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

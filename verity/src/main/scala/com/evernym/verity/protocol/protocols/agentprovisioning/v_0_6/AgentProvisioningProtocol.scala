@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.wallet.StoreTheirKey
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg, WalletParam}
@@ -12,7 +13,6 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AgentWalletSetupProvider, AskUserAgentCreator}
 import com.evernym.verity.util.ParticipantUtil
-import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 
 sealed trait Role
@@ -94,7 +94,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     val fromDIDVerKey = ca.fromDIDVerKey
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_SEED)
     val agentPairwiseKey = prepareNewAgentWalletData(fromDID, fromDIDVerKey, aws)
-    walletAPI.storeTheirKey(StoreTheirKeyParam(fromDID, fromDIDVerKey), ignoreIfAlreadyExists=true)
+    walletAPI.storeTheirKey(StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true))
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(agentPairwiseKey.did, Option(fromDID)))) //TODO: confirm if this is correct
     val provisionerPartiId = oa.parameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
     ctx.apply(ProvisionerPartiSet(provisionerPartiId))

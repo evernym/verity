@@ -5,6 +5,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent._
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
@@ -671,9 +672,9 @@ case class SegmentStorageFailed() extends ActorMessageClass
 case class ExternalStorageComplete(externalId: SegmentKey)
 case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessageClass {
 
-  def msgIdOpt: Option[MsgId] = msg match {
-    case e: Envelope1[_] => e.msgId
-    case c: CtlEnvelope[_] => Option(c.msgId)
+  def msgId: MsgId = msg match {
+    case e: Envelope1[_] => e.msgId.getOrElse(MsgFamilyUtil.getNewMsgUniqueId)
+    case c: CtlEnvelope[_] => Option(c.msgId).getOrElse(MsgFamilyUtil.getNewMsgUniqueId)
   }
 }
 

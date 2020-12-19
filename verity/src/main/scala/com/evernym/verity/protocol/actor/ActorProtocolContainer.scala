@@ -3,14 +3,12 @@ package com.evernym.verity.protocol.actor
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
-import akka.persistence.RecoveryCompleted
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.{ActorResponse, ServiceEndpoint}
+import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
@@ -35,11 +33,11 @@ import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
+import com.evernym.verity.{ActorResponse, ServiceEndpoint}
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
-import java.util.UUID
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 /**
@@ -76,59 +74,111 @@ class ActorProtocolContainer[
       with HasAgentWallet
       with AgentIdentity {
 
+  override final val receiveEvent: Receive = {
+    case evt: Any => applyRecordedEvent(evt)
+  }
+  override final def receiveCmd: Receive = initialBehavior
+
+  override lazy val logger: Logger = getAgentIdentityLoggerByName(
+    this,
+    s"${definition.msgFamily.protoRef.toString}"
+  )
+
+  override val appConfig: AppConfig = agentActorContext.appConfig
+  lazy val pinstId: PinstId = entityId
+
+  var senderActorRef: Option[ActorRef] = None
 
   override def domainId: DomainId = backstate.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
-  override lazy val logger: Logger = getAgentIdentityLoggerByName(this, s"${definition.msgFamily.protoRef.toString}")
+  var agentWalletSeed: Option[String] = None
   def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
 
-  override def receiveRecover: Receive = {
-    /**
-      * if protocol actor recovery is completed then the receiver should be set to 'protocolReceiveCommandBase' if any of this is true
-      *   - it doesn't need any further initialization from container (definition.initParamNames.isEmpty)
-      *   - state is not equal to initial state, which means, this actor has been already initialized
-      */
-
-    case RecoveryCompleted if ! state.equals(definition.initialState) =>
-      changeReceiverToBase()
-    case evt =>
-      super.receiveRecover(evt)
+  def toBaseBehavior(): Unit = {
+    logger.debug("becoming baseBehavior")
+    setNewReceiveBehaviour(baseBehavior)
+    unstashAll()
   }
 
-  def protocolReceiveEvent: Receive = {
-    case evt: Any => // we can't make a stronger assertion about type because erasure
-
-      //NOTE: assumption is that if any event is coming for recovery, then protocol should have
-      // been already initialized [so that the last line of this code block 'protocol.apply(evt)' can work ]
-      // if protocol is not yet initialized, it must be the case that this actor is just started and
-      // is in event recovery process, so we should create the protocol instance.
-      applyRecordedEvent(evt)
-  }
-
-  def protocolReceiveCommand: Receive = {
-    case m @ (_:MsgWithSegment | _: Control | _:MsgEnvelope) =>
-      val (msgIdOpt, actualMsg, msgToBeSent) = m match {
-        case c: Control =>
-          // flow diagram: ctl.nothread, step 17 -- Control message without thread gets default.
-          senderActorRef = Option(sender())
-          (None, c, CtlEnvelope(c, MsgFamilyUtil.getNewMsgUniqueId, DEFAULT_THREAD_ID))
-
-        // we can't make a stronger assertion about type because erasure
-        case me @ MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId))  =>
-          senderActorRef = Option(sender())
-          msg match {
-            // flow diagram: ctl.thread, step 17 -- Handle control message with thread.
-            case c: Control  => (me.msgId, c, CtlEnvelope(c, msgId, thId))
-            // flow diagram: proto, step 17 -- Route message to appropriate protocol handler.
-            case pm          => (me.msgId, pm, Envelope1(pm, to, frm, me.msgId, me.thId))
-          }
-
-          // flow diagram: ctl.rare, step 17
-        case m: MsgWithSegment => (m.msgIdOpt, m, m)
+  // This function is only called when the actor is uninitialized; later,
+  // the receiver becomes inert.
+  final def initialBehavior: Receive = {
+    case InitProtocol(domainId: DomainId, parameters: Set[Parameter]) =>
+      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-resp-received",
+        "init-msg-id", inMsg = Option("init-param-received"))
+      submit(GivenDomainId(domainId))
+      if(parameters.nonEmpty) {
+        logger.debug(s"$protocolIdForLog about to send init msg")
+        submitInitMsg(parameters)
+        logger.debug(s"$protocolIdForLog protocol instance initialized successfully")
       }
-      val reqId = msgIdOpt.getOrElse(UUID.randomUUID().toString)
+      toBaseBehavior()
+      // Ask for sponsor details from domain and record metric for initialized protocol
+      agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
+    case ProtocolCmd(_, metadata) =>
+      logger.debug(s"$protocolIdForLog protocol instance created for first time")
+      stash()
+      metadata.foreach { m =>
+        setForwarderParams(m.walletSeed, m.forwarder)
+      }
+      recoverOrInit()
+    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
+  }
 
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "in-msg-process-started", reqId, inMsg = Option(actualMsg))
-      submit(msgToBeSent, Option(handleResponse(_, msgIdOpt, senderActorRef)))
+  final def baseBehavior: Receive = {
+    case pc: ProtocolCmd =>       handleProtocolCmd(pc)
+    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
+    case s: SponsorRel =>         handleSponsorRel(s)
+  }
+
+  def toStoringBehavior(): Unit = {
+    logger.debug("becoming storingBehavior")
+    setNewReceiveBehaviour(storingBehavior)
+  }
+
+  final def storingBehavior: Receive = {
+    case ProtocolCmd(_: SegmentStorageComplete, _) =>
+      logger.debug(s"$protocolIdForLog received StoreComplete")
+      toBaseBehavior()
+    case ProtocolCmd(_: SegmentStorageFailed, _) =>
+      logger.error(s"failed to store segment")
+      toBaseBehavior()
+    case msg: Any => // we can't make a stronger assertion about type because erasure
+      logger.debug(s"$protocolIdForLog received msg: $msg while storing data")
+      stash()
+  }
+
+  //TODO -> RTM: Add documentation for this
+  //dhh I'd like to understand the significance of changing receive behavior.
+  // Is this part of the issue Jason wrote about with futures, where we are
+  // going into different modes at different points in a sequence of actions
+  // that contains multiple waits?
+  def toRetrievingBehavior(): Unit = {
+    logger.debug("becoming retrievingBehavior")
+    setNewReceiveBehaviour(retrievingBehavior)
+  }
+
+  final def retrievingBehavior: Receive = {
+    case ProtocolCmd(_: DataRetrieved, _) =>
+      logger.debug(s"$protocolIdForLog received DataRetrieved")
+      toBaseBehavior()
+    case ProtocolCmd(_: DataNotFound, _) =>
+      logger.debug(s"$protocolIdForLog data not found")
+      toBaseBehavior()
+    case msg: Any => // we can't make a stronger assertion about type because erasure
+      logger.debug(s"$protocolIdForLog received msg: $msg while retrieving data")
+      stash()
+  }
+
+  def toCopyFromBehavior(): Unit = {
+    logger.debug("becoming dataStoringReceive")
+    setNewReceiveBehaviour(storingBehavior)
+  }
+
+  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+    if (!state.equals(definition.initialState)){
+      toBaseBehavior()
+    }
+    List.empty
   }
 
   def handleResponse(resp: Try[Any], msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
@@ -157,75 +207,37 @@ class ActorProtocolContainer[
     }
   }
 
-  def sendRespToCaller(resp: Any, msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
-    sndr.foreach(_ ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt))
+  def handleProtocolCmd(cmd: ProtocolCmd) = {
+    logger.debug(s"$protocolIdForLog handling ProtocolCmd: " + cmd)
+
+    cmd.metadata.foreach { m =>
+      storePackagingDetail(m.threadContextDetail)
+      setForwarderParams(m.walletSeed, m.forwarder)
+    }
+
+    if(sender() != self) {
+      senderActorRef = Option(sender())
+    }
+
+    val (msgId, actualMsg, msgToBeSent) = cmd.msg match {
+      case c: Control =>
+        val newMsgId = MsgFamilyUtil.getNewMsgUniqueId
+        (newMsgId, c, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
+      case MsgEnvelope(msg: Control, _, _, _, Some(msgId), Some(thId)) =>
+        (msgId, msg, CtlEnvelope(msg, msgId, thId))
+      case MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId)) =>
+        (msgId, msg, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
+      case m: MsgWithSegment =>
+        (m.msgId, m, m)
+    }
+    MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "in-msg-process-started", msgId, inMsg = Option(actualMsg))
+    submit(msgToBeSent, Option(handleResponse(_, Some(msgId), senderActorRef)))
   }
 
-  override val appConfig: AppConfig = agentActorContext.appConfig
-
-  lazy val pinstId: PinstId = entityId
-
-  override final val receiveEvent: Receive = protocolReceiveEvent
-
-  override final def receiveCmd: Receive = uninitializedReceiveCommand
-
-  var senderActorRef: Option[ActorRef] = None
-
-  final def protocolReceiveCommandBase: Receive = {
-    // flow diagram: ctl + proto, step 16
-    //NOTE: this is when any actor/object wants to send a command with ProtocolCmd wrapper
-    // we can't make a stronger assertion about type because erasure    
-    case pc @ ProtocolCmd(MsgEnvelope(msg: Any, msgType, to, frm, msgId, thId), metadata) =>
-      logger.debug(s"$protocolIdForLog received ProtocolCmd: " + pc)
-      storePackagingDetail(metadata.threadContextDetail)
-      setForwarderParams(metadata.walletSeed, metadata.forwarder)
-      protocolReceiveCommand(MsgEnvelope(msg, msgType, to, frm, msgId, thId))
-
-    // we can't make a stronger assertion about type because erasure
-    case msg: Any if protocolReceiveCommand.isDefinedAt(msg) =>
-      logger.debug(s"$protocolIdForLog received msg: " + msg)
-      protocolReceiveCommand(msg)
-
-    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
-
-    case s: SponsorRel =>
-      if (!s.equals(SponsorRel.empty)) submit(GivenSponsorRel(s))
-      val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> definition.msgFamily.protoRef.toString)
-      MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
-  }
-
-  def changeReceiverToBase(): Unit = {
-    logger.debug("transitioning to protocolReceiveCommandBase")
-    setNewReceiveBehaviour(protocolReceiveCommandBase)
-    unstashAll()
-  }
-
-  // This function is only called when the actor is uninitialized; later,
-  // the receiver becomes inert.
-  final def uninitializedReceiveCommand: Receive = {
-    case InitProtocol(domainId: DomainId, parameters: Set[Parameter]) =>
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-resp-received",
-        "init-msg-id", inMsg = Option("init-param-received"))
-      submit(GivenDomainId(domainId))
-      if(parameters.nonEmpty) {
-        logger.debug(s"$protocolIdForLog about to send init msg")
-        sendInitMsgToProtocol(parameters)
-        logger.debug(s"$protocolIdForLog protocol instance initialized successfully")
-      }
-      changeReceiverToBase()
-      // Ask for sponsor details from domain and record metric for initialized protocol
-      agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
-
-    //TODO: we are purposefully expecting ProtocolCmd, so that sending actor can provide
-    // its own reference and still keep the original sender un impacted
-    // we should try to find a better way to handle it without ProtocolCmd
-    case ProtocolCmd(_, metadata) =>
-      logger.debug(s"$protocolIdForLog protocol instance created for first time")
-      stash()
-      setForwarderParams(metadata.walletSeed, metadata.forwarder)
-      recoverOrInit()
-
-    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
+  def handleSponsorRel(s: SponsorRel): Unit = {
+    if (!s.equals(SponsorRel.empty)) submit(GivenSponsorRel(s))
+    val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> definition.msgFamily.protoRef.toString)
+    MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
   }
 
   /**
@@ -241,47 +253,15 @@ class ActorProtocolContainer[
     }
   }
 
-  def changeReceiverToDataStoring(): Unit = {
-    logger.debug("becoming dataStoringReceive")
-    setNewReceiveBehaviour(dataStoringReceive)
+  def sendRespToCaller(resp: Any, msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
+    sndr.foreach{ x =>
+      if(x == self) {
+        println("SDF")
+      }
+      else {x ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt)}
+
+    }
   }
-
-  final def dataStoringReceive: Receive = {
-    case _: SegmentStorageComplete =>
-      logger.debug(s"$protocolIdForLog received StoreComplete")
-      changeReceiverToBase()
-    case _: SegmentStorageFailed =>
-      logger.error(s"failed to store segment")
-      changeReceiverToBase()
-    case msg: Any => // we can't make a stronger assertion about type because erasure
-      logger.debug(s"$protocolIdForLog received msg: $msg while storing data")
-      stash()
-  }
-
-  //TODO -> RTM: Add documentation for this
-  //dhh I'd like to understand the significance of changing receive behavior.
-  // Is this part of the issue Jason wrote about with futures, where we are
-  // going into different modes at different points in a sequence of actions
-  // that contains multiple waits?
-  def changeReceiverToRetrieve(): Unit = {
-    logger.debug("becoming dataRetrievalReceive")
-    setNewReceiveBehaviour(dataRetrievalReceive)
-  }
-
-  final def dataRetrievalReceive: Receive = {
-    case _: DataRetrieved =>
-      logger.debug(s"$protocolIdForLog received DataRetrieved")
-      changeReceiverToBase()
-    case _: DataNotFound =>
-      logger.debug(s"$protocolIdForLog data not found")
-      changeReceiverToBase()
-    case msg: Any => // we can't make a stronger assertion about type because erasure
-      logger.debug(s"$protocolIdForLog received msg: $msg while retrieving data")
-      stash()
-  }
-
-
-  var agentWalletSeed: Option[String] = None
 
   def setForwarderParams(_walletSeed: String, fwder: ActorRef): Unit = {
     msgForwarder.setForwarder(fwder)
@@ -293,18 +273,19 @@ class ActorProtocolContainer[
   }
 
   def addToMsgQueue(msg: Any): Unit = {
-    self ! msg
+    self ! ProtocolCmd(
+      msg,
+      None
+    )
   }
 
   val eventRecorder: RecordsEvents = new RecordsEvents {
-
     //NOTE: as of now, don't see any other way to get around this except setting it as an empty vector.
     def recoverState(pinstId: PinstId): (_, Vector[_]) = {
       (state, Vector.empty)
     }
 
     def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit = persistExt(event)(cb)
-
   }
 
   def requestInit(): Unit = {
@@ -406,7 +387,7 @@ class ActorProtocolContainer[
 
 
   def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = {
-
+    val t = 0
     def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any): Unit = {
       val typeName = SegmentedStateStore.buildTypeName(definition.msgFamily.protoRef, definition.segmentedStateName.get)
       val segmentedStateRegion = ClusterSharding.get(context.system).shardRegion(typeName)
@@ -422,7 +403,7 @@ class ActorProtocolContainer[
     }
 
     def saveStorageState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      changeReceiverToDataStoring()
+      toStoringBehavior()
       logger.debug(s"storing storage state: $data")
       storageService.write(segmentAddress + segmentKey, data.toByteArray, {
         case Success(storageInfo: StorageInfo) =>
@@ -442,7 +423,7 @@ class ActorProtocolContainer[
     }
 
     def saveSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      changeReceiverToDataStoring()
+      toStoringBehavior()
       data match {
         case segmentData if maxSegmentSize(segmentData) =>
           val cmd = SaveSegmentedState(segmentKey, segmentData)
@@ -454,13 +435,13 @@ class ActorProtocolContainer[
     }
 
     def readSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey): Unit = {
-      changeReceiverToRetrieve()
+      toRetrievingBehavior()
       val cmd = GetSegmentedState(segmentKey)
       sendToSegmentedRegion(segmentAddress, cmd)
     }
 
     def readStorageState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, storageRef: StorageReferenceStored): Unit = {
-      changeReceiverToRetrieve()
+      toRetrievingBehavior()
       storageService.read(segmentAddress + segmentKey, {
         case Success(data: Array[Byte]) =>
           val event = SegmentedStateStore buildEvent(storageRef.eventCode, data)
@@ -567,7 +548,7 @@ case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends 
   */
 case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessageClass
 
-case class ProtocolCmd(msg: Any, metadata: ProtocolMetadata) extends ActorMessageClass
+case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends ActorMessageClass
 
 /*
   walletSeed: actor protocol container needs to access/provide wallet service

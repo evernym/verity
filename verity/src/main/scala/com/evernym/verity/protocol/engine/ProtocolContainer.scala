@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.evernym.verity.Exceptions
+import com.evernym.verity.protocol.legacy.services.ProtocolServices
 
 trait ProtocolTypes[P,R,M,E,S,I] {
   type Proto = Protocol[P,R,M,E,S,I]
@@ -48,7 +48,7 @@ trait ProtocolContainer[P,R,M,E,S,I] extends ProtocolTypes[P,R,M,E,S,I] with Pro
     }
   }
 
-  def sendInitMsgToProtocol(parameters: Set[Parameter]): Unit = {
+  def submitInitMsg(parameters: Set[Parameter]): Unit = {
     try {
       val init = definition.createInitMsg(Parameters(parameters))
       submit(init)

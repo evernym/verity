@@ -51,9 +51,12 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
   }
 
   private def buildProtocolActorCmd(pinstId: PinstId,
-                                       threadContextDetail: ThreadContextDetail,
-                                       msgEnvelope: MsgEnvelope): Any = {
-    val cmd = ProtocolCmd(msgEnvelope, ProtocolMetadata(threadContextDetail, walletSeed, self))
+                                    threadContextDetail: ThreadContextDetail,
+                                    msgEnvelope: MsgEnvelope): Any = {
+    val cmd = ProtocolCmd(
+      msgEnvelope,
+      Some(ProtocolMetadata(threadContextDetail, walletSeed, self))
+    )
     ForIdentifier(pinstId, cmd)
   }
 

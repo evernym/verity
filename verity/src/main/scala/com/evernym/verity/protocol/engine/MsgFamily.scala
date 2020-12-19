@@ -7,10 +7,6 @@ import scala.util.matching.Regex
 
 
 object MsgFamily {
-
-  //TODO: Evernym qualifier given below is just a test string,
-  // we'll have to decide what it should be?
-
   val EVERNYM_QUALIFIER: MsgFamilyQualifier = "123456789abcdefghi1234"
 
   val COMMUNITY_QUALIFIER: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"

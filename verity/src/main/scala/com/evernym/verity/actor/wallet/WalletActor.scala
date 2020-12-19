@@ -18,13 +18,8 @@ import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyInfo, WalletAlreadyOpened, WalletDoesNotExist, WalletExt, WalletInvalidState, WalletNotOpened, WalletProvider}
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.{InvalidParameterException, InvalidStructureException}
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
-import org.hyperledger.indy.sdk.crypto.Crypto
-import org.hyperledger.indy.sdk.did.Did
-import org.hyperledger.indy.sdk.ledger.Ledger.signRequest
-import org.hyperledger.indy.sdk.wallet.WalletItemAlreadyExistsException
+
+import scala.concurrent.Future
 
 import scala.concurrent.Future
 

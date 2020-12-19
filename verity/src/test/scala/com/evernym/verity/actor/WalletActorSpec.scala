@@ -11,8 +11,7 @@ import org.scalatest.concurrent.Eventually
 import com.evernym.verity.actor.wallet._
 
 
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, DeleteWallet, WalletDeleted}
-import com.evernym.verity.vault.NewKeyCreated
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet}
 class WalletActorSpec extends TestKitBase
   with ProvidesMockPlatform
   with BasicSpec
@@ -25,14 +24,6 @@ class WalletActorSpec extends TestKitBase
 
   "WalletActor" - {
 
-    "creating WalletActor" - {
-      "should create and open wallet" in {
-        walletActor ! CreateNewKey
-        val keys = expectMsgType[NewKeyCreated]
-        walletActor ! CreateWallet(keys.did, keys.verKey)
-        expectMsgType[WalletDeleted.type]
-      }
-    }
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
         walletActor ! CreateWallet

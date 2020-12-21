@@ -6,7 +6,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError}
 import com.evernym.verity.cache._
@@ -16,6 +15,7 @@ import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.{Exceptions, UrlDetail}
 
 import scala.concurrent.Future

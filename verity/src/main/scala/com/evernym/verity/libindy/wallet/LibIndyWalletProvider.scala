@@ -1,9 +1,10 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.wallet
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
@@ -44,8 +45,7 @@ class LibIndyWalletProvider(val appConfig: AppConfig) extends LibIndyCommon with
     }
   }
 
-  def create(id: String, encryptionKey: String,
-                           walletConfig: WalletConfig): Unit = {
+  def create(id: String, encryptionKey: String, walletConfig: WalletConfig): Unit = {
     try {
       val startTime = LocalDateTime.now
       logger.debug(s"libindy api call started (create wallet)")
@@ -94,7 +94,6 @@ class LibIndyWalletProvider(val appConfig: AppConfig) extends LibIndyCommon with
       case _: WalletDoesNotExist =>
         false
     }
-
   }
 
   def close(walletExt: WalletExt): Unit = {

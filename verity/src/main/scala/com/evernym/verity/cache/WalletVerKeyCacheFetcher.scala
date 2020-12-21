@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault._
 
 
-case class GetWalletVerKeyParam(did: DID, getFromPool: Boolean = false, wap: WalletAccessParam) {
+case class GetWalletVerKeyParam(did: DID, getFromPool: Boolean = false, wap: WalletAPIParam) {
   override def toString: String = s"DID: $did, getKeyFromPool: $getFromPool"
 }
 

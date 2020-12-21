@@ -12,7 +12,7 @@ import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyCommon}
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail

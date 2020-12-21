@@ -11,17 +11,17 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, SendRemoteMsgHelper}
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdMsgHelper
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackedMsg, ParseParam, UnpackParam}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AgentAuthKeyUtil
 import com.evernym.verity.protocol.actor.MsgEnvelope
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
-import com.evernym.verity.vault.VerifySigByVerKeyParam
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
+import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -335,7 +335,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   protected def veritySignature(senderAuth: RestAuthContext): Unit = {
     Base58Util.decode(senderAuth.signature) match {
       case Success(signature) =>
-        val toVerify = VerifySigByVerKeyParam(senderAuth.verKey, senderAuth.verKey.getBytes, signature)
+        val toVerify = VerifySigByVerKey(senderAuth.verKey, senderAuth.verKey.getBytes, signature)
         if (!walletDetail.walletAPI.verifySigWithVerKey(toVerify).verified)
           throw new UnauthorisedErrorException
       case Failure(_) => throw new UnauthorisedErrorException

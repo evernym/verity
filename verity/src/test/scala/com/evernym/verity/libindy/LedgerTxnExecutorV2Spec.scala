@@ -6,7 +6,9 @@ import com.evernym.verity.Status.{StatusDetail, TAA_NOT_SET_ON_THE_LEDGER}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
+import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
+import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
 import com.evernym.verity.protocol.engine.{DID, LedgerRejectException}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
@@ -23,8 +25,8 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
   val maxWaitTime: Duration = 5000.millis
   override lazy val walletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
-  lazy val mockWalletAPI: WalletAPI = new WalletAPI(null, null, null) {
-    override def signLedgerRequest(sr: SubmitReqParam): Future[LedgerRequest] = Future(sr.reqDetail)
+  lazy val mockWalletAPI: WalletAPI = new WalletAPI(null, null) {
+    override def signLedgerRequest(sr: SignLedgerRequest): Future[LedgerRequest] = Future(sr.reqDetail)
   }
   lazy val poolConnManager: IndyLedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig) {
     override def poolConn: Some[Pool] = Some(null)
@@ -34,7 +36,7 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
   }
 
   lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
-  lazy val wap: WalletAccessParam = buildWalletAccessParam(submitterDID, "test-key")
+  lazy val wap: WalletAPIParam = WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 
   lazy val targetDidPair: DidPair = DidPair("VFN92wTpay26L64XnEQsfR", "GPxvxemamgNTYpe1J6J1ivr5qwsBDWFCxHHzZG67mhW3")

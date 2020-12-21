@@ -6,7 +6,6 @@ import com.evernym.verity.actor.agent.SetupAgentEndpoint
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
@@ -17,6 +16,7 @@ import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 
 

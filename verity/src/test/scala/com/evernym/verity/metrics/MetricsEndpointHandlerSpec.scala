@@ -14,13 +14,13 @@ import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.{NoResp, RespMode}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeRecorder
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.PackedMsgWrapper
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.metric.PeriodSnapshot
@@ -143,7 +143,7 @@ class TestEndpointHandler extends EndpointHandlerBase {
     override def recordMetrics(reqId: ReqId, msgName: String, nextHop: String): Unit = {}
   }
 
-  override def processPackedMsg(smw: PackedMsgWrapper): Future[Any] = {
+  override def processPackedMsg(pmw: PackedMsgWrapper): Future[Any] = {
     Future {
       if (throwsException) {
         new RuntimeException("Testing Exception")

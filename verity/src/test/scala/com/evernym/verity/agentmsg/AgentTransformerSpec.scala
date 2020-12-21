@@ -3,38 +3,44 @@ package com.evernym.verity.agentmsg
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackParam, PackedMsg}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.testkit.util.TestUtil
-import org.hyperledger.indy.sdk.wallet.Wallet
+import com.evernym.verity.vault.service.NonActorWalletService
 
 trait AgentMsgSpecBase extends BasicSpecWithIndyCleanup with CommonSpecUtil {
 
   lazy val config:AppConfig = new TestAppConfig()
   lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(config)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(config)
-  lazy val walletAPI: WalletAPI = new WalletAPI(walletProvider, TestUtil, poolConnManager)
+  lazy val walletService = new NonActorWalletService(config, TestUtil, walletProvider, poolConnManager)
+  lazy val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
 
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 
   def typ: String
 
-  lazy val aliceWap: WalletAccessParam = createOrOpenWallet(s"alice-$typ", walletAPI)
-  lazy val aliceCloudAgencyAgentWap: WalletAccessParam = createOrOpenWallet(s"alice-cloud-agency-$typ", walletAPI)
-  lazy val aliceCloudAgentWap: WalletAccessParam = createOrOpenWallet(s"alice-cloud-agent-$typ", walletAPI)
+  lazy val aliceWap: WalletAPIParam =
+    createWallet(s"alice-$typ", walletAPI)
+  lazy val aliceCloudAgencyAgentWap: WalletAPIParam =
+    createWallet(s"alice-cloud-agency-$typ", walletAPI)
+  lazy val aliceCloudAgentWap: WalletAPIParam =
+    createWallet(s"alice-cloud-agent-$typ", walletAPI)
 
   lazy val aliceCloudAgentKeyInfo: KeyInfo = KeyInfo(Left(aliceCloudAgentKey.verKey))
   lazy val aliceKeyInfo: KeyInfo = KeyInfo(Left(aliceKey.verKey))
 
-  lazy val aliceKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam())(aliceWap)
-  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam())(aliceCloudAgencyAgentWap)
-  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam())(aliceCloudAgentWap)
+  lazy val aliceKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceWap)
+  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgencyAgentWap)
+  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgentWap)
 
   //TODO why does this need to be mutable? Tests need to be able to be run independently.
   var lastPackedMsg: PackedMsg = _
@@ -79,8 +85,6 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
     EncryptParam(recipKeys, senderKeyOpt)
   }
 
-  def walletFor(name: String): Wallet = walletAPI.wallets(name).wallet
-
   def runPackTests(): Unit = {
     "Alice" - {
       "when tried to pack a msg for her cloud agent" - {
@@ -88,8 +92,7 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
 
           val jsonString = DefaultMsgCodec.toJson(msg)
           lastPackedMsg = agentMsgTransformer.pack(msgPackFormat,
-            jsonString, getEncryptParamFromAliceToAliceCloudAgent,
-            PackParam(openWalletIfNotOpened = true))(aliceWap)
+            jsonString, getEncryptParamFromAliceToAliceCloudAgent)(aliceWap)
         }
       }
     }

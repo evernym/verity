@@ -7,6 +7,7 @@ import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.libindy.JnaPath.augmentJnaPath
+import com.evernym.verity.libindy.wallet.MySqlStorageLib
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.LibIndy
 

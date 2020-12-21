@@ -4,9 +4,9 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.msgsender.{MsgDeliveryResult, SendMsgParam}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{HasLogger, MsgId}
+import com.evernym.verity.actor.wallet.PackedMsg
 
 
 trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger =>

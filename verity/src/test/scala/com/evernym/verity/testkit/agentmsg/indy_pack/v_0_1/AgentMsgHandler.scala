@@ -1,11 +1,11 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_1
 
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.mock.HasCloudAgent
 import com.evernym.verity.testkit.mock.agent.MockAgent
+import com.evernym.verity.actor.wallet.PackedMsg
 
 /**
  * this will handle received/incoming/response agent messages

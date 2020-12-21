@@ -3,9 +3,9 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.msghandler.MsgParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.actor.agent.{PayloadMetadata, ThreadContextDetail}
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.push_notification.PushNotifData
 
 import scala.concurrent.Future

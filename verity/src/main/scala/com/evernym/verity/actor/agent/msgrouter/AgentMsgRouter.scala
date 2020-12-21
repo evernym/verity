@@ -16,7 +16,7 @@ import com.evernym.verity.RouteTo
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.incoming.{PackedMsgParam, RestMsgParam}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._

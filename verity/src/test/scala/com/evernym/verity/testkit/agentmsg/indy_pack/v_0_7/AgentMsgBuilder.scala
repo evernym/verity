@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7
 
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MFV_1_0, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -12,6 +12,7 @@ import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateAgent_MFV_0_7, CreateEdgeAgent_MFV_0_7}
 import com.evernym.verity.util.Util.logger
+import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.util.Left
 

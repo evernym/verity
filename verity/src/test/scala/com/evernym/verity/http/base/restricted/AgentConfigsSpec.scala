@@ -4,11 +4,11 @@ import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestConfigDetail
+import com.evernym.verity.actor.wallet.PackedMsg
 
 trait AgentConfigsSpec { this : EndpointHandlerBaseSpec =>
 

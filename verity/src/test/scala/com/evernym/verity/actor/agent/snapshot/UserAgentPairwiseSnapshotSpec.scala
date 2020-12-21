@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, R
 import com.evernym.verity.actor.agent.user.{UserAgentPairwiseSpecScaffolding, UserAgentPairwiseState}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine.DID

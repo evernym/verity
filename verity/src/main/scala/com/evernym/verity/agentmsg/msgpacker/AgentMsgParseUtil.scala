@@ -3,6 +3,7 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.constants.Constants.`@MSG`
 import com.evernym.verity.Exceptions.MissingReqFieldException
 import com.evernym.verity.actor.agent.TypeFormat
+import com.evernym.verity.actor.wallet.UnpackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -51,7 +52,7 @@ object AgentMsgParseUtil {
   }
 
   def parse(unpackedMsg: UnpackedMsg, parseParam: ParseParam=ParseParam()): AgentBundledMsg = {
-    val extractedMsg = extractMsg(unpackedMsg.msg, parseParam)
+    val extractedMsg = extractMsg(unpackedMsg.msgString, parseParam)
     val msgFamilyDetail = extractedMsg.msgFamilyDetail
     val (parsedMsgs, usesLegacyBundledMsgs) = {
       if (parseParam.parseBundledMsgs && msgFamilyDetail.msgName == BUNDLED

@@ -1,13 +1,11 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.actor.wallet.NewKeyCreated
 import com.evernym.verity.ledger.LedgerRequest
-import com.evernym.verity.libindy.WalletAccessLibindy
+import com.evernym.verity.libindy.wallet.WalletAccessLibindy
 import com.evernym.verity.protocol.engine.WalletAccess.SIGN_ED25519_SHA512_SINGLE
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
 import com.evernym.verity.testkit.{BasicSpec, TestWalletHelper}
 import com.evernym.verity.util.ParticipantUtil
-import com.evernym.verity.vault.{NewKeyCreated, WalletExt}
 
 import scala.util.Try
 
@@ -103,8 +101,8 @@ class WalletAccessControllerSpec extends BasicSpec {
 }
 
 object WalletAccessTest extends TestWalletHelper {
-  val wallet: WalletExt = walletDetail.walletAPI.createAndOpenWallet(wap)
-  val newKey: NewKeyCreated = wallet.createNewKey()
+  walletDetail.walletAPI.createWallet(wap)
+  val newKey: NewKeyCreated = walletDetail.walletAPI.createNewKey()
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =
     new WalletAccessLibindy(appConfig, walletDetail.walletAPI, selfParticipantId)

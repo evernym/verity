@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy;
+package com.evernym.verity.libindy.wallet;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;

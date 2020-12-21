@@ -4,13 +4,13 @@ import java.util.concurrent.ExecutionException
 
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import org.hyperledger.indy.sdk.did.Did
 
 import scala.compat.java8.FutureConverters
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 
 object Util extends UtilBase {
 

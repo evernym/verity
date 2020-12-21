@@ -5,7 +5,6 @@ import com.evernym.verity.Status.UNAUTHORIZED
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil.convertTo
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.protocols.walletBackup
@@ -14,6 +13,7 @@ import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.actor.wallet.PackedMsg
 
 
 trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : EndpointHandlerBaseSpec =>

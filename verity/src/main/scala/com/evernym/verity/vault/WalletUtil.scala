@@ -6,6 +6,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_ENCRYPTION
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.util.Util
+import com.evernym.verity.vault.service.WalletParam
 import org.apache.commons.codec.digest.DigestUtils
 
 object WalletUtil {
@@ -22,31 +23,36 @@ object WalletUtil {
     } else new DefaultWalletConfig
   }
 
-  def createWalletAccessParam(entityId: String, key: String, walletConfig: WalletConfig,
-                              appConfig: AppConfig): WalletAccessParam =
-    WalletAccessParam(
-      getWalletName(entityId, appConfig),
-      key,
-      walletConfig
-    )
+  def generateWalletParam(walletId: String,
+                          appConfig: AppConfig,
+                          walletProvider: WalletProvider): WalletParam = {
+    val walletConfig = buildWalletConfig(appConfig)
+    generateWalletParam(walletId, appConfig, walletProvider, walletConfig)
+  }
 
-  def getWalletName(entityId: String, appConfig: AppConfig): String = {
+  def generateWalletParam(walletId: String,
+                          appConfig: AppConfig,
+                          walletProvider: WalletProvider,
+                          walletConfig: WalletConfig): WalletParam = {
+    val walletName = getWalletName(walletId, appConfig)
+    val encryptionKey = walletProvider.generateKey(Option(getWalletKeySeed(walletId, appConfig)))
+    WalletParam(walletId, walletName, encryptionKey, walletConfig)
+  }
+
+  private def getWalletName(entityId: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
     Util.saltedHashedName(entityId, appConfig)
   }
 
-  def getWalletKeySeed(id: String, appConfig: AppConfig): String = {
+  private def getWalletKeySeed(id: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
     val salt = appConfig.getConfigStringReq(SALT_WALLET_ENCRYPTION)
     buildWalletKeySeed(id, salt)
   }
 
-  def buildWalletKeySeed(secret: String, salt: String): String = {
+  private def buildWalletKeySeed(secret: String, salt: String): String = {
     //NOTE: This logic should not be changed unless we know its impact
     val seed = DigestUtils.sha512Hex(secret + salt)
     UUID.nameUUIDFromBytes(seed.getBytes).toString.replace("-", "")
   }
-
-  def generateWalletKey(seed: String, walletAPI: WalletAPI, appConfig: AppConfig): String =
-    walletAPI.generateWalletKey(Option(getWalletKeySeed(seed, appConfig)))
 }

@@ -1,9 +1,9 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.ledger
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
-import com.evernym.verity.libindy.LedgerTxnExecutorBase._
+import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault._
 import org.hyperledger.indy.sdk.pool.Pool

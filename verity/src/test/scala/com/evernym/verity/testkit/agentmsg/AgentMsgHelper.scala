@@ -5,6 +5,7 @@ import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey}
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.dead_drop.GetDeadDropMsg
 import com.evernym.verity.agentmsg.issuer_setup.{CreateDIDMsg, CurrentIdentifierMsg}
@@ -196,7 +197,7 @@ trait AgentMsgHelper
 
   def handleSetAgencyPairwiseAgentKey(DID: String, verKey: String): Unit = {
     setAgencyPairwiseAgentDetail(DID, verKey)
-    walletAPI.storeTheirKey(StoreTheirKeyParam(DID, verKey))
+    walletAPI.storeTheirKey(StoreTheirKey(DID, verKey))
   }
 
   def handleAgentCreatedRespForAgent(pairwiseDID: DID, pairwiseDIDVerKey: VerKey): Unit = {

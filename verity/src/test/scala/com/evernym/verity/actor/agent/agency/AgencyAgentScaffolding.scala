@@ -6,11 +6,11 @@ import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.{ActorErrorResp, UrlDetail}
 import org.scalatest.concurrent.Eventually
 

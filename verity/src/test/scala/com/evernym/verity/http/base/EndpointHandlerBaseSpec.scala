@@ -7,7 +7,6 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.base.open._
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
@@ -24,6 +23,7 @@ import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingS
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util._
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 
 import scala.reflect.ClassTag
@@ -179,4 +179,5 @@ trait ApiClientSpecCommon {
   var inviteUrl: String = _
 }
 
-case class RemoteAgentAndAgencyIdentity(agentDID: DID, agentVerKey: VerKey, agencyDID: DID, agencyVerKey: VerKey)
+case class RemoteAgentAndAgencyIdentity(agentDID: DID, agentVerKey: VerKey,
+                                        agencyDID: DID, agencyVerKey: VerKey)

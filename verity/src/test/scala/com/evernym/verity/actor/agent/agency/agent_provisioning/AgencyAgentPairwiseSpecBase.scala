@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
-import com.evernym.verity.vault.{WalletAPI, WalletAccessParam}
+import com.evernym.verity.vault.{WalletAPI, WalletAPIParam}
 import com.evernym.verity.UrlDetail
 import org.scalatest.concurrent.Eventually
 
@@ -21,8 +21,7 @@ trait AgencyAgentPairwiseSpecBase
 
   val aac: AgentActorContext = platform.agentActorContext
 
-  implicit lazy val wap: WalletAccessParam =
-    WalletAccessParam(agencyAgentEntityId, aac.walletAPI, aac.walletConfig, aac.appConfig, closeAfterUse=false)
+  implicit lazy val wap: WalletAPIParam = WalletAPIParam(agencyAgentEntityId)
 
   val agencyAgentWalletAPI: WalletAPI = platform.agentActorContext.walletAPI
   var agencyAgentPairwiseDID:DID = _

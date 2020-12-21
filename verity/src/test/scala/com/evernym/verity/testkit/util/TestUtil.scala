@@ -34,7 +34,10 @@ object TestUtil extends UtilBase {
     }
   }
 
-  override def getVerKey(did: DID, walletExt: WalletExt, getKeyFromPool: Boolean, poolConnManager: LedgerPoolConnManager): Future[String] = {
+  override def getVerKey(did: DID,
+                         walletExt: WalletExt,
+                         getKeyFromPool: Boolean,
+                         poolConnManager: LedgerPoolConnManager): Future[String] = {
     FutureConverters.toScala(Did.keyForLocalDid(walletExt.wallet, did))
       .recover{ case e: Exception => throw new ExecutionException(e)}
   }

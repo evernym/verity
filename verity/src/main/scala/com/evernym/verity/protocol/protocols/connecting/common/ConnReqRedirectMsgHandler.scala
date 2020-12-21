@@ -4,14 +4,14 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{MSG_STATUS_REDIRECTED, REDIRECTED_CONN_REQ_EXISTS}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
+import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgParam, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgParam}
 import com.evernym.verity.protocol.actor.ProtoMsg
 import com.evernym.verity.protocol.engine.{MsgId, Protocol}
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
-import com.evernym.verity.vault.StoreTheirKeyParam
 import org.json.JSONObject
 
 
@@ -118,17 +118,17 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
 
     theirDidDocDetailOpt.foreach { _ =>
       walletDetail.walletAPI.storeTheirKey(
-        StoreTheirKeyParam(rcrm.senderAgencyDetail.DID,
-          rcrm.senderAgencyDetail.verKey), ignoreIfAlreadyExists = true)
+        StoreTheirKey(rcrm.senderAgencyDetail.DID,
+          rcrm.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
 
       walletDetail.walletAPI.storeTheirKey(
-        StoreTheirKeyParam(rcrm.senderDetail.DID,
-          rcrm.senderDetail.verKey), ignoreIfAlreadyExists = true)
+        StoreTheirKey(rcrm.senderDetail.DID,
+          rcrm.senderDetail.verKey, ignoreIfAlreadyExists = true))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
       walletDetail.walletAPI.storeTheirKey(
-        StoreTheirKeyParam(rkdp.agentDID, rkdp.agentDelegatedKey), ignoreIfAlreadyExists = true
+        StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }
   }

@@ -9,7 +9,7 @@ import com.evernym.verity.actor.{AgentKeyDlgProofSet, MsgDetailAdded}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqMsg, ConnReqMsgHelper}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.LogKeyConstants._
@@ -22,6 +22,7 @@ import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormal
 import com.evernym.verity.vault.{EncryptParam, KeyInfo}
 import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
+import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.concurrent.Future
 import scala.util.Left

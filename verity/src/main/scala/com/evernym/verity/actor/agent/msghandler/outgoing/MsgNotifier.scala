@@ -159,7 +159,8 @@ trait MsgNotifierForStoredMsgs
         sendMsgToRegisteredEndpointLegacy(pw, allComMethods)
       case Some(MPF_PLAIN)  =>
         sendMsgToRegisteredEndpointNew(pw, allComMethods)
-      case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
+      case Some(Unrecognized(_)) =>
+        throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
     }
   }
 
@@ -195,13 +196,12 @@ trait MsgNotifierForStoredMsgs
             case MPF_PLAIN =>
               remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
             case MPF_INDY_PACK | MPF_MSG_PACK =>
-              val endpointReceipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyInfo(Left(verKey))))
+              val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyInfo(Left(verKey))))
               // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
-              val recipKeys = endpointReceipKeys match {
+              val recipKeys = endpointRecipKeys match {
                 case Some(keys) if keys.nonEmpty => keys
                 case _ => defaultSelfRecipKeys
               }
-
               val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
               remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlDetail(hcm.value))
             case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")

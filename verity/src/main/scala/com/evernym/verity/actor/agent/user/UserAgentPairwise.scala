@@ -30,7 +30,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -61,6 +61,7 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.json.JSONObject
 
 import scala.concurrent.Future

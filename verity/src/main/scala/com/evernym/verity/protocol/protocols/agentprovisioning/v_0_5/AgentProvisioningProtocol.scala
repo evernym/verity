@@ -5,6 +5,7 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueExce
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
+import com.evernym.verity.actor.wallet.StoreTheirKey
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
@@ -14,7 +15,6 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AgentWalletSetupProvider, AskUserAgentCreator}
 import com.evernym.verity.util.{Base58Util, ParticipantUtil}
-import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 
 
@@ -180,7 +180,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def storeTheirKey(did: DID, verKey: VerKey): Unit = {
     try {
-      walletDetail.walletAPI.storeTheirKey(StoreTheirKeyParam(did, verKey))
+      walletDetail.walletAPI.storeTheirKey(StoreTheirKey(did, verKey))
     } catch {
       case e: BadRequestErrorException if e.respCode == ALREADY_EXISTS.statusCode =>
         throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)

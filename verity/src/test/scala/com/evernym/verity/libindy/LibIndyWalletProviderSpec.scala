@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.libindy.wallet.{LibIndyWalletExt, LibIndyWalletProvider}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault.{WalletAlreadyExist, WalletAlreadyOpened}
 import org.hyperledger.indy.sdk.did.DidResults.CreateAndStoreMyDidResult
@@ -62,7 +63,8 @@ class LibIndyWalletProviderSpec extends BasicSpecWithIndyCleanup with CommonSpec
     "when asked to store their key" - {
       "should be able to store it successfully" in {
         val did1 = generateNewDid()
-        lip1Wallet.storeTheirDID(did1.DID, did1.verKey)
+        val DIDJson = s"""{\"did\":\"${did1.DID}\",\"verkey\":\"${did1.verKey}\"}"""
+        Did.storeTheirDid(lip1Wallet.wallet, DIDJson)
       }
     }
   }

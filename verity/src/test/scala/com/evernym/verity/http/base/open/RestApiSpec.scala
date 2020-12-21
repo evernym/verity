@@ -11,8 +11,9 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestErrorResponse, RestOKResponse}
 import com.evernym.verity.util.Base58Util
-import com.evernym.verity.vault.{KeyInfo, SignMsgParam}
+import com.evernym.verity.vault.KeyInfo
 import com.evernym.verity.Status
+import com.evernym.verity.actor.wallet.SignMsg
 import org.json.JSONObject
 
 trait RestApiSpec { this : EndpointHandlerBaseSpec =>
@@ -23,7 +24,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
     lazy val routingDid = mockEdgeAgent.myDIDDetail.did
     lazy val verKey = mockEdgeAgent.myDIDDetail.verKey
     lazy val signature = {
-      val signedVerKey = mockEdgeAgent.walletAPI.signMsg(SignMsgParam(KeyInfo(Left(verKey)), verKey.getBytes))(mockEdgeAgent.wap)
+      val signedVerKey = mockEdgeAgent.walletAPI.signMsg(SignMsg(KeyInfo(Left(verKey)), verKey.getBytes))(mockEdgeAgent.wap)
       Base58Util.encode(signedVerKey)
     }
 

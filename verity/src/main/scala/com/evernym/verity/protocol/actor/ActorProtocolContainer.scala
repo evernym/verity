@@ -18,7 +18,6 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.libindy.{LedgerAccessApi, WalletAccessLibindy}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
@@ -36,6 +35,8 @@ import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.libindy.ledger.LedgerAccessApi
+import com.evernym.verity.libindy.wallet.WalletAccessLibindy
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.github.ghik.silencer.silent

@@ -8,10 +8,10 @@ import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.actor.{AgencyPublicDid, ForIdentifier, agentRegion}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, PinstIdResolution}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.AgentProvisioningProtoDef
+import com.evernym.verity.actor.wallet.PackedMsg
 
 class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
 

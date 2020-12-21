@@ -1,6 +1,6 @@
 package com.evernym.verity.libindy
 
-import com.evernym.verity.vault.WalletExt
+import com.evernym.verity.libindy.wallet.WalletAccessLibindy
 import com.evernym.verity.protocol.engine.{DID, InvalidSignType, ParticipantId, VerKey}
 import com.evernym.verity.testkit.{BasicSpec, TestWalletHelper}
 import com.evernym.verity.util.ParticipantUtil
@@ -8,8 +8,9 @@ import com.evernym.verity.util.ParticipantUtil
 import scala.util.{Failure, Success}
 
 class WalletAccessLibindySpec extends BasicSpec with TestWalletHelper {
-  val wallet: WalletExt = walletDetail.walletAPI.createAndOpenWallet(wap)
-  val selfParticipantId: ParticipantId = ParticipantUtil.participantId(wallet.createNewKey().did, None)
+  walletDetail.walletAPI.createWallet(wap)
+  val selfParticipantId: ParticipantId = ParticipantUtil.participantId(
+    walletDetail.walletAPI.createNewKey().did, None)
   val walletAccess = new WalletAccessLibindy(appConfig, walletDetail.walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()

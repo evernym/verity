@@ -9,7 +9,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.vault.WalletAccessParam
+import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -28,7 +28,7 @@ trait PlatformServiceProvider
   lazy val logger: Logger = getLoggerByClass(classOf[PlatformServiceProvider])
 
   var agencyDID: DID = _
-  implicit var wap: WalletAccessParam = _
+  implicit var wap: WalletAPIParam = _
 
   def getAgencyDIDFut: Future[DID] = {
     Option(wap).map { _ =>
@@ -38,8 +38,7 @@ trait PlatformServiceProvider
         agencyDID = agencyId
         agentActorContext.agentMsgRouter.execute(GetRoute(agencyDID)) map {
           case Some(aa: ActorAddressDetail) =>
-            wap = WalletAccessParam(aa.address, agentActorContext.walletAPI,
-              agentActorContext.walletConfig, agentActorContext.appConfig, closeAfterUse=false)
+            wap = WalletAPIParam(aa.address)
             agencyDID
           case None =>
             agencyDID

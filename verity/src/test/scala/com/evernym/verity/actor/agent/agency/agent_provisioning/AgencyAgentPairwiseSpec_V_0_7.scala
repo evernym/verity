@@ -5,11 +5,11 @@ import com.evernym.verity.actor.agent.agency.{GetLocalAgencyIdentity, UserAgentC
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.TimeUtil.IsoDateTime
 import com.evernym.verity.util.TimeUtil
+import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.concurrent.duration.Duration
 

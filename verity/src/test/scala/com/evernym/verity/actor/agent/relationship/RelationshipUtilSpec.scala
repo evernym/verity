@@ -3,13 +3,15 @@ package com.evernym.verity.actor.agent.relationship
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.util.Util
-import com.evernym.verity.vault.WalletUtil.buildWalletConfig
-import com.evernym.verity.vault.{WalletAPI, WalletAccessParam, WalletConfig}
+import com.evernym.verity.vault.{WalletAPI, WalletAPIParam}
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
+import com.evernym.verity.actor.wallet.CreateNewKey
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.vault.service.NonActorWalletService
 import org.scalatest.OptionValues
 
 class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
@@ -149,13 +151,14 @@ class RelationshipUtilSpec extends BasicSpecWithIndyCleanup with OptionValues {
   lazy val walletVerKeyCacheHelper: WalletVerKeyCacheHelper = {
     val appConfig = new TestAppConfig()
     val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
-    val walletAPI: WalletAPI = new WalletAPI(new LibIndyWalletProvider(appConfig), Util, poolConnManager)
-    val walletConfig: WalletConfig = buildWalletConfig(appConfig)
-    val wap = WalletAccessParam("encryption-key-seed", walletAPI, walletConfig, appConfig, closeAfterUse = false)
-    val wh = walletAPI.createAndOpenWallet(wap)
-    wh.createNewKey(seedOption = Option("0000000000000000000000000000TEST"))          //key to represent current/this agent
-    wh.createNewKey(seedOption = Option("000000000000000000000000000OTHER"))          //key to represent some other agent
-    wh.createNewKey(seedOption = Option("000000000000000000000000000THEIR"))          //key to represent their agent
+    val walletProvider = new LibIndyWalletProvider(appConfig)
+    val walletService = new NonActorWalletService(appConfig, Util, walletProvider, poolConnManager)
+    val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
+    implicit val wap = WalletAPIParam("encryption-key-seed")
+    walletAPI.createWallet(wap)
+    walletAPI.createNewKey(CreateNewKey(seed = Option("0000000000000000000000000000TEST")))          //key to represent current/this agent
+    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000OTHER")))          //key to represent some other agent
+    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
     new WalletVerKeyCacheHelper(wap, walletAPI, appConfig)
   }
 }

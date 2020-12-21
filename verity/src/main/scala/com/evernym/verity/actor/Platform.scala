@@ -16,7 +16,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, ActivityWindow}
+import com.evernym.verity.actor.metrics.ActivityTracker
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -101,7 +101,7 @@ class Platform(val aac: AgentActorContext)
   //wallet actor
   val walletActorRegion: ActorRef = createRegion(
     WALLET_REGION_ACTOR_NAME,
-    buildProp(Props(new WalletActor(agentActorContext.appConfig)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)),
+    buildProp(Props(new WalletActor(agentActorContext.appConfig, agentActorContext.util, agentActorContext.poolConnManager)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)),
     passivateIdleEntityAfter = appConfig.getConfigIntOption(CommonConfig.WALLET_ACTOR_PASSIVATE_TIME) match {
       case Some(duration) => duration.second
       case None => 10.minute
@@ -180,23 +180,27 @@ class Platform(val aac: AgentActorContext)
   val itemContainerRegion: ActorRef = createRegion(ITEM_CONTAINER_REGION_ACTOR_NAME, ItemContainer.props)
 
   // protocol region actors
-  val protocolRegions = agentActorContext.protocolRegistry.entries.map { e =>
-    val ap = ActorProtocol(e.protoDef)
-    val region = createRegion(
-      ap.typeName,
-      ap.props(agentActorContext))
-    ap.typeName -> region
-  }.toMap
+  val protocolRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
+    .entries
+    .map { e =>
+      val ap = ActorProtocol(e.protoDef)
+      val region = createRegion(
+        ap.typeName,
+        ap.props(agentActorContext))
+      ap.typeName -> region
+    }.toMap
 
 
   //segmented state region actors
-  val segmentedStateRegions = agentActorContext.protocolRegistry.entries.filter(_.protoDef.segmentedStateName.isDefined).map { e =>
-    val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef, e.protoDef.segmentedStateName.get)
-    val region = createRegion(
-      typeName,
-      SegmentedStateStore.props(agentActorContext.appConfig))
-    typeName -> region
-  }.toMap
+  val segmentedStateRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
+    .entries.filter(_.protoDef.segmentedStateName.isDefined)
+    .map { e =>
+      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef, e.protoDef.segmentedStateName.get)
+      val region = createRegion(
+        typeName,
+        SegmentedStateStore.props(agentActorContext.appConfig))
+      typeName -> region
+    }.toMap
 
   createCusterSingletonManagerActor(SingletonParent.props(CLUSTER_SINGLETON_PARENT))
 

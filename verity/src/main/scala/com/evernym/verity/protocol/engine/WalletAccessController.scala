@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ledger.LedgerRequest
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
 
 import scala.util.{Failure, Try}
 

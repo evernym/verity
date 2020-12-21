@@ -1,64 +1,35 @@
 package com.evernym.verity.agentmsg.msgpacker
 
-import com.evernym.verity.vault.WalletExt
-import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.{MsgPackFormat, PayloadMetadata, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault._
-import org.hyperledger.indy.sdk.wallet.Wallet
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.reflect.ClassTag
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 
 class AgentMsgTransformer(val walletAPI: WalletAPI) {
 
-  def pack(msgPackFormat: MsgPackFormat, msg: String, encryptInfo: EncryptParam,
-           packParam: PackParam = PackParam())
-          (implicit wap: WalletAccessParam): PackedMsg = {
-    walletAPI.executeOpWithWalletInfo("auth/anon crypt",
-      openWalletIfNotExists = packParam.openWalletIfNotOpened, { we: WalletExt =>
-        val senderKeyOpt = encryptInfo.senderKey.map({ sk =>
-          val future = walletAPI.getVerKeyFromWallet(sk.verKeyDetail)(we)
-          Await.result(future, Duration.Inf) // fixme ve2028 testing
-        })
-        val future = walletAPI.getVerKeyFromWallet(encryptInfo.recipKeys.head.verKeyDetail)(we)
-        val verkey = Await.result(future, Duration.Inf) // fixme ve2028 testing
-        val recipKeys = Set(verkey)
-        AgentMsgTransformerApi.pack(msgPackFormat, we.wallet, msg, recipKeys, senderKeyOpt)
-      }
-    )
+  def pack(msgPackFormat: MsgPackFormat,
+           msg: String,
+           encryptInfo: EncryptParam)
+          (implicit wap: WalletAPIParam): PackedMsg = {
+    AgentMsgTransformerApi.pack(msgPackFormat, msg, encryptInfo.recipKeys, encryptInfo.senderKey)(wap, walletAPI)
   }
 
   def unpack(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())
-            (implicit wap: WalletAccessParam): AgentMsgWrapper = {
-    walletAPI.executeOpWithWalletInfo("auth/anon decrypt",
-      openWalletIfNotExists = unpackParam.openWalletIfNotOpened, { we: WalletExt =>
-        val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
-        val fromVerKey = Await.result(fromVerKeyFuture, Duration.Inf) // fixme ve2028 testing
-        AgentMsgTransformerApi.unpack(we.wallet, msg, Option(fromVerKey), unpackParam)
-      }
-    )
+            (implicit wap: WalletAPIParam): AgentMsgWrapper = {
+    AgentMsgTransformerApi.unpack(msg, Option(fromKeyInfo), unpackParam)(wap, walletAPI)
   }
 
   def unpackAsync(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())
-                 (implicit wap: WalletAccessParam): Future[AgentMsgWrapper] = {
-    walletAPI.executeOpWithWalletInfo("auth/anon decrypt",
-      openWalletIfNotExists = unpackParam.openWalletIfNotOpened, { we: WalletExt =>
-        val fromVerKeyFuture = walletAPI.getVerKeyFromWallet(fromKeyInfo.verKeyDetail)(we)
-        fromVerKeyFuture.map({ fromVerKey =>
-          AgentMsgTransformerApi.unpack(we.wallet, msg, Option(fromVerKey), unpackParam)
-        })
-      }
-    )
+                 (implicit wap: WalletAPIParam): Future[AgentMsgWrapper] = {
+    AgentMsgTransformerApi.unpackAsync(msg, Option(fromKeyInfo), unpackParam)(wap, walletAPI)
   }
 
 }
-
-case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata]=None) extends ActorMessageClass
 
 /**
  * wrapper around one decrypted agent message
@@ -123,10 +94,6 @@ case class UnpackParam(parseParam: ParseParam=ParseParam(),
   */
 case class ParseParam(parseBundledMsgs: Boolean = true, useInsideMsgIfPresent: Boolean = false)
 
-case class UnpackedMsg(msg: String,
-                       senderVerKey: Option[VerKey],
-                       recipVerKey: Option[VerKey])
-
 //NOTE: origDetailOpt in MsgFamilyDetail case class is the original un parsed detail
 // for example: did:sov:123456789abcdefghi1234;spec/onboarding/1.0/CONNECT
 // 'msgVer' is only for backward compatibility
@@ -150,7 +117,12 @@ trait MsgTransformer {
 
   def msgPackFormat: MsgPackFormat
 
-  def pack(wallet: Wallet, msg: String, recipVerKeys: Set[VerKey], senderVerKey: Option[VerKey], packParam: PackParam): PackedMsg
+  def pack(msg: String, recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo], packParam: PackParam)
+          (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg
 
-  def unpack(wallet: Wallet, msg: Array[Byte], fromVerKey: Option[VerKey], unpackParam: UnpackParam): AgentBundledMsg
+  def unpack(msg: Array[Byte], fromVerKey: Option[KeyInfo], unpackParam: UnpackParam)
+            (implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentBundledMsg
+
+  def unpackAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], unpackParam: UnpackParam)
+                 (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg]
 }

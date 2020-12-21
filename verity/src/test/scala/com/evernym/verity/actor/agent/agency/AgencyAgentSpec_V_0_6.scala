@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.actor.wallet.PackedMsg
 
 class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
 

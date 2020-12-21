@@ -1,12 +1,12 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.wallet
 
-import com.evernym.verity.actor.agent.SpanUtil._
+import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
 import com.evernym.verity.protocol.engine.{AnonCredRequests, DID}
 import com.evernym.verity.util.HashAlgorithm.SHA256
-import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
-import com.evernym.verity.vault.WalletAccessParam
+import com.evernym.verity.util.HashUtil
+import com.evernym.verity.vault.WalletAPIParam
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
 import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
 
@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 
 trait AnonCredRequestsApi extends AnonCredRequests { this: WalletAccessLibindy  =>
 
-  implicit def wap: WalletAccessParam
+  implicit def wap: WalletAPIParam
 
   lazy val masterSecretId: String = {
 

@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.agentmsg.msgpacker.{PackMsgParam, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED_OFFER, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, getNewMsgUniqueId}
@@ -13,6 +13,7 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyInfo}
 import org.scalatest.time.{Seconds, Span}
 

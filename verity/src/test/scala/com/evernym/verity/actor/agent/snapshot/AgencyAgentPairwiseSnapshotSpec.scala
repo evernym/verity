@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, GetLocal
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, agentRegion}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.DID
@@ -63,7 +63,6 @@ class AgencyAgentPairwiseSnapshotSpec
   }
 
   lazy val aap = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
-
 
   def fetchAgencyKey(): Unit = {
     aa ! GetLocalAgencyIdentity()

@@ -1,25 +1,27 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libindy.ledger
 
 import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status
 import com.evernym.verity.Status.{TIMEOUT, UNHANDLED, _}
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_LEDGER_OPERATION
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError, SeriousSystemError}
 import com.evernym.verity.config.ConfigUtil.findTAAConfig
 import com.evernym.verity.config.{AppConfig, CommonConfig, ConfigUtil}
 import com.evernym.verity.ledger._
-import com.evernym.verity.libindy.LedgerTxnExecutorBase._
+import com.evernym.verity.libindy.LibIndyCommon
+import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{DID, WalletAccess}
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
-import com.evernym.verity.util.{TAAUtil, Util}
 import com.evernym.verity.util.Util.getJsonStringFromMap
-import com.evernym.verity.vault.{SubmitReqParam, WalletAPI}
-import com.evernym.verity.Status
+import com.evernym.verity.util.{TAAUtil, Util}
+import com.evernym.verity.vault.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.IndyException
 import org.hyperledger.indy.sdk.ledger.Ledger
@@ -146,7 +148,7 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
       .flatMap{ r =>
         if(r.needsSigning) walletAPI
           .getOrElse(throw new Exception("WalletAPI required for signing ledger transactions"))
-          .signLedgerRequest(SubmitReqParam(r, submitterDetail))
+          .signLedgerRequest(SignLedgerRequest(r, submitterDetail))
         else Future.successful(r)
       }
   }

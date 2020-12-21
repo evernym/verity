@@ -6,12 +6,12 @@ import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.cache._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.vault.{WalletAPI, WalletAccessParam}
+import com.evernym.verity.vault.{WalletAPI, WalletAPIParam}
 
 /**
  * contains a wallet ver key cache
  */
-class WalletVerKeyCacheHelper(wap: WalletAccessParam, walletAPI: WalletAPI, appConfig: AppConfig) {
+class WalletVerKeyCacheHelper(wap: WalletAPIParam, walletAPI: WalletAPI, appConfig: AppConfig) {
 
   private lazy val walletCacheFetchers: Map[Int, CacheValueFetcher] = Map (
     WALLET_VER_KEY_CACHE_FETCHER_ID -> new WalletVerKeyCacheFetcher(walletAPI, appConfig)

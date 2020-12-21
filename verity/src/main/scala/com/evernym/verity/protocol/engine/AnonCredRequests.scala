@@ -1,7 +1,5 @@
 package com.evernym.verity.protocol.engine
 
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
-
 import scala.util.Try
 
 trait AnonCredRequests {

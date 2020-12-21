@@ -10,7 +10,6 @@ import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet, agentRegion}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -21,6 +20,7 @@ import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEd
 import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingSvcListener
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import org.scalatest.concurrent.Eventually
 

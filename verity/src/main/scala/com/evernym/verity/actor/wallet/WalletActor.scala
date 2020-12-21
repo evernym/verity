@@ -21,8 +21,6 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 
-import scala.concurrent.Future
-
 
 class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
   extends Actor {

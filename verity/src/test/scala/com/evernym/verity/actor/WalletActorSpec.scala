@@ -13,8 +13,9 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.engine.WalletAccess.KEY_ED25519
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult
+import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
 class WalletActorSpec extends TestKitBase
   with ProvidesMockPlatform
   with BasicSpec
@@ -73,7 +74,8 @@ class WalletActorSpec extends TestKitBase
 
     "when sent SignLedgerRequest command" - {
       "should respond with LedgerRequest" in {
-        walletActor ! SignLedgerRequest(LedgerRequest("{}"), Submitter.apply())
+        val req = buildGetNymRequest("did:sov:NcysrVCeLU1WNdJdLYxU6g", testDID).get
+        walletActor ! SignLedgerRequest(LedgerRequest(req), Submitter(testDID, Some(WalletAPIParam(walletActorEntityId))))
         expectMsgType[LedgerRequest]
       }
     }
@@ -159,7 +161,7 @@ class WalletActorSpec extends TestKitBase
       "should respond with IssuerCreateAndStoreCredentialDefResult" in {
         walletActor ! CreateCredDef(issuerDID = testDID,
           schemaJson = "{}",
-          tag = String,
+          tag = "tag",
           sigType = None,
           revocationDetails = Some("{}"))
         expectMsgType[IssuerCreateAndStoreCredentialDefResult]

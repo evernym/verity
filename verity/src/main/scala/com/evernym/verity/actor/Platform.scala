@@ -1,13 +1,9 @@
 package com.evernym.verity.actor
 
-import java.time.ZoneId
-
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.cluster.singleton._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity._
 import com.evernym.verity.actor.ShardUtil._
 import com.evernym.verity.actor.agent.AgentActorContext
@@ -16,19 +12,22 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.ActivityTracker
+import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
 import com.evernym.verity.actor.wallet.WalletActor
-import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.constants.ActorNameConstants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
 
+import java.time.ZoneId
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
@@ -203,6 +202,10 @@ class Platform(val aac: AgentActorContext)
     }.toMap
 
   createCusterSingletonManagerActor(SingletonParent.props(CLUSTER_SINGLETON_PARENT))
+
+  //Agent to collect metrics from Libindy
+  val libindyMetricsCollector: ActorRef =
+    agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")

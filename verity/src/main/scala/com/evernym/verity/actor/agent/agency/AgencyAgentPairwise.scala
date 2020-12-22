@@ -138,7 +138,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
     }
     for (
-      agencyVerKey <- getAgencyVerKeyFut
+      agencyVerKey <- agencyVerKeyFut
     ) yield  {
       paramMap(agencyVerKey) orElse super.stateDetailsWithAgencyVerKey(agencyVerKey)
     }

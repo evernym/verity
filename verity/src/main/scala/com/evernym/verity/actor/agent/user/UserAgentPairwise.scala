@@ -279,7 +279,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       DefaultMsgCodec.toJson(msg)
     }
     for (
-      agencyVerKey    <- getAgencyVerKeyFut;
+      agencyVerKey    <- agencyVerKeyFut();
       filteredConfigs <- getConfigs(Set(NAME_KEY, LOGO_URL_KEY))
     ) yield {
       {
@@ -810,7 +810,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     for {
       _   <- setRoute(stdd.myDID)
       ctlMsg  <-
-        getAgencyVerKeyFut.map { agencyVerKey =>
+        agencyVerKeyFut().map { agencyVerKey =>
           val myVerKey = getVerKeyReqViaCache(state.myDid_!)
           val routingKeys = Vector(myVerKey, agencyVerKey)
           Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))

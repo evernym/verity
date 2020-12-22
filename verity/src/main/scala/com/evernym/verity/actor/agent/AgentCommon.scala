@@ -8,7 +8,7 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerEr
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
+import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyInfo, GetAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.relationship.RelUtilParam
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -129,7 +129,13 @@ trait AgentCommon
     }
   }
 
-  def getAgencyVerKeyFut: Future[VerKey] = {
+  def agencyVerKeyFut(): Future[VerKey] =
+    AgencyAgent
+      .agencyAgentDetail
+      .map(aad => Future.successful(aad.verKey))
+      .getOrElse(getAgencyVerKeyFut)
+
+  private def getAgencyVerKeyFut: Future[VerKey] = {
     val gad = GetAgencyIdentity(agencyDIDReq, getEndpoint = false)
     val gadFutResp = agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(agencyDIDReq, gad))
     gadFutResp.map {

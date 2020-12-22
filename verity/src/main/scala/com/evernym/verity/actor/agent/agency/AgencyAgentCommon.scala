@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyCreated, WalletCreated, WalletCreatedBase}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyCreated, WalletCreated}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
@@ -87,7 +87,7 @@ trait AgencyAgentCommon
 
   def stateDetailsFor: Future[PartialFunction[String, Parameter]] = {
     for (
-      agencyVerKey <- getAgencyVerKeyFut
+      agencyVerKey <- agencyVerKeyFut()
     ) yield  {
       stateDetailsWithAgencyVerKey(agencyVerKey)
     }

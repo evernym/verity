@@ -232,16 +232,6 @@ trait BasePersistentActor
     else Recovery(fromSnapshot = SnapshotSelectionCriteria.None)
   }
 
-  def postActorRecoveryCompleted(): List[Future[Any]] = {
-    List.empty
-  }
-
-  var isSuccessfullyRecovered: Boolean = false
-
-  def postSuccessfulActorRecovery(): Unit = {}
-
-  def snapshotPostActorRecovery(): Unit = {}
-
   def receiveActorInitBaseCmd: Receive = LoggingReceive.withLabel("receiveActorInitBaseCmd") {
     case PostRecoveryActorInitSucceeded =>
       context.become(receiveCommand)
@@ -268,6 +258,10 @@ trait BasePersistentActor
         (LOG_KEY_PERSISTENCE_ID, persistenceId))
       stash()
   }
+
+  var isSuccessfullyRecovered: Boolean = false
+  def postSuccessfulActorRecovery(): Unit = {}
+  def snapshotPostActorRecovery(): Unit = {}
 
   def receiveWhenActorInitFailedBaseCmd: Receive = LoggingReceive.withLabel("receiveWhenActorInitFailedBaseCmd") {
     case _ => sender ! ActorInitPostRecoveryFailed
@@ -320,6 +314,10 @@ trait BasePersistentActor
           self ! PostRecoveryActorInitFailed(e)
       }
     }
+  }
+
+  def postActorRecoveryCompleted(): List[Future[Any]] = {
+    List.empty
   }
 
   def undoTransformAndApplyEvents(transformedEvents: Seq[Any]): Unit = {

@@ -698,7 +698,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
     }
 
-    getAgencyVerKeyFut map paramMap
+    agencyVerKeyFut map paramMap
 
   }
 

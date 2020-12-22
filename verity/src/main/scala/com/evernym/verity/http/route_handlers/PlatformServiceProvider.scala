@@ -35,7 +35,7 @@ trait PlatformServiceProvider
     }.getOrElse {
       getAgencyDID(agentActorContext.generalCache).flatMap { agencyId =>
         agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(agencyId, GetAgencyAgentDetail)) map {
-          case Some(aad: AgencyAgentDetail) =>
+          case aad: AgencyAgentDetail =>
             wap = WalletAPIParam(aad.walletId)
             DidPair(aad.did, aad.verKey)
           case _ =>

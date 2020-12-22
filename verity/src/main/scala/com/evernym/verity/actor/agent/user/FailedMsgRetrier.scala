@@ -41,7 +41,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
         val jobId = "RetryUndeliveredMsgs"
         scheduleJob(
           jobId,
-          scheduledJobInitialDelay,
           scheduledJobInterval,
           RetryUndeliveredMsgs
         )
@@ -123,7 +122,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class
-  def scheduledJobInitialDelay: Int
   def scheduledJobInterval: Int
   def getMsgIdsEligibleForRetries: Set[MsgId]
   def updateUndeliveredMsgCountMetrics(): Unit

@@ -13,7 +13,7 @@ abstract class PersistentActor <<sys>>
 interface com.evernym.verity.actor.persistence.EventPersistenceEncryption
 interface com.evernym.verity.actor.persistence.ActorCommon
 class com.evernym.verity.actor.metrics.ActorMetrics
-interface com.evernym.verity.actor.HasActorMsgScheduler
+interface com.evernym.verity.actor.base.HasActorMsgScheduler
 interface com.evernym.verity.protocol.protocols.HasAppConfig
 interface com.evernym.verity.actor.persistence.HasActorResponseTimeout
 interface com.evernym.verity.actor.persistence.DeleteMsgCallbackHandler
@@ -42,7 +42,7 @@ interface com.evernym.verity.actor.agent.msghandler.outgoing.SendOutgoingMsg
 interface com.evernym.verity.msg_tracer.MsgTraceProvider
 class com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 class com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker
-interface com.evernym.verity.actor.persistence.BaseNonPersistentActor
+interface com.evernym.verity.actor.base.BaseNonPersistentActor
 abstract class Actor <<sys>>
 interface com.evernym.verity.msg_tracer.HasAsyncReqContext
 interface com.evernym.verity.actor.agent.state.HasOwnerDetail
@@ -89,7 +89,7 @@ com.evernym.verity.actor.persistence.BasePersistentActor -* com.evernym.verity.a
 com.evernym.verity.actor.persistence.BasePersistentActor -* com.evernym.verity.actor.persistence.DeleteMsgCallbackHandler
 com.evernym.verity.actor.persistence.BasePersistentActor -down-* .Stash
 com.evernym.verity.actor.persistence.ActorCommon -up-|> com.evernym.verity.actor.metrics.ActorMetrics
-com.evernym.verity.actor.persistence.ActorCommon -down-* com.evernym.verity.actor.HasActorMsgScheduler
+com.evernym.verity.actor.persistence.ActorCommon -down-* com.evernym.verity.actor.base.HasActorMsgScheduler
 com.evernym.verity.actor.persistence.ActorCommon --* com.evernym.verity.protocol.protocols.HasAppConfig
 com.evernym.verity.actor.persistence.DefaultPersistenceEncryption -up-|> com.evernym.verity.actor.persistence.EventPersistenceEncryption
 com.evernym.verity.actor.agent.msghandler.AgentMsgHandler -up-|> com.evernym.verity.actor.agent.AgentCommon
@@ -117,10 +117,10 @@ com.evernym.verity.msg_tracer.MsgTraceProvider -up-|> com.evernym.verity.msg_tra
 com.evernym.verity.msg_tracer.MsgTraceProvider --* com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker
 com.evernym.verity.msg_tracer.MsgTraceProvider --* com.evernym.verity.actor.persistence.HasActorResponseTimeout
 com.evernym.verity.msg_tracer.MsgTraceProvider -* com.evernym.verity.msg_tracer.HasAsyncReqContext
-com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker -up-|> com.evernym.verity.actor.persistence.BaseNonPersistentActor
-com.evernym.verity.actor.persistence.BaseNonPersistentActor -up-|> .Actor
-com.evernym.verity.actor.persistence.BaseNonPersistentActor -* com.evernym.verity.actor.persistence.ActorCommon
-com.evernym.verity.actor.persistence.BaseNonPersistentActor -* com.evernym.verity.actor.persistence.HasActorResponseTimeout
+com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker -up-|> com.evernym.verity.actor.base.BaseNonPersistentActor
+com.evernym.verity.actor.base.BaseNonPersistentActor -up-|> .Actor
+com.evernym.verity.actor.base.BaseNonPersistentActor -* com.evernym.verity.actor.persistence.ActorCommon
+com.evernym.verity.actor.base.BaseNonPersistentActor -* com.evernym.verity.actor.persistence.HasActorResponseTimeout
 com.evernym.verity.actor.ShardRegionFromActorContext -up-|> com.evernym.verity.actor.ShardRegionCommon
 com.evernym.verity.actor.ShardRegionCommon -up-|> com.evernym.verity.actor.ShardRegionNames
 com.evernym.verity.actor.ShardRegionNames -up-|> com.evernym.verity.actor.HasShardRegionNames

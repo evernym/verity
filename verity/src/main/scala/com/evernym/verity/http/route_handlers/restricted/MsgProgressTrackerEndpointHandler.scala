@@ -10,7 +10,7 @@ import com.evernym.verity.actor.msg_tracer.progress_tracker.{ConfigureTracking, 
 import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgressTracking, StopProgressTracking}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingIds}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.http.common.CustomExceptionHandler.exceptionHandler
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.msg_tracer.progress_tracker.{MsgProgressTrackerHtmlGenerator, PinstIdLinkDetail}

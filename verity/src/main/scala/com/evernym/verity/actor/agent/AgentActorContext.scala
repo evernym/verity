@@ -60,8 +60,8 @@ trait AgentActorContext extends ActorContext {
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
-  //lazy val walletService: ActorWalletService = new ActorWalletService(system)
-  lazy val walletService: NonActorWalletService = new NonActorWalletService(appConfig, util, walletProvider, poolConnManager)
+  lazy val walletService: ActorWalletService = new ActorWalletService(system)
+  //lazy val walletService: NonActorWalletService = new NonActorWalletService(appConfig, util, walletProvider, poolConnManager)
   lazy val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)

@@ -59,8 +59,8 @@ trait AgencyAgentCommon
           case AGENT_PROVISIONER_PARTICIPANT_ID         => Parameter(AGENT_PROVISIONER_PARTICIPANT_ID, selfParticipantId)
           case AGENCY_DID                               => Parameter(AGENCY_DID, agencyDIDReq)
           case AGENCY_DID_VER_KEY                       => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
-          case THIS_AGENT_WALLET_SEED                	  => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
-          case NEW_AGENT_WALLET_SEED                    => Parameter(NEW_AGENT_WALLET_SEED, newActorId)
+          case THIS_AGENT_WALLET_ID                	    => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
+          case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, newActorId)
           case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
           case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
 

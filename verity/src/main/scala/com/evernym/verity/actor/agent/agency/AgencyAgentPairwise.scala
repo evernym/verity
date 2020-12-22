@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relati
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.AcceptConnReqMsg_MFV_0_6
@@ -198,8 +198,8 @@ trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
 trait AgencyAgentPairwiseStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {

@@ -110,7 +110,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |    enabled = true
         |
         |    scheduled-job {
-        |      initial-delay-in-seconds = 5
         |      interval-in-seconds = 3
         |    }
         |  }
@@ -118,7 +117,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |  item-container {
         |
         |    scheduled-job {
-        |      initial-delay-in-seconds = 1
         |      interval-in-seconds = 1
         |    }
         |

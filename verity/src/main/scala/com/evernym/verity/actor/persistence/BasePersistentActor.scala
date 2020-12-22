@@ -14,6 +14,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.base.ActorBase
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -25,6 +26,7 @@ import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.transformations.transformers.<=>
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -40,7 +42,7 @@ import scala.concurrent.duration._
 trait BasePersistentActor
   extends PersistentActor
     with EventPersistenceEncryption
-    with ActorCommon
+    with ActorBase
     with HasActorResponseTimeout
     with DeleteMsgHandler
     with HasTransformationRegistry
@@ -112,14 +114,14 @@ trait BasePersistentActor
 
   def trackPersistenceFailure(): Unit = {
     val duration = System.currentTimeMillis() - persistStart
-    ActorMetrics.incrementGauge(AS_SERVICE_DYNAMODB_PERSIST_FAILED_COUNT)
-    ActorMetrics.incrementGauge(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
+    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_FAILED_COUNT)
+    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
   def trackPersistenceSuccess(): Unit = {
     val duration = System.currentTimeMillis() - persistStart
-    ActorMetrics.incrementGauge(AS_SERVICE_DYNAMODB_PERSIST_SUCCEED_COUNT)
-    ActorMetrics.incrementGauge(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
+    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_SUCCEED_COUNT)
+    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
   final def persistEvent(event: Any, sync: Boolean)(handler: Any => Unit): Unit = {

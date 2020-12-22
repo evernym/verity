@@ -8,7 +8,7 @@ import com.evernym.verity.actor.cluster_singleton.ForWatcherManager
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, ItemManagerEntityId, ItemType}
 import com.evernym.verity.actor.itemmanager._
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, HasActorResponseTimeout}
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
@@ -18,6 +18,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ActorErrorResp
+import com.evernym.verity.actor.base.BaseNonPersistentActor
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -140,9 +141,6 @@ trait WatcherBase extends BaseNonPersistentActor with HasActorResponseTimeout wi
     itemManagerRegion ? ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(uip, None))
   }
 
-  lazy val scheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PAIRWISE_WATCHER_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
-
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PAIRWISE_WATCHER_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(200)
 
@@ -150,7 +148,6 @@ trait WatcherBase extends BaseNonPersistentActor with HasActorResponseTimeout wi
 
   scheduleJob(
     "CheckForPeriodicTaskExecution",
-    scheduledJobInitialDelay,
     scheduledJobInterval,
     CheckForPeriodicTaskExecution
   )

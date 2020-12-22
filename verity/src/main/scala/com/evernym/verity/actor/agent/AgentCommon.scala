@@ -23,6 +23,7 @@ import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
+import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.actor.ProtocolIdDetail
@@ -72,7 +73,7 @@ trait AgentCommon
   override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
 
   def agentActorContext: AgentActorContext
-  def agentWalletSeed: Option[String] = state.agentWalletSeed
+  def agentWalletId: Option[String] = state.agentWalletId
   def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
 
   def agencyDIDReq: DID = state.agencyDID.getOrElse(
@@ -105,7 +106,7 @@ trait AgentCommon
 
   def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
     try {
-      updateAgentWalletSeed(actorEntityId)
+      updateAgentWalletId(actorEntityId)
       logger.debug(s"wallet successfully initialized and opened for actorEntityId: $actorEntityId")
     } catch {
       case e: Exception =>
@@ -115,10 +116,10 @@ trait AgentCommon
     }
   }
 
-  def updateAgentWalletSeed(actorEntityId: String): Unit = {
-    if (agentWalletSeed.nonEmpty && ! agentWalletSeed.contains(actorEntityId))
-      throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet seed already set to different value"))
-    setAgentWalletSeed(actorEntityId)
+  def updateAgentWalletId(actorEntityId: String): Unit = {
+    if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
+      throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet id already set to different value"))
+    setAgentWalletId(actorEntityId)
   }
 
   def setAgentActorDetail(forDID: DID): Future[Any] = {
@@ -190,7 +191,7 @@ case class SetupCreateKeyEndpoint(newAgentKeyDID: DID,
                                   forDID: DID,
                                   mySelfRelDID: DID,
                                   ownerAgentKeyDID: Option[DID] = None,
-                                  ownerAgentActorEntityId: Option[String]=None,
+                                  ownerAgentActorEntityId: Option[EntityId]=None,
                                   pid: Option[ProtocolIdDetail]=None) extends ActorMessageClass
 
 trait SetupEndpoint extends ActorMessageClass {

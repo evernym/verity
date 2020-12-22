@@ -8,8 +8,9 @@ import akka.pattern.ask
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemType}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, Done, SnapshotConfig, SnapshotterExt}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
 import com.evernym.verity.protocol.engine.VerKey

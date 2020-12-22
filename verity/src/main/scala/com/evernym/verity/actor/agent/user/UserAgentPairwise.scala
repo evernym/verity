@@ -293,7 +293,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
-        case THIS_AGENT_WALLET_SEED                 => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
+        case THIS_AGENT_WALLET_ID                   => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
 
         case NAME                                   => Parameter(NAME, agentName(filteredConfigs.configs))
         case LOGO_URL                               => Parameter(LOGO_URL, agentLogoUrl(filteredConfigs.configs))
@@ -652,7 +652,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     scke.pid.foreach { pd =>
       writeAndApply(ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     }
-    scke.ownerAgentActorEntityId.foreach(setAgentWalletSeed)
+    scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
     val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDID.get)
     val cdsEvt = AgentDetailSet(scke.forDID, scke.newAgentKeyDID)
     writeAndApply(odsEvt)
@@ -861,9 +861,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def mySelfRelDIDReq: DID = domainId
   def myPairwiseVerKey: VerKey = getVerKeyReqViaCache(state.myDid_!)
 
-  lazy val scheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
-
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
 
@@ -917,8 +914,8 @@ trait UserAgentPairwiseStateUpdateImpl
 
   def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {

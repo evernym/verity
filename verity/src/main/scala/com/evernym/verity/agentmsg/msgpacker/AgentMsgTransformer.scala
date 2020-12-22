@@ -14,9 +14,9 @@ class AgentMsgTransformer(val walletAPI: WalletAPI) {
 
   def pack(msgPackFormat: MsgPackFormat,
            msg: String,
-           encryptInfo: EncryptParam)
+           encryptParam: EncryptParam)
           (implicit wap: WalletAPIParam): PackedMsg = {
-    AgentMsgTransformerApi.pack(msgPackFormat, msg, encryptInfo.recipKeys, encryptInfo.senderKey)(wap, walletAPI)
+    AgentMsgTransformerApi.pack(msgPackFormat, msg, encryptParam.recipKeys, encryptParam.senderKey)(wap, walletAPI)
   }
 
   def unpack(msg: Array[Byte], fromKeyInfo: KeyInfo, unpackParam: UnpackParam = UnpackParam())

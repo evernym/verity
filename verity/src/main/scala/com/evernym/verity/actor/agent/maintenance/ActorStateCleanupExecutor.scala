@@ -5,8 +5,9 @@ import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{GetRouteBatchResult, _}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
-import com.evernym.verity.actor.persistence.{BasePersistentActor, Done, Stop}
+import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ActorStateCleaned, ActorStateStored, BatchSizeRecorded, Completed, ForIdentifier, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
@@ -270,17 +271,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
   lazy val singletonParentProxyActor: ActorRef =
     getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
 
-  lazy val scheduledJobInitialDelay: Int =
-    appConfig
-      .getConfigIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS)
-      .getOrElse(60)
 
   lazy val scheduledJobInterval: Int =
     appConfig
       .getConfigIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
-  scheduleJob("periodic_job", scheduledJobInitialDelay, scheduledJobInterval, ProcessPending)
+  scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
 
 }
 

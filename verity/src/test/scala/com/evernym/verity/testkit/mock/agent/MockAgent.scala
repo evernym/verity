@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.AgentDIDDetail
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
@@ -42,7 +42,7 @@ trait MockAgent extends HasWalletHelper with HasAppConfig {
   init()
 
   def getVerKeyFromWallet(did: DID): VerKey = walletAPI.getVerKey(
-    GetVerKeyByKeyInfoParam(KeyInfo(Right(GetVerKeyByDIDParam(did, getKeyFromPool = false)))))
+    GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(did, getKeyFromPool = false)))))
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)

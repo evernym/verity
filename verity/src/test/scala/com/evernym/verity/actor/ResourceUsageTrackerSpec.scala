@@ -9,7 +9,7 @@ import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
 import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
 import com.evernym.verity.actor.resourceusagethrottling.{tracking, _}
 import com.evernym.verity.actor.testkit.PersistentActorSpec

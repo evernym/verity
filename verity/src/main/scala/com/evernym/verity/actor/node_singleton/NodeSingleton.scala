@@ -4,11 +4,12 @@ import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.base.{BaseNonPersistentActor, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.metrics.MetricsReader

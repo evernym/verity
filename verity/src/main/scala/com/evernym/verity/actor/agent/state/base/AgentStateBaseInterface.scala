@@ -14,7 +14,7 @@ trait AgentStateUpdateInterface {
   type StateType <: AgentStateInterface
   def state: StateType
 
-  def setAgentWalletSeed(seed: String): Unit
+  def setAgentWalletId(walletId: String): Unit
   def setAgencyDID(did: DID): Unit
   def addThreadContextDetail(threadContext: ThreadContext): Unit
   def removeThreadContext(pinstId: PinstId): Unit
@@ -61,7 +61,7 @@ trait AgentStateInterface extends State {
   def relationship: Option[Relationship]
   def relationshipReq: Relationship = relationship.getOrElse(throw new RuntimeException("relationship not found"))
 
-  def agentWalletSeed: Option[String]
+  def agentWalletId: Option[String]
   def agencyDID: Option[DID]
   def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))
 

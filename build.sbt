@@ -50,7 +50,7 @@ val sdnotifyVer = "1.3" // NOTE: Do not downgrade SDNotify to 1.1!
 //test dependency versions
 val scalatestVer = "3.2.0"
 val mockitoVer = "1.14.8"
-val veritySdkVer = "0.4.4-f5a828d8"
+val veritySdkVer = "0.4.5-77b158ab"
 val vcxWrapperVer = "0.10.1.1124"
 
 // compiler plugin versions

@@ -141,7 +141,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def createKey(ck: CreateKey): Unit = {
     if (state.relationship.isEmpty) {
       logger.debug("agency agent key setup starting...")
-      setAgentWalletSeed(entityId)
+      setAgentWalletId(entityId)
       agentActorContext.walletAPI.createWallet(wap)
       val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKey(seed = ck.seed))
       writeAndApply(KeyCreated(createdKey.did))
@@ -385,8 +385,8 @@ trait AgencyAgentStateImpl extends AgentStateImplBase
 trait AgencyAgentStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgent =>
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {

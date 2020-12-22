@@ -27,7 +27,7 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
         //asserts that original State and deserialized state are equals
         originalState.agencyDID shouldBe deserializedState.agencyDID
         originalState.isEndpointSet shouldBe deserializedState.isEndpointSet
-        originalState.agentWalletSeed shouldBe deserializedState.agentWalletSeed
+        originalState.agentWalletId shouldBe deserializedState.agentWalletId
         originalState.thisAgentKeyId shouldBe deserializedState.thisAgentKeyId
 
         List("pinst-id-1", "pinst-id-2").foreach { pinstId =>
@@ -100,7 +100,7 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
       .withIsEndpointSet(true)
       .withAgencyDID("agency-did")
       .withThisAgentKeyId("this-agent-key-1")
-      .withAgentWalletSeed("wallet-seed")
+      .withAgentWalletId("wallet-id")
       .withThreadContext(threadContext)
       .withProtoInstances(protoInstances)
       .withRelationship(relationship)

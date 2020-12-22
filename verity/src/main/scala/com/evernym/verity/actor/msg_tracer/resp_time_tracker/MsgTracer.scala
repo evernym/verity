@@ -4,7 +4,8 @@ import java.time.Instant
 
 import akka.actor.Props
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done}
+import com.evernym.verity.actor.base.BaseNonPersistentActor
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeMetricsRecorder
 

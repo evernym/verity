@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCmdErrorResponse, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
@@ -60,9 +60,7 @@ class NonActorWalletService(appConfig:AppConfig,
 
   private def executeOpWithWalletInfo[T](opContext: String, op: WalletExt => T)
                                 (implicit wap: WalletParam): T = {
-    runWithInternalSpan(s"executeOpWithWalletInfo($opContext)", "WalletAPI") {
-      _executeOpWithWalletParam(opContext, op)(wap)
-    }
+    _executeOpWithWalletParam(opContext, op)(wap)
   }
 
   private def _executeOpWithWalletParam[T](opContext: String, op: WalletExt => T)

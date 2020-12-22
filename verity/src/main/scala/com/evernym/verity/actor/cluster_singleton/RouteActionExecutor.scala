@@ -6,7 +6,8 @@ import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
 import com.evernym.verity.actor.agent.maintenance.{ProcessPending, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, GetRegisteredRouteSummary, GetRouteBatch, GetRouteBatchResult, InternalMsgRouteParam, RoutingAgentBucketMapperV1}
-import com.evernym.verity.actor.persistence.{AlreadyDone, BaseNonPersistentActor, Done, Start, Stop}
+import com.evernym.verity.actor.base.BaseNonPersistentActor
+import com.evernym.verity.actor.base.{AlreadyDone, Done, Start, Stop}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
@@ -48,7 +49,7 @@ class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsg
     }
     if (action.isEmpty) {
       action = Option(raa)
-      scheduleJob(scheduledJobId, 10, 30, ProcessPending)
+      scheduleJob(scheduledJobId, 30, ProcessPending)
       sender ! Done
     } else {
       sender ! AlreadyDone

@@ -6,7 +6,7 @@ import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.SetupAgentEndpoint
 import com.evernym.verity.actor.agent.relationship.SelfRelationship
 import com.evernym.verity.actor.agent.user.UserAgentState
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME
@@ -81,7 +81,7 @@ class UserAgentSnapshotSpec
                                   protoInstancesSize: Int): Unit = {
     state.publicIdentity.isDefined shouldBe false
     state.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
-    state.agentWalletSeed shouldBe Option(userAgentEntityId)
+    state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
     state.thisAgentKeyId.contains(userDID) shouldBe false
 

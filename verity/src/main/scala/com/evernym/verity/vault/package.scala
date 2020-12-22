@@ -1,6 +1,5 @@
 package com.evernym.verity
 
-import com.evernym.verity.actor.wallet.{GetVerKey, GetVerKeyOpt}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import org.hyperledger.indy.sdk.wallet.Wallet
 
@@ -36,25 +35,12 @@ package object vault {
 
   case class KeyInfo(verKeyDetail: Either[VerKey, GetVerKeyByDIDParam])
 
-  case class GetVerKeyByKeyInfoParam(keyInfo: KeyInfo) {
-    def createGetVerKey: GetVerKey = GetVerKey(keyInfo)
-    def createGetVerKeyOpt: GetVerKeyOpt = GetVerKeyOpt(keyInfo)
-  }
-
-  case class GetVerKeyOptionByKeyInfoParam(keyInfo: KeyInfo)
-
   case class SealParam(keyInfo: KeyInfo)
 
   case class EncryptParam(recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
 
-  case class GetOrCreateEncryptionKeyParam(did: DID)
-
-  case class ForceUpdateEncryptionKeyParam(did: DID, key: String)
-
   //response
-  case class ValidLedgerResponse(resp: String)
   case class LedgerResponse(resp: Any)
-  case class EncryptionKey(key: String)
 
   trait WalletExt {
     def wallet: Wallet

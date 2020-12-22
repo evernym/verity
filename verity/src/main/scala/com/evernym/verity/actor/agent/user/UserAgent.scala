@@ -14,7 +14,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
 import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -332,7 +332,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildSetupCreateKeyEndpoint(forDID: DID, newAgentPairwiseVerKeyDID: DID): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(newAgentPairwiseVerKeyDID, forDID,
-      state.myDid_!, state.thisAgentKeyDID, agentWalletSeed)
+      state.myDid_!, state.thisAgentKeyDID, agentWalletId)
   }
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -672,7 +672,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         userAgentPairwiseRegionName,
         state.myDid_!,
         state.thisAgentKeyDID,
-        agentWalletSeed)
+        agentWalletId)
     )
     val filteredConfs = getFilteredConfigs(Set(NAME_KEY, LOGO_URL_KEY))
 
@@ -683,8 +683,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case LOGO_URL                                 => Parameter(LOGO_URL, agentLogoUrl(filteredConfs))
       case AGENCY_DID                               => Parameter(AGENCY_DID, agencyDIDReq)
       case AGENCY_DID_VER_KEY                       => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
-      case THIS_AGENT_WALLET_SEED                   => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
-      case NEW_AGENT_WALLET_SEED                    => Parameter(NEW_AGENT_WALLET_SEED, agentActorEntityId)
+      case THIS_AGENT_WALLET_ID                     => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
+      case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, agentActorEntityId)
       case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, createKeyEndpointSetupDetailJson)
       case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, state.myDid_!)
 
@@ -805,8 +805,8 @@ trait UserAgentStateUpdateImpl
 
   def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {

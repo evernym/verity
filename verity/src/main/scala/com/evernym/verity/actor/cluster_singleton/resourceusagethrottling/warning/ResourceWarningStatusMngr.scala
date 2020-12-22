@@ -8,7 +8,8 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.persistence.{Done, SingletonChildrenPersistentActor}
+import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.persistence.SingletonChildrenPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil._
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.resourceusagethrottling.warning.ResourceWarningStatusMngrCommon

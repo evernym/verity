@@ -16,7 +16,7 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
   this: Actor with HasActorResponseTimeout with HasLogger =>
 
   def entityId: String
-  def walletSeed: String
+  def agentWalletIdReq: String
 
   override type ControllerProviderInputType = ActorDriverGenParam
 
@@ -53,7 +53,7 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
   private def buildProtocolActorCmd[A](pinstId: PinstId,
                                        threadContextDetail: ThreadContextDetail,
                                        msgEnvelope: MsgEnvelope[A]): Any = {
-    val cmd = ProtocolCmd(msgEnvelope, ProtocolMetadata(threadContextDetail, walletSeed, self))
+    val cmd = ProtocolCmd(msgEnvelope, ProtocolMetadata(threadContextDetail, agentWalletIdReq, self))
     ForIdentifier(pinstId, cmd)
   }
 

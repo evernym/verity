@@ -272,11 +272,6 @@ trait AgentStateCleanupHelper {
       .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5000)
 
-  lazy val migrateThreadContextScheduledJobInitialDelay: Int =
-    appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS)
-      .getOrElse(60)
-
   lazy val migrateThreadContextScheduledJobInterval: Int =
     appConfig
       .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
@@ -300,7 +295,6 @@ trait AgentStateCleanupHelper {
   def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {
     scheduleJob(
       MIGRATE_SCHEDULED_JOB_ID,
-      migrateThreadContextScheduledJobInitialDelay,
       migrateThreadContextScheduledJobInterval,
       MigrateThreadContexts)
   }

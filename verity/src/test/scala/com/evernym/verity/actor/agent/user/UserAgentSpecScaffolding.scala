@@ -4,7 +4,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SetupAgentEndpoint
 import com.evernym.verity.actor.agentRegion
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.protocol.engine.{DID, VerKey}

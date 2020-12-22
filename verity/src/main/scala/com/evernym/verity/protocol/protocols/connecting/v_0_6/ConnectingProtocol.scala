@@ -50,7 +50,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   lazy val myPairwiseVerKeyReq : VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
-    val seed = params.find(_.name == THIS_AGENT_WALLET_SEED).get.value
+    val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
     initWalletDetail(seed)
     ConnectingState(
       ctx.SERVICES_DEPRECATED.appConfig,

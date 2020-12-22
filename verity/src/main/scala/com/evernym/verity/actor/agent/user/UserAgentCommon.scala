@@ -260,9 +260,6 @@ trait UserAgentCommon
   override final def handleSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] =
     handleCommonSignalMsgs orElse handleSpecificSignalMsgs
 
-  lazy val periodicCleanupScheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
-
   lazy val periodicCleanupScheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(900)
 

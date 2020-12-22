@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.OutgoingMsgParam
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespConfig, MsgRespContext}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgParam, ProtoParam, TrackingParam}
-import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
+import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, SendRemoteMsgHelper}
@@ -21,6 +21,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 
 import scala.concurrent.Future

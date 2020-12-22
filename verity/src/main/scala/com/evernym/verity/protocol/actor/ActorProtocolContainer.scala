@@ -181,7 +181,7 @@ class ActorProtocolContainer[
     case pc @ ProtocolCmd(MsgEnvelope(msg: Any, msgType, to, frm, msgId, thId), metadata) =>
       logger.debug(s"$protocolIdForLog received ProtocolCmd: " + pc)
       storePackagingDetail(metadata.threadContextDetail)
-      setForwarderParams(metadata.walletSeed, metadata.forwarder)
+      setForwarderParams(metadata.walletId, metadata.forwarder)
       protocolReceiveCommand(MsgEnvelope(msg, msgType, to, frm, msgId, thId))
 
     // we can't make a stronger assertion about type because erasure
@@ -225,7 +225,7 @@ class ActorProtocolContainer[
     case ProtocolCmd(_, metadata) =>
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
-      setForwarderParams(metadata.walletSeed, metadata.forwarder)
+      setForwarderParams(metadata.walletId, metadata.forwarder)
       recoverOrInit()
 
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
@@ -284,11 +284,11 @@ class ActorProtocolContainer[
   }
 
 
-  var agentWalletSeed: Option[String] = None
+  var agentWalletId: Option[String] = None
 
   def setForwarderParams(_walletSeed: String, fwder: ActorRef): Unit = {
     msgForwarder.setForwarder(fwder)
-    agentWalletSeed = Option(_walletSeed)
+    agentWalletId = Option(_walletSeed)
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
@@ -581,7 +581,7 @@ case class ProtocolCmd(msg: Any, metadata: ProtocolMetadata) extends ActorMessag
   who originally forwarded the msg
  */
 case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
-                            walletSeed: String,
+                            walletId: String,
                             forwarder: ActorRef)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)

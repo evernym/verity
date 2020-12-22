@@ -1,16 +1,14 @@
-package com.evernym.verity.actor
+package com.evernym.verity.actor.base
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Actor, Cancellable}
-import com.evernym.verity.actor.persistence.ActorCommon
+import akka.actor.{Actor, Cancellable, Timers}
+import com.evernym.verity.logging.LoggingUtil
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.logging.LoggingUtil
 
-trait HasActorMsgScheduler { this: ActorCommon with Actor =>
+trait HasActorMsgScheduler extends Timers { this: ActorBase with Actor =>
 
   private val logger: Logger = LoggingUtil.getLoggerByName("HasActorMsgScheduler")
 
@@ -21,17 +19,16 @@ trait HasActorMsgScheduler { this: ActorCommon with Actor =>
   /**
    *
    * @param jobId caller needs to provide a unique id for the job
-   * @param initialDelayInSeconds
    * @param intervalInSeconds
    * @param msg
    */
-  def scheduleJob(jobId: JobId, initialDelayInSeconds: Int, intervalInSeconds: Int, msg: Any): Unit = {
-    if (! scheduledJobs.contains(jobId) && initialDelayInSeconds >= 0) {
-      val cancellable = context.system.scheduler.scheduleWithFixedDelay(
-        Duration.create(initialDelayInSeconds, TimeUnit.SECONDS),
-        Duration.create(intervalInSeconds, TimeUnit.SECONDS),
-        self, msg)
-      scheduledJobs += jobId -> cancellable
+  def scheduleJob(jobId: JobId, intervalInSeconds: Int, msg: Any): Unit = {
+    if (intervalInSeconds > 0) {
+      timers.startTimerWithFixedDelay(
+        jobId,
+        msg,
+        Duration.create(intervalInSeconds, TimeUnit.SECONDS)
+      )
     }
   }
 

@@ -36,8 +36,8 @@ object AgentProvisioningProtoDef
 
   override lazy val initParamNames: Set[String] = Set(
     AGENT_PROVISIONER_PARTICIPANT_ID,
-    THIS_AGENT_WALLET_SEED,
-    NEW_AGENT_WALLET_SEED,
+    THIS_AGENT_WALLET_ID,
+    NEW_AGENT_WALLET_ID,
     CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON
   )
 

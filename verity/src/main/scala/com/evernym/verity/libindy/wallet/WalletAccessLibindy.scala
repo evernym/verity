@@ -1,6 +1,6 @@
 package com.evernym.verity.libindy.wallet
 
-import com.evernym.verity.actor.wallet.{SignLedgerRequest, SignMsg, StoreTheirKey, VerifySigByVerKey}
+import com.evernym.verity.actor.wallet.{GetVerKey, SignLedgerRequest, SignMsg, StoreTheirKey, VerifySigByVerKey}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine._
@@ -31,7 +31,7 @@ class WalletAccessLibindy(protected val appConfig: AppConfig,
 
   def verKey(forDID: DID): Try[VerKey] = {
     Try {
-      walletApi.getVerKey(GetVerKeyByKeyInfoParam(KeyInfo(Right(GetVerKeyByDIDParam(forDID, getKeyFromPool=false)))))
+      walletApi.getVerKey(GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(forDID, getKeyFromPool=false)))))
     }
   }
 
@@ -88,7 +88,7 @@ class WalletAccessLibindy(protected val appConfig: AppConfig,
 
   def getVerKeyFromParticipantId(participantId: ParticipantId): VerKey = {
     val did = ParticipantUtil.DID(participantId)
-    val key = GetVerKeyByKeyInfoParam(KeyInfo(Right(GetVerKeyByDIDParam(did, getKeyFromPool=false))))
+    val key = GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(did, getKeyFromPool=false))))
     walletApi.getVerKey(key)
   }
 

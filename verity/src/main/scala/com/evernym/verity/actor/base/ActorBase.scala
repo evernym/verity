@@ -1,25 +1,23 @@
-package com.evernym.verity.actor.persistence
+package com.evernym.verity.actor.base
 
 import java.io.Serializable
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorRef, PoisonPill, ReceiveTimeout}
-import com.evernym.verity.actor.metrics.ActorMetrics
-import com.evernym.verity.actor.{ActorMessage, ActorMessageClass, ActorMessageObject, ExceptionHandler, HasActorMsgScheduler}
+import com.evernym.verity.actor.{ActorMessage, ActorMessageClass, ActorMessageObject, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
 /**
- * base actor for almost all (non persistent or persistent) actors used in this codebase
+ * base actor for almost all actors (persistent or non-persistent) used in this codebase
  */
-trait ActorCommon
-    extends ActorMetrics
-    with HasActorMsgScheduler
-    with HasAppConfig { this: Actor =>
+trait ActorBase extends HasActorMsgScheduler with HasAppConfig { this: Actor =>
 
   var actorStopStartedOpt: Option[LocalDateTime] = None
 
@@ -48,7 +46,7 @@ trait ActorCommon
   def preReceiveTimeoutCheck(): Boolean = true
 
   final override def preStart(): Unit = {
-    ActorMetrics.incrementGauge(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
+    MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
     preStartTime = LocalDateTime.now
     beforeStart()
   }
@@ -63,9 +61,6 @@ trait ActorCommon
   }
 
   def stopActor(): Unit = {
-    genericLogger.debug(s"[$actorId] scheduled jobs before shutdown: " + scheduledJobs.size)
-    stopAllScheduledJobs()
-    genericLogger.debug(s"[$actorId] scheduled jobs post cancelling those scheduled jobs: " + scheduledJobs.size)
     context.self ! PoisonPill
   }
 
@@ -81,7 +76,7 @@ trait ActorCommon
       actorStopStartedOpt = Option(LocalDateTime.now)
       genericLogger.debug(s"[$actorId] actor wil start preparing for shutdown... ")
       stopActor()
-      ActorMetrics.incrementGauge(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
+      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
     }
   }
 

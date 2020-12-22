@@ -1,9 +1,5 @@
 package com.evernym.verity.vault
 
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
-
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.ledger.LedgerRequest
@@ -33,14 +29,7 @@ class WalletAPI(walletService: WalletService, walletProvider: WalletProvider)
   }
 
   def createWallet(wap: WalletAPIParam): Unit = {
-    runWithInternalSpan("createWallet", "WalletAPI") {
-      val startTime = LocalDateTime.now
-      logger.debug(s"api call started (create wallet)")
-      walletService.executeSync[WalletCreatedBase](wap.walletId, CreateWallet)
-      val curTime = LocalDateTime.now
-      val millis = ChronoUnit.MILLIS.between(startTime, curTime)
-      logger.debug(s"api call finished (create wallet), time taken (in millis): $millis")
-    }
+    walletService.executeSync[WalletCreatedBase](wap.walletId, CreateWallet)
   }
 
   def generateWalletKey(seedOpt: Option[String] = None): String =
@@ -59,12 +48,12 @@ class WalletAPI(walletService: WalletService, walletProvider: WalletProvider)
     walletService.executeSync[TheirKeyCreated](wap.walletId, stk)
   }
 
-  def getVerKeyOption(ki: KeyInfo)(implicit wap: WalletAPIParam): Option[VerKey] = {
-    walletService.executeSync[Option[VerKey]](wap.walletId, GetVerKeyOpt(ki))
+  def getVerKeyOption(gvkOpt: GetVerKeyOpt)(implicit wap: WalletAPIParam): Option[VerKey] = {
+    walletService.executeSync[Option[VerKey]](wap.walletId, gvkOpt)
   }
 
-  def getVerKey(gvk: GetVerKeyByKeyInfoParam)(implicit wap: WalletAPIParam): VerKey = {
-    walletService.executeSync[VerKey](wap.walletId, gvk.createGetVerKey)
+  def getVerKey(gvk: GetVerKey)(implicit wap: WalletAPIParam): VerKey = {
+    walletService.executeSync[VerKey](wap.walletId, gvk)
   }
 
   def signMsg(sm: SignMsg)(implicit wap: WalletAPIParam): Array[Byte] = {

@@ -60,15 +60,18 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
     ctx.apply(messageToEvt(m))
 
     val signal = Signal.ReceivedMessage(
+      ctx.getRoster.selfId_!,
       m.`~l10n`,
       m.sent_time,
       m.content,
       m.`~attach`,
     )
+
     ctx.signal(signal)
   }
 
   def send(m: Ctl.SendMessage): Unit = {
+
     ctx.apply(MyRole(Participator.roleNum))
     val messageMsg = Msg.Message(
       m.`~l10n`,
@@ -77,7 +80,7 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
       m.`~attach`,
     )
     ctx.apply(messageToEvt(messageMsg))
-    ctx.send(messageMsg, Some(Participator), Some(Participator))
+    ctx.send(messageMsg)
   }
 
   // Helper Functions
@@ -96,7 +99,7 @@ object BasicMessage {
   def buildMessage(m: MessageReceived): Msg.Message = {
     Msg.Message(
       l10n(locale = m.localization),
-      BaseTiming(out_time = m.sentTime),
+      m.sentTime,
       m.content,
       Some(attachmentObjectsToAttachments(m.attachments.toVector)),
     )
@@ -105,7 +108,7 @@ object BasicMessage {
   def messageToEvt(m: Msg.Message): MessageReceived = {
     MessageReceived(
       m.`~l10n`.locale,
-      m.sent_time.out_time,
+      m.sent_time,
       m.content,
       attachmentsToAttachmentObjects(m.`~attach`.getOrElse(Vector.empty)),
     )

@@ -96,10 +96,13 @@ trait ActorSystemConfig {
           }
 
           serialization-bindings {
-            "com.evernym.verity.actor.TransformedMultiEvent" = protoser
-            "com.evernym.verity.actor.TransformedEvent" = protoser
-            "com.evernym.verity.actor.TransformedState" = protoser
-            "com.evernym.verity.actor.PersistentData" = protoser
+            "com.evernym.verity.actor.DeprecatedEventMsg" = protoser        //kept to satisfy config validation
+            "com.evernym.verity.actor.DeprecatedStateMsg" = protoser        //kept to satisfy config validation
+            "com.evernym.verity.actor.DeprecatedMultiEventMsg" = protoser   //kept to satisfy config validation
+
+            "com.evernym.verity.actor.PersistentMsg" = protoser
+            "com.evernym.verity.actor.PersistentMultiEventMsg" = protoser
+
             "com.evernym.verity.actor.ActorMessage" = kryo-akka
           }
 
@@ -115,7 +118,6 @@ trait ActorSystemConfig {
     overrideConfig.getOrElse(ConfigFactory.empty())
       .withFallback(levelDBJournal(tdir)) //default persistence
       .withFallback(baseConfig)
-
   }
 
 

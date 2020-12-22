@@ -1,13 +1,14 @@
 package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, PackedMsg, UnpackParam}
+import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, UnpackParam}
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.testkit.{BasicSpecBase, Matchers}
+import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV_0_5, GeneralMsgCreatedResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
 import com.evernym.verity.testkit.mock.HasCloudAgent
 import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_5, ComMethodUpdated_MFV_0_5, ConfigsMsg_MFV_0_5, ConfigsRemoved_MFV_0_5, ConfigsUpdated_MFV_0_5, ConnStatusUpdated_MFV_0_5, Connected_MFV_0_5, InviteMsgDetail_MFV_0_5, KeyCreated_MFV_0_5, MsgCreated_MFV_0_5, MsgStatusUpdatedByConns_MFV_0_5, MsgStatusUpdated_MFV_0_5, MsgsByConns_MFV_0_5, MsgsSent_MFV_0_5, Msgs_MFV_0_5, SignedUp_MFV_0_5}
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, StoreTheirKeyParam}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
 
 /**
  * this will handle received/incoming/response agent messages
@@ -21,7 +22,7 @@ trait AgentMsgHandler {
     def handleConnectedResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): Connected_MFV_0_5 = {
       val connectedMsg = unpackConnectedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
       walletAPI.storeTheirKey(
-        StoreTheirKeyParam(connectedMsg.withPairwiseDID, connectedMsg.withPairwiseDIDVerKey))
+        StoreTheirKey(connectedMsg.withPairwiseDID, connectedMsg.withPairwiseDIDVerKey))
       setAgencyPairwiseAgentDetail(connectedMsg.withPairwiseDID, connectedMsg.withPairwiseDIDVerKey)
       connectedMsg
     }

@@ -12,22 +12,21 @@ import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
-import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
-import com.evernym.verity.actor.agent.relationship.{EndpointType, RelationshipUtil, SelfRelationship, PackagingContext}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
+import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.libindy.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -45,6 +44,8 @@ import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
+import com.evernym.verity.actor.wallet.{CreateNewKey, PackedMsg, StoreTheirKey}
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -56,7 +57,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
-    with MsgNotifierForUserAgent {
+    with MsgNotifierForUserAgent
+    with AgentSnapshotter[UserAgentState] {
 
   type StateType = UserAgentState
   var state = new UserAgentState
@@ -113,6 +115,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     case GetFwdComMethods                        => sendFwdComMethods()
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
+    case GetSponsorRel                           => sendSponsorDetails()
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
@@ -228,17 +231,15 @@ class UserAgent(val agentActorContext: AgentActorContext)
     Future.successful(Option(ControlMsg(RecoveryKeyRegistered())))
   }
 
+  def sendSponsorDetails(): Unit =
+    sender() ! state.sponsorRel.getOrElse(SponsorRel.empty)
+
   def handleAgentDetailSet(ads: AgentDetailSet): Unit = {
     if (state.relationshipAgentsContains(AgentDetail(ads.forDID, ads.agentKeyDID))) {
       sender ! Done
     } else {
       writeApplyAndSendItBack(ads)
     }
-
-    logger.info(s"setting sponsor for pw: ${ads.agentKeyDID}")
-    agentActorContext
-      .agentMsgRouter
-      .execute(InternalMsgRouteParam(ads.agentKeyDID, SetSponsorRel(state.sponsorRel)))
   }
 
   def handleDeleteComMethod(dcm: DeleteComMethod): Unit = {
@@ -265,7 +266,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       else state.myDidDoc_!.endpoints_!.endpoints
     val comMethods = endpoints.map { ep =>
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
-        .filterByKeyIds(ep.authKeyIds.toSeq)
+        .filterByKeyIds(ep.authKeyIds)
         .map(_.verKey).toSet
       val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
       ComMethodDetail(ep.`type`, ep.value, cmp)
@@ -310,16 +311,14 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val forVerKey = verKeyOpt.getOrElse(getVerKeyReqViaCache(forDID))
 
     val endpointDID = if (! isEdgeAgent) {
-      val pairwiseKeyResult = agentActorContext.walletAPI.createNewKey(CreateNewKeyParam())
-      agentActorContext.walletAPI.storeTheirKey(StoreTheirKeyParam(forDID, forVerKey), ignoreIfAlreadyExists = true)
+      val pairwiseKeyResult = agentActorContext.walletAPI.createNewKey(CreateNewKey())
+      agentActorContext.walletAPI.storeTheirKey(StoreTheirKey(forDID, forVerKey, ignoreIfAlreadyExists = true))
       writeAndApply(AgentDetailSet(forDID, pairwiseKeyResult.did))
       pairwiseKeyResult.did
     } else forDID
 
     val ipc = buildSetupCreateKeyEndpoint(forDID, endpointDID)
-    val pairwiseEntityId = getNewActorId
-    val resp = userAgentPairwiseRegion ? ForIdentifier(pairwiseEntityId, ipc)
-    userAgentPairwiseRegion ! ForIdentifier(pairwiseEntityId, SetSponsorRel(state.sponsorRel))
+    val resp = userAgentPairwiseRegion ? ForIdentifier(getNewActorId, ipc)
     (resp, endpointDID)
   }
 
@@ -333,7 +332,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildSetupCreateKeyEndpoint(forDID: DID, newAgentPairwiseVerKeyDID: DID): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(newAgentPairwiseVerKeyDID, forDID,
-      state.myDid_!, state.thisAgentKeyDID, agentWalletSeed)
+      state.myDid_!, state.thisAgentKeyDID, agentWalletId)
   }
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -493,13 +492,18 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildSuccessfullyUpdatedMsgStatusResp(success: List[(String, Any)], agentVerKey: VerKey):  Map[String, List[String]] = {
     success.map { case (fromDID, respMsg) =>
-      val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(respMsg.asInstanceOf[PackedMsg].msg, KeyInfo(Left(agentVerKey)))
-      val msgIds = unpackedAgentMsg.msgPackFormat match {
-        case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
-        case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
-        case x              => throw new RuntimeException("unsupported msg pack format: " + x)
+      respMsg match {
+        case pm: PackedMsg =>
+          val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(pm.msg, KeyInfo(Left(agentVerKey)))
+          val msgIds = unpackedAgentMsg.msgPackFormat match {
+            case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
+            case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
+            case x              => throw new RuntimeException("unsupported msg pack format: " + x)
+          }
+          fromDID -> msgIds
+        case other =>
+          throw new RuntimeException("unexpected error: " + other.toString)
       }
-      fromDID -> msgIds
     }.filter(_._2.nonEmpty).toMap
   }
 
@@ -593,7 +597,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
               case MPF_MSG_PACK | MPF_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
               case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack format not supported: " + x))
             }
-            AgentActivityTracker.track(respMsg.metadata.map(_.msgTypeStr).getOrElse(""), domainId, state.sponsorRel, Some(fromDID))
+            val msgType = respMsg.metadata.map(_.msgTypeStr).getOrElse("")
+            AgentActivityTracker.track(msgType, domainId, Some(fromDID))
             fromDID -> msgs
           }.toMap
           val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(result)(reqMsgContext.agentMsgContext)
@@ -641,7 +646,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     }
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
-    AgentActivityTracker.newAgent(sponsorRel.map(_.sponsorId))
+    AgentActivityTracker.newAgent(sponsorRel)
 
     setRouteFut map {
       case _: RouteSet  => sndr ! resp
@@ -667,7 +672,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         userAgentPairwiseRegionName,
         state.myDid_!,
         state.thisAgentKeyDID,
-        agentWalletSeed)
+        agentWalletId)
     )
     val filteredConfs = getFilteredConfigs(Set(NAME_KEY, LOGO_URL_KEY))
 
@@ -678,8 +683,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case LOGO_URL                                 => Parameter(LOGO_URL, agentLogoUrl(filteredConfs))
       case AGENCY_DID                               => Parameter(AGENCY_DID, agencyDIDReq)
       case AGENCY_DID_VER_KEY                       => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
-      case THIS_AGENT_WALLET_SEED                   => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
-      case NEW_AGENT_WALLET_SEED                    => Parameter(NEW_AGENT_WALLET_SEED, agentActorEntityId)
+      case THIS_AGENT_WALLET_ID                     => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
+      case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, agentActorEntityId)
       case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, createKeyEndpointSetupDetailJson)
       case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, state.myDid_!)
 
@@ -693,7 +698,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
     }
 
-    getAgencyVerKeyFut map paramMap
+    agencyVerKeyFut map paramMap
 
   }
 
@@ -759,6 +764,7 @@ case object GetAllComMethods extends ActorMessageObject
 case object GetPushComMethods extends ActorMessageObject
 case object GetHttpComMethods extends ActorMessageObject
 case object GetFwdComMethods extends ActorMessageObject
+case object GetSponsorRel extends ActorMessageObject
 case class DeleteComMethod(value: String, reason: String) extends ActorMessageClass
 
 //response msgs
@@ -799,15 +805,15 @@ trait UserAgentStateUpdateImpl
 
   def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
     state = state.withAgencyDID(did)
   }
 
-  override def setSponsorRel(rel: SponsorRel): Unit = {
+  def setSponsorRel(rel: SponsorRel): Unit = {
     state = state.withSponsorRel(rel)
   }
 
@@ -816,8 +822,7 @@ trait UserAgentStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

@@ -9,10 +9,12 @@ import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
-import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof}
+import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof, VcxBasicMessage}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
@@ -26,11 +28,12 @@ import com.evernym.verity.util.{Base64Util, OptionUtil}
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.time.{Seconds, Span}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
-trait InteractiveSdkFlow {
+trait InteractiveSdkFlow extends MetricsFlow {
   this: BasicSpec with TempDir with Eventually =>
 
   import InteractiveSdkFlow._
@@ -803,7 +806,7 @@ trait InteractiveSdkFlow {
           .issuerDid(issuerDID)
           .build()
 
-        val nameAttr = PresentProofV1_0.attribute("name", restriction)
+        val nameAttr = PresentProofV1_0.attribute(Array("first_name", "last_name"), restriction)
         val numAttr = PresentProofV1_0.attribute("license_num", restriction)
 
         val t = Array(nameAttr, numAttr)
@@ -872,7 +875,8 @@ trait InteractiveSdkFlow {
 
         val forRel = proverSdk.relationship_!(relationshipId).owningDID
         val proof = proverSdk.asInstanceOf[VcxPresentProof].presentProof_1_0(forRel, tid, requestMsg)
-        proof.accept(proverSdk.context)
+
+        proof.acceptRequest(proverSdk.context)
       }
 
       s"[$verifierName] receive presentation" in {
@@ -893,8 +897,12 @@ trait InteractiveSdkFlow {
             .getString("value") shouldBe "123"
           presentation
             .getJSONObject("revealed_attrs")
-            .getJSONObject("name")
+            .getJSONObject("first_name")
             .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
         }
 
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
@@ -948,13 +956,14 @@ trait InteractiveSdkFlow {
           .issuerDid(issuerDID)
           .build()
 
-        val nameAttr = PresentProofV1_0.attribute("name", restriction)
+        val nameAttr = PresentProofV1_0.attribute(Array("first_name", "last_name"), restriction)
         val numAttr = PresentProofV1_0.attribute("license_num", restriction)
 
         verifierSdk
           .presentProof_1_0(forRel, proofName, Array(nameAttr, numAttr), Array.empty)
           .request(verifierSdk.context)
       }
+
 
       s"[$holderName] send a proof presentation" taggedAs UNSAFE_IgnoreLog in {
         var tid = ""
@@ -965,7 +974,8 @@ trait InteractiveSdkFlow {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
 
         holderSdk.presentProof_1_0(forRel, tid)
-          .accept(holderSdk.context)
+
+          .acceptRequest(holderSdk.context)
       }
       s"[$verifierName] receive presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
@@ -974,6 +984,7 @@ trait InteractiveSdkFlow {
         var presentation = new JSONObject()
 
         verifierMsgReceiver.expectMsg("presentation-result") { result =>
+          println(s"Presentation result: ${result.toString(2)}")
           tid = threadId(result)
           result.getString("verification_result") shouldBe "ProofValidated"
 
@@ -985,8 +996,12 @@ trait InteractiveSdkFlow {
             .getString("value") shouldBe "123"
           presentation
             .getJSONObject("revealed_attrs")
-            .getJSONObject("name")
+            .getJSONObject("first_name")
             .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
         }
 
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
@@ -997,6 +1012,109 @@ trait InteractiveSdkFlow {
             .getJSONObject("requested_presentation")
           presentationAgain.toString shouldBe presentation.toString
         }
+      }
+    }
+  }
+
+  def presentProof_1_0_with_proposal(verifier: ApplicationAdminExt,
+                                     holder: ApplicationAdminExt,
+                                     relationshipId: String,
+                                     proofName: String,
+                                     attributes: Seq[String])
+                                    (implicit scenario: Scenario): Unit = {
+    val verifierSdk = verifier.sdks.head
+    val holderSdk = holder.sdks.head
+
+    presentProof_1_0_with_proposal(verifierSdk, verifierSdk, holderSdk, holderSdk, relationshipId, proofName, attributes)
+  }
+
+  def presentProof_1_0_with_proposal(verifierSdk: VeritySdkProvider,
+                                     verifierMsgReceiverSdk: VeritySdkProvider,
+                                     holderSdk: VeritySdkProvider,
+                                     holderMsgReceiverSdk: VeritySdkProvider,
+                                     relationshipId: String,
+                                     proofName: String,
+                                     attributes: Seq[String])
+                                    (implicit scenario: Scenario): Unit = {
+    val holderName = holderSdk.sdkConfig.name
+    val verifierName = verifierSdk.sdkConfig.name
+    s"present proof with proposal from $holderName verifier $verifierName on relationship ($relationshipId)" - {
+      val verifierMsgReceiver = receivingSdk(Option(verifierMsgReceiverSdk))
+      val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdk))
+
+      s"[$holderName] propose a proof presentation" in {
+        val forRel = holderSdk.relationship_!(relationshipId).owningDID
+        val credDefId = verifierSdk.data_!(credDefIdKey("cred_name1", "tag"))
+
+        val firstNameAttr = PresentProofV1_0.proposedAttribute("first_name", credDefId, "Bob")
+        val lastNameAttr = PresentProofV1_0.proposedAttribute("last_name", credDefId, "Marley")
+        val numAttr = PresentProofV1_0.proposedAttribute("license_num", credDefId, "123")
+
+        holderSdk
+          .presentProof_1_0(forRel, Array(firstNameAttr, lastNameAttr, numAttr), Array.empty)
+          .propose(verifierSdk.context)
+      }
+
+      s"[$verifierName] accept the proof proposal" in {
+        val forRel = verifierSdk.relationship_!(relationshipId).owningDID
+
+        var tid = ""
+        verifierMsgReceiver.expectMsg("review-proposal") { proposal =>
+          println(s"Proposal received: ${proposal.toString(2)}")
+          tid = threadId(proposal)
+        }
+
+        verifierSdk
+          .presentProof_1_0(forRel, tid)
+          .acceptProposal(verifierSdk.context)
+      }
+
+      s"[$holderName] send a proof presentation" taggedAs UNSAFE_IgnoreLog in {
+        var tid = ""
+        holderMsgReceiver.expectMsg("ask-accept") { askAccept =>
+          tid = threadId(askAccept)
+        }
+
+        val forRel = holderSdk.relationship_!(relationshipId).owningDID
+
+        holderSdk.presentProof_1_0(forRel, tid)
+          .acceptRequest(holderSdk.context)
+      }
+      s"[$verifierName] receive presentation" in {
+        val forRel = verifierSdk.relationship_!(relationshipId).owningDID
+        var tid = ""
+
+        var presentation = new JSONObject()
+
+        verifierMsgReceiver.expectMsg("presentation-result") { result =>
+          println(s"Presentation result: ${result.toString(2)}")
+          tid = threadId(result)
+          result.getString("verification_result") shouldBe "ProofValidated"
+
+          presentation = result.getJSONObject("requested_presentation")
+
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("license_num")
+            .getString("value") shouldBe "123"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("first_name")
+            .getString("value") shouldBe "Bob"
+          presentation
+            .getJSONObject("revealed_attrs")
+            .getJSONObject("last_name")
+            .getString("value") shouldBe "Marley"
+        }
+
+        //        verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
+        //        verifierMsgReceiver.expectMsg("status-report") { status =>
+        //          status.getString("status") shouldBe "Complete"
+        //          val presentationAgain = status
+        //            .getJSONObject("results")
+        //            .getJSONObject("requested_presentation")
+        //          presentationAgain.toString shouldBe presentation.toString
+        //        }
       }
     }
   }
@@ -1061,6 +1179,87 @@ trait InteractiveSdkFlow {
     }
   }
 
+  def basicMessage(sender: ApplicationAdminExt,
+                   receiver: ApplicationAdminExt,
+                   relationshipId: String,
+                   content: String,
+                   sentTime: String,
+                   localization: String)
+                     (implicit scenario: Scenario): Unit = {
+    s"send message to ${receiver.name} from ${sender.name}" - {
+      val senderSdk = receivingSdk(sender)
+      val receiverSdk = receivingSdk(receiver)
+
+      s"[${sender.name}] send message" in {
+        val forRel = senderSdk.relationship_!(relationshipId).owningDID
+        senderSdk.basicMessage_1_0(forRel, content, sentTime, localization)
+          .message(senderSdk.context)
+      }
+      s"[${receiver.name}] check message" in {
+
+        receiverSdk.expectMsg("received-message") { receivedMessage =>
+
+          receivedMessage.getString("content") shouldBe "Hello, World!"
+          receivedMessage.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
+          receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
+
+          val forRel = receiverSdk.relationship_!(relationshipId).owningDID
+          receivedMessage.getString("relationship") shouldBe forRel
+        }
+      }
+    }
+    s"send message to ${receiver.name} from ${sender.name}" - {
+      val receiverSdk = receivingSdk(sender)
+      val senderSdk = receivingSdk(receiver)
+      s"[${receiver.name}] send message" in {
+        val forRel = senderSdk.relationship_!(relationshipId).owningDID
+
+        val tid = "12345"
+
+        senderSdk.asInstanceOf[VcxBasicMessage].basicMessage_1_0(forRel, tid, content, sentTime, localization)
+          .message(senderSdk.context)
+      }
+      s"[${sender.name}] check message" in {
+        var forRel = ""
+
+        receiverSdk.expectMsg("received-message") { receivedMessage =>
+
+          receivedMessage.getString("content") shouldBe "Hello, World!"
+          receivedMessage.getString("sent_time") shouldBe "2018-1-19T01:24:00-000"
+          receivedMessage.getJSONObject("~l10n").getString("locale") shouldBe "en"
+
+          val forRel = receiverSdk.relationship_!(relationshipId).owningDID
+          receivedMessage.getString("relationship") shouldBe forRel
+        }
+      }
+    }
+  }
+
+
+  // The 'expectedMetricCount' will change depending how many times the app scenario ran a specific protocol
+  def validateProtocolMetrics(app: ApplicationAdminExt,
+                              protoRef: String,
+                              expectedMetricCount: Double,
+                              dumpToFile: Boolean=false): Unit = {
+    s"${app.name} validating protocol metrics" - {
+      s"[$protoRef] validation" in {
+        //Get metrics for specific app
+        val allNodeMetrics = app.getAllNodeMetrics()
+        allNodeMetrics.data.headOption.nonEmpty shouldBe true
+        val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
+        if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
+        val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
+        val baseMetric = currentNodeMetrics
+          .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
+          .find(_.tags.get == tag)
+          .get
+
+        //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
+        if (baseMetric.value != expectedMetricCount)
+          fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+      }
+    }
+  }
 }
 
 object InteractiveSdkFlow {

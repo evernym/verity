@@ -2,8 +2,8 @@ package com.evernym.verity.testkit.mock.remotemsgsendingsvc
 
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.testkit.actor.MockRemoteMsgSendingSvc
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.testkit.BasicSpecBase
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 

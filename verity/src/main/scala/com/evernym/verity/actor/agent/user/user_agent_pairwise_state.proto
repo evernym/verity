@@ -8,7 +8,6 @@ import "protocol_instances.proto";
 import "relationship.proto";
 import "config_value.proto";
 import "msg_and_delivery.proto";
-import "sponsor_rel.proto";
 import "connection_status.proto";
 
 package com.evernym.verity.actor.agent.user;
@@ -17,13 +16,12 @@ message UserAgentPairwiseState {
     option (scalapb.message).extends = "com.evernym.verity.actor.agent.user.UserAgentPairwiseStateImpl";
     google.protobuf.StringValue mySelfRelDID = 1;
     google.protobuf.StringValue ownerAgentKeyDID = 2;
-    SponsorRel sponsorRel = 3;
     ConnectionStatus connectionStatus = 4;
     map<string, ConfigValue> configs = 5;
     MsgAndDelivery msgAndDelivery = 6;
     google.protobuf.StringValue thisAgentKeyId = 7;
     google.protobuf.StringValue agencyDID = 8;
-    google.protobuf.StringValue agentWalletSeed = 9;
+    google.protobuf.StringValue agentWalletId = 9;
     ThreadContext threadContext = 10;
     //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
     //the below mentioned 'protoInstances' will no longer be required.

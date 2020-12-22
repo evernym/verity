@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.engine.{DID, Ledgers, VerKey}
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util._
 import com.evernym.verity.Status
+import scalapb.GeneratedMessage
 
 /**
  * each actor incoming/outgoing command is supposed to extend from these base classes
@@ -65,7 +66,16 @@ trait MultiEvt {
   def events: Seq[Any]
 }
 
-trait State
+trait State extends GeneratedMessage {
+
+  /**
+   * purpose of this is to use it during snapshotting if state size exceeds
+   * max allowed size, logging will help know what state contains which might be
+   * taking more size
+   * @return
+   */
+  def summary(): Option[String] = None
+}
 
 //response msg
 
@@ -77,6 +87,13 @@ case object ConfigRefreshFailed extends ActorMessageObject
 case object RefreshConfigOnAllNodes extends ActorMessageObject
 case object RefreshNodeConfig extends ActorMessageObject
 case object NodeConfigRefreshed extends ActorMessageObject
+
+case object ConfigOverridden extends ActorMessageObject
+case object ConfigOverrideFailed extends ActorMessageObject
+
+case class OverrideConfigOnAllNodes(configStr: String) extends ActorMessageClass
+case class OverrideNodeConfig(configStr: String) extends ActorMessageClass
+case object NodeConfigOverridden extends ActorMessageObject
 
 case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessageClass
 case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessageClass

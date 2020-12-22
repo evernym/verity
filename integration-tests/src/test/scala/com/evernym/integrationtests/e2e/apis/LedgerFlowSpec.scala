@@ -8,13 +8,14 @@ import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
 import com.evernym.verity.config.{CommonConfig, ConfigUtil}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, OpenConnException, TransactionAuthorAgreement}
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyCommon}
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory, ConfigUtil => TypesafeConfigUtil}
 import org.scalatest.BeforeAndAfterEach

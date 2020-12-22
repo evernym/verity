@@ -9,9 +9,10 @@ import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.{ReqId, ReqMsgId, RespMsgId}
 import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker._
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
-import com.evernym.verity.actor.persistence.{Done, HasActorResponseTimeout}
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine.{MsgId, ProtoDef, RelationshipId}
 import com.evernym.verity.util.{ReqMsgContext, Util}

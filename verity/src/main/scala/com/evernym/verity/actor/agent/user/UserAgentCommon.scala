@@ -82,18 +82,8 @@ trait UserAgentCommon
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
     case umds: UpdateMsgDeliveryStatus  => updateMsgDeliveryStatus(umds)
     case gc: GetConfigs                 => sender ! AgentConfigs(getFilteredConfigs(gc.names))
-    case CheckPeriodicCleanupTasks      => checkPeriodicCleanupTasks()
     case sad: SetAgencyIdentity         => setAgencyIdentity(sad)
     case _: AgencyIdentitySet           => //nothing to od
-  }
-
-  def maxTimeToRetainSeenMsgsInMinutes: Option[Int] =
-    appConfig.getConfigIntOption(AGENT_MAX_TIME_TO_RETAIN_SEEN_MSG)
-
-  def checkPeriodicCleanupTasks(): Unit = {
-    maxTimeToRetainSeenMsgsInMinutes.foreach { minutes =>
-      performStateCleanup(minutes)
-    }
   }
 
   override val receiveActorInitSpecificCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
@@ -217,7 +207,7 @@ trait UserAgentCommon
   }
 
   override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
-                       senderDID: DID, threadOpt: Option[Thread]): Unit = {
+                                senderDID: DID, threadOpt: Option[Thread]): Unit = {
     logger.debug("storing outgoing msg")
     runWithInternalSpan("storeOutgoingMessage", "UserAgentCommon") {
       val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)
@@ -270,19 +260,8 @@ trait UserAgentCommon
   override final def handleSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] =
     handleCommonSignalMsgs orElse handleSpecificSignalMsgs
 
-  lazy val periodicCleanupScheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
-
   lazy val periodicCleanupScheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(900)
-
-  //Disabling this job for now, as anyhow the configuration on which
-  //'CheckPeriodicCleanupTasks' msg handling logic depends is not turned on yet.
-//  scheduleJob(
-//    "CheckPeriodicCleanupTasks",
-//    periodicCleanupScheduledJobInitialDelay,
-//    periodicCleanupScheduledJobInterval,
-//    CheckPeriodicCleanupTasks)
 
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
 
@@ -319,8 +298,6 @@ trait UserAgentCommon
   def msgAndDeliveryReq: MsgAndDelivery
 }
 
-case object CheckPeriodicCleanupTasks extends ActorMessageObject
-
 case class MsgStored(msgCreatedEvent: MsgCreated, payloadStoredEvent: Option[MsgPayloadStored])
 
 //state
@@ -349,7 +326,7 @@ case class AgentConfigs(configs: Set[ConfigDetail]) extends ActorMessageClass {
 
 case object PairwiseConnSet extends ActorMessageObject
 
-trait UserAgentCommonState {
+trait UserAgentCommonState { this: State =>
 
   def configs: Map[String, ConfigValue]
 
@@ -360,6 +337,12 @@ trait UserAgentCommonState {
   def isConfigExists(name: String): Boolean = configs.contains(name)
   def isConfigExists(name: String, value: String): Boolean = configs.exists(c => c._1 == name && c._2.value == value)
   def filterConfigsByNames(names: Set[String]): Map[String, AgentConfig] = agentConfigs.filter(c => names.contains(c._1))
+
+  def msgAndDelivery: Option[MsgAndDelivery]
+
+  override def summary(): Option[String] = msgAndDelivery.map { mad =>
+    mad.msgs.values.groupBy(_.getType).map(r => s"${r._1}:${r._2.size}").mkString(", ")
+  }
 }
 
 /**

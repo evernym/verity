@@ -2,25 +2,26 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.Exceptions
+import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.SpanUtil._
-import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
-import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, SponsorRel}
 import com.evernym.verity.actor.agent.msghandler.MsgRespConfig
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
+import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.{EndpointADT, Endpoints, LegacyRoutingServiceEndpoint, PairwiseRelationship, Relationship, RelationshipUtil, RoutingServiceEndpoint, Tags}
+import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
+import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
+import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
+import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
+import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
-import com.evernym.verity.actor.cluster_singleton.{ForMetricsHelper, ForUserAgentPairwiseActorWatcher, MetricsCountUpdated, UpdateCountMetrics, UpdateFailedAttemptCount, UpdateFailedMsgCount, UpdateUndeliveredMsgCount}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
 import com.evernym.verity.actor.persistence.InternalReqHelperData
@@ -29,14 +30,14 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
-import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
@@ -48,17 +49,11 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUpdated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
-import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened,
-  InviteShorteningFailed => IssueCredInviteShorteningFailed}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened, InviteShorteningFailed => IssueCredInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{ShortenInvite => IssueCredShortenInvite}
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened,
-  InviteShorteningFailed => PresentProofInviteShorteningFailed}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened, InviteShorteningFailed => PresentProofInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.{ShortenInvite => PresentProofShortenInvite}
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{InviteShortened => RelInviteShortened,
-  InviteShorteningFailed => RelInviteShorteningFailed, SMSSendingFailed, SMSSent}
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSSendingFailed, SMSSent, InviteShortened => RelInviteShortened, InviteShorteningFailed => RelInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{SendSMSInvite, ShortenInvite => RelShortenInvite}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
@@ -66,6 +61,7 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -83,8 +79,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with HasAgentActivity
-    with FailedMsgRetrier {
+    with FailedMsgRetrier
+    with AgentSnapshotter[UserAgentPairwiseState] {
 
   type StateType = UserAgentPairwiseState
   var state = new UserAgentPairwiseState
@@ -137,7 +133,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     case ppgm: ProcessPersistedSendRemoteMsg                => processPersistedSendRemoteMsg(ppgm)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
-    case s: SetSponsorRel                                   => if (state.sponsorRel.isEmpty) setSponsorDetail(s.rel)
   }
 
   override final def receiveAgentEvent: Receive =
@@ -158,16 +153,17 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
       state = state.withConnectionStatus(ConnectionStatus(answerStatusCode = csu.statusCode))
-    case sa: SponsorAssigned               =>
-      setSponsorRel(SponsorRel(sa.id, sa.sponsee))
   }
 
   //this is for backward compatibility
   val legacyEventReceiver: Receive = {
-    case rkd: TheirAgentKeyDlgProofSet =>
-      val lrd = LegacyRoutingDetail(null, agentKeyDID = rkd.DID, agentVerKey = rkd.delegatedKey, rkd.signature)
-      updateLegacyRelationshipState(null, lrd)
 
+    //includes details of 'their' cloud agent (agent DID, agent key and delegation proof signature)
+    case rkd: TheirAgentKeyDlgProofSet =>
+      val lrd = LegacyRoutingDetail("", agentKeyDID = rkd.DID, agentVerKey = rkd.delegatedKey, rkd.signature)
+      updateLegacyRelationshipState("", lrd)
+
+    //includes details of 'their' edge pairwise DID and 'their' cloud agent DID
     case rcd: TheirAgentDetailSet =>
       val theirDidDoc = state.relationship.flatMap(_.theirDidDoc.map(_.copy(did = rcd.DID)))
       state = state
@@ -178,6 +174,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         .getOrElse(state)
       state = state.withConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
 
+    //includes details of 'their' agency
     case rad: TheirAgencyIdentitySet =>
       //TODO This can be more easily done by teaching the LegacyRoutingServiceEndpoint and RoutingServiceEndpoint how to do the conversion.
       val updatedDidDoc = state.relationship.flatMap(_.theirDidDoc.map { tdd =>
@@ -260,34 +257,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     }
   }
 
-  override def updateUndeliveredMsgCountMetrics(): Unit = {
-    msgDeliveryState.foreach { mds =>
-      sendUpdateMetrics(UpdateUndeliveredMsgCount(entityId, AS_USER_AGENT_MSG_UNDELIVERED_COUNT, mds.getUndeliveredMsgCounts))
-    }
-  }
-
-  override def updateFailedAttemptCountMetrics(): Unit = {
-    msgDeliveryState.foreach { mds =>
-      sendUpdateMetrics(UpdateFailedAttemptCount(entityId, AS_USER_AGENT_MSG_FAILED_ATTEMPT_COUNT, mds.getFailedAttemptCounts))
-    }
-  }
-
-  override def updateFailedMsgCountMetrics(): Unit = {
-    msgDeliveryState.foreach { mds =>
-      sendUpdateMetrics(UpdateFailedMsgCount(entityId, AS_USER_AGENT_MSG_FAILED_COUNT, mds.getFailedMsgCounts))
-    }
-  }
-
-  def sendUpdateMetrics(msg: UpdateCountMetrics): Unit = {
-    val failedMsgCountMetricFut = singletonParentProxyActor ? ForMetricsHelper(msg)
-    failedMsgCountMetricFut.map {
-      case r: MetricsCountUpdated =>
-        logger.debug(s"successfully updated ${r.metricsName}: " + r.totalCount)
-    }.recover {
-      case e: Exception => logger.error("error while updating metrics: " + Exceptions.getErrorMsg(e))
-    }
-  }
-
   override def msgSentSuccessfully(mss: MsgSentSuccessfully): Unit = {
     self ! mss
   }
@@ -310,7 +279,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       DefaultMsgCodec.toJson(msg)
     }
     for (
-      agencyVerKey    <- getAgencyVerKeyFut;
+      agencyVerKey    <- agencyVerKeyFut();
       filteredConfigs <- getConfigs(Set(NAME_KEY, LOGO_URL_KEY))
     ) yield {
       {
@@ -324,7 +293,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
-        case THIS_AGENT_WALLET_SEED                 => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
+        case THIS_AGENT_WALLET_ID                   => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
 
         case NAME                                   => Parameter(NAME, agentName(filteredConfigs.configs))
         case LOGO_URL                               => Parameter(LOGO_URL, agentLogoUrl(filteredConfigs.configs))
@@ -353,7 +322,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   }
 
   override def postUpdateConfig(tupdateConf: TypedMsg[UpdateConfigReqMsg], senderVerKey: Option[VerKey]): Unit = {
-    agentCache.deleteFromCache(tupdateConf.msg.configs.map(_.name))
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
     tupdateConf.msg.configs.filter(_.name == configName).foreach { c =>
@@ -595,6 +563,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           case x => throw new RuntimeException("unsupported condition: " + x)
         }
       }.recover {
+        case e: InternalServerErrorException
+          if e.respCode == DATA_NOT_FOUND.statusCode && e.respMsg.contains("payload not found") =>
+          val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
+          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
         case e: Exception =>
           logger.error("send msg failed unexpectedly",
             (LOG_KEY_UID, uid),
@@ -680,7 +652,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     scke.pid.foreach { pd =>
       writeAndApply(ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     }
-    scke.ownerAgentActorEntityId.foreach(setAgentWalletSeed)
+    scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
     val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDID.get)
     val cdsEvt = AgentDetailSet(scke.forDID, scke.newAgentKeyDID)
     writeAndApply(odsEvt)
@@ -838,7 +810,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     for {
       _   <- setRoute(stdd.myDID)
       ctlMsg  <-
-        getAgencyVerKeyFut.map { agencyVerKey =>
+        agencyVerKeyFut().map { agencyVerKey =>
           val myVerKey = getVerKeyReqViaCache(state.myDid_!)
           val routingKeys = Vector(myVerKey, agencyVerKey)
           Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
@@ -889,9 +861,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def mySelfRelDIDReq: DID = domainId
   def myPairwiseVerKey: VerKey = getVerKeyReqViaCache(state.myDid_!)
 
-  lazy val scheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
-
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
 
@@ -926,13 +895,6 @@ case class ProcessPersistedSendRemoteMsg(
                                           reqHelperData: InternalReqHelperData) extends ActorMessageClass
 
 case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessageClass
-case class SetSponsorRel(rel: SponsorRel) extends ActorMessageClass
-
-object SetSponsorRel {
-  def apply(rel: Option[SponsorRel]): SetSponsorRel =
-    new SetSponsorRel(rel.getOrElse(SponsorRel.empty))
-}
-
 
 trait UserAgentPairwiseStateImpl
   extends AgentStatePairwiseImplBase
@@ -952,16 +914,12 @@ trait UserAgentPairwiseStateUpdateImpl
 
   def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
     state = state.withAgencyDID(did)
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    state = state.withSponsorRel(rel)
   }
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {
@@ -969,8 +927,7 @@ trait UserAgentPairwiseStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

@@ -82,12 +82,15 @@ class FirebasePusher(serviceParam: FirebasePushServiceParam) extends PushService
         PushNotifResponse(regId, MSG_DELIVERY_STATUS_SENT.statusCode, None, None)
       } else if (fpnr.failure == 1) {
         val error = convertToMsg[FirebasePushNotifErrorResponse](response).results.head.error
-        PushNotifResponse(cm,
+        PushNotifResponse(
+          cm,
           MSG_DELIVERY_STATUS_FAILED.statusCode,
           Option(MSG_DELIVERY_STATUS_FAILED.statusMsg),
           Option(error))
       } else {
-        PushNotifResponse(cm, MSG_DELIVERY_STATUS_FAILED.statusCode,
+        PushNotifResponse(
+          cm,
+          MSG_DELIVERY_STATUS_FAILED.statusCode,
           Option(MSG_DELIVERY_STATUS_FAILED.statusMsg),
           Option(s"unhandled response ($regId): ${fpnr.asInstanceOf[FirebasePushNotifErrorResponse].results.head.error}"))
       }
@@ -121,7 +124,7 @@ class FirebasePusher(serviceParam: FirebasePushServiceParam) extends PushService
           .mapAsync(1)(response => Unmarshal(response.entity).to[String])
           .runWith(Sink.head)
     } yield {
-      handleResponse(notifParam.cm, response, notifParam.regId)
+      handleResponse(notifParam.comMethodValue, response, notifParam.regId)
     }
   }
 }

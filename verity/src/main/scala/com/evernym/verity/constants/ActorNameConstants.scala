@@ -14,6 +14,7 @@ object ActorNameConstants {
   val AGENCY_AGENT_REGION_ACTOR_NAME = "AgencyAgent"
   val AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME = "AgencyAgentPairwise"
   val USER_AGENT_REGION_ACTOR_NAME = "UserAgent"
+  val WALLET_REGION_ACTOR_NAME = "WalletActor"
   val USER_AGENT_PAIRWISE_REGION_ACTOR_NAME = "UserAgentPairwise"
   val ACTIVITY_TRACKER_REGION_ACTOR_NAME = "ActivityTracker"
   val ITEM_MANAGER_REGION_ACTOR_NAME = "ItemManager"
@@ -33,8 +34,8 @@ object ActorNameConstants {
   val RESOURCE_WARNING_STATUS_MNGR = "user-warning-status-mngr"
   val WATCHER_MANAGER = "watcher-manager"
   val USER_AGENT_PAIRWISE_ACTOR_WATCHER = "user-agent-pairwise-actor-watcher"
-  val METRICS_HELPER = "metrics-helper"
   val ACTOR_STATE_CLEANUP_MANAGER = "actor-state-cleanup-manager"
+  val ROUTE_MAINTENANCE_HELPER = "route-maintenance-helper"
 
   //actor path/name related
   val SHARDED_ACTOR_PATH_PREFIX = "/system/sharding"

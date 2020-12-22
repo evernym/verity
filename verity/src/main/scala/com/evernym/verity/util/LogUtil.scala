@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
 import org.slf4j.event.Level
+import Level._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
@@ -12,7 +13,7 @@ object LogUtil {
   def logDuration[T](logger: Logger,
                   actionDesc: String,
                   unit: TimeUnit = TimeUnit.MILLISECONDS,
-                  level: Level = Level.DEBUG)(action: => T): T = {
+                  level: Level = DEBUG)(action: => T): T = {
     val startTime = now()
     val rtn = action
     writeDuration(startTime, logger, actionDesc, unit, level)
@@ -44,13 +45,13 @@ object LogUtil {
   private def now(): FiniteDuration = Duration(System.nanoTime(), TimeUnit.NANOSECONDS)
 
   def logAtLevel(logger: Logger, level: Level)(msg: => String): Unit = {
-    level match { // match statements don't seem to nativily support java enums like Level
-      case l if l == Level.DEBUG => logger.debug(msg)
-      case l if l == Level.ERROR => logger.error(msg)
-      case l if l == Level.INFO =>  logger.info(msg)
-      case l if l == Level.WARN => logger.warn(msg)
-      case l if l == Level.TRACE => logger.trace(msg)
-      case _ => //Ignore if it is some illegal level (logging is best effort)
+    level match {
+      case DEBUG  => logger.debug(msg)
+      case ERROR  => logger.error(msg)
+      case INFO   =>  logger.info(msg)
+      case WARN   => logger.warn(msg)
+      case TRACE  => logger.trace(msg)
+      case _      => //Ignore if it is some illegal level (logging is best effort)
     }
   }
 

@@ -8,11 +8,12 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.InterpreterEnv
 import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
-import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
@@ -150,6 +151,20 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
+  override def basicMessage_1_0(forRelationship: DID, content: String, sentTime: String, localization: String): BasicMessageV1_0 = {
+    new UndefinedBasicMessage_1_0{
+      override def message(ctx: Context): Unit = {
+        executeCmd(
+          ctx,
+          "BasicMessage",
+          this.version,
+          "message",
+          Seq(forRelationship, None, content, sentTime, localization)
+        )
+      }
+    }
+  }
+
   override def committedAnswer_1_0(forRelationship: DID,
                                    questionText: String,
                                    questionDescription: String,
@@ -259,7 +274,12 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedPresentProof_1_0 {
       override def status(ctx: Context): Unit =
         executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))
+
+      override def acceptProposal(ctx: Context): Unit =
+        executeCmd(ctx, "PresentProof", this.version, "accept_proposal", Seq(forRelationship, threadId))
     }
+
+  override def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 = ???
 
   override def convertGoalCode(goal: GoalCode): String = {
     goal match {
@@ -269,6 +289,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       case GoalCode.REQUEST_PROOF => "GoalsList.REQUEST_PROOF"
     }
   }
+
 }
 
 object PythonSdkProvider {

@@ -21,16 +21,16 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1605"
+val debPkgDepLibIndyMinVersion = "1.15.0~1607"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1605"
+val libIndyVer = "1.15.0~1607"
 val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),
   LibPack("libmysqlstorage",  "0.1.11"),
-  LibPack("libvcx", "0.10.1-bionic~1100"), // For integration testing ONLY
+  LibPack("libvcx", "0.10.1-bionic~1124"), // For integration testing ONLY
 )
 
 //dependency versions
@@ -51,7 +51,7 @@ val sdnotifyVer = "1.3" // NOTE: Do not downgrade SDNotify to 1.1!
 val scalatestVer = "3.2.0"
 val mockitoVer = "1.14.8"
 val veritySdkVer = "0.4.4-f5a828d8"
-val vcxWrapperVer = "0.10.1.1100"
+val vcxWrapperVer = "0.10.1.1124"
 
 // compiler plugin versions
 val silencerVersion = "1.6.0"

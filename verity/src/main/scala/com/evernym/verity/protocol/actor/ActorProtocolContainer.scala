@@ -8,22 +8,20 @@ import akka.pattern.ask
 import akka.persistence.RecoveryCompleted
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, ProtocolEngineExceptionHandler, SetupAgentEndpoint, SetupCreateKeyEndpoint, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.libindy.{LedgerAccessApi, WalletAccessLibindy}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.msg.GivenDomainId
+import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
@@ -36,6 +34,11 @@ import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
+import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.libindy.ledger.LedgerAccessApi
+import com.evernym.verity.libindy.wallet.WalletAccessLibindy
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -79,6 +82,7 @@ class ActorProtocolContainer[
 
   override def domainId: DomainId = backstate.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
   override lazy val logger: Logger = getAgentIdentityLoggerByName(this, s"${definition.msgFamily.protoRef.toString}")
+  def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
 
   override def receiveRecover: Receive = {
     /**
@@ -177,7 +181,7 @@ class ActorProtocolContainer[
     case pc @ ProtocolCmd(MsgEnvelope(msg: Any, msgType, to, frm, msgId, thId), metadata) =>
       logger.debug(s"$protocolIdForLog received ProtocolCmd: " + pc)
       storePackagingDetail(metadata.threadContextDetail)
-      setForwarderParams(metadata.walletSeed, metadata.forwarder)
+      setForwarderParams(metadata.walletId, metadata.forwarder)
       protocolReceiveCommand(MsgEnvelope(msg, msgType, to, frm, msgId, thId))
 
     // we can't make a stronger assertion about type because erasure
@@ -187,6 +191,10 @@ class ActorProtocolContainer[
 
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
 
+    case s: SponsorRel =>
+      if (!s.equals(SponsorRel.empty)) submit(GivenSponsorRel(s))
+      val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> definition.msgFamily.protoRef.toString)
+      MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
   }
 
   def changeReceiverToBase(): Unit = {
@@ -208,6 +216,8 @@ class ActorProtocolContainer[
         logger.debug(s"$protocolIdForLog protocol instance initialized successfully")
       }
       changeReceiverToBase()
+      // Ask for sponsor details from domain and record metric for initialized protocol
+      agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
 
     //TODO: we are purposefully expecting ProtocolCmd, so that sending actor can provide
     // its own reference and still keep the original sender un impacted
@@ -215,16 +225,22 @@ class ActorProtocolContainer[
     case ProtocolCmd(_, metadata) =>
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
-      setForwarderParams(metadata.walletSeed, metadata.forwarder)
+      setForwarderParams(metadata.walletId, metadata.forwarder)
       recoverOrInit()
 
     case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
   }
 
+  /**
+   * handles thread context migration
+   * @param tcd thread context detail
+   */
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)
-      sender ! ThreadContextStoredInProtoActor(pinstId)
+      sender ! ThreadContextStoredInProtoActor(pinstId, definition.msgFamily.protoRef)
+    } else {
+      sender ! ThreadContextNotStoredInProtoActor(pinstId, definition.msgFamily.protoRef)
     }
   }
 
@@ -245,6 +261,7 @@ class ActorProtocolContainer[
       stash()
   }
 
+  //TODO -> RTM: Add documentation for this
   //dhh I'd like to understand the significance of changing receive behavior.
   // Is this part of the issue Jason wrote about with futures, where we are
   // going into different modes at different points in a sequence of actions
@@ -267,11 +284,11 @@ class ActorProtocolContainer[
   }
 
 
-  var agentWalletSeed: Option[String] = None
+  var agentWalletId: Option[String] = None
 
   def setForwarderParams(_walletSeed: String, fwder: ActorRef): Unit = {
     msgForwarder.setForwarder(fwder)
-    agentWalletSeed = Option(_walletSeed)
+    agentWalletId = Option(_walletSeed)
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
@@ -564,7 +581,7 @@ case class ProtocolCmd(msg: Any, metadata: ProtocolMetadata) extends ActorMessag
   who originally forwarded the msg
  */
 case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
-                            walletSeed: String,
+                            walletId: String,
                             forwarder: ActorRef)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
@@ -590,6 +607,11 @@ case class MsgEnvelope[A](msg: A,
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
 }
 
+trait ServiceDecorator{
+  def msg: Any
+  def deliveryMethod: ComMethodDetail
+}
+
 class MsgForwarder {
   private var _forwarder: Option[ActorRef] = None
   def setForwarder(actorRef: ActorRef): Unit = _forwarder = Option(actorRef)
@@ -598,4 +620,5 @@ class MsgForwarder {
 
 case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
 
-case class ThreadContextStoredInProtoActor(pinstId: PinstId) extends ActorMessageClass
+case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
+case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass

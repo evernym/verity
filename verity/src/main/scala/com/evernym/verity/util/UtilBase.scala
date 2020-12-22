@@ -23,6 +23,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.actor.wallet.SignMsg
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.codec.digest.DigestUtils
@@ -309,9 +310,9 @@ trait UtilBase {
   }
 
   def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
-                           (implicit walletAPI: WalletAPI, wap: WalletAccessParam): AgentKeyDlgProof = {
+                           (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
-    val sig = walletAPI.signMsg(SignMsgParam(KeyInfo(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
+    val sig = walletAPI.signMsg(SignMsg(KeyInfo(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
     keyDlgProof.copy(signature=Base64Util.getBase64Encoded(sig))
   }
 

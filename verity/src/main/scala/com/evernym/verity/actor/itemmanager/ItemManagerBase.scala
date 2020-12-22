@@ -8,8 +8,9 @@ import akka.pattern.ask
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemType}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, Done, PersistenceConfig, SnapshotterExt}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
 import com.evernym.verity.protocol.engine.VerKey
@@ -25,9 +26,7 @@ trait ItemManagerBase
 
   implicit def appConfig: AppConfig
 
-  override lazy val persistenceConfig: PersistenceConfig = PersistenceConfig (
-    allowOnlyEvents = false,
-    allowOnlySnapshots = true,
+  override lazy val snapshotConfig: SnapshotConfig = SnapshotConfig (
     snapshotEveryNEvents = None,
     keepNSnapshots = Option(1),
     deleteEventsOnSnapshot = false
@@ -151,7 +150,7 @@ trait ItemManagerBase
         headContainerEntityId = Option(expectedHeadId),
         tailContainerEntityId = Option(expectedTailId))
       )
-      saveSnapshotStateIfAvailable()
+      saveUpdatedState()
       recordMetrics()
     }
     sender ! Done
@@ -220,7 +219,7 @@ trait ItemManagerBase
   def updateHeadIdIfNeeded(cm: ContainerMigrated): Unit = {
     if (itemManagerStateReq.headContainerEntityId.contains(cm.migratedContainerEntityId)) {
       itemManagerState = itemManagerState.map(_.copy(headContainerEntityId = Option(cm.migratedContainersNextEntityId)))
-      saveSnapshotStateIfAvailable()
+      saveUpdatedState()
     }
     sender ! Done
   }
@@ -246,10 +245,13 @@ trait ItemManagerBase
   def handleSetItemManagerConfig(so: SetItemManagerConfig): Unit = {
     itemManagerState = Option(ItemManagerStateDetail(so.itemType, so.ownerVerKey, 0, None, None,
       so.migrateItemsToNextLinkedContainer, so.migrateItemsToLatestVersionedContainers))
-    saveSnapshotStateIfAvailable()
+    saveUpdatedState()
     sender ! itemManagerStateReq
   }
 
+  def saveUpdatedState(): Unit = {
+    saveSnapshotStateIfAvailable()
+  }
 }
 
 case class UpdateHeadAndOrTailId(latestCreatedContainerId: ItemContainerEntityId) extends ActorMessageClass

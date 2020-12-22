@@ -3,10 +3,13 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.JsonUtil.getDeserializedJson
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.vault.{KeyInfo, WalletAPI, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.wallet.Wallet
+
+import scala.concurrent.Future
 
 
 /**
@@ -17,8 +20,8 @@ object AgentMsgTransformerApi {
 
   val logger: Logger = getLoggerByName("AgentMsgTransformerApi")
 
-  private val msgPackTransformer: MsgTransformer = new MsgPackTransformer(MPF_MSG_PACK)
-  private val indyPackTransformer: MsgTransformer = new IndyPackTransformer(MPF_INDY_PACK)
+  private val msgPackTransformer: MsgTransformer = new MsgPackTransformer
+  private val indyPackTransformer: MsgTransformer = new IndyPackTransformer
 
   def msgTransformer(mpf: MsgPackFormat): MsgTransformer = {
     mpf match {
@@ -28,13 +31,17 @@ object AgentMsgTransformerApi {
     }
   }
 
-  def pack(mpf: MsgPackFormat, wallet: Wallet, msg: String,
-           recipVerKeys: Set[String], senderVerKey: Option[VerKey], packParam: PackParam = PackParam()): PackedMsg = {
-    msgTransformer(mpf).pack(wallet, msg, recipVerKeys, senderVerKey, packParam)
+  def pack(mpf: MsgPackFormat,
+           msg: String,
+           recipVerKeys: Set[KeyInfo],
+           senderVerKey: Option[KeyInfo],
+           packParam: PackParam = PackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
+    msgTransformer(mpf).pack(msg, recipVerKeys, senderVerKey, packParam)
   }
 
-  def unpack(wallet: Wallet, msg: Array[Byte], fromVerKeyOpt: Option[VerKey],
-             unpackParam: UnpackParam = UnpackParam()): AgentMsgWrapper = {
+  def unpack(msg: Array[Byte],
+             fromVerKeyOpt: Option[KeyInfo],
+             unpackParam: UnpackParam = UnpackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentMsgWrapper = {
 
     val (transformer, fromVerKey) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)
@@ -42,9 +49,26 @@ object AgentMsgTransformerApi {
       (msgPackTransformer, fromVerKeyOpt)
     }
 
-    val unpackedMsg = transformer.unpack(wallet, msg, fromVerKey, unpackParam)
+    val unpackedMsg = transformer.unpack(msg, fromVerKey, unpackParam)
     AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
   }
+
+  def unpackAsync(msg: Array[Byte],
+                  fromVerKeyOpt: Option[KeyInfo],
+                  unpackParam: UnpackParam = UnpackParam())
+                 (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentMsgWrapper] = {
+
+    val (transformer, fromVerKey) = if (isIndyPacked(msg)) {
+      (indyPackTransformer, None)
+    } else {
+      (msgPackTransformer, fromVerKeyOpt)
+    }
+
+    transformer.unpackAsync(msg, fromVerKey, unpackParam).map { unpackedMsg =>
+      AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
+    }
+  }
+
 
   //set of keys to be present in any indy packed json message
   val indyPackedJsonRequiredKeys = Set("ciphertext")

@@ -8,40 +8,45 @@ class ProtoBufSerializer
 
   override def identifier: Int = 99
 
-  //mostly we we'll have only one event (EncryptedEvent) which will come at this level for serialization,
-  // so if we want, we can just use empty string as manifest and it will work
-  // but just in case if we have to support more events in future,
-  // we can give numbers to different types of events.
+  //NOTE: don't change below given manifest numbers as that won't be backward compatible and
+  // deserialization will fail for previously serialized events
+  val DEPRECATED_MULTI_EVENT_MSG_MANIFEST = "0"
+  val DEPRECATED_EVENT_MSG_MANIFEST = "1"
+  val DEPRECATED_STATE_MSG_MANIFEST = "2"
 
-  val TRANSFORMED_MULTI_EVENTS_MANIFEST = "0"
-  val TRANSFORMED_EVENT_MANIFEST = "1"
-  val TRANSFORMED_STATE_MANIFEST = "2"
-  val PERSISTENT_DATA_MANIFEST = "3"
+  val PERSISTENT_MSG_MANIFEST = "3"
+  val PERSISTENT_MULTI_EVENT_MSG_MANIFEST = "4"
 
   override def manifest(o: AnyRef): String = {
     o match {
-      case _: TransformedMultiEvent => TRANSFORMED_MULTI_EVENTS_MANIFEST
-      case _: TransformedEvent      => TRANSFORMED_EVENT_MANIFEST
-      case _: TransformedState      => TRANSFORMED_STATE_MANIFEST
-      case _: PersistentData        => PERSISTENT_DATA_MANIFEST
+      case _: DeprecatedEventMsg      => DEPRECATED_EVENT_MSG_MANIFEST
+      case _: DeprecatedStateMsg      => DEPRECATED_STATE_MSG_MANIFEST
+      case _: DeprecatedMultiEventMsg => DEPRECATED_MULTI_EVENT_MSG_MANIFEST
+
+      case _: PersistentMsg           => PERSISTENT_MSG_MANIFEST
+      case _: PersistentMultiEventMsg => PERSISTENT_MULTI_EVENT_MSG_MANIFEST
     }
   }
 
   override def toBinary(o: AnyRef): Array[Byte] = {
     o match {
-      case te: TransformedMultiEvent  => te.toByteArray
-      case te: TransformedEvent       => te.toByteArray
-      case ts: TransformedState       => ts.toByteArray
-      case pd: PersistentData         => pd.toByteArray
+      case dem: DeprecatedEventMsg        => dem.toByteArray
+      case dsm: DeprecatedStateMsg        => dsm.toByteArray
+      case dmem: DeprecatedMultiEventMsg  => dmem.toByteArray
+
+      case pm: PersistentMsg              => pm.toByteArray
+      case pmem: PersistentMultiEventMsg  => pmem.toByteArray
     }
   }
 
   def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
     manifest match {
-      case TRANSFORMED_MULTI_EVENTS_MANIFEST  => TransformedMultiEvent.parseFrom(bytes)
-      case TRANSFORMED_EVENT_MANIFEST         => TransformedEvent.parseFrom(bytes)
-      case TRANSFORMED_STATE_MANIFEST         => TransformedState.parseFrom(bytes)
-      case PERSISTENT_DATA_MANIFEST           => PersistentData.parseFrom(bytes)
+      case DEPRECATED_EVENT_MSG_MANIFEST        => DeprecatedEventMsg.parseFrom(bytes)
+      case DEPRECATED_STATE_MSG_MANIFEST        => DeprecatedStateMsg.parseFrom(bytes)
+      case DEPRECATED_MULTI_EVENT_MSG_MANIFEST  => DeprecatedMultiEventMsg.parseFrom(bytes)
+
+      case PERSISTENT_MSG_MANIFEST              => PersistentMsg.parseFrom(bytes)
+      case PERSISTENT_MULTI_EVENT_MSG_MANIFEST  => PersistentMultiEventMsg.parseFrom(bytes)
     }
   }
 }

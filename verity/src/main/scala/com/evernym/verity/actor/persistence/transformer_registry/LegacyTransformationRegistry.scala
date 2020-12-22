@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.transformer_registry
 
-import com.evernym.verity.actor.{TransformedEvent, TransformedState}
+import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, DEPRECATED_StateCodeMapper, ObjectCodeMapperBase}
+import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg}
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.transformations.transformers.legacy._
 
@@ -13,11 +14,14 @@ import com.evernym.verity.transformations.transformers.legacy._
  */
 trait LegacyTransformationRegistry { this: HasTransformationRegistry =>
 
-  lazy val legacyEventTransformer: Any <=> TransformedEvent =
-    createLegacyEventTransformer(persistenceEncryptionKey)
+  val legacyEventObjectMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper
+  val legacyStateObjectMapper: ObjectCodeMapperBase = DEPRECATED_StateCodeMapper
 
-  lazy val legacyStateTransformer: Any <=> TransformedState =
-    createLegacyStateTransformer(persistenceEncryptionKey)
+  lazy val legacyEventTransformer: Any <=> DeprecatedEventMsg =
+    createLegacyEventTransformer(persistenceEncryptionKey, legacyEventObjectMapper)
+
+  lazy val legacyStateTransformer: Any <=> DeprecatedStateMsg =
+    createLegacyStateTransformer(persistenceEncryptionKey, legacyStateObjectMapper)
 
   /**
    * These constants should only be used to lookup legacy event/state transformers

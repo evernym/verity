@@ -6,6 +6,8 @@ import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
+import scala.concurrent.duration.FiniteDuration
+
 object ShardUtil {
 
   val forIdentifierEntityIdExtractor: ExtractEntityId  = {
@@ -53,12 +55,17 @@ trait ShardUtil {
   def createRegion(typeName: String,
                    props: Props,
                    extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
-                   extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor
+                   extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
+                   passivateIdleEntityAfter: FiniteDuration = null
                    )(implicit system: ActorSystem): ActorRef = {
+    var clusterSettings = ClusterShardingSettings(system)
+    if (passivateIdleEntityAfter != null) {
+      clusterSettings = clusterSettings.withPassivateIdleAfter(passivateIdleEntityAfter)
+    }
     ClusterSharding(system).start(
       typeName          = typeName,
       entityProps       = props,
-      settings          = ClusterShardingSettings(system),
+      settings          = clusterSettings,
       extractEntityId   = extractEntityId,
       extractShardId    = extractShardId(ShardIdExtractor(appConfig, typeName))
     )
@@ -79,6 +86,7 @@ trait ShardRegionNames extends HasShardRegionNames{
   lazy val userAgentRegionName: String = USER_AGENT_REGION_ACTOR_NAME
   lazy val userAgentPairwiseRegionName: String = USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
   lazy val activityTrackerRegionName: String = ACTIVITY_TRACKER_REGION_ACTOR_NAME
+  lazy val walletActorRegionName: String = WALLET_REGION_ACTOR_NAME
 }
 
 trait ShardRegionCommon extends ShardRegionNames {

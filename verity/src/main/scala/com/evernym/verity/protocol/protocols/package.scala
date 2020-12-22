@@ -2,7 +2,7 @@ package com.evernym.verity.protocol
 
 import com.evernym.verity.drivers.{AgentProvisioningDriver, TicTacToeAI, WalletBackupDriver, _}
 import com.evernym.verity.protocol.actor.ActorDriverGenParam
-import com.evernym.verity.protocol.engine.PinstIdResolution.{V0_1, V0_2}
+import com.evernym.verity.protocol.engine.PinstIdResolution.{DEPRECATED_V0_1, V0_2}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.{Bucket_2_Legacy, OneToOneDomain}
 import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.{AgentProvisioningProtoDef => AgentProvisioningProtoDef_v_0_5}
@@ -30,8 +30,8 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.WriteSchemaDefini
 
 package object protocols {
   val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = ProtocolRegistry(
-    (AgentProvisioningProtoDef_v_0_5, V0_1, { new AgentProvisioningDriver(_) }),
-    (AgentProvisioningProtoDef_v_0_6, V0_1, { new AgentProvisioningDriver(_) }),
+    (AgentProvisioningProtoDef_v_0_5, DEPRECATED_V0_1, { new AgentProvisioningDriver(_) }),
+    (AgentProvisioningProtoDef_v_0_6, DEPRECATED_V0_1, { new AgentProvisioningDriver(_) }),
     (AgentProvisioningProtoDef_v_0_7, V0_2, { new AgentProvisioningDriver(_) }, OneToOneDomain),
 
     (UpdateConfigsDefinition, V0_2, { new UpdateConfigsDriver(_) }),
@@ -40,14 +40,14 @@ package object protocols {
 
     (OutOfBandDef, V0_2, {new OutOfBandDriver(_)}),
 
-    (BasicMessageDefinition, V0_1, { new BasicMessageDriver(_) }),
+    (BasicMessageDefinition, V0_2, { new BasicMessageDriver(_) }),
 
-    (ConnectingProtoDef_v_0_5, V0_1, {new ConnectingDriver(_)}),
-    (ConnectingProtoDef_v_0_6, V0_1, {new ConnectingDriver(_)}),
+    (ConnectingProtoDef_v_0_5, DEPRECATED_V0_1, {new ConnectingDriver(_)}),
+    (ConnectingProtoDef_v_0_6, DEPRECATED_V0_1, {new ConnectingDriver(_)}),
     (ConnectionsDef, V0_2, {new ConnectionsDriver(_)}),
 
-    (WalletBackupProtoDef, V0_1, { new WalletBackupDriver(_) }, Bucket_2_Legacy),
-    (DeadDropProtoDef, V0_1, Bucket_2_Legacy),
+    (WalletBackupProtoDef, DEPRECATED_V0_1, { new WalletBackupDriver(_) }, Bucket_2_Legacy),
+    (DeadDropProtoDef, DEPRECATED_V0_1, Bucket_2_Legacy),
 
     (WriteSchemaDefinition, V0_2, { new WriteSchemaDriver(_) }),
     (CredDefDefinition, V0_2, { new WriteCredDefDriver(_) }),

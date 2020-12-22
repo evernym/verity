@@ -9,6 +9,7 @@ import com.evernym.verity.Exceptions.{HandledErrorException, TransitionHandlerNo
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.state._
+import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.{Util, UtilBase}
@@ -153,6 +154,9 @@ trait AppStateManagerBase {
   }
 
   private def addEventToQueue(eventParam: EventParam): Unit = synchronized {
+    if (! AppConfigWrapper.isConfigLoaded) {
+      logger.error(eventParam.causeDetail.toString)
+    }
     eventQueue = eventQueue enqueue eventParam
     Future(executePendingEvents())
   }

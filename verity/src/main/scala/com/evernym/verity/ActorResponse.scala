@@ -39,8 +39,11 @@ object ActorResponse {
  * @param errorDetail error detail
  */
 
-final case class ActorErrorResp(exceptionClass: Class[_], statusCode: String, statusMsg: Option[String],
-                          statusMsgDetail: Option[String]=None, errorDetail: Option[Any]=None) extends ActorMessageClass {
+final case class ActorErrorResp(exceptionClass: Class[_],
+                                statusCode: String,
+                                statusMsg: Option[String],
+                                statusMsgDetail: Option[String]=None,
+                                errorDetail: Option[Any]=None) extends ActorMessageClass {
 
   def respMsg: String = statusMsg.getOrElse(Status.getStatusMsgFromCode(statusCode))
 }

@@ -5,11 +5,11 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestComMethod
+import com.evernym.verity.actor.wallet.PackedMsg
 
 trait UpdateComMethodSpec { this : EndpointHandlerBaseSpec =>
 

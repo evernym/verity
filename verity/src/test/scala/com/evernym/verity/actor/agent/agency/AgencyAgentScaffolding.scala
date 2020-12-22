@@ -1,19 +1,16 @@
 package com.evernym.verity.actor.agent.agency
 
-import akka.actor.PoisonPill
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.actor.persistence.{ActorDetail, Done, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
-import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.{ActorErrorResp, UrlDetail}
 import org.scalatest.concurrent.Eventually
 
@@ -90,7 +87,7 @@ trait AgencyAgentScaffolding
       }
       "when sent get-token msg" - {
         "should respond with token" in {
-          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId")
+          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId", ComMethodDetail(1, validTestPushNotifToken))
           aa ! PackedMsgParam(msg, reqMsgContext)
           val packedMsg = expectMsgType[PackedMsg]
           val token = mockEdgeAgent.v_0_1_resp.handleSendToken(packedMsg, mockAgencyAdmin.agencyPublicDid.get.DID)
@@ -104,17 +101,9 @@ trait AgencyAgentScaffolding
 
   protected def restartSpecs(): Unit = {
     "when tried to restart actor" - {
-      "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-        restartActor()
+      "should be successful and respond" taggedAs UNSAFE_IgnoreAkkaEvents in {
+        restartActor(aa)
       }
     }
-  }
-
-  def restartActor(): Unit = {
-    aa ! PoisonPill
-    expectNoMessage()
-    Thread.sleep(1000)
-    aa ! GetActorDetail
-    expectMsgType[ActorDetail]
   }
 }

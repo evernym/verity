@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyCreated, WalletCreated}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
@@ -21,7 +22,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily._
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util.Util.getNewActorId
-import com.evernym.verity.vault.{NewKeyCreated, StoreTheirKeyParam, WalletAccessParam}
+import com.evernym.verity.vault.WalletAPIParam
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -58,8 +59,8 @@ trait AgencyAgentCommon
           case AGENT_PROVISIONER_PARTICIPANT_ID         => Parameter(AGENT_PROVISIONER_PARTICIPANT_ID, selfParticipantId)
           case AGENCY_DID                               => Parameter(AGENCY_DID, agencyDIDReq)
           case AGENCY_DID_VER_KEY                       => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
-          case THIS_AGENT_WALLET_SEED                	  => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
-          case NEW_AGENT_WALLET_SEED                    => Parameter(NEW_AGENT_WALLET_SEED, newActorId)
+          case THIS_AGENT_WALLET_ID                	    => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
+          case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, newActorId)
           case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
           case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
 
@@ -86,7 +87,7 @@ trait AgencyAgentCommon
 
   def stateDetailsFor: Future[PartialFunction[String, Parameter]] = {
     for (
-      agencyVerKey <- getAgencyVerKeyFut
+      agencyVerKey <- agencyVerKeyFut()
     ) yield  {
       stateDetailsWithAgencyVerKey(agencyVerKey)
     }
@@ -134,27 +135,31 @@ trait AgencyAgentCommon
         val domainKeys = agentActorContext.walletAPI.createNewKey()
         (domainKeys.did, domainKeys.verKey, requesterVk)
     }
-
-    val agentPairwiseKey = prepareNewAgentWalletData(domainDID, domainVk, newActorId)
-    val setupEndpoint = SetupAgentEndpoint_V_0_7(
-      threadId,
-      domainDID,
-      agentPairwiseKey.did,
-      requesterVk,
-      requester.sponsorRel
-    )
-
-    userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
-
-    Future.successful(None)
+    prepareNewAgentWalletData(domainDID, domainVk, newActorId).map { agentPairwiseKey =>
+      val setupEndpoint = SetupAgentEndpoint_V_0_7(
+        threadId,
+        domainDID,
+        agentPairwiseKey.did,
+        requesterVk,
+        requester.sponsorRel
+      )
+      userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
+      None
+    }
   }
 
-  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, seed: String): NewKeyCreated  = {
-    val wap = WalletAccessParam(seed, agentActorContext.walletAPI, agentActorContext.walletConfig,
-      agentActorContext.appConfig, closeAfterUse=false)
-    agentActorContext.walletAPI.createAndOpenWallet(wap)
-    agentActorContext.walletAPI.storeTheirKey(StoreTheirKeyParam(requesterDid, requesterVerKey))(wap)
-    agentActorContext.walletAPI.createNewKey()(wap)
+  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, walletId: String): Future[NewKeyCreated]  = {
+    implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
+    val fut1 = agentActorContext.walletService.executeAsync[WalletCreated.type](walletId, CreateWallet)
+    val fut2 = agentActorContext.walletService.executeAsync[TheirKeyCreated](walletId, StoreTheirKey(requesterDid, requesterVerKey))
+    val fut3 = agentActorContext.walletService.executeAsync[NewKeyCreated](walletId, CreateNewKey())
+    fut1.map { _ =>
+      //below futures should be only executed when fut1 (create wallet) is done
+      for {
+        _ <- fut2;
+        fut3Res <- fut3
+      } yield fut3Res
+    }.flatten
   }
 
   def getAgencyDIDFut(req: Boolean = false): Future[CacheQueryResponse] = {

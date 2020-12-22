@@ -4,15 +4,13 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.actor.persistence.{AlreadyDone, Done}
+import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
 import com.evernym.verity.testkit.BasicSpec
-
 
 
 class MsgRespTimeTrackerShardedSpec

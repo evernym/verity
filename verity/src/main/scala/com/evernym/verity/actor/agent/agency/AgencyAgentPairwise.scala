@@ -11,8 +11,8 @@ import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseImplBase, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.user.AgentProvisioningDone
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.AcceptConnReqMsg_MFV_0_6
@@ -36,7 +36,8 @@ import scala.concurrent.Future
 class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   extends AgencyAgentCommon
     with AgencyAgentPairwiseStateUpdateImpl
-    with PairwiseConnState {
+    with PairwiseConnState
+    with AgentSnapshotter[AgencyAgentPairwiseState] {
 
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
@@ -53,6 +54,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
         AgentProvisioningDefinition,
         apd.threadId
       )
+    case GetSponsorRel => sender() ! SponsorRel.empty
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
@@ -70,8 +72,10 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     case ads: AgentDetailSet => handleSetupRelationship(ads.agentKeyDID, ads.forDID)
 
     //kept it for backward compatibility
-    case ac:AgentCreated    => handleSetupRelationship(ac.agentKeyDID, ac.forDID)
-    case _: SignedUp        => //nothing to do, kept it for backward compatibility
+    case ac:AgentCreated      =>
+      if (state.relationship.isEmpty && ac.forDID.nonEmpty && ac.agentKeyDID.nonEmpty)
+        handleSetupRelationship(ac.agentKeyDID, ac.forDID)
+    case _ @ (_: OwnerSetForAgent | _: SignedUp) => //nothing to do, kept it for backward compatibility
   }
 
   def handleSetupRelationship(myPairwiseDID: DID, theirPairwiseDID: DID): Unit = {
@@ -134,7 +138,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
     }
     for (
-      agencyVerKey <- getAgencyVerKeyFut
+      agencyVerKey <- agencyVerKeyFut
     ) yield  {
       paramMap(agencyVerKey) orElse super.stateDetailsWithAgencyVerKey(agencyVerKey)
     }
@@ -186,18 +190,16 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
+
 }
 
-trait AgencyAgentPairwiseStateImpl
-  extends AgentStatePairwiseImplBase {
-  def sponsorRel: Option[SponsorRel] = None
-}
+trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
 
 trait AgencyAgentPairwiseStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
@@ -209,8 +211,7 @@ trait AgencyAgentPairwiseStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 
@@ -224,9 +225,5 @@ trait AgencyAgentPairwiseStateUpdateImpl
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {
     state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
-  }
-
-  override def setSponsorRel(rel: SponsorRel): Unit = {
-    //nothing to do
   }
 }

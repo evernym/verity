@@ -5,36 +5,6 @@ import "scalapb/scalapb.proto";
 
 package com.evernym.verity.actor;
 
-message PersistentData {
-    int32 transformationId = 1;
-    bytes data = 2;
-};
-
-message TransformedEvent {
-    int32 transformationId = 1;
-    int32 typeCode = 2;
-    bytes data = 3;
-};
-
-//
-// We need this Event for already existing events
-// on our servers. This is the old class that was
-// serialized by java serialization. Should not be
-// used for new events and only exists for
-// deserialization.
-//
-message TransformedMultiEvents {
-    repeated TransformedEvent events = 1;
-};
-
-//note: earlier this class name was TransformedMultiEvents when it was not using protobuf serializer
-//now we want to make sure this event uses protobuf serializer so changed the class name a little bit
-//so that existing persisted class TransformedMultiEvents will still try to use java serializer during deserialization
-//and newly persisted class TransformedMultiEvent will be mapped to use protobuf for serialization/deserialization purposes.
-message TransformedMultiEvent {
-    repeated TransformedEvent events = 1;
-};
-
 message KeyCreated {
     string forDID = 1;
 };
@@ -497,17 +467,6 @@ message SponsorAssigned {
     string sponsee = 2;
 }
 
-message RecordingAgentActivity {
-    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
-    string domainId = 1;
-    string timestamp = 2;
-    string sponsorId = 3;
-    string activityType = 4;
-    string relId = 5;
-    string stateKey = 6;
-    string sponseeId = 7;
-}
-
 message WindowRules {
     string frequency = 1;
     string behavior = 2;
@@ -518,6 +477,13 @@ message WindowActivityDefined {
     repeated WindowRules windows = 1;
 }
 
-message ProtoActorUpdatedWithThreadContext {
+message ThreadContextMigrationStarted {
     string pinstId = 1;
+    repeated string candidateProtoActors = 2;
+}
+
+message ThreadContextMigrationStatusUpdated {
+    string pinstId = 1;
+    repeated string successResponseFromProtoActors = 2;
+    repeated string nonSuccessResponseFromProtoActors = 3;
 }

@@ -22,12 +22,12 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   override final def receiveAgentCmd: Receive = agentCmdReceiver orElse retryCmdReceiver
 
   val retryCmdReceiver: Receive = LoggingReceive.withLabel("retryCmdReceiver") {
-    case Init                                     => init()
+    case FailedMsgRetrierInit                     => init()
     case CheckRetryJobScheduled                   => scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
     case RetryUndeliveredMsgs if sender == self   => resendUndeliveredMsgsIfAny()
   }
 
-  self ! Init
+  self ! FailedMsgRetrierInit
 
   def init(): Unit = {
     scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
@@ -41,7 +41,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
         val jobId = "RetryUndeliveredMsgs"
         scheduleJob(
           jobId,
-          scheduledJobInitialDelay,
           scheduledJobInterval,
           RetryUndeliveredMsgs
         )
@@ -123,7 +122,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class
-  def scheduledJobInitialDelay: Int
   def scheduledJobInterval: Int
   def getMsgIdsEligibleForRetries: Set[MsgId]
   def updateUndeliveredMsgCountMetrics(): Unit
@@ -135,4 +133,4 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
 
 case object RetryUndeliveredMsgs extends ActorMessageObject
 case object CheckRetryJobScheduled extends ActorMessageObject
-case object Init extends ActorMessageObject
+case object FailedMsgRetrierInit extends ActorMessageObject

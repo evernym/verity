@@ -50,7 +50,7 @@ class BasicMessageSpec
     "produces valid json" in { _ =>
       val msg = Msg.Message(
         l10n(locale = Some("en")),
-        BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")),
+        "2018-12-13T17:29:34+0000",
         "Hello, World!"
       )
       val threadId = UUID.randomUUID().toString
@@ -92,7 +92,7 @@ class BasicMessageSpec
           val result = s.bob expect signal[Signal.ReceivedMessage]
           result.content shouldBe "Hello, World!"
           result.`~l10n` shouldBe l10n(locale = Some("en"))
-          result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
+          result.sent_time shouldBe "2018-12-13T17:29:34+0000"
 
           s.bob.state shouldBe a[State.Messaging]
 
@@ -127,7 +127,7 @@ class BasicMessageSpec
             val result = s.bob expect signal[Signal.ReceivedMessage]
             result.content shouldBe "Hello, World!"
             result.`~l10n` shouldBe l10n(locale = Some("en"))
-            result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
+            result.sent_time shouldBe "2018-12-13T17:29:34+0000"
             extractString(result.`~attach`.get(0)) shouldBe "Hello, World!"
           }
         }
@@ -139,7 +139,7 @@ class BasicMessageSpec
     "Sender does not include localization" in { s =>
       interaction (s.alice, s.bob) {
         s.alice ~ SendMessage(
-          sent_time=BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")),
+          sent_time="2018-12-13T17:29:34+0000",
           content="Hello, World",
         )
 
@@ -155,7 +155,7 @@ class BasicMessageSpec
         val result = s.bob expect signal[Signal.ReceivedMessage]
         result.content shouldBe "Hello, World!"
         result.`~l10n` shouldBe l10n(locale = Some("en"))
-        result.sent_time shouldBe BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
+        result.sent_time shouldBe "2018-12-13T17:29:34+0000"
         extractString(result.`~attach`.get(0)) shouldBe "Hello, World!"
       }
     }
@@ -168,7 +168,7 @@ object TestingVars extends CommonSpecUtil {
   val PARTICIPATOR = "participator"
   val MESSAGE_CONTENT = "Hello, World!"
   val LOCALIZATION = l10n(locale = Some("en"))
-  val OUT_TIME = BaseTiming(out_time = Some("2018-12-13T17:29:34+0000"))
+  val OUT_TIME = "2018-12-13T17:29:34+0000"
 
   def testSendMessage(a: Option[Vector[Attachment]] = None): SendMessage = {
     SendMessage(

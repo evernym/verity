@@ -9,9 +9,6 @@ import com.evernym.verity.{ActorResponse, Exceptions}
 object ExceptionHandler {
 
   def handleException(e: Throwable, sndr: ActorRef, selfOpt: Option[ActorRef]=None): Unit = {
-
-    logger.debug(s"handled exceptions: $e")
-
     if (selfOpt.contains(sndr)) {
       //if error occurred as part of processing msg sent by self, then log the error
       logErrorMsg(e)

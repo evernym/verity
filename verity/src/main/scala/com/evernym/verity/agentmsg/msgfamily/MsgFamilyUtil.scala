@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrF
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefinition
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.{QuestionAnswerDefinition, QuestionAnswerMsgFamily}
+import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily
 import com.evernym.verity.util.MsgIdProvider
 
 object MsgFamilyUtil {
@@ -50,10 +51,10 @@ object MsgFamilyUtil {
   val MSG_TYPE_AGENT_CREATED = "AGENT_CREATED"
 
   val MSG_TYPE_GET_TOKEN = "get-token"
-  val MSG_TYPE_DETAIL_GET_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, MSG_TYPE_GET_TOKEN)
+  val MSG_TYPE_DETAIL_GET_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, TokenizerMsgFamily.name, TokenizerMsgFamily.version, MSG_TYPE_GET_TOKEN)
 
   val MSG_TYPE_SEND_TOKEN = "send-token"
-  val MSG_TYPE_DETAIL_SEND_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, MSG_TYPE_SEND_TOKEN)
+  val MSG_TYPE_DETAIL_SEND_TOKEN: String = typeStrFromMsgType(EVERNYM_QUALIFIER, TokenizerMsgFamily.name, TokenizerMsgFamily.version, MSG_TYPE_SEND_TOKEN)
 
 
   val MSG_TYPE_CONN_REQ = "CONN_REQUEST"
@@ -78,7 +79,6 @@ object MsgFamilyUtil {
 
   val MSG_TYPE_CONN_REQ_ACCEPTED = "CONN_REQ_ACCEPTED"
   val MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONNECTING, MFV_0_6, MSG_TYPE_CONN_REQ_ACCEPTED)
-  val MSG_TYPE_CONN_REQ_ACCEPTED_RESP = "CONN_REQ_ACCEPTED_RESP"
 
   val MSG_TYPE_CONN_REQ_DECLINED = "CONN_REQ_DECLINED"
   val MSG_TYPE_CONN_REQ_DECLINED_RESP = "CONN_REQ_DECLINED_RESP"
@@ -144,17 +144,21 @@ object MsgFamilyUtil {
 
   //sub msg types
   val MSG_TYPE_MSG_DETAIL = "MSG_DETAIL"
+  val MSG_TYPE_UNKNOWN = "unknown"
   val CREATE_MSG_TYPE_GENERAL = "general"
+
   val CREATE_MSG_TYPE_CONN_REQ = "connReq"
   val CREATE_MSG_TYPE_CONN_REQ_ANSWER = "connReqAnswer"
-  val CREATE_MSG_TYPE_CRED_OFFER = "credOffer"
+
   val CREATE_MSG_TYPE_REDIRECT_CONN_REQ = "connReqRedirect"
   val CREATE_MSG_TYPE_CONN_REQ_REDIRECTED = "connReqRedirected"
 
+  val CREATE_MSG_TYPE_CRED_OFFER = "credOffer"
   val CREATE_MSG_TYPE_CRED_REQ = "credReq"
   val CREATE_MSG_TYPE_CRED = "cred"
   val CREATE_MSG_TYPE_PROOF_REQ = "proofReq"
   val CREATE_MSG_TYPE_PROOF = "proof"
+
   val CREATE_MSG_TYPE_TOKEN_XFER_OFFER = "tokenTransferOffer"
   val CREATE_MSG_TYPE_TOKEN_XFER_REQ = "tokenTransferReq"
   val CREATE_MSG_TYPE_TOKEN_XFERRED = "tokenTransferred"

@@ -16,7 +16,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 class AgentMsgUtilSpec extends BasicSpec {
 
-  implicit val protoReg = engine.ProtocolRegistry(ConnectingProtoDef_V_0_6 -> PinstIdResolution.V0_1)
+  implicit val protoReg = engine.ProtocolRegistry(ConnectingProtoDef_V_0_6 -> PinstIdResolution.DEPRECATED_V0_1)
 
   val createKeyJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1","@type":"$MSG_TYPE_DETAIL_CREATE_KEY"}"""
 

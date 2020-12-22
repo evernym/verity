@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.ActorMessageClass
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, SponsorRel, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
@@ -11,14 +11,13 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
-import com.evernym.verity.protocol.engine.msg.{GivenDomainId, PersistenceFailure, StoreThreadContext}
+import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
-
 import com.github.ghik.silencer.silent
 
 import scala.concurrent.Future
@@ -77,7 +76,8 @@ trait ProtocolContext[P,R,M,E,S,I]
                        stateVersion: Int=0,
                        domainId: Option[DomainId]=None,
                        packagingContext: Option[PackagingContext] = None,
-                       msgOrders: Option[MsgOrders] = None) {
+                       msgOrders: Option[MsgOrders] = None,
+                       sponsorRel: Option[SponsorRel]=None) {
     def advanceVersion: Backstate = {
       this.copy(stateVersion = this.stateVersion + 1)
     }
@@ -158,8 +158,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       case e: E =>
         val result = try {
           protocol.applyEvent(getState, getRoster, e)
-        }
-        catch {
+        } catch {
           case me: MatchError =>
             recordWarn(s"no event handler for: ${me.getMessage}")
             throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.toString, me)
@@ -321,8 +320,13 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   protected def applySystemEvent: ProtoSystemEvent ?=> Backstate = {
+    case SetPinstId(_) => shadowBackState.getOrElse(Backstate()) // kept it for backward compatibility
+
     case SetDomainId(id) =>
       shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
+
+    case s: SponsorRel => Backstate()
+      shadowBackState.getOrElse(Backstate()).copy(sponsorRel = Option(s))
 
     case pcs: PackagingContextSet =>
       val pc = PackagingContext.init(pcs)
@@ -358,6 +362,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def handleInternalSystemMsg(sysMsg: InternalSystemMsg): Any = {
     sysMsg match {
       case GivenDomainId(id)           => apply(SetDomainId(id))
+      case GivenSponsorRel(s)           => apply(s)
       case stc: StoreThreadContext     =>
         val curPackagingContext = backstate.packagingContext
         if (curPackagingContext.isEmpty) {
@@ -594,6 +599,10 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  /**
+   * stores packaging detail if it is not already stored/persisted
+   * @param tc
+   */
   def storePackagingDetail(tc: ThreadContextDetail): Unit = {
     if (backstate.packagingContext.isEmpty) {
       val pc = PackagingContext(

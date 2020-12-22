@@ -2,16 +2,17 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.Props
 import akka.event.LoggingReceive
-import com.evernym.verity.actor.agent.SponsorRel
+import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
+import com.evernym.verity.actor.agent.user.GetSponsorRel
+import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessageClass, RecordingAgentActivity, WindowActivityDefined, WindowRules}
+import com.evernym.verity.actor.{ActorMessageClass, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.{DID, DomainId}
+import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
 
@@ -20,26 +21,47 @@ import scala.concurrent.duration.Duration
   1. activity within a specified window
   2. active relationships within a specified window
  */
-class ActivityTracker(override val appConfig: AppConfig)
+class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMsgRouter)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
   type StateKey = String
   type StateType = State
   var state = new State
-  val logger: Logger = getLoggerByClass(classOf[ActivityTracker])
+
  /**
   * actor persistent state object
   */
- class State(_activity: Map[StateKey, AgentActivity]=Map.empty, activityWindow: ActivityWindow=ActivityWindow(Set())) {
-   def activityWindows: ActivityWindow = activityWindow
+  class State(_activity: Map[StateKey, AgentActivity]=Map.empty,
+             _activityWindow: ActivityWindow=ActivityWindow(Set()),
+             _sponsorRel: Option[SponsorRel]=None,
+             _attemptedSponsorRetrieval: Boolean=false) {
 
-   def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
-     s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
-   def copy(newActivity: Map[StateKey, AgentActivity]=_activity, activityWindow: ActivityWindow=activityWindow): State =
-     new State(newActivity, activityWindow)
-   def activity: Map[StateKey, AgentActivity] = _activity
-   def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
- }
+    def copy(activity: Map[StateKey, AgentActivity]=_activity,
+            activityWindow: ActivityWindow=_activityWindow,
+            sponsorRel: Option[SponsorRel]=None,
+            attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
+     new State(activity, activityWindow, sponsorRel, attemptedSponsorRetrieval)
+
+    def sponsorRel: Option[SponsorRel] = _sponsorRel
+    def withSponsorRel(sponsorRel: SponsorRel): State =
+      copy(sponsorRel=Some(sponsorRel))
+    /**
+     * A sponsor can be undefined. If activity occurs and there is no sponsor
+     */
+    def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
+    def withAttemptedSponsorRetrieval(): State =
+      copy(attemptedSponsorRetrieval=true)
+
+     def activityWindows: ActivityWindow = _activityWindow
+     def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
+
+    def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
+    def withAgentActivity(key: StateKey, activity: AgentActivity): State =
+      copy(activity=_activity + (key -> activity))
+
+    def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
+      s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
+  }
 
   override def beforeStart(): Unit = {
     super.beforeStart()
@@ -51,16 +73,41 @@ class ActivityTracker(override val appConfig: AppConfig)
   * internal command handler
   */
  val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
-  case activity: AgentActivity => handleAgentActivity(activity)
+  case activity: AgentActivity if state.sponsorReady() => handleAgentActivity(activity)
+  case activity: AgentActivity => needsSponsor(activity)
   case updateActivityWindows: ActivityWindow => applyEvent(updateActivityWindows.asEvt)
  }
 
+  val waitingForSponsor: Receive = LoggingReceive.withLabel("waitingForSponsor") {
+    case sponsorRel: SponsorRel =>
+      applyEvent(sponsorRel)
+      context.become(receiveCmd)
+      unstashAll()
+    case msg =>
+      logger.debug(s"stashing $msg");
+      stash()
+  }
+
  val receiveEvent: Receive = {
   case r: RecordingAgentActivity =>
-    state = state.copy(newActivity=state.activity + (r.stateKey -> AgentActivity(r)))
+    state = state.withAgentActivity(r.stateKey, AgentActivity(r))
   case w: WindowActivityDefined =>
-     state = state.copy(activityWindow=ActivityWindow.fromEvt(w))
+    state = state.withActivityWindow(ActivityWindow.fromEvt(w))
+  case s: SponsorRel =>
+    if (s.equals(SponsorRel.empty)) state = state.withAttemptedSponsorRetrieval()
+    else state = state.withSponsorRel(s)
+
  }
+
+  /**
+   * Sponsor details not set, go to agent and retrieve
+   */
+  def needsSponsor(activity: AgentActivity): Unit = {
+    logger.trace(s"getting sponsor info, activity: $activity")
+    stash()
+    context.become(waitingForSponsor)
+    agentMsgRouter.forward(InternalMsgRouteParam(activity.domainId, GetSponsorRel), self)
+  }
 
   /**
    * 1. Process each defined window
@@ -106,33 +153,39 @@ class ActivityTracker(override val appConfig: AppConfig)
     4.
    */
   def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
-    logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity)}")
-    MetricsWriter.gaugeApi.incrementWithTags(window.activityType.metricBase, agentTags(window, activity))
+    logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity.domainId)}")
+    MetricsWriter.gaugeApi.incrementWithTags(window.activityType.metricBase, agentTags(window, activity.domainId))
     val recording = RecordingAgentActivity(
       activity.domainId,
       activity.timestamp,
-      activity.sponsorRel.sponsorId,
+      state.sponsorRel,
       activity.activityType,
       activity.relId.getOrElse(""),
       state.key(window, activity.id(window.activityType)),
-      activity.sponsorRel.sponseeId,
     )
 
     writeAndApply(recording)
   }
 
-  private def agentTags(behavior: ActiveWindowRules, agentActivity: AgentActivity): Map[String, String] =
+  private def agentTags(behavior: ActiveWindowRules, domainId: DomainId): Map[String, String] =
     behavior.activityType match {
       case ActiveUsers =>
-        ActiveUsers.tags(agentActivity.sponsorRel.sponsorId, behavior.activityFrequency)
+        ActiveUsers.tags(
+          state.sponsorRel.getOrElse(SponsorRel.empty).sponsorId,
+          behavior.activityFrequency
+        )
       case ActiveRelationships =>
-        ActiveRelationships.tags(agentActivity.domainId, behavior.activityFrequency, agentActivity.sponsorRel.sponseeId)
+        ActiveRelationships.tags(
+          domainId,
+          behavior.activityFrequency,
+          state.sponsorRel.getOrElse(SponsorRel.empty).sponseeId
+        )
     }
 }
 
 object ActivityTracker {
- def props(implicit config: AppConfig): Props = {
-  Props(new ActivityTracker(config))
+ def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter): Props = {
+  Props(new ActivityTracker(config, agentMsgRouter))
  }
 }
 
@@ -167,7 +220,7 @@ case object ActiveRelationships extends AgentBehavior {
  * */
 trait FrequencyType
 case object CalendarMonth extends FrequencyType {
-  override def toString: String = "monthly"
+  override def toString: String = s"monthly-${TimeUtil.toMonth(TimeUtil.nowDateString)}"
 }
 case class VariableDuration(duration: Duration) extends FrequencyType {
   override def toString: String = duration.toString
@@ -199,7 +252,6 @@ object ActivityWindow {
 }
 final case class AgentActivity(domainId: DID,
                                timestamp: IsoDateTime,
-                               sponsorRel: SponsorRel,
                                activityType: String,
                                relId: Option[String]=None) extends ActivityTracking {
   def id(behavior: Behavior): Option[String] =
@@ -215,7 +267,6 @@ object AgentActivity {
     new AgentActivity(
       r.domainId,
       r.timestamp,
-      SponsorRel(r.sponsorId, r.sponseeId),
       r.activityType,
       if (r.relId == "") None else Some(r.relId)
     )

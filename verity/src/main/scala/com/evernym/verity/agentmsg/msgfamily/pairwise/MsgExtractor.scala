@@ -1,18 +1,19 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
 import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.msgcodec.MsgPlusMeta
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackedMsg, UnpackParam}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, UnpackParam}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID => _, _}
-import com.evernym.verity.vault.{EncryptParam, KeyInfo, WalletAPI, WalletAccessParam}
+import com.evernym.verity.vault.{EncryptParam, KeyInfo, WalletAPI, WalletAPIParam}
 
 object MsgExtractor {
   type JsonStr = String
   type NativeMsg = Any
 }
 
-class MsgExtractor(val keyInfo: KeyInfo, walletAPI: WalletAPI)(implicit wap: WalletAccessParam) {
+class MsgExtractor(val keyInfo: KeyInfo, walletAPI: WalletAPI)(implicit wap: WalletAPIParam) {
   import MsgExtractor._
 
   val amt = new AgentMsgTransformer(walletAPI)

@@ -3,11 +3,11 @@ package com.evernym.verity.http.base.open
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, RemoteAgentAndAgencyIdentity}
 import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.actor.wallet.PackedMsg
 
 trait ProvisionRelationshipSpec { this : EndpointHandlerBaseSpec =>
 

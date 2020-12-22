@@ -458,9 +458,12 @@ trait CommonReqConfigValidatorBase extends ReqConfigValidator {
     ConfDetail(AKKA_MNGMNT_HTTP_API_CREDS, depConfDetail = Option(DepConfDetail(AKKA_MNGMNT_HTTP_ENABLED, Option(YES), caseSensitive=false))),
 
     ConfDetail("akka.actor.serializers.protoser", allowedValues = Set("com.evernym.verity.actor.serializers.ProtoBufSerializer")),
-    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.TransformedEvent\"", allowedValues = Set("protoser")),
-    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.TransformedState\"", allowedValues = Set("protoser")),
-    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.TransformedMultiEvent\"", allowedValues = Set("protoser")),
+    ConfDetail("akka.actor.serializers.kryo-akka", allowedValues = Set("com.twitter.chill.akka.AkkaSerializer")),
+    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.DeprecatedEventMsg\"", allowedValues = Set("protoser")),
+    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.DeprecatedStateMsg\"", allowedValues = Set("protoser")),
+    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.DeprecatedMultiEventMsg\"", allowedValues = Set("protoser")),
+    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.PersistentMsg\"", allowedValues = Set("protoser")),
+    ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.PersistentMultiEventMsg\"", allowedValues = Set("protoser")),
     ConfDetail("akka.actor.serialization-bindings.\"com.evernym.verity.actor.ActorMessage\"", allowedValues = Set("kryo-akka"))
   )
 }
@@ -795,7 +798,9 @@ object CommonConfigValidatorCreator {
   )
 
   def getAllValidatorCreators: List[ConfigValidatorCreator] =
-    baseValidatorCreators ++ List(CommonReqConfigValidator) ++ List(CommonOptionalConfigValidator)
+    baseValidatorCreators ++
+      List(CommonReqConfigValidator) ++
+      List(CommonOptionalConfigValidator)
 }
 
 class ConfigValidatorHelper(givenConfig: Option[Config]=None) {

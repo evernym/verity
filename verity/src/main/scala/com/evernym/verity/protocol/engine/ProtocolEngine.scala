@@ -14,7 +14,7 @@ class ProtocolEngine(val signalMsgHandler: String => Unit,
   def domainId: DomainId = "placeholder for now" //TODO: complete this
   def relationshipId: Option[String] = None   //TODO: complete this
 
-  val protocolRegistry = ProtocolRegistry(ConnectingProtoDef -> PinstIdResolution.V0_1)
+  val protocolRegistry = ProtocolRegistry(ConnectingProtoDef -> PinstIdResolution.DEPRECATED_V0_1)
 
 //  def handleMsg(msg: Any): Boolean = {
 //    var handled = sendMsgToProtocolContainers(msg)

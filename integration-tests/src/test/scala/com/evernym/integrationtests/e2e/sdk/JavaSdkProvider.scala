@@ -3,7 +3,9 @@ package com.evernym.integrationtests.e2e.sdk
 import java.nio.file.Path
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.{DID, ThreadId}
+import com.evernym.verity.sdk.protocols.basicmessage.BasicMessage
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.IssueCredential
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -11,7 +13,7 @@ import com.evernym.verity.sdk.protocols.issuersetup.IssuerSetup
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.PresentProof
-import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
@@ -59,6 +61,11 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 =
     WriteCredentialDefinition.v0_6(name, schemaId, tag.orNull, revocationDetails.orNull)
 
+  override def basicMessage_1_0(forRelationship: DID,
+                                content: String,
+                                sentTime: String,
+                                localization: String): BasicMessageV1_0 =
+    BasicMessage.v1_0(forRelationship, content, sentTime, localization)
 
   override def committedAnswer_1_0(forRelationship: DID,
                                    questionText: String,
@@ -109,4 +116,7 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
 
   override def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 =
     PresentProof.v1_0(forRelationship, threadId)
+
+  override def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 =
+    PresentProof.v1_0(forRelationship, proofAttrs, proofPredicates)
 }

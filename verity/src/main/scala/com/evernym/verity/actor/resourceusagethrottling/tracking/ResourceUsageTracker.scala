@@ -11,19 +11,160 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.node_singleton.ResourceBlockingStatusMngrCache
-import com.evernym.verity.actor.persistence.{BasePersistentActor, Done, PersistenceConfig, SnapshotterExt}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.http.route_handlers.restricted.{UpdateResourcesUsageCounter, UpdateResourcesUsageLimit}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.HasLogger
 import com.evernym.verity.actor.resourceusagethrottling.helper._
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus
+import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
 import com.evernym.verity.config.CommonConfig.{USAGE_RULES, VIOLATION_ACTION}
 
 import scala.concurrent.Future
 
+
+class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor)
+  extends BasePersistentActor
+    with SnapshotterExt[ResourceUsageState]{
+
+  override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
+    case aru: AddResourceUsage              => addResourceUsage(aru)
+    case gru: GetResourceUsage              => sendResourceUsage(gru)
+    case GetAllResourceUsages               => sender ! getResourceUsages
+    case urul: UpdateResourcesUsageLimit    => updateResourceUsageLimit(urul)
+    case uruc: UpdateResourcesUsageCounter  => updateResourceUsageCounter(uruc)
+    case _ @ (_: UpdateBlockingStatus |
+              _:UpdateWarningStatus)        => //nothing to do
+  }
+
+  override def receiveSnapshot: PartialFunction[Any, Unit] = {
+    case rus: ResourceUsageState => resourceUsageTracker.updateWithSnapshotState(rus)
+  }
+
+  override def receiveEvent: Receive = {
+    case beu: ResourceBucketUsageUpdated    =>
+      val startDateTime =
+        if (beu.startDateTime == -1) None else Option(getZonedDateTimeFromMillis(beu.startDateTime)(UTCZoneId))
+      val endDateTime =
+        if (beu.endDateTime == -1) None else Option(getZonedDateTimeFromMillis(beu.endDateTime)(UTCZoneId))
+      resourceUsageTracker.addToExistingBuckets(beu.resourceType, beu.resourceName,
+        Map(beu.bucketId -> Bucket(beu.count, persistUsages = true, startDateTime, endDateTime)))
+
+    case rulu: ResourceUsageLimitUpdated    => resourceUsageTracker.updateResourceUsageLimit(rulu)
+    case rucu: ResourceUsageCounterUpdated  => resourceUsageTracker.updateResourceUsageCounter(rucu)
+  }
+
+  override lazy val snapshotConfig: SnapshotConfig = SnapshotConfig(
+    snapshotEveryNEvents = Option(ResourceUsageRuleHelper.resourceUsageRules.snapshotAfterEvents),
+    keepNSnapshots = Option(1),
+    deleteEventsOnSnapshot = true)
+
+  override def snapshotState: Option[ResourceUsageState] = Option(resourceUsageTracker.getSnapshotState)
+
+  val resourceUsageTracker = new BucketBasedResourceUsageTracker
+
+  override lazy val persistenceEncryptionKey: String =
+    appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
+
+  def getResourceUsages: ResourceUsages = try {
+    val allResourceUsages = resourceUsageTracker.getAllResources.map { case (resourceName, resourceBuckets) =>
+      val rur = ResourceUsageRuleHelper.getResourceUsageRule(entityId, resourceBuckets.`type`, resourceName).getOrElse(
+        throw new RuntimeException("resource usage rule not found"))
+      resourceName -> resourceBuckets.buckets.map { case (bucketId, bucket) =>
+        val allowedCount =
+          resourceUsageTracker.getCustomLimit(resourceName, bucketId).
+            getOrElse(rur.bucketRules.get(bucketId).map(_.allowedCount).
+              getOrElse(-1))
+        val bucketExt = BucketExt(bucket.usedCount, allowedCount, bucket.startDateTime, bucket.endDateTime)
+        bucketId.toString -> bucketExt
+      }
+    }.filter(_._2.nonEmpty)
+    ResourceUsages(allResourceUsages.filter(_._2.nonEmpty))
+  } catch {
+    case e: Exception =>
+      logger.error("error occurred while building resource usages: " + Exceptions.getErrorMsg(e))
+      throw e
+  }
+
+  def addResourceUsage(aru: AddResourceUsage): Unit = {
+    runWithInternalSpan("addResourceUsage", "ResourceUsageTracker") {
+      ResourceUsageRuleHelper.loadResourceUsageRules()
+      if (ResourceUsageRuleHelper.resourceUsageRules.applyUsageRules) {
+        val persistUpdatedBucketEntries =
+          resourceUsageTracker.updateResourceUsage(aru.apiToken, aru.resourceType, aru.resourceName)
+        persistUpdatedBucketEntries.foreach { ube =>
+          ube.entries.foreach(asyncWriteWithoutApply)
+        }
+        analyzeUsage(aru)
+      }
+      if (aru.sendBackAck)
+        sender ! Done
+    }
+  }
+
+  def sendResourceUsage(gru: GetResourceUsage): Unit = {
+    val ru = resourceUsageTracker.getResourceUsageByBuckets(gru.resourceName)
+    sender ! ru
+  }
+
+  def updateResourceUsageLimit(urul: UpdateResourcesUsageLimit): Unit = {
+    urul.resourceUsageLimits.foreach { srul =>
+      val currentBucketInfo = resourceUsageTracker.resourceUsages.get(srul.resourceName).flatMap(_.buckets.get(srul.bucketId))
+      val newLimit = (srul.newLimit, srul.addToCurrentUsedCount) match {
+        case (Some(nl), None)       => nl
+        case (None,     Some(atcc)) => currentBucketInfo.map(_.usedCount).getOrElse(0) + atcc
+        case _                      =>
+          throw new BadRequestErrorException(BAD_REQUEST.statusCode,
+            Option("one and only one of these should be specified: 'newLimit' or 'addToCurrentUsedCount'"))
+
+      }
+      writeAndApply(ResourceUsageLimitUpdated(srul.resourceName, srul.bucketId, newLimit))
+    }
+    sender ! Done
+  }
+
+  def updateResourceUsageCounter(urul: UpdateResourcesUsageCounter): Unit = {
+    urul.resourceUsageCounters.foreach { rc =>
+      writeAndApply(ResourceUsageCounterUpdated(rc.resourceName, rc.bucketId, rc.newCount.getOrElse(0)))
+    }
+    sender ! Done
+  }
+
+  /**
+   * checks if resource usage has exceeded configured limits and take appropriate actions if that is the case
+   * @param aru
+   */
+  def analyzeUsage(aru: AddResourceUsage): Unit = {
+    runWithInternalSpan("analyzeUsage", "ResourceUsageTracker") {
+      Future {
+        ResourceUsageRuleHelper.getResourceUsageRule(aru.apiToken, aru.resourceType, aru.resourceName).foreach { usageRule =>
+          val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)
+          usageRule.bucketRules.foreach { case (bucketId, bucketRule) =>
+            actualUsages.usages.get(bucketId).foreach { actualCount =>
+              val customAllowedCount: Option[Int] = resourceUsageTracker.getCustomLimit(aru.resourceName, bucketId)
+              val allowedCount = customAllowedCount.getOrElse(bucketRule.allowedCount)
+              if (actualCount >= allowedCount) {
+                val rulePath =
+                  s"""$USAGE_RULES.${
+                    if (customAllowedCount.isDefined) "custom" else "default"
+                  }.${
+                    ResourceUsageRuleHelper.getHumanReadableResourceType(aru.resourceType)
+                  }.${aru.resourceName}"""
+                val actionPath = VIOLATION_ACTION
+                val vr = ViolatedRule(entityId, aru.resourceName, bucketRule, actualCount, rulePath, bucketId, actionPath)
+                actionExecutor.execute(bucketRule.violationActionId, vr)(self)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}
 
 object ResourceUsageTracker {
 
@@ -82,153 +223,6 @@ object ResourceUsageTracker {
   def sendToResourceUsageTracker(entityId: EntityId, cmd: Any)(rut: ActorRef): Unit = {
     rut.tell(ForIdentifier(entityId, cmd), Actor.noSender)
   }
-}
-
-class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor)
-  extends BasePersistentActor
-    with SnapshotterExt[ResourceUsageState]
-    with HasLogger {
-
-  val logger = getLoggerByClass(getClass)
-
-  val resourceUsageTracker = new BucketBasedResourceUsageTracker
-
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
-
-  override lazy val persistenceConfig: PersistenceConfig = PersistenceConfig(
-    allowOnlyEvents = false,
-    allowOnlySnapshots = false,
-    snapshotEveryNEvents = Option(ResourceUsageRuleHelper.resourceUsageRules.snapshotAfterEvents),
-    keepNSnapshots = Option(1),
-    deleteEventsOnSnapshot = true)
-
-  def getResourceUsages: ResourceUsages = try {
-    val allResourceUsages = resourceUsageTracker.getAllResources.map { case (resourceName, resourceBuckets) =>
-      val rur = ResourceUsageRuleHelper.getResourceUsageRule(entityId, resourceBuckets.`type`, resourceName).getOrElse(
-        throw new RuntimeException("resource usage rule not found"))
-      resourceName -> resourceBuckets.buckets.map { case (bucketId, bucket) =>
-        val allowedCount =
-          resourceUsageTracker.getCustomLimit(resourceName, bucketId).
-            getOrElse(rur.bucketRules.get(bucketId).map(_.allowedCount).
-              getOrElse(-1))
-        val bucketExt = BucketExt(bucket.usedCount, allowedCount, bucket.startDateTime, bucket.endDateTime)
-        bucketId.toString -> bucketExt
-      }
-    }.filter(_._2.nonEmpty)
-    ResourceUsages(allResourceUsages.filter(_._2.nonEmpty))
-  } catch {
-    case e: Exception =>
-      logger.error("error occurred while building resource usages: " + Exceptions.getErrorMsg(e))
-      throw e
-  }
-
-  override def snapshotState: Option[ResourceUsageState] = Option(resourceUsageTracker.getSnapshotState)
-
-  def addResourceUsage(aru: AddResourceUsage): Unit = {
-    runWithInternalSpan("addResourceUsage", "ResourceUsageTracker") {
-      ResourceUsageRuleHelper.loadResourceUsageRules()
-      if (ResourceUsageRuleHelper.resourceUsageRules.applyUsageRules) {
-        val persistUpdatedBucketEntries =
-          resourceUsageTracker.updateResourceUsage(aru.apiToken, aru.resourceType, aru.resourceName)
-        persistUpdatedBucketEntries.foreach { ube =>
-          ube.entries.foreach(writeWithoutApply)
-        }
-        analyzeUsage(aru)
-      }
-      if (aru.sendBackAck)
-        sender ! Done
-    }
-  }
-
-  def sendResourceUsage(gru: GetResourceUsage): Unit = {
-    val ru = resourceUsageTracker.getResourceUsageByBuckets(gru.resourceName)
-    sender ! ru
-  }
-
-  def updateResourceUsageLimit(urul: UpdateResourcesUsageLimit): Unit = {
-    urul.resourceUsageLimits.foreach { srul =>
-      val currentBucketInfo = resourceUsageTracker.resourceUsages.get(srul.resourceName).flatMap(_.buckets.get(srul.bucketId))
-      val newLimit = (srul.newLimit, srul.addToCurrentUsedCount) match {
-        case (Some(nl), None) => nl
-        case (None, Some(atcc)) => currentBucketInfo.map(_.usedCount).getOrElse(0) + atcc
-        case _ => throw new BadRequestErrorException(BAD_REQUEST.statusCode,
-          Option("one and only one of these should be specified: 'newLimit' or 'addToCurrentUsedCount'"))
-
-      }
-      writeAndApply(ResourceUsageLimitUpdated(srul.resourceName, srul.bucketId, newLimit))
-    }
-    sender ! Done
-  }
-
-  def updateResourceUsageCounter(urul: UpdateResourcesUsageCounter): Unit = {
-    urul.resourceUsageCounters.foreach { rc =>
-      writeAndApply(ResourceUsageCounterUpdated(rc.resourceName, rc.bucketId, rc.newCount.getOrElse(0)))
-    }
-    sender ! Done
-  }
-
-  override def receiveEvent: Receive = {
-    case beu: ResourceBucketUsageUpdated =>
-      val startDateTime =
-        if (beu.startDateTime == -1) None else Option(getZonedDateTimeFromMillis(beu.startDateTime)(UTCZoneId))
-      val endDateTime =
-        if (beu.endDateTime == -1) None else Option(getZonedDateTimeFromMillis(beu.endDateTime)(UTCZoneId))
-      resourceUsageTracker.addToExistingBuckets(beu.resourceType, beu.resourceName,
-        Map(beu.bucketId -> Bucket(beu.count, persistUsages = true, startDateTime, endDateTime)))
-
-    case rulu: ResourceUsageLimitUpdated => resourceUsageTracker.updateResourceUsageLimit(rulu)
-
-    case rucu: ResourceUsageCounterUpdated => resourceUsageTracker.updateResourceUsageCounter(rucu)
-
-  }
-
-  override def receiveSnapshot: PartialFunction[Any, Unit] = {
-    case rus: ResourceUsageState => resourceUsageTracker.updateWithSnapshotState(rus)
-  }
-
-  override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
-
-    case aru: AddResourceUsage => addResourceUsage(aru)
-
-    case gru: GetResourceUsage => sendResourceUsage(gru)
-
-    case GetAllResourceUsages => sender ! getResourceUsages
-
-    case urul: UpdateResourcesUsageLimit => updateResourceUsageLimit(urul)
-
-    case uruc: UpdateResourcesUsageCounter => updateResourceUsageCounter(uruc)
-
-    case _@(_: CallerBlocked | _: CallerUnblocked | _: CallerResourceBlocked | _: CallerResourceUnblocked) |
-         _@(_: CallerWarned  | _: CallerUnwarned  | _: CallerResourceWarned  | _: CallerResourceUnwarned) => //nothing to do
-  }
-
-  def analyzeUsage(aru: AddResourceUsage): Unit = {
-    runWithInternalSpan("analyzeUsage", "ResourceUsageTracker") {
-      Future {
-        ResourceUsageRuleHelper.getResourceUsageRule(aru.apiToken, aru.resourceType, aru.resourceName).foreach { usageRule =>
-          val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)
-          usageRule.bucketRules.foreach { case (bucketId, bucketRule) =>
-            actualUsages.usages.get(bucketId).foreach { actualCount =>
-              val customAllowedCount: Option[Int] = resourceUsageTracker.getCustomLimit(aru.resourceName, bucketId)
-              val allowedCount = customAllowedCount.getOrElse(bucketRule.allowedCount)
-              if (actualCount >= allowedCount) {
-                val rulePath =
-                  s"""$USAGE_RULES.${
-                    if (customAllowedCount.isDefined) "custom" else "default"
-                  }.${
-                    ResourceUsageRuleHelper.getHumanReadableResourceType(aru.resourceType)
-                  }.${aru.resourceName}"""
-                val actionPath = VIOLATION_ACTION
-                val vr = ViolatedRule(entityId, aru.resourceName, bucketRule, actualCount, rulePath, bucketId, actionPath)
-                actionExecutor.execute(bucketRule.violationActionId, vr)(self)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
 }
 
 case class Bucket(usedCount: Int = 0,

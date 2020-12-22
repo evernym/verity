@@ -15,7 +15,8 @@ import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.{HttpRemoteMsgSendingSvc, RemoteMsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
@@ -25,6 +26,7 @@ import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.{Util, UtilBase}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.service.ActorWalletService
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -57,7 +59,9 @@ trait AgentActorContext extends ActorContext {
   lazy val util: UtilBase = Util
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
-  lazy val walletAPI: WalletAPI = new WalletAPI(new LibIndyWalletProvider(appConfig), util, poolConnManager)
+  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
+  lazy val walletService: ActorWalletService = new ActorWalletService(system)
+  lazy val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val walletConfig: WalletConfig = buildWalletConfig(appConfig)

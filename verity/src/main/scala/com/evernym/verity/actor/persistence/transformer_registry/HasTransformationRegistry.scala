@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.transformer_registry
 
-import com.evernym.verity.actor.PersistentData
+import com.evernym.verity.actor.PersistentMsg
+import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.transformations.transformers._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.transformations.transformers.v1._
@@ -18,12 +19,13 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
    */
   val schemaEvolTransformation: IdentityTransformer[Any] = new IdentityTransformer
 
+  val persistentObjectMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper
+
   /**
    * new persistence transformer, optimized compared to legacy event/state transformers
-   * TODO: 'CodeMsgExtractor' code needs to be reviewed and finalized before getting used
    */
-  lazy val persistenceTransformerV1: Any <=> PersistentData =
-    createPersistenceTransformerV1(persistenceEncryptionKey, schemaEvolTransformation)
+  lazy val persistenceTransformerV1: Any <=> PersistentMsg =
+    createPersistenceTransformerV1(persistenceEncryptionKey, persistentObjectMapper, schemaEvolTransformation)
 
   /**
    * transformer registry, map between a transformer id (Int) and corresponding composite transformer
@@ -41,7 +43,8 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
    * lookup/searches an appropriate transformer based on given input
    *
    * @param id transformer id
-   * @param typ optional, only used for legacy event/state transformers (id=0)
+   * @param typ optional, only used for legacy event/state transformers
+   *            (as for both legacy event and state the transformation id was 0)
    *            for new transformers (id > 0), this parameter doesn't get used
    * @tparam T
    * @return a transformer
@@ -53,7 +56,7 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, Some(LEGACY_PERSISTENT_OBJECT_TYPE_STATE)) =>
         LEGACY_STATE_TRANSFORMATION_ID
       case (_, None)  => id      //for new transformers
-      case (id, typ)     => throw new RuntimeException(s"transformation not supported for id '$id' and type '$typ'")
+      case (id, typ)  => throw new RuntimeException(s"transformation not supported for id '$id' and type '$typ'")
     }
     transformationRegistry.getOrElse(transformerId, throw new RuntimeException("transformation not found for id: " + id))
       .asInstanceOf[Any <=> T]

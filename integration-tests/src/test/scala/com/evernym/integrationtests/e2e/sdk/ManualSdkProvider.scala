@@ -5,11 +5,12 @@ import java.io.{File, FileOutputStream}
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
-import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate}
+import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
@@ -84,6 +85,11 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
                                 tag: Option[String],
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 =
     throw new NotImplementedError
+
+  override def basicMessage_1_0(forRelationship: DID,
+                                content: String,
+                                sentTime: String,
+                                localization: String): BasicMessageV1_0 = throw new NotImplementedError
 
   override def committedAnswer_1_0(forRelationship: DID,
                                    questionText: String,
@@ -181,7 +187,7 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
   override def presentProof_1_0(forRelationship: DID,
                                 threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
-      override def accept(context: Context): Unit = {
+      override def acceptRequest(context: Context): Unit = {
         println("===========================================")
         println("==               MANUAL STEPS            ==")
         println("===========================================")
@@ -190,7 +196,7 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
     }
   }
 
-
+  override def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 = ???
 }
 
 object ManualSdkProvider {

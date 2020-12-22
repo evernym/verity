@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor;
+
+message Registered {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string entityId = 2;
+    int32 totalCandidateRoutes = 3;
+}
+
+message Completed {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    string entityId = 1;
+    int32 totalProcessedRoutes = 2;
+}
+
+message ExecutorDeleted {
+    string entityId = 1;
+}

@@ -8,7 +8,7 @@ import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.ReqId
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.agentmsg.DefaultMsgCodec

@@ -11,8 +11,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyCommon}
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -240,7 +239,7 @@ class ApiFlowSpec
           restartAgencyProcessesIfRequired
           val id = "my-id"
           val sponsorId = "sponsor-token"
-          val token = sendGetToken(id, sponsorId)
+          val token = sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
           println("provision token: " + token)
           token.sponseeId shouldBe id
         }

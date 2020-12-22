@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor;
+
+//This message is the LATEST/NEW persistent message to be used to store 'events' or 'snapshots'
+//This message is used by LATEST/NEW transformer (persistenceTransformerV1)
+message PersistentMsg {
+    int32 transformationId = 1;
+    bytes data = 2;
+};
+
+//This message is a wrapper message to store multiple 'events' (used in protocol actors)
+//The 'events' member is used by LATEST/NEW transformer (persistenceTransformerV1)
+message PersistentMultiEventMsg {
+    repeated PersistentMsg events = 1;
+};

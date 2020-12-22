@@ -7,12 +7,12 @@ import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClient
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
-import com.evernym.verity.actor.persistence.Done
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.http.common.HttpCustomTypes
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.util.{ReqMsgContext, PackedMsgWrapper}
+import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
+import com.evernym.verity.actor.wallet.PackedMsg
 
 
 trait PackedMsgEndpointHandler

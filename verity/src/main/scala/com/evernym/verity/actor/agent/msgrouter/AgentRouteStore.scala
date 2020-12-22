@@ -2,16 +2,15 @@ package com.evernym.verity.actor.agent.msgrouter
 
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
+import akka.cluster.sharding.ShardRegion.EntityId
 import akka.event.LoggingReceive
-import com.evernym.verity.actor.cluster_singleton.maintenance.{AlreadyCompleted, AlreadyRegistered, Register}
-import com.evernym.verity.actor.cluster_singleton.maintenance.Registered
+import com.evernym.verity.actor.agent.maintenance.{AlreadyCompleted, AlreadyRegistered, RegisteredRouteSummary}
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, RouteSet}
+import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, Registered, RouteSet}
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.{DID, HasLogger}
-import com.typesafe.scalalogging.Logger
+import com.evernym.verity.protocol.engine.DID
+
 
 /**
  * stores agent routing details (it DOESN'T do any message routing itself)
@@ -23,8 +22,7 @@ import com.typesafe.scalalogging.Logger
  * @param appConfig application config
  */
 class AgentRouteStore(implicit val appConfig: AppConfig)
-  extends BasePersistentActor
-    with HasLogger {
+  extends BasePersistentActor {
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case sr: SetRoute if routes.contains(sr.forDID) => sender ! RouteAlreadySet(sr.forDID)
@@ -35,7 +33,7 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
     case gr: GetRoute => handleGetRoute(gr)
 
-    case SendAllRouteRegistrationRequest => sender ! Register(entityId, getAllRouteDIDs().size)
+    case GetRegisteredRouteSummary => sender ! RegisteredRouteSummary(entityId, getAllRouteDIDs().size)
 
     case grd: GetRouteBatch => handleGetRouteBatch(grd)
 
@@ -44,17 +42,28 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
   override val receiveEvent: Receive = {
     case rs: RouteSet =>
-      routes = routes.updated(rs.forDID, ActorAddressDetail(rs.actorTypeId, rs.address))
+      val aad = ActorAddressDetail(rs.actorTypeId, rs.address)
+      routes = routes.updated(rs.forDID, aad)
+      routesByInsertionOrder = routesByInsertionOrder :+ (rs.forDID, aad.actorTypeId)
   }
 
-  def getAllRouteDIDs(totalCandidates:Int = routes.size) : Set[String] = {
-    routes.take(totalCandidates).keySet
+  var routesByInsertionOrder: List[(DID, Int)] = List.empty
+
+  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
+                      actorTypeIds: List[Int] = List.empty): Set[String] = {
+    routesByInsertionOrder
+      .take(totalCandidates)
+      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
+      .map(_._1)
+      .toSet
   }
 
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
-    val candidates = getAllRouteDIDs(grd.totalCandidates).slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
-    val resp = CandidateRoutesToBeProcessed(candidates)
+    val candidates =
+      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
+      .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+    val resp = GetRouteBatchResult(entityId, candidates)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
   }
@@ -78,7 +87,6 @@ class AgentRouteStore(implicit val appConfig: AppConfig)
 
   var routes: Map[String, ActorAddressDetail] = Map.empty
 
-  val logger: Logger = getLoggerByClass(getClass)
   val routingAgentRegion: ActorRef = ClusterSharding(context.system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
   override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 }
@@ -93,10 +101,14 @@ case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessa
 
 //cmds
 case class SetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessageClass
-case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds) extends ActorMessageClass
-case class GetRouteBatch(totalCandidates: Int, fromIndex: Int, batchSize: Int) extends ActorMessageClass
-case object SendAllRouteRegistrationRequest extends ActorMessageObject
+case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
+  extends ActorMessageClass
+case class GetRouteBatch(totalCandidates: Int,
+                         fromIndex: Int,
+                         batchSize: Int,
+                         actorTypeIds: List[Int] = List.empty) extends ActorMessageClass
+case object GetRegisteredRouteSummary extends ActorMessageObject
 
 //response msgs
 case class RouteAlreadySet(forDID: DID) extends ActorMessageClass
-case class CandidateRoutesToBeProcessed(dids: Set[DID]) extends ActorMessageClass
+case class GetRouteBatchResult(routeStoreEntityId: EntityId, dids: Set[DID]) extends ActorMessageClass

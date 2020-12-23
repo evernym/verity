@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent
 
 import akka.actor.{Actor, ActorRef, ActorSystem}
-import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
@@ -33,7 +32,7 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
       stateDetailsFor.map { paramMapper =>
         logger.debug(s"init params received")
         val parameters = ipr.stateKeys.map(paramMapper)
-        sndr ! InitProtocol(domainId, parameters)
+        sndr ! ProtocolCmd(InitProtocol(domainId, parameters), None)
         logger.debug(s"init params sent")
       }.recover {
         case e: MatchError =>
@@ -50,39 +49,39 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
     }
   }
 
-  private def buildProtocolActorCmd(pinstId: PinstId,
-                                    threadContextDetail: ThreadContextDetail,
-                                    msgEnvelope: MsgEnvelope): Any = {
+  def tellProtocol(pinstIdPair: PinstIdPair,
+                   threadContextDetail: ThreadContextDetail,
+                   msgEnvelope: MsgEnvelope,
+                   sndr: ActorRef = sender()): Unit = {
+
     val cmd = ProtocolCmd(
       msgEnvelope,
       Some(ProtocolMetadata(threadContextDetail, walletSeed, self))
     )
-    ForIdentifier(pinstId, cmd)
+    ActorProtocol(pinstIdPair.protoDef)
+      .region
+      .tell(
+        ForIdentifier(pinstIdPair.id, cmd),
+        sndr
+      )
   }
 
-  def tellProtocol(pinstIdPair: PinstIdPair,
-                      threadContextDetail: ThreadContextDetail,
-                      msgEnvelope: MsgEnvelope,
-                      sndr: ActorRef = sender()): Any = {
-    // flow diagram: ctl + proto, step 15 -- Message given to protocol subsystem.
-    val cmd = buildProtocolActorCmd(pinstIdPair.id, threadContextDetail, msgEnvelope)
-    ActorProtocol(pinstIdPair.protoDef).region.tell(cmd, sndr)
+  /*
+  Intended for actor specific messages and NOT for protocol messages (control and/or protocol messages)
+  Basically, non-enveloped messages.
+   */
+  def tellProtocolActor(pinstIdPair: PinstIdPair,
+                        msgEnvelope: Any,
+                        sndr: ActorRef = sender()): Unit = {
+    val cmd = ProtocolCmd(
+      msgEnvelope,
+      None
+    )
+    ActorProtocol(pinstIdPair.protoDef)
+      .region
+      .tell(
+        ForIdentifier(pinstIdPair.id, cmd),
+        sndr
+      )
   }
-
-  def askProtocols[T](relationshipId: Option[RelationshipId],
-                        threadId: ThreadId,
-                        msgEnvelope: MsgEnvelope,
-                        threadContextDetail: ThreadContextDetail): Option[Future[T]] = {
-    pinstIdForMsg(msgEnvelope, relationshipId, threadId).map { x =>
-      askProtocolDirectly(x.id, threadContextDetail, msgEnvelope)(x.protoDef)
-    }.asInstanceOf[Option[Future[T]]] //TODO this seems really brittle!
-  }
-
-  def askProtocolDirectly(pinstId: PinstId,
-                             threadContextDetail: ThreadContextDetail,
-                             msgEnvelope: MsgEnvelope)(protoDef: ProtoDef): Future[Any] = {
-    val cmd = buildProtocolActorCmd(pinstId, threadContextDetail, msgEnvelope)
-    ActorProtocol(protoDef).region ? cmd
-  }
-
 }

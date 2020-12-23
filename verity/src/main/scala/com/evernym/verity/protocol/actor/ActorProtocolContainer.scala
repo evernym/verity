@@ -41,38 +41,38 @@ import scalapb.GeneratedMessage
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 /**
-  *
-  * @tparam P Protocol type
-  * @tparam R Role type
-  * @tparam M Message type
-  * @tparam E Event type
-  * @tparam S State type
-  * @tparam I Message Recipient Identifier Type
-  */
+ *
+ * @tparam P Protocol type
+ * @tparam R Role type
+ * @tparam M Message type
+ * @tparam E Event type
+ * @tparam S State type
+ * @tparam I Message Recipient Identifier Type
+ */
 
 class ActorProtocolContainer[
-      P <: Protocol[P,R,M,E,S,I],
-      PD <: ProtocolDefinition[P,R,M,E,S,I],
-      R,M,E <: Any,
-      S,
-      I]
+  P <: Protocol[P,R,M,E,S,I],
+  PD <: ProtocolDefinition[P,R,M,E,S,I],
+  R,M,E <: Any,
+  S,
+  I]
 (
   val agentActorContext: AgentActorContext,
   val definition: PD,
   val segmentStoreStrategy: Option[SegmentStoreStrategy]
 )
-    extends ProtocolContainer[P,R,M,E,S,I]
-      with BasePersistentActor
-      with DefaultPersistenceEncryption
-      with HasLogger
-      with TokenToActorMappingProvider
-      with MsgQueueServiceProvider
-      with CreateKeyEndpointServiceProvider
-      with AgentEndpointServiceProvider
-      with ProtocolEngineExceptionHandler
-      with MsgTraceProvider
-      with HasAgentWallet
-      with AgentIdentity {
+  extends ProtocolContainer[P,R,M,E,S,I]
+    with BasePersistentActor
+    with DefaultPersistenceEncryption
+    with HasLogger
+    with TokenToActorMappingProvider
+    with MsgQueueServiceProvider
+    with CreateKeyEndpointServiceProvider
+    with AgentEndpointServiceProvider
+    with ProtocolEngineExceptionHandler
+    with MsgTraceProvider
+    with HasAgentWallet
+    with AgentIdentity {
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -102,7 +102,7 @@ class ActorProtocolContainer[
   // This function is only called when the actor is uninitialized; later,
   // the receiver becomes inert.
   final def initialBehavior: Receive = {
-    case InitProtocol(domainId: DomainId, parameters: Set[Parameter]) =>
+    case ProtocolCmd(InitProtocol(domainId: DomainId, parameters: Set[Parameter]), None)=>
       MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-resp-received",
         "init-msg-id", inMsg = Option("init-param-received"))
       submit(GivenDomainId(domainId))
@@ -114,6 +114,17 @@ class ActorProtocolContainer[
       toBaseBehavior()
       // Ask for sponsor details from domain and record metric for initialized protocol
       agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
+    case ProtocolCmd(FromProtocol(fromPinstId), _) =>
+      toCopyEventsBehavior()
+      context.system.actorOf(
+        ExtractEventsActor.prop(
+          appConfig,
+          entityName,
+          fromPinstId,
+          self
+        )
+      )
+    case ProtocolCmd(stc: SetThreadContext, None) => handleSetThreadContext(stc.tcd)
     case ProtocolCmd(_, metadata) =>
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
@@ -121,13 +132,12 @@ class ActorProtocolContainer[
         setForwarderParams(m.walletSeed, m.forwarder)
       }
       recoverOrInit()
-    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
   }
 
   final def baseBehavior: Receive = {
-    case pc: ProtocolCmd =>       handleProtocolCmd(pc)
-    case stc: SetThreadContext => handleSetThreadContext(stc.tcd)
-    case s: SponsorRel =>         handleSponsorRel(s)
+    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
+    case s: SponsorRel                             => handleSponsorRel(s)
+    case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
   def toStoringBehavior(): Unit = {
@@ -169,9 +179,23 @@ class ActorProtocolContainer[
       stash()
   }
 
-  def toCopyFromBehavior(): Unit = {
-    logger.debug("becoming dataStoringReceive")
-    setNewReceiveBehaviour(storingBehavior)
+  def toCopyEventsBehavior(): Unit = {
+    logger.debug("becoming copyEventsBehavior")
+    setNewReceiveBehaviour(copyEventsBehavior)
+  }
+
+  final def copyEventsBehavior: Receive = {
+    case ProtocolCmd(ExtractedEvent(event), None) =>
+      persistExt(event)(
+        { _ =>
+          applyRecordedEvent(event)
+        }
+      )
+    case ProtocolCmd(ExtractionComplete(), None) =>
+      toBaseBehavior()
+    case msg: Any =>
+      logger.debug(s"$protocolIdForLog received msg: $msg while copy events")
+      stash()
   }
 
   override def postActorRecoveryCompleted(): List[Future[Any]] = {
@@ -316,11 +340,11 @@ class ActorProtocolContainer[
     regionActorRef ? ForIdentifier(toEntityId, cmd)
   }
 
-    /*
-    We call this function when we want to create a pairwise actor. It creates a key
-    and the pairwise actor as well. The pairwise actor is effectively an "endpoint", since
-    it is where you will receive messages from the other side.
-     */
+  /*
+  We call this function when we want to create a pairwise actor. It creates a key
+  and the pairwise actor as well. The pairwise actor is effectively an "endpoint", since
+  it is where you will receive messages from the other side.
+   */
   def setupCreateKeyEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any] = {
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](endpointDetailJson)
     val cmd = SetupCreateKeyEndpoint(agentKeyDID, forDID, endpointDetail.ownerDID,
@@ -502,28 +526,28 @@ class ActorProtocolContainer[
 trait ProtoMsg extends MsgBase
 
 /**
-  * This message is sent only when protocol is being created/initialized for first time
-  * @param params - Set of Parameter (key & value) which protocol needs
-  */
+ * This message is sent only when protocol is being created/initialized for first time
+ * @param params - Set of Parameter (key & value) which protocol needs
+ */
 
 case class Init(params: Parameters) extends Control {
   def parametersStored: Set[ParameterStored] = params.initParams.map(p => ParameterStored(p.name, p.value))
 }
 
 /**
-  * This is used to update delivery status of the message.
-  * Currently it is used by Connecting protocol and UserAgentPairwise both
-  * @param uid - unique message id
-  * @param to - delivery destination (phone no, remote agent DID, edge DID etc)
-  * @param statusCode - new status code
-  * @param statusDetail - status detail
-  */
+ * This is used to update delivery status of the message.
+ * Currently it is used by Connecting protocol and UserAgentPairwise both
+ * @param uid - unique message id
+ * @param to - delivery destination (phone no, remote agent DID, edge DID etc)
+ * @param statusCode - new status code
+ * @param statusDetail - status detail
+ */
 case class UpdateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String,
                                    statusDetail: Option[String]) extends Control with ActorMessageClass
 
 /**
-  * Purpose of this service is to provide a way for protocol to schedule a message for itself
-  */
+ * Purpose of this service is to provide a way for protocol to schedule a message for itself
+ */
 trait MsgQueueServiceProvider {
   def addToMsgQueue(msg: Any): Unit
 }
@@ -542,10 +566,10 @@ trait MsgQueueServiceProvider {
 case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessageClass
 
 /**
-  * This is used by this actor during protocol initialization process.
-  * It is sent to the message forwarder (which is available in ProtocolCmd)
-  * @param stateKeys - set of keys/names whose value is needed by the protocol.
-  */
+ * This is used by this actor during protocol initialization process.
+ * It is sent to the message forwarder (which is available in ProtocolCmd)
+ * @param stateKeys - set of keys/names whose value is needed by the protocol.
+ */
 case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessageClass
 
 case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends ActorMessageClass
@@ -600,3 +624,5 @@ case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
 
 case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
 case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
+
+case class FromProtocol(fromPinstId: PinstId)

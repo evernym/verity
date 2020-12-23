@@ -25,12 +25,12 @@ class ExtractEventsActor(override val appConfig: AppConfig,
   }
 
   override def receiveEvent: Receive =  {
-    case event => dest ! ExtractedEvent(event)
+    case event => dest ! ProtocolCmd(ExtractedEvent(event), None)
   }
 
 
   override def postActorRecoveryCompleted(): List[Future[Any]] = {
-    dest ! ExtractionComplete()
+    dest ! ProtocolCmd(ExtractionComplete(), None)
     self ! PoisonPill
 
     List.empty

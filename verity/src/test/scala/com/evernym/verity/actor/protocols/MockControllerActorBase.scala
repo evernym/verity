@@ -3,10 +3,10 @@ package com.evernym.verity.actor.protocols
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, InternalMsgRouteParam, SetRoute}
 import com.evernym.verity.actor.agent.user.GetSponsorRel
-import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
@@ -49,7 +49,8 @@ trait MockControllerActorBase
 
   def postSetupCmdHandler: Receive = {
     case ipr: InitProtocolReq   => handleInitProtocolReq(ipr)
-    case cmd: SendControlMsg    => buildAndSendToProtocol(cmd.msg)
+    case SendActorMsg(msg)      => sendToProtocolActor(msg)
+    case SendControlMsg(msg)    => buildAndSendToProtocol(msg)
     case GetSponsorRel          => //TODO: decide what to do
   }
 
@@ -105,6 +106,10 @@ trait MockControllerActorBase
     controllerDataOpt.flatMap(_.theirDIDOpt)
     .getOrElse(CommonSpecUtil.generateNewDid().DID)
 
+  def sendToProtocolActor(msg: Any): Unit = {
+    tellProtocolActor(controllerData.pinstIdPair, msg, self)
+  }
+
   def buildAndSendToProtocol(msg: Any): Unit = {
     val typedMsg = controllerData.pinstIdPair.protoDef.msgFamily.typedMsg(msg)
     val msgEnvelope = buildMsgEnvelope(typedMsg)
@@ -149,5 +154,6 @@ case class ControllerData(myDID: DID,
 }
 
 case class SetupController(data: ControllerData) extends ActorMessageClass
+case class SendActorMsg(msg: Any) extends ActorMessageClass
 case class SendControlMsg(msg: Any) extends ActorMessageClass
 case class ProtoIncomingMsg(msg: Any) extends ActorMessageClass

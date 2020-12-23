@@ -2,6 +2,9 @@ package com.evernym.verity.actor.serializers
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
+/**
+ * DEPRECATED: kept for backward compatibility
+ */
 object JavaSerializer {
 
   def serialise(value: Any): Array[Byte] = {

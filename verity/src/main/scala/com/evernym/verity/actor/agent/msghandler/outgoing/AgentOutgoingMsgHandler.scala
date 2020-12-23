@@ -8,8 +8,9 @@ import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATU
 import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity, MsgPackFormat, PayloadMetadata, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespContext}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgParam
-import com.evernym.verity.actor.persistence.{AgentPersistentActor, Done}
+import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._

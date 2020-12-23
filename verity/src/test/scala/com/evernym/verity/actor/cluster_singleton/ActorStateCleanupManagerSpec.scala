@@ -7,7 +7,8 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
-import com.evernym.verity.actor.persistence.{ActorDetail, BaseNonPersistentActor, GetActorDetail}
+import com.evernym.verity.actor.base.BaseNonPersistentActor
+import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}

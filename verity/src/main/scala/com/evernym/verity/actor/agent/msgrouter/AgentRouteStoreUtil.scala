@@ -57,8 +57,6 @@ trait RoutingAgentUtil {
     }
   }
 
-  def getRandomDelayInSecondsForMigrationJob: Int = random.nextInt(100) + 5
-
   def getRandomIntervalInSecondsForMigrationJob: Int = random.nextInt(300) + 5
 
 }

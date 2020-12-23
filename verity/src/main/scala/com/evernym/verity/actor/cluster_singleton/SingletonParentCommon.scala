@@ -14,7 +14,7 @@ import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig

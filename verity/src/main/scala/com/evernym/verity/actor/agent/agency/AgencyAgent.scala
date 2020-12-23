@@ -24,8 +24,8 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, Submitter, TxnResp}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
+import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
-import com.evernym.verity.util._
 import com.evernym.verity.{Exceptions, UrlDetail}
 
 import scala.concurrent.Future
@@ -52,6 +52,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   val cmdReceiver: Receive = LoggingReceive.withLabel("cmdReceiver") {
     case saw: SetAgentActorDetail               => setAgentActorDetail(saw)
     case gad: GetAgencyIdentity                 => sendAgencyIdentity(gad)
+    case GetAgencyAgentDetail                   => sendAgencyAgentDetail()
     case glai: GetLocalAgencyIdentity           => sendLocalAgencyIdentity(glai.withDetail)
     case ck: CreateKey                          => createKey(ck)
     case SetEndpoint                            => setEndpoint()
@@ -87,9 +88,17 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     state = state.withRelationship(AnywiseRelationship(myDidDoc))
   }
 
-  override def getAgencyDIDFut: Future[DID] = state.agencyDID match {
-    case None             => Future.failed(new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode))
-    case Some(agencyDID)  => Future.successful(agencyDID)
+  def sendAgencyAgentDetail(): Unit = {
+    getAgencyAgentDetail() match {
+      case Some(aad)  => sender ! aad
+      case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
+    }
+  }
+
+  def getAgencyAgentDetail(): Option[AgencyAgentDetail] = {
+    state.agencyDID map { ad =>
+      AgencyAgentDetail(ad, getAgencyVerKey(ad, fromPool = GET_AGENCY_VER_KEY_FROM_POOL), entityId)
+    }
   }
 
   def updateAgencyEndpointInLedger(url: UrlDetail): Unit = {
@@ -141,9 +150,10 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def createKey(ck: CreateKey): Unit = {
     if (state.relationship.isEmpty) {
       logger.debug("agency agent key setup starting...")
-      setAgentWalletSeed(entityId)
+      setAgentWalletId(entityId)
       agentActorContext.walletAPI.createWallet(wap)
       val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKey(seed = ck.seed))
+      AgencyAgent.setAgencyAgentDetail(AgencyAgentDetail(createdKey.did, createdKey.verKey, entityId))
       writeAndApply(KeyCreated(createdKey.did))
       val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, createdKey.did))
       val sndr = sender()
@@ -279,12 +289,19 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   def sendLocalAgencyIdentity(withDetail: Boolean = false): Unit = {
-    state.agencyDID match {
-      case Some(agencyDID) =>
+    getAgencyAgentDetail() match {
+      case Some(aad) =>
         val ledgerDetail = if (withDetail) Option(agencyLedgerDetail()) else None
-        sender ! AgencyPublicDid(agencyDID, getAgencyVerKey(agencyDID, fromPool = GET_AGENCY_VER_KEY_FROM_POOL), ledgerDetail)
+        sender ! AgencyPublicDid(aad.did, aad.verKey, ledgerDetail)
       case None =>
         throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
+    }
+  }
+
+  override def getAgencyDidPairFut: Future[DidPair] = Future {
+    getAgencyAgentDetail() match {
+      case Some(aad)  =>  DidPair(aad.did, aad.verKey)
+      case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }
 
@@ -315,6 +332,11 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
         state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
       }
       .getOrElse(state)
+
+    getAgencyAgentDetail() match {
+      case Some(aad)  => AgencyAgent.setAgencyAgentDetail(aad)
+      case None       => //nothing to do
+    }
   }
 
   override def isReadyToHandleIncomingMsg: Boolean = state.isEndpointSet
@@ -336,6 +358,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
+
 }
 
 //response
@@ -357,6 +380,9 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Op
   def isErrorInFetchingEndpoint: Boolean = endpoint.exists(_.isLeft)
   def isErrorFetchingAnyData: Boolean = isErrorInFetchingVerKey || isErrorInFetchingEndpoint
 }
+
+case object GetAgencyAgentDetail extends ActorMessageObject
+case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessageClass
 
 //cmds
 case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessageClass
@@ -385,8 +411,8 @@ trait AgencyAgentStateImpl extends AgentStateImplBase
 trait AgencyAgentStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgent =>
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
@@ -405,4 +431,12 @@ trait AgencyAgentStateUpdateImpl
   def addPinst(pri: ProtocolRunningInstances): Unit = {
     state = state.withProtoInstances(pri)
   }
+}
+
+object AgencyAgent extends AgencyIdUtil {
+  private var _agencyAgentDetail: Option[AgencyAgentDetail] = None
+
+  def agencyAgentDetail: Option[AgencyAgentDetail] = _agencyAgentDetail
+  def setAgencyAgentDetail(aad: AgencyAgentDetail): Unit =
+    _agencyAgentDetail = Option(aad)
 }

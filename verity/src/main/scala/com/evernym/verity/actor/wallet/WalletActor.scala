@@ -61,12 +61,12 @@ class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolC
   }
 
   def closeWallet(): Unit = {
-    if (walletExt == null) {
+    if (walletExtOpt.isEmpty) {
       logger.debug("WalletActor try to close not opened wallet")
-      return
-    }
-    runWithInternalSpan(s"closeWallet", "WalletActor") {
-      walletProvider.close(walletExt)
+    } else {
+      runWithInternalSpan(s"closeWallet", "WalletActor") {
+        walletProvider.close(walletExt)
+      }
     }
   }
 

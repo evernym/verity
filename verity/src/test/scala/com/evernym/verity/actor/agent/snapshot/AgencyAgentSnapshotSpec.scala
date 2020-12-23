@@ -72,7 +72,7 @@ class AgencyAgentSnapshotSpec
                                   protoInstancesSize: Int): Unit = {
     snap.isEndpointSet shouldBe true
     snap.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
-    snap.agentWalletSeed shouldBe Option(agencyAgentEntityId)
+    snap.agentWalletId shouldBe Option(agencyAgentEntityId)
     snap.thisAgentKeyId shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
     snap.agencyDID shouldBe snap.thisAgentKeyId
 

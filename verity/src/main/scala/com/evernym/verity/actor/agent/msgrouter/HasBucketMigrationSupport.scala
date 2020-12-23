@@ -64,7 +64,6 @@ trait HasBucketMigrationSupport { this: AgentRouteStore =>
           val jobId = "MigrateCandidateRoutes"
           scheduleJob(
             jobId,
-            RoutingAgentUtil.getRandomDelayInSecondsForMigrationJob,
             RoutingAgentUtil.getRandomIntervalInSecondsForMigrationJob,
             MigrateCandidateRoutes(latestBucketPersistenceId)
           )

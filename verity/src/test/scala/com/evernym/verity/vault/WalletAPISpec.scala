@@ -1,7 +1,7 @@
 package com.evernym.verity.vault
 
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey, TheirKeyCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
@@ -48,7 +48,7 @@ class WalletAPISpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {
         val response = walletAPI.storeTheirKey(StoreTheirKey(bobKey.did, bobKey.verKey))(aliceWap)
         response shouldBe a[TheirKeyCreated]
         val responseVerKey = walletAPI.getVerKey(
-          GetVerKeyByKeyInfoParam(KeyInfo(Right(GetVerKeyByDIDParam(bobKey.did, getKeyFromPool = false)))))(aliceWap)
+          GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(bobKey.did, getKeyFromPool = false)))))(aliceWap)
         responseVerKey shouldBe bobKey.verKey
       }
     }
@@ -58,7 +58,7 @@ class WalletAPISpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {
         val response = walletAPI.storeTheirKey(StoreTheirKey(aliceKey.did, aliceKey.verKey))(bobWap)
         response shouldBe a[TheirKeyCreated]
         val responseVerKey = walletAPI.getVerKey(
-          GetVerKeyByKeyInfoParam(KeyInfo(Right(GetVerKeyByDIDParam(aliceKey.did, getKeyFromPool = false)))))(bobWap)
+          GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(aliceKey.did, getKeyFromPool = false)))))(bobWap)
         responseVerKey shouldBe aliceKey.verKey
       }
     }

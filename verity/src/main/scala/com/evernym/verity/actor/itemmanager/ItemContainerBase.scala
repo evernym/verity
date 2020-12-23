@@ -9,9 +9,10 @@ import akka.pattern.ask
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, _}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, Done}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
@@ -178,8 +179,6 @@ trait ItemContainerBase
 
   lazy val itemManagerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_MANAGER_REGION_ACTOR_NAME)
 
-  lazy val scheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    ITEM_CONTAINER_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     ITEM_CONTAINER_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
   lazy val itemMigrationChunkSize: Int = appConfig.getConfigIntOption(
@@ -210,7 +209,6 @@ trait ItemContainerBase
       val jobId = "CheckForPeriodicTaskExecution"
       scheduleJob(
         jobId,
-        scheduledJobInitialDelay,
         scheduledJobInterval,
         InternalCmdWrapper(CheckForPeriodicTaskExecution)
       )

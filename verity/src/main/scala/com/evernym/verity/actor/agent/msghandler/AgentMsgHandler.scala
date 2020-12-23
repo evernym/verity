@@ -164,8 +164,6 @@ trait AgentMsgHandler
     }
   }
 
-  lazy val walletSeed: String = agentWalletSeedReq
-
   def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
                        senderDID: DID, threadOpt: Option[Thread]): Unit = {
     Future.successful("default implementation of storeOutgoingMsg")

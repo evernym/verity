@@ -1,10 +1,10 @@
-package com.evernym.verity.actor.persistence
+package com.evernym.verity.actor.base
 
 import akka.actor.{Actor, ActorRef}
 
 trait BaseNonPersistentActor
   extends Actor
-    with ActorCommon {
+    with ActorBase {
 
   override def cmdSender: ActorRef = sender()
   def receiveCmd: Receive

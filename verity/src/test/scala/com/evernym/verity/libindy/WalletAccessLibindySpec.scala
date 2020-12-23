@@ -8,6 +8,7 @@ import com.evernym.verity.util.ParticipantUtil
 import scala.util.{Failure, Success}
 
 class WalletAccessLibindySpec extends BasicSpec with TestWalletHelper {
+
   walletDetail.walletAPI.createWallet(wap)
   val selfParticipantId: ParticipantId = ParticipantUtil.participantId(
     walletDetail.walletAPI.createNewKey().did, None)

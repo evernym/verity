@@ -29,8 +29,8 @@ object InitParamConstants {
   val THEIR_PAIRWISE_DID = "remoteEdgePairwiseDid"
 
   val THIS_AGENT_VER_KEY = "agentActorVerKey"
-  val THIS_AGENT_WALLET_SEED = "currentAgentWalletSeed"
-  val NEW_AGENT_WALLET_SEED = "newAgentWalletSeed"
+  val THIS_AGENT_WALLET_ID = "currentAgentWalletSeed"
+  val NEW_AGENT_WALLET_ID = "newAgentWalletSeed"
 
   val AGENT_PROVISIONER_PARTICIPANT_ID = "agentProvisionerPartiId"
   val CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON = "createAgentEndpointSetupDetailJson"

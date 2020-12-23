@@ -63,7 +63,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def initState(params: Seq[ParameterStored]): Unit = {
-    val seed = params.find(_.name == THIS_AGENT_WALLET_SEED).get.value
+    val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
     initWalletDetail(seed)
   }
 
@@ -92,7 +92,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
     val fromDID = ca.fromDID
     val fromDIDVerKey = ca.fromDIDVerKey
-    val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_SEED)
+    val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
     val agentPairwiseKey = prepareNewAgentWalletData(fromDID, fromDIDVerKey, aws)
     walletAPI.storeTheirKey(StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true))
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(agentPairwiseKey.did, Option(fromDID)))) //TODO: confirm if this is correct

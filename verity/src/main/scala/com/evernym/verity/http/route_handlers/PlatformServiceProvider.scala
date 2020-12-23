@@ -2,13 +2,12 @@ package com.evernym.verity.http.route_handlers
 
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.agent.agency.AgencyIdUtil
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
+import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
+import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}
+import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msg_tracer.MsgTraceProvider
-import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
@@ -27,21 +26,20 @@ trait PlatformServiceProvider
 
   lazy val logger: Logger = getLoggerByClass(classOf[PlatformServiceProvider])
 
-  var agencyDID: DID = _
   implicit var wap: WalletAPIParam = _
 
-  def getAgencyDIDFut: Future[DID] = {
-    Option(wap).map { _ =>
-      Future.successful(agencyDID)
+  def getAgencyDidPairFut: Future[DidPair] = {
+    AgencyAgent.agencyAgentDetail.map { aad =>
+      wap = WalletAPIParam(aad.walletId)
+      Future.successful(DidPair(aad.did, aad.verKey))
     }.getOrElse {
       getAgencyDID(agentActorContext.generalCache).flatMap { agencyId =>
-        agencyDID = agencyId
-        agentActorContext.agentMsgRouter.execute(GetRoute(agencyDID)) map {
-          case Some(aa: ActorAddressDetail) =>
-            wap = WalletAPIParam(aa.address)
-            agencyDID
-          case None =>
-            agencyDID
+        agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(agencyId, GetAgencyAgentDetail)) map {
+          case aad: AgencyAgentDetail =>
+            wap = WalletAPIParam(aad.walletId)
+            DidPair(aad.did, aad.verKey)
+          case _ =>
+            throw new RuntimeException("agency agent not yet setup")
         }
       }
     }

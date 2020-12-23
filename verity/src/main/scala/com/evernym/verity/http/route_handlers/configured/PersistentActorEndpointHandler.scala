@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Directives.{complete, handleExceptions, logRequ
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.maintenance.{ActorParam, PersistentDataWrapper, SendPersistedData}
 import com.evernym.verity.actor.node_singleton.PersistentActorQueryParam
-import com.evernym.verity.actor.persistence.Stop
+import com.evernym.verity.actor.base.Stop
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.CustomExceptionHandler.{exceptionHandler, handleExpectedResponse, handleUnexpectedResponse}
 import com.evernym.verity.http.common.HttpRouteBase

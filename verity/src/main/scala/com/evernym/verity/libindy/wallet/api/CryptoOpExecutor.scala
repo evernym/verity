@@ -8,6 +8,7 @@ import com.evernym.verity.util.UtilBase
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{INVALID_VALUE, UNHANDLED}
 import com.evernym.verity.actor.wallet.{GetVerKey, LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletExt}
@@ -111,7 +112,15 @@ object CryptoOpExecutor extends FutureConverter {
 
   def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt): Future[UnpackedMsg] = {
     asScalaFuture(Crypto.unpackMessage(we.wallet, um.msg))
-      .map(r => UnpackedMsg(r, None, None))
+      .map(r => {
+        val binaryMsg = r
+        val jsonStringMsg = new String(binaryMsg)
+        val resultMap = DefaultMsgCodec.fromJson[Map[String, String]](jsonStringMsg)
+        val msgJsonString = resultMap("message")
+        val senderVerKeyOpt = resultMap.get("sender_verkey")
+        val recipVerKeyOpt = resultMap.get("recipient_verkey")
+        UnpackedMsg(msgJsonString, senderVerKeyOpt, recipVerKeyOpt)
+      })
       .recover {
         case e: BadRequestErrorException => throw e
         case e: WalletItemNotFoundException =>

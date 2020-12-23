@@ -31,25 +31,14 @@ class IndyPackTransformer
   override def unpack(msg: Array[Byte], fromVerKey: Option[KeyInfo],
                       unpackParam: UnpackParam)(implicit wap: WalletAPIParam, walletAPI: WalletAPI)
   : AgentBundledMsg = {
-    val um = walletAPI.unpackMessage(msg)
-    prepareAgentBundledMsg(um, unpackParam)
+    val unpackedMsg = walletAPI.unpackMessage(msg)
+    AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
   }
 
   override def unpackAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
-    walletAPI.unpackMessageAsync(msg).map { um =>
-      prepareAgentBundledMsg(um, unpackParam)
+    walletAPI.unpackMessageAsync(msg).map { unpackedMsg =>
+      AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
     }
-  }
-
-  private def prepareAgentBundledMsg(um: UnpackedMsg, unpackParam: UnpackParam): AgentBundledMsg = {
-    val binaryMsg = um.msg
-    val jsonStringMsg = new String(binaryMsg)
-    val resultMap = DefaultMsgCodec.fromJson[Map[String, String]](jsonStringMsg)
-    val msgJsonString = resultMap("message")
-    val senderVerKeyOpt = resultMap.get("sender_verkey")
-    val recipVerKeyOpt = resultMap.get("recipient_verkey")
-    val unpackedMsg = UnpackedMsg(msgJsonString, senderVerKeyOpt, recipVerKeyOpt)
-    AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
   }
 }

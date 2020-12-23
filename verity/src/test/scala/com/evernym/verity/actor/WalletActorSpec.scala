@@ -26,7 +26,14 @@ class WalletActorSpec extends TestKitBase
   lazy val walletActorEntityId: String = UUID.randomUUID().toString
   lazy val walletActor: agentRegion = agentRegion(walletActorEntityId, walletRegionActor)
   val testDID = "did:sov:NcysrVCeLU1WNdJdLYxU6g"
-  val keyInfo = KeyInfo(Right(GetVerKeyByDIDParam(testDID, getKeyFromPool = false)))
+  val keyInfo: KeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(testDID, getKeyFromPool = false)))
+  val testByteMsg: Array[Byte] = "test message".getBytes()
+
+  def createKeyInfo(): KeyInfo = {
+    walletActor ! CreateNewKey()
+    val keys = expectMsgType[NewKeyCreated]
+    KeyInfo(Right(GetVerKeyByDIDParam(keys.did, getKeyFromPool = false)))
+  }
 
   "WalletActor" - {
 
@@ -68,14 +75,15 @@ class WalletActorSpec extends TestKitBase
     "when sent CreateNewKey command again" - {
       "should respond with NewKeyCreated" in {
         walletActor ! CreateNewKey()
-        expectMsgType[NewKeyCreated]
       }
     }
 
     "when sent SignLedgerRequest command" - {
       "should respond with LedgerRequest" in {
+        walletActor ! CreateNewKey()
+        val keys = expectMsgType[NewKeyCreated]
         val req = buildGetNymRequest("did:sov:NcysrVCeLU1WNdJdLYxU6g", testDID).get
-        walletActor ! SignLedgerRequest(LedgerRequest(req), Submitter(testDID, Some(WalletAPIParam(walletActorEntityId))))
+        walletActor ! SignLedgerRequest(LedgerRequest(req), Submitter(keys.did, Some(WalletAPIParam(walletActorEntityId))))
         expectMsgType[LedgerRequest]
       }
     }
@@ -108,45 +116,36 @@ class WalletActorSpec extends TestKitBase
       }
     }
 
-    "when sent SignMsg command" - {
-      "should respond with TheirKeyCreated" in {
-        walletActor ! SignMsg(keyInfo, Array())
-        expectMsgType[Array[Byte]]
-      }
-    }
-
-    "when sent VerifySigByKeyInfo command" - {
-      "should respond with VerifySigResult" in {
-        walletActor ! VerifySigByKeyInfo(keyInfo, challenge = Array(), signature = Array())
-        expectMsgType[VerifySigResult]
+    "when sent SignMsg command and check result with VerifySigByKeyInfo command" - {
+      "should respond with success VerifySigResult" in {
+        val newKeyInfo = createKeyInfo()
+        walletActor ! SignMsg(newKeyInfo, testByteMsg)
+        val signature = expectMsgType[Array[Byte]]
+        walletActor ! VerifySigByKeyInfo(newKeyInfo, challenge = testByteMsg, signature = signature)
+        val verifyResult = expectMsgType[VerifySigResult]
+        assert(verifyResult.verified)
       }
     }
 
     "when sent PackMsg command" - {
-      "should respond with PackedMsg" in {
-        walletActor ! PackMsg(msg = Array(), recipVerKeys = Set(keyInfo), senderVerKey = Some(keyInfo))
-        expectMsgType[PackedMsg]
-      }
-    }
-
-    "when sent UnpackMsg command" - {
-      "should respond with UnpackedMsg" in {
-        walletActor ! UnpackMsg(Array())
-        expectMsgType[UnpackedMsg]
+      "should respond with PackedMsg be successfully unpacked via UnpackMsg" in {
+        walletActor ! PackMsg(testByteMsg, recipVerKeys = Set(createKeyInfo()), senderVerKey = Some(createKeyInfo()))
+        val packedMsg = expectMsgType[PackedMsg]
+        walletActor ! UnpackMsg(packedMsg.msg)
+        val unpackedMsg = expectMsgType[UnpackedMsg]
+        assert(testByteMsg.sameElements(unpackedMsg.msg))
       }
     }
 
     "when sent LegacyPackMsg command" - {
-      "should respond with PackedMsg" in {
-        walletActor ! LegacyPackMsg(msg = Array(), recipVerKeys = Set(keyInfo), senderVerKey = Some(keyInfo))
-        expectMsgType[PackedMsg]
-      }
-    }
-
-    "when sent LegacyUnpackMsg command" - {
-      "should respond with UnpackedMsg" in {
-        walletActor ! LegacyUnpackMsg(msg = Array(), fromVerKey = Some(keyInfo), isAnonCryptedMsg = false)
-        expectMsgType[UnpackedMsg]
+      "should respond with PackedMsg be successfully unpacked via LegacyUnpackMsg" in {
+        val senderVerKey = Some(createKeyInfo())
+        val recipVerKeys = createKeyInfo()
+        walletActor ! LegacyPackMsg(testByteMsg, Set(recipVerKeys), senderVerKey)
+        val packedMsg = expectMsgType[PackedMsg]
+        walletActor ! LegacyUnpackMsg(packedMsg.msg, fromVerKey = Some(recipVerKeys), isAnonCryptedMsg = false)
+        val unpackedMsg = expectMsgType[UnpackedMsg]
+        assert(testByteMsg.sameElements(unpackedMsg.msg))
       }
     }
 
@@ -156,60 +155,5 @@ class WalletActorSpec extends TestKitBase
         expectMsgType[String]
       }
     }
-
-    "when sent CreateCredDef command" - {
-      "should respond with IssuerCreateAndStoreCredentialDefResult" in {
-        walletActor ! CreateCredDef(issuerDID = testDID,
-          schemaJson = "{}",
-          tag = "tag",
-          sigType = None,
-          revocationDetails = Some("{}"))
-        expectMsgType[IssuerCreateAndStoreCredentialDefResult]
-      }
-    }
-
-
-    "when sent CreateCredOffer command" - {
-      "should respond with TheirKeyCreated" in {
-        walletActor ! CreateCredOffer("credDefId")
-        expectMsgType[String]
-      }
-    }
-
-
-    "when sent CreateCredReq command" - {
-      "should respond with TheirKeyCreated" in {
-        walletActor ! CreateCredReq("credDefId", proverDID = testDID,
-          "credDefJson", "credOfferJson", "masterSecretId")
-        expectMsgType[String]
-      }
-    }
-
-
-    "when sent CreateCred command" - {
-      "should respond with TheirKeyCreated" in {
-        walletActor ! CreateCred("credOfferJson", "credReqJson", "credValuesJson",
-          "revRegistryId", -1)
-        expectMsgType[String]
-      }
-    }
-
-
-    "when sent CredForProofReq command" - {
-      "should respond with TheirKeyCreated" in {
-        walletActor ! CredForProofReq("proofRequest")
-        expectMsgType[String]
-      }
-    }
-
-    "when sent CreateProof command" - {
-      "should respond with TheirKeyCreated" in {
-        walletActor ! CreateProof("proofRequest", "usedCredentials", "schemas",
-          "credentialDefs", "revStates", "masterSecret")
-        expectMsgType[String]
-      }
-    }
   }
-
-
  }

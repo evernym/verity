@@ -66,7 +66,7 @@ object WalletMsgHandler extends FutureConverter {
     AnoncredsWalletOpExecutor.handleCreateCredOffer(offer)
   }
 
-  private def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[IssuerCreateAndStoreCredentialDefResult] = {
+  private def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[CreatedCredDef] = {
     AnoncredsWalletOpExecutor.handleCreateCredDef(ccd)
   }
 

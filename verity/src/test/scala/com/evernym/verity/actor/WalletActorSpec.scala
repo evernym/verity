@@ -99,9 +99,9 @@ class WalletActorSpec
     }
 
     "when sent StoreTheirKey command" - {
-      "should respond with TheirKeyCreated" in {
+      "should respond with TheirKeyStored" in {
         walletActor ! StoreTheirKey(testDID, "CnToPx3rPHNaXkMMtdPTnsK45pSHvP1e4BzNrk3oSVgr")
-        expectMsgType[TheirKeyCreated]
+        expectMsgType[TheirKeyStored]
       }
     }
 

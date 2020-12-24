@@ -184,7 +184,7 @@ class WalletActorSpec extends TestKitBase
 
 
     "when sent CreateCred command" - {
-      "should respond with TheirKeyCreated" ignore {
+      "should respond with a created credential" ignore {
         walletActor ! CreateCred("credOfferJson", "credReqJson", "credValuesJson",
           "revRegistryId", -1)
         expectMsgType[String]
@@ -193,14 +193,14 @@ class WalletActorSpec extends TestKitBase
 
 
     "when sent CredForProofReq command" - {
-      "should respond with TheirKeyCreated" ignore  {
+      "should respond with a credential for the proof req" ignore  {
         walletActor ! CredForProofReq("proofRequest")
         expectMsgType[String]
       }
     }
 
     "when sent CreateProof command" - {
-      "should respond with TheirKeyCreated" ignore {
+      "should respond with a proof" ignore {
         walletActor ! CreateProof("proofRequest", "usedCredentials", "schemas",
           "credentialDefs", "revStates", "masterSecret")
         expectMsgType[String]

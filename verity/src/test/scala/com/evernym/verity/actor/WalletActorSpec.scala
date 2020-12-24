@@ -10,12 +10,18 @@ import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.engine.WalletAccess.KEY_ED25519
+import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.RevocationDetails
+import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletAPIParam}
+import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
+
+import scala.concurrent.duration.DurationInt
 class WalletActorSpec extends TestKitBase
   with ProvidesMockPlatform
   with BasicSpec
@@ -75,6 +81,7 @@ class WalletActorSpec extends TestKitBase
     "when sent CreateNewKey command again" - {
       "should respond with NewKeyCreated" in {
         walletActor ! CreateNewKey()
+        expectMsgType[NewKeyCreated]
       }
     }
 
@@ -149,11 +156,57 @@ class WalletActorSpec extends TestKitBase
       }
     }
 
-    "when sent CreateMasterSecret command" - {
-      "should respond with TheirKeyCreated" in {
+    "when sent CreateCredReq command" - {
+      "should respond with CredReq in a json string" in {
+        walletActor ! CreateNewKey()
+        val keys = expectMsgType[NewKeyCreated]
+
         walletActor ! CreateMasterSecret("masterSecretId")
+        val masterSecretId = expectMsgType[String]
+
+        val schema = Anoncreds.issuerCreateSchema(keys.did, "name", "version", seqToJson(Array("attr1", "attr2"))).get()
+        walletActor ! CreateCredDef(issuerDID = keys.did,
+          schemaJson = schema.getSchemaJson,
+          tag = "tag",
+          sigType = Some("CL"),
+          revocationDetails = Some(RevocationDetails(false, "tails_file", 5).toString))
+        val createdCredDef = expectMsgType[CreatedCredDef](15.second)
+
+        walletActor ! CreateCredOffer(createdCredDef.credDefId)
+        val createCredOffer = expectMsgType[String]
+
+        walletActor ! CreateCredReq(createdCredDef.credDefId, proverDID = keys.did,
+          createdCredDef.credDefJson, createCredOffer, masterSecretId)
+        val credReqJson = expectMsgType[String]
+
+      }
+    }
+
+
+    "when sent CreateCred command" - {
+      "should respond with TheirKeyCreated" ignore {
+        walletActor ! CreateCred("credOfferJson", "credReqJson", "credValuesJson",
+          "revRegistryId", -1)
+        expectMsgType[String]
+      }
+    }
+
+
+    "when sent CredForProofReq command" - {
+      "should respond with TheirKeyCreated" ignore  {
+        walletActor ! CredForProofReq("proofRequest")
+        expectMsgType[String]
+      }
+    }
+
+    "when sent CreateProof command" - {
+      "should respond with TheirKeyCreated" ignore {
+        walletActor ! CreateProof("proofRequest", "usedCredentials", "schemas",
+          "credentialDefs", "revStates", "masterSecret")
         expectMsgType[String]
       }
     }
   }
+
+
  }

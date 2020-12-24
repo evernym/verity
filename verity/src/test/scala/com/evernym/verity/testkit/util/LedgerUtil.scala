@@ -3,6 +3,8 @@ package com.evernym.verity.testkit.util
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
@@ -14,7 +16,8 @@ import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.NonActorWalletService
+import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
 
@@ -28,7 +31,8 @@ class LedgerUtil (val appConfig: AppConfig,
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
                   val taa: Option[TransactionAuthorAgreement] = None,
-                  val genesisTxnPath: Option[String] = None) extends CommonSpecUtil {
+                  val genesisTxnPath: Option[String] = None)
+  extends CommonSpecUtil{
 
   lazy val poolConnManager: LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(appConfig, poolConfigName, genesisTxnPath)
@@ -40,8 +44,8 @@ class LedgerUtil (val appConfig: AppConfig,
   private val walletId = submitterDID + "_" + LocalDateTime.now().toString
 
   val walletProvider = new LibIndyWalletProvider(appConfig)
-  val walletService = new NonActorWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
-  val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
+  val walletService = new ActorWalletService(ActorSystem())
+  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
 
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)
 

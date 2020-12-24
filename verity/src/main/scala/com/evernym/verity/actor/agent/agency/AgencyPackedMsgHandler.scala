@@ -31,7 +31,7 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
     // flow diagram: fwd + ctl + proto + legacy, step 3 -- Decrypt and check message type.
     getAgencyDidPairFut flatMap { adp =>
       agentActorContext.agentMsgTransformer.unpackAsync(
-        pmw.msg, KeyInfo(Left(adp.verKey)), UnpackParam(openWalletIfNotOpened = true, isAnonCryptedMsg = true)
+        pmw.msg, KeyInfo(Left(adp.verKey)), UnpackParam(isAnonCryptedMsg = true)
       ).flatMap { implicit amw =>
         handleUnpackedMsg(pmw)
       }

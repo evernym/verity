@@ -1,6 +1,7 @@
 package com.evernym.verity.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackFormat
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.agent.{MsgPackFormat, WalletApiBuilder}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg}
@@ -14,15 +15,18 @@ import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.vault.service.NonActorWalletService
+import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
-trait AgentMsgSpecBase extends BasicSpecWithIndyCleanup with CommonSpecUtil {
+trait AgentMsgSpecBase
+  extends BasicSpecWithIndyCleanup
+    with CommonSpecUtil{
 
   lazy val config:AppConfig = new TestAppConfig()
   lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(config)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(config)
-  lazy val walletService = new NonActorWalletService(config, TestUtil, walletProvider, poolConnManager)
-  lazy val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
+  lazy val walletService = new ActorWalletService(ActorSystem())
+  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(config, TestUtil, walletService, walletProvider, poolConnManager)
 
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 
@@ -71,8 +75,9 @@ trait AgentMsgSpecBase extends BasicSpecWithIndyCleanup with CommonSpecUtil {
 }
 
 
-trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
-  with AgentMsgSpecBase {
+trait AgentTransformerSpec
+  extends BasicSpecWithIndyCleanup
+    with AgentMsgSpecBase {
 
   def msgPackFormat: MsgPackFormat
   def msgFamilyVersion: MsgFamilyVersion

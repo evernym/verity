@@ -26,7 +26,8 @@ import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.{Util, UtilBase}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
+import com.evernym.verity.vault.wallet_api.{LegacyWalletAPI, ActorWalletAPI, WalletAPI}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -60,8 +61,9 @@ trait AgentActorContext extends ActorContext {
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
-  lazy val walletService: ActorWalletService = new ActorWalletService(system)
-  lazy val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
+  lazy val walletService: WalletService = new ActorWalletService(system)
+  lazy val walletAPI: WalletAPI = WalletApiBuilder.build(
+    appConfig, util, walletService, walletProvider, poolConnManager)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val walletConfig: WalletConfig = buildWalletConfig(appConfig)
@@ -101,5 +103,21 @@ class DefaultLedgerSvc(val system: ActorSystem,
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))
+  }
+}
+
+object WalletApiBuilder {
+
+  def build(appConfig: AppConfig,
+            util: UtilBase,
+            walletService: WalletService,
+            walletProvider: WalletProvider,
+            poolConnManager: LedgerPoolConnManager): WalletAPI = {
+    val walletApiConfigPath = "verity.wallet-api"
+    appConfig.getConfigStringOption(walletApiConfigPath) match {
+      case Some("legacy") => new LegacyWalletAPI(appConfig, walletProvider, util, poolConnManager)
+      case Some("actor")  => new ActorWalletAPI(walletService, walletProvider)
+      case _              => throw new RuntimeException(s"invalid value for configuration: '$walletApiConfigPath'")
+    }
   }
 }

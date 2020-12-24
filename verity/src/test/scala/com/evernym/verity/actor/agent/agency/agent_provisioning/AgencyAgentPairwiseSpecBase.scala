@@ -8,8 +8,9 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
-import com.evernym.verity.vault.{WalletAPI, WalletAPIParam}
+import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.concurrent.Eventually
 
 

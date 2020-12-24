@@ -6,7 +6,8 @@ import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.msgcodec.MsgPlusMeta
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, UnpackParam}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID => _, _}
-import com.evernym.verity.vault.{EncryptParam, KeyInfo, WalletAPI, WalletAPIParam}
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{EncryptParam, KeyInfo, WalletAPIParam}
 
 object MsgExtractor {
   type JsonStr = String

@@ -2,22 +2,20 @@ package com.evernym.verity.actor
 
 import java.util.UUID
 
-import akka.actor.{ActorSystem, PoisonPill}
-import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.actor.testkit.AkkaTestBasic
-import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
+import akka.actor.PoisonPill
+import akka.testkit.ImplicitSender
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import com.evernym.verity.actor.wallet._
 
 
-class WalletActorSpec extends TestKitBase
-  with ProvidesMockPlatform
-  with BasicSpec
-  with ImplicitSender
-  with Eventually {
+class WalletActorSpec
+  extends ActorSpec
+    with BasicSpec
+    with ImplicitSender
+    with Eventually {
 
-  implicit lazy val system: ActorSystem = AkkaTestBasic.system()
   lazy val walletActorEntityId: String = UUID.randomUUID().toString
   lazy val walletActor: agentRegion = agentRegion(walletActorEntityId, walletRegionActor)
 

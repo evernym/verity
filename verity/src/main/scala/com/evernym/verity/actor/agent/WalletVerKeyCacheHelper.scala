@@ -6,7 +6,8 @@ import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.cache._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.vault.{WalletAPI, WalletAPIParam}
+import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 /**
  * contains a wallet ver key cache

@@ -1,10 +1,9 @@
 package com.evernym.verity.vault.service
 
-import java.time.temporal.ChronoUnit
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
-import akka.util.Timeout
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status.INVALID_VALUE
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -71,13 +70,9 @@ trait WalletService extends AsyncToSync {
 }
 
 trait AsyncToSync {
-  //TODO: finalize the wallet service timeout
-  //TODO: when this timeout was set around 15-25 seconds,
-  // the 'write-def' protocol was failing during sdk flow test, should find out why and fix it.
-  val WALLET_SERVICE_TIMEOUT: FiniteDuration = FiniteDuration(50, TimeUnit.SECONDS)
-  implicit val defaultTimeout: Timeout = Timeout(WALLET_SERVICE_TIMEOUT)
 
   def convertToSyncReq[T](fut: Future[T]): T = {
-    Await.result(fut, WALLET_SERVICE_TIMEOUT)
+    //TODO: finalize timeout
+    Await.result(fut, FiniteDuration(300, TimeUnit.SECONDS))
   }
 }

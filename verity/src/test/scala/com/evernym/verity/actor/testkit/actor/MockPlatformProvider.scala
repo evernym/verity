@@ -5,8 +5,10 @@ import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.vault.{WalletAPI, WalletConfig}
+import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.UrlDetail
+import com.evernym.verity.vault.service.WalletService
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 
 class MockPlatform(system: ActorSystem, appConfig: AppConfig, mockPlatformParam: MockPlatformParam)
@@ -22,6 +24,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   lazy val agentActorContext: AgentActorContext = platform.agentActorContext
 
+  lazy val walletService: WalletService = platform.agentActorContext.walletService
   lazy val walletAPI: WalletAPI = platform.agentActorContext.walletAPI
   lazy val walletConfig: WalletConfig = platform.agentActorContext.walletConfig
 

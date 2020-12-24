@@ -1,22 +1,23 @@
-package com.evernym.verity.vault
+package com.evernym.verity.vault.wallet_api
 
-import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.libindy.wallet.api.FutureConverter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.service._
+import com.evernym.verity.vault.{KeyInfo, WalletAPIParam, WalletProvider}
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
 
-import scala.language.implicitConversions
 import scala.concurrent.Future
+import scala.language.implicitConversions
 
-
-class WalletAPI(walletService: WalletService, walletProvider: WalletProvider)
-  extends FutureConverter
+class ActorWalletAPI(walletService: WalletService, walletProvider: WalletProvider)
+  extends WalletAPI
+    with FutureConverter
     with AsyncToSync {
 
   val logger: Logger = getLoggerByClass(classOf[WalletAPI])
@@ -28,8 +29,8 @@ class WalletAPI(walletService: WalletService, walletProvider: WalletProvider)
     walletService.executeAsync(walletId, slr).mapTo[LedgerRequest]
   }
 
-  def createWallet(wap: WalletAPIParam): Unit = {
-    walletService.executeSync[WalletCreatedBase](wap.walletId, CreateWallet)
+  def createWallet(wap: WalletAPIParam): WalletCreated.type = {
+    walletService.executeSync[WalletCreated.type](wap.walletId, CreateWallet)
   }
 
   def generateWalletKey(seedOpt: Option[String] = None): String =
@@ -44,8 +45,8 @@ class WalletAPI(walletService: WalletService, walletProvider: WalletProvider)
     walletService.executeSync[NewKeyCreated](wap.walletId, CreateDID(keyType))
   }
 
-  def storeTheirKey(stk: StoreTheirKey)(implicit wap: WalletAPIParam): TheirKeyCreated = {
-    walletService.executeSync[TheirKeyCreated](wap.walletId, stk)
+  def storeTheirKey(stk: StoreTheirKey)(implicit wap: WalletAPIParam): TheirKeyStored = {
+    walletService.executeSync[TheirKeyStored](wap.walletId, stk)
   }
 
   def getVerKeyOption(gvkOpt: GetVerKeyOpt)(implicit wap: WalletAPIParam): Option[VerKey] = {

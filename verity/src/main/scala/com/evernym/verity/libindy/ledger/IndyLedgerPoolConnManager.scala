@@ -18,7 +18,7 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{HashUtil, Util}
-import com.evernym.verity.vault.WalletAPI
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.pool.Pool
 import org.hyperledger.indy.sdk.pool.PoolJSONParameters.CreatePoolLedgerConfigJSONParameter

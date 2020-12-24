@@ -6,6 +6,7 @@ import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{FiniteDuration, _}

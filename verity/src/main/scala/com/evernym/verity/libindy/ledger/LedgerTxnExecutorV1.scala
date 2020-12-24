@@ -6,6 +6,7 @@ import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
 
 

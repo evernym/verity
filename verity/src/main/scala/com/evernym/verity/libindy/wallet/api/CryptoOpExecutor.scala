@@ -36,7 +36,6 @@ object CryptoOpExecutor extends FutureConverter {
 
   def handleLegacyPackMsg(pm: LegacyPackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                          (implicit we: WalletExt): Future[PackedMsg] = {
-
     val recipKeyFut = verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager).map(_.head)
     val senderVerKeyFut = verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
 
@@ -92,18 +91,12 @@ object CryptoOpExecutor extends FutureConverter {
     val senderVerKeyFut = verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
 
     val result = for (
-      recipKeys <- recipKeysFut;
-      senderVerKey <- senderVerKeyFut
+      recipKeys     <- recipKeysFut;
+      senderVerKey  <- senderVerKeyFut
     ) yield {
       val recipKeysJson = jsonArray(recipKeys)
-
       asScalaFuture {
-        senderVerKey match {
-          case None =>
-            Crypto.packMessage(we.wallet, recipKeysJson, null, pm.msg)
-          case Some(senderKey) =>
-            Crypto.packMessage(we.wallet, recipKeysJson, senderKey, pm.msg)
-        }
+        Crypto.packMessage(we.wallet, recipKeysJson, senderVerKey.orNull, pm.msg)
       }.map(PackedMsg(_))
     }
     result.flatten

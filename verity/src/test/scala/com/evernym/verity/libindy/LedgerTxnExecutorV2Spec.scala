@@ -12,7 +12,9 @@ import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnEx
 import com.evernym.verity.protocol.engine.{DID, LedgerRejectException}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
+import org.mockito.invocation.InvocationOnMock
 import org.mockito.scalatest.MockitoSugar
 
 import scala.concurrent.duration._
@@ -23,11 +25,8 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
   with BasicSpecWithIndyCleanup with MockitoSugar {
 
   val maxWaitTime: Duration = 5000.millis
-  override lazy val walletAPI: WalletAPI = mock[WalletAPI]
+  lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
-  lazy val mockWalletAPI: WalletAPI = new WalletAPI(null, null) {
-    override def signLedgerRequest(sr: SignLedgerRequest): Future[LedgerRequest] = Future(sr.reqDetail)
-  }
   lazy val poolConnManager: IndyLedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig) {
     override def poolConn: Some[Pool] = Some(null)
   }
@@ -51,6 +50,8 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
             """{"result":{"ver":"1","txn":{"metadata":{"digest":"bf6ad32c57789d763cb989f6e1d14aa8a89949fc99a07aa94cc85f2acf7cd411","reqId":1532330281707005000,"from":"Th7MpTaRZVRYnPiabds81Y"},"protocolVersion":2,"type":"1","data":{"dest":"3pB1JfL2BHNjmaUj7bbJTn","verkey":"2XwCs4gdFMKmfy23iQoFTrfewAWjnrGYmxAE7kxGR5Mz"}},"rootHash":"JBgBjiiJpD6f7Vv6VSnenCPdDvB5QWNN8Esa8vRiczzj","reqSignature":{"type":"ED25519","values":[{"value":"42XcgJQQ8sP9ibds2eEcq2yLMjUMDmnzFHxzH5ARTBjTH1sqdstydzTfUHavhPHEhNjciv67LJEupYnUAdbFrS6T","from":"Th7MpTaRZVRYnPiabds81Y"}]},"txnMetadata":{"txnId":"b4680ea46a7975006627977d624f07c9bf3cbbb3ccf3ffa92b83d8304d0dcbfc","seqNo":448,"txnTime":1532330281},"auditPath":["GfsuEw7NyYvTWhB2fnaX9jd7xkBf2sxcbmXq4hWg6w6v","H9mCzs2g2DF2AxmfxLb3VUndQEYFoVe7366TEUoukGhb","CA3gxxWgRF4SU5E5dghdLpw87P3KkT4xBYX9E22tVxnx","65kcUqw29WDPeWEe3R8eQHUDrh1dzUV2sf8AYjxypMd6","DJN2rWacgFzhgsJReD5EgSJzEFeCuU7nsvX3SdJaZSmv","7Cd531U9orb3S6sSCtMFPCZhETRyP3DR1msnz3j9LLh9","37cJ9zbeoCmn8pYm4oWaDDQ9zsWLNp4aJhheKBATAfq6","SM4p1s81TX1hLr1EMbwxPxSo3mt5SGYJkC3zsmL8WJC"]},"op":"REPLY"}""".stripMargin
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
+          when(mockWalletAPI.signLedgerRequest(any[SignLedgerRequest]))
+            .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).reqDetail))
           val response = Await.result(
             ledgerTxnExecutor.addNym(submitter, targetDidPair),
             maxWaitTime

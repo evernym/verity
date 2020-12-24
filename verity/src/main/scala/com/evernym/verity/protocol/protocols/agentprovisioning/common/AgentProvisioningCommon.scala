@@ -5,6 +5,7 @@ import com.evernym.verity.actor.wallet.{NewKeyCreated, StoreTheirKey}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 trait AgentWalletSetupProvider {
 

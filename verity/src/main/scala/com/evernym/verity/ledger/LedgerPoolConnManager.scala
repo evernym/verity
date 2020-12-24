@@ -1,7 +1,7 @@
 package com.evernym.verity.ledger
 
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.vault.WalletAPI
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 class LedgerPoolException(msg: String) extends Exception(msg)
 case class OpenConnException(msg: String) extends LedgerPoolException(msg)

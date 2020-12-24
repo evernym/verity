@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutionException
 import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
-import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyCreated}
+import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.libindy.wallet.api.WalletOpExecutor.logger
@@ -55,18 +55,18 @@ object DidOpExecutor extends FutureConverter {
     }
   }
 
-  def handleStoreTheirKey(stk: StoreTheirKey)(implicit we: WalletExt): Future[TheirKeyCreated] = {
+  def handleStoreTheirKey(stk: StoreTheirKey)(implicit we: WalletExt): Future[TheirKeyStored] = {
     try {
       asScalaFuture {
         val DIDJson = s"""{\"did\":\"${stk.theirDID}\",\"verkey\":\"${stk.theirDIDVerKey}\"}"""
         Did.storeTheirDid(we.wallet, DIDJson)
       }.map { _ =>
         MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
-        TheirKeyCreated(stk.theirDID, stk.theirDIDVerKey)
+        TheirKeyStored(stk.theirDID, stk.theirDIDVerKey)
       }
     } catch {
       case e: Exception if stk.ignoreIfAlreadyExists && e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
-        Future(TheirKeyCreated(stk.theirDID, stk.theirDIDVerKey))
+        Future(TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))
       case e: Exception if e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
         logger.error("error while storing their key: " + Exceptions.getErrorMsg(e))
         throw new BadRequestErrorException(

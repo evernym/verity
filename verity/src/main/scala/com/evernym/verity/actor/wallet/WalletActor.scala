@@ -1,8 +1,9 @@
 package com.evernym.verity.actor.wallet
 
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
 import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.Status.UNHANDLED
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.AppConfig
@@ -21,7 +22,6 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 
-
 class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
   extends Actor {
 
@@ -30,20 +30,26 @@ class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolC
       val sndr = sender()
       val resp = cmd match {
         case CreateWallet if walletExtOpt.isDefined =>
-          Future(WalletAlreadyCreated)
+          Future.successful(WalletAlreadyCreated)
         case CreateWallet =>
           walletExtOpt = Option(WalletMsgHandler.handleCreateAndOpenWallet())
-          Future(WalletCreated)
+          Future.successful(WalletCreated)
         case cmd if walletExtOpt.isDefined =>
           WalletMsgHandler.executeAsync(cmd)
         case cmd =>
           Future.failed(WalletNotOpened("cmd can't be executed while wallet is not yet opened: " + cmd))
       }
-      resp.map { r =>
-        sndr ! r
-      }.recover {
-        case e: HandledErrorException => sndr ! WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
-      }
+      handleFut(sndr, resp)
+
+  }
+
+  def handleFut(sndr: ActorRef, fut: Future[Any]): Unit = {
+    fut.recover {
+      case e: HandledErrorException => WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
+      case _: RuntimeException      => WalletCmdErrorResponse(UNHANDLED)
+    }.map { r =>
+      sndr ! r
+    }
   }
 
   def openWalletIfExists(): Unit = {
@@ -174,7 +180,7 @@ case object WalletAlreadyCreated extends WalletCreatedBase
 
 case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
 
-case class TheirKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
+case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
 
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse
 

@@ -31,7 +31,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.{ParticipantUtil, Util}
-import com.evernym.verity.vault.{WalletAPI, WalletConfig}
+import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
@@ -39,6 +39,7 @@ import com.evernym.verity.libindy.ledger.LedgerAccessApi
 import com.evernym.verity.libindy.wallet.WalletAccessLibindy
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage

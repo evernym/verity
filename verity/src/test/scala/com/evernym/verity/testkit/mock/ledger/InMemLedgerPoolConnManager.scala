@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.mock.ledger
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
-import com.evernym.verity.vault.WalletAPI
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.ExecutionContextExecutor
 

@@ -24,6 +24,7 @@ import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.wallet.SignMsg
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.codec.digest.DigestUtils

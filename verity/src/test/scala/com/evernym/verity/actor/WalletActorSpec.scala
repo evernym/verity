@@ -2,33 +2,29 @@ package com.evernym.verity.actor
 
 import java.util.UUID
 
-import akka.actor.{ActorSystem, PoisonPill}
-import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.actor.testkit.AkkaTestBasic
-import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
+import akka.actor.PoisonPill
+import akka.testkit.ImplicitSender
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet}
-import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.engine.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.RevocationDetails
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
-
 import scala.concurrent.duration.DurationInt
-class WalletActorSpec extends TestKitBase
-  with ProvidesMockPlatform
-  with BasicSpec
-  with ImplicitSender
-  with Eventually {
 
-  implicit lazy val system: ActorSystem = AkkaTestBasic.system()
+class WalletActorSpec
+  extends ActorSpec
+    with BasicSpec
+    with ImplicitSender
+    with Eventually {
+
   lazy val walletActorEntityId: String = UUID.randomUUID().toString
   lazy val walletActor: agentRegion = agentRegion(walletActorEntityId, walletRegionActor)
   val testDID = "did:sov:NcysrVCeLU1WNdJdLYxU6g"
@@ -57,14 +53,14 @@ class WalletActorSpec extends TestKitBase
       }
     }
 
-    "when sent CreateNewKey command" - {
+    "when sent CreateNewKey command" -{
       "should respond with NewKeyCreated" in {
         walletActor ! CreateNewKey()
         expectMsgType[NewKeyCreated]
       }
     }
 
-    "when sent PoisonPill command" - {
+    "when sent PoisonPill command" -{
       "should stop the actor" in {
         walletActor ! PoisonPill
         expectNoMessage()
@@ -78,7 +74,7 @@ class WalletActorSpec extends TestKitBase
       }
     }
 
-    "when sent CreateNewKey command again" - {
+    "when sent CreateNewKey command again" -{
       "should respond with NewKeyCreated" in {
         walletActor ! CreateNewKey()
         expectMsgType[NewKeyCreated]
@@ -209,4 +205,4 @@ class WalletActorSpec extends TestKitBase
   }
 
 
- }
+}

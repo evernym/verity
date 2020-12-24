@@ -9,7 +9,8 @@ import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.protocol.actor.{MsgQueueServiceProvider, WalletParam}
 import com.evernym.verity.protocol.engine.{DID, RecordsEvents, SERVICES_DEPRECATION_DATE, SendsMsgs, VerKey}
 import com.evernym.verity.texter.SMSSender
-import com.evernym.verity.vault.{WalletAPI, WalletAPIParam, AgentWalletAPI}
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{AgentWalletAPI, WalletAPIParam}
 
 /** General services provided to protocols.
   *

@@ -1,6 +1,7 @@
 package com.evernym.verity
 
 import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.wallet.Wallet
 
 package object vault {

@@ -5,6 +5,7 @@ import com.evernym.verity.actor.wallet.StoreTheirKey
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 /**
  *

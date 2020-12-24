@@ -7,6 +7,7 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 
 case class GetWalletVerKeyParam(did: DID, getFromPool: Boolean = false, wap: WalletAPIParam) {

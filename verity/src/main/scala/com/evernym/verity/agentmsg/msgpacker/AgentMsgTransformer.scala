@@ -5,6 +5,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -82,7 +83,6 @@ case class PackParam(openWalletIfNotOpened: Boolean=false)
 //NOTE: few parameters in this case class is mainly to handle 0.5 version of agent messages
 //so, it is for backward compatibility and in future we'll remove it
 case class UnpackParam(parseParam: ParseParam=ParseParam(),
-                       openWalletIfNotOpened: Boolean=false,
                        isAnonCryptedMsg: Boolean=false)
 
 /**

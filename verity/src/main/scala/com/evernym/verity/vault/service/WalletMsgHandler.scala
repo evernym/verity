@@ -109,7 +109,7 @@ object WalletMsgHandler extends FutureConverter {
       }
   }
 
-  private def handleStoreTheirKey(stk: StoreTheirKey)(implicit walletExt: WalletExt): Future[TheirKeyCreated]= {
+  private def handleStoreTheirKey(stk: StoreTheirKey)(implicit walletExt: WalletExt): Future[TheirKeyStored]= {
     DidOpExecutor.handleStoreTheirKey(stk)
   }
 

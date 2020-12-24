@@ -29,7 +29,6 @@ object AnoncredsWalletOpExecutor {
         configJson
       )
     }.map(r => {
-      println(r)
       CreatedCredDef(r.getCredDefId, r.getCredDefJson)
     })
   }

@@ -9,6 +9,7 @@ import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.engine.WalletAccess.KEY_ED25519
@@ -17,6 +18,7 @@ import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
+
 import scala.concurrent.duration.DurationInt
 
 class WalletActorSpec
@@ -135,8 +137,10 @@ class WalletActorSpec
         walletActor ! PackMsg(testByteMsg, recipVerKeys = Set(createKeyInfo()), senderVerKey = Some(createKeyInfo()))
         val packedMsg = expectMsgType[PackedMsg]
         walletActor ! UnpackMsg(packedMsg.msg)
-        val unpackedMsg = expectMsgType[UnpackedMsg]
-        assert(testByteMsg.sameElements(unpackedMsg.msg))
+        val binaryUnpackedMsg = expectMsgType[UnpackedMsg]
+        val jsonStringMsg = new String(binaryUnpackedMsg.msg)
+        val unpackedMsg = DefaultMsgCodec.fromJson[Map[String, String]](jsonStringMsg)
+        assert(testByteMsg.sameElements(unpackedMsg("message")))
       }
     }
 

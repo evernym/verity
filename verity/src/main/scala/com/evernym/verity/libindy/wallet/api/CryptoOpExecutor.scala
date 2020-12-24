@@ -105,15 +105,7 @@ object CryptoOpExecutor extends FutureConverter {
 
   def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt): Future[UnpackedMsg] = {
     asScalaFuture(Crypto.unpackMessage(we.wallet, um.msg))
-      .map(r => {
-        val binaryMsg = r
-        val jsonStringMsg = new String(binaryMsg)
-        val resultMap = DefaultMsgCodec.fromJson[Map[String, String]](jsonStringMsg)
-        val msgJsonString = resultMap("message")
-        val senderVerKeyOpt = resultMap.get("sender_verkey")
-        val recipVerKeyOpt = resultMap.get("recipient_verkey")
-        UnpackedMsg(msgJsonString, senderVerKeyOpt, recipVerKeyOpt)
-      })
+      .map(r => UnpackedMsg(r, None, None))
       .recover {
         case e: BadRequestErrorException => throw e
         case e: WalletItemNotFoundException =>

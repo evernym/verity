@@ -37,7 +37,7 @@ class LibindyMetricsCollectorSpec
         expectMsgType[CollectLibindySuccess]
         val criteria = MetricsFilterCriteria(filtered = false)
         awaitCond(MetricsReader.getNodeMetrics(criteria).metrics.exists(
-          metricDetail => metricDetail.name.contains("libindy_threadpool_active_count")), 60.seconds)
+          metricDetail => metricDetail.name.contains("threadpool_threads_count")), 60.seconds)
       }
     }
   }

@@ -42,7 +42,7 @@ trait AnonCredRequestsApi extends AnonCredRequests { this: WalletAccessLibindy  
                              revocationDetails: Option[String]=None): Try[(String, String)] = {
     runWithInternalSpan("createCredDef", "AnonCredRequestsApi") {
       val createSchemaResult = walletApi.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)
-      Try(createSchemaResult.getCredDefId, createSchemaResult.getCredDefJson)
+      Try(createSchemaResult.credDefId, createSchemaResult.credDefJson)
     }
   }
 

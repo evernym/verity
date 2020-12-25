@@ -106,8 +106,8 @@ class ActorWalletAPI(walletService: WalletService, walletProvider: WalletProvide
                     tag: String,
                     sigType: Option[String],
                     revocationDetails: Option[String])
-                   (implicit wap: WalletAPIParam): IssuerCreateAndStoreCredentialDefResult = {
-    walletService.executeSync[IssuerCreateAndStoreCredentialDefResult](wap.walletId,
+                   (implicit wap: WalletAPIParam): CreatedCredDef = {
+    walletService.executeSync[CreatedCredDef](wap.walletId,
       CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))
   }
 

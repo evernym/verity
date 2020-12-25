@@ -363,10 +363,10 @@ class LegacyWalletAPI(appConfig: AppConfig,
                     tag: String,
                     sigType: Option[String],
                     revocationDetails: Option[String])
-                   (implicit wap: WalletAPIParam): IssuerCreateAndStoreCredentialDefResult = {
+                   (implicit wap: WalletAPIParam): CreatedCredDef = {
     executeOpWithWalletInfo("set metadata", { we: WalletExt =>
       val configJson = revocationDetails.getOrElse(""""{"support_revocation": false}"""")
-      Anoncreds.issuerCreateAndStoreCredentialDef(
+      val createdCredDef = Anoncreds.issuerCreateAndStoreCredentialDef(
         we.wallet,
         issuerDID,
         schemaJson,
@@ -374,6 +374,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
         sigType.getOrElse("CL"),
         configJson
       ).get
+      CreatedCredDef(createdCredDef.getCredDefId, createdCredDef.getCredDefJson)
     })
   }
 

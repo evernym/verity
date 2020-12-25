@@ -8,6 +8,7 @@ import com.evernym.verity.util.UtilBase
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{INVALID_VALUE, UNHANDLED}
 import com.evernym.verity.actor.wallet.{GetVerKey, LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletExt}

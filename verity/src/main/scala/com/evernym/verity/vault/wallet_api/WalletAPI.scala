@@ -1,6 +1,6 @@
 package com.evernym.verity.vault.wallet_api
 
-import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignLedgerRequest, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyInfo, VerifySigByVerKey, VerifySigResult, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignLedgerRequest, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyInfo, VerifySigByVerKey, VerifySigResult, WalletCreated}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
@@ -34,7 +34,7 @@ trait WalletAPI {
                     tag: String,
                     sigType: Option[String],
                     revocationDetails: Option[String])
-                   (implicit wap: WalletAPIParam): IssuerCreateAndStoreCredentialDefResult
+                   (implicit wap: WalletAPIParam): CreatedCredDef
   def createCredOffer(credDefId: String)(implicit wap: WalletAPIParam): String
   def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String, masterSecretId: String)
                    (implicit wap: WalletAPIParam): String

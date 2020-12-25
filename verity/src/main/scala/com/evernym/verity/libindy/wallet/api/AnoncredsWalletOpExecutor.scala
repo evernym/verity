@@ -17,7 +17,7 @@ object AnoncredsWalletOpExecutor {
     }
   }
 
-  def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[IssuerCreateAndStoreCredentialDefResult] = {
+  def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[CreatedCredDef] = {
     asScalaFuture {
       val configJson = ccd.revocationDetails.getOrElse(""""{"support_revocation": false}"""")
       Anoncreds.issuerCreateAndStoreCredentialDef(
@@ -28,7 +28,9 @@ object AnoncredsWalletOpExecutor {
         ccd.sigType.getOrElse("CL"),
         configJson
       )
-    }
+    }.map(r => {
+      CreatedCredDef(r.getCredDefId, r.getCredDefJson)
+    })
   }
 
   def handleCreateCredOffer(cco: CreateCredOffer)(implicit we: WalletExt): Future[String] = {

@@ -4,6 +4,7 @@ import java.time.ZonedDateTime
 
 import akka.actor.ActorSystem
 import com.evernym.verity.Status._
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.{DID, WalletAccess}
 import com.evernym.verity.util.TimeZoneUtil._
@@ -60,7 +61,7 @@ case class ReadSubmitter() extends Submitter {
 }
 
 
-case class LedgerRequest(req: String, needsSigning: Boolean=true, taa: Option[TransactionAuthorAgreement]=None){
+case class LedgerRequest(req: String, needsSigning: Boolean=true, taa: Option[TransactionAuthorAgreement]=None) extends ActorMessage {
   def prepared(newRequest: String): LedgerRequest = this.copy(req=newRequest)
 }
 

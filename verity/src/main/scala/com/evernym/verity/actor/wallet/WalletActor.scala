@@ -197,4 +197,6 @@ case class UnpackedMsg(msg: Array[Byte],
   def msgString: String = new String(msg)
 }
 
+case class CreatedCredDef(credDefId: String, credDefJson: String) extends WalletCmdSuccessResponse
+
 case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage

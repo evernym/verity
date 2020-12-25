@@ -58,7 +58,7 @@ class ActivityTrackerSpec
       }
 
       //Test writes metric with multiple windows
-      "should record activity with multiple windows" in {
+      "should record activity with multiple windows" ignore {
         val sponsorRel3: SponsorRel = SponsorRel(SPONSOR_ID3, SPONSEE_ID)
         val activityTracker: DID = createCloudAgent(sponsorRel3, sponsorKeys().verKey, getNonce)
         val baseTimeStamp =TimeUtil.nowDateString
@@ -193,7 +193,7 @@ class ActivityTrackerSpec
       }
 
       //Test writes metric with multiple windows
-      "should record activity with multiple windows" in {
+      "should record activity with multiple windows" ignore {
         val sponsorRel7: SponsorRel = SponsorRel(SPONSOR_ID7, SPONSEE_ID)
         val sponsorRel8: SponsorRel = SponsorRel(SPONSOR_ID8, SPONSEE_ID)
         val activityTracker: DID = createCloudAgent(sponsorRel7, sponsorKeys().verKey, getNonce)

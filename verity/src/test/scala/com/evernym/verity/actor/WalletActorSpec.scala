@@ -170,7 +170,7 @@ class WalletActorSpec
           tag = "tag",
           sigType = Some("CL"),
           revocationDetails = Some(RevocationDetails(false, "tails_file", 5).toString))
-        val createdCredDef = expectMsgType[CreatedCredDef](15.second)
+        val createdCredDef = expectMsgType[CreatedCredDef](60.second)
 
         walletActor ! CreateCredOffer(createdCredDef.credDefId)
         val createCredOffer = expectMsgType[String]

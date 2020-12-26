@@ -100,8 +100,11 @@ class Platform(val aac: AgentActorContext)
   //wallet actor
   val walletActorRegion: ActorRef = createRegion(
     WALLET_REGION_ACTOR_NAME,
-    buildProp(Props(new WalletActor(agentActorContext.appConfig, agentActorContext.util, agentActorContext.poolConnManager)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)),
-    passivateIdleEntityAfter = appConfig.getConfigIntOption(CommonConfig.WALLET_ACTOR_PASSIVATE_TIME) match {
+    buildProp(
+      Props(new WalletActor(agentActorContext.appConfig, agentActorContext.util, agentActorContext.poolConnManager)),
+      Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)
+    ),
+    passivateIdleEntityAfter = appConfig.getConfigIntOption(CommonConfig.WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS) match {
       case Some(duration) => duration.second
       case None => 10.minute
     }

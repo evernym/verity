@@ -3,19 +3,20 @@ package com.evernym.verity.vault.wallet_api
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.LedgerRequest
-import com.evernym.verity.libindy.wallet.api.FutureConverter
+import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, FutureConverter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.service._
 import com.evernym.verity.vault.{KeyInfo, WalletAPIParam, WalletProvider}
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
 
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-class ActorWalletAPI(walletService: WalletService, walletProvider: WalletProvider)
+
+class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProvider)
   extends WalletAPI
     with FutureConverter
     with AsyncToSync {
@@ -65,33 +66,33 @@ class ActorWalletAPI(walletService: WalletService, walletProvider: WalletProvide
     walletService.executeSync[VerifySigResult](wap.walletId, vs)
   }
 
-  def LEGACY_pack(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
-                 (implicit wap: WalletAPIParam): PackedMsg = {
+  def LEGACY_packMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
+                    (implicit wap: WalletAPIParam): PackedMsg = {
     walletService.executeSync[PackedMsg](wap.walletId, LegacyPackMsg(msg, recipVerKeys, senderVerKey))
   }
 
-  def LEGACY_unpack(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                 (implicit wap: WalletAPIParam): UnpackedMsg = {
+  def LEGACY_unpackMsg(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+                      (implicit wap: WalletAPIParam): UnpackedMsg = {
     walletService.executeSync[UnpackedMsg](wap.walletId, LegacyUnpackMsg(msg, fromVerKey, isAnonCryptedMsg))
   }
 
-  def LEGACY_unpackAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                   (implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
+  def LEGACY_unpackMsgAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+                           (implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
     walletService
       .executeAsync(wap.walletId, LegacyUnpackMsg(msg, fromVerKey, isAnonCryptedMsg))
       .mapTo[UnpackedMsg]
   }
 
-  def packMessage(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
-                 (implicit wap: WalletAPIParam): PackedMsg = {
+  def packMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
+             (implicit wap: WalletAPIParam): PackedMsg = {
     walletService.executeSync[PackedMsg](wap.walletId, PackMsg(msg, recipVerKeys, senderVerKey))
   }
 
-  def unpackMessage(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {
+  def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {
     walletService.executeSync[UnpackedMsg](wap.walletId, UnpackMsg(msg))
   }
 
-  def unpackMessageAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
+  def unpackMsgAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
     walletService
       .executeAsync(wap.walletId, UnpackMsg(msg))
       .mapTo[UnpackedMsg]
@@ -143,15 +144,13 @@ class ActorWalletAPI(walletService: WalletService, walletProvider: WalletProvide
 
   //no wallet needed
   def verifySigWithVerKey(vs: VerifySigByVerKey): VerifySigResult = {
-    convertToSyncReq(WalletMsgHandler.coreVerifySig(vs.verKey, vs.challenge, vs.signature))
+    convertToSyncReq(CryptoOpExecutor.verifySig(vs.verKey, vs.challenge, vs.signature))
   }
 
   //no wallet needed
   def createSchema(issuerDID: DID, name:String, version: String, data: String): IssuerCreateSchemaResult = {
     convertToSyncReq {
-      asScalaFuture {
-        Anoncreds.issuerCreateSchema(issuerDID, name, version, data)
-      }
+      Anoncreds.issuerCreateSchema(issuerDID, name, version, data)
     }
   }
 
@@ -159,9 +158,8 @@ class ActorWalletAPI(walletService: WalletService, walletProvider: WalletProvide
   def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String,
                   revocRegDefs: String, revocRegs: String): Boolean = {
     convertToSyncReq {
-      asScalaFuture {
-        Anoncreds.verifierVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
-      }.map(_.booleanValue())
+      Anoncreds.verifierVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
+      .map(_.booleanValue())
     }
   }
 }

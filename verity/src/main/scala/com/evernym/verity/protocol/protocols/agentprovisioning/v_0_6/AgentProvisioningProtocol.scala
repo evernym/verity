@@ -7,12 +7,13 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.wallet.StoreTheirKey
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.{Init, ProtoMsg, WalletParam}
+import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AgentWalletSetupProvider, AskUserAgentCreator}
 import com.evernym.verity.util.ParticipantUtil
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 
 sealed trait Role
@@ -28,8 +29,6 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
       with DEPRECATED_HasWallet {
 
   val logger: Logger = ctx.logger
-
-  override def walletParam: WalletParam = ctx.SERVICES_DEPRECATED.walletParam
 
   override def applyEvent: ApplyEvent = {
 
@@ -110,4 +109,5 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   override def appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
+  override def walletAPI: WalletAPI = ctx.SERVICES_DEPRECATED.walletAPI
 }

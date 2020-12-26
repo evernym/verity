@@ -50,8 +50,8 @@ object MetricsReader {
   def getNodeMetrics(criteria: MetricsFilterCriteria = MetricsFilterCriteria()): NodeMetricsData = {
     metricsReporter.map { mp =>
       val metadata = if (criteria.includeMetaData) Some(buildMetadata) else None
-      val fixedMetrics = mp.getFixedMetrics
-      val resetMetrics = if (criteria.includeReset && explicitlyReset) mp.getResetMetrics else List.empty
+      val fixedMetrics = mp.fixedMetrics
+      val resetMetrics = if (criteria.includeReset && explicitlyReset) mp.postResetMetrics else List.empty
       val allMetrics = fixedMetrics ++ resetMetrics
       val allFilteredMetrics = if (criteria.filtered) MetricsFilter.filterMetrics(allMetrics) else allMetrics
       val allFinalMetrics = allFilteredMetrics.map { m =>

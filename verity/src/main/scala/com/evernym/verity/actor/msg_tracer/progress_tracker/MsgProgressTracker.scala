@@ -14,7 +14,7 @@ import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.ReqId
 import org.apache.http.conn.util.InetAddressUtils
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.base.{BaseNonPersistentActor, Done}
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.constants.Constants
 
 
@@ -28,7 +28,7 @@ object MsgProgressTracker {
  * msg progress tracker sharded actor
  * @param appConfig app config
  */
-class MsgProgressTracker(val appConfig: AppConfig) extends BaseNonPersistentActor with HasActorResponseTimeout {
+class MsgProgressTracker(val appConfig: AppConfig) extends CoreActorExtended with HasActorResponseTimeout {
 
   implicit val isGlobalOrIpAddress: Boolean =
     InetAddressUtils.isIPv4Address(entityId) ||

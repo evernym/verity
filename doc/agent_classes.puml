@@ -12,15 +12,17 @@ interface BasePersistentActor
 abstract class PersistentActor <<sys>>
 interface EventPersistenceEncryption
 interface ActorBase
+interface CoreActor
+abstract class Actor <<sys>>
 interface HasActorMsgScheduler
 abstract class Timers <<sys>>
-interface HasAppConfig
 interface HasActorResponseTimeout
 interface DeleteMsgHandler
 interface HasTransformationRegistry
 interface LegacyTransformationRegistry
 abstract class Stash <<sys>>
 interface DefaultPersistenceEncryption
+interface HasAppConfig
 interface UserAgentCommonStateUpdateImpl
 interface AgentStateUpdateInterface
 interface MsgAndDeliveryHandler
@@ -72,10 +74,9 @@ interface HasAgentMsgTransformer
 interface MsgNotifierForUserAgentPairwise
 interface FailedMsgRetrier
 class AgencyAgent <<focus>>
-interface AgencyAgentCommon
-abstract class AgencyAgentStateUpdateImpl <<sys>>
-interface AgencyPackedMsgHandler
+interface AgencyIdUtil
 class AgencyAgentPairwise <<focus>>
+interface AgencyAgentCommon
 abstract class AgencyAgentPairwiseStateUpdateImpl <<sys>>
 
 UserAgent -up-|> UserAgentCommon
@@ -100,8 +101,9 @@ BasePersistentActor -* HasActorResponseTimeout
 BasePersistentActor -* DeleteMsgHandler
 BasePersistentActor --* HasTransformationRegistry
 BasePersistentActor -down-* Stash
-ActorBase -up-|> HasActorMsgScheduler
-ActorBase --* HasAppConfig
+ActorBase -up-|> CoreActor
+ActorBase -* HasActorMsgScheduler
+CoreActor -up-|> Actor
 HasActorMsgScheduler -up-|> Timers
 HasTransformationRegistry -up-|> LegacyTransformationRegistry
 UserAgentCommonStateUpdateImpl -up-|> AgentStateUpdateInterface
@@ -155,19 +157,15 @@ AgentMsgSender -down-* HasLogger
 UsesConfigs -up-|> HasAppConfig
 MsgDeliveryResultHandler -up-|> HasAgentMsgTransformer
 MsgNotifierForUserAgentPairwise -up-|> MsgNotifierForUserAgentCommon
-AgencyAgent -up-|> AgencyAgentCommon
-AgencyAgent -down-* AgencyAgentStateUpdateImpl
-AgencyAgent -* AgencyPackedMsgHandler
-AgencyAgent -down-* AgentSnapshotter
+AgencyAgent -up-|> AgencyIdUtil
+AgencyAgentPairwise -up-|> AgencyAgentCommon
+AgencyAgentPairwise -down-* AgencyAgentPairwiseStateUpdateImpl
+AgencyAgentPairwise -down-* PairwiseConnState
+AgencyAgentPairwise -down-* AgentSnapshotter
 AgencyAgentCommon -up-|> AgentPersistentActor
 AgencyAgentCommon --* AgentMsgHandler
 AgencyAgentCommon -down-* ShardRegionFromActorContext
 AgencyAgentCommon --* MsgNotifier
 AgencyAgentCommon -* LEGACY_connectingSignalHandler
-AgencyPackedMsgHandler -up-|> ResourceUsageCommon
-AgencyAgentPairwise -up-|> AgencyAgentCommon
-AgencyAgentPairwise -down-* AgencyAgentPairwiseStateUpdateImpl
-AgencyAgentPairwise -down-* PairwiseConnState
-AgencyAgentPairwise -down-* AgentSnapshotter
 
 @enduml

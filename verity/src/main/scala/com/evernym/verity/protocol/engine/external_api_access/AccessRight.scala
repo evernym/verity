@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.external_api_access
 
 sealed trait AccessRight
 

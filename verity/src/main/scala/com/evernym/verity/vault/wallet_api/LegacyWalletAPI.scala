@@ -244,8 +244,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
     coreVerifySig(vs.verKey, vs.challenge, vs.signature)
   }
 
-  def LEGACY_pack(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
-                 (implicit wap: WalletAPIParam): PackedMsg = {
+  def LEGACY_packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+                    (implicit wap: WalletAPIParam): PackedMsg = {
     executeOpWithWalletInfo("legacy pack msg", { we: WalletExt =>
 
       val senderKeyOpt = senderKey.map({ sk =>
@@ -263,8 +263,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def packMessage(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
-                 (implicit wap: WalletAPIParam): PackedMsg = {
+  def packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+             (implicit wap: WalletAPIParam): PackedMsg = {
     // Question: Should JSON validation happen for msg happen here or is it left to libindy?
     // Question: Since libindy expects bytes, should msg be bytes and not string. This will
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
@@ -280,14 +280,14 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def unpackMessageAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
+  def unpackMsgAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
     executeOpWithWalletInfo("unpack async msg", { we: WalletExt =>
       Future(UnpackedMsg(Crypto.unpackMessage(we.wallet, msg).get, None, None))
     })
   }
 
-  def LEGACY_unpack(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                   (implicit wap: WalletAPIParam): UnpackedMsg = {
+  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+                      (implicit wap: WalletAPIParam): UnpackedMsg = {
     executeOpWithWalletInfo("legacy unpack msg", { we: WalletExt =>
       try {
         val fvkFut = getVerKeyFromWallet(fromKeyInfo.get)(we)
@@ -313,8 +313,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def LEGACY_unpackAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                        (implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
+  def LEGACY_unpackMsgAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+                           (implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
     executeOpWithWalletInfo("legacy unpack async msg", { we: WalletExt =>
       getVerKeyFromWallet(fromKeyInfo.get)(we).map { fvk =>
         val (decryptedMsg, senderVerKey) = if (isAnonCryptedMsg) {
@@ -342,7 +342,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def unpackMessage(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {
+  def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {
     executeOpWithWalletInfo("unpack msg", { we: WalletExt =>
       UnpackedMsg(Crypto.unpackMessage(we.wallet, msg).get, None, None)
     })
@@ -397,8 +397,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
                  revRegistryId: String, blobStorageReaderHandle: Int)
                 (implicit wap: WalletAPIParam): String = {
     executeOpWithWalletInfo("cred", { we: WalletExt =>
-      Anoncreds.issuerCreateCredential(we.wallet, credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)
-        .get.getCredentialJson
+      Anoncreds.issuerCreateCredential(we.wallet, credOfferJson, credReqJson, credValuesJson,
+        revRegistryId, blobStorageReaderHandle).get.getCredentialJson
     })
   }
 

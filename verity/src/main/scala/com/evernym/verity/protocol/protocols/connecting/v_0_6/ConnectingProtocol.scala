@@ -129,7 +129,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   private def handleCreateConnection(amw: AgentMsgWrapper): PackedMsg = {
     val cc = amw.headAgentMsg.convertTo[CreateConnectionReqMsg_MFV_0_6]
-    val edgePairwiseKey = walletDetail.walletAPI.createNewKey(CreateNewKey())
+    val edgePairwiseKey = walletAPI.createNewKey(CreateNewKey())
     val edgePairwiseKeyCreated = KeyCreated(edgePairwiseKey.did)
     ctx.apply(edgePairwiseKeyCreated)
 
@@ -144,7 +144,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
       edgePairwiseKey.did, edgePairwiseKey.did, endpointDetail)
     val kdp = getAgentKeyDlgProof(edgePairwiseKey.verKey, edgePairwiseKey.did,
-      edgePairwiseKey.verKey)(walletDetail.walletAPI, wap)
+      edgePairwiseKey.verKey)(walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
     val pm = handleConnReqMsg(ccamw, Option(cc.sourceId))
     amw.msgPackFormat match {
@@ -168,8 +168,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   }
 
   private def processKeyCreatedMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit agentMsgContext: AgentMsgContext): Future[PackedMsg] = {
-    val pairwiseKeyResult = walletDetail.walletAPI.createNewKey(CreateNewKey())
-    walletDetail.walletAPI.storeTheirKey(StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
+    val pairwiseKeyResult = walletAPI.createNewKey(CreateNewKey())
+    walletAPI.storeTheirKey(StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)

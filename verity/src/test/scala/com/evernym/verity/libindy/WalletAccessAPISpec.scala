@@ -1,18 +1,19 @@
 package com.evernym.verity.libindy
 
-import com.evernym.verity.libindy.wallet.WalletAccessLibindy
-import com.evernym.verity.protocol.engine.{DID, InvalidSignType, ParticipantId, VerKey}
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
+import com.evernym.verity.protocol.engine.external_api_access.InvalidSignType
+import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.testkit.{BasicSpec, TestWalletHelper}
 import com.evernym.verity.util.ParticipantUtil
 
 import scala.util.{Failure, Success}
 
-class WalletAccessLibindySpec extends BasicSpec with TestWalletHelper {
+class WalletAccessAPISpec extends BasicSpec with TestWalletHelper {
 
-  walletDetail.walletAPI.createWallet(wap)
+  agentWalletAPI.walletAPI.createWallet(wap)
   val selfParticipantId: ParticipantId = ParticipantUtil.participantId(
-    walletDetail.walletAPI.createNewKey().did, None)
-  val walletAccess = new WalletAccessLibindy(appConfig, walletDetail.walletAPI, selfParticipantId)
+    agentWalletAPI.walletAPI.createNewKey().did, None)
+  val walletAccess = new WalletAccessAPI(appConfig, agentWalletAPI.walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"

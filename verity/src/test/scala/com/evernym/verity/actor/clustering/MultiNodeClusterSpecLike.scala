@@ -15,24 +15,34 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.reflect.ClassTag
 
 
+/**
+ * a base class to test multi node cluster
+ * implementing spec just needs to extend this trait and
+ * optionally override 'numberOfNodes' (by default it will generate 2 node cluster)
+ */
 trait MultiNodeClusterSpecLike
   extends BasicSpec
     with ActorSystemConfig
     with CleansUpIndyClientFirst {
 
+  def numberOfNodes: Int = 2
+
   lazy val firstNodePort: Int = getNextAvailablePort
   lazy val systemName: String = "actorSpecSystem" + firstNodePort
   lazy val seedNodeConfig: Option[Config] = generateSeedNodeConfig(systemName, firstNodePort)
 
-  lazy val node1: TestNodePlatform = {
-    val (as, config) = createNodeSystem(systemName, seedNodeConfig, Option(firstNodePort))
-    new TestNodePlatform(as, config)
-  }
+  lazy val allNodes: List[NodePlatform] = {
+    (1 to numberOfNodes).map { i =>
+      val (as, config) = if (i == 1) {
+        createNodeSystem(systemName, seedNodeConfig, Option(firstNodePort))
+      } else {
+        createNodeSystem(systemName, seedNodeConfig)
+      }
+      new NodePlatform(as, config)
+    }
+  }.toList
 
-  lazy val node2: TestNodePlatform = {
-    val (as, config) = createNodeSystem(systemName, seedNodeConfig)
-    new TestNodePlatform(as, config)
-  }
+  lazy val allNodeClients: List[NodeClient] = allNodes.map(_.client)
 
   def generateSeedNodeConfig(systemName: String, firstNodePort: Int): Option[Config] = {
     Option {
@@ -56,18 +66,21 @@ trait MultiNodeClusterSpecLike
     (ActorSystem(systemName, config), config)
   }
 
-  lazy val forAllClient: List[TestClient] = List(node1, node2).map(_.client)
-  lazy val node1Client: TestClient = node1.client
-  lazy val node2Client: TestClient = node2.client
-
-  class TestNodePlatform(as: ActorSystem, config: Config)
+  /**
+   * represents a node (an actor system)
+   * each node also has corresponding 'client' as well to communicate (send and receive messages)
+   * to corresponding node
+   * @param as
+   * @param config
+   */
+  class NodePlatform(as: ActorSystem, config: Config)
     extends Platform(new MockAgentActorContext(as, new TestAppConfig(Option(config)))) {
     lazy val agencyAgentEntityId: String = UUID.nameUUIDFromBytes("agency-DID".getBytes()).toString
     lazy val aa: agentRegion = agentRegion(agencyAgentEntityId, agencyAgentRegion)
-    val client: TestClient = new TestClient(TestProbe(), this)
+    val client: NodeClient = NodeClient(TestProbe(), this)
   }
 
-  case class TestClient(probe: TestProbe, nodePlatform: TestNodePlatform) {
+  case class NodeClient(probe: TestProbe, nodePlatform: NodePlatform) {
     def sendToAgencyAgent(msg: Any): Unit = {
       nodePlatform.aa.tell(msg, probe.ref)
     }

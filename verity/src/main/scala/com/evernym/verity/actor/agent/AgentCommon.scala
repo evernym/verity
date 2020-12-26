@@ -27,6 +27,7 @@ import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.actor.ProtocolIdDetail
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
 import kamon.metric.MeasurementUnit
@@ -75,6 +76,7 @@ trait AgentCommon
   def agentActorContext: AgentActorContext
   def agentWalletId: Option[String] = state.agentWalletId
   def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
+  def walletAPI: WalletAPI = agentActorContext.walletAPI
 
   def agencyDIDReq: DID = state.agencyDID.getOrElse(
     throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, Option("agent not yet created")))
@@ -84,7 +86,7 @@ trait AgentCommon
   def ownerAgentKeyDID: Option[DID]
   def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
 
-  lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, walletDetail.walletAPI, appConfig)
+  lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, agentWalletAPI.walletAPI, appConfig)
   def getVerKeyReqViaCache(did: DID, getFromPool: Boolean = false): VerKey = walletVerKeyCacheHelper.getVerKeyReqViaCache(did, getFromPool)
 
   lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (

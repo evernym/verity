@@ -25,22 +25,21 @@ class IndyPackTransformer
 
   override def pack(msg: String,
                     recipVerKeys: Set[KeyInfo],
-                    senderVerKey: Option[KeyInfo],
-                    packParam: PackParam)
+                    senderVerKey: Option[KeyInfo])
                    (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    walletAPI.packMessage(msg.getBytes, recipVerKeys, senderVerKey)
+    walletAPI.packMsg(msg.getBytes, recipVerKeys, senderVerKey)
   }
 
   override def unpack(msg: Array[Byte], fromKeyInfo: Option[KeyInfo],
                       unpackParam: UnpackParam)(implicit wap: WalletAPIParam, walletAPI: WalletAPI)
   : AgentBundledMsg = {
-    val um = walletAPI.unpackMessage(msg)
+    val um = walletAPI.unpackMsg(msg)
     prepareAgentBundledMsg(um, unpackParam)
   }
 
   override def unpackAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
-    walletAPI.unpackMessageAsync(msg).map { um =>
+    walletAPI.unpackMsgAsync(msg).map { um =>
       prepareAgentBundledMsg(um, unpackParam)
     }
   }

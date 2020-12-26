@@ -6,9 +6,8 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 class LedgerPoolException(msg: String) extends Exception(msg)
 case class OpenConnException(msg: String) extends LedgerPoolException(msg)
 
-abstract class ConfigurableLedgerPoolConnManager(val appConfig: AppConfig) extends LedgerPoolConnManager {
-
-}
+abstract class ConfigurableLedgerPoolConnManager(val appConfig: AppConfig)
+  extends LedgerPoolConnManager
 
 trait LedgerPoolConnManager {
 

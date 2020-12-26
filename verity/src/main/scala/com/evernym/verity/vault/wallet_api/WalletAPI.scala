@@ -4,7 +4,7 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey,
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
 
 import scala.concurrent.Future
 
@@ -20,13 +20,13 @@ trait WalletAPI {
   def signMsg(sm: SignMsg)(implicit wap: WalletAPIParam): Array[Byte]
   def verifySig(vs: VerifySigByKeyInfo)(implicit wap: WalletAPIParam): VerifySigResult
   def verifySigWithVerKey(vs: VerifySigByVerKey): VerifySigResult
-  def LEGACY_pack(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
-                 (implicit wap: WalletAPIParam): PackedMsg
-  def packMessage(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
-                 (implicit wap: WalletAPIParam): PackedMsg
-  def LEGACY_unpack(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                   (implicit wap: WalletAPIParam): UnpackedMsg
-  def unpackMessage(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg
+  def LEGACY_packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+                    (implicit wap: WalletAPIParam): PackedMsg
+  def packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+             (implicit wap: WalletAPIParam): PackedMsg
+  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+                      (implicit wap: WalletAPIParam): UnpackedMsg
+  def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg
   def createMasterSecret(masterSecretId: String)(implicit wap: WalletAPIParam): String
   def createSchema(issuerDID: DID, name:String, version: String, data: String): IssuerCreateSchemaResult
   def createCredDef(issuerDID: DID,
@@ -50,9 +50,9 @@ trait WalletAPI {
 
   //async apis
   def signLedgerRequest(sr: SignLedgerRequest): Future[LedgerRequest]
-  def unpackMessageAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg]
-  def LEGACY_unpackAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                        (implicit wap: WalletAPIParam): Future[UnpackedMsg]
+  def unpackMsgAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg]
+  def LEGACY_unpackMsgAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+                           (implicit wap: WalletAPIParam): Future[UnpackedMsg]
 
 }
 

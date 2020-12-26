@@ -213,12 +213,14 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
     appConfig.getConfigIntOption(PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES)
       .getOrElse(190000)
 
-  final override def receiveRecover: Receive = defaultSnapshotOfferReceiver orElse handleEvent
+  final override def receiveRecover: Receive =
+    defaultSnapshotOfferReceiver orElse
+      handleEvent
 
   final override def receiveCommand: Receive =
-    handleCommand(cmdHandler) orElse
+    basePersistentCmdHandler(cmdHandler) orElse
       snapshotCallbackHandler orElse
-      receiveCmdBase
+      receiveUnhandled
 
   var isSnapshotExists: Boolean = false
   private val throttledLogger = new ThrottledLogger[SnapshotterLogMessages](logger, min_period = 30.minutes)

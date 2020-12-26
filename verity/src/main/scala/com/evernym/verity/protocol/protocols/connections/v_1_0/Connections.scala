@@ -7,7 +7,7 @@ import java.time.Instant
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi, _}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity
@@ -18,6 +18,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.SetupTheir
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.UrlDetail
 import com.evernym.verity.actor.agent.relationship.URL
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 
 import scala.util.{Failure, Success, Try}
 

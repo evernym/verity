@@ -76,10 +76,6 @@ case class AgentMsgTypeDetail(msgPackFormat: MsgPackFormat,
   def msgVersion: String = msgVer.getOrElse(familyVersion)
 }
 
-
-
-case class PackParam(openWalletIfNotOpened: Boolean=false)
-
 //NOTE: few parameters in this case class is mainly to handle 0.5 version of agent messages
 //so, it is for backward compatibility and in future we'll remove it
 case class UnpackParam(parseParam: ParseParam=ParseParam(),
@@ -117,7 +113,7 @@ trait MsgTransformer {
 
   def msgPackFormat: MsgPackFormat
 
-  def pack(msg: String, recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo], packParam: PackParam)
+  def pack(msg: String, recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg
 
   def unpack(msg: Array[Byte], fromVerKey: Option[KeyInfo], unpackParam: UnpackParam)

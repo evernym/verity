@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.protocols.deaddrop
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, SignMsg}
@@ -10,7 +9,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
 import org.apache.commons.codec.digest.DigestUtils
@@ -37,7 +36,7 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
   def generatePayload(): DeadDropData = {
     val poolConnManager = new IndyLedgerPoolConnManager(appConfig)
     val walletProvider = new LibIndyWalletProvider(appConfig)
-    val walletService = new ActorWalletService(ActorSystem())
+    val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
     implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(
       appConfig, TestUtil, walletService, walletProvider, poolConnManager)
 

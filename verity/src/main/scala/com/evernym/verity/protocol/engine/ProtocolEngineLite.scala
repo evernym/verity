@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLoggerLike}
 

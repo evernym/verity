@@ -323,7 +323,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
   }
 
   def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
-    val nkc = walletDetail.walletAPI.createNewKey()
+    val nkc = agentWalletAPI.walletAPI.createNewKey()
     val (respFut, _) = createNewPairwiseEndpointBase(nkc.did, Option(nkc.verKey), isEdgeAgent = true)
     respFut.map { _ =>
       Option(ControlMsg(Ctl.KeyCreated(nkc.did, nkc.verKey)))

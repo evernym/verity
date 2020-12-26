@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.protocol.engine.{AnonCredRequests, DID}
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.external_api_access.AnonCredRequests
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
 
 import scala.util.Try

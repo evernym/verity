@@ -3,7 +3,6 @@ package com.evernym.verity.testkit.util
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil
@@ -13,10 +12,9 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitte
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.util.OptionUtil
+import com.evernym.verity.util.{OptionUtil, TestWalletService}
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
@@ -32,7 +30,7 @@ class LedgerUtil (val appConfig: AppConfig,
                   val submitterRole: String = "STEWARD",
                   val taa: Option[TransactionAuthorAgreement] = None,
                   val genesisTxnPath: Option[String] = None)
-  extends CommonSpecUtil{
+  extends CommonSpecUtil {
 
   lazy val poolConnManager: LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(appConfig, poolConfigName, genesisTxnPath)
@@ -44,7 +42,7 @@ class LedgerUtil (val appConfig: AppConfig,
   private val walletId = submitterDID + "_" + LocalDateTime.now().toString
 
   val walletProvider = new LibIndyWalletProvider(appConfig)
-  val walletService = new ActorWalletService(ActorSystem())
+  val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
   implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
 
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)

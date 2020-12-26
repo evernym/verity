@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
 
 

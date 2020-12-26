@@ -2,7 +2,8 @@ package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{AccessRight, AccessSign, AccessVerify, MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition}
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessSign, AccessVerify}
+import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Role.{Questioner, Responder}
 
 object CommittedAnswerDefinition extends ProtocolDefinition[CommittedAnswerProtocol, Role, Msg, Event, State, String] {

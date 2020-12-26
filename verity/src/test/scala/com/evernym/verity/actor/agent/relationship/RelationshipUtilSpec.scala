@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.agent.relationship
 
-import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
@@ -12,7 +11,7 @@ import com.evernym.verity.actor.wallet.CreateNewKey
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.OptionValues
 
@@ -156,7 +155,7 @@ class RelationshipUtilSpec
     val appConfig = new TestAppConfig()
     val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
     val walletProvider = new LibIndyWalletProvider(appConfig)
-    val walletService = new ActorWalletService(ActorSystem())
+    val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
     implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
     implicit val wap: WalletAPIParam = WalletAPIParam("encryption-key-seed")
     walletAPI.createWallet(wap)

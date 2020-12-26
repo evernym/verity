@@ -26,19 +26,19 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.legacy.services._
-import com.evernym.verity.protocol.protocols.HasAgentWallet
+import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.{ParticipantUtil, Util}
-import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.ActorResponse
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
 import com.evernym.verity.libindy.ledger.LedgerAccessApi
-import com.evernym.verity.libindy.wallet.WalletAccessLibindy
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
@@ -78,6 +78,7 @@ class ActorProtocolContainer[
       with ProtocolEngineExceptionHandler
       with MsgTraceProvider
       with HasAgentWallet
+      with HasAppConfig
       with AgentIdentity {
 
 
@@ -166,6 +167,7 @@ class ActorProtocolContainer[
   }
 
   override val appConfig: AppConfig = agentActorContext.appConfig
+  def walletAPI: WalletAPI = agentActorContext.walletAPI
 
   lazy val pinstId: PinstId = entityId
 
@@ -323,13 +325,12 @@ class ActorProtocolContainer[
 
   @silent
   override def createServices: Option[Services] = {
-    val walletParam = WalletParam(agentActorContext.walletAPI, agentActorContext.walletConfig)
 
-    Some(new LegacyProtocolServicesImpl[M,E,I](eventRecorder, sendsMsgs,
-      agentActorContext.appConfig, walletParam, agentActorContext.generalCache,
-      agentActorContext.smsSvc, agentActorContext.agentMsgRouter, agentActorContext.remoteMsgSendingSvc,
-      agentActorContext.agentMsgTransformer, this, this,
-      this, this))
+    Some(new LegacyProtocolServicesImpl[M,E,I](
+      eventRecorder, sendsMsgs, agentActorContext.appConfig,
+      agentActorContext.walletAPI, agentActorContext.generalCache,
+      agentActorContext.remoteMsgSendingSvc, agentActorContext.agentMsgTransformer,
+      this, this, this))
   }
 
   // For each sharded actor, there will be one region actor per type per node. The region
@@ -486,7 +487,7 @@ class ActorProtocolContainer[
     }
   }
 
-  private lazy val walletAccessImpl = new WalletAccessLibindy(
+  private lazy val walletAccessImpl = new WalletAccessAPI(
     agentActorContext.appConfig,
     agentActorContext.walletAPI,
     getRoster.selfId_!
@@ -586,8 +587,6 @@ case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
                             forwarder: ActorRef)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
-
-case class WalletParam(walletAPI: WalletAPI, walletConfig: WalletConfig)
 
 /**
  * incoming msg envelope

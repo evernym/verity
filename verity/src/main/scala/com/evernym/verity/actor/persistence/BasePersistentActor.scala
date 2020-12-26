@@ -14,7 +14,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.base.ActorBase
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -42,11 +42,14 @@ import scala.concurrent.duration._
 trait BasePersistentActor
   extends PersistentActor
     with EventPersistenceEncryption
-    with ActorBase
+    with CoreActorExtended
     with HasActorResponseTimeout
     with DeleteMsgHandler
     with HasTransformationRegistry
     with Stash {
+
+  var totalPersistedEvents: Int = 0
+  var totalRecoveredEvents: Int = 0
 
   def incrementTotalPersistedEvents(by: Int = 1): Unit = {
     totalPersistedEvents = totalPersistedEvents + by
@@ -436,27 +439,40 @@ trait BasePersistentActor
 
   def receiveActorInitHandler: Receive = receiveActorInitSpecificCmd orElse receiveActorInitBaseCmd
 
-  def receiveCmd: Receive
-  final override def cmdHandler: Receive = receiveCmd
 
   /**
    * any unhandled messages from implementing actor will be handled by this receiver
    * @return
    */
-  def receiveCmdBase: Receive = msgDeleteCallbackHandler orElse {
-    case m => handleException(new BadRequestErrorException(
+  def receiveUnhandled: Receive = {
+    case m =>
+      handleException(new BadRequestErrorException(
         UNSUPPORTED_MSG_TYPE.statusCode, Option(s"[$persistenceId] unsupported incoming message: $m")), sender())
   }
 
-  override def receiveCommand: Receive = handleCommand(cmdHandler) orElse receiveCmdBase
+  private def handleBasePersistenceCmd: Receive = {
+    case GetActorDetail     =>
+      sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
+  }
 
-  def receiveEvent: Receive
+  def basePersistentCmdHandler(actualReceiver: Receive): Receive =
+    handleBasePersistenceCmd orElse
+      baseCommandHandler(actualReceiver) orElse
+      msgDeleteCallbackHandler
+
+  override def receiveCommand: Receive =
+    basePersistentCmdHandler(cmdHandler) orElse
+      receiveUnhandled
+
+  override def setNewReceiveBehaviour(receiver: Receive): Unit = {
+    context.become(basePersistentCmdHandler(receiver))
+  }
+
+  final override def cmdHandler: Receive = receiveCmd
   override def receiveRecover: Receive = handleEvent
 
-  final override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-    logCrashReason(reason, message)
-    super.preRestart(reason, message)
-  }
+  def receiveCmd: Receive
+  def receiveEvent: Receive
 
   protected lazy val logger: Logger = LoggingUtil.getLoggerByClass(this.getClass)
 }

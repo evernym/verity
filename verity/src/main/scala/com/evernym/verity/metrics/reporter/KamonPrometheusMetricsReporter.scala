@@ -12,7 +12,6 @@ import kamon.prometheus.PrometheusReporter
 
 object KamonPrometheusMetricsReporter extends MetricsReporter {
 
-
   val DEFAULT_TARGET = "unknown"
   val FIXED_REPORTER_NAME = "fixed-reporter"
   val RESET_BASED_REPORTER_NAME = "reset-based-reporter"
@@ -41,11 +40,11 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
     rep
   }
 
-  override def getFixedMetrics: List[MetricDetail] = {
+  override def fixedMetrics: List[MetricDetail] = {
     buildMetrics(fixedMetricsData)
   }
 
-  override def getResetMetrics: List[MetricDetail] =
+  override def postResetMetrics: List[MetricDetail] =
     buildMetrics(resetBasedMetricsData, isResetMetrics = true)
 
   def resetMetrics(): Unit = {

@@ -27,7 +27,7 @@ import com.evernym.verity.util.{Util, UtilBase}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
-import com.evernym.verity.vault.wallet_api.{LegacyWalletAPI, ActorWalletAPI, WalletAPI}
+import com.evernym.verity.vault.wallet_api.{LegacyWalletAPI, StandardWalletAPI, WalletAPI}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -115,9 +115,9 @@ object WalletApiBuilder {
             poolConnManager: LedgerPoolConnManager): WalletAPI = {
     val walletApiConfigPath = "verity.wallet-api"
     appConfig.getConfigStringOption(walletApiConfigPath) match {
-      case Some("legacy") => new LegacyWalletAPI(appConfig, walletProvider, util, poolConnManager)
-      case Some("actor")  => new ActorWalletAPI(walletService, walletProvider)
-      case _              => throw new RuntimeException(s"invalid value for configuration: '$walletApiConfigPath'")
+      case Some("legacy")     => new LegacyWalletAPI(appConfig, walletProvider, util, poolConnManager)
+      case Some("standard")   => new StandardWalletAPI(walletService, walletProvider)
+      case _                  => throw new RuntimeException(s"invalid value for configuration: '$walletApiConfigPath'")
     }
   }
 }

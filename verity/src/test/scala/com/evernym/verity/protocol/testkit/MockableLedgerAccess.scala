@@ -6,7 +6,8 @@ import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.Status
-import com.evernym.verity.libindy.wallet.WalletAccessLibindy
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, LedgerAccessException, LedgerRejectException, WalletAccessController}
 
 import scala.util.{Failure, Try}
 
@@ -28,10 +29,10 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
   implicit val wap = testWallet.wap
   override val walletAccess = new WalletAccessController(
     Set(),
-    new WalletAccessLibindy(
+    new WalletAccessAPI(
       testWallet.appConfig,
-      testWallet.walletDetail.walletAPI,
-      testWallet.walletDetail.walletId
+      testWallet.walletAPI,
+      testWallet.agentWalletIdReq
     )
   )
 

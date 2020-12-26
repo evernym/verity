@@ -1,9 +1,10 @@
 package com.evernym.verity.libindy.wallet
 
-import com.evernym.verity.actor.wallet.{GetVerKey, SignLedgerRequest, SignMsg, StoreTheirKey, VerifySigByVerKey}
+import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
-import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.{external_api_access, _}
+import com.evernym.verity.protocol.engine.external_api_access.{InvalidSignType, SignatureResult, WalletAccess}
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -13,13 +14,13 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class WalletAccessLibindy(protected val appConfig: AppConfig,
-                          protected val walletApi: WalletAPI,
-                          protected val selfParticipantId: ParticipantId)
-                         (implicit val wap: WalletAPIParam)
-  extends WalletAccess with AnonCredRequestsApi {
+class WalletAccessAPI(protected val appConfig: AppConfig,
+                      protected val walletApi: WalletAPI,
+                      protected val selfParticipantId: ParticipantId)
+                     (implicit val wap: WalletAPIParam)
+  extends WalletAccess with AnonCredRequestsAPI {
 
-  import WalletAccess._
+  import com.evernym.verity.protocol.engine.external_api_access.WalletAccess._
 
   private val maxWaitTime: FiniteDuration = 15 second
 

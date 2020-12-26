@@ -1,10 +1,15 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.external_api_access
+
+import com.evernym.verity.protocol.engine.DID
 
 import scala.util.Try
 
 trait AnonCredRequests {
 
-  def createSchema(issuerDID: DID, name: String, version: String, data: String): Try[(String, String)]
+  def createSchema(issuerDID: DID,
+                   name: String,
+                   version: String,
+                   data: String): Try[(String, String)]
 
   def createCredDef(issuerDID: DID,
                     schemaJson: String,

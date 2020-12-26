@@ -9,12 +9,13 @@ import com.evernym.verity.actor.wallet.StoreTheirKey
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.{Init, ProtoMsg, WalletParam}
+import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AgentWalletSetupProvider, AskUserAgentCreator}
 import com.evernym.verity.util.{Base58Util, ParticipantUtil}
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 
 
@@ -159,7 +160,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def processValidatedConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
-    val agentPairwiseKey = walletDetail.walletAPI.createNewKey()
+    val agentPairwiseKey = walletAPI.createNewKey()
     storeTheirKey(crm.fromDID, crm.fromDIDVerKey)
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(crm.fromDID, None)))
     val provisionerPartiId = initParameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
@@ -180,7 +181,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def storeTheirKey(did: DID, verKey: VerKey): Unit = {
     try {
-      walletDetail.walletAPI.storeTheirKey(StoreTheirKey(did, verKey))
+      walletAPI.storeTheirKey(StoreTheirKey(did, verKey))
     } catch {
       case e: BadRequestErrorException if e.respCode == ALREADY_EXISTS.statusCode =>
         throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)
@@ -210,7 +211,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     ctx.send(agentCreatedRespMsg, toRole = Option(Requester), fromRole = Option(Provisioner))
   }
 
-  override def walletParam: WalletParam = ctx.SERVICES_DEPRECATED.walletParam
+  override def walletAPI: WalletAPI = ctx.SERVICES_DEPRECATED.walletAPI
 }
 
 /**

@@ -1,6 +1,7 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.external_api_access
 
 import com.evernym.verity.ledger.LedgerRequest
+import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 
 import scala.util.{Failure, Try}
 

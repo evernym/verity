@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy.wallet.api
+package com.evernym.verity.libindy.wallet.operation_executor
 
 
 import com.evernym.verity.Exceptions.BadRequestErrorException
@@ -6,71 +6,50 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
 import com.evernym.verity.util.UtilBase
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{INVALID_VALUE, UNHANDLED}
-import com.evernym.verity.actor.wallet.{GetVerKey, LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg}
-import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
+import com.evernym.verity.actor.wallet.{GetVerKey, LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletExt}
+import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.vault.service._
-import org.hyperledger.indy.sdk.InvalidStructureException
+import org.hyperledger.indy.sdk.{InvalidParameterException, InvalidStructureException}
 import org.hyperledger.indy.sdk.crypto.Crypto
 import org.hyperledger.indy.sdk.wallet.WalletItemNotFoundException
 
 import scala.concurrent.Future
 
 
-object CryptoOpExecutor extends FutureConverter {
-
-  private def verKeyFuture(keys: Set[KeyInfo], util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
-                          (implicit we: WalletExt): Future[Set[VerKey]] = {
-    Future.sequence {
-      keys.map { rk =>
-        rk.verKeyDetail match {
-          case Left(vk) => Future(vk)
-          case Right(gvk: GetVerKeyByDIDParam) =>
-            WalletOpExecutor.getVerKey(gvk.did, gvk.getKeyFromPool, util, ledgerPoolManager)
-        }
-      }
-    }
-  }
+object CryptoOpExecutor extends OpExecutorBase {
 
   def handleLegacyPackMsg(pm: LegacyPackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                          (implicit we: WalletExt): Future[PackedMsg] = {
-    val recipKeyFut = verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager).map(_.head)
-    val senderVerKeyFut = verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
-
     val resp = for (
-      recipKey      <- recipKeyFut;
-      senderVerKey  <- senderVerKeyFut
+      recipKey      <- verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager).map(_.head);
+      senderVerKey  <- verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
     ) yield {
-      asScalaFuture {
-        senderVerKey match {
-          case None             => Crypto.anonCrypt(recipKey, pm.msg)
-          case Some(senderKey)  => Crypto.authCrypt(we.wallet, senderKey, recipKey, pm.msg)
-        }
-      }.map{ r => PackedMsg(r) }
+      val fut = senderVerKey match {
+        case None             => Crypto.anonCrypt(recipKey, pm.msg)
+        case Some(senderKey)  => Crypto.authCrypt(we.wallet, senderKey, recipKey, pm.msg)
+      }
+      fut.map(r => PackedMsg(r))
     }
     resp.flatten
   }
 
   def handleLegacyUnpackMsg(pm: LegacyUnpackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                            (implicit we: WalletExt): Future[UnpackedMsg] = {
-    val fromVerKeyFut = verKeyFuture(pm.fromVerKey.toSet, util, ledgerPoolManager).map(_.head)
 
     val result = for (
-      fromVerKey <- fromVerKeyFut
+      fromVerKey <- verKeyFuture(pm.fromVerKey.toSet, util, ledgerPoolManager).map(_.head)
     ) yield {
       val result = if (pm.isAnonCryptedMsg) {
-        asScalaFuture(Crypto.anonDecrypt(we.wallet, fromVerKey, pm.msg))
-          .map((_, None))
+        Crypto.anonDecrypt(we.wallet, fromVerKey, pm.msg)
+          .map(dm => UnpackedMsg(dm, None, None))
       } else {
-        asScalaFuture(Crypto.authDecrypt(we.wallet, fromVerKey, pm.msg))
-          .map(r => (r.getDecryptedMessage, Option(r.getVerkey)))
+        Crypto.authDecrypt(we.wallet, fromVerKey, pm.msg)
+          .map(dr => UnpackedMsg(dr.getDecryptedMessage, Option(dr.getVerkey), None))
       }
-      result.map { case (decryptedMsg, senderVerKey) =>
-        UnpackedMsg(decryptedMsg, senderVerKey, None)
-      }.recover {
+      result.recover {
         case _: InvalidStructureException =>
           throw new BadRequestErrorException(INVALID_VALUE.statusCode,
             Option("invalid sealed/encrypted box"))
@@ -84,27 +63,23 @@ object CryptoOpExecutor extends FutureConverter {
 
   def handlePackMsg(pm: PackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                    (implicit we: WalletExt): Future[PackedMsg] = {
-    // Question: Should JSON validation happen for msg happen here or is it left to libindy?
+    // Question: Should JSON validation for msg happen here or is it left to libindy?
     // Question: Since libindy expects bytes, should msg be bytes and not string. This will
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
 
-    val recipKeysFut = verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager)
-    val senderVerKeyFut = verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
-
     val result = for (
-      recipKeys     <- recipKeysFut;
-      senderVerKey  <- senderVerKeyFut
+      recipKeys     <- verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager);
+      senderVerKey  <- verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
     ) yield {
       val recipKeysJson = jsonArray(recipKeys)
-      asScalaFuture {
-        Crypto.packMessage(we.wallet, recipKeysJson, senderVerKey.orNull, pm.msg)
-      }.map(PackedMsg(_))
+      Crypto.packMessage(we.wallet, recipKeysJson, senderVerKey.orNull, pm.msg)
+      .map(PackedMsg(_))
     }
     result.flatten
   }
 
   def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt): Future[UnpackedMsg] = {
-    asScalaFuture(Crypto.unpackMessage(we.wallet, um.msg))
+    Crypto.unpackMessage(we.wallet, um.msg)
       .map(r => UnpackedMsg(r, None, None))
       .recover {
         case e: BadRequestErrorException => throw e
@@ -120,11 +95,21 @@ object CryptoOpExecutor extends FutureConverter {
 
   def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[Array[Byte]] = {
     val verKeyFuture = handleGetVerKey(GetVerKey(smp.keyInfo))
-    val result = for (
-      verKey <- verKeyFuture
-    ) yield {
-      asScalaFuture(Crypto.cryptoSign(we.wallet, verKey, smp.msg))
+    verKeyFuture.flatMap { verKey =>
+      Crypto.cryptoSign(we.wallet, verKey, smp.msg)
     }
-    result.flatten
+  }
+
+  def verifySig(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte]): Future[VerifySigResult] = {
+    val detail = s"challenge: '$challenge', signature: '$signature'"
+    Crypto.cryptoVerify(verKey, challenge, signature)
+      .map(VerifySigResult(_))
+      .recover {
+          case _@ (_:InvalidStructureException |_: InvalidParameterException) =>
+            throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
+              Option("signature verification failed"), Option(detail))
+          case _: Exception => throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
+            Option("unhandled error"), Option(detail))
+      }
   }
 }

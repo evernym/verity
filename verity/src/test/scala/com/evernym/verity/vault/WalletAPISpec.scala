@@ -1,6 +1,5 @@
 package com.evernym.verity.vault
 
-import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
@@ -8,20 +7,20 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.protocol.engine.WalletAccess.KEY_ED25519
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.KEY_ED25519
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
 
 class WalletAPISpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {
 
-  lazy val config:AppConfig = new TestAppConfig()
-  lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(config)
-  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(config)
-  lazy val walletService = new ActorWalletService(ActorSystem())
-  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(config, TestUtil, walletService, walletProvider, poolConnManager)
+  lazy val appConfig:AppConfig = new TestAppConfig()
+  lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(appConfig)
+  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
+  lazy val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
+  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
 
   lazy val aliceWap: WalletAPIParam = createWallet("alice", walletAPI)
   lazy val bobWap: WalletAPIParam = createWallet("bob", walletAPI)

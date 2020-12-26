@@ -16,7 +16,8 @@ import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{DID, WalletAccess}
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
 import com.evernym.verity.util.Util.getJsonStringFromMap

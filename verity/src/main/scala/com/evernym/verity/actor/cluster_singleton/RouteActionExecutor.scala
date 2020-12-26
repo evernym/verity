@@ -6,13 +6,12 @@ import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
 import com.evernym.verity.actor.agent.maintenance.{ProcessPending, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, GetRegisteredRouteSummary, GetRouteBatch, GetRouteBatchResult, InternalMsgRouteParam, RoutingAgentBucketMapperV1}
-import com.evernym.verity.actor.base.BaseNonPersistentActor
-import com.evernym.verity.actor.base.{AlreadyDone, Done, Start, Stop}
+import com.evernym.verity.actor.base.{CoreActorExtended, AlreadyDone, Done, Start, Stop}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
 class RouteMaintenanceHelper(val appConfig: AppConfig, val agentMsgRouter: AgentMsgRouter)
-  extends BaseNonPersistentActor {
+  extends CoreActorExtended {
 
   override def receiveCmd: Receive = {
     case mcw: MaintenanceCmdWrapper  => getRequiredActor(mcw.taskId).forward(mcw.cmd)
@@ -24,7 +23,7 @@ class RouteMaintenanceHelper(val appConfig: AppConfig, val agentMsgRouter: Agent
 }
 
 class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsgRouter)
-  extends BaseNonPersistentActor {
+  extends CoreActorExtended {
 
   override def receiveCmd: Receive = {
     case Init                         => handleInit()

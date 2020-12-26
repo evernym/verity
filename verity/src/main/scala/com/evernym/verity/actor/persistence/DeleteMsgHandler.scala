@@ -18,7 +18,7 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
    * this takes care of deleting messages in batches
    * and increases/decreases number of messages (or batch size) accordingly
    * and will make sure it does delete messages eventually
-   * @param toSeqNo
+   * @param toSeqNo sequence number till which events needs to be deleted
    */
   def deleteMessagesExtended(toSeqNo: Long): Unit = {
     deleteMsgsTillSeqNo = toSeqNo

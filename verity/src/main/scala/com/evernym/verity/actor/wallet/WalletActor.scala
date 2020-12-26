@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.wallet
 
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.ActorRef
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.Status.UNHANDLED
 import com.evernym.verity.actor.ActorMessage
@@ -13,6 +13,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.util.UtilBase
 import com.evernym.verity.vault.WalletUtil._
@@ -22,10 +23,10 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 
-class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
-  extends Actor {
+class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
+  extends CoreActor {
 
-  final override def receive: Receive = {
+  final override def receiveCmd: Receive = {
     case cmd: WalletCommand =>    //only entertain commands extending 'WalletCommand'
       val sndr = sender()
       val resp = cmd match {
@@ -39,14 +40,16 @@ class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolC
         case cmd =>
           Future.failed(WalletNotOpened("cmd can't be executed while wallet is not yet opened: " + cmd))
       }
-      handleFut(sndr, resp)
+      handleRespFut(cmd, sndr, resp)
 
   }
 
-  def handleFut(sndr: ActorRef, fut: Future[Any]): Unit = {
+  def handleRespFut(cmd: Any, sndr: ActorRef, fut: Future[Any]): Unit = {
     fut.recover {
       case e: HandledErrorException => WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
-      case _: RuntimeException      => WalletCmdErrorResponse(UNHANDLED)
+      case e: Exception      =>
+        logger.warn(s"error while executing wallet '${cmd.getClass.getSimpleName}' : " + e.getMessage)
+        WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
     }.map { r =>
       sndr ! r
     }
@@ -85,18 +88,11 @@ class WalletActor(appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolC
   implicit val walletParam: WalletParam = generateWalletParam(entityId, appConfig, walletProvider)
   implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, walletParam, util, poolManager)
 
-  def entityId: String = self.path.name
-  def entityName: String = self.path.parent.name
-
-  @throws(classOf[Exception])
-  //#lifecycle-hooks
-  override def preStart(): Unit = {
+  override def beforeStart(): Unit = {
     openWalletIfExists()
   }
 
-  @throws(classOf[Exception])
-  //#lifecycle-hooks
-  override def postStop(): Unit = {
+  override def afterStop(): Unit = {
     closeWallet()
   }
 

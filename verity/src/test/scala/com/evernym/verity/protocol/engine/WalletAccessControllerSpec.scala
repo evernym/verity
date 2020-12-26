@@ -2,8 +2,9 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.wallet.NewKeyCreated
 import com.evernym.verity.ledger.LedgerRequest
-import com.evernym.verity.libindy.wallet.WalletAccessLibindy
-import com.evernym.verity.protocol.engine.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
+import com.evernym.verity.protocol.engine.external_api_access.{AccessNewDid, AccessSign, AccessVerify, SignatureResult, WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.testkit.{BasicSpec, TestWalletHelper}
 import com.evernym.verity.util.ParticipantUtil
 
@@ -45,14 +46,14 @@ class WalletAccessControllerSpec extends BasicSpec {
   }
 
   class TestWalletAccess extends WalletAccess {
-    import WalletAccess._
+    import com.evernym.verity.protocol.engine.external_api_access.WalletAccess._
 
     override def newDid(keyType: KeyType): Try[(DID, VerKey)] = Try(("Did", "Verkey"))
 
     override def verKey(forDID: DID): Try[VerKey] = Try("Verkey")
 
     def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Try[SignatureResult] =
-      Try(SignatureResult(Array[Byte](1, 2, 3), "VerKey"))
+      Try(external_api_access.SignatureResult(Array[Byte](1, 2, 3), "VerKey"))
 
     def verify(signer: ParticipantId,
                msg: Array[Byte],
@@ -101,10 +102,10 @@ class WalletAccessControllerSpec extends BasicSpec {
 }
 
 object WalletAccessTest extends TestWalletHelper {
-  walletDetail.walletAPI.createWallet(wap)
-  val newKey: NewKeyCreated = walletDetail.walletAPI.createNewKey()
+  agentWalletAPI.walletAPI.createWallet(wap)
+  val newKey: NewKeyCreated = agentWalletAPI.walletAPI.createNewKey()
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =
-    new WalletAccessLibindy(appConfig, walletDetail.walletAPI, selfParticipantId)
+    new WalletAccessAPI(appConfig, agentWalletAPI.walletAPI, selfParticipantId)
 }
 

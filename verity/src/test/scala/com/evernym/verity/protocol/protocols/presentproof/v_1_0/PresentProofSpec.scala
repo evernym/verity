@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.{AnonCredRequests, LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}

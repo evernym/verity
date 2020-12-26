@@ -128,17 +128,17 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, connReqAnswerMsg.answerStatusCode, theirDidDocDetailOpt))
 
     theirDidDocDetailOpt.foreach { _ =>
-      walletDetail.walletAPI.storeTheirKey(
+      walletAPI.storeTheirKey(
         StoreTheirKey(connReqAnswerMsg.senderAgencyDetail.DID,
           connReqAnswerMsg.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
 
-      walletDetail.walletAPI.storeTheirKey(
+      walletAPI.storeTheirKey(
         StoreTheirKey(connReqAnswerMsg.senderDetail.DID,
           connReqAnswerMsg.senderDetail.verKey, ignoreIfAlreadyExists = true))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
-      walletDetail.walletAPI.storeTheirKey(
+      walletAPI.storeTheirKey(
         StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }
@@ -185,7 +185,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
-    walletDetail.walletAPI.getVerKeyOption(
+    walletAPI.getVerKeyOption(
         GetVerKeyOpt(KeyInfo(Right(GetVerKeyByDIDParam(senderDID, getKeyFromPool = false))))) foreach {_ =>
       throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))

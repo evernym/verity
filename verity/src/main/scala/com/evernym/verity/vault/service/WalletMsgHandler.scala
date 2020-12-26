@@ -3,24 +3,19 @@ package com.evernym.verity.vault.service
 
 import java.util.concurrent.ExecutionException
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.SIGNATURE_VERIF_FAILED
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
-import com.evernym.verity.libindy.wallet.api.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, FutureConverter, LedgerWalletOpExecutor}
+import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, LedgerWalletOpExecutor}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.{HashUtil, UtilBase}
 import com.evernym.verity.vault.{WalletConfig, WalletExt, WalletProvider}
-import org.hyperledger.indy.sdk.{InvalidParameterException, InvalidStructureException}
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult
-import org.hyperledger.indy.sdk.crypto.Crypto
 
 import scala.concurrent.Future
 
-object WalletMsgHandler extends FutureConverter {
+object WalletMsgHandler {
 
   def executeAsync[T](cmd: Any)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Any] = {
     cmd match {
@@ -97,7 +92,7 @@ object WalletMsgHandler extends FutureConverter {
   private def handleVerifySigByKeyInfo(param: VerifySigByKeyInfo)
                               (implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
     handleGetVerKey(GetVerKey(param.keyInfo)).flatMap { verKey =>
-      coreVerifySig(verKey, param.challenge, param.signature)
+      CryptoOpExecutor.verifySig(verKey, param.challenge, param.signature)
     }
   }
 
@@ -145,25 +140,6 @@ object WalletMsgHandler extends FutureConverter {
         wmp.util.getVerKey(r.did, we, r.getKeyFromPool, wmp.poolManager)
       }
     )
-  }
-
-
-  def coreVerifySig(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte]): Future[VerifySigResult] = {
-    val detail = s"challenge: '$challenge', signature: '$signature'"
-    asScalaFuture(Crypto.cryptoVerify(verKey, challenge, signature))
-      .map(VerifySigResult(_))
-      .recover {
-        case e: ExecutionException =>
-          e.getCause match {
-            case _@ (_:InvalidStructureException |_: InvalidParameterException) =>
-              throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
-                Option("signature verification failed"), Option(detail))
-            case _: Exception => throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
-              Option("unhandled error"), Option(detail))
-          }
-        case _: Exception => throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
-          Option("unhandled error"), Option(detail))
-      }
   }
 }
 

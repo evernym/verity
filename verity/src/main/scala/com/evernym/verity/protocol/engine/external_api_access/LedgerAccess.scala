@@ -1,7 +1,8 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.external_api_access
 
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, TxnResp}
+import com.evernym.verity.protocol.engine.DID
 
 import scala.util.Try
 

@@ -10,6 +10,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol.Nonce

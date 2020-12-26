@@ -4,22 +4,17 @@ import java.time.Instant
 
 import akka.actor.Props
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.base.BaseNonPersistentActor
-import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeMetricsRecorder
 
 import scala.concurrent.duration._
 
-object MsgTracer {
-  def props(appConfig: AppConfig): Props = Props(classOf[MsgTracer], appConfig)
-}
-
 /**
  * msg tracer sharded actor
  * @param appConfig
  */
-class MsgTracer(val appConfig: AppConfig) extends BaseNonPersistentActor {
+class MsgTracer(val appConfig: AppConfig) extends CoreActorExtended {
 
   val msgTracingMetricsRecorder = new MsgRespTimeMetricsRecorder(appConfig)
 
@@ -50,3 +45,7 @@ case class MetricTag(name: String, value: Any)
 
 case class ReqReceived(respMode: RespMode = NoResp, atEpochMillis: Long = Instant.now().toEpochMilli) extends MsgTracerActorMsg
 case class CaptureMetrics(msgName: String, nextHop: String, atEpochMillis: Long = Instant.now().toEpochMilli) extends MsgTracerActorMsg
+
+object MsgTracer {
+  def props(appConfig: AppConfig): Props = Props(new MsgTracer(appConfig))
+}

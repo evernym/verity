@@ -4,6 +4,7 @@ import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants.{NAME, _}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess}
 import com.evernym.verity.protocol.engine.util.?=>
 
 object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, Event, State, String] {

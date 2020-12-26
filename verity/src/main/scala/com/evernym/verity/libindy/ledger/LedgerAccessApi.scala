@@ -3,7 +3,8 @@ package com.evernym.verity.libindy.ledger
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerSvc, TxnResp}
-import com.evernym.verity.protocol.engine.{DID, LedgerAccess, LedgerAccessException, WalletAccess}
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, LedgerAccessException, WalletAccess}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

@@ -1,17 +1,10 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.external_api_access
 
 import com.evernym.verity.ledger.LedgerRequest
+import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.util.Base64Util
 
 import scala.util.Try
-
-case class InvalidSignType(message: String) extends Exception(message)
-case class NoWalletFound(message: String)   extends Exception(message)
-
-case class SignatureResult(signature: Array[Byte], verKey: VerKey) {
-  def toBase64: String = Base64Util.getBase64Encoded(signature)
-  def toBase64UrlEncoded: String = Base64Util.getBase64UrlEncoded(signature)
-}
 
 trait WalletAccess
   extends AnonCredRequests {
@@ -22,7 +15,8 @@ trait WalletAccess
 
   def verKey(forDID: DID): Try[VerKey]
 
-  def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Try[SignatureResult]
+  def sign(msg: Array[Byte],
+           signType: SignType = SIGN_ED25519_SHA512_SINGLE): Try[SignatureResult]
 
   /**
     * Protocols often do not know the verkey associated with another participants. A protocol should not have to
@@ -61,4 +55,12 @@ object WalletAccess {
   val SIGN_ED25519_SHA512_SINGLE: SignType = "spec/signature/1.0/ed25519Sha512_single"
   // TODO: Decide if following belong here or at a broader level
   type PackedMsg = Array[Byte]
+}
+
+case class InvalidSignType(message: String) extends Exception(message)
+case class NoWalletFound(message: String)   extends Exception(message)
+
+case class SignatureResult(signature: Array[Byte], verKey: VerKey) {
+  def toBase64: String = Base64Util.getBase64Encoded(signature)
+  def toBase64UrlEncoded: String = Base64Util.getBase64UrlEncoded(signature)
 }

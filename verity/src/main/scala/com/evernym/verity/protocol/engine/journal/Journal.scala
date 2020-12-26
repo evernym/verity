@@ -1,8 +1,6 @@
 package com.evernym.verity.protocol.engine.journal
 
 import com.typesafe.scalalogging.Logger
-import org.fusesource.jansi.Ansi.ansi
-import org.fusesource.jansi.Ansi.Color._
 
 /**
   * For setting global detailed logging attributes. Implementations of the

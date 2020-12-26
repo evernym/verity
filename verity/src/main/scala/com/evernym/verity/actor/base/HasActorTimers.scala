@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.Duration
 
-trait HasActorMsgScheduler extends Timers { this: ActorBase with Actor =>
+trait HasActorTimers extends Timers { this: CoreActorExtended with Actor =>
 
   private val logger: Logger = LoggingUtil.getLoggerByName("HasActorMsgScheduler")
 

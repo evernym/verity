@@ -4,7 +4,7 @@ import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.base.{BaseNonPersistentActor, Done}
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
@@ -17,11 +17,7 @@ import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
 
 
-object NodeSingleton {
-  def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
-}
-
-class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor with HasActorResponseTimeout {
+class NodeSingleton(val appConfig: AppConfig) extends CoreActorExtended with HasActorResponseTimeout {
 
   def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
     singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
@@ -114,3 +110,7 @@ case object DrainNode extends ActorMessageObject
 case object DrainInitiated extends ActorMessageObject
 case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
   extends ActorMessageClass
+
+object NodeSingleton {
+  def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
+}

@@ -32,6 +32,7 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlDetail}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
@@ -115,7 +116,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
                                      isEdgeAgentsKeyDlgProof: Boolean): Unit = {
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
-    val verifResult = walletDetail.walletAPI.verifySigWithVerKey(
+    val verifResult = walletAPI.verifySigWithVerKey(
       VerifySigByVerKey(signedByVerKey, challenge, sig))
     if (! verifResult.verified) {
       val errorMsgPrefix = if (isEdgeAgentsKeyDlgProof) "local" else "remote"
@@ -450,7 +451,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   lazy val `userName_!`: String = ctx.getState.parameters.paramValueRequired(NAME)
   lazy val `userLogoUrl_!`: String = ctx.getState.parameters.paramValueRequired(LOGO_URL)
 
-  override def walletParam: WalletParam = ctx.SERVICES_DEPRECATED.walletParam
+  override def walletAPI: WalletAPI = ctx.SERVICES_DEPRECATED.walletAPI
 
   /**
    * this method should not be used anywhere else than where it is already used

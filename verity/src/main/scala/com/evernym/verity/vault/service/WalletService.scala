@@ -8,6 +8,11 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorExce
 import com.evernym.verity.Status.INVALID_VALUE
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet.WalletCmdErrorResponse
+import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
+import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
+import com.evernym.verity.metrics.MetricsWriter
+import com.typesafe.scalalogging.Logger
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
 
@@ -17,6 +22,8 @@ import scala.reflect.ClassTag
 
 
 trait WalletService extends AsyncToSync {
+
+  private val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
   /**
    * synchronous/BLOCKING wallet service call
@@ -43,6 +50,9 @@ trait WalletService extends AsyncToSync {
     val startTime = Instant.now()
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
+        logger.error(s"error while executing wallet command '${cmd.getClass.getSimpleName}''",
+          (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
+        MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         wer.sd.statusCode match {
           case INVALID_VALUE.statusCode => throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
           case _ => throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
@@ -56,6 +66,7 @@ trait WalletService extends AsyncToSync {
         .withTag("operation", s"wallet cmd: ${cmd.getClass.getSimpleName}")
         .withTag("component", "WalletService")
         .record(seconds)
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
       resp
     }
   }

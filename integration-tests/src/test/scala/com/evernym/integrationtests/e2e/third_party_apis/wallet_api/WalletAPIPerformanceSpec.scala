@@ -73,7 +73,7 @@ class WalletAPIPerformanceSpec
 
   def walletAPIConfig: Config = ConfigFactory parseString {
     """
-      verity.wallet-api = "actor"                   # use "legacy" to test 'legacy wallet api'
+      verity.wallet-api = "standard"                   # use "legacy" to test 'legacy wallet api'
       verity.lib-indy.wallet.type = "mysql"
       """
   }

@@ -354,7 +354,9 @@ trait AgentOutgoingMsgHandler
     else false
   }
 
-  def packOutgoingMsg(omp: OutgoingMsgParam, toParticipantId: ParticipantId, msgPackFormat: MsgPackFormat,
+  def packOutgoingMsg(omp: OutgoingMsgParam,
+                      toParticipantId: ParticipantId,
+                      msgPackFormat: MsgPackFormat,
                       msgSpecificRecipVerKey: Option[KeyInfo]=None): OutgoingMsgParam = {
     logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey")
     val toDID = ParticipantUtil.agentId(toParticipantId)

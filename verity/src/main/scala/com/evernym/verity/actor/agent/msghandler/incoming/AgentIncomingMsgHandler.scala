@@ -337,7 +337,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     Base58Util.decode(senderAuth.signature) match {
       case Success(signature) =>
         val toVerify = VerifySigByVerKey(senderAuth.verKey, senderAuth.verKey.getBytes, signature)
-        if (!walletDetail.walletAPI.verifySigWithVerKey(toVerify).verified)
+        if (!agentWalletAPI.walletAPI.verifySigWithVerKey(toVerify).verified)
           throw new UnauthorisedErrorException
       case Failure(_) => throw new UnauthorisedErrorException
     }

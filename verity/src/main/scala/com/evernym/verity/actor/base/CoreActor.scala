@@ -1,38 +1,28 @@
 package com.evernym.verity.actor.base
 
-import java.io.Serializable
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{Actor, ActorRef, PoisonPill, ReceiveTimeout}
-import com.evernym.verity.actor.{ActorMessage, ActorMessageClass, ActorMessageObject, ExceptionHandler}
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import akka.actor.{Actor, ActorRef, PoisonPill}
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
+import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
 import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
 /**
- * base actor for almost all actors (persistent or non-persistent) used in this codebase
+ * core actor for almost all actors (persistent or non-persistent) used in this codebase
  */
-trait ActorBase extends HasActorMsgScheduler with HasAppConfig { this: Actor =>
+trait CoreActor extends Actor {
 
   var actorStopStartedOpt: Option[LocalDateTime] = None
 
-  def cmdSender: ActorRef
+  def cmdSender: ActorRef = sender()
 
   // We have need of a super generic logging. But this is too high level to define a generic logger
   // So we have this private logger for those needs but should not be sub-classes
-  private val genericLogger: Logger = LoggingUtil.getLoggerByName("ActorCommon")
-
-  /**
-   * incoming command handler to be implemented by super class
-   *
-   * @return
-   */
-  def cmdHandler: Receive
+  protected val genericLogger: Logger = LoggingUtil.getLoggerByName(getClass.getSimpleName)
 
   def entityId: String = self.path.name
 
@@ -40,10 +30,10 @@ trait ActorBase extends HasActorMsgScheduler with HasAppConfig { this: Actor =>
 
   def actorId: String = entityId
 
-  var totalPersistedEvents: Int = 0
-  var totalRecoveredEvents: Int = 0
-
-  def preReceiveTimeoutCheck(): Boolean = true
+  final override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    logCrashReason(reason, message)
+    super.preRestart(reason, message)
+  }
 
   final override def preStart(): Unit = {
     MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
@@ -58,6 +48,7 @@ trait ActorBase extends HasActorMsgScheduler with HasAppConfig { this: Actor =>
       val stopTimeMillis = ChronoUnit.MILLIS.between(actorStopStarted, actorStopped)
       genericLogger.debug(s"[$actorId] stop-time-in-millis: $stopTimeMillis")
     }
+    afterStop()
   }
 
   def stopActor(): Unit = {
@@ -70,33 +61,11 @@ trait ActorBase extends HasActorMsgScheduler with HasAppConfig { this: Actor =>
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
   }
 
-  def handleReceiveTimeout(): Unit = {
-    genericLogger.debug(s"received ReceiveTimeout for ${self.path}")
-    if (preReceiveTimeoutCheck()) {
-      actorStopStartedOpt = Option(LocalDateTime.now)
-      genericLogger.debug(s"[$actorId] actor wil start preparing for shutdown... ")
-      stopActor()
-      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
-    }
-  }
-
   def postCommandExecution(cmd: Any): Unit = {
     //default implementation (do nothing)
   }
 
-  def handleCommand(actualCmdReceiver: Receive): Receive = {
-    case GetActorDetail     =>
-      sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
-
-    case s: Start           =>
-      if (s.sendBackConfirmation) sender ! Done
-
-    case s: Stop            =>
-      if (s.sendBackConfirmation) sender ! Done
-      stopActor()
-
-    case ReceiveTimeout     => handleReceiveTimeout()
-
+  private def handleCoreCommand(actualCmdReceiver: Receive): Receive = {
     case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
       try {
         actualCmdReceiver(cmd)
@@ -114,22 +83,33 @@ trait ActorBase extends HasActorMsgScheduler with HasAppConfig { this: Actor =>
 
   var preStartTime: LocalDateTime = _
 
+  /**
+   * will be executed before actor starts as part of "preStart" actor lifecycle hook
+   */
   def beforeStart(): Unit = {
     //can be overridden by implementing class
   }
 
+  /**
+   * will be executed after actor stops as part of "postStop" actor lifecycle hook
+   */
+  def afterStop(): Unit = {
+    //can be overridden by implementing class
+  }
+
+  def coreCommandHandler(actualReceiver: Receive): Receive =
+    handleCoreCommand(actualReceiver)
+
   def setNewReceiveBehaviour(receiver: Receive): Unit = {
-    context.become(handleCommand(receiver))
+    context.become(coreCommandHandler(receiver))
   }
 
   def handleException(e: Throwable, sndr: ActorRef): Unit = {
     ExceptionHandler.handleException(e, sndr, Option(self))
   }
+
+  def receiveCmd: Receive
+  def cmdHandler: Receive = receiveCmd
+  override def receive: Receive = coreCommandHandler(cmdHandler)
 }
 
-abstract class SerializableObject extends Serializable with ActorMessageObject
-case object Done extends SerializableObject
-case object NotFound extends SerializableObject
-case object AlreadyDone extends SerializableObject
-case class Stop(sendBackConfirmation: Boolean = false) extends ActorMessageClass
-case class Start(sendBackConfirmation: Boolean = false) extends ActorMessageClass

@@ -140,7 +140,9 @@ trait CommonConfig {
   val SALT_WALLET_ENCRYPTION = s"$SALT.wallet-encryption"
   val SALT_EVENT_ENCRYPTION = s"$SALT.event-encryption"
 
-  val WALLET_ACTOR_PASSIVATE_TIME = s"$VERITY.wallet-actor-passivate-time"
+  val PASSIVATE_TIME_IN_SECONDS = "passivate-time-in-seconds"
+  val SHARDED_ACTOR_PASSIVATE_TIME = s"$VERITY.sharded-actor-passivate-time"
+  val WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS = s"$SHARDED_ACTOR_PASSIVATE_TIME.WalletActor.$PASSIVATE_TIME_IN_SECONDS"
 
   private val SECRET = s"$VERITY.secret"
   val SECRET_ROUTING_AGENT = s"$SECRET.routing-agent"

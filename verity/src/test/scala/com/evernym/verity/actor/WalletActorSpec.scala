@@ -12,14 +12,16 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.protocol.engine.WalletAccess.KEY_ED25519
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.RevocationDetails
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletAPIParam}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
 
 import scala.concurrent.duration.DurationInt
+
 
 class WalletActorSpec
   extends ActorSpec
@@ -164,12 +166,13 @@ class WalletActorSpec
         walletActor ! CreateMasterSecret("masterSecretId")
         val masterSecretId = expectMsgType[String]
 
-        val schema = Anoncreds.issuerCreateSchema(keys.did, "name", "version", seqToJson(Array("attr1", "attr2"))).get()
+        val schema = Anoncreds.issuerCreateSchema(keys.did, "name", "version",
+          seqToJson(Array("attr1", "attr2"))).get()
         walletActor ! CreateCredDef(issuerDID = keys.did,
           schemaJson = schema.getSchemaJson,
           tag = "tag",
           sigType = Some("CL"),
-          revocationDetails = Some(RevocationDetails(false, "tails_file", 5).toString))
+          revocationDetails = Some(RevocationDetails(support_revocation = false, "tails_file", 5).toString))
         val createdCredDef = expectMsgType[CreatedCredDef](60.second)
 
         walletActor ! CreateCredOffer(createdCredDef.credDefId)
@@ -183,6 +186,14 @@ class WalletActorSpec
     }
 
 
+    "when sent CreateCred command with invalid value" - {
+      "should respond with error message" in {
+        walletActor ! CreateCred("credOfferJson", "credReqJson", "credValuesJson",
+          "revRegistryId", -1)
+        expectMsgType[WalletCmdErrorResponse]
+      }
+    }
+
     "when sent CreateCred command" - {
       "should respond with a created credential" ignore {
         walletActor ! CreateCred("credOfferJson", "credReqJson", "credValuesJson",
@@ -191,11 +202,25 @@ class WalletActorSpec
       }
     }
 
+    "when sent CredForProofReq command with invalid value" - {
+      "should respond with error message" in  {
+        walletActor ! CredForProofReq("proofRequest")
+        expectMsgType[WalletCmdErrorResponse]
+      }
+    }
 
     "when sent CredForProofReq command" - {
       "should respond with a credential for the proof req" ignore  {
         walletActor ! CredForProofReq("proofRequest")
         expectMsgType[String]
+      }
+    }
+
+    "when sent CreateProof command with invalid value" - {
+      "should respond with error message" in {
+        walletActor ! CreateProof("proofRequest", "usedCredentials", "schemas",
+          "credentialDefs", "revStates", "masterSecret")
+        expectMsgType[WalletCmdErrorResponse]
       }
     }
 
@@ -206,7 +231,22 @@ class WalletActorSpec
         expectMsgType[String]
       }
     }
+
+    "when waited for more than passivate time" - {
+      "should be stopped" in {
+        val prevWalletActorRef = lastSender
+        Thread.sleep((PASSIVATE_TIMEOUT_IN_SECONDS*1000)+10000)
+        walletActor ! CreateNewKey()
+        expectMsgType[NewKeyCreated]
+        lastSender should not be prevWalletActorRef   //this indirectly proves actor got restarted
+      }
+    }
   }
 
+  val PASSIVATE_TIMEOUT_IN_SECONDS = 15
 
+  override def overrideConfig: Option[Config] = Option {
+    val confStr = s"verity.sharded-actor-passivate-time.WalletActor.passivate-time-in-seconds = 15"
+    ConfigFactory.parseString(confStr)
+  }
 }

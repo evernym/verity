@@ -35,9 +35,8 @@ object AgentMsgTransformerApi {
   def pack(mpf: MsgPackFormat,
            msg: String,
            recipVerKeys: Set[KeyInfo],
-           senderVerKey: Option[KeyInfo],
-           packParam: PackParam = PackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    msgTransformer(mpf).pack(msg, recipVerKeys, senderVerKey, packParam)
+           senderVerKey: Option[KeyInfo])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
+    msgTransformer(mpf).pack(msg, recipVerKeys, senderVerKey)
   }
 
   def unpack(msg: Array[Byte],

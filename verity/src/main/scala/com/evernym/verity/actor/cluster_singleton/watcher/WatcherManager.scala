@@ -18,7 +18,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ActorErrorResp
-import com.evernym.verity.actor.base.BaseNonPersistentActor
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -30,7 +30,8 @@ import scala.concurrent.Future
  * @param appConfig application configuration
  * @param childActorDetails child actor to be created by this Watcher Manager actor
  */
-class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[WatcherChildActorDetail]) extends BaseNonPersistentActor {
+class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[WatcherChildActorDetail])
+  extends CoreActorExtended {
   val logger: Logger = getLoggerByClass(classOf[WatcherManager])
 
   childActorDetails.foreach { cad =>
@@ -60,7 +61,7 @@ class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[Watche
 }
 
 
-trait WatcherBase extends BaseNonPersistentActor with HasActorResponseTimeout with HasAppConfig {
+trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with HasAppConfig {
   implicit def appConfig: AppConfig
 
   val logger: Logger = getLoggerByClass(classOf[WatcherBase])
@@ -199,5 +200,5 @@ case class WatcherChildActorDetail(enabledConfName: String, actorName: String, a
 object WatcherManager {
   val name: String = WATCHER_MANAGER
   def props(appConfig: AppConfig, childActorDetails: Set[WatcherChildActorDetail]): Props =
-    Props(classOf[WatcherManager], appConfig, childActorDetails)
+    Props(new WatcherManager(appConfig, childActorDetails))
 }

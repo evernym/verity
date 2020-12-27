@@ -39,7 +39,7 @@ class LedgerTxnExecutorV1Spec
   }
 
   lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
-  lazy val wap: WalletAPIParam =  WalletAPIParam(submitterDID)
+  implicit lazy val wap: WalletAPIParam =  WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 
   lazy val targetDidPair: DidPair = DidPair("VFN92wTpay26L64XnEQsfR", "GPxvxemamgNTYpe1J6J1ivr5qwsBDWFCxHHzZG67mhW3")
@@ -60,7 +60,7 @@ class LedgerTxnExecutorV1Spec
               |"op":"REPLY"}""".stripMargin
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-          when(mockWalletAPI.signLedgerRequest(any[SignLedgerRequest]))
+          when(mockWalletAPI.executeAsync[LedgerRequest](any[SignLedgerRequest])(any[WalletAPIParam]))
             .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).reqDetail))
           val response = Await.result(
             ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime

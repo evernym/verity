@@ -150,7 +150,7 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
         if(r.needsSigning)
           walletAPI
             .getOrElse(throw new Exception("WalletAPI required for signing ledger transactions"))
-            .signLedgerRequest(SignLedgerRequest(r, submitterDetail))
+            .executeAsync[LedgerRequest](SignLedgerRequest(r, submitterDetail))(submitterDetail.wapReq)
         else Future.successful(r)
       }
   }

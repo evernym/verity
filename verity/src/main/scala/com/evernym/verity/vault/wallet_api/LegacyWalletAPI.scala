@@ -11,7 +11,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.wallet.{GetVerKeyOpt, _}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
+import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
@@ -20,17 +20,15 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util.UtilBase
 import com.evernym.verity.vault.WalletUtil.generateWalletParam
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.WalletParam
+import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
 import org.hyperledger.indy.sdk.crypto.Crypto
 import org.hyperledger.indy.sdk.did.{Did, DidJSONParameters}
-import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.wallet.{WalletItemAlreadyExistsException, WalletItemNotFoundException}
 import org.hyperledger.indy.sdk.{InvalidParameterException, InvalidStructureException}
 
-import scala.compat.java8.FutureConverters
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
@@ -88,22 +86,6 @@ class LegacyWalletAPI(appConfig: AppConfig,
     if (!wallets.contains(uniqueKey)) {
       wallets += uniqueKey -> w
     }
-  }
-
-  def signLedgerRequest(sr: SignLedgerRequest): Future[LedgerRequest] = {
-    executeOpWithWalletInfo(
-      "ledger op",
-      { we: WalletExt =>
-        FutureConverters.toScala(
-          signRequest(
-            we.wallet,
-            sr.submitterDetail.did,
-            sr.reqDetail.req
-          )
-        )
-      }
-    )(sr.submitterDetail.wap.getOrElse(throw new Exception("Signed Requests require Wallet Info"))) // TODO make a better exception
-      .map(sr.reqDetail.prepared)
   }
 
   def createWallet(wap: WalletAPIParam): WalletCreated.type = {
@@ -280,12 +262,6 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def unpackMsgAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
-    executeOpWithWalletInfo("unpack async msg", { we: WalletExt =>
-      Future(UnpackedMsg(Crypto.unpackMessage(we.wallet, msg).get, None, None))
-    })
-  }
-
   def LEGACY_unpackMsg(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
                       (implicit wap: WalletAPIParam): UnpackedMsg = {
     executeOpWithWalletInfo("legacy unpack msg", { we: WalletExt =>
@@ -309,35 +285,6 @@ class LegacyWalletAPI(appConfig: AppConfig,
         case e: Exception =>
           throw new BadRequestErrorException(UNHANDLED.statusCode,
             Option("unhandled error while unpacking message"))
-      }
-    })
-  }
-
-  def LEGACY_unpackMsgAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                           (implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
-    executeOpWithWalletInfo("legacy unpack async msg", { we: WalletExt =>
-      getVerKeyFromWallet(fromKeyInfo.get)(we).map { fvk =>
-        val (decryptedMsg, senderVerKey) = if (isAnonCryptedMsg) {
-          val parsedResult = Crypto.anonDecrypt(we.wallet, fvk, msg).get
-          (parsedResult, None)
-        } else {
-          val parsedResult = Crypto.authDecrypt(we.wallet, fvk, msg).get
-          (parsedResult.getDecryptedMessage, Option(parsedResult.getVerkey))
-        }
-        UnpackedMsg(decryptedMsg, senderVerKey, None)
-      }.recover {
-        case e: ExecutionException =>
-          e.getCause match {
-            case _: InvalidStructureException =>
-              throw new BadRequestErrorException(INVALID_VALUE.statusCode,
-                Option("invalid sealed/encrypted box"))
-            case _: Exception =>
-              throw new BadRequestErrorException(UNHANDLED.statusCode,
-                Option("unhandled error while unsealing/decrypting msg"))
-          }
-        case _: Exception =>
-          throw new BadRequestErrorException(UNHANDLED.statusCode,
-            Option("unhandled error while unsealing/decrypting msg"))
       }
     })
   }
@@ -421,4 +368,21 @@ class LegacyWalletAPI(appConfig: AppConfig,
                   revocRegDefs: String, revocRegs: String): Boolean = {
     Anoncreds.verifierVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs).get
   }
+
+  def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
+    val wp = generateWalletParam(wap.walletId, appConfig, walletProvider)
+    implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util, ledgerPoolManager)
+    val resp = cmd match {
+      case CreateWallet =>
+        val walletExt = WalletMsgHandler.handleCreateAndOpenWallet()
+        addToOpenedWalletIfReq(walletExt)(wp)
+        Future(WalletCreated)
+      case other        =>
+        executeOpWithWalletInfo("create proof", { implicit we: WalletExt =>
+          WalletMsgHandler.executeAsync[T](other)
+        })
+    }
+    resp.map(_.asInstanceOf[T])
+  }
+
 }

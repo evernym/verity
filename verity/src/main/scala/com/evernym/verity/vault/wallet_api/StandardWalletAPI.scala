@@ -1,8 +1,7 @@
 package com.evernym.verity.vault.wallet_api
 
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.wallet._
-import com.evernym.verity.ledger.LedgerRequest
+import com.evernym.verity.actor.wallet.{WalletCreated, _}
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, FutureConverter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -22,13 +21,6 @@ class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProv
     with AsyncToSync {
 
   val logger: Logger = getLoggerByClass(classOf[WalletAPI])
-
-  def signLedgerRequest(slr: SignLedgerRequest): Future[LedgerRequest] = {
-    val walletId = slr.submitterDetail.wap
-      .getOrElse(throw new Exception("signed requests require wallet info")) // TODO make a better exception
-      .walletId
-    walletService.executeAsync(walletId, slr).mapTo[LedgerRequest]
-  }
 
   def createWallet(wap: WalletAPIParam): WalletCreated.type = {
     walletService.executeSync[WalletCreated.type](wap.walletId, CreateWallet)
@@ -76,13 +68,6 @@ class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProv
     walletService.executeSync[UnpackedMsg](wap.walletId, LegacyUnpackMsg(msg, fromVerKey, isAnonCryptedMsg))
   }
 
-  def LEGACY_unpackMsgAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                           (implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
-    walletService
-      .executeAsync(wap.walletId, LegacyUnpackMsg(msg, fromVerKey, isAnonCryptedMsg))
-      .mapTo[UnpackedMsg]
-  }
-
   def packMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
              (implicit wap: WalletAPIParam): PackedMsg = {
     walletService.executeSync[PackedMsg](wap.walletId, PackMsg(msg, recipVerKeys, senderVerKey))
@@ -90,12 +75,6 @@ class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProv
 
   def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {
     walletService.executeSync[UnpackedMsg](wap.walletId, UnpackMsg(msg))
-  }
-
-  def unpackMsgAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg] = {
-    walletService
-      .executeAsync(wap.walletId, UnpackMsg(msg))
-      .mapTo[UnpackedMsg]
   }
 
   def createMasterSecret(masterSecretId: String)(implicit wap: WalletAPIParam): String = {
@@ -161,6 +140,10 @@ class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProv
       Anoncreds.verifierVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
       .map(_.booleanValue())
     }
+  }
+
+  def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
+    walletService.executeAsync(wap.walletId, cmd)
   }
 }
 

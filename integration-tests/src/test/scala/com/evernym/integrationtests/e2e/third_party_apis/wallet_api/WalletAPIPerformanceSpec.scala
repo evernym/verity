@@ -2,17 +2,17 @@ package com.evernym.integrationtests.e2e.third_party_apis.wallet_api
 
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.Executors
 
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 /**
@@ -28,6 +28,10 @@ class WalletAPIPerformanceSpec
 
   var totalUser: Int = 1000
   var successResp: Int = 0
+
+  //this is to make sure this test has capacity to run 1000 async tasks (via future)
+  implicit val executionContext: ExecutionContext =
+    ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1000))
 
   "WalletService" - {
     "when tried to setup lots of user wallets parallely" - {

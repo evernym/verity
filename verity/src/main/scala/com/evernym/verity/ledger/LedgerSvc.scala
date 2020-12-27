@@ -49,6 +49,7 @@ case class CredDefV1(id: String,
 trait Submitter {
   def did: DID
   def wap: Option[WalletAPIParam]
+  def wapReq: WalletAPIParam = wap.getOrElse(throw new Exception("Signed Requests require Wallet Info"))
 }
 object Submitter {
   def apply(did: DID, wap: Option[WalletAPIParam]): Submitter = WriteSubmitter(did, wap)

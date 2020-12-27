@@ -3,7 +3,7 @@ package com.evernym.verity.libindy.wallet
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
-import com.evernym.verity.protocol.engine.{external_api_access, _}
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.external_api_access.{InvalidSignType, SignatureResult, WalletAccess}
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.vault._
@@ -56,7 +56,7 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
     val submitter = Submitter(submitterDID, Some(wap))
 
     Try(Await.result(
-      walletApi.signLedgerRequest(SignLedgerRequest(ledgerRequest, submitter)),
+      walletApi.executeAsync[LedgerRequest](SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq),
       maxWaitTime
     ))
   }

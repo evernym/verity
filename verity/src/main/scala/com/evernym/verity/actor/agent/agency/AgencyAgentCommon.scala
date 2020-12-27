@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.actor.wallet.{NewKeyCreated, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
@@ -135,26 +135,31 @@ trait AgencyAgentCommon
         val domainKeys = agentActorContext.walletAPI.createNewKey()
         (domainKeys.did, domainKeys.verKey, requesterVk)
     }
-
-    val agentPairwiseKey = prepareNewAgentWalletData(domainDID, domainVk, newActorId)
-    val setupEndpoint = SetupAgentEndpoint_V_0_7(
-      threadId,
-      domainDID,
-      agentPairwiseKey.did,
-      requesterVk,
-      requester.sponsorRel
-    )
-
-    userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
-
-    Future.successful(None)
+    prepareNewAgentWalletData(domainDID, domainVk, newActorId).map { agentPairwiseKey =>
+      val setupEndpoint = SetupAgentEndpoint_V_0_7(
+        threadId,
+        domainDID,
+        agentPairwiseKey.did,
+        requesterVk,
+        requester.sponsorRel
+      )
+      userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
+      None
+    }
   }
 
-  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, walletId: String): NewKeyCreated  = {
-    val wap = WalletAPIParam(walletId)
-    agentActorContext.walletAPI.createWallet(wap)
-    agentActorContext.walletAPI.storeTheirKey(StoreTheirKey(requesterDid, requesterVerKey))(wap)
-    agentActorContext.walletAPI.createNewKey()(wap)
+  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, walletId: String): Future[NewKeyCreated]  = {
+    implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
+    val fut1 = walletAPI.executeAsync[WalletCreated.type](CreateWallet)
+    val fut2 = walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(requesterDid, requesterVerKey))
+    val fut3 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey())
+    fut1.map { _ =>
+      //below futures should be only executed when fut1 (create wallet) is done
+      for {
+        _ <- fut2;
+        fut3Res <- fut3
+      } yield fut3Res
+    }.flatten
   }
 
   def getAgencyDIDFut(req: Boolean = false): Future[CacheQueryResponse] = {

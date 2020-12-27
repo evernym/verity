@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.wallet.{PackedMsg, UnpackedMsg}
+import com.evernym.verity.actor.wallet.{PackedMsg, UnpackMsg, UnpackedMsg}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
@@ -39,7 +39,7 @@ class IndyPackTransformer
 
   override def unpackAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
-    walletAPI.unpackMsgAsync(msg).map { um =>
+    walletAPI.executeAsync[UnpackedMsg](UnpackMsg(msg)).map { um =>
       prepareAgentBundledMsg(um, unpackParam)
     }
   }

@@ -1,7 +1,6 @@
 package com.evernym.verity.vault.wallet_api
 
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignLedgerRequest, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyInfo, VerifySigByVerKey, VerifySigResult, WalletCreated}
-import com.evernym.verity.ledger.LedgerRequest
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyInfo, VerifySigByVerKey, VerifySigResult, WalletCreated}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
@@ -48,11 +47,7 @@ trait WalletAPI {
   def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String,
                   revocRegDefs: String, revocRegs: String): Boolean
 
-  //async apis
-  def signLedgerRequest(sr: SignLedgerRequest): Future[LedgerRequest]
-  def unpackMsgAsync(msg: Array[Byte])(implicit wap: WalletAPIParam): Future[UnpackedMsg]
-  def LEGACY_unpackMsgAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
-                           (implicit wap: WalletAPIParam): Future[UnpackedMsg]
+  def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T]
 
 }
 

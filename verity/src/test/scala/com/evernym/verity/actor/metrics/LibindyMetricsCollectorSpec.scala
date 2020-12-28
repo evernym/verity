@@ -39,7 +39,7 @@ class LibindyMetricsCollectorSpec
         awaitCond(
           MetricsReader.getNodeMetrics(criteria).metrics.exists(
             metricDetail => {
-              metricDetail.name.contains("threadpool_threads_count") &&
+              metricDetail.name.contains("libindy_threadpool_threads_count") &&
               metricDetail.value.isValidInt &&
               metricDetail.tags.get.contains("label")
             }

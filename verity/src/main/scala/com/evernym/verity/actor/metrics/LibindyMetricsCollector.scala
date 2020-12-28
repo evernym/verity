@@ -32,7 +32,7 @@ class LibindyMetricsCollector extends Actor {
           val metricsList = metricsItem._2
           metricsList foreach(
             metricsRecord => {
-              MetricsWriter.gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value.toLong, metricsRecord.tags)
+              MetricsWriter.gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
             }
           )
         })

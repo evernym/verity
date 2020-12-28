@@ -12,8 +12,9 @@ import org.json.{JSONException, JSONObject}
 object JsonUtil {
 
   private val jsonMapper = {
-    new ObjectMapper()
-      .registerModule(DefaultScalaModule)
+    val objectMapper = new ObjectMapper() with ScalaObjectMapper
+    objectMapper.registerModule(DefaultScalaModule)
+    objectMapper
   }
 
   def mapToJson(map: Map[String, Any]): String = {
@@ -30,8 +31,8 @@ object JsonUtil {
     jsonMapper.readValue(msg, classOf[Map[K,V]])
   }
 
-  def deserializeJsonStringToMetrics[String, LibindyMetricsRecord](metrics: String): Map[String, List[LibindyMetricsRecord]] = {
-    jsonMapper.readValue[Map[String, List[LibindyMetricsRecord]]](metrics)
+  def deserializeJsonStringToObject[T](metrics: String)(implicit m: Manifest[T]): T = {
+    jsonMapper.readValue[T](metrics)
   }
 
   // TODO we need a better way to determine if a msg is JSON or MsgPack

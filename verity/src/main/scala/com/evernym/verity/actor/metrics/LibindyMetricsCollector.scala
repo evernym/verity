@@ -8,6 +8,7 @@ import com.evernym.verity.metrics.{MetricsReader, MetricsWriter}
 import com.evernym.verity.util.Util.logger
 import org.hyperledger.indy.sdk.metrics.Metrics
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 
@@ -25,9 +26,7 @@ class LibindyMetricsCollector extends Actor {
     val replyTo = sender()
     toFuture(Metrics.collectMetrics).onComplete {
       case Success(metrics) =>
-        val objectMapper = new ObjectMapper() with ScalaObjectMapper
-        objectMapper.registerModule(DefaultScalaModule)
-        val metricsObj: Map[String, List[LibindyMetricsRecord]] = objectMapper.readValue[Map[String, List[LibindyMetricsRecord]]](metrics)
+        val metricsObj: Map[String, List[LibindyMetricsRecord]] = deserializeJsonStringToObject[Map[String, List[LibindyMetricsRecord]]](metrics)
         metricsObj foreach( metricsItem => {
           val metricsName = metricsItem._1
           val metricsList = metricsItem._2

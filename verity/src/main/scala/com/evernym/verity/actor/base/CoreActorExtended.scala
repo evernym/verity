@@ -5,8 +5,6 @@ import java.time.LocalDateTime
 
 import akka.actor.ReceiveTimeout
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.MetricsWriter
 
 
 /**
@@ -23,33 +21,34 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
       actorStopStartedOpt = Option(LocalDateTime.now)
       genericLogger.debug(s"[$actorId] actor wil start preparing for shutdown... ")
       stopActor()
-      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
     }
   }
 
   private def handleBaseCommand: Receive = {
-    case s: Start           =>
+    case s: Ping        =>
       if (s.sendBackConfirmation) sender ! Done
 
-    case s: Stop            =>
+    case s: Stop        =>
       if (s.sendBackConfirmation) sender ! Done
       stopActor()
 
-    case ReceiveTimeout     => handleReceiveTimeout()
+    case ReceiveTimeout => handleReceiveTimeout()
   }
-
-  def baseCommandHandler(actualCmdReceiver: Receive): Receive =
-    handleBaseCommand orElse
-      coreCommandHandler(actualCmdReceiver)
 
   override def setNewReceiveBehaviour(receiver: Receive): Unit = {
     context.become(baseCommandHandler(receiver))
   }
+
+  final def baseCommandHandler(actualCmdReceiver: Receive): Receive =
+    handleBaseCommand orElse
+      coreCommandHandler(actualCmdReceiver)
+
+  override def receive: Receive = baseCommandHandler(cmdHandler)
 }
 
 abstract class SerializableObject extends Serializable with ActorMessageObject
 case object Done extends SerializableObject
 case object AlreadyDone extends SerializableObject
 case object NotFound extends SerializableObject
+case class Ping(sendBackConfirmation: Boolean = false) extends ActorMessageClass
 case class Stop(sendBackConfirmation: Boolean = false) extends ActorMessageClass
-case class Start(sendBackConfirmation: Boolean = false) extends ActorMessageClass

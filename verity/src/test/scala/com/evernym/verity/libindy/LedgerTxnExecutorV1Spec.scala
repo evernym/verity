@@ -61,7 +61,7 @@ class LedgerTxnExecutorV1Spec
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
           when(mockWalletAPI.executeAsync[LedgerRequest](any[SignLedgerRequest])(any[WalletAPIParam]))
-            .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).reqDetail))
+            .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).request))
           val response = Await.result(
             ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime
           )

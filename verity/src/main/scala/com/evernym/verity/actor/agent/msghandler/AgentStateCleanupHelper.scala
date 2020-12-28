@@ -139,11 +139,11 @@ trait AgentStateCleanupHelper {
   def migrateThreadContexts(): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
     if (isMigrateThreadContextsEnabled && routeSetStatus.isDefined) {
-      scheduleThreadContextMigrationJobIfNotScheduled()
       val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
       if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
         finishThreadContextMigration()
       } else {
+        scheduleThreadContextMigrationJobIfNotScheduled()
         candidateThreadContexts.foreach { case (pinstId, tcd) =>
           val candidateProtoActors = com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
             val migrationStatus = threadContextMigrationStatus.get(pinstId)
@@ -194,12 +194,11 @@ trait AgentStateCleanupHelper {
     logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received fixActorState, routeSetStatus: " + routeSetStatus)
     if (routeSetStatus.isEmpty) {
       actorStateCleanupExecutor = Option(sndrActorRef)
-      routeSetStatus = Option(RouteSetStatus(did, isSet = state.myDid.isEmpty))
-      sndrActorRef ! InitialActorState(did, state.myDid.isEmpty, getTotalThreadContextSize)
+      val isRouteSet = state.myDid.forall(_ == did)
+      routeSetStatus = Option(RouteSetStatus(did, isSet = isRouteSet))
+      sndrActorRef ! InitialActorState(did, isRouteSet, getTotalThreadContextSize)
       state.myDid.foreach { myDID =>
-        if (did == myDID) {
-          routeSetStatus = Option(RouteSetStatus(did, isSet = true))
-        } else {
+        if (! isRouteSet) {
           setRoute(myDID).map {
             case _: RouteSet | _: RouteAlreadySet =>
               self ! RouteSetStatus(did, isSet = true)
@@ -230,8 +229,7 @@ trait AgentStateCleanupHelper {
             finishThreadContextMigration()
           }
         }
-      case _ =>
-        //nothing to do
+      case _ => //nothing to do
     }
   }
 
@@ -288,9 +286,6 @@ trait AgentStateCleanupHelper {
     appConfig
       .getConfigBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
       .getOrElse(false)
-
-
-  scheduleThreadContextMigrationJobIfNotScheduled()
 
   def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {
     scheduleJob(

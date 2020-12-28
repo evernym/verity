@@ -27,6 +27,10 @@ class MsgTracer(val appConfig: AppConfig) extends CoreActorExtended {
           case r  => sender ! r
         }
       }
+      mtm match {
+        case _: CaptureMetrics => stopActor()
+        case _                 => //nothing to do
+      }
   }
 
   //after 5 min of inactivity, it should kill itself

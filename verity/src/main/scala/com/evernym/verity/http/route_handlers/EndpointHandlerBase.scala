@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
+import com.evernym.verity.actor.agent.agency.{AgencyAgent, GetLocalAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
@@ -44,10 +44,21 @@ trait EndpointHandlerBase
     }
   }
 
+  def getAgencyIdentity(withDetail: Boolean): Future[Any] = {
+    (AgencyAgent.agencyAgentDetail, AgencyAgent.ledgers) match {
+      case (Some(aad), Some(ledger)) =>
+        val ledgerDetail = if (withDetail) {
+          Option(ledger)
+        } else None
+        Future.successful(AgencyPublicDid(aad.did, aad.verKey, ledgerDetail))
+      case _ => sendToAgencyAgent(GetLocalAgencyIdentity(withDetail))
+    }
+  }
+
   def handleGetAgencyIdentity(withDetail: Boolean)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT, "GET_agency", None)
     complete {
-      sendToAgencyAgent(GetLocalAgencyIdentity(withDetail)).map[ToResponseMarshallable] {
+      getAgencyIdentity(withDetail).map[ToResponseMarshallable] {
         msgResponseHandler
       }
     }

@@ -302,9 +302,16 @@ class UserAgent(val agentActorContext: AgentActorContext)
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, state.myDid)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
-    val (futResp, agentDID) = createNewPairwiseEndpointBase(createKeyReqMsg.forDID, Option(createKeyReqMsg.forDIDVerKey), isEdgeAgent = false)
+    val (futResp, agentDID) = createNewPairwiseEndpointBase(
+      createKeyReqMsg.forDID, Option(createKeyReqMsg.forDIDVerKey), isEdgeAgent = false)
     val sndr = sender()
     handleInitPairwiseConnResp(agentDID, futResp, sndr)
+  }
+
+  def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
+    val nkc = agentWalletAPI.walletAPI.createNewKey()
+    val (respFut, _) = createNewPairwiseEndpointBase(nkc.did, Option(nkc.verKey), isEdgeAgent = true)
+    respFut.map(_ => Option(ControlMsg(Ctl.KeyCreated(nkc.did, nkc.verKey))))
   }
 
   def createNewPairwiseEndpointBase(forDID: DID, verKeyOpt: Option[VerKey]=None, isEdgeAgent: Boolean): (Future[Any], DID) = {
@@ -320,14 +327,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val ipc = buildSetupCreateKeyEndpoint(forDID, endpointDID)
     val resp = userAgentPairwiseRegion ? ForIdentifier(getNewActorId, ipc)
     (resp, endpointDID)
-  }
-
-  def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
-    val nkc = agentWalletAPI.walletAPI.createNewKey()
-    val (respFut, _) = createNewPairwiseEndpointBase(nkc.did, Option(nkc.verKey), isEdgeAgent = true)
-    respFut.map { _ =>
-      Option(ControlMsg(Ctl.KeyCreated(nkc.did, nkc.verKey)))
-    }
   }
 
   def buildSetupCreateKeyEndpoint(forDID: DID, newAgentPairwiseVerKeyDID: DID): SetupCreateKeyEndpoint = {

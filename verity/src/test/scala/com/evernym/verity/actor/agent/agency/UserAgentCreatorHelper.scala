@@ -5,7 +5,7 @@ import java.util.UUID
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpecBase
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.config.AppConfig
@@ -157,7 +157,7 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
     val msg = edgeAgent.v_0_6_req.prepareConnectCreateKey(
       edgeAgent.myDIDDetail.did, edgeAgent.myDIDDetail.verKey, edgeAgent.agencyAgentDetailReq.DID
     )
-    aa ! PackedMsgParam(msg, reqMsgContext)
+    aa ! ProcessPackedMsg(msg, reqMsgContext)
     val pm = expectMsgType[PackedMsg]
     val resp = edgeAgent.v_0_6_resp.handleConnectKeyCreatedResp(pm)
     pairwiseDID = resp.withPairwiseDID
@@ -189,7 +189,7 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
     val msg = createFn(
       agent.agencyPairwiseAgentDetailReq.DID, requesterKeys, requesterDetails
     )
-    aap ! PackedMsgParam(msg, reqMsgContext)
+    aap ! ProcessPackedMsg(msg, reqMsgContext)
     SendCreateAgent(expectMsgType[PackedMsg], requesterKeys)
   }
 

@@ -54,7 +54,7 @@ object DidOpExecutor extends OpExecutorBase {
       case e: Exception if e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
         throw new BadRequestErrorException(
           ALREADY_EXISTS.statusCode, Option("'their' pw keys are already in the wallet"))
-      case e: Exception =>
+      case _: Exception =>
         throw new InternalServerErrorException(
           UNHANDLED.statusCode, Option("unhandled error while storing their key"))
     }

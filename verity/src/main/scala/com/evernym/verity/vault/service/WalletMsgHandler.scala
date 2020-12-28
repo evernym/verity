@@ -119,7 +119,7 @@ object WalletMsgHandler {
   private def handleSignLedgerReq(sr: SignLedgerRequest)(implicit walletExt: WalletExt): Future[LedgerRequest] = {
     LedgerWalletOpExecutor.handleSignRequest(
       sr.submitterDetail.did,
-      sr.reqDetail)
+      sr.request)
   }
 
   /**

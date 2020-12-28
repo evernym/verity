@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.wallet.PackedMsg
 
 class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
@@ -30,7 +30,7 @@ class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
         val fromDID = mockEdgeAgent1.myDIDDetail.did
         val fromDIDVerKey = mockEdgeAgent1.getVerKeyFromWallet(fromDID)
         val msg = mockEdgeAgent1.v_0_6_req.prepareConnectCreateKey(fromDID, fromDIDVerKey, mockEdgeAgent1.agencyAgentDetailReq.DID)
-        aa ! PackedMsgParam(msg, reqMsgContext)
+        aa ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         mockEdgeAgent1.v_0_6_resp.handleConnectKeyCreatedResp(pm)
       }
@@ -52,7 +52,7 @@ class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
         val fromDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(fromDID)
         val msg = mockEdgeAgent.v_0_6_req.prepareCreateAgentMsg(
           mockEdgeAgent.agencyAgentDetailReq.DID, fromDID, fromDIDVerKey)
-        aa ! PackedMsgParam(msg, reqMsgContext)
+        aa ! ProcessPackedMsg(msg, reqMsgContext)
         expectMsgType[PackedMsg]
       }
     }

@@ -27,7 +27,7 @@ class LibindyMetricsCollector extends Actor {
       case Success(metrics) =>
         val objectMapper = new ObjectMapper() with ScalaObjectMapper
         objectMapper.registerModule(DefaultScalaModule)
-        val metricsObj:Map[String, List[LibindyMetricsRecord]] = objectMapper.readValue[Map[String, List[LibindyMetricsRecord]]](metrics)
+        val metricsObj: Map[String, List[LibindyMetricsRecord]] = objectMapper.readValue[Map[String, List[LibindyMetricsRecord]]](metrics)
         metricsObj foreach( metricsItem => {
           val metricsName = metricsItem._1
           val metricsList = metricsItem._2

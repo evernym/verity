@@ -32,11 +32,11 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   def agentIncomingCommonCmdReceiver[A]: Receive = {
 
     //edge agent -> agency routing service -> this actor
-    case ac: PackedMsgParam if isReadyToHandleIncomingMsg
-                                      => handlePackedMsg(ac.packedMsg.msg, ac.reqMsgContext)
+    case ppm: ProcessPackedMsg if isReadyToHandleIncomingMsg
+                                      => handlePackedMsg(ppm.packedMsg.msg, ppm.reqMsgContext)
 
     //edge agent -> agency routing service -> this actor
-    case rm: RestMsgParam             => handleRestMsg(rm)
+    case prm: ProcessRestMsg          => handleRestMsg(prm)
 
     //edge agent -> agency routing service -> self rel actor (user agent actor) -> this actor (pairwise agent actor)
     case mfr: MsgForRelationship[_]   => handleMsgForRel(mfr)
@@ -71,24 +71,24 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
   /**
    * handles incoming rest messages
-   * @param rmp rest message param
+   * @param prm rest message param
    */
-  def handleRestMsg(rmp: RestMsgParam): Unit = {
+  def handleRestMsg(prm: ProcessRestMsg): Unit = {
     try {
       //msg progress tracking related
       MsgProgressTracker.recordMsgReceivedByAgent(getClass.getSimpleName,
         trackingParam,
-        inMsgParam = MsgParam(msgName = Option(rmp.restMsgContext.msgType.msgName)))(rmp.restMsgContext.reqMsgContext)
-      logger.debug(s"[$persistenceId] incoming rest msg: " + rmp.msg)
-      veritySignature(rmp.restMsgContext.auth)
-      preMsgProcessing(rmp.restMsgContext.msgType, Option(rmp.restMsgContext.auth.verKey))(rmp.restMsgContext.reqMsgContext)
-      val imp = IncomingMsgParam(rmp, rmp.restMsgContext.msgType)
+        inMsgParam = MsgParam(msgName = Option(prm.restMsgContext.msgType.msgName)))(prm.restMsgContext.reqMsgContext)
+      logger.debug(s"[$persistenceId] incoming rest msg: " + prm.msg)
+      veritySignature(prm.restMsgContext.auth)
+      preMsgProcessing(prm.restMsgContext.msgType, Option(prm.restMsgContext.auth.verKey))(prm.restMsgContext.reqMsgContext)
+      val imp = IncomingMsgParam(prm, prm.restMsgContext.msgType)
       val amw = imp.msgToBeProcessed
-      implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, rmp.restMsgContext.reqMsgContext)
+      implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, prm.restMsgContext.reqMsgContext)
       if (incomingMsgHandler(reqMsgContext).isDefinedAt(amw)) {
         incomingMsgHandler(reqMsgContext)(amw)
       } else {
-        extractMsgAndSendToProtocol(imp, rmp.restMsgContext.thread)(rmp.restMsgContext.reqMsgContext)
+        extractMsgAndSendToProtocol(imp, prm.restMsgContext.thread)(prm.restMsgContext.reqMsgContext)
       }
     } catch protoExceptionHandler
   }

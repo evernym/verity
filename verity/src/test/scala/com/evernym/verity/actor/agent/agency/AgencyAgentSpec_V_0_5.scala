@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.Status.{CONN_STATUS_ALREADY_CONNECTED, UNSUPPORTED_MSG_TYPE}
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -46,7 +46,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
         "when sent bundled message with only unsupported SIGNUP msg" - {
           "should respond with unsupported msg type error msg" in {
             val msg = prepareUnsupportedMsgForAgencyWithVersion(unsupportedVersion)
-            aa ! PackedMsgParam(msg, reqMsgContext)
+            aa ! ProcessPackedMsg(msg, reqMsgContext)
             expectError(UNSUPPORTED_MSG_TYPE.statusCode)
           }
         }
@@ -54,7 +54,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
         "when sent bundled message which has an unsupported SIGNUP msg" - {
           "should respond with unsupported msg type error msg" in {
             val msg = prepareUnsupportedMsgWithMoreThanOneMsgsForAgency(unsupportedVersion)
-            aa ! PackedMsgParam(msg, reqMsgContext)
+            aa ! ProcessPackedMsg(msg, reqMsgContext)
             expectError(UNSUPPORTED_MSG_TYPE.statusCode)
           }
         }
@@ -70,7 +70,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
         "when sent CONNECT msg 0.5" - {
           "should respond with CONNECTED msg" in {
             val msg = prepareConnectMsg()
-            aa ! PackedMsgParam(msg, reqMsgContext)
+            aa ! ProcessPackedMsg(msg, reqMsgContext)
             val pm = expectMsgType[PackedMsg]
             handleConnectedResp(pm)
           }
@@ -79,7 +79,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
         "when resent CONNECT msg" - {
           "should respond with already connected error msg" in {
             val msg = prepareConnectMsg()
-            aa ! PackedMsgParam(msg, reqMsgContext)
+            aa ! ProcessPackedMsg(msg, reqMsgContext)
             expectError(CONN_STATUS_ALREADY_CONNECTED.statusCode)
           }
         }
@@ -100,7 +100,7 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
     "when resent CONNECT msg with different content" - {
       "should respond with CONNECTED msg" in {
         val msg = mockEdgeAgent1.v_0_5_req.prepareConnectMsg()
-        aa ! PackedMsgParam(msg, reqMsgContext)
+        aa ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         mockEdgeAgent1.v_0_5_resp.handleConnectedResp(pm)
       }

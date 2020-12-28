@@ -155,10 +155,10 @@ trait AgencyAgentCommon
     val fut3 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey())
     fut1.map { _ =>
       //below futures should be only executed when fut1 (create wallet) is done
-      for {
-        _ <- fut2;
+      for (
+        _       <- fut2;
         fut3Res <- fut3
-      } yield fut3Res
+      ) yield fut3Res
     }.flatten
   }
 

@@ -23,7 +23,7 @@ import scala.reflect.ClassTag
 
 trait WalletService extends AsyncToSync {
 
-  private val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
+  protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
   /**
    * synchronous/BLOCKING wallet service call
@@ -50,12 +50,12 @@ trait WalletService extends AsyncToSync {
     val startTime = Instant.now()
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        logger.error(s"error while executing wallet command '${cmd.getClass.getSimpleName}''",
+        logger.error(s"error while executing wallet command '${cmd.getClass.getSimpleName}'",
           (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
         MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         wer.sd.statusCode match {
           case INVALID_VALUE.statusCode => throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
-          case _ => throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
+          case _                        => throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         }
       case r => r.asInstanceOf[T] //TODO: can we get rid of this .asInstanceOf method?
     }.map { resp =>

@@ -4,7 +4,7 @@ import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpecBase
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, GetLocalAgencyIdentity}
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, agentRegion}
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -72,7 +72,7 @@ class AgencyAgentPairwiseSnapshotSpec
 
   def sendConnectMsg(): Unit = {
     val msg = prepareConnectMsg()
-    aa ! PackedMsgParam(msg, reqMsgContext)
+    aa ! ProcessPackedMsg(msg, reqMsgContext)
     val pm = expectMsgType[PackedMsg]
     val connectedResp = handleConnectedResp(pm)
     pairwiseDID = connectedResp.withPairwiseDID

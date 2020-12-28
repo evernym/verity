@@ -9,13 +9,11 @@ import com.evernym.verity.Status.{StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCmdErrorResponse, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_DURATION
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam, WalletService}
 import com.evernym.verity.vault.{WalletConfig, WalletExt, WalletProvider}
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 
@@ -59,7 +57,6 @@ class TestWalletService(appConfig:AppConfig,
   }
 
   private var wallets: Map[String, WalletExt] = Map.empty
-  val logger: Logger = getLoggerByClass(classOf[TestWalletService])
 
   private def executeOpWithWalletInfo[T](opContext: String, op: WalletExt => T)
                                 (implicit wap: WalletParam): T = {

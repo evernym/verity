@@ -17,46 +17,46 @@ import com.evernym.verity.util.{ReqMsgContext, RestMsgContext}
  */
 case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
 
-  override def supportedTypes: List[Class[_]] = List(classOf[AgentMsgWrapper], classOf[RestMsgParam])
+  override def supportedTypes: List[Class[_]] = List(classOf[AgentMsgWrapper], classOf[ProcessRestMsg])
 
   def senderVerKey: Option[VerKey] = givenMsg match {
     case amw: AgentMsgWrapper   => amw.senderVerKey
-    case rmp: RestMsgParam      => Option(rmp.restMsgContext.auth.verKey)
+    case rmp: ProcessRestMsg    => Option(rmp.restMsgContext.auth.verKey)
   }
 
   def msgToBeProcessed: AgentMsgWrapper = givenMsg match {
-    case amw: AgentMsgWrapper  => amw
-    case rmp: RestMsgParam     => AgentMessageWrapper(rmp.msg, MPF_PLAIN)
+    case amw: AgentMsgWrapper   => amw
+    case rmp: ProcessRestMsg    => AgentMessageWrapper(rmp.msg, MPF_PLAIN)
   }
 
   def msgPackFormat: Option[MsgPackFormat] = givenMsg match {
     case amw: AgentMsgWrapper   => Option(amw.msgPackFormat)
-    case _: RestMsgParam        => Option(MPF_PLAIN)
+    case _: ProcessRestMsg      => Option(MPF_PLAIN)
   }
 
   def msgFormat: Option[TypeFormat] = givenMsg match {
     case amw: AgentMsgWrapper   => Option(amw.headAgentMsg.msgTypeFormat)
-    case _: RestMsgParam        => Option(TypeFormat.STANDARD_TYPE_FORMAT)
+    case _: ProcessRestMsg      => Option(TypeFormat.STANDARD_TYPE_FORMAT)
   }
 
   def usesLegacyGenMsgWrapper: Boolean = givenMsg match {
     case amw: AgentMsgWrapper   => amw.usesLegacyGenMsgWrapper
-    case _: RestMsgParam        => false
+    case _: ProcessRestMsg      => false
   }
 
   def usesLegacyBundledMsgWrapper: Boolean = givenMsg match {
     case amw: AgentMsgWrapper   => amw.usesLegacyBundledMsgWrapper
-    case _: RestMsgParam        => false
+    case _: ProcessRestMsg      => false
+  }
+
+  def isSync(default: Boolean): Boolean = givenMsg match {
+    case _: AgentMsgWrapper     => default
+    case rmp: ProcessRestMsg    => rmp.restMsgContext.sync
   }
 
   def msgPackFormatReq: MsgPackFormat = msgPackFormat.getOrElse(
     throw new RuntimeException("message pack version required, but not available")
   )
-
-  def isSync(default: Boolean): Boolean = givenMsg match {
-    case _: AgentMsgWrapper     => default
-    case rmp: RestMsgParam      => rmp.restMsgContext.sync
-  }
 }
 
 /**
@@ -77,13 +77,13 @@ case class MsgForRelationship[A](msgToBeSent: TypedMsgLike[A],
                                 ) extends ActorMessageClass
 
 
-case class PackedMsgParam(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext) extends MsgBase with ActorMessageClass {
+case class ProcessPackedMsg(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext) extends MsgBase with ActorMessageClass {
   override def validate(): Unit = {
     checkRequired("packedMsg", packedMsg)
   }
 }
 
-case class RestMsgParam(msg: String, restMsgContext: RestMsgContext) extends MsgBase with ActorMessageClass {
+case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext) extends MsgBase with ActorMessageClass {
   override def validate(): Unit = {
     checkRequired("msg", msg)
   }
@@ -135,8 +135,8 @@ object STOP_GAP_MsgTypeMapper {
         val newGivenMsg = imp.givenMsg match {
           case amw: AgentMsgWrapper   =>
             changeMsgTypeInAgentMsgWrapper(amw, newMsgType)
-          case rmp: RestMsgParam      =>
-            RestMsgParam(rmp.msg, rmp.restMsgContext.copy(msgType = newMsgType))
+          case rmp: ProcessRestMsg      =>
+            ProcessRestMsg(rmp.msg, rmp.restMsgContext.copy(msgType = newMsgType))
         }
         IncomingMsgParam(newGivenMsg, newMsgType)
     }

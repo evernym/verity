@@ -112,7 +112,8 @@ class WalletActorSpec
     "when sent GetVerKey command" - {
       "should respond with VerKey" in {
         walletActor ! GetVerKey(keyInfo)
-        expectMsgType[VerKey]
+        val vk = expectMsgType[VerKey]
+        vk shouldBe "CnToPx3rPHNaXkMMtdPTnsK45pSHvP1e4BzNrk3oSVgr"
       }
     }
 

@@ -41,14 +41,13 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
           Future.failed(WalletNotOpened("cmd can't be executed while wallet is not yet opened: " + cmd))
       }
       handleRespFut(cmd, sndr, resp)
-
   }
 
   def handleRespFut(cmd: Any, sndr: ActorRef, fut: Future[Any]): Unit = {
     fut.recover {
-      case e: HandledErrorException => WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
-      case e: Exception      =>
-        logger.warn(s"error while executing wallet '${cmd.getClass.getSimpleName}' : " + e.getMessage)
+      case e: HandledErrorException =>
+        WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
+      case e: Exception             =>
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
     }.map { r =>
       sndr ! r
@@ -103,19 +102,14 @@ trait WalletCommand extends ActorMessage
 
 case object CreateWallet extends WalletCommand
 
-case object DeleteWallet extends WalletCommand
-
 case class CreateNewKey(DID: Option[DID] = None, seed: Option[String] = None) extends WalletCommand {
   override def toString: String = {
     val redacted = seed.map(_ => "redacted")
-    s"CreateNewKeyParam($DID, $redacted)"
+    s"CreateNewKey($DID, $redacted)"
   }
 }
-case class SignLedgerRequest(reqDetail: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
 case class CreateDID(keyType: String) extends WalletCommand
-
-case object GenerateWalletKey extends WalletCommand
 
 case class StoreTheirKey(theirDID: DID, theirDIDVerKey: VerKey, ignoreIfAlreadyExists: Boolean=false)
   extends WalletCommand
@@ -135,7 +129,9 @@ case class VerifySigByVerKey(verKey: VerKey, challenge: Array[Byte], signature: 
 case class PackMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
   extends WalletCommand
 
-case class UnpackMsg(msg: Array[Byte]) extends WalletCommand
+case class UnpackMsg(msg: Array[Byte]) extends WalletCommand {
+  override def toString: DID = s"UnpackMsg: " + new String(msg)
+}
 
 case class LegacyPackMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
   extends WalletCommand
@@ -143,7 +139,9 @@ case class LegacyPackMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVer
 case class LegacyUnpackMsg(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
   extends WalletCommand
 
-case class CreateMasterSecret(masterSecretId: String) extends WalletCommand
+case class CreateMasterSecret(masterSecretId: String) extends WalletCommand {
+  override def toString: DID = s"CreateMasterSecret(masterSecretId: redacted)"
+}
 
 case class CreateCredDef(issuerDID: DID,
                          schemaJson: String,
@@ -166,6 +164,8 @@ case class CredForProofReq(proofRequest: String) extends WalletCommand
 case class CreateProof(proofRequest: String, usedCredentials: String, schemas: String,
                        credentialDefs: String, revStates: String, masterSecret: String)
   extends WalletCommand
+
+case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage

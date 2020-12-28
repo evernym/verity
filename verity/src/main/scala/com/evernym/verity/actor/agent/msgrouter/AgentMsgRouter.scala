@@ -15,7 +15,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.RouteTo
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.msghandler.incoming.{PackedMsgParam, RestMsgParam}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache._
 import com.evernym.verity.config.AppConfig
@@ -132,9 +132,9 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
           // The relevant actor in this case will be one of our Agent classes, in its
           // capacity as an impl of AgentIncomingMsgHandler. Most commonly it'll be
           // UserAgentPairwise, since we expect most packed messages to end up there.
-          sendCmdToGivenActor(sndr, ForIdentifier(ri.entityId, PackedMsgParam(pmrp.packedMsg, pmrp.reqMsgContext)), ri.actorRef)
+          sendCmdToGivenActor(sndr, ForIdentifier(ri.entityId, ProcessPackedMsg(pmrp.packedMsg, pmrp.reqMsgContext)), ri.actorRef)
         }.getOrElse {
-          ri.actorRef ? ForIdentifier(ri.entityId, PackedMsgParam(pmrp.packedMsg, pmrp.reqMsgContext))
+          ri.actorRef ? ForIdentifier(ri.entityId, ProcessPackedMsg(pmrp.packedMsg, pmrp.reqMsgContext))
         }
       }
     }
@@ -159,9 +159,9 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
       logDuration(logger, "sending rest msg to target actor") {
         logger.debug("sending rest msg to target actor")
         senderOpt.map { implicit sndr =>
-          sendCmdToGivenActor(sndr, ForIdentifier(ri.entityId, RestMsgParam(rmrp.msg, rmrp.restMsgContext)), ri.actorRef)
+          sendCmdToGivenActor(sndr, ForIdentifier(ri.entityId, ProcessRestMsg(rmrp.msg, rmrp.restMsgContext)), ri.actorRef)
         }.getOrElse {
-          ri.actorRef ? ForIdentifier(ri.entityId, RestMsgParam(rmrp.msg, rmrp.restMsgContext))
+          ri.actorRef ? ForIdentifier(ri.entityId, ProcessRestMsg(rmrp.msg, rmrp.restMsgContext))
         }
       }
     }

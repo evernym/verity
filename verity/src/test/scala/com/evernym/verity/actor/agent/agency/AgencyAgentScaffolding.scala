@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
@@ -88,7 +88,7 @@ trait AgencyAgentScaffolding
       "when sent get-token msg" - {
         "should respond with token" in {
           val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId", ComMethodDetail(1, validTestPushNotifToken))
-          aa ! PackedMsgParam(msg, reqMsgContext)
+          aa ! ProcessPackedMsg(msg, reqMsgContext)
           val packedMsg = expectMsgType[PackedMsg]
           val token = mockEdgeAgent.v_0_1_resp.handleSendToken(packedMsg, mockAgencyAdmin.agencyPublicDid.get.DID)
           assert(token.sponsorId == "sponsorId")

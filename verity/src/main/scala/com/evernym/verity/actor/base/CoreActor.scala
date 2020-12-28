@@ -7,12 +7,14 @@ import akka.actor.{Actor, ActorRef, PoisonPill}
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
+import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
 import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
 /**
  * core actor for almost all actors (persistent or non-persistent) used in this codebase
+ * this is mostly to reuse start/stop metrics tracking and
+ * generic exception handling during command processing
  */
 trait CoreActor extends Actor {
 
@@ -49,13 +51,14 @@ trait CoreActor extends Actor {
       genericLogger.debug(s"[$actorId] stop-time-in-millis: $stopTimeMillis")
     }
     afterStop()
+    MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
   }
 
   def stopActor(): Unit = {
     context.self ! PoisonPill
   }
 
-  def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
+  private def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
     genericLogger.error(s"[$actorId]: crashed and about to restart => " +
       s"message being processed while error happened: $message, " +
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
@@ -97,19 +100,20 @@ trait CoreActor extends Actor {
     //can be overridden by implementing class
   }
 
-  def coreCommandHandler(actualReceiver: Receive): Receive =
-    handleCoreCommand(actualReceiver)
+  final def handleException(e: Throwable, sndr: ActorRef): Unit = {
+    ExceptionHandler.handleException(e, sndr, Option(self))
+  }
 
   def setNewReceiveBehaviour(receiver: Receive): Unit = {
     context.become(coreCommandHandler(receiver))
   }
 
-  def handleException(e: Throwable, sndr: ActorRef): Unit = {
-    ExceptionHandler.handleException(e, sndr, Option(self))
-  }
+  final def coreCommandHandler(actualReceiver: Receive): Receive =
+    handleCoreCommand(actualReceiver)
+
+  override def receive: Receive = coreCommandHandler(cmdHandler)
 
   def receiveCmd: Receive
   def cmdHandler: Receive = receiveCmd
-  override def receive: Receive = coreCommandHandler(cmdHandler)
 }
 

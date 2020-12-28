@@ -4,7 +4,7 @@ import java.io.File
 
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
-import com.evernym.verity.actor.base.{Done, Start}
+import com.evernym.verity.actor.base.{Done, Ping}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, MockEvent4, MockState, ShardIdExtractor, ShardUtil}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
@@ -26,7 +26,7 @@ class PersistentActorSpec
   "MockPersistentActor" - {
     "when sent PersistEvent command" - {
       "should persist event and save snapshot" taggedAs IgnoreAkkaEvents in {
-        sendToMockActor(MOCK_ACTOR_1, Start(sendBackConfirmation = true))
+        sendToMockActor(MOCK_ACTOR_1, Ping(sendBackConfirmation = true))
         expectMsgType[Done.type]
 
         //send first event which should force snapshot

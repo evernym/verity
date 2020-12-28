@@ -8,7 +8,7 @@ import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet, agentRegion}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
@@ -52,7 +52,7 @@ trait AgentSpecHelper
   val connId2 = "2"
   val connId3 = "3"
 
-  def wrapAsPackedMsgParam(packedMsg: PackedMsg) = PackedMsgParam(packedMsg, reqMsgContext)
+  def wrapAsPackedMsgParam(packedMsg: PackedMsg) = ProcessPackedMsg(packedMsg, reqMsgContext)
 
   def buildMockConsumerEdgeAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockConsumerEdgeAgent = {
     val mcea = new MockConsumerEdgeAgent(UrlDetail("localhost:9001/agency/msg"), config)

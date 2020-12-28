@@ -4,7 +4,7 @@ import akka.event.LoggingReceive
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
 import com.evernym.verity.actor.ActorMessageObject
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
-import com.evernym.verity.actor.agent.msghandler.incoming.{PackedMsgParam, RestMsgParam}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -102,7 +102,7 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
 
   override def postCommandExecution(cmd: Any): Unit = {
     cmd match {
-      case _: PackedMsgParam | _: RestMsgParam =>
+      case _: ProcessPackedMsg | _: ProcessRestMsg =>
         scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
       case _ => //nothing to do
     }

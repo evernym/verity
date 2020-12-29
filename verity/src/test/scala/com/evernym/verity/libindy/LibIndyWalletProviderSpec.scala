@@ -27,21 +27,21 @@ class LibIndyWalletProviderSpec extends BasicSpecWithIndyCleanup with CommonSpec
 
     "when asked to create new wallet" - {
       "should be able to create it successfully" in {
-        walletKey = lip1.generateKey()
-        lip1.create(wn1, walletKey, testWalletConfig)
+        walletKey = lip1.generateKeySync()
+        lip1.createSync(wn1, walletKey, testWalletConfig)
       }
     }
 
     "when asked to open created wallet" - {
       "should be able to open the wallet" in {
-        lip1Wallet = lip1.open(wn1, walletKey, testWalletConfig)
+        lip1Wallet = lip1.openSync(wn1, walletKey, testWalletConfig)
       }
     }
 
     "when asked to open already opened wallet" - {
       "throws WalletAlreadyOpened exception" in {
         intercept[WalletAlreadyOpened] {
-          lip1.open(wn1, walletKey, testWalletConfig)
+          lip1.openSync(wn1, walletKey, testWalletConfig)
         }
       }
     }
@@ -73,7 +73,7 @@ class LibIndyWalletProviderSpec extends BasicSpecWithIndyCleanup with CommonSpec
     "when asked to create existing new wallet" - {
       "should fail " in {
         intercept[WalletAlreadyExist] {
-          lip2.create(wn1, walletKey, testWalletConfig)
+          lip2.createSync(wn1, walletKey, testWalletConfig)
         }
       }
     }

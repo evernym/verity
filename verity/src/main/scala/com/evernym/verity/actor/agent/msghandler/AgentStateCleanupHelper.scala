@@ -248,7 +248,7 @@ trait AgentStateCleanupHelper {
     actorStateCleanupExecutor = None
     routeSetStatus = None
     isThreadContextMigrationFinished = true
-    snapshotPostStateChangeIfNeeded()
+    executeOnStateChangePostRecovery()
   }
 
   type ResponseReceived = Boolean

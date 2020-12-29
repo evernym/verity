@@ -3,7 +3,7 @@ package com.evernym.verity.actor.persistence
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{ActorRef, Kill, Stash}
+import akka.actor.{Kill, Stash}
 import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
@@ -48,6 +48,11 @@ trait BasePersistentActor
     with HasTransformationRegistry
     with Stash {
 
+  //NOTE: don't remove/change below three vals else it won't be backward compatible
+  override lazy val entityName: String = self.path.parent.parent.name
+  override lazy val actorId: String = entityName + "-" + entityId
+  override lazy val persistenceId: String = actorId
+
   var totalPersistedEvents: Int = 0
   var totalRecoveredEvents: Int = 0
 
@@ -61,12 +66,6 @@ trait BasePersistentActor
 
   val defaultReceiveTimeoutInSeconds = 600
   val entityCategory: String = PERSISTENT_ACTOR_BASE
-
-  override lazy val entityName: String = self.path.parent.parent.name
-  override lazy val actorId: String = entityName + "-" + entityId
-  override lazy val persistenceId: String = actorId
-
-  override def cmdSender: ActorRef = sender()
 
   def emptyEventHandler(event: Any): Unit = {}
 
@@ -94,7 +93,7 @@ trait BasePersistentActor
    * generic proto buf wrapper message for which a serialization binding is
    * configured to use "ProtoBufSerializer"
    *
-   * @param evt
+   * @param evt event
    * @return
    */
   def transformedEvent(evt: Any): GeneratedMessage = {
@@ -118,6 +117,7 @@ trait BasePersistentActor
   def trackPersistenceFailure(): Unit = {
     val duration = System.currentTimeMillis() - persistStart
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_FAILED_COUNT)
+    //TODO: is below metrics needs to be captured in case of failure too?
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
@@ -186,7 +186,7 @@ trait BasePersistentActor
   /**
    * writes/persists events and then applies the event (state change)
    * and then that event is sent back to the command/message sender
-   * @param evt
+   * @param evt event
    */
   def writeApplyAndSendItBack(evt: Any): Unit = {
     writeAndApply(evt)
@@ -218,18 +218,24 @@ trait BasePersistentActor
     if (entityName == "/") getClass.getSimpleName.replace("$", "")
     else entityName.replace("$", "")
   }
-  def normalizedEntityId: String = {
-    entityId.replace("$", "")
-  }
+  def normalizedEntityId: String = entityId.replace("$", "")
 
   def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
     appConfig, defaultReceiveTimeoutInSeconds,
     normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
 
+  /**
+   * configuration to decide if this persistent actor should use snapshot during recovery
+   * @return
+   */
   def recoverFromSnapshot: Boolean = PersistentActorConfigUtil.getRecoverFromSnapshot(
     appConfig, defaultValue = true,
     normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
 
+  /**
+   * use 'recoverFromSnapshot' configuration to decide if snapshot will be used during recovery or not
+   * @return
+   */
   override def recovery: Recovery = {
     if (recoverFromSnapshot) Recovery()
     else Recovery(fromSnapshot = SnapshotSelectionCriteria.None)
@@ -246,7 +252,7 @@ trait BasePersistentActor
       logger.debug(s"[$actorId] start-time-in-millis: $millis")
       isSuccessfullyRecovered = true
       postSuccessfulActorRecovery()
-      snapshotPostActorRecovery()
+      executeOnPostActorRecovery()
       unstashAll()
 
     case aif: PostRecoveryActorInitFailed =>
@@ -261,10 +267,6 @@ trait BasePersistentActor
         (LOG_KEY_PERSISTENCE_ID, persistenceId))
       stash()
   }
-
-  var isSuccessfullyRecovered: Boolean = false
-  def postSuccessfulActorRecovery(): Unit = {}
-  def snapshotPostActorRecovery(): Unit = {}
 
   def receiveWhenActorInitFailedBaseCmd: Receive = LoggingReceive.withLabel("receiveWhenActorInitFailedBaseCmd") {
     case _ => sender ! ActorInitPostRecoveryFailed
@@ -299,7 +301,7 @@ trait BasePersistentActor
   }
 
   /**
-   * Called after being reconstituted from event-sourced material.
+   * called after being reconstituted from event-sourced material.
    */
   def postRecoveryCompleted(): Unit = {
     runWithInternalSpan("postRecoveryCompleted", "BasePersistentActor") {
@@ -319,6 +321,11 @@ trait BasePersistentActor
     }
   }
 
+  /**
+   * to be overridden by implementing class to run any logic post actor recovery
+   * but before actor starts processing any incoming message
+   * @return
+   */
   def postActorRecoveryCompleted(): List[Future[Any]] = {
     List.empty
   }
@@ -330,8 +337,8 @@ trait BasePersistentActor
   }
 
   /**
-   * transforms given generic proto buf wrapper message (TransformedEvent, PersistentData)
-   * by using a 'transformer' to a plain (deserialized, decrypted) event
+   * transforms given generic proto buf wrapper message (TransformedEvent, DeprecatedEventMsg, PersistentMsg)
+   * by using a 'transformer' to a plain (decrypted and deserialized) event object
    * which actor can apply to it's state
    *
    * instead of hardcoding transformer for this 'undo' operation, we lookup appropriate transformer based on
@@ -351,18 +358,16 @@ trait BasePersistentActor
         case pm: PersistentMsg        =>
           lookupTransformer(pm.transformationId).undo(pm)
       }
-      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_DECRYPTION)
+      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_TRANSFORMATION_UNDO)
       event
     } catch {
       case e: Exception =>
         val errorMsg = s"error while undoing persisted event transformation (persistence-id: $persistenceId)"
-        handleRecoveryFailure(e, errorMsg)
+        handleUndoTransformFailure(e, errorMsg)
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         throw e
     }
   }
-
-  def snapshotPostStateChangeIfNeeded(): Unit = {}
 
   def applyReceivedEvent(evt: Any): Unit = {
     try {
@@ -379,9 +384,18 @@ trait BasePersistentActor
 
   def postEventHandlerApplied(): Unit = {
     if (recoveryFinished) {  //we don't want to save snapshot while actor is in process of recovery
-      snapshotPostStateChangeIfNeeded()
+      executeOnStateChangePostRecovery()
     }
   }
+
+  /**
+   * determines if actor successfully recovered and executed any
+   * 'postActorRecoveryCompleted' futures also got successfully executed
+   */
+  var isSuccessfullyRecovered: Boolean = false
+  def postSuccessfulActorRecovery(): Unit = {}
+  def executeOnPostActorRecovery(): Unit = {}
+  def executeOnStateChangePostRecovery(): Unit = {}
 
   def handleErrorEventParam(errorEventParam: ErrorEventParam): Unit = {
     AppStateManager << errorEventParam
@@ -394,6 +408,10 @@ trait BasePersistentActor
 
   def handleRecoveryFailure(cause: Throwable, errorMsg: String): Unit = {
     handleErrorEventParam(ErrorEventParam(SeriousSystemError, CONTEXT_EVENT_RECOVERY, cause, Option(errorMsg)))
+  }
+
+  def handleUndoTransformFailure(cause: Throwable, errorMsg: String): Unit = {
+    handleErrorEventParam(ErrorEventParam(SeriousSystemError, CONTEXT_EVENT_TRANSFORMATION_UNDO, cause, Option(errorMsg)))
   }
 
   override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {

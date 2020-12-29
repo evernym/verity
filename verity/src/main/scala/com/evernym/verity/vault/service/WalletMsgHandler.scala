@@ -20,12 +20,12 @@ object WalletMsgHandler {
   def executeAsync[T](cmd: Any)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Any] = {
     cmd match {
       case cnk: CreateNewKey                => handleCreateNewKey(cnk)
-      case sr: SignLedgerRequest            => handleSignLedgerReq(sr)
+      case slr: SignLedgerRequest           => handleSignLedgerReq(slr)
       case cd: CreateDID                    => handleCreateDID(cd)
       case stk: StoreTheirKey               => handleStoreTheirKey(stk)
       case gvk: GetVerKey                   => handleGetVerKey(gvk)
-      case gvk: GetVerKeyOpt                => handleGetVerKeyOpt(gvk)
-      case smp: SignMsg                     => handleSignMsg(smp)
+      case gvko: GetVerKeyOpt               => handleGetVerKeyOpt(gvko)
+      case sm: SignMsg                      => handleSignMsg(sm)
       case vs: VerifySigByKeyInfo           => handleVerifySigByKeyInfo(vs)
       case pm: PackMsg                      => handlePackMsg(pm)
       case um: UnpackMsg                    => handleUnpackMsg(um)
@@ -96,8 +96,8 @@ object WalletMsgHandler {
     }
   }
 
-  private def handleGetVerKeyOpt(gvk: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[VerKey]] = {
-    handleGetVerKey(GetVerKey(gvk.keyInfo))
+  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[VerKey]] = {
+    handleGetVerKey(GetVerKey(gvko.keyInfo))
       .map(vk => Option(vk))
       .recover {
         case _: ExecutionException => None
@@ -116,10 +116,10 @@ object WalletMsgHandler {
     DidOpExecutor.handleCreateNewKey(cnk)
   }
 
-  private def handleSignLedgerReq(sr: SignLedgerRequest)(implicit walletExt: WalletExt): Future[LedgerRequest] = {
+  private def handleSignLedgerReq(slr: SignLedgerRequest)(implicit walletExt: WalletExt): Future[LedgerRequest] = {
     LedgerWalletOpExecutor.handleSignRequest(
-      sr.submitterDetail.did,
-      sr.request)
+      slr.submitterDetail.did,
+      slr.request)
   }
 
   /**
@@ -129,7 +129,9 @@ object WalletMsgHandler {
    * @return
    */
   def handleCreateAndOpenWallet()(implicit wmp: WalletMsgParam): WalletExt = {
-    wmp.walletProvider.createAndOpen(
+    wmp.walletProvider.createSync(
+      wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
+    wmp.walletProvider.openSync(
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
   }
 
@@ -164,8 +166,5 @@ case class WalletMsgParam(walletProvider: WalletProvider,
  * @param walletConfig
  */
 case class WalletParam(walletId: String, walletName: String, encryptionKey: String, walletConfig: WalletConfig) {
-  def getUniqueId: String = {
-    // TODO we should not concatenate string before hashing, should use safeMultiHash
-    HashUtil.hash(SHA256)(walletId + encryptionKey).hex
-  }
+  def getUniqueId: String = HashUtil.safeMultiHash(SHA256, walletId , encryptionKey).hex
 }

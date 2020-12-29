@@ -34,7 +34,7 @@ package object apphealth {
     val CONTEXT_EVENT_PERSIST = "event-persist"
     val CONTEXT_EVENT_DELETION = "event-deletion"
     val CONTEXT_EVENT_RECOVERY = "event-recovery"
-    val CONTEXT_EVENT_DECRYPTION = "event-decryption"
+    val CONTEXT_EVENT_TRANSFORMATION_UNDO = "event-transformation-undo"
     val CONTEXT_ACTOR_INIT = "actor-init"
     val CONTEXT_CONFIG_LOADING = "config-loading"
     val CONTEXT_LIB_INDY_INIT = "lib-indy-init"

@@ -1,18 +1,22 @@
 package com.evernym.verity.vault
 
+import com.evernym.verity.actor.wallet.WalletCreated
+
+import scala.concurrent.Future
+
 trait WalletProvider {
 
-  def generateKey(seedOpt: Option[String] = None): String
+  def createAsync(id: String, encryptionKey: String, walletConfig: WalletConfig): Future[WalletCreated.type]
 
-  def createAndOpen(id: String, encryptionKey: String, walletConfig: WalletConfig): WalletExt
+  def openAsync(id: String, encryptionKey: String, walletConfig: WalletConfig): Future[WalletExt]
 
-  def create(id: String, encryptionKey: String, walletConfig: WalletConfig): Unit
+  def createSync(id: String, encryptionKey: String, walletConfig: WalletConfig): WalletCreated.type
 
-  def open(id: String, encryptionKey: String, walletConfig: WalletConfig): WalletExt
+  def openSync(id: String, encryptionKey: String, walletConfig: WalletConfig): WalletExt
 
-  def checkIfWalletExists(id: String, encryptionKey: String, walletConfig: WalletConfig): Boolean
+  def generateKeyAsync(seedOpt: Option[String] = None): Future[String]
+
+  def generateKeySync(seedOpt: Option[String] = None): String
 
   def close(walletExt: WalletExt): Unit
-
-  def delete(id: String, encryptionKey: String, walletConfig: WalletConfig): Unit
 }

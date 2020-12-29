@@ -63,7 +63,7 @@ trait WalletService extends AsyncToSync {
       val seconds = ChronoUnit.SECONDS.between(startTime, endTime)
       Kamon
         .histogram("span_processing_time_seconds", MeasurementUnit.time.seconds)
-        .withTag("operation", s"wallet cmd: ${cmd.getClass.getSimpleName}")
+        .withTag("operation", s"${cmd.getClass.getSimpleName}")
         .withTag("component", "WalletService")
         .record(seconds)
       MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)

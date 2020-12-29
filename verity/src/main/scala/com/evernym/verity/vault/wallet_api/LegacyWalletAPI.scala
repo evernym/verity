@@ -18,7 +18,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.UtilBase
-import com.evernym.verity.vault.WalletUtil.generateWalletParam
+import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.typesafe.scalalogging.Logger
@@ -55,7 +55,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     // to a pairwise actors or any protocol actors which may spinned up on different nodes)
     // where that wallet is not yet opened. Long term solution would be a architecture change and will take time
     // this is a short term solution to just check if wallet is already opened, if not, open it.
-    implicit val wp: WalletParam = generateWalletParam(wap.walletId, appConfig, walletProvider)
+    implicit val wp: WalletParam = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
 
     implicit val w: WalletExt = if (!wallets.contains(wp.getUniqueId)) {
       val ow = _openWallet
@@ -66,7 +66,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
   }
 
   private def _openWallet(implicit wap: WalletParam): WalletExt = {
-    walletProvider.open(wap.walletName, wap.encryptionKey, wap.walletConfig)
+    walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
   }
 
   private def _executeOpWithWallet[T](opContext: String, op: WalletExt => T)
@@ -89,8 +89,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
   }
 
   def createWallet(wap: WalletAPIParam): WalletCreated.type = {
-    val wp: WalletParam = generateWalletParam(wap.walletId, appConfig, walletProvider)
-    walletProvider.create(wp.walletName, wp.encryptionKey, wp.walletConfig)
+    val wp: WalletParam = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
+    walletProvider.createSync(wp.walletName, wp.encryptionKey, wp.walletConfig)
     WalletCreated
   }
 
@@ -370,7 +370,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
   }
 
   def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
-    val wp = generateWalletParam(wap.walletId, appConfig, walletProvider)
+    val wp = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
     implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util, ledgerPoolManager)
     val resp = cmd match {
       case CreateWallet =>

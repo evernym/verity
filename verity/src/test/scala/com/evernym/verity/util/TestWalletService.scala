@@ -36,7 +36,7 @@ class TestWalletService(appConfig:AppConfig,
   private val walletConfig: WalletConfig = buildWalletConfig(appConfig)
 
   override protected def execute(walletId: String, cmd: Any): Future[Any] = {
-    implicit val wp: WalletParam = generateWalletParam(walletId, appConfig, walletProvider, walletConfig)
+    implicit val wp: WalletParam = generateWalletParamSync(walletId, appConfig, walletProvider, walletConfig)
     implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util: UtilBase, ledgerPoolManager)
 
     val resp = cmd match {
@@ -80,7 +80,7 @@ class TestWalletService(appConfig:AppConfig,
   }
 
   private def _openWallet(implicit wap: WalletParam): WalletExt = {
-    walletProvider.open(wap.walletName, wap.encryptionKey, wap.walletConfig)
+    walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
   }
 
   private def _executeOpWithWallet[T](opContext: String, op: WalletExt => T)

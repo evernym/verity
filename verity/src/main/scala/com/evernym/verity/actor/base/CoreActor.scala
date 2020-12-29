@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.base
 
 import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorRef, PoisonPill}
 import com.evernym.verity.Exceptions
@@ -14,42 +13,59 @@ import com.typesafe.scalalogging.Logger
 /**
  * core actor for almost all actors (persistent or non-persistent) used in this codebase
  * this is mostly to reuse start/stop metrics tracking and
+ * generic incoming command validation and (like if command extends 'ActorMessage' serializable interface or not etc)
  * generic exception handling during command processing
  */
 trait CoreActor extends Actor {
 
-  var actorStopStartedOpt: Option[LocalDateTime] = None
+  override def receive: Receive = coreCommandHandler(cmdHandler)
 
-  def cmdSender: ActorRef = sender()
+  final def coreCommandHandler(actualReceiver: Receive): Receive =
+    handleCoreCommand(actualReceiver)
+
+  private def handleCoreCommand(actualCmdReceiver: Receive): Receive = {
+    case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
+      try {
+        actualCmdReceiver(cmd)
+        postCommandExecution(cmd)
+      } catch {
+        case e: Exception => handleException(e, sender())
+      }
+
+    case cmd if actualCmdReceiver.isDefinedAt(cmd) =>
+      //any incoming command should extend from 'ActorMessage' interface
+      //to be able to serialize/deserialize
+      throw new RuntimeException(s"[$actorId] incoming command not extending 'ActorMessage' interface: $cmd")
+  }
+
+  def receiveCmd: Receive
+  def cmdHandler: Receive = receiveCmd
 
   // We have need of a super generic logging. But this is too high level to define a generic logger
   // So we have this private logger for those needs but should not be sub-classes
   protected val genericLogger: Logger = LoggingUtil.getLoggerByName(getClass.getSimpleName)
 
-  def entityId: String = self.path.name
+  lazy val isShardedActor: Boolean = self.path.toString.contains("sharding")
+  lazy val isClusterSingletonChild: Boolean = self.path.toString.contains("cluster-singleton-mngr")
 
-  def entityName: String = self.path.parent.name
+  lazy val entityId: String = self.path.name
+  lazy val entityName: String =
+    if (isShardedActor || isClusterSingletonChild) self.path.parent.parent.name
+    else entityId
+  lazy val actorId: String = if (entityName != entityId) entityName + "-" + entityId else entityId
 
-  def actorId: String = entityId
-
-  final override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     logCrashReason(reason, message)
     super.preRestart(reason, message)
   }
 
-  final override def preStart(): Unit = {
+  override def preStart(): Unit = {
     MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
-    preStartTime = LocalDateTime.now
     beforeStart()
   }
 
-  final override def postStop(): Unit = {
+  override def postStop(): Unit = {
     genericLogger.debug("in post stop: " + self.path)
-    actorStopStartedOpt.foreach { actorStopStarted =>
-      val actorStopped = LocalDateTime.now
-      val stopTimeMillis = ChronoUnit.MILLIS.between(actorStopStarted, actorStopped)
-      genericLogger.debug(s"[$actorId] stop-time-in-millis: $stopTimeMillis")
-    }
     afterStop()
     MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
   }
@@ -68,23 +84,7 @@ trait CoreActor extends Actor {
     //default implementation (do nothing)
   }
 
-  private def handleCoreCommand(actualCmdReceiver: Receive): Receive = {
-    case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
-      try {
-        actualCmdReceiver(cmd)
-        postCommandExecution(cmd)
-      } catch {
-        case e: Exception =>
-          handleException(e, cmdSender)
-      }
-
-    case cmd if actualCmdReceiver.isDefinedAt(cmd) =>
-      //any incoming command should extend from 'ActorMessage' interface
-      //to be able to serialize/deserialize
-      throw new RuntimeException(s"[$actorId] incoming command not extending 'ActorMessage' interface: $cmd")
-  }
-
-  var preStartTime: LocalDateTime = _
+  var preStartTime: LocalDateTime = LocalDateTime.now
 
   /**
    * will be executed before actor starts as part of "preStart" actor lifecycle hook
@@ -107,13 +107,5 @@ trait CoreActor extends Actor {
   def setNewReceiveBehaviour(receiver: Receive): Unit = {
     context.become(coreCommandHandler(receiver))
   }
-
-  final def coreCommandHandler(actualReceiver: Receive): Receive =
-    handleCoreCommand(actualReceiver)
-
-  override def receive: Receive = coreCommandHandler(cmdHandler)
-
-  def receiveCmd: Receive
-  def cmdHandler: Receive = receiveCmd
 }
 

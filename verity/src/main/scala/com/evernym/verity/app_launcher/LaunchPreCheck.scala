@@ -92,8 +92,8 @@ object LaunchPreCheck {
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
       val walletId = "test-wallet-name-" + UUID.randomUUID().toString
-      val wap = generateWalletParam(walletId, aac.appConfig, aac.walletProvider)
-      aac.walletProvider.open(wap.walletName, wap.encryptionKey, wap.walletConfig)
+      val wap = generateWalletParamSync(walletId, aac.appConfig, aac.walletProvider)
+      aac.walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
     } catch {
       //TODO: this logic doesn't seem to be working, should come back to this and fix it
       case e @ (_ : WalletInvalidState | _ : WalletDoesNotExist) =>

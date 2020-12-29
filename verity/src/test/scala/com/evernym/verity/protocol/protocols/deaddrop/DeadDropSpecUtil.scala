@@ -41,7 +41,7 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
       appConfig, TestUtil, walletService, walletProvider, poolConnManager)
 
     lazy val wap = {
-      val key = walletProvider.generateKey()
+      val key = walletProvider.generateKeySync()
       val wap = WalletAPIParam(key)
       walletAPI.createWallet(wap)
       wap

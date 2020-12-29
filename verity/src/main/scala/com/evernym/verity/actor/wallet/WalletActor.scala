@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.wallet
 
-
-import akka.actor.ActorRef
+import akka.pattern.pipe
+import akka.actor.{ActorRef, Stash}
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.Status.UNHANDLED
 import com.evernym.verity.actor.ActorMessage
@@ -18,54 +18,84 @@ import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.util.UtilBase
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
-import com.evernym.verity.vault.{KeyInfo, WalletAlreadyOpened, WalletDoesNotExist, WalletExt, WalletInvalidState, WalletNotOpened, WalletProvider}
+import com.evernym.verity.vault.{KeyInfo, WalletExt, WalletNotOpened, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 
-class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
-  extends CoreActor {
 
-  final override def receiveCmd: Receive = {
-    case cmd: WalletCommand =>    //only entertain commands extending 'WalletCommand'
-      val sndr = sender()
-      val resp = cmd match {
-        case CreateWallet if walletExtOpt.isDefined =>
-          Future.successful(WalletAlreadyCreated)
-        case CreateWallet =>
-          walletExtOpt = Option(WalletMsgHandler.handleCreateAndOpenWallet())
-          Future.successful(WalletCreated)
-        case cmd if walletExtOpt.isDefined =>
-          WalletMsgHandler.executeAsync(cmd)
-        case cmd =>
-          Future.failed(WalletNotOpened("cmd can't be executed while wallet is not yet opened: " + cmd))
+class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
+  extends CoreActor
+    with Stash {
+
+  override def receiveCmd: Receive = initReceiveCmd
+
+  def initReceiveCmd: Receive = {
+    case swp: SetWalletParam  =>
+      walletParamOpt = Option(swp.wp)
+      wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, util, poolManager))
+      openWalletIfExists()
+
+    case sw: SetWallet =>
+      sw.wallet match {
+        case Some(w) =>
+          walletExtOpt = Option(w)
+          setNewReceiveBehaviour(openedWalletReceiver)
+        case None =>
+          setNewReceiveBehaviour(postInitReceiver)
       }
-      handleRespFut(cmd, sndr, resp)
+      unstashAll()
+
+    case _: WalletCommand => stash()
   }
 
-  def handleRespFut(cmd: Any, sndr: ActorRef, fut: Future[Any]): Unit = {
+  def postInitReceiver: Receive = {
+    case CreateWallet =>
+      walletExtOpt = Option(WalletMsgHandler.handleCreateAndOpenWallet())
+      sender ! WalletCreated
+      setNewReceiveBehaviour(openedWalletReceiver)
+      unstashAll()
+
+    case _: WalletCommand => stash()
+  }
+
+  def openedWalletReceiver: Receive = {
+    case CreateWallet if walletExtOpt.isDefined =>
+      sender ! WalletAlreadyCreated
+
+    case cmd: WalletCommand if walletExtOpt.isDefined =>    //only entertain commands extending 'WalletCommand'
+      val sndr = sender()
+      handleRespFut(sndr, WalletMsgHandler.executeAsync(cmd))
+  }
+
+  def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
     fut.recover {
       case e: HandledErrorException =>
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
-      case e: Exception             =>
+      case e: Exception =>
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
-    }.map { r =>
-      sndr ! r
-    }
+    }.pipeTo(sndr)
   }
 
   def openWalletIfExists(): Unit = {
     runWithInternalSpan(s"openWallet", "WalletActor") {
-      try {
-        walletExtOpt = Option(walletProvider.open(
-          walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig))
-      } catch {
-        case _: WalletAlreadyOpened =>
-          logger.warn("wallet should not have been found open at this time")
-        case _: WalletDoesNotExist | _: WalletInvalidState =>
-          //nothing to do if wallet doesn't exists
-      }
+      walletProvider.openAsync(
+        walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
+        .map(w => SetWallet(Option(w)))
+        .recover {
+          case _: WalletNotOpened =>  SetWallet(None)
+        }.pipeTo(self)
     }
+  }
+
+  override def beforeStart(): Unit = {
+    generateWalletParamAsync(entityId, appConfig, walletProvider).map { wp =>
+      self ! SetWalletParam(wp)
+    }
+  }
+
+  override def afterStop(): Unit = {
+    closeWallet()
   }
 
   def closeWallet(): Unit = {
@@ -83,22 +113,23 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
   lazy val walletProvider: WalletProvider = new LibIndyWalletProvider(appConfig)
 
   var walletExtOpt: Option[WalletExt] = None
-  implicit def walletExt: WalletExt = walletExtOpt.getOrElse(throw new RuntimeException("wallet not opened"))
-  implicit val walletParam: WalletParam = generateWalletParam(entityId, appConfig, walletProvider)
-  implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, walletParam, util, poolManager)
+  var walletParamOpt: Option[WalletParam] = None
+  var wmpOpt: Option[WalletMsgParam] = None
 
-  override def beforeStart(): Unit = {
-    openWalletIfExists()
-  }
-
-  override def afterStop(): Unit = {
-    closeWallet()
-  }
+  implicit def walletExt: WalletExt = walletExtOpt.getOrElse(
+    throw new RuntimeException("wallet not opened"))
+  implicit lazy val walletParam: WalletParam = walletParamOpt.getOrElse(
+    throw new RuntimeException("wallet param not computed"))
+  implicit lazy val wmp: WalletMsgParam = wmpOpt.getOrElse(
+    throw new RuntimeException("wallet param not computed"))
 
 }
 
 //command
 trait WalletCommand extends ActorMessage
+
+case class SetWalletParam(wp: WalletParam) extends WalletCommand
+case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand
 
 case object CreateWallet extends WalletCommand
 

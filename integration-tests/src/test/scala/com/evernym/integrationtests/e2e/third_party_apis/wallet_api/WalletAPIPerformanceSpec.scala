@@ -3,7 +3,6 @@ package com.evernym.integrationtests.e2e.third_party_apis.wallet_api
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
-
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._

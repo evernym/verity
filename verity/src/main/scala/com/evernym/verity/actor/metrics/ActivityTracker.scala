@@ -84,7 +84,7 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
       context.become(receiveCmd)
       unstashAll()
     case msg =>
-      logger.debug(s"stashing $msg");
+      logger.debug(s"stashing $msg")
       stash()
   }
 

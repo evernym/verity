@@ -26,9 +26,6 @@ class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProv
     walletService.executeSync[WalletCreated.type](wap.walletId, CreateWallet)
   }
 
-  def generateWalletKey(seedOpt: Option[String] = None): String =
-    walletProvider.generateKey(seedOpt)
-
   def createNewKey(cnk: CreateNewKey=CreateNewKey())(implicit wap: WalletAPIParam):
   NewKeyCreated = {
     walletService.executeSync[NewKeyCreated](wap.walletId, cnk)

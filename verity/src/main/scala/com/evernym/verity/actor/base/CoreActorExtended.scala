@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.base
 
 import java.io.Serializable
-import java.time.LocalDateTime
 
 import akka.actor.ReceiveTimeout
 import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
@@ -13,16 +12,11 @@ import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
  */
 trait CoreActorExtended extends CoreActor with HasActorTimers {
 
-  def preReceiveTimeoutCheck(): Boolean = true
+  override def receive: Receive = baseCommandHandler(cmdHandler)
 
-  def handleReceiveTimeout(): Unit = {
-    genericLogger.debug(s"received ReceiveTimeout for ${self.path}")
-    if (preReceiveTimeoutCheck()) {
-      actorStopStartedOpt = Option(LocalDateTime.now)
-      genericLogger.debug(s"[$actorId] actor wil start preparing for shutdown... ")
-      stopActor()
-    }
-  }
+  final def baseCommandHandler(actualCmdReceiver: Receive): Receive =
+    handleBaseCommand orElse
+      coreCommandHandler(actualCmdReceiver)
 
   private def handleBaseCommand: Receive = {
     case s: Ping        =>
@@ -35,15 +29,20 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
     case ReceiveTimeout => handleReceiveTimeout()
   }
 
+  def preReceiveTimeoutCheck(): Boolean = true
+
+  def handleReceiveTimeout(): Unit = {
+    genericLogger.debug(s"received ReceiveTimeout for ${self.path}")
+    if (preReceiveTimeoutCheck()) {
+      genericLogger.debug(s"[$actorId] actor wil start preparing for shutdown... ")
+      stopActor()
+    }
+  }
+
   override def setNewReceiveBehaviour(receiver: Receive): Unit = {
     context.become(baseCommandHandler(receiver))
   }
 
-  final def baseCommandHandler(actualCmdReceiver: Receive): Receive =
-    handleBaseCommand orElse
-      coreCommandHandler(actualCmdReceiver)
-
-  override def receive: Receive = baseCommandHandler(cmdHandler)
 }
 
 abstract class SerializableObject extends Serializable with ActorMessageObject

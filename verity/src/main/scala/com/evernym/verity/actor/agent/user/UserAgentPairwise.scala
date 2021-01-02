@@ -892,9 +892,9 @@ case class PersistAndProcessSendRemoteMsg(
 case class ProcessPersistedSendRemoteMsg(
                                           sendRemoteMsg: SendRemoteMsg,
                                           msgCreated: MsgCreated,
-                                          reqHelperData: InternalReqHelperData) extends ActorMessageClass
+                                          reqHelperData: InternalReqHelperData) extends ActorMessage
 
-case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessageClass
+case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessage
 
 trait UserAgentPairwiseStateImpl
   extends AgentStatePairwiseImplBase

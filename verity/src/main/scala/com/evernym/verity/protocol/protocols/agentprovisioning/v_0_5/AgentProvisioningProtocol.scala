@@ -219,4 +219,4 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   */
 case class AskAgencyPairwiseCreator(newAgentKeyDID: DID, theirPairwiseDID: DID, endpointDetailJson: String)
 
-case class PairwiseEndpointCreated(participantId: ParticipantId) extends Control with ActorMessageClass
+case class PairwiseEndpointCreated(participantId: ParticipantId) extends Control with ActorMessage

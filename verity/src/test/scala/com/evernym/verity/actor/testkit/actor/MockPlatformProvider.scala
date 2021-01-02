@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.vault.WalletConfig
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.vault.service.WalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
@@ -44,7 +44,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
   lazy val itemContainerRegionActor: ActorRef = platform.itemContainerRegion
 
   lazy val mockAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlDetail(localAgencyEndpoint), platform.agentActorContext.appConfig)
+    new MockAgencyAdmin(system, UrlParam(localAgencyEndpoint), platform.agentActorContext.appConfig)
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
     platform.agentActorContext.remoteMsgSendingSvc.asInstanceOf[MockRemoteMsgSendingSvc].totalAgentMsgsSent

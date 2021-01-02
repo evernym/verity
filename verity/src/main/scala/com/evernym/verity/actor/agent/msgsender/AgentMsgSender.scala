@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.{Exceptions, UrlDetail}
+import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -55,9 +55,9 @@ trait AgentMsgSender
     LedgerSvcException(errorMsg)
   }
 
-  private def parseUrlDetail(ep: String): UrlDetail = {
+  private def parseUrlParam(ep: String): UrlParam = {
     try {
-      UrlDetail(ep)
+      UrlParam(ep)
     } catch {
       case e: Exception =>
         val errorMsg = s"error while parsing endpoint: ${Exceptions.getErrorMsg(e)}"
@@ -87,10 +87,10 @@ trait AgentMsgSender
       logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
       val epFut = getRemoteAgencyEndpoint
       epFut.map { ep =>
-        val urlDetail = parseUrlDetail(ep)
+        val urlParam = parseUrlParam(ep)
         logger.debug("remote agency detail received for msg to be sent to remote agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
-        logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlDetail))
-        val respFut = remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(sm.msg)(urlDetail)
+        logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlParam))
+        val respFut = remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(sm.msg)(urlParam)
         respFut.map {
           case Right(pm: PackedMsg) =>
             logger.debug("msg successfully sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))

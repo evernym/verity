@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.Status.MSG_DELIVERY_STATUS_SENT
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.config.CommonConfig.MCM_SEND_MSG
 import com.typesafe.scalalogging.Logger
 
@@ -51,7 +51,7 @@ object MockPusher extends PushServiceProvider {
                            (implicit system: ActorSystem): Unit = {
     try {
       logger.debug(s"sendMessageToEndpoint -> url: $url, pushNotifPayload: $pushNotifPayload")
-      val endpoint = UrlDetail(url)
+      val endpoint = UrlParam(url)
       val httpClient = Http().outgoingConnection(host = endpoint.host, port=endpoint.port)
 
       if (sendToEndpointEnabled) {

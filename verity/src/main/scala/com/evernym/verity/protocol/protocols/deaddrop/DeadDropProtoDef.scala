@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.deaddrop
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.protocol._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DEAD_DROP_STORE_DATA
 import com.evernym.verity.protocol.actor.ProtoMsg
@@ -38,8 +38,8 @@ sealed trait DeadDropCtrlMsg extends Control with MsgBase
 case class Params(params: Parameters) extends DeadDropCtrlMsg
 case class Init(params: Parameters) extends DeadDropCtrlMsg
 
-//TODO: refactor this so that we don't have to extend it from 'ActorMessageClass'
-case class StoreData(payload: DeadDropPayload) extends DeadDropCtrlMsg with HasMsgType with ActorMessageClass {
+//TODO: refactor this so that we don't have to extend it from 'ActorMessage'
+case class StoreData(payload: DeadDropPayload) extends DeadDropCtrlMsg with HasMsgType with ActorMessage {
   def msgName: String = MSG_TYPE_DEAD_DROP_STORE_DATA
   def msgFamily: MsgFamily = DeadDropMsgFamily
 }

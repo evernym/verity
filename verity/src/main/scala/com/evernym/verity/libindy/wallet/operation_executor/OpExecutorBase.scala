@@ -6,7 +6,7 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util.UtilBase
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo, WalletExt}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
 
 import scala.language.implicitConversions
 import scala.compat.java8.FutureConverters
@@ -22,11 +22,11 @@ trait OpExecutorBase extends FutureConverter {
     util.getVerKey(did, we, getKeyFromPool, ledgerPoolManager)
   }
 
-  def verKeyFuture(keys: Set[KeyInfo], util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
+  def verKeyFuture(keys: Set[KeyParam], util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                           (implicit we: WalletExt): Future[Set[VerKey]] = {
     Future.sequence {
       keys.map { rk =>
-        rk.verKeyDetail match {
+        rk.verKeyParam match {
           case Left(vk) => Future(vk)
           case Right(gvk: GetVerKeyByDIDParam) =>
             getVerKey(gvk.did, gvk.getKeyFromPool, util, ledgerPoolManager)

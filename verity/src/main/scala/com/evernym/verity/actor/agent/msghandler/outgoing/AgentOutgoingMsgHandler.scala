@@ -23,7 +23,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext}
 import com.evernym.verity.protocol.actor.ServiceDecorator
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifResponse}
 
@@ -35,7 +35,7 @@ trait AgentOutgoingMsgHandler
     with AgentIdentity
     with HasAgentActivity { this: AgentMsgHandler with AgentPersistentActor =>
 
-  lazy val defaultSelfRecipKeys = Set(KeyInfo(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
+  lazy val defaultSelfRecipKeys = Set(KeyParam(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
 
   def agentOutgoingCommonCmdReceiver: Receive = {
 
@@ -248,7 +248,7 @@ trait AgentOutgoingMsgHandler
           case MPF_PLAIN => omp
           case MPF_INDY_PACK | MPF_MSG_PACK =>
             // we pack the message if needed.
-            packOutgoingMsg(omp, mc.to, threadContext.msgPackFormat, packForVerKey.map(svk => KeyInfo(Left(svk))))
+            packOutgoingMsg(omp, mc.to, threadContext.msgPackFormat, packForVerKey.map(svk => KeyParam(Left(svk))))
           case Unrecognized(_) =>
             throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
@@ -357,10 +357,10 @@ trait AgentOutgoingMsgHandler
   def packOutgoingMsg(omp: OutgoingMsgParam,
                       toParticipantId: ParticipantId,
                       msgPackFormat: MsgPackFormat,
-                      msgSpecificRecipVerKey: Option[KeyInfo]=None): OutgoingMsgParam = {
-    logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey")
+                      msgSpecificRecipVerKey: Option[KeyParam]=None): OutgoingMsgParam = {
+    logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey)")
     val toDID = ParticipantUtil.agentId(toParticipantId)
-    val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyInfo(Right(GetVerKeyByDIDParam(toDID, getKeyFromPool = false)))))
+    val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyParam(Right(GetVerKeyByDIDParam(toDID, getKeyFromPool = false)))))
     val packedMsg = msgExtractor.pack(msgPackFormat, omp.jsonMsg_!(), recipKeys)
     OutgoingMsgParam(packedMsg, omp.metadata.map(x => x.copy(msgPackFormatStr = msgPackFormat.toString)))
   }

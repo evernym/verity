@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.actor.base.{Done, Ping}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, MockEvent4, MockState, ShardIdExtractor, ShardUtil}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, MockEvent4, MockState, ShardIdExtractor, ShardUtil}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.IgnoreAkkaEvents
@@ -141,8 +141,8 @@ class MockPersistentActor(val appConfig: AppConfig)
   self ! Reset
 }
 
-case object Reset extends ActorMessageObject
-case class PersistEvent(data: String) extends ActorMessageClass
+case object Reset extends ActorMessage
+case class PersistEvent(data: String) extends ActorMessage
 
 
 trait HasTestBasePersistence { this: BasePersistentActor with SnapshotterExt[_] =>

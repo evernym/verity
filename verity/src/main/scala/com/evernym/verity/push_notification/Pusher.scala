@@ -5,7 +5,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidComMethodException, PushNotifSendingFailedException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -82,7 +82,7 @@ case class SendPushNotif(comMethods: Set[ComMethodDetail],
                          sendAsAlertPushNotif: Boolean,
                          notifData: Map[String, Any],
                          extraData: Map[String, Any],
-                         sponsorId: Option[String]=None) extends ActorMessageClass
+                         sponsorId: Option[String]=None) extends ActorMessage
 
 case class PushNotifData(uid: MsgId, msgType: String, sendAsAlertPushNotif: Boolean,
                          notifData: Map[String, Any], extraData: Map[String, Any])
@@ -202,7 +202,7 @@ object Pusher {
 case class PushNotifResponse(comMethodValue: String,
                              statusCode: String,
                              statusDetail: Option[String],
-                             detail: Option[String]) extends ActorMessageClass {
+                             detail: Option[String]) extends ActorMessage {
   require (Set(MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT).map(_.statusCode).contains(statusCode),
     "invalid push notification response status code")
 }

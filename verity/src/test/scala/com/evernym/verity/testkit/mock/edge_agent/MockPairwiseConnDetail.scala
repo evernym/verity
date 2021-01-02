@@ -65,8 +65,8 @@ class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
   //TODO: this should go to specific class
   def getEncryptParamForOthersCloudAgent: EncryptParam = {
     EncryptParam(
-      Set(KeyInfo(Right(GetVerKeyByDIDParam(theirCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(myPairwiseDidPair.DID, getKeyFromPool = false))))
+      Set(KeyParam(Right(GetVerKeyByDIDParam(theirCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(myPairwiseDidPair.DID, getKeyFromPool = false))))
     )
   }
 

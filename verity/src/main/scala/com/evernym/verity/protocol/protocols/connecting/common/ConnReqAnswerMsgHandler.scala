@@ -13,7 +13,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgPara
 import com.evernym.verity.protocol.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
 
 
 /**
@@ -186,7 +186,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
 
   private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
     walletAPI.getVerKeyOption(
-        GetVerKeyOpt(KeyInfo(Right(GetVerKeyByDIDParam(senderDID, getKeyFromPool = false))))) foreach {_ =>
+        GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(senderDID, getKeyFromPool = false))))) foreach { _ =>
       throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))
     }

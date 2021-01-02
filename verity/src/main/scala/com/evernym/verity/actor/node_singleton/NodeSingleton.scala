@@ -106,10 +106,10 @@ class NodeSingleton(val appConfig: AppConfig) extends CoreActorExtended with Has
     context.child(name).getOrElse(context.actorOf(props, name))
 }
 
-case object DrainNode extends ActorMessageObject
-case object DrainInitiated extends ActorMessageObject
+case object DrainNode extends ActorMessage
+case object DrainInitiated extends ActorMessage
 case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
-  extends ActorMessageClass
+  extends ActorMessage
 
 object NodeSingleton {
   def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))

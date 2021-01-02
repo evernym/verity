@@ -6,13 +6,13 @@ import "scalapb/scalapb.proto";
 package com.evernym.verity.actor;
 
 message Registered {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string entityId = 2;
     int32 totalCandidateRoutes = 3;
 }
 
 message Completed {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string entityId = 1;
     int32 totalProcessedRoutes = 2;
 }

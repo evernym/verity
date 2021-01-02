@@ -197,7 +197,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
 }
 
-trait ForSingletonChild extends ActorMessageClass {
+trait ForSingletonChild extends ActorMessage {
   def cmd: Any
   def getActorName: String
 }
@@ -222,4 +222,4 @@ case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWa
 case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
-case object NodeAddedToClusterSingleton extends ActorMessageObject
+case object NodeAddedToClusterSingleton extends ActorMessage

@@ -7,9 +7,9 @@ import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.ActorMessageClass
-import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyInfo, GetAgencyIdentity}
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, InternalMsgRouteParam}
+import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.agent.relationship.RelUtilParam
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
@@ -131,19 +131,14 @@ trait AgentCommon
     }
   }
 
-  def agencyVerKeyFut(): Future[VerKey] =
-    AgencyAgent
-      .agencyAgentDetail
-      .map(aad => Future.successful(aad.verKey))
-      .getOrElse(getAgencyVerKeyFut)
+  def agencyVerKeyFut(): Future[VerKey] = agencyVerKeyFutByCache()
 
-  private def getAgencyVerKeyFut: Future[VerKey] = {
-    val gad = GetAgencyIdentity(agencyDIDReq, getEndpoint = false)
-    val gadFutResp = agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(agencyDIDReq, gad))
-    gadFutResp.map {
-      case ai: AgencyInfo if ! ai.isErrorInFetchingVerKey => ai.verKeyReq
-      case _ => throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("agency ver key not found"))
-    }
+  def agencyVerKeyFutByCache(): Future[VerKey] = {
+    val gadp = GetAgencyIdentityCacheParam(state.agencyDIDReq, GetAgencyIdentity(state.agencyDIDReq, getEndpoint = false))
+    val gadfcParam = GetCachedObjectParam(Set(KeyDetail(gadp, required = true)), AGENCY_DETAIL_CACHE_FETCHER_ID)
+    generalCache.getByParamAsync(gadfcParam)
+      .mapTo[CacheQueryResponse]
+      .map(cqr => cqr.getAgencyInfoReq(state.agencyDIDReq).verKeyReq)
   }
 
   /**
@@ -173,11 +168,11 @@ trait AgentCommon
  * @param did domain DID
  * @param actorEntityId entity id of the actor which belongs to the self relationship actor
  */
-case class SetAgentActorDetail(did: DID, actorEntityId: String) extends ActorMessageClass
-case class AgentActorDetailSet(did: DID, actorEntityId: String) extends ActorMessageClass
+case class SetAgentActorDetail(did: DID, actorEntityId: String) extends ActorMessage
+case class AgentActorDetailSet(did: DID, actorEntityId: String) extends ActorMessage
 
-case class SetAgencyIdentity(did: DID) extends ActorMessageClass
-case class AgencyIdentitySet(did: DID) extends ActorMessageClass
+case class SetAgencyIdentity(did: DID) extends ActorMessage
+case class AgencyIdentitySet(did: DID) extends ActorMessage
 
 trait SponsorRelCompanion {
   def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
@@ -200,9 +195,9 @@ case class SetupCreateKeyEndpoint(newAgentKeyDID: DID,
                                   mySelfRelDID: DID,
                                   ownerAgentKeyDID: Option[DID] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
-                                  pid: Option[ProtocolIdDetail]=None) extends ActorMessageClass
+                                  pid: Option[ProtocolIdDetail]=None) extends ActorMessage
 
-trait SetupEndpoint extends ActorMessageClass {
+trait SetupEndpoint extends ActorMessage {
   def ownerDID: DID
   def agentKeyDID: DID
 }

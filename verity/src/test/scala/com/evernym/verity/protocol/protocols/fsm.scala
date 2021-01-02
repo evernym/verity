@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.util.ByteString
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.testkit.BasicSpec
 
 import scala.collection.immutable
@@ -21,12 +21,12 @@ import scala.language.postfixOps
 
 object FSMDocSpec {
   // received events
-  final case class SetTarget(ref: ActorRef) extends ActorMessageClass
-  final case class Queue(obj: Any) extends ActorMessageClass
-  case object Flush extends ActorMessageObject
+  final case class SetTarget(ref: ActorRef) extends ActorMessage
+  final case class Queue(obj: Any) extends ActorMessage
+  case object Flush extends ActorMessage
 
   // sent events
-  final case class Batch(obj: immutable.Seq[Any]) extends ActorMessageClass
+  final case class Batch(obj: immutable.Seq[Any]) extends ActorMessage
 
   // states
   sealed trait State

@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.event.LoggingReceive
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.persistence.SingletonPersistentAgentActorBase
-import com.evernym.verity.actor.{ActorMessageClass, MappingAdded}
+import com.evernym.verity.actor.{ActorMessage, MappingAdded}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
@@ -53,6 +53,6 @@ trait KeyValueMapperBase extends SingletonPersistentAgentActorBase {
 }
 
 //cmd
-case class AddMapping(key: String, value: String) extends ActorMessageClass
-case class GetValue(key: String) extends ActorMessageClass
+case class AddMapping(key: String, value: String) extends ActorMessage
+case class GetValue(key: String) extends ActorMessage
 

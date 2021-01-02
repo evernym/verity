@@ -6,7 +6,7 @@ import java.nio.file.{Files, Path}
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
 import com.evernym.verity.config.{AppConfig, ConfigReadHelper}
@@ -318,14 +318,14 @@ object VerityInstance {
       requireSponsor)
   }
 
-  def optionToEndpoint(endpointOpt: Option[String], setup: Boolean, listeningPort: Option[Int]): UrlDetail = {
+  def optionToEndpoint(endpointOpt: Option[String], setup: Boolean, listeningPort: Option[Int]): UrlParam = {
     def throwException(reason: String): Nothing = {
       throw new RuntimeException(s"'$ENDPOINT' or '$LISTENING_PORT' is $reason")
     }
 
-    (setup, endpointOpt.map(UrlDetail(_)), listeningPort) match {
+    (setup, endpointOpt.map(UrlParam(_)), listeningPort) match {
       case (_,      Some(ep), None        )                     => ep
-      case (true,   None,     Some(port)  )                     => UrlDetail(s"localhost:$port")
+      case (true,   None,     Some(port)  )                     => UrlParam(s"localhost:$port")
       case (true,   Some(ep), Some(_)     ) if ! ep.isLocalhost => ep
       case (true,   None,     None        )                     => throwException("required")
       case (true,   Some(ep), Some(port)  ) if ep.port != port  => throwException("pointing to different ports")
@@ -428,7 +428,7 @@ object AppInstance {
 case class VerityInstance(name: String,
                           appType: AppType,
                           setup: Boolean,
-                          endpoint: UrlDetail,
+                          endpoint: UrlParam,
                           listeningPort: Option[Int]=None,
                           seed: Option[String]=None,
                           ledgerConfig: LedgerConfig,
@@ -523,10 +523,10 @@ case class SdkConfig(sdkTypeStr: String,
                      verityInstance: VerityInstance) {
   val sdkType: SdkType = SdkType.fromString(sdkTypeStr)
 
-  val endpoint: Option[UrlDetail] = {
+  val endpoint: Option[UrlParam] = {
     endpointStr match {
-      case Some(ep) => Some(UrlDetail(ep))
-      case None     => port.map(p => UrlDetail(s"localhost:$p"))
+      case Some(ep) => Some(UrlParam(ep))
+      case None     => port.map(p => UrlParam(s"localhost:$p"))
     }
   }
 

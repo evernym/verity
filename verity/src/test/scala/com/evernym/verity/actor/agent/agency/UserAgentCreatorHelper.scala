@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.{Base64Util, TimeUtil}
-import com.evernym.verity.vault.KeyInfo
+import com.evernym.verity.vault.KeyParam
 import com.typesafe.config.{Config, ConfigFactory}
 
 trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
@@ -136,7 +136,7 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
   def getNonce: String = UUID.randomUUID().toString
   def sig(nonce: String, id: String, sponsorId: String, vk: VerKey, timestamp: String): Base64Encoded = {
     val encrypted = walletAPI.signMsg {
-      SignMsg(KeyInfo(
+      SignMsg(KeyParam(
         Left(vk)),
         (nonce + timestamp + id + sponsorId).getBytes()
       )

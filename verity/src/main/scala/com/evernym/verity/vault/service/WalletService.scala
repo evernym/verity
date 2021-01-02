@@ -50,7 +50,7 @@ trait WalletService extends AsyncToSync {
     val startTime = Instant.now()
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        logger.error(s"error while executing wallet command '${cmd.getClass.getSimpleName}'",
+        logger.error(s"error while executing wallet command: ${cmd.toString}, error msg: ${wer.sd.statusMsg}",
           (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
         MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         wer.sd.statusCode match {

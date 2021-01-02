@@ -3,7 +3,7 @@ package com.evernym.verity.actor.metrics
 import akka.Done
 import akka.actor.Actor
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.{ActorMessageClass, MetricsFilterCriteria}
+import com.evernym.verity.actor.{ActorMessage, MetricsFilterCriteria}
 import com.evernym.verity.metrics.{MetricsReader, MetricsWriter}
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToMap
 import com.evernym.verity.util.Util.logger
@@ -15,9 +15,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
-case class CollectLibindyMetrics() extends ActorMessageClass
-case class CollectLibindySuccess() extends ActorMessageClass
-case class CollectLibindyFailed(e: String) extends ActorMessageClass
+case class CollectLibindyMetrics() extends ActorMessage
+case class CollectLibindySuccess() extends ActorMessage
+case class CollectLibindyFailed(e: String) extends ActorMessage
 
 class LibindyMetricsCollector extends Actor {
   def collectLibindyMetrics(): Unit = {

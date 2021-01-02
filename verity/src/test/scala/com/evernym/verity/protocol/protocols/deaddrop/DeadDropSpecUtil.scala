@@ -11,7 +11,7 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.apache.commons.codec.digest.DigestUtils
 
 trait DeadDropSpecUtil extends CommonSpecUtil {
@@ -26,10 +26,10 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
     val recoveryVerKey = nkc.verKey
     val namespace = passphrase  //TODO: is it ok to use passphrase as namespace?
     val locator = DigestUtils.sha256Hex(
-      walletAPI.signMsg(SignMsg(KeyInfo(Left(recoveryVerKey)), namespace.getBytes)))
+      walletAPI.signMsg(SignMsg(KeyParam(Left(recoveryVerKey)), namespace.getBytes)))
     val hashedAddress = DigestUtils.sha256Hex(recoveryVerKey + locator)
     val locatorSignature =
-      walletAPI.signMsg(SignMsg(KeyInfo(Left(recoveryVerKey)), locator.getBytes))
+      walletAPI.signMsg(SignMsg(KeyParam(Left(recoveryVerKey)), locator.getBytes))
     DeadDropData(recoveryVerKey, hashedAddress, locator, locatorSignature, dataOpt.getOrElse("test-data".getBytes))
   }
 

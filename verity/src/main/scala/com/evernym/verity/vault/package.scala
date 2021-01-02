@@ -34,11 +34,11 @@ package object vault {
 
   case class GetVerKeyByDIDParam(did: DID, getKeyFromPool: Boolean)
 
-  case class KeyInfo(verKeyDetail: Either[VerKey, GetVerKeyByDIDParam])
+  case class KeyParam(verKeyParam: Either[VerKey, GetVerKeyByDIDParam])
 
-  case class SealParam(keyInfo: KeyInfo)
+  case class SealParam(keyParam: KeyParam)
 
-  case class EncryptParam(recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+  case class EncryptParam(recipKeyParams: Set[KeyParam], senderKeyParam: Option[KeyParam])
 
   //response
   case class LedgerResponse(resp: Any)

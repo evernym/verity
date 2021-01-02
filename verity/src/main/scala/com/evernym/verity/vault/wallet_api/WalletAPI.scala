@@ -1,8 +1,8 @@
 package com.evernym.verity.vault.wallet_api
 
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyInfo, VerifySigByVerKey, VerifySigResult, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyParam, VerifySigByVerKey, VerifySigResult, WalletCreated}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
 
 import scala.concurrent.Future
@@ -17,13 +17,13 @@ trait WalletAPI {
   def getVerKeyOption(gvk: GetVerKeyOpt)(implicit wap: WalletAPIParam): Option[VerKey]
   def getVerKey(gvk: GetVerKey)(implicit wap: WalletAPIParam): VerKey
   def signMsg(sm: SignMsg)(implicit wap: WalletAPIParam): Array[Byte]
-  def verifySig(vs: VerifySigByKeyInfo)(implicit wap: WalletAPIParam): VerifySigResult
+  def verifySig(vs: VerifySigByKeyParam)(implicit wap: WalletAPIParam): VerifySigResult
   def verifySigWithVerKey(vs: VerifySigByVerKey): VerifySigResult
-  def LEGACY_packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+  def LEGACY_packMsg(msg: Array[Byte], recipKeyParams: Set[KeyParam], senderKeyParam: Option[KeyParam])
                     (implicit wap: WalletAPIParam): PackedMsg
-  def packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+  def packMsg(msg: Array[Byte], recipKeyParams: Set[KeyParam], senderKeyParam: Option[KeyParam])
              (implicit wap: WalletAPIParam): PackedMsg
-  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyParamOpt: Option[KeyParam], isAnonCryptedMsg: Boolean)
                       (implicit wap: WalletAPIParam): UnpackedMsg
   def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg
   def createMasterSecret(masterSecretId: String)(implicit wap: WalletAPIParam): String

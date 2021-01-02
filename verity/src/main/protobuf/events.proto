@@ -31,7 +31,7 @@ message AgentKeyCreated {
 };
 
 message AgentDetailSet {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string forDID = 1;
     string agentKeyDID = 2;
 };
@@ -153,14 +153,14 @@ message MsgDeliveryStatusUpdated {
 //AgencyAgentBase Events
 
 message EndpointSet {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string dummyField = 1;
 }
 
 //KeyValueMapper Events
 
 message MappingAdded {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string key = 1;
     string value = 2;
 }
@@ -168,7 +168,7 @@ message MappingAdded {
 //RoutingAgentBase Events
 
 message RouteSet {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string forDID = 1;
     int32 actorTypeId = 2;
     string address = 3;
@@ -191,7 +191,7 @@ message ConfigRemoved {
 }
 
 message TokenToActorItemMappingAdded {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string actorEntityId = 1;
     string uid = 2;
     string regionTypeName = 3;
@@ -228,7 +228,7 @@ message CallerResourceUnblocked {
 }
 
 message RouteMigrated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string forDID = 1;
     string toBucketId = 2;
 }
@@ -318,7 +318,7 @@ message MigratedContainerStorageCleaned {
 }
 
 message ItemContainerConfigSet {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string itemType = 1;
     int32 versionId = 2;
     string managerEntityId = 3;
@@ -328,12 +328,12 @@ message ItemContainerConfigSet {
 }
 
 message ItemContainerPrevIdUpdated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string id = 1;
 }
 
 message ItemContainerNextIdUpdated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string id = 1;
 }
 
@@ -361,7 +361,7 @@ message TheirProvisionalDidDocDetail {
 }
 
 message ConnectionStatusUpdated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     bool reqReceived = 1;
     string answerStatusCode = 2;
     TheirDidDocDetail theirDidDocDetail = 3;
@@ -388,7 +388,7 @@ message ProtocolObserverAdded {
 }
 
 message ProtocolIdDetailSet {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string msgFamilyName = 1;
     string msgFamilyVersion = 2;
     string pinstId = 3;
@@ -436,7 +436,7 @@ message InitializedWallet {
 }
 
 message SegmentedStateStored {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string key = 1;
     int32 eventCode = 2;
     bytes data = 3;

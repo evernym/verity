@@ -9,7 +9,7 @@ import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, ItemManagerEntityId, ItemType}
 import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -191,10 +191,10 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
   def pendingActiveRegisteredItemMetricsName: String
 }
 
-case object CheckForPeriodicTaskExecution extends ActorMessageObject
-case class AddItem(itemId: ItemId, status: Option[Int], detail: Option[String]) extends ActorMessageClass
-case class RemoveItem(itemId: ItemId) extends ActorMessageClass
-case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessageClass
+case object CheckForPeriodicTaskExecution extends ActorMessage
+case class AddItem(itemId: ItemId, status: Option[Int], detail: Option[String]) extends ActorMessage
+case class RemoveItem(itemId: ItemId) extends ActorMessage
+case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
 case class WatcherChildActorDetail(enabledConfName: String, actorName: String, actorProp: Props)
 
 object WatcherManager {

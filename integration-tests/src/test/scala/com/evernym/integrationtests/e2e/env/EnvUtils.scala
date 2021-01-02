@@ -73,8 +73,8 @@ object EnvUtils {
 
     }
 
-    private def runInstanceStopScript(scriptPath: Path, appName: String, envVars: List[EnvVar]=List.empty, status: String): String = {
-      val cmd = s"""bash $scriptPath $projectDir $testSuiteDir $appName $status"""
+    private def runInstanceStopScript(scriptPath: Path, appName: String, envVars: List[EnvVar]=List.empty): String = {
+      val cmd = s"""bash $scriptPath $projectDir $testSuiteDir $appName"""
       val pc = Process(cmd, None, buildEnvVarsTuple(envVars):_*)
       pc.!!
     }
@@ -89,7 +89,7 @@ object EnvUtils {
         println(s"\n\nSetting up environment")
         println(s"  project dir    : $projectDir")
         printlnWithResetConsole(s"  test suite dir : " + Console.BOLD  + s"$testSuiteDir")
-        runTearDown(testEnv, status)
+        runTearDown(testEnv)
         println(s"  executing setup.sh ...")
         println(s"     * if genesis file points to local ledger and is changed, assuming ledger data is already deleted")
         println(s"     * if genesis file points to remote ledger and there is one local verity instance, ")
@@ -127,16 +127,16 @@ object EnvUtils {
 
     def stopEnv(testEnv: IntegrationTestEnv): Unit = {
       status = ENV_STATUS_STOPPING
-      runTearDown(testEnv, status)
+      runTearDown(testEnv)
       updateStatus(ENV_STATUS_STOPPED)
       Thread.sleep(5000)
     }
 
-    private def runTearDown(testEnv: IntegrationTestEnv, environmentStatus: String): Unit = {
+    private def runTearDown(testEnv: IntegrationTestEnv): Unit = {
       println(s"  executing teardown.sh ...")
       testEnv.allLocalInstances.foreach { vi =>
         val envVars = buildEnvVars(testEnv, vi)
-        val res = runInstanceStopScript(teardownScript(projectDir), vi.name, envVars, status)
+        val res = runInstanceStopScript(teardownScript(projectDir), vi.name, envVars)
         checkScriptExecutionResult(res, "tear-down-completed")
       }
       println(s"  executed teardown.sh")

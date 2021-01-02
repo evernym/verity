@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.actor.InitProtocolReq
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.util.MsgIdProvider
-import com.evernym.verity.vault.KeyInfo
+import com.evernym.verity.vault.KeyParam
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -128,8 +128,8 @@ trait AgentMsgHandler
    * key info belonging to "this" agent (edge/cloud)
    * @return
    */
-  lazy val thisAgentKeyInfo: KeyInfo = KeyInfo(Left(state.thisAgentVerKeyReq))
-  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyInfo, agentActorContext.walletAPI)
+  lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(state.thisAgentVerKeyReq))
+  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, agentActorContext.walletAPI)
 
   def getNewMsgId: MsgId = MsgIdProvider.getNewMsgId
 

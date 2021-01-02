@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.msgrouter.{GetRouteBatchResult, _}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ActorStateCleaned, ActorStateStored, BatchSizeRecorded, Completed, ForIdentifier, StatusUpdated}
+import com.evernym.verity.actor.{ActorMessage, ActorStateCleaned, ActorStateStored, BatchSizeRecorded, Completed, ForIdentifier, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
@@ -285,7 +285,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
                             totalCandidates: Int,
                             totalProcessed: Int,
-                            inProgressCleanupStatus: Map[DID, CleanupStatus] = Map.empty) extends ActorMessageClass {
+                            inProgressCleanupStatus: Map[DID, CleanupStatus] = Map.empty) extends ActorMessage {
   def isAllCompleted: Boolean = totalCandidates == totalProcessed
 }
 
@@ -299,9 +299,9 @@ case class CleanupStatus(isRouteSet: Boolean,
 }
 
 //incoming message
-case object Destroy extends ActorMessageObject
-case class GetExecutorStatus(includeDetails: Boolean = false) extends ActorMessageClass
-case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int) extends ActorMessageClass
+case object Destroy extends ActorMessage
+case class GetExecutorStatus(includeDetails: Boolean = false) extends ActorMessage
+case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int) extends ActorMessage
 
 object ActorStateCleanupExecutor {
   def props(appConfig: AppConfig, agentMsgRouter: AgentMsgRouter): Props =
@@ -319,10 +319,10 @@ case class BatchStatus(candidates: Map[DID, Boolean]) {
 
 case class ExecutorStatus(routeStoreStatus: Option[RouteStoreStatus],
                           batchStatus: BatchStatus,
-                          actorStateCleanupStatus: Option[Map[DID, CleanupStatus]]=None) extends ActorMessageClass
+                          actorStateCleanupStatus: Option[Map[DID, CleanupStatus]]=None) extends ActorMessage
 
-case class Destroyed(entityId: EntityId) extends ActorMessageClass
+case class Destroyed(entityId: EntityId) extends ActorMessage
 
-case class InitialActorState(actorId: DID, isRouteSet: Boolean, threadContexts: Int) extends ActorMessageClass
+case class InitialActorState(actorId: DID, isRouteSet: Boolean, threadContexts: Int) extends ActorMessage
 
 case class BatchSize(last: Int, current: Int)

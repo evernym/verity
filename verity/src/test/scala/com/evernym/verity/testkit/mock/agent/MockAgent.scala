@@ -42,7 +42,7 @@ trait MockAgent extends HasWalletHelper with HasAppConfig {
   init()
 
   def getVerKeyFromWallet(did: DID): VerKey = walletAPI.getVerKey(
-    GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(did, getKeyFromPool = false)))))
+    GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool = false)))))
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.ThreadContextDetail
 
 /**
@@ -19,6 +19,6 @@ case class ProtocolOutgoingMsg(msg: Any,
                                requestMsgId: MsgId,
                                pinstId: PinstId,
                                protoDef: ProtoDef,
-                               threadContextDetail: ThreadContextDetail) extends ActorMessageClass {
+                               threadContextDetail: ThreadContextDetail) extends ActorMessage {
   def envelope: Envelope1[Any] = Envelope1(msg, to, from, Option(requestMsgId), Option(threadContextDetail.threadId))
 }

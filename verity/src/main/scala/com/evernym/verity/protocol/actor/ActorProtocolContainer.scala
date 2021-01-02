@@ -543,7 +543,7 @@ case class Init(params: Parameters) extends Control {
   * @param statusDetail - status detail
   */
 case class UpdateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String,
-                                   statusDetail: Option[String]) extends Control with ActorMessageClass
+                                   statusDetail: Option[String]) extends Control with ActorMessage
 
 /**
   * Purpose of this service is to provide a way for protocol to schedule a message for itself
@@ -563,16 +563,16 @@ trait MsgQueueServiceProvider {
  * @param domainId domain id
  * @param parameters protocol initialization parameters
  */
-case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessageClass
+case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessage
 
 /**
   * This is used by this actor during protocol initialization process.
   * It is sent to the message forwarder (which is available in ProtocolCmd)
   * @param stateKeys - set of keys/names whose value is needed by the protocol.
   */
-case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessageClass
+case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessage
 
-case class ProtocolCmd(msg: Any, metadata: ProtocolMetadata) extends ActorMessageClass
+case class ProtocolCmd(msg: Any, metadata: ProtocolMetadata) extends ActorMessage
 
 /*
   walletSeed: actor protocol container needs to access/provide wallet service
@@ -603,7 +603,7 @@ case class MsgEnvelope[A](msg: A,
                           to: ParticipantId,
                           frm: ParticipantId,
                           msgId: Option[MsgId]=None,
-                          thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessageClass {
+                          thId: Option[ThreadId]=None) extends TypedMsgLike[A] with ActorMessage {
   def typedMsg: TypedMsg[A] = TypedMsg(msg, msgType)
 }
 
@@ -618,7 +618,7 @@ class MsgForwarder {
   def forwarder:Option[ActorRef] = _forwarder
 }
 
-case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
+case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessage
 
-case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
-case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
+case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessage
+case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessage

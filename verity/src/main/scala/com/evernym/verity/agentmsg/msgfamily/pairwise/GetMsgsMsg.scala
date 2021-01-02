@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, _}
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
@@ -13,7 +13,7 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 
 
-trait GetMsgsBaseMsg extends ProtoMsg with HasMsgType with ActorMessageClass {
+trait GetMsgsBaseMsg extends ProtoMsg with HasMsgType with ActorMessage {
   def excludePayload: Option[String]
   def uids: Option[List[String]]
   def statusCodes: Option[List[String]]

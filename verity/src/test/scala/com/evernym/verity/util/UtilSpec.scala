@@ -5,7 +5,7 @@ import com.evernym.verity.Status.INVALID_VALUE
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.Util._
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 
 
 class UtilSpec extends BasicSpec with CommonSpecUtil {
@@ -56,47 +56,47 @@ class UtilSpec extends BasicSpec with CommonSpecUtil {
     }
     "when asked to parse url" - {
       "should respond with proper parsed url detail" in {
-        val caught1 = intercept[InvalidComMethodException] { UrlDetail("xyz://127.0.0.1:9000/agent/callback") }
+        val caught1 = intercept[InvalidComMethodException] { UrlParam("xyz://127.0.0.1:9000/agent/callback") }
         assert(caught1.getMessage.contains("unknown protocol: xyz"))
 
-        val caught2 = intercept[InvalidComMethodException] { UrlDetail("localhost") }
+        val caught2 = intercept[InvalidComMethodException] { UrlParam("localhost") }
         assert(caught2.getMessage.contains("no protocol: localhost"))
 
-        val caught3 = intercept[InvalidComMethodException] { UrlDetail("127.128.129.130") }
+        val caught3 = intercept[InvalidComMethodException] { UrlParam("127.128.129.130") }
         assert(caught3.getMessage.contains("no protocol: 127.128.129.130"))
 
-        UrlDetail("127.0.0.1:9000/agent/callback") shouldBe UrlDetail("http", "127.0.0.1", 9000, Option("agent/callback"))
-        UrlDetail("127.0.0.1:9000/agent/callback?k1=v1") shouldBe UrlDetail("http", "127.0.0.1", 9000, Option("agent/callback"), Option("k1=v1"))
+        UrlParam("127.0.0.1:9000/agent/callback") shouldBe UrlParam("http", "127.0.0.1", 9000, Option("agent/callback"))
+        UrlParam("127.0.0.1:9000/agent/callback?k1=v1") shouldBe UrlParam("http", "127.0.0.1", 9000, Option("agent/callback"), Option("k1=v1"))
 
-        UrlDetail("http://127.0.0.1:9000/agent/callback?k1=v1") shouldBe UrlDetail("http", "127.0.0.1", 9000, Option("agent/callback"), Option("k1=v1"))
-        UrlDetail("https://127.0.0.1:9000/agent/callback") shouldBe UrlDetail("https", "127.0.0.1", 9000, Option("agent/callback"))
+        UrlParam("http://127.0.0.1:9000/agent/callback?k1=v1") shouldBe UrlParam("http", "127.0.0.1", 9000, Option("agent/callback"), Option("k1=v1"))
+        UrlParam("https://127.0.0.1:9000/agent/callback") shouldBe UrlParam("https", "127.0.0.1", 9000, Option("agent/callback"))
 
-        UrlDetail("http://localhost:9000/agent/callback") shouldBe UrlDetail("http", "localhost", 9000, Option("agent/callback"))
-        UrlDetail("https://localhost:9001/agent/callback1?k1=v1") shouldBe UrlDetail("https", "localhost", 9001, Option("agent/callback1"), Option("k1=v1"))
+        UrlParam("http://localhost:9000/agent/callback") shouldBe UrlParam("http", "localhost", 9000, Option("agent/callback"))
+        UrlParam("https://localhost:9001/agent/callback1?k1=v1") shouldBe UrlParam("https", "localhost", 9001, Option("agent/callback1"), Option("k1=v1"))
 
-        UrlDetail("https://localhost/agent/callback1?k1=v1") shouldBe UrlDetail("https", "localhost", 443, Option("agent/callback1"), Option("k1=v1"))
-        UrlDetail("http://localhost/agent/callback1") shouldBe UrlDetail("http", "localhost", 80, Option("agent/callback1"))
+        UrlParam("https://localhost/agent/callback1?k1=v1") shouldBe UrlParam("https", "localhost", 443, Option("agent/callback1"), Option("k1=v1"))
+        UrlParam("http://localhost/agent/callback1") shouldBe UrlParam("http", "localhost", 80, Option("agent/callback1"))
 
-        UrlDetail("https://localhost.com/agent/callback1") shouldBe UrlDetail("https", "localhost.com", 443, Option("agent/callback1"))
-        UrlDetail("https://localhost.com/agent/callback1") shouldBe UrlDetail("https", "localhost.com", 443, Option("agent/callback1"))
+        UrlParam("https://localhost.com/agent/callback1") shouldBe UrlParam("https", "localhost.com", 443, Option("agent/callback1"))
+        UrlParam("https://localhost.com/agent/callback1") shouldBe UrlParam("https", "localhost.com", 443, Option("agent/callback1"))
 
-        UrlDetail("http://localhost:9000/agent/callback").isHttp shouldBe true
-        UrlDetail("http://localhost:9000/agent/callback").isHttps shouldBe false
-        UrlDetail("https://localhost.com/agent/callback1").isHttps shouldBe true
-        UrlDetail("https://localhost.com/agent/callback1").isHttp shouldBe false
+        UrlParam("http://localhost:9000/agent/callback").isHttp shouldBe true
+        UrlParam("http://localhost:9000/agent/callback").isHttps shouldBe false
+        UrlParam("https://localhost.com/agent/callback1").isHttps shouldBe true
+        UrlParam("https://localhost.com/agent/callback1").isHttp shouldBe false
 
-        UrlDetail("https://localhost.com/agent/callback1").api shouldBe "localhost.com:443/agent/callback1"
-        UrlDetail("https://localhost.com/agent/callback1").url shouldBe "https://localhost.com:443/agent/callback1"
-        UrlDetail("https://localhost.com/agent/callback1").path shouldBe "agent/callback1"
+        UrlParam("https://localhost.com/agent/callback1").api shouldBe "localhost.com:443/agent/callback1"
+        UrlParam("https://localhost.com/agent/callback1").url shouldBe "https://localhost.com:443/agent/callback1"
+        UrlParam("https://localhost.com/agent/callback1").path shouldBe "agent/callback1"
       }
     }
-    "when asked to instantiate UrlDetail object with different constructors" - {
+    "when asked to instantiate UrlParam object with different constructors" - {
       "should be able to do it successfully" in {
-        UrlDetail("localhost:9001/agency/msg") shouldBe UrlDetail("localhost:9001/agency/msg")
-        UrlDetail("http://localhost:9001/agency/msg") shouldBe UrlDetail("localhost", 9001, Some("agency/msg"))
-        UrlDetail("localhost:9001/agency/msg") shouldBe UrlDetail("localhost", 9001, Some("agency/msg"))
-        UrlDetail("http://api.enym.com/agency/msg") shouldBe UrlDetail("api.enym.com", 80, Some("agency/msg"))
-        UrlDetail("https://api.enym.com/agency/msg") shouldBe UrlDetail("api.enym.com", 443, Some("agency/msg"))
+        UrlParam("localhost:9001/agency/msg") shouldBe UrlParam("localhost:9001/agency/msg")
+        UrlParam("http://localhost:9001/agency/msg") shouldBe UrlParam("localhost", 9001, Some("agency/msg"))
+        UrlParam("localhost:9001/agency/msg") shouldBe UrlParam("localhost", 9001, Some("agency/msg"))
+        UrlParam("http://api.enym.com/agency/msg") shouldBe UrlParam("api.enym.com", 80, Some("agency/msg"))
+        UrlParam("https://api.enym.com/agency/msg") shouldBe UrlParam("api.enym.com", 443, Some("agency/msg"))
       }
     }
     "when asked to normalized valid phone number" - {

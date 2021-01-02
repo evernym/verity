@@ -97,8 +97,8 @@ trait AgentMsgHelper
    */
   protected def unsealResp_MPV_1_0(rmw: Array[Byte], unsealFromDID: DID)
   : AgentMsgWrapper = {
-    val fromKeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(unsealFromDID, getKeyFromPool = false)))
-    agentMsgTransformer.unpack(rmw, fromKeyInfo)
+    val fromKeyParam = KeyParam(Right(GetVerKeyByDIDParam(unsealFromDID, getKeyFromPool = false)))
+    agentMsgTransformer.unpack(rmw, fromKeyParam)
   }
 
   /**
@@ -121,36 +121,36 @@ trait AgentMsgHelper
   }
 
   def sealParamFromEdgeToAgency: SealParam =
-    SealParam(KeyInfo(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false))))
+    SealParam(KeyParam(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false))))
 
   def invalidSealParamFromEdgeToAgency: SealParam = {
     val dd = generateNewAgentDIDDetail()
-    SealParam(KeyInfo(Left(dd.verKey)))
+    SealParam(KeyParam(Left(dd.verKey)))
   }
 
   def encryptParamFromEdgeToAgencyAgent: EncryptParam =
     EncryptParam(
-      Set(KeyInfo(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false)))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
+      Set(KeyParam(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false)))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
     )
 
   def encryptParamFromEdgeToAgencyAgentPairwise: EncryptParam =
     EncryptParam(
-      Set(KeyInfo(Right(GetVerKeyByDIDParam(agencyPairwiseAgentDetailReq.DID, getKeyFromPool = false)))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
+      Set(KeyParam(Right(GetVerKeyByDIDParam(agencyPairwiseAgentDetailReq.DID, getKeyFromPool = false)))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
     )
 
   def encryptParamFromEdgeToCloudAgent: EncryptParam =
     EncryptParam(
-      Set(KeyInfo(Left(cloudAgentDetailReq.verKey))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
+      Set(KeyParam(Left(cloudAgentDetailReq.verKey))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
     )
 
   def encryptParamFromEdgeToCloudAgentPairwise(connId: String): EncryptParam = {
     val pcd = pairwiseConnDetail(connId)
     EncryptParam(
-      Set(KeyInfo(Right(GetVerKeyByDIDParam(pcd.myCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(pcd.myPairwiseDidPair.DID, getKeyFromPool = false))))
+      Set(KeyParam(Right(GetVerKeyByDIDParam(pcd.myCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(pcd.myPairwiseDidPair.DID, getKeyFromPool = false))))
     )
   }
 
@@ -161,8 +161,8 @@ trait AgentMsgHelper
     } else { getVerKeyFromWallet(forDID) }
 
     EncryptParam(
-      Set(KeyInfo(Left(receiveVk))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(fromDID, getKeyFromPool = false))))
+      Set(KeyParam(Left(receiveVk))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(fromDID, getKeyFromPool = false))))
     )
   }
 
@@ -274,8 +274,8 @@ trait AgentMsgHelper
     val msg = GetDeadDropMsg(MSG_TYPE_DETAIL_DEAD_DROP_RETRIEVE,
       ddd.recoveryVerKey, ddd.address, ddd.locator, ddd.locatorSignature)
     val encParam = EncryptParam(
-      Set(KeyInfo(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false)))),
-      Option(KeyInfo(Left(ddd.recoveryVerKey)))
+      Set(KeyParam(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false)))),
+      Option(KeyParam(Left(ddd.recoveryVerKey)))
     )
     AgentPackMsgUtil(msg, encParam)
   }
@@ -368,11 +368,11 @@ trait AgentMsgHelper
   }
 
   def unpackMsg(msg: Array[Byte], fromVerKey: Option[VerKey]=None, unpackParam:UnpackParam = UnpackParam()): AgentMsgWrapper = {
-    val fromKeyInfo = fromVerKey match {
-      case Some(vk) => KeyInfo(Left(vk))
-      case None     => KeyInfo(Right(GetVerKeyByDIDParam(getDIDToUnsealAgentRespMsg, getKeyFromPool=false)))
+    val fromKeyParam = fromVerKey match {
+      case Some(vk) => KeyParam(Left(vk))
+      case None     => KeyParam(Right(GetVerKeyByDIDParam(getDIDToUnsealAgentRespMsg, getKeyFromPool=false)))
     }
-    agentMsgTransformer.unpack(msg, fromKeyInfo, unpackParam)
+    agentMsgTransformer.unpack(msg, fromKeyParam, unpackParam)
   }
 }
 

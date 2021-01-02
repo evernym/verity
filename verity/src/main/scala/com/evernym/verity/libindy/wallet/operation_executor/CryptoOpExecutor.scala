@@ -21,32 +21,32 @@ import scala.concurrent.Future
 
 object CryptoOpExecutor extends OpExecutorBase {
 
-  def handleLegacyPackMsg(pm: LegacyPackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
+  def handleLegacyPackMsg(lpm: LegacyPackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                          (implicit we: WalletExt): Future[PackedMsg] = {
     val resp = for (
-      recipKey      <- verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager).map(_.head);
-      senderVerKey  <- verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
+      recipKey      <- verKeyFuture(lpm.recipVerKeyParams, util, ledgerPoolManager).map(_.head);
+      senderVerKey  <- verKeyFuture(lpm.senderVerKeyParam.toSet, util, ledgerPoolManager).map(_.headOption)
     ) yield {
       val fut = senderVerKey match {
-        case None             => Crypto.anonCrypt(recipKey, pm.msg)
-        case Some(senderKey)  => Crypto.authCrypt(we.wallet, senderKey, recipKey, pm.msg)
+        case None             => Crypto.anonCrypt(recipKey, lpm.msg)
+        case Some(senderKey)  => Crypto.authCrypt(we.wallet, senderKey, recipKey, lpm.msg)
       }
       fut.map(r => PackedMsg(r))
     }
     resp.flatten
   }
 
-  def handleLegacyUnpackMsg(pm: LegacyUnpackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
+  def handleLegacyUnpackMsg(lum: LegacyUnpackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
                            (implicit we: WalletExt): Future[UnpackedMsg] = {
 
     val result = for (
-      fromVerKey <- verKeyFuture(pm.fromVerKey.toSet, util, ledgerPoolManager).map(_.head)
+      fromVerKey <- verKeyFuture(lum.fromVerKeyParam.toSet, util, ledgerPoolManager).map(_.head)
     ) yield {
-      val result = if (pm.isAnonCryptedMsg) {
-        Crypto.anonDecrypt(we.wallet, fromVerKey, pm.msg)
+      val result = if (lum.isAnonCryptedMsg) {
+        Crypto.anonDecrypt(we.wallet, fromVerKey, lum.msg)
           .map(dm => UnpackedMsg(dm, None, None))
       } else {
-        Crypto.authDecrypt(we.wallet, fromVerKey, pm.msg)
+        Crypto.authDecrypt(we.wallet, fromVerKey, lum.msg)
           .map(dr => UnpackedMsg(dr.getDecryptedMessage, Option(dr.getVerkey), None))
       }
       result.recover {
@@ -68,8 +68,8 @@ object CryptoOpExecutor extends OpExecutorBase {
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
 
     val result = for (
-      recipKeys     <- verKeyFuture(pm.recipVerKeys, util, ledgerPoolManager);
-      senderVerKey  <- verKeyFuture(pm.senderVerKey.toSet, util, ledgerPoolManager).map(_.headOption)
+      recipKeys     <- verKeyFuture(pm.recipVerKeyParams, util, ledgerPoolManager);
+      senderVerKey  <- verKeyFuture(pm.senderVerKeyParam.toSet, util, ledgerPoolManager).map(_.headOption)
     ) yield {
       val recipKeysJson = jsonArray(recipKeys)
       Crypto.packMessage(we.wallet, recipKeysJson, senderVerKey.orNull, pm.msg)
@@ -94,7 +94,7 @@ object CryptoOpExecutor extends OpExecutorBase {
   }
 
   def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[Array[Byte]] = {
-    val verKeyFuture = handleGetVerKey(GetVerKey(smp.keyInfo))
+    val verKeyFuture = handleGetVerKey(GetVerKey(smp.keyParam))
     verKeyFuture.flatMap { verKey =>
       Crypto.cryptoSign(we.wallet, verKey, smp.msg)
     }

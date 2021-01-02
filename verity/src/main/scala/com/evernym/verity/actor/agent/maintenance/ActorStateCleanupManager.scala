@@ -7,7 +7,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter._
 import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.persistence.SingletonChildrenPersistentActor
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
+import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
@@ -277,7 +277,7 @@ case class ManagerStatus(registeredRouteStoreActorCount: Int,
                          totalProcessedAgentActors: Int,
                          inProgressCleanupStatus: Map[EntityId, Map[DID, CleanupStatus]],
                          resetStatus: Option[ResetStatus] = None,
-                         registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
+                         registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessage
 
 object ResetStatus {
   def empty: ResetStatus = ResetStatus(isInProgress = false, Map.empty)
@@ -287,13 +287,13 @@ case class ResetStatus(isInProgress: Boolean, executorStatus: Map[EntityId, Bool
 }
 
 //incoming messages
-case class RegisteredRouteSummary(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessageClass
-case class GetManagerStatus(includeDetails: Boolean = false) extends ActorMessageClass
-case object Reset extends ActorMessageObject
+case class RegisteredRouteSummary(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessage
+case class GetManagerStatus(includeDetails: Boolean = false) extends ActorMessage
+case object Reset extends ActorMessage
 
 //outgoing messages
-case object AlreadyCompleted extends ActorMessageObject
-case object AlreadyRegistered extends ActorMessageObject
+case object AlreadyCompleted extends ActorMessage
+case object AlreadyRegistered extends ActorMessage
 
 object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER

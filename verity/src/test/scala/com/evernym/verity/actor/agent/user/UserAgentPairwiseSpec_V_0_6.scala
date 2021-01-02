@@ -14,7 +14,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
 class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -168,8 +168,8 @@ trait UserAgentPairwiseSpec_V_0_6
           invite.connReqId)
 
         val theirAgentEncParam = EncryptParam(
-          Set(KeyInfo(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
-          Option(KeyInfo(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
+          Set(KeyParam(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
+          Option(KeyParam(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
         )
         val msg = buildReceivedReqMsg_1_0(AgentPackMsgUtil(agentMsg, theirAgentEncParam))
         uap ! wrapAsPackedMsgParam(msg)

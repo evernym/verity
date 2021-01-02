@@ -36,14 +36,14 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
 
   lazy val aliceCloudMsgExtractor: MsgExtractor = {
     implicit val acWap: WalletAPIParam = aliceCloudAgentWap
-    new MsgExtractor(aliceCloudAgentKeyInfo, walletAPI)
+    new MsgExtractor(aliceCloudAgentKeyParam, walletAPI)
   }
   lazy val aliceMsgExtractor: MsgExtractor = {
     implicit val aWap: WalletAPIParam = aliceWap
-    new MsgExtractor(aliceKeyInfo, walletAPI)
+    new MsgExtractor(aliceKeyParam, walletAPI)
   }
 
-  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyInfo))
+  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyParam))
 
   def setup(): Unit = {
     //touch each of these lazy vals

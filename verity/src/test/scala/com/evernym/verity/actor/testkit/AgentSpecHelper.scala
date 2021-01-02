@@ -19,7 +19,7 @@ import com.evernym.verity.testkit.mock.cloud_agent.{MockConsumerCloudAgent, Mock
 import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingSvcListener
 import com.evernym.verity.util.ReqMsgContext
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import org.scalatest.concurrent.Eventually
@@ -55,7 +55,7 @@ trait AgentSpecHelper
   def wrapAsPackedMsgParam(packedMsg: PackedMsg) = ProcessPackedMsg(packedMsg, reqMsgContext)
 
   def buildMockConsumerEdgeAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockConsumerEdgeAgent = {
-    val mcea = new MockConsumerEdgeAgent(UrlDetail("localhost:9001/agency/msg"), config)
+    val mcea = new MockConsumerEdgeAgent(UrlParam("localhost:9001/agency/msg"), config)
     mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
     mcea
   }
@@ -73,7 +73,7 @@ trait AgentSpecHelper
   }
 
   def buildMockEnterpriseEdgeAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockEntEdgeAgent = {
-    val mcea = new MockEntEdgeAgent(UrlDetail("localhost:9002/agency/msg"), config)
+    val mcea = new MockEntEdgeAgent(UrlParam("localhost:9002/agency/msg"), config)
     mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
     mcea
   }

@@ -6,7 +6,7 @@ import "scalapb/scalapb.proto";
 package com.evernym.verity.actor;
 
 message StatusUpdated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string agentRouteStoreEntityId= 1;
     int32 totalRoutes = 2;
     int32 processedRoutes = 3;
@@ -18,7 +18,7 @@ message ActorStateStored {
 }
 
 message ActorStateCleaned {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string actorId = 1;
     int32 successfullyMigratedCount = 2;
     int32 nonMigratedCount = 3;

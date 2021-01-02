@@ -26,7 +26,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
-import com.evernym.verity.{Exceptions, UrlDetail}
+import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
 import scala.io.Source
@@ -101,7 +101,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     }
   }
 
-  def updateAgencyEndpointInLedger(url: UrlDetail): Unit = {
+  def updateAgencyEndpointInLedger(url: UrlParam): Unit = {
     val sndr = sender()
     // This is sort of an example of the problem with futures that Jason wrote about.
     // However, it's not very troubling, because the closure just sends a response;
@@ -153,8 +153,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
       setAgentWalletId(entityId)
       agentActorContext.walletAPI.createWallet(wap)
       val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKey(seed = ck.seed))
-      AgencyAgent.setAgencyAgentDetail(AgencyAgentDetail(createdKey.did, createdKey.verKey, entityId))
-      AgencyAgent.setLedgers(appConfig, agentActorContext.poolConnManager)
       writeAndApply(KeyCreated(createdKey.did))
       val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, createdKey.did))
       val sndr = sender()
@@ -174,6 +172,37 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
 
   def getAgencyVerKey(did: DID, fromPool: Boolean): VerKey = {
     getVerKeyReqViaCache(did, fromPool)
+  }
+
+  def agencyLedgerDetail(): Ledgers = {
+    // Architecture requested that this be future-proofed by assuming Agency will have more than one ledger.
+    val genesis = try {
+      val genesisFileLocation = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
+      val genesisFileSource = Source.fromFile(genesisFileLocation)
+      val lines = genesisFileSource.getLines().toList
+      genesisFileSource.close()
+      lines
+    } catch {
+      case e: Exception =>
+        logger.error(s"Could not read config ${CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION}. Reason: $e")
+        List()
+    }
+    val taaEnabledOnLedger: Boolean = try {
+      agentActorContext.poolConnManager.asInstanceOf[LedgerPoolConnManager].currentTAA match {
+        case Some(_) => true
+        case None => false
+      }
+    } catch {
+      case e: Exception =>
+        logger.error(s"Could not determine if TAA is enabled or not. Assuming it is enabled. Reason: $e")
+        true
+    }
+    val ledgers: Ledgers = List(Map(
+        "name" -> "default",
+        "genesis" -> genesis,
+        "taa_enabled" -> taaEnabledOnLedger
+      ))
+    ledgers
   }
 
   //dhh I feel a need to understand how caching works. How long before it's reevaluated?
@@ -260,15 +289,10 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
 
   def sendLocalAgencyIdentity(withDetail: Boolean = false): Unit = {
     getAgencyAgentDetail() match {
-      case Some(aad) =>
-        val ledgerDetail = if (withDetail) {
-          val ledgerDetail = AgencyAgent.ledgers.getOrElse(
-            AgencyAgent.setLedgers(appConfig, agentActorContext.poolConnManager))
-          Option(ledgerDetail)
-        } else None
+      case Some(aad)  =>
+        val ledgerDetail = if (withDetail) Option(agencyLedgerDetail()) else None
         sender ! AgencyPublicDid(aad.did, aad.verKey, ledgerDetail)
-      case None =>
-        throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
+      case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }
 
@@ -306,13 +330,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
         state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
       }
       .getOrElse(state)
-
-    getAgencyAgentDetail() match {
-      case Some(aad)  =>
-        AgencyAgent.setAgencyAgentDetail(aad)
-        AgencyAgent.setLedgers(appConfig, agentActorContext.poolConnManager)
-      case None       => //nothing to do
-    }
   }
 
   override def isReadyToHandleIncomingMsg: Boolean = state.isEndpointSet
@@ -338,7 +355,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
 }
 
 //response
-case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessageClass {
+case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessage {
 
   def rightOption(v: Either[StatusDetail, String]): Option[String] = v.fold(_ => None, r => Option(r))
   def leftOption(v: Either[StatusDetail, String]): Option[StatusDetail] = v.fold(sd => Option(sd), _ => None)
@@ -357,11 +374,11 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Op
   def isErrorFetchingAnyData: Boolean = isErrorInFetchingVerKey || isErrorInFetchingEndpoint
 }
 
-case object GetAgencyAgentDetail extends ActorMessageObject
-case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessageClass
+case object GetAgencyAgentDetail extends ActorMessage
+case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage
 
 //cmds
-case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessageClass
+case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessage
 
 /**
  * this message is to get agency identity detail for any agency DID (can be local/self agency or other remote agency)
@@ -369,18 +386,18 @@ case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMess
  * @param getVerKey determines if ver key needs to be received
  * @param getEndpoint determines if endpoint needs to be received
  */
-case class GetAgencyIdentity(did: DID, getVerKey: Boolean = true, getEndpoint: Boolean = true) extends ActorMessageClass
+case class GetAgencyIdentity(did: DID, getVerKey: Boolean = true, getEndpoint: Boolean = true) extends ActorMessage
 
-case class CreateKey(seed: Option[String] = None) extends ActorMessageClass {
+case class CreateKey(seed: Option[String] = None) extends ActorMessage {
   override def toString: String = {
     val redacted = seed.map(_ => "redacted")
     s"CreateKey($redacted)"
   }
 }
 
-case object SetEndpoint extends ActorMessageObject
+case object SetEndpoint extends ActorMessage
 
-case object UpdateEndpoint extends ActorMessageObject
+case object UpdateEndpoint extends ActorMessage
 
 trait AgencyAgentStateImpl extends AgentStateImplBase
 
@@ -406,53 +423,5 @@ trait AgencyAgentStateUpdateImpl
 
   def addPinst(pri: ProtocolRunningInstances): Unit = {
     state = state.withProtoInstances(pri)
-  }
-}
-
-object AgencyAgent extends AgencyIdUtil {
-  private var _agencyAgentDetail: Option[AgencyAgentDetail] = None
-  private var _ledgers: Option[Ledgers] = None
-
-  def agencyAgentDetail: Option[AgencyAgentDetail] = _agencyAgentDetail
-  def ledgers: Option[Ledgers] = _ledgers
-
-  def setAgencyAgentDetail(aad: AgencyAgentDetail): Unit =
-    _agencyAgentDetail = Option(aad)
-
-  def setLedgers(appConfig: AppConfig, poolConnManager: LedgerPoolConnManager): Ledgers = {
-    val ledger = prepareLedgers(appConfig, poolConnManager)
-    _ledgers = Option(ledger)
-    ledger
-  }
-
-  private def prepareLedgers(appConfig: AppConfig, poolConnManager: LedgerPoolConnManager): Ledgers = {
-    // Architecture requested that this be future-proofed by assuming Agency will have more than one ledger.
-    val genesis = try {
-      val genesisFileLocation = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
-      val genesisFileSource = Source.fromFile(genesisFileLocation)
-      val lines = genesisFileSource.getLines().toList
-      genesisFileSource.close()
-      lines
-    } catch {
-      case e: Exception =>
-        logger.error(s"Could not read config ${CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION}. Reason: $e")
-        List()
-    }
-    val taaEnabledOnLedger: Boolean = try {
-      poolConnManager.asInstanceOf[LedgerPoolConnManager].currentTAA match {
-        case Some(_) => true
-        case None => false
-      }
-    } catch {
-      case e: Exception =>
-        logger.error(s"Could not determine if TAA is enabled or not. Assuming it is enabled. Reason: $e")
-        true
-    }
-    val ledgers: Ledgers = List(Map(
-      "name" -> "default",
-      "genesis" -> genesis,
-      "taa_enabled" -> taaEnabledOnLedger
-    ))
-    ledgers
   }
 }

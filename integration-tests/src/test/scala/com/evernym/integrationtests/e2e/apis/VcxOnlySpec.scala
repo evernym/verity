@@ -111,7 +111,7 @@ class VcxOnlySpec
 
         val context = ContextBuilder.fromScratch(
           sdk.walletConfig(this.suiteTempDir.resolve("wallets").toString),
-          app.urlDetail.url
+          app.urlParam.url
         )
 
         sdk.provision_0_7.provision(context)

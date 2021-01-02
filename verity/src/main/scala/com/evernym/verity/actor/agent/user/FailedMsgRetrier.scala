@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
-import com.evernym.verity.actor.ActorMessageObject
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.agent.MsgPackFormat
@@ -131,6 +131,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   def removeItemFromWatcher(itemId: ItemId): Unit
 }
 
-case object RetryUndeliveredMsgs extends ActorMessageObject
-case object CheckRetryJobScheduled extends ActorMessageObject
-case object FailedMsgRetrierInit extends ActorMessageObject
+case object RetryUndeliveredMsgs extends ActorMessage
+case object CheckRetryJobScheduled extends ActorMessage
+case object FailedMsgRetrierInit extends ActorMessage

@@ -184,8 +184,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
                                                 (implicit agentMsgContext: AgentMsgContext): PackedMsg = {
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pairwiseKeyCreated.did, pairwiseKeyCreated.verKey)
     val encryptInfo = EncryptParam(
-      Set(KeyInfo(Left(createKeyReqMsg.forDIDVerKey))),
-      Option(KeyInfo(Left(pairwiseKeyCreated.verKey)))
+      Set(KeyParam(Left(createKeyReqMsg.forDIDVerKey))),
+      Option(KeyParam(Left(pairwiseKeyCreated.verKey)))
     )
     val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
     buildAgentMsg(agentMsgContext.msgPackFormat, param)
@@ -257,7 +257,7 @@ case class AskPairwiseCreator(fromDID: DID, pairwiseDID: DID, endpointDetailJson
 /**
  * Control Messages
  */
-case class GetInviteDetail_MFV_0_6(override val uid: MsgId) extends GetInviteDetail with ActorMessageClass {
+case class GetInviteDetail_MFV_0_6(override val uid: MsgId) extends GetInviteDetail with ActorMessage {
   val msgName: MsgName = MSG_TYPE_GET_INVITE_DETAIL
   val msgFamily: MsgFamily = ConnectingMsgFamily
 }

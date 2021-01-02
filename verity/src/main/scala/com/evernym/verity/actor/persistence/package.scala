@@ -29,26 +29,26 @@ package object persistence {
     require(! (snapshotEveryNEvents.forall(_ <= 0 ) && keepNSnapshots.exists(_ > 1)),
       "'keepNSnapshots' and 'snapshotEveryNEvents' are conflicting")
 
-    def getDeleteSnapshotCriteria(curSnapshotSeqNr: Long): Option[SnapshotSelectionCriteria] = {
+    def getDeleteSnapshotCriteria(latestSnapshotSeqNr: Long): Option[SnapshotSelectionCriteria] = {
       (keepNSnapshots, snapshotEveryNEvents) match {
         case (Some(keepNSnapshot), Some(snapshotEveryNEvent)) =>
-          val minSequenceNumber = curSnapshotSeqNr - (keepNSnapshot * snapshotEveryNEvent)
-          val maxSequenceNumber = curSnapshotSeqNr - ((keepNSnapshot-1) * snapshotEveryNEvent) - 1
+          val minSequenceNumber = latestSnapshotSeqNr - (keepNSnapshot * snapshotEveryNEvent)
+          val maxSequenceNumber = latestSnapshotSeqNr - ((keepNSnapshot-1) * snapshotEveryNEvent) - 1
           if (minSequenceNumber > 0 && maxSequenceNumber > 0) {
             Option(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNumber, minSequenceNr = minSequenceNumber))
           } else None
-        case (Some(keepNSnapshot), None) if curSnapshotSeqNr >= 1 && keepNSnapshot == 1 =>   //manual snapshotting
-          Option(SnapshotSelectionCriteria(maxSequenceNr = curSnapshotSeqNr-keepNSnapshot))
+        case (Some(keepNSnapshot), None) if latestSnapshotSeqNr >= 1 && keepNSnapshot == 1 =>   //manual snapshotting
+          Option(SnapshotSelectionCriteria(maxSequenceNr = latestSnapshotSeqNr-keepNSnapshot))
         case _ => None
       }
     }
   }
 
-  case object GetActorDetail extends ActorMessageObject
-  case class ActorDetail(persistenceId: String, totalPersistedEvents: Int, totalRecoveredEvents: Int) extends ActorMessageClass
-  case class PostRecoveryActorInitFailed(error: Throwable) extends ActorMessageClass
-  case object PostRecoveryActorInitSucceeded extends ActorMessageObject
-  case object ActorInitPostRecoveryFailed extends ActorMessageObject
+  case object GetActorDetail extends ActorMessage
+  case class ActorDetail(persistenceId: String, totalPersistedEvents: Int, totalRecoveredEvents: Int) extends ActorMessage
+  case class PostRecoveryActorInitFailed(error: Throwable) extends ActorMessage
+  case object PostRecoveryActorInitSucceeded extends ActorMessage
+  case object ActorInitPostRecoveryFailed extends ActorMessage
 
   case class InternalReqHelperData(reqMsgContext: ReqMsgContext)
 

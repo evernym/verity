@@ -6,7 +6,7 @@ import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, F
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.service._
-import com.evernym.verity.vault.{KeyInfo, WalletAPIParam, WalletProvider}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
@@ -15,7 +15,7 @@ import scala.concurrent.Future
 import scala.language.implicitConversions
 
 
-class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProvider)
+class StandardWalletAPI(walletService: WalletService)
   extends WalletAPI
     with FutureConverter
     with AsyncToSync {
@@ -51,23 +51,23 @@ class StandardWalletAPI(walletService: WalletService, walletProvider: WalletProv
     walletService.executeSync[Array[Byte]](wap.walletId, sm)
   }
 
-  def verifySig(vs: VerifySigByKeyInfo)(implicit wap: WalletAPIParam): VerifySigResult = {
+  def verifySig(vs: VerifySigByKeyParam)(implicit wap: WalletAPIParam): VerifySigResult = {
     walletService.executeSync[VerifySigResult](wap.walletId, vs)
   }
 
-  def LEGACY_packMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
+  def LEGACY_packMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
                     (implicit wap: WalletAPIParam): PackedMsg = {
-    walletService.executeSync[PackedMsg](wap.walletId, LegacyPackMsg(msg, recipVerKeys, senderVerKey))
+    walletService.executeSync[PackedMsg](wap.walletId, LegacyPackMsg(msg, recipVerKeyParams, senderVerKeyParam))
   }
 
-  def LEGACY_unpackMsg(msg: Array[Byte], fromVerKey: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyParamOpt: Option[KeyParam], isAnonCryptedMsg: Boolean)
                       (implicit wap: WalletAPIParam): UnpackedMsg = {
-    walletService.executeSync[UnpackedMsg](wap.walletId, LegacyUnpackMsg(msg, fromVerKey, isAnonCryptedMsg))
+    walletService.executeSync[UnpackedMsg](wap.walletId, LegacyUnpackMsg(msg, fromKeyParamOpt, isAnonCryptedMsg))
   }
 
-  def packMsg(msg: Array[Byte], recipVerKeys: Set[KeyInfo], senderVerKey: Option[KeyInfo])
+  def packMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
              (implicit wap: WalletAPIParam): PackedMsg = {
-    walletService.executeSync[PackedMsg](wap.walletId, PackMsg(msg, recipVerKeys, senderVerKey))
+    walletService.executeSync[PackedMsg](wap.walletId, PackMsg(msg, recipVerKeyParams, senderVerKeyParam))
   }
 
   def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {

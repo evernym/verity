@@ -68,7 +68,7 @@ class SegmentedStateStore(val appConfig: AppConfig)
 
 }
 
-case class SaveSegmentedState(segmentKey: SegmentKey, value : GeneratedMessage) extends ActorMessageClass
-case class GetSegmentedState(segmentKey: SegmentKey) extends ActorMessageClass
+case class SaveSegmentedState(segmentKey: SegmentKey, value : GeneratedMessage) extends ActorMessage
+case class GetSegmentedState(segmentKey: SegmentKey) extends ActorMessage
 
-case class ValidationError(error: String) extends ActorMessageClass
+case class ValidationError(error: String) extends ActorMessage

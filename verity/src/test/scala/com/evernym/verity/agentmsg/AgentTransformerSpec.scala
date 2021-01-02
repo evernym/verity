@@ -39,8 +39,8 @@ trait AgentMsgSpecBase
   lazy val aliceCloudAgentWap: WalletAPIParam =
     createWallet(s"alice-cloud-agent-$typ", walletAPI)
 
-  lazy val aliceCloudAgentKeyInfo: KeyInfo = KeyInfo(Left(aliceCloudAgentKey.verKey))
-  lazy val aliceKeyInfo: KeyInfo = KeyInfo(Left(aliceKey.verKey))
+  lazy val aliceCloudAgentKeyParam: KeyParam = KeyParam(Left(aliceCloudAgentKey.verKey))
+  lazy val aliceKeyParam: KeyParam = KeyParam(Left(aliceKey.verKey))
 
   lazy val aliceKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceWap)
   lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgencyAgentWap)
@@ -85,8 +85,8 @@ trait AgentTransformerSpec
   def msg: Any
 
   def getEncryptParamFromAliceToAliceCloudAgent: EncryptParam = {
-    val recipKeys = Set(aliceCloudAgentKeyInfo)
-    val senderKeyOpt = Option(aliceKeyInfo)
+    val recipKeys = Set(aliceCloudAgentKeyParam)
+    val senderKeyOpt = Option(aliceKeyParam)
     EncryptParam(recipKeys, senderKeyOpt)
   }
 
@@ -105,7 +105,7 @@ trait AgentTransformerSpec
 
   //should only be called inside of tests
   lazy val unpacked: AgentMsgWrapper = agentMsgTransformer.unpack(lastPackedMsg.msg,
-    KeyInfo(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+    KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
 
   def runUnpackTests(): Unit = {
     "Alice cloud agent" - {

@@ -7,6 +7,7 @@ import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
+import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -25,6 +26,8 @@ class WalletAPIPerformanceSpec
     with ProvidesMockPlatform
     with BasicSpec {
 
+  MetricsReader
+
   var totalUser: Int = 1000
   var successResp: Int = 0
 
@@ -41,6 +44,7 @@ class WalletAPIPerformanceSpec
 
         //wait until all user wallet setup is completed
         while (successResp < totalUser) {
+          printExecutorMetrics()
           println("wallet setup completed count                             : " + successResp)
           Thread.sleep(5000)
         }
@@ -84,4 +88,11 @@ class WalletAPIPerformanceSpec
   def walletStorageConfig: Config =
     ConfigFactory.parseFile(new File("verity/src/main/resources/wallet-storage.conf"))
       .resolve()
+
+  def printExecutorMetrics(): Unit = {
+    val metrics =  MetricsReader.getNodeMetrics().metrics
+    val filteredMetric = metrics
+      .filter(m => Set("executor_tasks_submitted_total", "executor_tasks_completed_total").exists(m.name.contains) )
+    println("filtered metrics: " + filteredMetric.map(m => s"${m.name}:${m.value}"))
+  }
 }

@@ -116,7 +116,7 @@ object WalletApiBuilder {
     val walletApiConfigPath = "verity.wallet-api"
     appConfig.getConfigStringOption(walletApiConfigPath) match {
       case Some("legacy")     => new LegacyWalletAPI(appConfig, walletProvider, util, poolConnManager)
-      case Some("standard")   => new StandardWalletAPI(walletService, walletProvider)
+      case Some("standard")   => new StandardWalletAPI(walletService)
       case _                  => throw new RuntimeException(s"invalid value for configuration: '$walletApiConfigPath'")
     }
   }

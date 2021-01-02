@@ -7,7 +7,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet.{LegacyUnpackMsg, PackedMsg, UnpackedMsg}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -23,26 +23,26 @@ class MsgPackTransformer
   val logger: Logger = getLoggerByClass(classOf[MsgPackTransformer])
 
   override def pack(msg: String,
-                    recipVerKeys: Set[KeyInfo],
-                    senderVerKey: Option[KeyInfo])
+                    recipVerKeyParams: Set[KeyParam],
+                    senderVerKeyParam: Option[KeyParam])
                    (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
 
     val msgBytes = MessagePackUtil.convertJsonStringToPackedMsg(msg)
-    walletAPI.LEGACY_packMsg(msgBytes, recipVerKeys, senderVerKey)
+    walletAPI.LEGACY_packMsg(msgBytes, recipVerKeyParams, senderVerKeyParam)
   }
 
   override def unpack(msg: Array[Byte],
-                      fromVerKey: Option[KeyInfo],
+                      fromVerKeyParamOpt: Option[KeyParam],
                       unpackParam: UnpackParam)
                      (implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentBundledMsg = {
-    val um = walletAPI.LEGACY_unpackMsg(msg, fromVerKey, unpackParam.isAnonCryptedMsg)
+    val um = walletAPI.LEGACY_unpackMsg(msg, fromVerKeyParamOpt, unpackParam.isAnonCryptedMsg)
     prepareAgentBundledMsg(um, unpackParam)
   }
 
-  override def unpackAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], unpackParam: UnpackParam)
+  override def unpackAsync(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
 
-    walletAPI.executeAsync[UnpackedMsg](LegacyUnpackMsg(msg, fromVerKey, unpackParam.isAnonCryptedMsg)).map { um =>
+    walletAPI.executeAsync[UnpackedMsg](LegacyUnpackMsg(msg, fromVerKeyParamOpt, unpackParam.isAnonCryptedMsg)).map { um =>
       prepareAgentBundledMsg(um, unpackParam)
     }
   }

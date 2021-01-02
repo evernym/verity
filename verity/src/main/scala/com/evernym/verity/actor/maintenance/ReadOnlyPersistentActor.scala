@@ -2,7 +2,7 @@ package com.evernym.verity.actor.maintenance
 
 import akka.actor.Props
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, State}
+import com.evernym.verity.actor.{ActorMessage, State}
 import com.evernym.verity.config.AppConfig
 
 import scala.concurrent.duration._
@@ -70,12 +70,12 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
   context.setReceiveTimeout(5.minutes)
 }
 
-case object SendPersistedData extends ActorMessageObject
+case object SendPersistedData extends ActorMessage
 
 case class PersistentData(lastSeqNo: Long, event: Any) {
   override def toString: String = s"$lastSeqNo: $event"
 }
-case class PersistentDataWrapper(data: List[PersistentData]) extends ActorMessageClass
+case class PersistentDataWrapper(data: List[PersistentData]) extends ActorMessage
 
 object ReadOnlyPersistentActor {
   def prop(appConfig: AppConfig, actorParam: ActorParam): Props =

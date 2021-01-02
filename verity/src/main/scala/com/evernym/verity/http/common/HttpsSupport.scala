@@ -35,8 +35,7 @@ trait HttpsSupport {
 
       val sslContext: SSLContext = SSLContext.getInstance("TLS")
       sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
-      Option(ConnectionContext.https(sslContext))
-
+      Option(ConnectionContext.httpsServer(sslContext))
     } catch {
       case e: Exception =>
         val errMsg = s"error creating https connection context: ${Exceptions.getErrorMsg(e)}"

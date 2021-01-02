@@ -61,13 +61,13 @@ class FailsOnLargeEventTestJournal extends TestJournal {
 
 }
 
-case class AddData(did: DID, data: String) extends ActorMessageClass
+case class AddData(did: DID, data: String) extends ActorMessage
 
-case class GetData(did: DID) extends ActorMessageClass
+case class GetData(did: DID) extends ActorMessage
 
-case class BadPersistenceData(data: Array[Byte]) extends ActorMessageClass
+case class BadPersistenceData(data: Array[Byte]) extends ActorMessage
 
-case object RestartNow extends ActorMessageObject
+case object RestartNow extends ActorMessage
 
 class DummyActor extends BasePersistentActor {
 

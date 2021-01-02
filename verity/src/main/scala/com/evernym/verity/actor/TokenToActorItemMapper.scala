@@ -50,11 +50,11 @@ object TokenToActorItemMapper {
 }
 
 //cmds
-case class AddDetail(regionTypeName: String, actorEntityId: String, uid: MsgId) extends ActorMessageClass
-case object GetDetail extends ActorMessageObject
+case class AddDetail(regionTypeName: String, actorEntityId: String, uid: MsgId) extends ActorMessage
+case object GetDetail extends ActorMessage
 
 //msgs
-case class ActorItemDetail(actorEntityId: String, uid: MsgId, regionTypeName: String) extends ActorMessageClass
+case class ActorItemDetail(actorEntityId: String, uid: MsgId, regionTypeName: String) extends ActorMessage
 
 
 class TokenToActorItemMapper(val appConfig: AppConfig)

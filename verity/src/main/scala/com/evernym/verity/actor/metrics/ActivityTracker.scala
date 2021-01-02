@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRout
 import com.evernym.verity.actor.agent.user.GetSponsorRel
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessageClass, WindowActivityDefined, WindowRules}
+import com.evernym.verity.actor.{ActorMessage, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.metrics.MetricsWriter
@@ -230,7 +230,7 @@ object VariableDuration {
 }
 
 /** ActivityTracker Commands */
-trait ActivityTracking extends ActorMessageClass
+trait ActivityTracking extends ActorMessage
 final case class ActivityWindow(windows: Set[ActiveWindowRules]) extends ActivityTracking {
   def asEvt: WindowActivityDefined =
     WindowActivityDefined(windows.map(x => WindowRules(x.activityFrequency.toString, x.activityType.toString)).toSeq)
@@ -275,5 +275,5 @@ object AgentActivity {
 final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior)
 
 /** ActivityTracker Event Base Type */
-trait Active extends ActorMessageClass
+trait Active extends ActorMessage
 

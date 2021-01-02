@@ -20,7 +20,7 @@ trait HasWalletHelper extends CommonSpecUtil { this: HasAppConfig =>
   val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
   val walletProvider = new LibIndyWalletProvider(appConfig)
   val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
-  val walletAPI = new StandardWalletAPI(walletService, walletProvider)
+  val walletAPI = new StandardWalletAPI(walletService)
 
   implicit lazy val wap: WalletAPIParam = {
     val wap = WalletAPIParam(walletId)

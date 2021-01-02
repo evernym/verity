@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, SponsorRel, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
@@ -665,12 +665,12 @@ class PartiMsg {
   }
 }
 
-case class DataRetrieved() extends ActorMessageClass
-case class DataNotFound() extends ActorMessageClass
-case class SegmentStorageComplete() extends ActorMessageClass
-case class SegmentStorageFailed() extends ActorMessageClass
+case class DataRetrieved() extends ActorMessage
+case class DataNotFound() extends ActorMessage
+case class SegmentStorageComplete() extends ActorMessage
+case class SegmentStorageFailed() extends ActorMessage
 case class ExternalStorageComplete(externalId: SegmentKey)
-case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessageClass {
+case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
 
   def msgIdOpt: Option[MsgId] = msg match {
     case e: Envelope1[_] => e.msgId

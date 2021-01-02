@@ -41,7 +41,7 @@ class TestWalletService(appConfig:AppConfig,
 
     val resp = cmd match {
       case CreateWallet =>
-        addToOpenedWalletIfReq(WalletMsgHandler.handleCreateAndOpenWallet())
+        addToOpenedWalletIfReq(WalletMsgHandler.handleCreateAndOpenWalletSync())
         Future(WalletCreated)
       case cmd =>
         executeOpWithWalletInfo("with wallet", { implicit we: WalletExt =>

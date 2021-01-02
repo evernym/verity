@@ -45,7 +45,7 @@ kill_process_by_pid_file_path(){
   wait_timeout=${2:-10}
   appendToProgressLog "Kill process by pid in file = $filepath"
   if [[ -f "$filepath" ]]; then
-    kill_process $(cat ${filepath}) $wait_timeout
+    kill_process "$(cat ${filepath})" $wait_timeout
     appendToProgressLog "Removing $filepath"
     rm -f ${filepath}
     appendToProgressLog "Removed $filepath"

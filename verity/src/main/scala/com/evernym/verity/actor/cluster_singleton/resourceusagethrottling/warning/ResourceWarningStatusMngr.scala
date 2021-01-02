@@ -145,12 +145,12 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
   override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_WARNING_STATUS_MNGR)
 }
 
-trait UpdateWarningStatus extends ActorMessageClass
+trait UpdateWarningStatus extends ActorMessage
 
 case class GetWarnedList(onlyWarned: Boolean, onlyUnwarned: Boolean, onlyActive: Boolean,
-                         inChunks: Boolean, ids: Option[String]=None, resourceNames: Option[String]=None) extends ActorMessageClass
+                         inChunks: Boolean, ids: Option[String]=None, resourceNames: Option[String]=None) extends ActorMessage
 
-object GetWarnedList extends ActorMessageObject {
+object GetWarnedList extends ActorMessage {
   def apply(onlyWarned: String, onlyUnwarned: String, onlyActive: String, inChunks: Boolean,
             ids: Option[String], resourceNames: Option[String]): GetWarnedList = {
     val gwl = GetWarnedList(strToBoolean(onlyWarned), strToBoolean(onlyUnwarned),
@@ -189,27 +189,27 @@ case class WarningDetail(warnFrom: Option[ZonedDateTime], warnTill: Option[Zoned
  * @param status warning status of the entity itself
  * @param resourcesStatus warning status for different resources (endpoint/messages) for the entity
  */
-case class EntityWarningStatus(status: WarningDetail, resourcesStatus: Map[ResourceName, WarningDetail]) extends ActorMessageClass
+case class EntityWarningStatus(status: WarningDetail, resourcesStatus: Map[ResourceName, WarningDetail]) extends ActorMessage
 
 case class WarnCaller(entityId: EntityId,
                       warnFrom: Option[ZonedDateTime]=None,
                       warnPeriod: Option[Long]=None,
-                      allWarnedResources: Option[String]=None) extends ActorMessageClass
+                      allWarnedResources: Option[String]=None) extends ActorMessage
 
 case class WarnResourceForCaller(entityId: EntityId,
                                  resourceName: ResourceName,
                                  warnFrom: Option[ZonedDateTime]=None,
-                                 warnPeriod: Option[Long]=None) extends ActorMessageClass
+                                 warnPeriod: Option[Long]=None) extends ActorMessage
 
 case class UnwarnCaller(entityId: EntityId,
                         unwarnFrom: Option[ZonedDateTime]=None,
                         unwarnPeriod: Option[Long]=None,
-                        allWarnedResources: Option[String]=None) extends ActorMessageClass
+                        allWarnedResources: Option[String]=None) extends ActorMessage
 
 case class UnwarnResourceForCaller(entityId: EntityId,
                                    resourceName: ResourceName,
                                    unwarnFrom: Option[ZonedDateTime]=None,
-                                   unwarnPeriod: Option[Long]=None) extends ActorMessageClass
+                                   unwarnPeriod: Option[Long]=None) extends ActorMessage
 
 /**
  * used to send warning status from cluster singleton to each node
@@ -218,7 +218,7 @@ case class UnwarnResourceForCaller(entityId: EntityId,
  * @param totalChunks total chunks
  */
 case class UsageWarningStatusChunk(usageWarningStatus: Map[EntityId, EntityWarningStatus],
-                                   currentChunkNumber: Int, totalChunks: Int) extends ActorMessageClass
+                                   currentChunkNumber: Int, totalChunks: Int) extends ActorMessage
 
 
 object ResourceWarningStatusMngr {

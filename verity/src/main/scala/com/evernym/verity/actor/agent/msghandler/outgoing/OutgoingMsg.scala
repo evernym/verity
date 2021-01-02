@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler.outgoing
 
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msghandler.MsgParam
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.protocol.engine._
@@ -51,14 +51,14 @@ case class OutgoingMsg[A](msg: A,
  */
 case class SendSignalMsg(msg: Any, threadId: ThreadId, protoRef: ProtoRef,
                             pinstId: PinstId, threadContextDetail: ThreadContextDetail,
-                            requestMsgId: Option[MsgId]) extends ActorMessageClass
+                            requestMsgId: Option[MsgId]) extends ActorMessage
 
 /**
  * This is sent after any pre processing work is done for received SendSignalMsg
  * As of now, primarily it is used to copy the thread context from 'UserAgent' actor to 'UserAgentPairwise' actor
  * @param ssm
  */
-case class ProcessSendSignalMsg(ssm: SendSignalMsg) extends ActorMessageClass
+case class ProcessSendSignalMsg(ssm: SendSignalMsg) extends ActorMessage
 
 /**
  * This case class is used by GenericProtocolActor to send synchronous response message
@@ -66,7 +66,7 @@ case class ProcessSendSignalMsg(ssm: SendSignalMsg) extends ActorMessageClass
  * now we can migrate them to send asynchronous response (by using protocol context's 'send' method),
  * but until we migrate them all, GenericProtocolActor will have to send response messages back
  */
-case class ProtocolSyncRespMsg(msg: Any, requestMsgId: Option[MsgId]) extends RequestMsgIdProvider with ActorMessageClass
+case class ProtocolSyncRespMsg(msg: Any, requestMsgId: Option[MsgId]) extends RequestMsgIdProvider with ActorMessage
 
 
 /**
@@ -100,7 +100,7 @@ trait SendOutgoingMsg {
  * to make sure once the msg is stored (successful persistence) then it tries
  * to send it to edge agent
  */
-case class SendStoredMsgToSelf(msgId: MsgId) extends ActorMessageClass
+case class SendStoredMsgToSelf(msgId: MsgId) extends ActorMessage
 
 case class JsonMsg(msg: String)
 

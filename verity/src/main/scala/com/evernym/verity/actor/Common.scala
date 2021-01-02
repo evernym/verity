@@ -8,21 +8,19 @@ import com.evernym.verity.Status
 import scalapb.GeneratedMessage
 
 /**
- * each actor incoming/outgoing command is supposed to extend from these base classes
+ * each actor incoming/outgoing command/response/message is supposed to extend from this base class
  * which helps choosing correct serializer/deserializer if that message needs to use
  * akka remoting (in other way, when a message has to cross a jvm boundary)
  */
 trait ActorMessage
-trait ActorMessageObject extends ActorMessage
-trait ActorMessageClass extends ActorMessage
 
-final case class ForIdentifier(id: String, msg: Any) extends ActorMessageClass
+final case class ForIdentifier(id: String, msg: Any) extends ActorMessage
 
-final case class ForToken(token: String, msg: Any) extends ActorMessageClass {
+final case class ForToken(token: String, msg: Any) extends ActorMessage {
   TokenProvider.checkIfTokenLengthIsValid(token)
 }
 
-final case class ForUrlStore(hashedUrl: String, msg: Any) extends ActorMessageClass {
+final case class ForUrlStore(hashedUrl: String, msg: Any) extends ActorMessage {
   checkIfHashedUrlLengthIsValid(hashedUrl)
 }
 
@@ -31,7 +29,7 @@ final case class ForUrlStore(hashedUrl: String, msg: Any) extends ActorMessageCl
  * @param DID agency agent's public DID
  * @param verKey agency agent's public DID verKey
  */
-case class AgencyPublicDid(DID: DID, verKey: VerKey, ledgers: Option[Ledgers]=None) extends ActorMessageClass
+case class AgencyPublicDid(DID: DID, verKey: VerKey, ledgers: Option[Ledgers]=None) extends ActorMessage
 
 //event
 object Evt {
@@ -79,31 +77,31 @@ trait State extends GeneratedMessage {
 
 //response msg
 
-case class SendCmdToAllNodes(cmd: Any) extends ActorMessageClass
+case class SendCmdToAllNodes(cmd: Any) extends ActorMessage
 
-case object ConfigRefreshed extends ActorMessageObject
-case object ConfigRefreshFailed extends ActorMessageObject
+case object ConfigRefreshed extends ActorMessage
+case object ConfigRefreshFailed extends ActorMessage
 
-case object RefreshConfigOnAllNodes extends ActorMessageObject
-case object RefreshNodeConfig extends ActorMessageObject
-case object NodeConfigRefreshed extends ActorMessageObject
+case object RefreshConfigOnAllNodes extends ActorMessage
+case object RefreshNodeConfig extends ActorMessage
+case object NodeConfigRefreshed extends ActorMessage
 
-case object ConfigOverridden extends ActorMessageObject
-case object ConfigOverrideFailed extends ActorMessageObject
+case object ConfigOverridden extends ActorMessage
+case object ConfigOverrideFailed extends ActorMessage
 
-case class OverrideConfigOnAllNodes(configStr: String) extends ActorMessageClass
-case class OverrideNodeConfig(configStr: String) extends ActorMessageClass
-case object NodeConfigOverridden extends ActorMessageObject
+case class OverrideConfigOnAllNodes(configStr: String) extends ActorMessage
+case class OverrideNodeConfig(configStr: String) extends ActorMessage
+case object NodeConfigOverridden extends ActorMessage
 
-case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessageClass
-case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessageClass
+case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessage
+case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessage
 
-case object ResetNodeMetrics extends ActorMessageObject
-case object ResetMetricsOfAllNodes extends ActorMessageObject
-case class StartProgressTracking(trackingId: String) extends ActorMessageClass
-case class StopProgressTracking(trackingId: String) extends ActorMessageClass
-case object NodeMetricsResetDone extends ActorMessageObject
-case object AllNodeMetricsResetDone extends ActorMessageObject
+case object ResetNodeMetrics extends ActorMessage
+case object ResetMetricsOfAllNodes extends ActorMessage
+case class StartProgressTracking(trackingId: String) extends ActorMessage
+case class StopProgressTracking(trackingId: String) extends ActorMessage
+case object NodeMetricsResetDone extends ActorMessage
+case object AllNodeMetricsResetDone extends ActorMessage
 
 case class MetricsFilterCriteria(includeMetaData: Boolean = true, includeReset: Boolean = true,
                                  includeTags: Boolean = true, filtered: Boolean = true)

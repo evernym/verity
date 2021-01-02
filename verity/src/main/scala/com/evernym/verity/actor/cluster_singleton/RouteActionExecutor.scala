@@ -3,7 +3,7 @@ package com.evernym.verity.actor.cluster_singleton
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.agent.maintenance.{ProcessPending, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, GetRegisteredRouteSummary, GetRouteBatch, GetRouteBatchResult, InternalMsgRouteParam, RoutingAgentBucketMapperV1}
 import com.evernym.verity.actor.base.{CoreActorExtended, AlreadyDone, Done, Ping, Stop}
@@ -176,11 +176,11 @@ object RouteActionExecutor {
     Props(new RouteActionExecutor(appConfig, agentMsgRouter))
 }
 
-case class MaintenanceCmdWrapper(taskId: String, cmd: Any) extends ActorMessageClass
+case class MaintenanceCmdWrapper(taskId: String, cmd: Any) extends ActorMessage
 
-case class RestartAllActors(actorTypeIdsStr: String, restartTaskIfAlreadyRunning: Boolean) extends ActorMessageClass
-case object GetStatus extends ActorMessageObject
+case class RestartAllActors(actorTypeIdsStr: String, restartTaskIfAlreadyRunning: Boolean) extends ActorMessage
+case object GetStatus extends ActorMessage
 
-case class ActionStatus(routeStatus: Map[EntityId, RouteStatus]) extends ActorMessageClass
+case class ActionStatus(routeStatus: Map[EntityId, RouteStatus]) extends ActorMessage
 
-case object Init extends ActorMessageObject
+case object Init extends ActorMessage

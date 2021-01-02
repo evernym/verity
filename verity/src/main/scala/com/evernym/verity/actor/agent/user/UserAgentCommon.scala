@@ -306,12 +306,12 @@ case class AgentConfig(value: String, lastUpdatedDateTime: ZonedDateTime) {
 }
 
 //cmd
-case class UpdateConfig(name: String, value: String) extends ActorMessageClass
-case class RemoveConfig(name: String) extends ActorMessageClass
-case class GetConfigs(names: Set[String]) extends ActorMessageClass
+case class UpdateConfig(name: String, value: String) extends ActorMessage
+case class RemoveConfig(name: String) extends ActorMessage
+case class GetConfigs(names: Set[String]) extends ActorMessage
 
 //response
-case class AgentConfigs(configs: Set[ConfigDetail]) extends ActorMessageClass {
+case class AgentConfigs(configs: Set[ConfigDetail]) extends ActorMessage {
 
   def getConfValueOpt(name: String): Option[String] = {
     configs.find(_.name == name).map(_.value)
@@ -324,7 +324,7 @@ case class AgentConfigs(configs: Set[ConfigDetail]) extends ActorMessageClass {
   }
 }
 
-case object PairwiseConnSet extends ActorMessageObject
+case object PairwiseConnSet extends ActorMessage
 
 trait UserAgentCommonState { this: State =>
 

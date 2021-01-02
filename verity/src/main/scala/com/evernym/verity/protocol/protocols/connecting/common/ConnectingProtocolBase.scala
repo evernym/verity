@@ -33,7 +33,7 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlDetail}
+import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
@@ -292,11 +292,11 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def prepareEdgePayloadStoredEvent(msgId: String, msgName: String, externalPayloadMsg: String): Option[MsgPayloadStored] = {
 
     def prepareEdgeMsg(): Array[Byte] = {
-      val fromKeyInfo = KeyInfo (Left(ctx.getState.thisAgentVerKeyReq))
-      val forKeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(getEncryptForDID, getKeyFromPool = false)))
-      val ecInfo = EncryptParam (Set(forKeyInfo), Option(fromKeyInfo))
+      val fromKeyParam = KeyParam (Left(ctx.getState.thisAgentVerKeyReq))
+      val forKeyParam = KeyParam(Right(GetVerKeyByDIDParam(getEncryptForDID, getKeyFromPool = false)))
+      val encryptParam = EncryptParam (Set(forKeyParam), Option(fromKeyParam))
       val packedMsg = ctx.SERVICES_DEPRECATED.agentMsgTransformer.pack(
-        msgPackFormat, externalPayloadMsg, ecInfo)
+        msgPackFormat, externalPayloadMsg, encryptParam)
       packedMsg.msg
     }
     val payload = prepareEdgeMsg()
@@ -411,7 +411,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
     (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(v1: LegacyRoutingDetail), None) =>
-        val theirAgencySealParam = SealParam(KeyInfo(Left(getVerKeyReqViaCache(
+        val theirAgencySealParam = SealParam(KeyParam(Left(getVerKeyReqViaCache(
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
@@ -466,7 +466,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
 case class NotifyUserViaPushNotif(pushNotifData: PushNotifData, updateDeliveryStatus: Boolean)
 
-case class SendMsgToRegisteredEndpoint(msgId: MsgId, msg: Array[Byte], metadata: Option[PayloadMetadata]) extends Control with MsgBase with ActorMessageClass
+case class SendMsgToRegisteredEndpoint(msgId: MsgId, msg: Array[Byte], metadata: Option[PayloadMetadata]) extends Control with MsgBase with ActorMessage
 
 /**
  * This is used after connection request message is validated and its events are sent for persistence.
@@ -478,7 +478,7 @@ case class SendMsgToRegisteredEndpoint(msgId: MsgId, msg: Array[Byte], metadata:
  *   b. prepare the response (of original connReq message) and sends it back to caller.
  * @param uid - connection request message uid
  */
-case class SendConnReqMsg(uid: MsgId) extends Control with ActorMessageClass
+case class SendConnReqMsg(uid: MsgId) extends Control with ActorMessage
 
 /**
  * This is used after connection request answer message is validated and its events are sent for persistence.
@@ -489,7 +489,7 @@ case class SendConnReqMsg(uid: MsgId) extends Control with ActorMessageClass
  * to connection request sender's cloud agent
  * @param uid - connection request answer message uid
  */
-case class SendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat) extends Control with ActorMessageClass
+case class SendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat) extends Control with ActorMessage
 
 
 /**
@@ -500,7 +500,7 @@ case class SendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat) e
  * As part of processing this (on connection request sender side), it sends the received message to edge agent
  * @param uid - accepted conn request message id
  */
-case class SendMsgToEdgeAgent(uid: MsgId) extends Control with ActorMessageClass
+case class SendMsgToEdgeAgent(uid: MsgId) extends Control with ActorMessage
 
 // signal
 case class StatusReport(sourceId: String, status: String)
@@ -540,7 +540,7 @@ case class UpdateMsgExpirationTime_MFV_0_6(targetMsgName: MsgName, timeInSeconds
  * @param phoneNo - invite recipient's phone number
  * @param urlMappingServiceEndpoint - endpoint of url mapping service (today hosted on CAS [Consumer Agent Service])
  */
-case class CreateAndSendTinyUrlParam(uid: MsgId, phoneNo: String, urlMappingServiceEndpoint: UrlDetail)
+case class CreateAndSendTinyUrlParam(uid: MsgId, phoneNo: String, urlMappingServiceEndpoint: UrlParam)
 
 /**
  * Used during preparing invitation detail and also when connection request answer message is sent to remote cloud agent.
@@ -584,7 +584,7 @@ case class SenderDetailAbbreviated(d: DID, v: VerKey, dp: Option[AgentKeyDlgProo
  */
 case class InviteDetail(connReqId: String, targetName: String,
                         senderAgencyDetail: SenderAgencyDetail, senderDetail: SenderDetail,
-                        statusCode: String, statusMsg: String, version: String) extends ActorMessageClass {
+                        statusCode: String, statusMsg: String, version: String) extends ActorMessage {
   def toAbbreviated: InviteDetailAbbreviated = {
     InviteDetailAbbreviated(
       connReqId,
@@ -599,7 +599,7 @@ case class InviteDetail(connReqId: String, targetName: String,
 }
 
 case class InviteDetailAbbreviated(id: String, t: String, sa: SenderAgencyDetailAbbreviated, s: SenderDetailAbbreviated,
-                                   sc: String, sm: String, version: String) extends ActorMessageClass
+                                   sc: String, sm: String, version: String) extends ActorMessage
 
 case class ConnReqReceived(inviteDetail: InviteDetail) extends MsgBase
 

@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msgsender.{MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{HasLogger, MsgId}
@@ -58,6 +58,6 @@ trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger 
   }
 }
 
-trait MsgDeliveryNotification extends Control with ActorMessageClass
+trait MsgDeliveryNotification extends Control with ActorMessage
 case class MsgSentSuccessfully(uid: MsgId, typ: String) extends MsgDeliveryNotification
 case class MsgSendingFailed(uid: MsgId, typ: String) extends MsgDeliveryNotification

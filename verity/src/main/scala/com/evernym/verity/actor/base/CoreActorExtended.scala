@@ -3,7 +3,7 @@ package com.evernym.verity.actor.base
 import java.io.Serializable
 
 import akka.actor.ReceiveTimeout
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject}
+import com.evernym.verity.actor.ActorMessage
 
 
 /**
@@ -45,9 +45,9 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
 
 }
 
-abstract class SerializableObject extends Serializable with ActorMessageObject
+abstract class SerializableObject extends Serializable with ActorMessage
 case object Done extends SerializableObject
 case object AlreadyDone extends SerializableObject
 case object NotFound extends SerializableObject
-case class Ping(sendBackConfirmation: Boolean = false) extends ActorMessageClass
-case class Stop(sendBackConfirmation: Boolean = false) extends ActorMessageClass
+case class Ping(sendBackConfirmation: Boolean = false) extends ActorMessage
+case class Stop(sendBackConfirmation: Boolean = false) extends ActorMessage

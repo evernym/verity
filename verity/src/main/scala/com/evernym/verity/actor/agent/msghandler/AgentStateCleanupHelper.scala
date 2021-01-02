@@ -297,15 +297,15 @@ trait AgentStateCleanupHelper {
   self ! FixThreadMigrationState
 }
 
-case object MigrateThreadContexts extends ActorMessageObject
-case object FixThreadMigrationState extends ActorMessageObject
-case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorMessageClass
-case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessageClass
+case object MigrateThreadContexts extends ActorMessage
+case object FixThreadMigrationState extends ActorMessage
+case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorMessage
+case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessage
 case class ActorStateCleanupStatus(actorDID: DID,
                                    isRouteFixed: Boolean,
                                    pendingCount: Int,
                                    successfullyMigratedCount: Int,
-                                   nonMigratedCount: Int) extends ActorMessageClass {
+                                   nonMigratedCount: Int) extends ActorMessage {
   def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
 }
 
@@ -318,4 +318,4 @@ case class ThreadContextMigrationStatus(candidateProtoActors: Set[ProtoRef],
   def isNotMigrated: Boolean = isAllRespReceived && successResponseFromProtoActors.isEmpty
 }
 
-case class RouteSetStatus(did: DID, isSet: Boolean) extends ActorMessageObject
+case class RouteSetStatus(did: DID, isSet: Boolean) extends ActorMessage

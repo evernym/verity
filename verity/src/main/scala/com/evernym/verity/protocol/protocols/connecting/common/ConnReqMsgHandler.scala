@@ -19,8 +19,8 @@ import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormalizedPhoneNumber, replaceVariables}
-import com.evernym.verity.vault.{EncryptParam, KeyInfo}
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.vault.{EncryptParam, KeyParam}
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.PackedMsg
 
@@ -126,7 +126,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
     val urlMapperSvcHost = appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_HOST)
     val urlMapperSvcPort = appConfig.getConfigIntReq(URL_MAPPER_SVC_ENDPOINT_PORT)
     val urlMapperPathPrefix = Option(appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
-    val urlMapperEndpoint = UrlDetail(urlMapperSvcHost, urlMapperSvcPort, urlMapperPathPrefix)
+    val urlMapperEndpoint = UrlParam(urlMapperSvcHost, urlMapperSvcPort, urlMapperPathPrefix)
     implicit val param: CreateAndSendTinyUrlParam = CreateAndSendTinyUrlParam(uid, phoneNo, urlMapperEndpoint)
     val domainId = ctx.getBackstate.domainId
     createAndSendTinyUrl(`userName_!`, domainId, tryCount = 1)
@@ -236,7 +236,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   private def withinMaxTryCount(curTryCount: Int): Boolean = curTryCount <= MAX_BUILD_AND_SEND_SMS_TRY_COUNT
 
   def encParamFromThisAgentToOwner: EncryptParam = EncryptParam(
-    Set(KeyInfo(Left(getVerKeyReqViaCache(getEncryptForDID)))),
-    Option(KeyInfo(Left(ctx.getState.thisAgentVerKeyReq)))
+    Set(KeyParam(Left(getVerKeyReqViaCache(getEncryptForDID)))),
+    Option(KeyParam(Left(ctx.getState.thisAgentVerKeyReq)))
   )
 }

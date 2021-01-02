@@ -26,7 +26,7 @@ object WalletMsgHandler {
       case gvk: GetVerKey                   => handleGetVerKey(gvk)
       case gvko: GetVerKeyOpt               => handleGetVerKeyOpt(gvko)
       case sm: SignMsg                      => handleSignMsg(sm)
-      case vs: VerifySigByKeyInfo           => handleVerifySigByKeyInfo(vs)
+      case vs: VerifySigByKeyParam          => handleVerifySigByKeyParam(vs)
       case pm: PackMsg                      => handlePackMsg(pm)
       case um: UnpackMsg                    => handleUnpackMsg(um)
       case lpm: LegacyPackMsg               => handleLegacyPackMsg(lpm)
@@ -89,15 +89,15 @@ object WalletMsgHandler {
     CryptoOpExecutor.handleLegacyUnpackMsg(msg, wmp.util, wmp.poolManager)
   }
 
-  private def handleVerifySigByKeyInfo(param: VerifySigByKeyInfo)
+  private def handleVerifySigByKeyParam(vs: VerifySigByKeyParam)
                               (implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
-    handleGetVerKey(GetVerKey(param.keyInfo)).flatMap { verKey =>
-      CryptoOpExecutor.verifySig(verKey, param.challenge, param.signature)
+    handleGetVerKey(GetVerKey(vs.keyParam)).flatMap { verKey =>
+      CryptoOpExecutor.verifySig(verKey, vs.challenge, vs.signature)
     }
   }
 
   private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[VerKey]] = {
-    handleGetVerKey(GetVerKey(gvko.keyInfo))
+    handleGetVerKey(GetVerKey(gvko.keyParam))
       .map(vk => Option(vk))
       .recover {
         case _: ExecutionException => None
@@ -128,7 +128,18 @@ object WalletMsgHandler {
    * @param wmp wallet msg param
    * @return
    */
-  def handleCreateAndOpenWallet()(implicit wmp: WalletMsgParam): WalletExt = {
+  def handleCreateWalletASync()(implicit wmp: WalletMsgParam): Future[WalletCreated.type] = {
+    wmp.walletProvider.createAsync(
+      wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
+  }
+
+  /**
+   * purposefully not returning a future as mostly the calling code has to do a
+   * state change when this function returns a wallet
+   * @param wmp wallet msg param
+   * @return
+   */
+  def handleCreateAndOpenWalletSync()(implicit wmp: WalletMsgParam): WalletExt = {
     wmp.walletProvider.createSync(
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
     wmp.walletProvider.openSync(
@@ -136,7 +147,7 @@ object WalletMsgHandler {
   }
 
   def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerKey] = {
-    gvk.keyInfo.verKeyDetail.fold (
+    gvk.keyParam.verKeyParam.fold (
       l => Future.successful(l),
       r => {
         wmp.util.getVerKey(r.did, we, r.getKeyFromPool, wmp.poolManager)

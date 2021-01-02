@@ -241,8 +241,8 @@ case class Bucket(usedCount: Int = 0,
 case class BucketExt(usedCount: Int = 0, allowedCount: Int,
                      startDateTime: Option[ZonedDateTime], endDateTime: Option[ZonedDateTime])
 
-case class AddResourceUsage(resourceType: ResourceType, resourceName: ResourceName, apiToken: ApiToken, sendBackAck: Boolean=true) extends ActorMessageClass
-case class GetResourceUsage(resourceName: ResourceName) extends ActorMessageClass
-case class ResourceUsages(usages: Map[ResourceName, Map[BucketIdStr, BucketExt]]) extends ActorMessageClass
+case class AddResourceUsage(resourceType: ResourceType, resourceName: ResourceName, apiToken: ApiToken, sendBackAck: Boolean=true) extends ActorMessage
+case class GetResourceUsage(resourceName: ResourceName) extends ActorMessage
+case class ResourceUsages(usages: Map[ResourceName, Map[BucketIdStr, BucketExt]]) extends ActorMessage
 
-case object GetAllResourceUsages  extends ActorMessageObject
+case object GetAllResourceUsages  extends ActorMessage

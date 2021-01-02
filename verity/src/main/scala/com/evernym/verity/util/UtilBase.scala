@@ -11,7 +11,7 @@ import akka.util.Timeout
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{HandledErrorException, _}
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.ledger.LedgerPoolConnManager
@@ -22,7 +22,7 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.SignMsg
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
@@ -43,7 +43,7 @@ import scala.language.implicitConversions
 import scala.util.{Failure, Left, Success}
 
 
-case class PackedMsgWrapper(msg: Array[Byte], reqMsgContext: ReqMsgContext) extends ActorMessageClass
+case class PackedMsgWrapper(msg: Array[Byte], reqMsgContext: ReqMsgContext) extends ActorMessage
 
 
 trait UtilBase {
@@ -210,11 +210,11 @@ trait UtilBase {
     curTime.isAfter(expiryTime)
   }
 
-  def buildAgencyEndpoint(appConfig: AppConfig): UrlDetail = {
+  def buildAgencyEndpoint(appConfig: AppConfig): UrlParam = {
     val host = appConfig.getConfigStringReq(VERITY_ENDPOINT_HOST)
     val port = appConfig.getConfigIntReq(VERITY_ENDPOINT_PORT)
     val pathPrefix = Option(appConfig.getConfigStringReq(VERITY_ENDPOINT_PATH_PREFIX))
-    UrlDetail(host, port, pathPrefix)
+    UrlParam(host, port, pathPrefix)
   }
 
   def checkIfDIDBelongsToVerKey(did: DID, verKey: VerKey): Unit = {
@@ -313,7 +313,7 @@ trait UtilBase {
   def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
                            (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
-    val sig = walletAPI.signMsg(SignMsg(KeyInfo(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
+    val sig = walletAPI.signMsg(SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
     keyDlgProof.copy(signature=Base64Util.getBase64Encoded(sig))
   }
 

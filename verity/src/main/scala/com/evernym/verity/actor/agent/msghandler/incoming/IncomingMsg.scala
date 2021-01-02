@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
@@ -74,16 +74,16 @@ case class MsgForRelationship[A](msgToBeSent: TypedMsgLike[A],
                                  msgTypeDeclarationFormat: Option[TypeFormat],
                                  msgRespConfig: Option[MsgRespConfig],
                                  reqMsgContext: Option[ReqMsgContext]=None
-                                ) extends ActorMessageClass
+                                ) extends ActorMessage
 
 
-case class ProcessPackedMsg(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext) extends MsgBase with ActorMessageClass {
+case class ProcessPackedMsg(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext) extends MsgBase with ActorMessage {
   override def validate(): Unit = {
     checkRequired("packedMsg", packedMsg)
   }
 }
 
-case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext) extends MsgBase with ActorMessageClass {
+case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext) extends MsgBase with ActorMessage {
   override def validate(): Unit = {
     checkRequired("msg", msg)
   }
@@ -112,7 +112,7 @@ case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
 case class SignalMsgFromDriver(signalMsg: Any,
                                protoRef: ProtoRef,
                                pinstId: PinstId,
-                               threadContextDetail: ThreadContextDetail) extends ActorMessageClass {
+                               threadContextDetail: ThreadContextDetail) extends ActorMessage {
   def threadId: ThreadId = threadContextDetail.threadId
 }
 

@@ -115,7 +115,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,Pro
  * @param uid - unique message id
  */
 
-case class GetInviteDetail_MFV_0_5(override val uid: MsgId) extends GetInviteDetail with ActorMessageClass {
+case class GetInviteDetail_MFV_0_5(override val uid: MsgId) extends GetInviteDetail with ActorMessage {
   val msgName: MsgName = MSG_TYPE_GET_INVITE_DETAIL
   val msgFamily: MsgFamily = ConnectingMsgFamily
 }

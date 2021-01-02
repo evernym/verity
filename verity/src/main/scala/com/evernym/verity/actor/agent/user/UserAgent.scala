@@ -40,7 +40,7 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
@@ -423,7 +423,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
             ucm.comMethod.value),
           appConfig)
         ucm.comMethod
-      case COM_METHOD_TYPE_HTTP_ENDPOINT  => UrlDetail(ucm.comMethod.value); ucm.comMethod
+      case COM_METHOD_TYPE_HTTP_ENDPOINT  => UrlParam(ucm.comMethod.value); ucm.comMethod
       case COM_METHOD_TYPE_FWD_PUSH       =>
         if (state.sponsorRel.isEmpty){
           throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("no sponsor registered - cannot register fwd method"))
@@ -477,8 +477,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
           case x => throw new RuntimeException("unsupported msg pack format: " + x)
         }
       val authEncParam = EncryptParam(
-        Set(KeyInfo(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
-        Option(KeyInfo(Left(agentVerKey)))
+        Set(KeyParam(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
+        Option(KeyParam(Left(agentVerKey)))
       )
       val packedMsg = agentActorContext.agentMsgTransformer.pack(reqMsgContext.msgPackFormat, updateMsgStatusReq, authEncParam)
       val rmi = reqMsgContext.copy()
@@ -493,7 +493,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     success.map { case (fromDID, respMsg) =>
       respMsg match {
         case pm: PackedMsg =>
-          val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(pm.msg, KeyInfo(Left(agentVerKey)))
+          val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(pm.msg, KeyParam(Left(agentVerKey)))
           val msgIds = unpackedAgentMsg.msgPackFormat match {
             case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
             case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
@@ -573,8 +573,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val agentVerKey = state.thisAgentVerKeyReq
     Future.traverse(filteredPairwiseConns) { pc =>
       val encParam = EncryptParam(
-        Set(KeyInfo(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
-        Option(KeyInfo(Left(agentVerKey)))
+        Set(KeyParam(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
+        Option(KeyParam(Left(agentVerKey)))
       )
       val packedMsg = agentActorContext.agentMsgTransformer.pack(MPF_MSG_PACK, getMsg, encParam)
       val rmi = reqMsgContext.copy()
@@ -591,7 +591,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         try {
           val agentVerKey = state.thisAgentVerKeyReq
           val result = respMsgs.map { case (fromDID, respMsg) =>
-            val amw = agentActorContext.agentMsgTransformer.unpack(respMsg.msg, KeyInfo(Left(agentVerKey)))
+            val amw = agentActorContext.agentMsgTransformer.unpack(respMsg.msg, KeyParam(Left(agentVerKey)))
             val msgs = reqMsgContext.msgPackFormat match {
               case MPF_MSG_PACK | MPF_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
               case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack format not supported: " + x))
@@ -712,8 +712,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def encParamFromThisAgentToOwner: EncryptParam = {
     EncryptParam(
-      Set(KeyInfo(Left(getVerKeyReqViaCache(state.myDid_!)))),
-      Option(KeyInfo(Left(state.thisAgentVerKeyReq)))
+      Set(KeyParam(Left(getVerKeyReqViaCache(state.myDid_!)))),
+      Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
   }
 
@@ -759,20 +759,20 @@ case class PairwiseConnSetExt(agentDID: DID, reqMsgContext: ReqMsgContext)
 case class PendingAuthKey(rka: RequesterKeyAdded, applied: Boolean = false)
 
 //cmd
-case object GetAllComMethods extends ActorMessageObject
-case object GetPushComMethods extends ActorMessageObject
-case object GetHttpComMethods extends ActorMessageObject
-case object GetFwdComMethods extends ActorMessageObject
-case object GetSponsorRel extends ActorMessageObject
-case class DeleteComMethod(value: String, reason: String) extends ActorMessageClass
+case object GetAllComMethods extends ActorMessage
+case object GetPushComMethods extends ActorMessage
+case object GetHttpComMethods extends ActorMessage
+case object GetFwdComMethods extends ActorMessage
+case object GetSponsorRel extends ActorMessage
+case class DeleteComMethod(value: String, reason: String) extends ActorMessage
 
 //response msgs
-case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessageClass
-case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessageClass
-case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessageClass
-case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessageClass
+case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessage
+case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessage
+case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessage
+case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessage
 
-case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Option[String]=None) extends ActorMessageClass {
+case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Option[String]=None) extends ActorMessage {
 
   def filterByType(comMethodType: Int): Set[ComMethodDetail] = {
     filterByTypes(Seq(comMethodType))

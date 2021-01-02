@@ -7,7 +7,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet.{PackedMsg, UnpackMsg, UnpackedMsg}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -24,20 +24,20 @@ class IndyPackTransformer
   val logger: Logger = getLoggerByClass(classOf[IndyPackTransformer])
 
   override def pack(msg: String,
-                    recipVerKeys: Set[KeyInfo],
-                    senderVerKey: Option[KeyInfo])
+                    recipVerKeyParams: Set[KeyParam],
+                    senderVerKeyParam: Option[KeyParam])
                    (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    walletAPI.packMsg(msg.getBytes, recipVerKeys, senderVerKey)
+    walletAPI.packMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam)
   }
 
-  override def unpack(msg: Array[Byte], fromKeyInfo: Option[KeyInfo],
+  override def unpack(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam],
                       unpackParam: UnpackParam)(implicit wap: WalletAPIParam, walletAPI: WalletAPI)
   : AgentBundledMsg = {
     val um = walletAPI.unpackMsg(msg)
     prepareAgentBundledMsg(um, unpackParam)
   }
 
-  override def unpackAsync(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], unpackParam: UnpackParam)
+  override def unpackAsync(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
     walletAPI.executeAsync[UnpackedMsg](UnpackMsg(msg)).map { um =>
       prepareAgentBundledMsg(um, unpackParam)

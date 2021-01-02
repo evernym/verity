@@ -11,7 +11,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail, 
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_5, MFV_1_0, MSG_FAMILY_NAME_0_5, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext, Util}
-import com.evernym.verity.vault.{KeyInfo, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -31,7 +31,7 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
     // flow diagram: fwd + ctl + proto + legacy, step 3 -- Decrypt and check message type.
     getAgencyDidPairFut flatMap { adp =>
       agentActorContext.agentMsgTransformer.unpackAsync(
-        pmw.msg, KeyInfo(Left(adp.verKey)), UnpackParam(isAnonCryptedMsg = true)
+        pmw.msg, KeyParam(Left(adp.verKey)), UnpackParam(isAnonCryptedMsg = true)
       ).flatMap { implicit amw =>
         handleUnpackedMsg(pmw)
       }

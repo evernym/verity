@@ -158,14 +158,14 @@ class LegacyWalletAPI(appConfig: AppConfig,
 
   def getVerKeyOption(gvk: GetVerKeyOpt)(implicit wap: WalletAPIParam): Option[VerKey] = {
     try {
-      Option(getVerKey(GetVerKey(gvk.keyInfo)))
+      Option(getVerKey(GetVerKey(gvk.keyParam)))
     } catch {
       case _: ExecutionException => None
     }
   }
 
-  private def getVerKeyFromDetail(keyInfo: KeyInfo)(implicit wap: WalletAPIParam): Future[VerKey] = {
-    keyInfo.verKeyDetail.fold(
+  private def getVerKeyFromDetail(keyParam: KeyParam)(implicit wap: WalletAPIParam): Future[VerKey] = {
+    keyParam.verKeyParam.fold(
       l => Future.successful(l),
       r => {
         executeOpWithWalletInfo("get ver key", { we: WalletExt =>
@@ -176,8 +176,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
     )
   }
 
-  private def getVerKeyFromWallet(keyInfo: KeyInfo)(implicit we: WalletExt): Future[VerKey] = {
-    keyInfo.verKeyDetail.fold(
+  private def getVerKeyFromWallet(keyParam: KeyParam)(implicit we: WalletExt): Future[VerKey] = {
+    keyParam.verKeyParam.fold(
       l => Future.successful(l),
       r => {
         util.getVerKey(r.did, we, r.getKeyFromPool, ledgerPoolManager)
@@ -186,13 +186,13 @@ class LegacyWalletAPI(appConfig: AppConfig,
   }
 
   def getVerKey(gvk: GetVerKey)(implicit wap: WalletAPIParam): VerKey = {
-    val verKeyFuture = getVerKeyFromDetail(gvk.keyInfo)
+    val verKeyFuture = getVerKeyFromDetail(gvk.keyParam)
     Await.result(verKeyFuture, Duration.Inf) // fixme ve2028 testing
   }
 
   def signMsg(sm: SignMsg)(implicit wap: WalletAPIParam): Array[Byte] = {
     executeOpWithWalletInfo("sign msg", { we: WalletExt =>
-      val verKeyFuture = getVerKeyFromWallet(sm.keyInfo)(we)
+      val verKeyFuture = getVerKeyFromWallet(sm.keyParam)(we)
       val verKey = Await.result(verKeyFuture, Duration.Inf) // fixme ve2028 testing
       Crypto.cryptoSign(we.wallet, verKey, sm.msg).get
     })
@@ -216,8 +216,8 @@ class LegacyWalletAPI(appConfig: AppConfig,
     }
   }
 
-  def verifySig(vs: VerifySigByKeyInfo)(implicit wap: WalletAPIParam): VerifySigResult = {
-    val verKeyFuture = getVerKeyFromDetail(vs.keyInfo)
+  def verifySig(vs: VerifySigByKeyParam)(implicit wap: WalletAPIParam): VerifySigResult = {
+    val verKeyFuture = getVerKeyFromDetail(vs.keyParam)
     val verKey = Await.result(verKeyFuture, Duration.Inf) // fixme ve2028 testing
     coreVerifySig(verKey, vs.challenge, vs.signature)
   }
@@ -226,16 +226,16 @@ class LegacyWalletAPI(appConfig: AppConfig,
     coreVerifySig(vs.verKey, vs.challenge, vs.signature)
   }
 
-  def LEGACY_packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+  def LEGACY_packMsg(msg: Array[Byte], recipKeyParams: Set[KeyParam], senderKeyParam: Option[KeyParam])
                     (implicit wap: WalletAPIParam): PackedMsg = {
     executeOpWithWalletInfo("legacy pack msg", { we: WalletExt =>
 
-      val senderKeyOpt = senderKey.map({ sk =>
+      val senderKeyOpt = senderKeyParam.map({ sk =>
         val future = getVerKeyFromWallet(sk)(we)
         Await.result(future, Duration.Inf) // fixme ve2028 testing
       })
 
-      val future = getVerKeyFromWallet(recipKeys.head)(we)
+      val future = getVerKeyFromWallet(recipKeyParams.head)(we)
       val recipVerKey = Await.result(future, Duration.Inf) // fixme ve2028 testing
       val cryptoBoxBytes = senderKeyOpt match {
         case None             => Crypto.anonCrypt(recipVerKey, msg).get
@@ -245,28 +245,28 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def packMsg(msg: Array[Byte], recipKeys: Set[KeyInfo], senderKey: Option[KeyInfo])
+  def packMsg(msg: Array[Byte], recipKeyParams: Set[KeyParam], senderKeyParam: Option[KeyParam])
              (implicit wap: WalletAPIParam): PackedMsg = {
     // Question: Should JSON validation happen for msg happen here or is it left to libindy?
     // Question: Since libindy expects bytes, should msg be bytes and not string. This will
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
     executeOpWithWalletInfo("pack msg", { we: WalletExt =>
-      val senderKeyOpt = senderKey.map({ sk =>
+      val senderKeyOpt = senderKeyParam.map({ sk =>
         val future = getVerKeyFromWallet(sk)(we)
         Await.result(future, Duration.Inf) // fixme ve2028 testing
       })
-      val future = getVerKeyFromWallet(recipKeys.head)(we)
+      val future = getVerKeyFromWallet(recipKeyParams.head)(we)
       val verKey = Await.result(future, Duration.Inf) // fixme ve2028 testing
       val verKeyJsonStr = jsonArray(Set(verKey))
       PackedMsg(Crypto.packMessage(we.wallet, verKeyJsonStr, senderKeyOpt.orNull, msg).get)
     })
   }
 
-  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyInfo: Option[KeyInfo], isAnonCryptedMsg: Boolean)
+  def LEGACY_unpackMsg(msg: Array[Byte], fromKeyParamOpt: Option[KeyParam], isAnonCryptedMsg: Boolean)
                       (implicit wap: WalletAPIParam): UnpackedMsg = {
     executeOpWithWalletInfo("legacy unpack msg", { we: WalletExt =>
       try {
-        val fvkFut = getVerKeyFromWallet(fromKeyInfo.get)(we)
+        val fvkFut = getVerKeyFromWallet(fromKeyParamOpt.get)(we)
         val fromVerKey = Await.result(fvkFut, Duration.Inf) // fixme ve2028 testing
         val (decryptedMsg, senderVerKey) = if (isAnonCryptedMsg) {
           val parsedResult = Crypto.anonDecrypt(we.wallet, fromVerKey, msg).get
@@ -374,7 +374,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util, ledgerPoolManager)
     val resp = cmd match {
       case CreateWallet =>
-        val walletExt = WalletMsgHandler.handleCreateAndOpenWallet()
+        val walletExt = WalletMsgHandler.handleCreateAndOpenWalletSync()
         addToOpenedWalletIfReq(walletExt)(wp)
         Future(WalletCreated)
       case other        =>

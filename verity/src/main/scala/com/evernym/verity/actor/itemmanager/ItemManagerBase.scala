@@ -254,21 +254,21 @@ trait ItemManagerBase
   }
 }
 
-case class UpdateHeadAndOrTailId(latestCreatedContainerId: ItemContainerEntityId) extends ActorMessageClass
+case class UpdateHeadAndOrTailId(latestCreatedContainerId: ItemContainerEntityId) extends ActorMessage
 case class ItemManagerStateDetail(itemType: ItemType,
                                   ownerVerKey: Option[VerKey],
                                   totalEverAllocatedContainers: Int,
                                   headContainerEntityId: Option[ItemContainerEntityId],
                                   tailContainerEntityId: Option[ItemContainerEntityId],
                                   migrateItemsToNextLinkedContainer: Boolean,
-                                  migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessageClass
+                                  migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage
 
-case class ContainerMigrated(migratedContainerEntityId: ItemContainerEntityId, migratedContainersNextEntityId: ItemContainerEntityId) extends ActorMessageClass
-case class MarkItemContainerAsInitialized(entityId: ItemContainerEntityId) extends ActorMessageClass
+case class ContainerMigrated(migratedContainerEntityId: ItemContainerEntityId, migratedContainersNextEntityId: ItemContainerEntityId) extends ActorMessage
+case class MarkItemContainerAsInitialized(entityId: ItemContainerEntityId) extends ActorMessage
 
-case object NoItemsFound extends ActorMessageObject
+case object NoItemsFound extends ActorMessage
 
 
-trait NeedContainerListTraversal extends ActorMessageClass
+trait NeedContainerListTraversal extends ActorMessage
 case object GetActiveContainers extends NeedContainerListTraversal
 case class GetItems(filterByStatutes: Set[Int]) extends NeedContainerListTraversal

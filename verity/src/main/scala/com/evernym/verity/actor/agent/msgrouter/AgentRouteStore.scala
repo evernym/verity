@@ -6,7 +6,7 @@ import akka.cluster.sharding.ShardRegion.EntityId
 import akka.event.LoggingReceive
 import com.evernym.verity.actor.agent.maintenance.{AlreadyCompleted, AlreadyRegistered, RegisteredRouteSummary}
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier, Registered, RouteSet}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, Registered, RouteSet}
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.protocol.engine.DID
@@ -96,19 +96,19 @@ object AgentRouteStore {
 }
 
 case class RouteInfo(actorRef: ActorRef, entityId: String)
-case class ActorAddressDetail(actorTypeId: Int, address: String) extends ActorMessageClass
-case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessageClass
+case class ActorAddressDetail(actorTypeId: Int, address: String) extends ActorMessage
+case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessage
 
 //cmds
-case class SetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessageClass
+case class SetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessage
 case class GetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
-  extends ActorMessageClass
+  extends ActorMessage
 case class GetRouteBatch(totalCandidates: Int,
                          fromIndex: Int,
                          batchSize: Int,
-                         actorTypeIds: List[Int] = List.empty) extends ActorMessageClass
-case object GetRegisteredRouteSummary extends ActorMessageObject
+                         actorTypeIds: List[Int] = List.empty) extends ActorMessage
+case object GetRegisteredRouteSummary extends ActorMessage
 
 //response msgs
-case class RouteAlreadySet(forDID: DID) extends ActorMessageClass
-case class GetRouteBatchResult(routeStoreEntityId: EntityId, dids: Set[DID]) extends ActorMessageClass
+case class RouteAlreadySet(forDID: DID) extends ActorMessage
+case class GetRouteBatchResult(routeStoreEntityId: EntityId, dids: Set[DID]) extends ActorMessage

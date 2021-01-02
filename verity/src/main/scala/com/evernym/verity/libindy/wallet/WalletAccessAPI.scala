@@ -33,7 +33,7 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
   def verKey(forDID: DID): Try[VerKey] = {
     Try {
-      walletApi.getVerKey(GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(forDID, getKeyFromPool=false)))))
+      walletApi.getVerKey(GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(forDID, getKeyFromPool=false)))))
     }
   }
 
@@ -44,7 +44,7 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
     Try {
       val verKey = getVerKeyFromParticipantId(selfParticipantId)
-      val toSign = SignMsg(KeyInfo(Left(verKey)), msg)
+      val toSign = SignMsg(KeyParam(Left(verKey)), msg)
       val signed = walletApi.signMsg(toSign)
 
       SignatureResult(signed, verKey)
@@ -90,7 +90,7 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
   def getVerKeyFromParticipantId(participantId: ParticipantId): VerKey = {
     val did = ParticipantUtil.DID(participantId)
-    val key = GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(did, getKeyFromPool=false))))
+    val key = GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool=false))))
     walletApi.getVerKey(key)
   }
 

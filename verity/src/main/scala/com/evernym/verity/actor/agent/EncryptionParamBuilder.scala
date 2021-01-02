@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent
 
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.vault.{EncryptParam, KeyInfo}
+import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.util.Left
 
@@ -13,12 +13,12 @@ case class EncryptionParamBuilder(walletVerKeyCacheHelper: WalletVerKeyCacheHelp
                              encryptParam: EncryptParam = EncryptParam(Set.empty, None)) {
 
   def withRecipDID(did: DID): EncryptionParamBuilder = {
-    copy(encryptParam = encryptParam.copy(recipKeys = Set(KeyInfo(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(did))))))
+    copy(encryptParam = encryptParam.copy(recipKeyParams = Set(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(did))))))
   }
   def withRecipVerKey(verKey: VerKey): EncryptionParamBuilder = {
-    copy(encryptParam = encryptParam.copy(recipKeys = Set(KeyInfo(Left(verKey)))))
+    copy(encryptParam = encryptParam.copy(recipKeyParams = Set(KeyParam(Left(verKey)))))
   }
   def withSenderVerKey(verKey: VerKey): EncryptionParamBuilder = {
-    copy(encryptParam = encryptParam.copy(senderKey = Option(KeyInfo(Left(verKey)))))
+    copy(encryptParam = encryptParam.copy(senderKeyParam = Option(KeyParam(Left(verKey)))))
   }
 }

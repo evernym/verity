@@ -50,7 +50,7 @@ class WalletAPISpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {
         val response = walletAPI.storeTheirKey(StoreTheirKey(bobKey.did, bobKey.verKey))(aliceWap)
         response shouldBe a[TheirKeyStored]
         val responseVerKey = walletAPI.getVerKey(
-          GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(bobKey.did, getKeyFromPool = false)))))(aliceWap)
+          GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(bobKey.did, getKeyFromPool = false)))))(aliceWap)
         responseVerKey shouldBe bobKey.verKey
       }
     }
@@ -60,7 +60,7 @@ class WalletAPISpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {
         val response = walletAPI.storeTheirKey(StoreTheirKey(aliceKey.did, aliceKey.verKey))(bobWap)
         response shouldBe a[TheirKeyStored]
         val responseVerKey = walletAPI.getVerKey(
-          GetVerKey(KeyInfo(Right(GetVerKeyByDIDParam(aliceKey.did, getKeyFromPool = false)))))(bobWap)
+          GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(aliceKey.did, getKeyFromPool = false)))))(bobWap)
         responseVerKey shouldBe aliceKey.verKey
       }
     }

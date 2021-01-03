@@ -8,6 +8,8 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 
 class BasicMultiNodeClusterSpec extends MultiNodeClusterSpecLike  {
 
+  //by default 'MultiNodeClusterSpecLike' will create two node cluster
+  //unless 'numberOfNodes' is overridden by this implementing class
   lazy val node1: NodePlatform = allNodes.head
   lazy val node2: NodePlatform = allNodes.last
   lazy val node1Client: NodeClient = node1.client
@@ -16,6 +18,7 @@ class BasicMultiNodeClusterSpec extends MultiNodeClusterSpecLike  {
   "Agency admin" - {
 
     "validates cluster configuration" in {
+      //this confirms that both the nodes are running on different ports
       node1.appConfig.getConfigStringReq("akka.remote.artery.canonical.port") should not be
         node2.appConfig.getConfigStringReq("akka.remote.artery.canonical.port")
     }

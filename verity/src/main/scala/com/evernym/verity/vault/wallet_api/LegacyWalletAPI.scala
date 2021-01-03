@@ -40,6 +40,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
   extends WalletAPI {
 
   val logger: Logger = getLoggerByClass(getClass)
+  var walletParams: Map[String, WalletParam] = Map.empty
   var wallets: Map[String, WalletExt] = Map.empty
 
   private def executeOpWithWalletInfo[T](opContext: String, op: WalletExt => T)
@@ -55,7 +56,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     // to a pairwise actors or any protocol actors which may spinned up on different nodes)
     // where that wallet is not yet opened. Long term solution would be a architecture change and will take time
     // this is a short term solution to just check if wallet is already opened, if not, open it.
-    implicit val wp: WalletParam = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
+    implicit val wp: WalletParam = getWalletParam(wap)
 
     implicit val w: WalletExt = if (!wallets.contains(wp.getUniqueId)) {
       val ow = _openWallet
@@ -85,6 +86,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     val uniqueKey = wp.getUniqueId
     if (!wallets.contains(uniqueKey)) {
       wallets += uniqueKey -> w
+      walletParams += wp.walletId -> wp
     }
   }
 
@@ -369,6 +371,14 @@ class LegacyWalletAPI(appConfig: AppConfig,
     Anoncreds.verifierVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs).get
   }
 
+  def getWalletParam(wap: WalletAPIParam): WalletParam = {
+    walletParams.getOrElse(wap.walletId, {
+      val wp = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
+      walletParams += wap.walletId -> wp
+      wp
+    })
+  }
+
   def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
     val wp = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
     implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util, ledgerPoolManager)
@@ -378,7 +388,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
         addToOpenedWalletIfReq(walletExt)(wp)
         Future(WalletCreated)
       case other        =>
-        executeOpWithWalletInfo("create proof", { implicit we: WalletExt =>
+        executeOpWithWalletInfo(cmd.getClass.getSimpleName, { implicit we: WalletExt =>
           WalletMsgHandler.executeAsync[T](other)
         })
     }

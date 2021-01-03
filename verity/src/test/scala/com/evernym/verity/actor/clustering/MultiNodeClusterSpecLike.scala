@@ -25,6 +25,7 @@ trait MultiNodeClusterSpecLike
     with ActorSystemConfig
     with CleansUpIndyClientFirst {
 
+  //can be overridden by implementing class
   def numberOfNodes: Int = 2
 
   lazy val firstNodePort: Int = getNextAvailablePort

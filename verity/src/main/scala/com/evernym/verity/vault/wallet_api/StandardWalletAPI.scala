@@ -142,6 +142,7 @@ class StandardWalletAPI(walletService: WalletService)
   def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
     walletService.executeAsync(wap.walletId, cmd)
   }
+
 }
 
 

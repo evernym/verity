@@ -3,10 +3,11 @@ package com.evernym.integrationtests.e2e.third_party_apis.wallet_api
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
+
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
+import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.vault.WalletAPIParam
@@ -21,7 +22,9 @@ import scala.concurrent.{ExecutionContext, Future}
  * required tables can be setup by executing  : <repo-root>/devops/scripts/wallet-storage-mysql/clean-setup.sh
  */
 
-class WalletAPIPerformanceSpec
+//NOTE: this one exercises "wallet SYNC api"
+// with custom execution context with 1000 thread limit
+class WalletAPIPerformanceSpec3
   extends ActorSpec
     with ProvidesMockPlatform
     with BasicSpec {

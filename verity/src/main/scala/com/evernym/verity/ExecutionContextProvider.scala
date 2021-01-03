@@ -24,5 +24,4 @@ object ExecutionContextProvider {
         case _          => Implicits.global
       },
     "future-thread-executor")
-
 }

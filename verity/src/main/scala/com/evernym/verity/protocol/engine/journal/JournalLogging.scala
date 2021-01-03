@@ -5,8 +5,6 @@ import org.slf4j.Marker
 
 import scala.util.Random
 
-import org.fusesource.jansi.Ansi._
-import org.fusesource.jansi.Ansi.Color._
 
 trait JournalLogging extends Journal {
 

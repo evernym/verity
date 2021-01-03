@@ -6,7 +6,7 @@ import java.util.concurrent.ExecutionException
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.testkit.{BasicSpec, LedgerClient}
+import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv

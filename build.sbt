@@ -185,12 +185,12 @@ lazy val settings = Seq(
 lazy val testSettings = Seq (
   //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", s"target/test-reports/$projectName"),
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),        // standard test output, a bit verbose
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oNCXEHLOPQRM"), // summarized test output
+  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
+  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oNCXEHLOPQRM"),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
-  // an issue was found when we run 'sbt test' related to class loading
-  // (which was somehow breaking deserialization process)
+  // an issue was found related to class loading when we run 'sbt test'
+  // (which was somehow breaking the deserialization process)
   // so to fix that, had to add below setting
   Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.Flat
 )
@@ -274,10 +274,10 @@ lazy val commonLibraryDependencies = {
     "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVer,          //Scala classes serialization/deserialization
 
     //sms service implementation dependencies
-    "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //Used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "2.25"                          //Used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
+    "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
+    "org.glassfish.jersey.core" % "jersey-client" % "2.25"                          //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
       excludeAll ExclusionRule(organization = "javax.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
-    "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //Used by "TwilioDispatcher" class
+    "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //kamon monitoring dependencies
     "io.kamon" % "kanela-agent" % kanelaAgentVer,    //a java agent needed to capture akka related metrics
@@ -288,13 +288,14 @@ lazy val commonLibraryDependencies = {
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
     //other dependencies
-    "commons-net" % "commons-net" % "3.6",      //needed to use CIDR-notation based ip addresses during ip address validation/checking/comparision (for internal apis and may be few other places)
-    "org.velvia" %% "msgpack4s" % "0.6.0",      //needed during legacy pack/unpack operations
-    "org.fusesource.jansi" % "jansi" % "1.18",
-    "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",
+    "commons-net" % "commons-net" % "3.6",        //used for CIDR based ip address validation/checking/comparision
+                                                      // (for internal apis and may be few other places)
+    "org.velvia" %% "msgpack4s" % "0.6.0",        //used by legacy pack/unpack operations
+    "org.fusesource.jansi" % "jansi" % "1.18",    //used by protocol engine for customized logging
+    "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-    "info.faljse" % "SDNotify" % sdnotifyVer    //needed by app state manager to notify to systemd
+    //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
   )
 
   //for macro libraries that are compile-time-only
@@ -316,9 +317,9 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
-    "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
+    "org.iq80.leveldb" % "leveldb" % "0.11",      //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
-    "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
+    "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
       exclude ("org.hyperledger", "indy"),
@@ -361,7 +362,6 @@ lazy val protoBufSettings = Seq(
 ) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
 
 lazy val confFiles = Set (
-  "environment.conf",
   "akka.conf",
   "dynamodb.conf",
   "lib-indy.conf",
@@ -381,14 +381,14 @@ lazy val confFiles = Set (
 )
 
 lazy val mergeStrategy: PartialFunction[String, MergeStrategy] = {
-  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.concat
-  case PathList(ps @ _*) if ps.last equals "module-info.class" => MergeStrategy.concat
-  case PathList("systemd", "systemd.service")               => MergeStrategy.first
-  case PathList("mime.types")                               => MergeStrategy.first
-  case PathList(ps @ _*) if ps.last endsWith ".proto"       => MergeStrategy.first
-  case PathList("reference.conf")                           => referenceConfMerge()
-  case s if confFiles.contains(s)                           => MergeStrategy.discard
-  case s                                                    => MergeStrategy.defaultMergeStrategy(s)
+  case PathList("META-INF", "io.netty.versions.properties")     => MergeStrategy.concat
+  case PathList(ps @ _*) if ps.last equals "module-info.class"  => MergeStrategy.concat
+  case PathList("systemd", "systemd.service")                   => MergeStrategy.first
+  case PathList("mime.types")                                   => MergeStrategy.first
+  case PathList(ps @ _*) if ps.last endsWith ".proto"           => MergeStrategy.first
+  case PathList("reference.conf")                               => referenceConfMerge()
+  case s if confFiles.contains(s)                               => MergeStrategy.discard
+  case s                                                        => MergeStrategy.defaultMergeStrategy(s)
 }
 
 /*

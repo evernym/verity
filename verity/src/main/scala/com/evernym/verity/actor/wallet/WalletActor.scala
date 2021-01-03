@@ -85,10 +85,10 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
 
     case cmd: WalletCommand if walletExtOpt.isDefined =>    //only entertain commands extending 'WalletCommand'
       val sndr = sender()
-      handleRespFut(cmd, sndr, WalletMsgHandler.executeAsync(cmd))
+      handleRespFut(sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
-  def handleRespFut(cmd: Any, sndr: ActorRef, fut: Future[Any]): Unit = {
+  def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
     fut.recover {
       case e: HandledErrorException =>
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))

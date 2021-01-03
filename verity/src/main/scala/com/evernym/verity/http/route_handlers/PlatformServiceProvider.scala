@@ -14,7 +14,8 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.Future
 
 /**
- * provides access to platform
+ * provides access to platform objects
+ * to be able to communicate/send messages to agency agent actor
  */
 trait PlatformServiceProvider
   extends AgencyIdUtil

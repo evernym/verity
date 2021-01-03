@@ -15,8 +15,9 @@ import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentState
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
+import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.cache._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
@@ -26,6 +27,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
+import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
@@ -57,7 +59,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     case ck: CreateKey                          => createKey(ck)
     case SetEndpoint                            => setEndpoint()
     case UpdateEndpoint                         => updateEndpoint()
-    case smw: PackedMsgWrapper                  => handlePackedMsg(smw)
+    case pmw: PackedMsgWrapper                  => handlePackedMsg(pmw)
     case apd: AgentProvisioningDone             =>
       sendUntypedMsgToProtocol(
         CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey),
@@ -89,13 +91,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   def sendAgencyAgentDetail(): Unit = {
-    getAgencyAgentDetail() match {
+    agencyAgentDetail() match {
       case Some(aad)  => sender ! aad
       case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }
 
-  def getAgencyAgentDetail(): Option[AgencyAgentDetail] = {
+  def agencyAgentDetail(): Option[AgencyAgentDetail] = {
     state.agencyDID map { ad =>
       AgencyAgentDetail(ad, getAgencyVerKey(ad, fromPool = GET_AGENCY_VER_KEY_FROM_POOL), entityId)
     }
@@ -273,32 +275,33 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   // Here, a "packed message" is one that's anoncrypted for the agency.
-  // Unsealing it means decrypting it and finding a "forward" inside.
+  // Unsealing/unpacking it means decrypting it and finding a "forward" inside.
   // According to Rajesh in mid July 2020, we are not currently using
   // this function (it's dead code).
 
   //this is in case we directly want to send endpoint requests to
   // agency agent to unseal instead of unsealing it at endpoint layer
-  def handlePackedMsg(smw: PackedMsgWrapper): Unit = {
+  def handlePackedMsg(pmw: PackedMsgWrapper): Unit = {
     val sndr = sender()
-    processPackedMsg(smw).recover {
+    agentMsgTransformer.unpackAsync(
+      pmw.msg, KeyParam(Left(agencyVerKey)), UnpackParam(isAnonCryptedMsg = true)
+    ).flatMap { implicit amw =>
+      handleUnpackedMsg(pmw)
+    }.map { r =>
+      sndr ! r
+    }.recover {
       case e: Exception =>
         handleException(e, sndr)
     }
   }
 
+  lazy val agencyVerKey: VerKey = getVerKeyReqViaCache(agencyDIDReq)
+
   def sendLocalAgencyIdentity(withDetail: Boolean = false): Unit = {
-    getAgencyAgentDetail() match {
+    agencyAgentDetail() match {
       case Some(aad)  =>
         val ledgerDetail = if (withDetail) Option(agencyLedgerDetail()) else None
         sender ! AgencyPublicDid(aad.did, aad.verKey, ledgerDetail)
-      case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
-    }
-  }
-
-  override def getAgencyDidPairFut: Future[DidPair] = Future {
-    getAgencyAgentDetail() match {
-      case Some(aad)  =>  DidPair(aad.did, aad.verKey)
       case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }

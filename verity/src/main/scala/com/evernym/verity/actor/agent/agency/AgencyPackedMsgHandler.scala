@@ -3,18 +3,16 @@ package com.evernym.verity.actor.agent.agency
 import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_ENDPOINT}
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
-import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
+import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_ROUTING, MSG_TYPE_FORWARD, MSG_TYPE_FWD}
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail, UnpackParam}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_5, MFV_1_0, MSG_FAMILY_NAME_0_5, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext, Util}
-import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
 import scala.concurrent.Future
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
 
@@ -24,19 +22,6 @@ import com.evernym.verity.actor.wallet.PackedMsg
 trait AgencyPackedMsgHandler extends ResourceUsageCommon {
 
   def agentActorContext: AgentActorContext
-  def getAgencyDidPairFut: Future[DidPair]
-  implicit def wap: WalletAPIParam
-
-  def processPackedMsg(pmw: PackedMsgWrapper): Future[Any] = {
-    // flow diagram: fwd + ctl + proto + legacy, step 3 -- Decrypt and check message type.
-    getAgencyDidPairFut flatMap { adp =>
-      agentActorContext.agentMsgTransformer.unpackAsync(
-        pmw.msg, KeyParam(Left(adp.verKey)), UnpackParam(isAnonCryptedMsg = true)
-      ).flatMap { implicit amw =>
-        handleUnpackedMsg(pmw)
-      }
-    }
-  }
 
   def handleUnpackedMsg(pmw: PackedMsgWrapper)(implicit amw: AgentMsgWrapper): Future[Any] = {
 

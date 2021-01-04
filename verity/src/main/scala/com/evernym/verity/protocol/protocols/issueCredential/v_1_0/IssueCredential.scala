@@ -159,10 +159,10 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val credOfferJson = extractCredOfferJson(st.credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, st.myPwDid, credDefJson, credOfferJson) match {
       case Success(credRequest) =>
-        val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest)
+        val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
         val attachmentEventObject = toEvent(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
-        ctx.apply(RequestSent(ctx.getInFlight.sender.id_!, Option(credRequested)))
+        ctx.apply(RequestSent(ctx.getInFlight.sender.id_!, Option(credRequested)))    //TODO: store cred req metadata to be used later on
         val rc = RequestCred(Vector(attachment), Option(credRequested.comment))
         ctx.send(rc)
         ctx.signal(SignalMsg.Sent(rc))
@@ -193,7 +193,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
                         `~please_ack`: Option[PleaseAck]=None): Unit = {
     val credOfferJson = extractCredOfferJson(credOffer)
     val credReqJson = extractCredReqJson(credRequest)
-    val credValuesJson = buildCredValueJson(credOffer.credential_preview)
+    val credValuesJson = IssueCredential.buildCredValueJson(credOffer.credential_preview)
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson,
       revRegistryId.orNull, -1) match {
       case Success(cred) =>
@@ -213,13 +213,6 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           )
         )
     }
-  }
-
-  def buildCredValueJson(cp: CredPreview): String = {
-    val credValues = cp.attributes.map { a =>
-      a.name -> EncodedCredAttribute(a.value, CredValueEncoderV1_0.encodedValue(a.value))
-    }.toMap
-    DefaultMsgCodec.toJson(credValues)
   }
 
 
@@ -269,6 +262,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   def handleIssueCredReceived(m: IssueCred): Unit = {
     val cred = CredIssued(m.`credentials~attach`.map(toEvent), commentReq(m.comment))
+    //TODO: store cred???
     ctx.apply(IssueCredReceived(Option(cred)))
     ctx.signal(SignalMsg.Received(m))
     if (m.`~please_ack`.isDefined) {
@@ -338,8 +332,6 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   //helper methods
 
-
-
   def extractCredOfferJson(offerCred: OfferCred): String = {
     val attachment = offerCred.`offers~attach`.head
     extractString(attachment)
@@ -358,7 +350,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     jsonObject.toString()
   }
 
-  def buildOffer(m: Ctl.Offer) = {
+  def buildOffer(m: Ctl.Offer): Try[(OfferSent, OfferCred)] = {
     ctx.wallet.createCredOffer(m.cred_def_id) match {
       case Success(credOffer) =>
         val credPreview = buildCredPreview(m.credential_values)
@@ -393,19 +385,11 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       cp.attributes.map(a => CredPreviewAttr(a.name, a.value, a.`mime-type`)))
   }
 
-  def buildCredPreview(cpo: CredPreviewObject): CredPreview = {
+  def buildCredPreviewFromObject(cpo: CredPreviewObject): CredPreview = {
     val cpa = cpo.attributes.map { a =>
       CredPreviewAttribute(a.name, a.value, a.mimeType)
     }
     CredPreview(cpo.`type`, cpa.toVector)
-  }
-
-  def buildCredPreview(credValues: Map[String, String]): CredPreview = {
-    val msgType = IssueCredentialProtoDef.msgFamily.msgType("credential-preview")
-    val cpa = credValues.map { case (name, value) =>
-      CredPreviewAttribute(name, value)
-    }
-    CredPreview(MsgFamily.typeStrFromMsgType(msgType), cpa.toVector)
   }
 
   def toEvent(a: AttachmentDescriptor): AttachmentObject = {
@@ -431,7 +415,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   def buildOfferCred(offer: Option[CredOffered]): OfferCred = {
     offer match {
       case Some(o) =>
-        val cp = o.credentialPreview.map(buildCredPreview).getOrElse(
+        val cp = o.credentialPreview.map(buildCredPreviewFromObject).getOrElse(
           throw new RuntimeException("cred preview is required"))
         OfferCred(cp, o.offersAttach.map(fromEvent).toVector, Option(o.comment), o.price)
       case None    => throw new NotImplementedError()
@@ -494,6 +478,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 case class EncodedCredAttribute(raw: String, encoded: String)
 
 object IssueCredential {
+
   def setSenderRole(senderId: String, senderRole: Role, roster: Roster[Role]): Roster[Role] = {
     val r = roster.withParticipant(senderId)
 
@@ -520,5 +505,20 @@ object IssueCredential {
         .map(p => InitParam(p.name, p.value))
         .toSeq
     )
+  }
+
+  def buildCredPreview(credValues: Map[String, String]): CredPreview = {
+    val msgType = IssueCredentialProtoDef.msgFamily.msgType("credential-preview")
+    val cpa = credValues.map { case (name, value) =>
+      CredPreviewAttribute(name, value)
+    }
+    CredPreview(MsgFamily.typeStrFromMsgType(msgType), cpa.toVector)
+  }
+
+  def buildCredValueJson(cp: CredPreview): String = {
+    val credValues = cp.attributes.map { a =>
+      a.name -> EncodedCredAttribute(a.value, CredValueEncoderV1_0.encodedValue(a.value))
+    }.toMap
+    DefaultMsgCodec.toJson(credValues)
   }
 }

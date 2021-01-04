@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine.external_api_access
 
+import com.evernym.verity.actor.wallet.CreatedCredReq
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 
@@ -58,12 +59,16 @@ class WalletAccessController(accessRights: Set[AccessRight], walletAccessImpl: W
   override def createCredOffer(credDefId: String): Try[String] =
     runIfAllowed(AnonCreds, {walletAccessImpl.createCredOffer(credDefId)})
 
-  override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[String] =
+  override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[CreatedCredReq] =
     runIfAllowed(AnonCreds, {walletAccessImpl.createCredReq(credDefId, proverDID, credDefJson, credOfferJson)})
 
   override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
                  revRegistryId: String, blobStorageReaderHandle: Int): Try[String] =
     runIfAllowed(AnonCreds, {walletAccessImpl.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)})
+
+  override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                         credDefJson: String, revRegDefJson: String): Try[String] =
+    runIfAllowed(AnonCreds, {walletAccessImpl.storeCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson)})
 
   override def credentialsForProofReq(proofRequest: String): Try[String] =
     runIfAllowed(AnonCreds, {walletAccessImpl.credentialsForProofReq(proofRequest)})

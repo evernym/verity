@@ -1,6 +1,6 @@
 package com.evernym.verity.vault.wallet_api
 
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyParam, VerifySigByVerKey, VerifySigResult, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreatedCredDef, CreatedCredReq, GetVerKey, GetVerKeyOpt, NewKeyCreated, PackedMsg, SignMsg, StoreTheirKey, TheirKeyStored, UnpackedMsg, VerifySigByKeyParam, VerifySigByVerKey, VerifySigResult, WalletCreated}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult
@@ -36,9 +36,12 @@ trait WalletAPI {
                    (implicit wap: WalletAPIParam): CreatedCredDef
   def createCredOffer(credDefId: String)(implicit wap: WalletAPIParam): String
   def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String, masterSecretId: String)
-                   (implicit wap: WalletAPIParam): String
+                   (implicit wap: WalletAPIParam): CreatedCredReq
   def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
                  revRegistryId: String, blobStorageReaderHandle: Int)
+                (implicit wap: WalletAPIParam): String
+  def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                credDefJson: String, revRegDefJson: String)
                 (implicit wap: WalletAPIParam): String
   def credentialsForProofReq(proofRequest: String)(implicit wap: WalletAPIParam): String
   def createProof(proofRequest: String, usedCredentials: String, schemas: String,

@@ -93,8 +93,8 @@ class StandardWalletAPI(walletService: WalletService)
   }
 
   def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String, masterSecretId: String)
-                   (implicit wap: WalletAPIParam): String = {
-    walletService.executeSync[String](wap.walletId,
+                   (implicit wap: WalletAPIParam): CreatedCredReq = {
+    walletService.executeSync[CreatedCredReq](wap.walletId,
       CreateCredReq(credDefId, proverDID, credDefJson, credOfferJson, masterSecretId))
   }
 
@@ -104,6 +104,14 @@ class StandardWalletAPI(walletService: WalletService)
     walletService.executeSync[String](wap.walletId,
       CreateCred(credOfferJson, credReqJson, credValuesJson,
         revRegistryId, blobStorageReaderHandle))
+  }
+
+  def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                credDefJson: String, revRegDefJson: String)
+                (implicit wap: WalletAPIParam): String = {
+    walletService.executeSync[String](wap.walletId,
+      StoreCred(credId, credReqMetadataJson, credJson,
+        credDefJson, revRegDefJson))
   }
 
   def credentialsForProofReq(proofRequest: String)(implicit wap: WalletAPIParam): String = {

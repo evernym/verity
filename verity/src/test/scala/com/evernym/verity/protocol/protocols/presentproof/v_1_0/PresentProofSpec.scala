@@ -1,5 +1,8 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
+import java.util.UUID
+
+import com.evernym.verity.actor.wallet.CreatedCredReq
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
 import com.evernym.verity.protocol.engine._
@@ -1021,7 +1024,7 @@ object PresentProofSpec {
       basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)
 
     override def createCredOffer(a1: String): Try[String] = basic.createCredOffer(a1)
-    override def createCredReq(a1: String, a2: DID, a3: String, a4: String): Try[String] =
+    override def createCredReq(a1: String, a2: DID, a3: String, a4: String): Try[CreatedCredReq] =
       basic.createCredReq(a1, a2, a3, a4)
     override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int): Try[String] =
       basic.createCred(a1, a2, a3, a4, a5)
@@ -1064,6 +1067,10 @@ object PresentProofSpec {
         |   ]
         |}""".stripMargin
     )
+
+    override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                           credDefJson: String, revRegDefJson: String): Try[String] =
+      Try(Option(credId).getOrElse(UUID.randomUUID().toString))
   }
 
   val invalidProof: AnonCredRequests = new AnonCredRequests {
@@ -1081,7 +1088,7 @@ object PresentProofSpec {
       basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)
 
     override def createCredOffer(a1: String): Try[String] = basic.createCredOffer(a1)
-    override def createCredReq(a1: String, a2: DID, a3: String, a4: String): Try[String] =
+    override def createCredReq(a1: String, a2: DID, a3: String, a4: String): Try[CreatedCredReq] =
       basic.createCredReq(a1, a2, a3, a4)
     override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int): Try[String] =
       basic.createCred(a1, a2, a3, a4, a5)
@@ -1090,5 +1097,8 @@ object PresentProofSpec {
       Try(false)
     override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String): Try[String] =
       basic.createProof(a1, a2, a3, a4, a5)
+    override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                           credDefJson: String, revRegDefJson: String): Try[String] =
+      basic.storeCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson)
   }
 }

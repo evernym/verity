@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine.external_api_access
 
+import com.evernym.verity.actor.wallet.CreatedCredReq
 import com.evernym.verity.protocol.engine.DID
 
 import scala.util.Try
@@ -22,13 +23,19 @@ trait AnonCredRequests {
   def createCredReq(credDefId: String,
                     proverDID: DID,
                     credDefJson: String,
-                    credOfferJson: String): Try[String]
+                    credOfferJson: String): Try[CreatedCredReq]
 
   def createCred(credOfferJson: String,
                  credReqJson: String,
                  credValuesJson: String,
                  revRegistryId: String,
                  blobStorageReaderHandle: Int): Try[String]
+
+  def storeCred(credId: String,
+                credReqMetadataJson: String,
+                credJson: String,
+                credDefJson: String,
+                revRegDefJson: String): Try[String]
 
   def credentialsForProofReq(proofRequest: String): Try[String]
 

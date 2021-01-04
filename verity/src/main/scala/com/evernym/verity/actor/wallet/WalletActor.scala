@@ -152,6 +152,8 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
 
 //command
 trait WalletCommand extends ActorMessage {
+  //overridden to make sure if this codebase is logging these commands anywhere
+  //it doesn't log any critical/private information
   override def toString: DID = this.getClass.getSimpleName
 }
 
@@ -211,6 +213,10 @@ case class CreateCred(credOfferJson: String, credReqJson: String, credValuesJson
                       revRegistryId: String, blobStorageReaderHandle: Int)
   extends WalletCommand
 
+case class StoreCred(credId: String, credReqMetadataJson: String, credJson: String,
+                     credDefJson: String, revRegDefJson: String)
+  extends WalletCommand
+
 case class CredForProofReq(proofRequest: String) extends WalletCommand
 
 case class CreateProof(proofRequest: String, usedCredentials: String, schemas: String,
@@ -246,5 +252,7 @@ case class UnpackedMsg(msg: Array[Byte],
 }
 
 case class CreatedCredDef(credDefId: String, credDefJson: String) extends WalletCmdSuccessResponse
+
+case class CreatedCredReq(credReqJson: String, credReqMetadataJson: String) extends WalletCmdSuccessResponse
 
 case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage

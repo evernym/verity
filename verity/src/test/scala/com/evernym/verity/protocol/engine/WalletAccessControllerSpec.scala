@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.actor.wallet.NewKeyCreated
+import com.evernym.verity.actor.wallet.{CreatedCredReq, NewKeyCreated}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.external_api_access.{AccessNewDid, AccessSign, AccessVerify, SignatureResult, WalletAccess, WalletAccessController}
@@ -86,18 +86,40 @@ class WalletAccessControllerSpec extends BasicSpec {
 
     override def createCredOffer(credDefId: String): Try[String] = ???
 
-    override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[String] = ???
+    override def createCredReq(credDefId: String,
+                               proverDID: DID,
+                               credDefJson: String,
+                               credOfferJson: String): Try[CreatedCredReq] = ???
 
-    override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
-                            revRegistryId: String, blobStorageReaderHandle: ParticipantIndex): Try[String] = ???
+    override def createCred(credOfferJson: String,
+                            credReqJson: String,
+                            credValuesJson: String,
+                            revRegistryId: String,
+                            blobStorageReaderHandle: ParticipantIndex): Try[String] = ???
+
+    override def storeCred(credId: String,
+                           credReqMetadataJson: String,
+                           credJson: String,
+                           credDefJson: String,
+                           revRegDefJson: String): Try[String] = ???
 
     override def credentialsForProofReq(proofRequest: String): Try[String] = ???
 
-    override def createProof(proofRequest: String, usedCredentials: String, schemas: String, credentialDefs: String, revStates: String): Try[String] = ???
+    override def createProof(proofRequest: String,
+                             usedCredentials: String,
+                             schemas: String,
+                             credentialDefs: String,
+                             revStates: String): Try[String] = ???
 
-    override def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String, revocRegDefs: String, revocRegs: String): Try[Boolean] = ???
+    override def verifyProof(proofRequest: String,
+                             proof: String,
+                             schemas: String,
+                             credentialDefs: String,
+                             revocRegDefs: String,
+                             revocRegs: String): Try[Boolean] = ???
 
-    override def signRequest(submitterDID: DID, request: String): Try[LedgerRequest] = ???
+    override def signRequest(submitterDID: DID,
+                             request: String): Try[LedgerRequest] = ???
   }
 }
 

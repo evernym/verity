@@ -59,12 +59,7 @@ trait ActorSystemConfig {
           receive = on
         }
 
-        actor {
-          provider = "akka.cluster.ClusterActorRefProvider"
-        }
-
         remote {
-          log-remote-lifecycle-events = off
           artery.canonical {
             hostname = "127.0.0.1"
             port = $port
@@ -88,6 +83,7 @@ trait ActorSystemConfig {
         }
 
         actor {
+          provider = "akka.cluster.ClusterActorRefProvider"
 
           serializers {
             protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"

@@ -30,7 +30,7 @@ class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec 
         val param = PushNotifParam("cm", regTokenId, sendAsAlertPushNotif = false,
           notifData, extraData)
         val response = Await.result(pusher.push(param)(system), Duration(5, "seconds"))
-        println("### response: " + response)
+        println("response: " + response)
       }
     }
   }

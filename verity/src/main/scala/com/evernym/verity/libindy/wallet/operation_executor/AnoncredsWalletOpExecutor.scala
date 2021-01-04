@@ -29,16 +29,21 @@ object AnoncredsWalletOpExecutor extends OpExecutorBase {
     Anoncreds.issuerCreateCredentialOffer(we.wallet, cco.credDefId)
   }
 
-  def handleCreateCredReq(ccr: CreateCredReq)(implicit we: WalletExt): Future[String] = {
+  def handleCreateCredReq(ccr: CreateCredReq)(implicit we: WalletExt): Future[CreatedCredReq] = {
     Anoncreds.proverCreateCredentialReq(
         we.wallet, ccr.proverDID, ccr.credOfferJson, ccr.credDefJson, ccr.masterSecretId)
-      .map(_.getCredentialRequestJson)
+      .map(r => CreatedCredReq(r.getCredentialRequestJson, r.getCredentialRequestMetadataJson))
   }
 
   def handleCreateCred(cc: CreateCred)(implicit we: WalletExt): Future[String] = {
     Anoncreds.issuerCreateCredential(we.wallet,
       cc.credOfferJson, cc.credReqJson, cc.credValuesJson, cc.revRegistryId, cc.blobStorageReaderHandle)
       .map(_.getCredentialJson)
+  }
+
+  def handleStoreCred(sc: StoreCred)(implicit we: WalletExt): Future[String] = {
+    Anoncreds.proverStoreCredential(we.wallet,
+      sc.credId, sc.credReqMetadataJson, sc.credJson, sc.credDefJson, sc.revRegDefJson)
   }
 
   def handleCredForProofReq(cfpr: CredForProofReq)(implicit we: WalletExt): Future[String] = {

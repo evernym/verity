@@ -334,20 +334,28 @@ class LegacyWalletAPI(appConfig: AppConfig,
   }
 
   def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String, masterSecretId: String)
-                   (implicit wap: WalletAPIParam): String = {
+                   (implicit wap: WalletAPIParam): CreatedCredReq = {
     executeOpWithWalletInfo("cred request", { we: WalletExt =>
-      Anoncreds.proverCreateCredentialReq(we.wallet, proverDID, credOfferJson, credDefJson, masterSecretId)
-        .get
-        .getCredentialRequestJson
+      val r = Anoncreds.proverCreateCredentialReq(we.wallet, proverDID, credOfferJson, credDefJson, masterSecretId).get
+      CreatedCredReq(r.getCredentialRequestJson, r.getCredentialRequestMetadataJson)
     })
   }
 
   def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
                  revRegistryId: String, blobStorageReaderHandle: Int)
                 (implicit wap: WalletAPIParam): String = {
-    executeOpWithWalletInfo("cred", { we: WalletExt =>
+    executeOpWithWalletInfo("create cred", { we: WalletExt =>
       Anoncreds.issuerCreateCredential(we.wallet, credOfferJson, credReqJson, credValuesJson,
         revRegistryId, blobStorageReaderHandle).get.getCredentialJson
+    })
+  }
+
+  def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                credDefJson: String, revRegDefJson: String)
+               (implicit wap: WalletAPIParam): String = {
+    executeOpWithWalletInfo("store cred", { we: WalletExt =>
+      Anoncreds.proverStoreCredential(we.wallet, credId, credReqMetadataJson, credJson,
+        credDefJson, revRegDefJson).get
     })
   }
 

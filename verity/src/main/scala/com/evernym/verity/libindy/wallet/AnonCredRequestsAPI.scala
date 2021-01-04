@@ -1,6 +1,7 @@
 package com.evernym.verity.libindy.wallet
 
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.wallet.CreatedCredReq
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.engine.external_api_access.AnonCredRequests
@@ -51,7 +52,7 @@ trait AnonCredRequestsAPI extends AnonCredRequests { this: WalletAccessAPI  =>
     Try(walletApi.createCredOffer(credDefId))
   }
 
-  override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[String] = {
+  override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[CreatedCredReq] = {
     Try(walletApi.createCredReq(credDefId, proverDID, credDefJson, credOfferJson, masterSecretId))
   }
 
@@ -59,6 +60,11 @@ trait AnonCredRequestsAPI extends AnonCredRequests { this: WalletAccessAPI  =>
                  revRegistryId: String, blobStorageReaderHandle: Int): Try[String] = {
     Try(walletApi.createCred(credOfferJson, credReqJson, credValuesJson,
       revRegistryId, blobStorageReaderHandle))
+  }
+
+  override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
+                         credDefJson: String, revRegDefJson: String): Try[String] = {
+    Try(walletApi.storeCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))
   }
 
   override def credentialsForProofReq(proofRequest: String): Try[String] =

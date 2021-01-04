@@ -36,6 +36,7 @@ object WalletMsgHandler {
       case cco: CreateCredOffer             => handleCreateCredOffer(cco)
       case ccr: CreateCredReq               => handleCreateCredReq(ccr)
       case cc: CreateCred                   => handleCreateCred(cc)
+      case sc: StoreCred                    => handleStoreCred(sc)
       case cfpr: CredForProofReq            => handleCredForProofReq(cfpr)
       case cp: CreateProof                  => handleCreateProof(cp)
     }
@@ -53,7 +54,11 @@ object WalletMsgHandler {
     AnoncredsWalletOpExecutor.handleCreateCred(cred)
   }
 
-  private def handleCreateCredReq(req: CreateCredReq)(implicit we: WalletExt): Future[String] = {
+  private def handleStoreCred(sc: StoreCred)(implicit we: WalletExt): Future[String] = {
+    AnoncredsWalletOpExecutor.handleStoreCred(sc)
+  }
+
+  private def handleCreateCredReq(req: CreateCredReq)(implicit we: WalletExt): Future[CreatedCredReq] = {
     AnoncredsWalletOpExecutor.handleCreateCredReq(req)
   }
 

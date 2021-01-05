@@ -2,7 +2,6 @@ package com.evernym.verity.actor.metrics
 
 import java.util.UUID
 
-import akka.Done
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.ReqId
@@ -12,10 +11,8 @@ import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
-import scala.concurrent.duration.{Duration, DurationInt}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.DurationInt
 
 class LibindyMetricsCollectorSpec
   extends TestKitBase

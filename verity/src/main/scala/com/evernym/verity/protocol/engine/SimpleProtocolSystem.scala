@@ -80,21 +80,9 @@ class SimpleProtocolSystem() extends HasContainers with HasDidRouter with Segmen
   @tailrec
   final def processAll(): Unit = {
     def processOne(c: InMemoryProtocolContainer[_,_,_,_,_,_]): Int = {
-
-      // TODO: remove this as soon as we remove sendAsync from
-      //  ProtocolContextApi; this yield is needed to accommodate the fact that
-      //  the future in sendAsync needs to have time to complete.
-      Thread.sleep(1)
-
       c.processAllBoxes()
     }
     if (containers.map(processOne).sum > 0) {
-      //TODO start: for some reason, when we do send message from within future
-      //something happens (which we don't completely know yet), that
-      //if we put Thread.sleep even for 1 ms, it works.
-      //Need to find out root cause and fix it.
-      //TODO end
-      Thread.sleep(30)
       processAll()
     }
   }

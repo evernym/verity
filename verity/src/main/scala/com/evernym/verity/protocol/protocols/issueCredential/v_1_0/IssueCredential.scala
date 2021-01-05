@@ -162,7 +162,9 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
         val attachmentEventObject = toEvent(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
-        ctx.apply(RequestSent(ctx.getInFlight.sender.id_!, Option(credRequested)))    //TODO: store cred req metadata to be used later on
+        //TODO: store cred req metadata to be used later on
+        // (at least libindy Anoncreds.proverStoreCredential api expects it)?
+        ctx.apply(RequestSent(ctx.getInFlight.sender.id_!, Option(credRequested)))
         val rc = RequestCred(Vector(attachment), Option(credRequested.comment))
         ctx.send(rc)
         ctx.signal(SignalMsg.Sent(rc))
@@ -262,7 +264,9 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   def handleIssueCredReceived(m: IssueCred): Unit = {
     val cred = CredIssued(m.`credentials~attach`.map(toEvent), commentReq(m.comment))
-    //TODO: store cred???
+    //TODO: we purposefully are not storing the received credential in the wallet
+    // as we are not sure yet if that is the right way to proceed or we want it to
+    // store it in persistent store and make it available to the state for further uses
     ctx.apply(IssueCredReceived(Option(cred)))
     ctx.signal(SignalMsg.Received(m))
     if (m.`~please_ack`.isDefined) {

@@ -114,7 +114,46 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
 
   override def overrideConfig: Option[Config] = Option {
     ConfigFactory parseString {
-      s"verity.agent.actor-state-cleanup.enabled = true"
+      s"""
+         |verity {
+         |  agent {
+         |    actor-state-cleanup {
+         |      enabled = true
+         |
+         |      manager {
+         |        registration {
+         |          batch-size = 100
+         |          batch-item-sleep-interval-in-millis = 0
+         |        }
+         |
+         |        processor {
+         |          batch-size = 100
+         |          batch-item-sleep-interval-in-millis = 0
+         |        }
+         |
+         |        scheduled-job {
+         |          initial-delay-in-seconds = 10
+         |          interval-in-seconds = 2
+         |        }
+         |      }
+         |
+         |      executor {
+         |        batch-size = 1
+         |        scheduled-job {
+         |          initial-delay-in-seconds = 1
+         |          interval-in-seconds = 3
+         |        }
+         |      }
+         |    }
+         |
+         |    migrate-thread-contexts {
+         |      scheduled-job {
+         |        initial-delay-in-seconds = -1
+         |      }
+         |    }
+         |  }
+         |}
+         """.stripMargin
     }
   }
 }

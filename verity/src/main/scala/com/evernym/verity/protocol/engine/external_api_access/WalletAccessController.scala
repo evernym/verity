@@ -66,9 +66,10 @@ class WalletAccessController(accessRights: Set[AccessRight], walletAccessImpl: W
                  revRegistryId: String, blobStorageReaderHandle: Int): Try[String] =
     runIfAllowed(AnonCreds, {walletAccessImpl.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)})
 
-  override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
-                         credDefJson: String, revRegDefJson: String): Try[String] =
-    runIfAllowed(AnonCreds, {walletAccessImpl.storeCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson)})
+  override def storeCred(credId: String, credDefJson: String,
+                         credReqMetadataJson: String, credJson: String,
+                         revRegDefJson: String): Try[String] =
+    runIfAllowed(AnonCreds, {walletAccessImpl.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)})
 
   override def credentialsForProofReq(proofRequest: String): Try[String] =
     runIfAllowed(AnonCreds, {walletAccessImpl.credentialsForProofReq(proofRequest)})

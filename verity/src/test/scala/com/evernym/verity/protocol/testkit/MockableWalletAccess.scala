@@ -109,11 +109,11 @@ class MockableWalletAccess(mockNewDid: () => Try[(String, String)] = randomDid  
     anonCreds.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)
 
   override def storeCred(credId: String,
+                         credDefJson: String,
                          credReqMetadataJson: String,
                          credJson: String,
-                         credDefJson: String,
                          revRegDefJson: String): Try[String] =
-  anonCreds.storeCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson)
+  anonCreds.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)
 
   override def credentialsForProofReq(proofRequest: String): Try[String] = anonCreds.credentialsForProofReq(proofRequest)
 

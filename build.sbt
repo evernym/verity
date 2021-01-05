@@ -165,6 +165,7 @@ lazy val settings = Seq(
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
   resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
   resolvers += Resolver.bintrayRepo("bfil", "maven"),
+
   Test / parallelExecution := false,
   Test / logBuffered := false,
   Global / parallelExecution := false,

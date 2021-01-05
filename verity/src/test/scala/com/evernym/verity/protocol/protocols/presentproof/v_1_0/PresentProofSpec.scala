@@ -1097,8 +1097,8 @@ object PresentProofSpec {
       Try(false)
     override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String): Try[String] =
       basic.createProof(a1, a2, a3, a4, a5)
-    override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
-                           credDefJson: String, revRegDefJson: String): Try[String] =
-      basic.storeCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson)
+    override def storeCred(credId: String, credDefJson: String, credReqMetadataJson: String, credJson: String,
+                           revRegDefJson: String): Try[String] =
+      basic.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)
   }
 }

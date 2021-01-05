@@ -213,8 +213,8 @@ case class CreateCred(credOfferJson: String, credReqJson: String, credValuesJson
                       revRegistryId: String, blobStorageReaderHandle: Int)
   extends WalletCommand
 
-case class StoreCred(credId: String, credReqMetadataJson: String, credJson: String,
-                     credDefJson: String, revRegDefJson: String)
+case class StoreCred(credId: String, credDefJson: String,
+                     credReqMetadataJson: String, credJson: String, revRegDefJson: String)
   extends WalletCommand
 
 case class CredForProofReq(proofRequest: String) extends WalletCommand

@@ -110,8 +110,7 @@ class StandardWalletAPI(walletService: WalletService)
                 credDefJson: String, revRegDefJson: String)
                 (implicit wap: WalletAPIParam): String = {
     walletService.executeSync[String](wap.walletId,
-      StoreCred(credId, credReqMetadataJson, credJson,
-        credDefJson, revRegDefJson))
+      StoreCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson))
   }
 
   def credentialsForProofReq(proofRequest: String)(implicit wap: WalletAPIParam): String = {

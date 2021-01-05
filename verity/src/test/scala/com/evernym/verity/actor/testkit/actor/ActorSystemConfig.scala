@@ -55,10 +55,6 @@ trait ActorSystemConfig {
         loggers = ["akka.event.slf4j.Slf4jLogger", "com.evernym.verity.actor.testkit.QuietTestEventListener"]
         stdout-loglevel = "off"
 
-        debug {
-          receive = on
-        }
-
         remote {
           artery.canonical {
             hostname = "127.0.0.1"
@@ -83,6 +79,10 @@ trait ActorSystemConfig {
         }
 
         actor {
+          debug {
+            receive = on
+          }
+
           provider = "akka.cluster.ClusterActorRefProvider"
 
           serializers {

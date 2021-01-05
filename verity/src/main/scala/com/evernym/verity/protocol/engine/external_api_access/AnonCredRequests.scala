@@ -32,9 +32,9 @@ trait AnonCredRequests {
                  blobStorageReaderHandle: Int): Try[String]
 
   def storeCred(credId: String,
+                credDefJson: String,
                 credReqMetadataJson: String,
                 credJson: String,
-                credDefJson: String,
                 revRegDefJson: String): Try[String]
 
   def credentialsForProofReq(proofRequest: String): Try[String]

@@ -111,7 +111,7 @@ trait EndpointHandlerBaseSpec
       super.checkIfRestApiEnabled()
   }
 
-  val AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME = "akka.test.http-route-timeout-in-seconds"
+  val AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME = "verity.test.http-route-timeout-in-seconds"
 
   implicit def default(implicit system: ActorSystem): RouteTestTimeout =
     RouteTestTimeout(buildDurationInSeconds(appConfig.getConfigIntReq(AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME)))

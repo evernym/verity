@@ -231,7 +231,7 @@ class WalletActorSpec
 
     "when sent CreateCredReq command" - {
       "should respond with CredReq in a json string" in {
-        withBasicCredReqSetup { crd: CredReqData =>
+        withCredReqCreated { crd: CredReqData =>
           //add assertions
           println("cred req: " + crd.credReq)
         }
@@ -248,7 +248,7 @@ class WalletActorSpec
 
     "when sent CreateCred command" - {
       "should respond with a created credential" in {
-        withBasicCredSetup({ crd: CredData =>
+        withCredReceived({ crd: CredData =>
           println("cred: " + crd.cred)
         })
       }
@@ -263,7 +263,7 @@ class WalletActorSpec
 
     "when sent CredForProofReq command" - {
       "should respond with a credential for the proof req" in {
-        withBasicCredSetup({ cd: CredData =>
+        withCredReceived({ cd: CredData =>
           val verifierProofRequest = {
             val proofAttributes = List(ProofAttribute(Option("age"), None, None, None, self_attest_allowed=true))
             val req = Request("", Option(proofAttributes), None, None, None)
@@ -306,7 +306,7 @@ class WalletActorSpec
     expectMsgType[TheirKeyStored]
   }
 
-  def withBasicCredSetup[T](f: CredData => T): T = {
+  def withCredReceived[T](f: CredData => T): T = {
     val crd = prepareBasicCredReqSetup()
     val credValues: Map[String, String] = Map(
       "name" -> "Joe",
@@ -317,13 +317,13 @@ class WalletActorSpec
     issuerWalletActor ! CreateCred(crd.credOffer, crd.credReq, credValuesJson, null, -1)
     val cred = expectMsgType[String]
     val cd = CredData(cred, crd)
-    holderWalletActor ! StoreCred(UUID.randomUUID().toString, crd.credReqMetaData, cred, crd.credDef.credDefJson, null)
+    holderWalletActor ! StoreCred(UUID.randomUUID().toString, crd.credDef.credDefJson, crd.credReqMetaData, cred, null)
     expectMsgType[String]
 
     f(cd)
   }
 
-  def withBasicCredReqSetup[T](f: CredReqData => T): T = {
+  def withCredReqCreated[T](f: CredReqData => T): T = {
     val crs = prepareBasicCredReqSetup()
     f(crs)
   }

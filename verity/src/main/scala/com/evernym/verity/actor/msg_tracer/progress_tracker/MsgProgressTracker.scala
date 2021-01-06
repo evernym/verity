@@ -7,13 +7,14 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME, SINGLETON_PARENT_PROXY}
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, SendCmdToAllNodes, StartProgressTracking, StopProgressTracking}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.ReqId
 import org.apache.http.conn.util.InetAddressUtils
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.constants.Constants
 
 
@@ -27,7 +28,7 @@ object MsgProgressTracker {
  * msg progress tracker sharded actor
  * @param appConfig app config
  */
-class MsgProgressTracker(val appConfig: AppConfig) extends BaseNonPersistentActor with HasActorResponseTimeout {
+class MsgProgressTracker(val appConfig: AppConfig) extends CoreActorExtended with HasActorResponseTimeout {
 
   implicit val isGlobalOrIpAddress: Boolean =
     InetAddressUtils.isIPv4Address(entityId) ||
@@ -139,7 +140,6 @@ class MsgProgressTracker(val appConfig: AppConfig) extends BaseNonPersistentActo
 
   scheduleJob(
     "CheckForPeriodicTask",
-    300,
     300,
     CheckForPeriodicTask
   )

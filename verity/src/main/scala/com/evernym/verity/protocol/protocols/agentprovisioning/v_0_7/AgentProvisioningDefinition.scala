@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine._
 import AgentProvisioningMsgFamily._
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerify}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
 

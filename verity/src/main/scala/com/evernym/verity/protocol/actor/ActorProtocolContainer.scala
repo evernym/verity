@@ -74,6 +74,7 @@ class ActorProtocolContainer[
     with ProtocolEngineExceptionHandler
     with MsgTraceProvider
     with HasAgentWallet
+    with HasAppConfig
     with AgentIdentity {
 
   override final val receiveEvent: Receive = {
@@ -87,12 +88,13 @@ class ActorProtocolContainer[
   )
 
   override val appConfig: AppConfig = agentActorContext.appConfig
+  def walletAPI: WalletAPI = agentActorContext.walletAPI
   lazy val pinstId: PinstId = entityId
 
   var senderActorRef: Option[ActorRef] = None
 
   override def domainId: DomainId = backstate.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
-  var agentWalletSeed: Option[String] = None
+  var agentWalletId: Option[String] = None
   def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
 
   def toBaseBehavior(): Unit = {
@@ -138,7 +140,7 @@ class ActorProtocolContainer[
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
       metadata.foreach { m =>
-        setForwarderParams(m.walletSeed, m.forwarder)
+        setForwarderParams(m.walletId, m.forwarder)
       }
       recoverOrInit()
   }
@@ -244,7 +246,7 @@ class ActorProtocolContainer[
 
     cmd.metadata.foreach { m =>
       storePackagingDetail(m.threadContextDetail)
-      setForwarderParams(m.walletSeed, m.forwarder)
+      setForwarderParams(m.walletId, m.forwarder)
     }
 
     if(sender() != self) {
@@ -297,7 +299,7 @@ class ActorProtocolContainer[
 
   def setForwarderParams(_walletSeed: String, fwder: ActorRef): Unit = {
     msgForwarder.setForwarder(fwder)
-    agentWalletSeed = Option(_walletSeed)
+    agentWalletId = Option(_walletSeed)
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
@@ -332,14 +334,11 @@ class ActorProtocolContainer[
 
   @silent
   override def createServices: Option[Services] = {
-    val walletParam = WalletParam(agentActorContext.walletAPI, agentActorContext.walletConfig)
+    Some(new LegacyProtocolServicesImpl[M,E,I](
+      eventRecorder, sendsMsgs, agentActorContext.appConfig,
+      agentActorContext.walletAPI, agentActorContext.generalCache,
+      agentActorContext.remoteMsgSendingSvc, agentActorContext.agentMsgTransformer,
 
-    Some(new LegacyProtocolServicesImpl[M,E,I](eventRecorder, sendsMsgs,
-      agentActorContext.appConfig, walletParam, agentActorContext.generalCache,
-      agentActorContext.smsSvc, agentActorContext.agentMsgRouter, agentActorContext.remoteMsgSendingSvc,
-      agentActorContext.agentMsgTransformer, this, this,
-      this, this))
-  }
 
   // For each sharded actor, there will be one region actor per type per node. The region
   // actor manages all the shard actors. See https://docs.google.com/drawings/d/1vyjsGYjEQtvQbwWVFditnTXP-JyhIIrMc2FATy4-GVs/edit
@@ -495,7 +494,7 @@ class ActorProtocolContainer[
     }
   }
 
-  private lazy val walletAccessImpl = new WalletAccessLibindy(
+  private lazy val walletAccessImpl = new WalletAccessAPI(
     agentActorContext.appConfig,
     agentActorContext.walletAPI,
     getRoster.selfId_!
@@ -551,7 +550,7 @@ case class Init(params: Parameters) extends Control {
  * @param statusDetail - status detail
  */
 case class UpdateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String,
-                                   statusDetail: Option[String]) extends Control with ActorMessageClass
+                                   statusDetail: Option[String]) extends Control with ActorMessage
 
 /**
  * Purpose of this service is to provide a way for protocol to schedule a message for itself
@@ -571,16 +570,16 @@ trait MsgQueueServiceProvider {
  * @param domainId domain id
  * @param parameters protocol initialization parameters
  */
-case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessageClass
+case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessage
 
 /**
  * This is used by this actor during protocol initialization process.
  * It is sent to the message forwarder (which is available in ProtocolCmd)
  * @param stateKeys - set of keys/names whose value is needed by the protocol.
  */
-case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessageClass
+case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessage
 
-case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends ActorMessageClass
+case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends ActorMessage
 
 /*
   walletSeed: actor protocol container needs to access/provide wallet service
@@ -591,7 +590,7 @@ case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends Act
   who originally forwarded the msg
  */
 case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
-                            walletSeed: String,
+                            walletId: String,
                             forwarder: ActorRef)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
@@ -613,7 +612,7 @@ case class MsgEnvelope(msg: Any,
                        to: ParticipantId,
                        frm: ParticipantId,
                        msgId: Option[MsgId]=None,
-                       thId: Option[ThreadId]=None) extends TypedMsgLike with ActorMessageClass {
+                       thId: Option[ThreadId]=None) extends TypedMsgLike with ActorMessage {
   def typedMsg: TypedMsg = TypedMsg(msg, msgType)
 }
 
@@ -628,9 +627,9 @@ class MsgForwarder {
   def forwarder:Option[ActorRef] = _forwarder
 }
 
-case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
+case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessage
 
-case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
-case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
+case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessage
+case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessage
 
 case class FromProtocol(fromPinstId: PinstId, newRelationship: RelationshipLike)

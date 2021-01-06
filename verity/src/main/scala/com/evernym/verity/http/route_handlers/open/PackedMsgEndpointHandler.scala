@@ -5,18 +5,27 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, MediaTypes, RemoteAddress}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
-import com.evernym.verity.actor.persistence.Done
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
+import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.http.common.HttpCustomTypes
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.util.{ReqMsgContext, PackedMsgWrapper}
+import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.agentmsg.msgpacker.UnpackParam
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
+
+import scala.concurrent.Future
 
 
 trait PackedMsgEndpointHandler
   extends AgencyPackedMsgHandler { this: HttpRouteWithPlatform =>
+
+  def getAgencyDidPairFut: Future[DidPair]
+  implicit def wap: WalletAPIParam
 
   def handleAgentMsgResponse: PartialFunction[(Any, ReqMsgContext), ToResponseMarshallable] = {
 
@@ -29,6 +38,34 @@ trait PackedMsgEndpointHandler
     case (e, _: ReqMsgContext) =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
       handleUnexpectedResponse(e)
+  }
+
+  /**
+   * PREFERABLE: sends the packed message to the agency agent
+   * when used this approach, earlier we found performance
+   * @param pmw packed msg wrapper
+   * @return
+   */
+  def sendPackedMsgToAgencyAgent(pmw: PackedMsgWrapper): Future[Any] = {
+    getAgencyDidPairFut flatMap { adp =>
+      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(adp.DID, pmw))
+    }
+  }
+
+  /**
+   * NOT-PREFERABLE: processes the packed message locally
+   * @param pmw packed msg wrapper
+   * @return
+   */
+  def processPackedMsg(pmw: PackedMsgWrapper): Future[Any] = {
+    // flow diagram: fwd + ctl + proto + legacy, step 3 -- Decrypt and check message type.
+    getAgencyDidPairFut flatMap { adp =>
+      agentActorContext.agentMsgTransformer.unpackAsync(
+        pmw.msg, KeyParam(Left(adp.verKey)), UnpackParam(isAnonCryptedMsg = true)
+      ).flatMap { implicit amw =>
+        handleUnpackedMsg(pmw)
+      }
+    }
   }
 
   def handleAgentMsgReqForOctetStreamContentType(implicit reqMsgContext: ReqMsgContext): Route = {

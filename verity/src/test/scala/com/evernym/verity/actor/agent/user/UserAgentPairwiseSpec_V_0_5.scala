@@ -13,7 +13,6 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, GetMsgsReqMsg_MFV_0_5, PairwiseMsgUids}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
@@ -21,7 +20,8 @@ import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_V_0_5}
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateMsg_MFV_0_5, TestConfigDetail, TestUtil}
-import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
 class ConsumerUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
@@ -101,8 +101,8 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
         )
 
         val theirAgentEncParam = EncryptParam(
-          Set(KeyInfo(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
-          Option(KeyInfo(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
+          Set(KeyParam(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
+          Option(KeyParam(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
         )
 
         val msg = buildReceivedReqMsg_V_0_5(AgentPackMsgUtil(msgs, theirAgentEncParam)(mockEdgeAgent.v_0_5_req.msgPackFormat))

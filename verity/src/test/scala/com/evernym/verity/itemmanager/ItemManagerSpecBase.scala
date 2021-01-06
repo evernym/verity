@@ -6,7 +6,7 @@ import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants.ENTITY_ID_MAPPER_VERSION_V1
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
 import com.evernym.verity.actor.itemmanager.{ExternalCmdWrapper, ItemConfigManager, ItemContainerMapper}
-import com.evernym.verity.actor.persistence.PersistenceConfig
+import com.evernym.verity.actor.persistence.SnapshotConfig
 import com.evernym.verity.actor.testkit.AkkaTestBasic.{getNextAvailablePort, systemNameForPort, tmpdir}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -28,9 +28,7 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
 
   val itemManagerEntityId1: String = ITEM_OWNER_ID
 
-  implicit val persistenceConfig: PersistenceConfig = PersistenceConfig (
-    allowOnlyEvents=false,
-    allowOnlySnapshots=true,
+  implicit val persistenceConfig: SnapshotConfig = SnapshotConfig (
     snapshotEveryNEvents=None,
     deleteEventsOnSnapshot = true,
     keepNSnapshots = Option(1))
@@ -112,7 +110,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |    enabled = true
         |
         |    scheduled-job {
-        |      initial-delay-in-seconds = 5
         |      interval-in-seconds = 3
         |    }
         |  }
@@ -120,7 +117,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |  item-container {
         |
         |    scheduled-job {
-        |      initial-delay-in-seconds = 1
         |      interval-in-seconds = 1
         |    }
         |

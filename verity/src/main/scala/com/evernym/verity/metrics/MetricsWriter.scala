@@ -14,9 +14,12 @@ object MetricsWriter {
 
 trait GaugeApi {
   def increment(name: String): Unit
-  def increment(name: String, duration: Long): Unit
+  def increment(name: String, times: Long): Unit
+  def decrement(name: String): Unit
+  def decrement(name: String, times: Long): Unit
   def incrementWithTags(name: String, tags: Map[String, String] = Map.empty)
   def updateWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty)
+  def update(name: String, value: Long)
 }
 
 
@@ -26,8 +29,16 @@ object GaugeApiImpl extends GaugeApi {
     initializedGaugeMetric(name).withoutTags().increment()
   }
 
-  def increment(name: String, duration: Long): Unit = {
-    initializedGaugeMetric(name).withoutTags().increment(duration)
+  def increment(name: String, times: Long): Unit = {
+    initializedGaugeMetric(name).withoutTags().increment(times)
+  }
+
+  def decrement(name: String): Unit = {
+    initializedGaugeMetric(name).withoutTags().decrement()
+  }
+
+  def decrement(name: String, times: Long): Unit = {
+    initializedGaugeMetric(name).withoutTags().decrement(times)
   }
 
   def incrementWithTags(name: String, tags: Map[String, String] = Map.empty): Unit = {
@@ -38,11 +49,14 @@ object GaugeApiImpl extends GaugeApi {
     initializedGaugeMetric(name).withTags(TagSet.from(tags)).update(value)
   }
 
+  def update(name: String, value: Long): Unit = {
+    initializedGaugeMetric(name).withoutTags().update(value)
+  }
+
   private def gaugeMetric(name: String): Metric.Gauge = Kamon.gauge(name)
 
   private def initializedGaugeMetric(name: String): Metric.Gauge = {
-    val gm = gaugeMetric(name)
-    gm
+    gaugeMetric(name)
   }
 }
 
@@ -69,7 +83,6 @@ object HistogramApiImpl extends HistogramApi {
   private def histogramMetric(name: String): Metric.Histogram = Kamon.histogram(name)
 
   private def initializedHistogramMetric(name: String): Metric.Histogram = {
-    val hist = histogramMetric(name)
-    hist
+    histogramMetric(name)
   }
 }

@@ -14,7 +14,7 @@ import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
@@ -197,7 +197,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
 }
 
-trait ForSingletonChild extends ActorMessageClass {
+trait ForSingletonChild extends ActorMessage {
   def cmd: Any
   def getActorName: String
 }
@@ -222,4 +222,4 @@ case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWa
 case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
-case object NodeAddedToClusterSingleton extends ActorMessageObject
+case object NodeAddedToClusterSingleton extends ActorMessage

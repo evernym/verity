@@ -1,8 +1,10 @@
 package com.evernym.verity.protocol.testkit
 
+import com.evernym.verity.actor.wallet.CreatedCredReq
 import com.evernym.verity.ledger.LedgerRequest
-import com.evernym.verity.protocol.engine.WalletAccess.{KeyType, SignType}
-import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.{KeyType, SignType}
+import com.evernym.verity.protocol.engine.{external_api_access, _}
+import com.evernym.verity.protocol.engine.external_api_access.{AnonCredRequests, SignatureResult, WalletAccess}
 import com.evernym.verity.protocol.testkit.MockableWalletAccess._
 import com.evernym.verity.util.Base58Util
 
@@ -40,7 +42,7 @@ object MockableWalletAccess {
   def randomSig() = {
     val randomSig = new Array[Byte](64)
     Random.nextBytes(randomSig)
-    Try(SignatureResult(randomSig, "V1"))
+    Try(external_api_access.SignatureResult(randomSig, "V1"))
   }
   def trueVerify() = Try(true)
 
@@ -96,7 +98,7 @@ class MockableWalletAccess(mockNewDid: () => Try[(String, String)] = randomDid  
   override def createCredReq(credDefId: String,
                              proverDID: DID,
                              credDefJson: String,
-                             credOfferJson: String): Try[String] =
+                             credOfferJson: String): Try[CreatedCredReq] =
     anonCreds.createCredReq(credDefId, proverDID, credDefJson, credOfferJson)
 
   override def createCred(credOfferJson: String,
@@ -105,6 +107,13 @@ class MockableWalletAccess(mockNewDid: () => Try[(String, String)] = randomDid  
                           revRegistryId: String,
                           blobStorageReaderHandle: ParticipantIndex): Try[String] =
     anonCreds.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)
+
+  override def storeCred(credId: String,
+                         credDefJson: String,
+                         credReqMetadataJson: String,
+                         credJson: String,
+                         revRegDefJson: String): Try[String] =
+  anonCreds.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)
 
   override def credentialsForProofReq(proofRequest: String): Try[String] = anonCreds.credentialsForProofReq(proofRequest)
 

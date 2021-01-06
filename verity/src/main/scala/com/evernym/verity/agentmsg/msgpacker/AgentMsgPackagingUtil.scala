@@ -13,7 +13,8 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.{DID, MsgFamilyQualifier, MsgName, VerKey}
 import com.evernym.verity.util.MessagePackUtil
-import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAccessParam}
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
 
 
@@ -43,7 +44,7 @@ object AgentMsgPackagingUtil {
    * @return
    */
   def buildAgentMsg(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam)
-                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
+                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
     runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
       val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
       agentMsgTransformer.pack(msgPackFormat, agentMsgJson, packMsgParam.encryptParam)
@@ -62,7 +63,7 @@ object AgentMsgPackagingUtil {
    */
   def buildRoutedAgentMsgFromPackMsgParam(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam,
                                           fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
-                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
+                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
 
     val packedAgentMsg = buildAgentMsg(msgPackFormat, packMsgParam)
     buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
@@ -80,7 +81,7 @@ object AgentMsgPackagingUtil {
    */
   def buildRoutedAgentMsg(msgPackFormat: MsgPackFormat, packedMsg: PackedMsg,
                           fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
-                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
+                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
     runWithInternalSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil") {
       var updatedPackedMsg = packedMsg
       fwdRoutes.foreach { fr =>
@@ -92,7 +93,7 @@ object AgentMsgPackagingUtil {
           fwdMsgType = packedMsg.metadata.map(_.msgTypeStr)
         )
         updatedPackedMsg = fr.encryptInfo.fold(
-          si => agentMsgTransformer.pack(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyInfo), None)),
+          si => agentMsgTransformer.pack(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyParam), None)),
           ei => agentMsgTransformer.pack(msgPackFormat, fwdMsg, ei)
         )
       }
@@ -150,7 +151,7 @@ object AgentMsgPackagingUtil {
                             routingKeys: Seq[VerKey],
                             msgType: String
                            )
-                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAccessParam): PackedMsg = {
+                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
     runWithInternalSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil") {
       routingKeys.size match {
         case 0 => PackedMsg(msg)
@@ -160,7 +161,7 @@ object AgentMsgPackagingUtil {
           val remaining = routingKeys.tail
           val encryptWith = remaining.head
           val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg, COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
-          val newPackedMsg = agentMsgTransformer.pack(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyInfo(Left(encryptWith))), None))
+          val newPackedMsg = agentMsgTransformer.pack(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyParam(Left(encryptWith))), None))
           if (remaining.size >= 2) {
             packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
           } else {

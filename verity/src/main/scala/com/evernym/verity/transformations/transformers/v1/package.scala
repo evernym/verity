@@ -1,6 +1,7 @@
 package com.evernym.verity.transformations.transformers
 
 import com.evernym.verity.actor.PersistentMsg
+import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 
 package object v1 {
   /**
@@ -16,11 +17,12 @@ package object v1 {
    * @return
    */
   def createPersistenceTransformerV1(persistenceEncryptionKey: String,
-                                     schemaEvolutionTransformation: Any <=> Any
+                                     objectCodeMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper,
+                                     schemaEvolutionTransformation: Any <=> Any = new IdentityTransformer
                                     ): Any <=> PersistentMsg = {
 
     schemaEvolutionTransformation andThen
-      DefaultProtoBufTransformerV1 andThen
+      new ProtoBufTransformerV1(objectCodeMapper) andThen
       new AESEncryptionTransformerV1(persistenceEncryptionKey) andThen
       new PersistenceTransformer(PERSISTENCE_TRANSFORMATION_ID_V1)
   }

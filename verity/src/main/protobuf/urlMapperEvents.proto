@@ -7,6 +7,6 @@ package com.evernym.verity.urlmapper;
 
 //UrlMapper Events
 message UrlAdded{
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessageClass";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string url = 1;
 }

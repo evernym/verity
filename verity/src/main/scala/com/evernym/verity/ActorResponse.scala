@@ -1,6 +1,6 @@
 package com.evernym.verity
 
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status._
 
@@ -39,8 +39,11 @@ object ActorResponse {
  * @param errorDetail error detail
  */
 
-final case class ActorErrorResp(exceptionClass: Class[_], statusCode: String, statusMsg: Option[String],
-                          statusMsgDetail: Option[String]=None, errorDetail: Option[Any]=None) extends ActorMessageClass {
+final case class ActorErrorResp(exceptionClass: Class[_],
+                                statusCode: String,
+                                statusMsg: Option[String],
+                                statusMsgDetail: Option[String]=None,
+                                errorDetail: Option[Any]=None) extends ActorMessage {
 
   def respMsg: String = statusMsg.getOrElse(Status.getStatusMsgFromCode(statusCode))
 }

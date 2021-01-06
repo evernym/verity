@@ -8,11 +8,12 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, StoreTheirKey}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
@@ -49,7 +50,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   lazy val myPairwiseVerKeyReq : VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
-    val seed = params.find(_.name == THIS_AGENT_WALLET_SEED).get.value
+    val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
     initWalletDetail(seed)
     ConnectingState(
       ctx.SERVICES_DEPRECATED.appConfig,
@@ -128,7 +129,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   private def handleCreateConnection(amw: AgentMsgWrapper): PackedMsg = {
     val cc = amw.headAgentMsg.convertTo[CreateConnectionReqMsg_MFV_0_6]
-    val edgePairwiseKey = walletDetail.walletAPI.createNewKey(CreateNewKeyParam())
+    val edgePairwiseKey = walletAPI.createNewKey(CreateNewKey())
     val edgePairwiseKeyCreated = KeyCreated(edgePairwiseKey.did)
     ctx.apply(edgePairwiseKeyCreated)
 
@@ -143,7 +144,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
       edgePairwiseKey.did, edgePairwiseKey.did, endpointDetail)
     val kdp = getAgentKeyDlgProof(edgePairwiseKey.verKey, edgePairwiseKey.did,
-      edgePairwiseKey.verKey)(walletDetail.walletAPI, wap)
+      edgePairwiseKey.verKey)(walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
     val pm = handleConnReqMsg(ccamw, Option(cc.sourceId))
     amw.msgPackFormat match {
@@ -167,8 +168,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   }
 
   private def processKeyCreatedMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit agentMsgContext: AgentMsgContext): Future[PackedMsg] = {
-    val pairwiseKeyResult = walletDetail.walletAPI.createNewKey(CreateNewKeyParam())
-    walletDetail.walletAPI.storeTheirKey(StoreTheirKeyParam(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
+    val pairwiseKeyResult = walletAPI.createNewKey(CreateNewKey())
+    walletAPI.storeTheirKey(StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
@@ -183,8 +184,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
                                                 (implicit agentMsgContext: AgentMsgContext): PackedMsg = {
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pairwiseKeyCreated.did, pairwiseKeyCreated.verKey)
     val encryptInfo = EncryptParam(
-      Set(KeyInfo(Left(createKeyReqMsg.forDIDVerKey))),
-      Option(KeyInfo(Left(pairwiseKeyCreated.verKey)))
+      Set(KeyParam(Left(createKeyReqMsg.forDIDVerKey))),
+      Option(KeyParam(Left(pairwiseKeyCreated.verKey)))
     )
     val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
     buildAgentMsg(agentMsgContext.msgPackFormat, param)
@@ -256,7 +257,7 @@ case class AskPairwiseCreator(fromDID: DID, pairwiseDID: DID, endpointDetailJson
 /**
  * Control Messages
  */
-case class GetInviteDetail_MFV_0_6(override val uid: MsgId) extends GetInviteDetail with ActorMessageClass {
+case class GetInviteDetail_MFV_0_6(override val uid: MsgId) extends GetInviteDetail with ActorMessage {
   val msgName: MsgName = MSG_TYPE_GET_INVITE_DETAIL
   val msgFamily: MsgFamily = ConnectingMsgFamily
 }

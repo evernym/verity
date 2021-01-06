@@ -11,7 +11,7 @@ import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
 import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, VerityInstance}
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 
 import scala.concurrent.duration.Duration
 
@@ -21,9 +21,9 @@ class ApplicationAdminExt(val scenario: Scenario,
   extends AgentMsgSenderHttpWrapper
     with AdminClient {
 
-  override def urlDetail: UrlDetail = instance.endpoint
+  override def urlParam: UrlParam = instance.endpoint
 
-  override val mockClientAgent = new MockAgencyAdmin(system, urlDetail, appConfig)
+  override val mockClientAgent = new MockAgencyAdmin(system, urlParam, appConfig)
 
   val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario.testDir))
 

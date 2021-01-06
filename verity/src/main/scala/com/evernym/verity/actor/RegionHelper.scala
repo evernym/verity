@@ -28,5 +28,5 @@ abstract class RegionHelper[T]() {
 }
 
 case class agentRegion(id: EntityId, region: ActorRef) extends RegionHelper[AgentId]() {
-  def prepare(msg: Any) = ForIdentifier(id, msg)
+  def prepare(msg: Any): ForIdentifier = ForIdentifier(id, msg)
 }

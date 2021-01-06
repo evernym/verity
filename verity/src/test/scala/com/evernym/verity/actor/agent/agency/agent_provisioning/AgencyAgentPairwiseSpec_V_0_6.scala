@@ -2,11 +2,11 @@ package com.evernym.verity.actor.agent.agency.agent_provisioning
 
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -44,7 +44,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
           val fromDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(fromDID)
           val msg = prepareConnectCreateKey(
             fromDID, fromDIDVerKey, mockEdgeAgent.agencyAgentDetailReq.DID)
-          aa ! PackedMsgParam(msg, reqMsgContext)
+          aa ! ProcessPackedMsg(msg, reqMsgContext)
           val pm = expectMsgType[PackedMsg]
           val resp = handleConnectKeyCreatedResp(pm)
           pairwiseDID = resp.withPairwiseDID
@@ -64,7 +64,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
           val msg = prepareCreateAgentMsg(
             mockEdgeAgent.agencyPairwiseAgentDetailReq.DID,
             fromDID, fromDIDVerKey)
-          aap ! PackedMsgParam(msg, reqMsgContext)
+          aap ! ProcessPackedMsg(msg, reqMsgContext)
           expectMsgType[PackedMsg]
         }
       }
@@ -72,7 +72,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
       "when sent connection request msg" - {
         "should respond with connection request detail" in {
           val msg = prepareCreateInvite(mockEdgeAgent.agencyPairwiseAgentDetailReq.DID, None)
-          aap ! PackedMsgParam(msg, reqMsgContext)
+          aap ! ProcessPackedMsg(msg, reqMsgContext)
           expectMsgType[PackedMsg]
         }
       }
@@ -85,7 +85,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
             val msg = prepareCreateAgentMsg(
               mockEdgeAgent.agencyPairwiseAgentDetailReq.DID,
               fromDID, fromDIDVerKey)
-            aap ! PackedMsgParam(msg, reqMsgContext)
+            aap ! ProcessPackedMsg(msg, reqMsgContext)
             expectError(AGENT_ALREADY_CREATED.statusCode)
           }
         }

@@ -4,9 +4,9 @@ import akka.http.scaladsl.model.{HttpMethod, HttpMethods}
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.concurrent.Future
 import scala.util.{Success, Try}
@@ -31,7 +31,7 @@ object MockRemoteMsgSendingSvc extends MockRemoteMsgSendingSvc {
   case class MockUrlMapperMessage(url: String, hashedUrl: String)
 
   def sendPlainTextMsgToRemoteEndpoint(payload: String, method: HttpMethod = HttpMethods.POST)
-                                      (implicit ud: UrlDetail): Future[Either[HandledErrorException, String]] = {
+                                      (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     Try(DefaultMsgCodec.fromJson[MockUrlMapperMessage](payload)) match {
       case Success(m) => mappedUrls = mappedUrls + (m.hashedUrl -> m.url)
       case _ =>
@@ -39,13 +39,13 @@ object MockRemoteMsgSendingSvc extends MockRemoteMsgSendingSvc {
     Future(Right(payload))
   }
 
-  def sendJsonMsgToRemoteEndpoint(payload: String)(implicit ud: UrlDetail): Future[Either[HandledErrorException, String]] = {
+  def sendJsonMsgToRemoteEndpoint(payload: String)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     totalRestAgentMsgsSent = totalRestAgentMsgsSent + 1
     lastAgentRestMsgOption = Option(payload)
     Future(Right(payload))
   }
 
-  def sendBinaryMsgToRemoteEndpoint(payload: Array[Byte])(implicit ud: UrlDetail): Future[Either[HandledErrorException, PackedMsg]] = {
+  def sendBinaryMsgToRemoteEndpoint(payload: Array[Byte])(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
     totalAgentMsgsSent = totalAgentMsgsSent + 1
     lastAgentMsgOption = Option(payload)
     Future(Right(PackedMsg(payload)))

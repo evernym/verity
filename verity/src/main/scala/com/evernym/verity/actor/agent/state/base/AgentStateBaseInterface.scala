@@ -14,13 +14,13 @@ trait AgentStateUpdateInterface {
   type StateType <: AgentStateInterface
   def state: StateType
 
-  def setAgentWalletSeed(seed: String): Unit
+  def setAgentWalletId(walletId: String): Unit
   def setAgencyDID(did: DID): Unit
   def addThreadContextDetail(threadContext: ThreadContext): Unit
   def removeThreadContext(pinstId: PinstId): Unit
+
   def addThreadContextDetail(pinstId: PinstId, threadContextDetail: ThreadContextDetail): Unit = {
-    val curThreadContextDetails = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val updatedThreadContextDetails = curThreadContextDetails ++ Map(pinstId -> threadContextDetail)
+    val updatedThreadContextDetails = state.currentThreadContexts ++ Map(pinstId -> threadContextDetail)
     addThreadContextDetail(ThreadContext(contexts = updatedThreadContextDetails))
   }
 
@@ -50,6 +50,10 @@ trait AgentStateInterface extends State {
 
   def threadContext: Option[ThreadContext]
 
+  def currentThreadContexts: Map[String, ThreadContextDetail] = threadContext.map(_.contexts).getOrElse(Map.empty)
+  def currentThreadContextSize: Int = currentThreadContexts.size
+
+
   //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
   //the below mentioned 'addPinst' will no longer be required.
   def protoInstances: Option[ProtocolRunningInstances]
@@ -57,7 +61,7 @@ trait AgentStateInterface extends State {
   def relationship: Option[Relationship]
   def relationshipReq: Relationship = relationship.getOrElse(throw new RuntimeException("relationship not found"))
 
-  def agentWalletSeed: Option[String]
+  def agentWalletId: Option[String]
   def agencyDID: Option[DID]
   def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))
 

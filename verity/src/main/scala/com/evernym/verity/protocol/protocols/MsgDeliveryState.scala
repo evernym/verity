@@ -36,7 +36,7 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
           if (isEligibleForRetries(criteria, msg, deliveryStatus)) {
             addAsEligibleForRetry(msgId)
           } else {
-            remoteAsEligibleForRetry(msgId)
+            removeAsEligibleForRetry(msgId)
           }
           if (isUndeliveredMsg(criteria, msg, deliveryStatus)) {
             undeliveredMsgs += msgId
@@ -53,28 +53,32 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
   }
 
   private def addAsEligibleForRetry(msgId: MsgId): Unit = {
-    remoteAsEligibleForRetry(msgId)    //this is so that it gets appended to the end when added in below line
+    removeAsEligibleForRetry(msgId)    //this is so that it gets appended to the end when added in below line
     eligibleForRetries += msgId
   }
 
-  private def remoteAsEligibleForRetry(msgId: MsgId): Unit = {
+  private def removeAsEligibleForRetry(msgId: MsgId): Unit = {
     eligibleForRetries -= msgId
   }
 
   private def filterRetriableDeliveryStatus(criteria: RetryEligibilityCriteria,
-                                            msg: Msg, deliveryStatus: Map[String, MsgDeliveryDetail]): List[MsgDeliveryDetail] = {
+                                            msg: Msg,
+                                            deliveryStatus: Map[String, MsgDeliveryDetail]): List[MsgDeliveryDetail] = {
     if (!criteria.exceptMsgTypes.contains(msg.getType) &&
       //only those msgs which is sent by given senderDID
       criteria.senderDID.forall(msg.senderDID == _)) {
       //only those msgs which has been failed in their previous delivery attempt
       // and their attempt count is not yet exceeded than max allowed retry count
-        deliveryStatus.filter(ds => criteria.deliveryTargets.contains(ds._1)).values
-          .filter(mds => mds.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode).toList
+        deliveryStatus
+          .filter(ds => criteria.deliveryTargets.contains(ds._1) && ds._2.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode)
+          .values
+          .toList
     } else List.empty
   }
 
   private def isEligibleForRetries(criteria: RetryEligibilityCriteria,
-                                   msg: Msg, deliveryStatus: Map[String, MsgDeliveryDetail]): Boolean = {
+                                   msg: Msg,
+                                   deliveryStatus: Map[String, MsgDeliveryDetail]): Boolean = {
     filterRetriableDeliveryStatus(criteria, msg, deliveryStatus)
       .exists(_.failedAttemptCount < maxRetryAttempts)
   }

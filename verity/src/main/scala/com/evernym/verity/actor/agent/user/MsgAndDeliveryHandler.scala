@@ -1,20 +1,23 @@
 package com.evernym.verity.actor.agent.user
 
-import java.time.temporal.ChronoUnit
+import java.time.ZonedDateTime
 
 import akka.actor.Actor.Receive
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status.{DATA_NOT_FOUND, INVALID_VALUE, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_ACCEPTED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REDIRECTED, MSG_STATUS_REJECTED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT, MSG_VALIDATION_ERROR_ALREADY_ANSWERED}
+import com.evernym.verity.Status._
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgReceivedOrdersDetail, MsgStatusUpdated, MsgThreadDetail}
-import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail, PayloadMetadata, PayloadWrapper, Thread}
+import com.evernym.verity.actor.agent.{AgentCommon, Msg, MsgDeliveryDetail, PayloadMetadata, PayloadWrapper, Thread}
+import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_CONN_REQ_ACCEPTED, _}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
 import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName, RefMsgId}
 import com.evernym.verity.protocol.protocols.MsgDeliveryState
-import com.evernym.verity.util.TimeZoneUtil.{getCurrentUTCZonedDateTime, getMillisForCurrentUTCZonedDateTime}
+import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import MsgHelper._
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.Util.checkIfDIDLengthIsValid
 
-trait MsgAndDeliveryHandler {
+trait MsgAndDeliveryHandler { this: AgentCommon =>
 
   /**
    * imaging below collection of messages (each of the below line is a message record with different fields)
@@ -26,9 +29,10 @@ trait MsgAndDeliveryHandler {
    *  uid2 -> uid1
    */
   private var refMsgIdToMsgId: Map[RefMsgId, MsgId] = Map.empty
-
   protected var unseenMsgIds: Set[MsgId] = Set.empty
   private var seenMsgIds: Set[MsgId] = Set.empty
+
+  def appConfig: AppConfig
 
   /**
    * mapping between MsgName (message type name, like: connection req, cred etc)
@@ -67,6 +71,7 @@ trait MsgAndDeliveryHandler {
           msu.lastUpdatedTimeInMillis)
         addToMsgs(msu.uid, updated)
         updateMsgIndexes(msu.uid, updated)
+        removeMsgIfReceivedByDestination(msu.uid)
       }
 
     case mdsu: MsgDeliveryStatusUpdated =>
@@ -76,7 +81,6 @@ trait MsgAndDeliveryHandler {
           addToMsgs(mdsu.uid, updated)
         }
         removeFromMsgDeliveryStatus(mdsu.uid)
-        //msgDetails -= mdsu.uid
       } else {
         val emds = getMsgDeliveryStatus(mdsu.uid)
         val newMds = MsgDeliveryDetail(mdsu.statusCode, Evt.getOptionFromValue(mdsu.statusDetail),
@@ -85,6 +89,7 @@ trait MsgAndDeliveryHandler {
         addToDeliveryStatus(mdsu.uid, nmds)
       }
       updateMsgDeliveryState(mdsu.uid, Option(mdsu))
+      removeMsgIfReceivedByDestination(mdsu.uid)
 
     case mda: MsgDetailAdded =>
       val emd = getMsgDetails(mda.uid)
@@ -147,35 +152,6 @@ trait MsgAndDeliveryHandler {
     }
   }
 
-
-  /**
-   * THIS IS NOT USED AS OF NOW (but will be once we thoroughly test this logic)
-   *
-   * This is initial implementation of in-memory msg state cleanup for stale messages
-   * once we know this change is working at high level, then we should finalize it,
-   * make it more robust if needed (at least for short term)
-   *
-   */
-  def performStateCleanup(maxTimeToRetainSeenMsgsInMinutes: Int): Unit = {
-    val currentDateTime = getCurrentUTCZonedDateTime
-    val candidateMsgIds = seenMsgIds.filter { msgId =>
-      getMsgOpt(msgId).exists { m =>
-        val duration = ChronoUnit.MINUTES.between(m.creationDateTime, currentDateTime)
-        duration >= maxTimeToRetainSeenMsgsInMinutes
-      }
-    }
-    removeFromMsgs(candidateMsgIds)
-    removeFromMsgDetails(candidateMsgIds)
-    removeFromMsgPayloads(candidateMsgIds)
-    removeFromMsgDeliveryStatus(candidateMsgIds)
-
-    seenMsgIds --= candidateMsgIds
-    unseenMsgIds --= candidateMsgIds
-    refMsgIdToMsgId = refMsgIdToMsgId.filterNot { case (refMsgId, msgId) =>
-      candidateMsgIds.contains(refMsgId) || candidateMsgIds.contains(msgId)
-    }
-  }
-
   def checkIfMsgExists(uidOpt: Option[MsgId]): Unit = {
     uidOpt.foreach { uid =>
       if (getMsgOpt(uid).isEmpty) {
@@ -215,6 +191,102 @@ trait MsgAndDeliveryHandler {
       }
     }
   }
+
+  def removeMsgIfReceivedByDestination(msgId: MsgId): Unit = {
+    if (isMsgCandidateForRemoval(msgId)) removedMsgsFromState(Set(msgId))
+  }
+
+  /**
+   * this state cleanup logic is to remove delivered messages
+   * from the state object (which should help in memory consumption and
+   * actor recovery time once we enable snapshotting)
+   * this code is only needed until we do "outbox integration" work
+   * which would have its own logic to determine which messages to keep into the state and not etc.
+   * @param msgId
+   * @return
+   */
+  def isMsgCandidateForRemoval(msgId: MsgId): Boolean = {
+    getMsgOpt(msgId).forall { msg =>
+      val msgDelivery = getMsgDeliveryStatus(msgId)
+      val isMsgSuccessfullyDelivered = msgDelivery.exists(_._2.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode)
+      val isMsgDeliveryAcknowledged = msg.statusCode == MSG_STATUS_REVIEWED.statusCode
+      val isSentByMe = state.myDid.contains(msg.senderDID)
+
+      val connReqMsgsOnInviteeSide = List(
+        CREATE_MSG_TYPE_CONN_REQ,             //0.5
+        MSG_TYPE_CONN_REQ                     //0.6
+      )
+
+      val connReqAnswerMsgsOnInviteeSide = List(
+        CREATE_MSG_TYPE_CONN_REQ_ANSWER,      //0.5
+        CREATE_MSG_TYPE_REDIRECT_CONN_REQ,    //0.5
+
+        MSG_TYPE_ACCEPT_CONN_REQ,             //0.6
+        MSG_TYPE_DECLINE_CONN_REQ,            //0.6
+        MSG_TYPE_REDIRECT_CONN_REQ            //0.6
+      )
+
+      val connAnswerMsgsOnInviterSide = List(
+        CREATE_MSG_TYPE_CONN_REQ_ANSWER,      //0.5
+        CREATE_MSG_TYPE_REDIRECT_CONN_REQ,    //0.5
+        CREATE_MSG_TYPE_CONN_REQ_REDIRECTED,  //0.5
+
+        MSG_TYPE_CONN_REQ_ACCEPTED,           //0.6
+        MSG_TYPE_CONN_REQ_REDIRECTED,         //0.6
+      )
+
+      val msgAnsweredStatusCodes = List(
+        MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED, MSG_STATUS_REDIRECTED, MSG_STATUS_REVIEWED
+      ).map(_.statusCode)
+
+      val isConnReqMsgOnInviterSide =
+        isSentByMe && connReqMsgsOnInviteeSide.contains(msg.getType) && msgAnsweredStatusCodes.contains(msg.statusCode)
+      val isConnAnswerMsgOnInviteeSide =
+        isSentByMe && connReqAnswerMsgsOnInviteeSide.contains(msg.getType) && msgAnsweredStatusCodes.contains(msg.statusCode)
+      val isConnAnswerMsgOnInviterSide =
+        ! isSentByMe && connAnswerMsgsOnInviterSide.contains(msg.getType) && msgAnsweredStatusCodes.contains(msg.statusCode)
+
+      val isMsgOlderToBeRemoved = msg.lastUpdatedDateTime.isBefore(ZonedDateTime.now().minusDays(10))
+
+      if (! isMsgAckNeeded && isMsgSuccessfullyDelivered) true                                      //VAS
+      else if (isMsgAckNeeded && isConnReqMsgOnInviterSide && isMsgOlderToBeRemoved) true           //CAS & EAS
+      else if (isMsgAckNeeded && isConnAnswerMsgOnInviteeSide && isMsgOlderToBeRemoved) true        //CAS & EAS
+      else if (isMsgAckNeeded && isConnAnswerMsgOnInviterSide && isMsgOlderToBeRemoved) true        //CAS & EAS
+      else if (isMsgAckNeeded && isMsgDeliveryAcknowledged) true                                    //CAS & EAS
+      else false                                                                                    //VAS/CAS/EAS
+    }
+  }
+
+  def removedMsgsFromState(msgIds: Set[MsgId]): Unit = {
+    if (isStateMessagesCleanupEnabled) {
+      removeFromMsgs(msgIds)
+      removeFromMsgDetails(msgIds)
+      removeFromMsgPayloads(msgIds)
+      removeFromMsgDeliveryStatus(msgIds)
+      removeMsgsFromLocalIndexState(msgIds)
+    }
+  }
+
+  def removeMsgsFromLocalIndexState(msgIds: Set[MsgId]): Unit = {
+    seenMsgIds --= msgIds
+    unseenMsgIds --= msgIds
+    refMsgIdToMsgId = refMsgIdToMsgId.filterNot { case (refMsgId, msgId) =>
+      msgIds.contains(refMsgId) || msgIds.contains(msgId)
+    }
+  }
+
+  /**
+   * if this is VAS, then it doesn't acknowledges message receipt
+   * and hence it would be ok to just consider message delivery status to
+   * know if that message can be considered as delivered and acknowledged too
+   */
+  lazy val isMsgAckNeeded: Boolean =
+    ! appConfig
+      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .contains("VerityAgent")
+
+  lazy val isStateMessagesCleanupEnabled: Boolean =
+    appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
 }
 
 object MsgHelper {

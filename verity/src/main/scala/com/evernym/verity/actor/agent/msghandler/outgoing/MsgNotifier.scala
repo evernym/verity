@@ -18,6 +18,7 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.logging.ThrottledLogger
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
@@ -25,9 +26,8 @@ import com.evernym.verity.protocol.engine.MsgFamily.VALID_MESSAGE_TYPE_REG_EX
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.push_notification._
 import com.evernym.verity.util.StrUtil.camelToKebab
-import com.evernym.verity.util.ThrottledLogger
-import com.evernym.verity.vault.KeyInfo
-import com.evernym.verity.{Exceptions, UrlDetail}
+import com.evernym.verity.vault.KeyParam
+import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
 
@@ -61,7 +61,7 @@ trait MsgNotifierForStoredMsgs
 
   def agentMsgRouter: AgentMsgRouter
   def remoteMsgSendingSvc: RemoteMsgSendingSvc
-  def defaultSelfRecipKeys: Set[KeyInfo]
+  def defaultSelfRecipKeys: Set[KeyParam]
 
   def selfRelDID : DID
 
@@ -159,7 +159,8 @@ trait MsgNotifierForStoredMsgs
         sendMsgToRegisteredEndpointLegacy(pw, allComMethods)
       case Some(MPF_PLAIN)  =>
         sendMsgToRegisteredEndpointNew(pw, allComMethods)
-      case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
+      case Some(Unrecognized(_)) =>
+        throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
     }
   }
 
@@ -172,9 +173,9 @@ trait MsgNotifierForStoredMsgs
          logger.debug(s"about to send message to endpoint: " + hcm)
           pw.metadata.map(_.msgPackFormat) match {
             case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
-              remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(pw.msg)(UrlDetail(hcm.value))
+              remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(pw.msg)(UrlParam(hcm.value))
             case Some(MPF_PLAIN)  =>
-              remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
+              remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlParam(hcm.value))
             case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint (legacy): " + hcm)
@@ -193,17 +194,16 @@ trait MsgNotifierForStoredMsgs
           val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
           pkgType match {
             case MPF_PLAIN =>
-              remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlDetail(hcm.value))
+              remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlParam(hcm.value))
             case MPF_INDY_PACK | MPF_MSG_PACK =>
-              val endpointReceipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyInfo(Left(verKey))))
+              val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
               // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
-              val recipKeys = endpointReceipKeys match {
+              val recipKeys = endpointRecipKeys match {
                 case Some(keys) if keys.nonEmpty => keys
                 case _ => defaultSelfRecipKeys
               }
-
               val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
-              remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlDetail(hcm.value))
+              remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlParam(hcm.value))
             case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint: " + hcm)
@@ -308,7 +308,7 @@ trait MsgNotifierForStoredMsgs
             val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
             val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
 
-            remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlDetail(url))
+            remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
             logger.debug("message sent to endpoint: " + url)
           })
         }

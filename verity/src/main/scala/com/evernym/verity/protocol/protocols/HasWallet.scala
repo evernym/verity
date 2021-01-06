@@ -1,27 +1,20 @@
 package com.evernym.verity.protocol.protocols
 
-import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.vault.{WalletAccessParam, WalletDetail}
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{AgentWalletAPI, WalletAPIParam}
 
 
 trait HasAgentWallet extends HasWallet { this: HasAppConfig =>
-
-  def agentWalletSeed: Option[String]
-
-  def agentActorContext: AgentActorContext
-
-  def agentWalletSeedReq: String = agentWalletSeed.getOrElse(
-    throw new RuntimeException("wallet seed not yet set")
-  )
-
-  lazy val walletDetail: WalletDetail =
-    WalletDetail(agentActorContext.walletAPI, agentActorContext.walletConfig, agentWalletSeedReq)
-
+  def walletAPI: WalletAPI
+  lazy val agentWalletAPI: AgentWalletAPI = AgentWalletAPI(walletAPI, agentWalletIdReq)
 }
 
 trait HasWallet { this: HasAppConfig =>
-  def walletDetail: WalletDetail
-  implicit lazy val wap: WalletAccessParam = WalletAccessParam(walletDetail, appConfig, closeAfterUse = false)
+  def agentWalletId: Option[String]
+  def agentWalletIdReq: String = agentWalletId.getOrElse(
+    throw new RuntimeException("agent wallet id not yet set")
+  )
+  implicit lazy val wap: WalletAPIParam = WalletAPIParam(agentWalletIdReq)
 
 }
 

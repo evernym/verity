@@ -6,7 +6,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.texter.{SMSSender, SmsInfo}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -23,14 +23,14 @@ object SmsTools {
     * @param config
     * @return endpoint, or None if config indicates a local service
     */
-  def smsEndpoint(implicit config: AppConfig): Option[UrlDetail] = {
+  def smsEndpoint(implicit config: AppConfig): Option[UrlParam] = {
     if (localSmsSvc) {
       None
     } else {
       val sendSmsEndpointHost = config.getConfigStringReq(SMS_SVC_ENDPOINT_HOST)
       val sendSmsEndpointPort = config.getConfigIntReq(SMS_SVC_ENDPOINT_PORT)
       val sendSmsEndpointPath = Option(config.getConfigStringReq(SMS_SVC_ENDPOINT_PATH_PREFIX))
-      Some(UrlDetail(sendSmsEndpointHost, sendSmsEndpointPort, sendSmsEndpointPath))
+      Some(UrlParam(sendSmsEndpointHost, sendSmsEndpointPort, sendSmsEndpointPath))
     }
   }
 

@@ -104,7 +104,7 @@ object ItemContainer extends HasProps {
 
 class ItemContainer(implicit val appConfig: AppConfig) extends ItemContainerBase
 
-trait ItemCmdWrapperBase extends ActorMessageClass {
+trait ItemCmdWrapperBase extends ActorMessage {
   def msg: Any
 }
 
@@ -121,30 +121,30 @@ case class ExternalCmdWrapper(msg: Any, ownerSignature: Option[String]) extends 
  */
 case class InternalCmdWrapper(msg: Any) extends ItemCmdWrapperBase
 
-case object GetState extends ActorMessageObject
-case class GetItem(id: ItemId) extends ActorMessageClass
-case class UpdateItem(id: ItemId, status: Option[Int]=None, detailOpt: Option[String]=None, createdAt: Option[ZonedDateTime]=None) extends ActorMessageClass
-case class SaveItemFromMigration(uip: UpdateItem) extends ActorMessageClass
+case object GetState extends ActorMessage
+case class GetItem(id: ItemId) extends ActorMessage
+case class UpdateItem(id: ItemId, status: Option[Int]=None, detailOpt: Option[String]=None, createdAt: Option[ZonedDateTime]=None) extends ActorMessage
+case class SaveItemFromMigration(uip: UpdateItem) extends ActorMessage
 
-case class ItemCmdResponse(msg: Any, senderEntityId: ItemContainerEntityId) extends ActorMessageClass
+case class ItemCmdResponse(msg: Any, senderEntityId: ItemContainerEntityId) extends ActorMessage
 
-case object ItemManagerConfigNotYetSet extends ActorMessageObject
+case object ItemManagerConfigNotYetSet extends ActorMessage
 
-case object ItemManagerConfigAlreadySet extends ActorMessageObject
+case object ItemManagerConfigAlreadySet extends ActorMessage
 
 case class SetItemManagerConfig(itemType: ItemType,
                                 ownerVerKey: Option[VerKey],
                                 migrateItemsToNextLinkedContainer: Boolean,
-                                migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessageClass {
+                                migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
   require (migrateItemsToNextLinkedContainer != migrateItemsToLatestVersionedContainers,
     "one and only one of 'migrateItemsToNextLinkedContainer' and 'migrateItemsToLatestVersionedContainers' should be set to true")
 }
 
-case object ItemContainerStaleOrConfigNotYetSet extends ActorMessageObject
+case object ItemContainerStaleOrConfigNotYetSet extends ActorMessage
 
-case object ItemContainerDeleted extends ActorMessageObject
+case object ItemContainerDeleted extends ActorMessage
 
-case object ItemContainerConfigAlreadySet extends ActorMessageObject
+case object ItemContainerConfigAlreadySet extends ActorMessage
 
 case class SetItemContainerConfig(itemType: ItemType,
                                   versionId: VersionId,
@@ -152,7 +152,7 @@ case class SetItemContainerConfig(itemType: ItemType,
                                   ownerVerKey: Option[VerKey],
                                   prevContainerEntityId: Option[ItemContainerEntityId],
                                   migrateItemsToNextLinkedContainer: Boolean,
-                                  migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessageClass {
+                                  migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
   require (migrateItemsToNextLinkedContainer != migrateItemsToLatestVersionedContainers,
     "one and only one of 'migrateItemsToNextLinkedContainer' and 'migrateItemsToLatestVersionedContainers' should be set to true")
 }

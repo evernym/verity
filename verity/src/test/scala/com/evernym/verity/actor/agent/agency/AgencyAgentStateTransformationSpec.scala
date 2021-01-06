@@ -9,12 +9,11 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.ConnectingProtoDef
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.transformations.transformers.IdentityTransformer
 import com.evernym.verity.transformations.transformers.v1._
 
 class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
-  lazy val transformer = createPersistenceTransformerV1("enc key", new IdentityTransformer)
+  lazy val transformer = createPersistenceTransformerV1("enc key")
 
   "AgencyAgentState" - {
 
@@ -28,7 +27,7 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
         //asserts that original State and deserialized state are equals
         originalState.agencyDID shouldBe deserializedState.agencyDID
         originalState.isEndpointSet shouldBe deserializedState.isEndpointSet
-        originalState.agentWalletSeed shouldBe deserializedState.agentWalletSeed
+        originalState.agentWalletId shouldBe deserializedState.agentWalletId
         originalState.thisAgentKeyId shouldBe deserializedState.thisAgentKeyId
 
         List("pinst-id-1", "pinst-id-2").foreach { pinstId =>
@@ -101,7 +100,7 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
       .withIsEndpointSet(true)
       .withAgencyDID("agency-did")
       .withThisAgentKeyId("this-agent-key-1")
-      .withAgentWalletSeed("wallet-seed")
+      .withAgentWalletId("wallet-id")
       .withThreadContext(threadContext)
       .withProtoInstances(protoInstances)
       .withRelationship(relationship)

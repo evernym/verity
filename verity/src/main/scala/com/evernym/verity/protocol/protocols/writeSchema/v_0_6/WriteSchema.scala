@@ -5,6 +5,7 @@ import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.LedgerRejectException
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer

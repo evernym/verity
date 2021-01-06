@@ -52,7 +52,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
   def provisionAgent(aae: ApplicationAdminExt)(implicit scenario: Scenario): Unit = {
     aae.sdks.foreach { sdk =>
-      provisionAgent(aae.name, sdk, aae.urlDetail.url)
+      provisionAgent(aae.name, sdk, aae.urlParam.url)
     }
   }
 

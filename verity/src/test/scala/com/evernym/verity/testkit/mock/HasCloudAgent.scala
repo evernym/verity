@@ -10,7 +10,7 @@ import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
 import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
 import com.evernym.verity.util.MsgIdProvider._
 import com.evernym.verity.util.Util.logger
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.DidPair
 
 trait HasCloudAgent { this: MockAgent =>
@@ -24,7 +24,7 @@ trait HasCloudAgent { this: MockAgent =>
   //my cloud agent's detail
   var cloudAgentDetail: Option[DidPair] = None
 
-  def agencyEndpoint: UrlDetail
+  def agencyEndpoint: UrlParam
 
   def agencyPublicDIDReq: DID = agencyPublicDid.get.DID
 

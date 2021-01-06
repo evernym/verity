@@ -5,8 +5,9 @@ import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter._
-import com.evernym.verity.actor.persistence.{Done, SingletonChildrenPersistentActor, Stop}
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
+import com.evernym.verity.actor.base.{Done, Stop}
+import com.evernym.verity.actor.persistence.SingletonChildrenPersistentActor
+import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
@@ -76,11 +77,12 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       val candidates = registered.filter(_._2 > 0).keySet
       if (candidates.nonEmpty) {
         resetStatus = ResetStatus(isInProgress = true, candidates.map(_ -> false).toMap)
-        sendDestroyExecutor()
       } else {
         completeResetProcess()
       }
-    } else if (resetStatus.isAllExecutorDestroyed) {
+    }
+    sendDestroyExecutor()
+    if (resetStatus.isAllExecutorDestroyed) {
       completeResetProcess()
     }
     sender ! Done
@@ -105,17 +107,16 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   }
 
   def completeResetProcess(): Unit = {
-    deleteEventsInBatches()
+    deleteMessagesExtended(lastSequenceNr)
   }
 
-  def postAllEventDeleted(): Unit = {
+  override def postAllMsgsDeleted(): Unit = {
     resetStatus = ResetStatus.empty
     registered = Map.empty
     completed = Map.empty
     inProgress = Map.empty
     cleanupStatus = Map.empty
     lastRequestedBucketId = -1
-    toSeqNoDeleted = 0
     stopActor()
   }
 
@@ -240,11 +241,6 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   lazy val agentRouteStoreRegion: ActorRef =
     ClusterSharding.get(context.system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
-  lazy val scheduledJobInitialDelay: Int =
-    appConfig
-      .getConfigIntOption(AAS_CLEANUP_MANAGER_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS)
-      .getOrElse(60)
-
   lazy val scheduledJobInterval: Int =
     appConfig
       .getConfigIntOption(AAS_CLEANUP_MANAGER_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
@@ -264,7 +260,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5)
 
-  scheduleJob("periodic_job", scheduledJobInitialDelay, scheduledJobInterval, ProcessPending)
+  scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
 
 }
 
@@ -281,7 +277,7 @@ case class ManagerStatus(registeredRouteStoreActorCount: Int,
                          totalProcessedAgentActors: Int,
                          inProgressCleanupStatus: Map[EntityId, Map[DID, CleanupStatus]],
                          resetStatus: Option[ResetStatus] = None,
-                         registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessageClass
+                         registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessage
 
 object ResetStatus {
   def empty: ResetStatus = ResetStatus(isInProgress = false, Map.empty)
@@ -291,13 +287,13 @@ case class ResetStatus(isInProgress: Boolean, executorStatus: Map[EntityId, Bool
 }
 
 //incoming messages
-case class RegisteredRouteSummary(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessageClass
-case class GetManagerStatus(includeDetails: Boolean = false) extends ActorMessageClass
-case object Reset extends ActorMessageObject
+case class RegisteredRouteSummary(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessage
+case class GetManagerStatus(includeDetails: Boolean = false) extends ActorMessage
+case object Reset extends ActorMessage
 
 //outgoing messages
-case object AlreadyCompleted extends ActorMessageObject
-case object AlreadyRegistered extends ActorMessageObject
+case object AlreadyCompleted extends ActorMessage
+case object AlreadyRegistered extends ActorMessage
 
 object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER

@@ -1,27 +1,30 @@
 package com.evernym.verity.testkit
 
+import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.libindy.LibIndyWalletProvider
-import com.evernym.verity.protocol.protocols.{HasAppConfig, HasWallet}
-import com.evernym.verity.util.Util
-import com.evernym.verity.vault.WalletUtil._
+import com.evernym.verity.ledger.LedgerPoolConnManager
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
+import com.evernym.verity.testkit.util.TestUtil
+import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.util.Util.getNewActorId
-import com.evernym.verity.vault.{WalletAPI, WalletConfig, WalletDetail}
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 
-trait TestWalletHelper extends HasWallet with HasAppConfig {
+trait TestWalletHelper extends HasAgentWallet with HasAppConfig {
+  override def agentWalletId: Option[String] = Option(getNewActorId)
   val appConfig = new TestAppConfig
-  val walletDetail: WalletDetail = {
-    val walletConfig: WalletConfig = buildWalletConfig(appConfig)
-
-    //NOTE: we are passing the ledger pool manager as null, we may wanna come back to it
-    val walletAPI = new WalletAPI(new LibIndyWalletProvider(appConfig), Util, null)
-    WalletDetail(walletAPI, walletConfig, getNewActorId)
+  val walletAPI: WalletAPI = {
+    val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
+    val walletProvider = new LibIndyWalletProvider(appConfig)
+    val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
+    WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
   }
 }
 
 class TestWallet(createWallet: Boolean=false) extends TestWalletHelper {
   if (createWallet) {
-    walletDetail.walletAPI.createAndOpenWallet(wap)
+    agentWalletAPI.walletAPI.createWallet(wap)
   }
 }

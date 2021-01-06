@@ -11,8 +11,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyCommon}
+import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -23,7 +22,7 @@ import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, Pus
 import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.util._
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.{AdminClient, ApiClientCommon}
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
@@ -35,7 +34,7 @@ import com.evernym.integrationtests.e2e.msg.MsgMap
 import com.evernym.integrationtests.e2e.scenario.Scenario.isRunScenario
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.util.HttpListenerUtil
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
@@ -72,7 +71,7 @@ class ApiFlowSpec
   }
 
   val edgeHttpEndpointForPushNotif: PushNotifMsgHttpListener = {
-    new EdgeHttpListenerForPushNotifMsg(appConfig, UrlDetail("localhost:3456/json-msg"))
+    new EdgeHttpListenerForPushNotifMsg(appConfig, UrlParam("localhost:3456/json-msg"))
   }
 
   val edgeHtppEndpointForSponsors: PushNotifMsgHttpListener = edgeHttpEndpointForPushNotif
@@ -134,8 +133,8 @@ class ApiFlowSpec
   }
 
   case class ClientEnvironment (scenario: Scenario,
-                                consumerAgencyEndpoint: UrlDetail,
-                                enterpriseAgencyEndpoint: UrlDetail) {
+                                consumerAgencyEndpoint: UrlParam,
+                                enterpriseAgencyEndpoint: UrlParam) {
     val enterprise = new EntAgentOwner(scenario, enterpriseAgencyEndpoint)
     val user = new UserAgentOwner(scenario, consumerAgencyEndpoint)
     enterprise.setRemoteConnEdgeOwner(user)
@@ -545,9 +544,9 @@ class ApiFlowSpec
           cam.senderDID shouldBe getRemoteConnEdgeOwnerMsgSenderDID(connId)
           cam.statusCode shouldBe expectedMsgStatus
 
-          val unsealKeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(mockClientAgent.getDIDToUnsealAgentRespMsg,
+          val unsealKeyParam = KeyParam(Right(GetVerKeyByDIDParam(mockClientAgent.getDIDToUnsealAgentRespMsg,
             getKeyFromPool = false)))
-          val amw = mockClientAgent.agentMsgTransformer.unpack(cam.payload.get, unsealKeyInfo)(mockClientAgent.wap)
+          val amw = mockClientAgent.agentMsgTransformer.unpack(cam.payload.get, unsealKeyParam)(mockClientAgent.wap)
 
           val respJsonMsg = amw.msgPackFormat match {
             case MPF_MSG_PACK =>
@@ -751,12 +750,12 @@ class ApiFlowSpec
     extends ApplicationAdminExt(scenario, verityInstance)
       with AdminClient
 
-  class EntAgentOwner(val scenario: Scenario, override val urlDetail: UrlDetail)
-    extends MockEnterpriseEdgeAgentApiExecutor(urlDetail)
+  class EntAgentOwner(val scenario: Scenario, override val urlParam: UrlParam)
+    extends MockEnterpriseEdgeAgentApiExecutor(urlParam)
       with AgentOwnerCommon
 
-  class UserAgentOwner(val scenario: Scenario, override val urlDetail: UrlDetail)
-    extends MockConsumerEdgeAgentApiExecutor(urlDetail)
+  class UserAgentOwner(val scenario: Scenario, override val urlParam: UrlParam)
+    extends MockConsumerEdgeAgentApiExecutor(urlParam)
       with AgentOwnerCommon
 
   //----------------------------------------------------------------------
@@ -1069,5 +1068,5 @@ class ApiFlowSpec
 }
 
 
-class EdgeHttpListenerForPackedMsg(val appConfig: AppConfig, val listeningEndpoint: UrlDetail) extends PackedMsgHttpListener
-class EdgeHttpListenerForPushNotifMsg(val appConfig: AppConfig, val listeningEndpoint: UrlDetail) extends PushNotifMsgHttpListener
+class EdgeHttpListenerForPackedMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam) extends PackedMsgHttpListener
+class EdgeHttpListenerForPushNotifMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam) extends PushNotifMsgHttpListener

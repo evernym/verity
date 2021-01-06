@@ -30,7 +30,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -62,6 +62,7 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -79,7 +80,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     with PairwiseConnState
     with MsgDeliveryResultHandler
     with MsgNotifierForUserAgentPairwise
-    with FailedMsgRetrier {
+    with FailedMsgRetrier
+    with AgentSnapshotter[UserAgentPairwiseState] {
 
   type StateType = UserAgentPairwiseState
   var state = new UserAgentPairwiseState
@@ -278,7 +280,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       DefaultMsgCodec.toJson(msg)
     }
     for (
-      agencyVerKey    <- getAgencyVerKeyFut;
+      agencyVerKey    <- agencyVerKeyFut();
       filteredConfigs <- getConfigs(Set(NAME_KEY, LOGO_URL_KEY))
     ) yield {
       {
@@ -292,7 +294,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
-        case THIS_AGENT_WALLET_SEED                 => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
+        case THIS_AGENT_WALLET_ID                   => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
 
         case NAME                                   => Parameter(NAME, agentName(filteredConfigs.configs))
         case LOGO_URL                               => Parameter(LOGO_URL, agentLogoUrl(filteredConfigs.configs))
@@ -651,7 +653,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     scke.pid.foreach { pd =>
       writeAndApply(ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     }
-    scke.ownerAgentActorEntityId.foreach(setAgentWalletSeed)
+    scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
     val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDID.get)
     val cdsEvt = AgentDetailSet(scke.forDID, scke.newAgentKeyDID)
     writeAndApply(odsEvt)
@@ -867,7 +869,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     for {
       _   <- setRoute(stdd.myDID)
       ctlMsg  <-
-        getAgencyVerKeyFut.map { agencyVerKey =>
+        agencyVerKeyFut().map { agencyVerKey =>
           val myVerKey = getVerKeyReqViaCache(state.myDid_!)
           val routingKeys = Vector(myVerKey, agencyVerKey)
           Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
@@ -918,9 +920,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def mySelfRelDIDReq: DID = domainId
   def myPairwiseVerKey: VerKey = getVerKeyReqViaCache(state.myDid_!)
 
-  lazy val scheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
-
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
 
@@ -952,9 +951,9 @@ case class PersistAndProcessSendRemoteMsg(
 case class ProcessPersistedSendRemoteMsg(
                                           sendRemoteMsg: SendRemoteMsg,
                                           msgCreated: MsgCreated,
-                                          reqHelperData: InternalReqHelperData) extends ActorMessageClass
+                                          reqHelperData: InternalReqHelperData) extends ActorMessage
 
-case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessageClass
+case class AddTheirDidDoc(theirDIDDoc: LegacyDIDDoc) extends ActorMessage
 
 trait UserAgentPairwiseStateImpl
   extends AgentStatePairwiseImplBase
@@ -974,8 +973,8 @@ trait UserAgentPairwiseStateUpdateImpl
 
   def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
@@ -987,8 +986,7 @@ trait UserAgentPairwiseStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

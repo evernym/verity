@@ -4,7 +4,7 @@ import akka.pattern.ask
 import akka.event.LoggingReceive
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.{ActorMessageClass, ForIdentifier, RouteMigrated, RouteSet}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, RouteMigrated, RouteSet}
 
 import scala.concurrent.Future
 
@@ -64,7 +64,6 @@ trait HasBucketMigrationSupport { this: AgentRouteStore =>
           val jobId = "MigrateCandidateRoutes"
           scheduleJob(
             jobId,
-            RoutingAgentUtil.getRandomDelayInSecondsForMigrationJob,
             RoutingAgentUtil.getRandomIntervalInSecondsForMigrationJob,
             MigrateCandidateRoutes(latestBucketPersistenceId)
           )
@@ -105,5 +104,5 @@ trait HasBucketMigrationSupport { this: AgentRouteStore =>
   var migrationScheduledJob: Option[String] = None
 }
 
-case class MigrateCandidateRoutes(toBucketPersistenceId: String) extends ActorMessageClass
-case class MigrateRoute(forDID: DID, toBucketPersistenceId: String) extends ActorMessageClass
+case class MigrateCandidateRoutes(toBucketPersistenceId: String) extends ActorMessage
+case class MigrateRoute(forDID: DID, toBucketPersistenceId: String) extends ActorMessage

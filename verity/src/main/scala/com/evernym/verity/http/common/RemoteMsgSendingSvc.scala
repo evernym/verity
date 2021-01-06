@@ -11,10 +11,10 @@ import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{BAD_REQUEST, UNHANDLED}
 import com.evernym.verity.actor.agent.SpanUtil._
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -26,47 +26,47 @@ trait HttpRemoteMsgSendingSvc extends RemoteMsgSendingSvc {
   def logger: Logger = getLoggerByClass(classOf[HttpRemoteMsgSendingSvc])
   implicit def _system: ActorSystem
 
-  def getConnection(ud: UrlDetail): Flow[HttpRequest, HttpResponse, Any] = {
-    if (ud.isHttps)
-      Http().outgoingConnectionHttps(ud.host, ud.port)
+  def getConnection(up: UrlParam): Flow[HttpRequest, HttpResponse, Any] = {
+    if (up.isHttps)
+      Http().outgoingConnectionHttps(up.host, up.port)
     else
-      Http().outgoingConnection(ud.host, ud.port)
+      Http().outgoingConnection(up.host, up.port)
   }
 
-  def apiRequest(request: HttpRequest)(implicit ud: UrlDetail): Future[HttpResponse] =
-    Source.single(request).via(getConnection(ud)).runWith(Sink.head).recover {
+  def apiRequest(request: HttpRequest)(implicit up: UrlParam): Future[HttpResponse] =
+    Source.single(request).via(getConnection(up)).runWith(Sink.head).recover {
       case _ =>
-        val errMsg = s"connection not established with remote server: ${ud.toString}"
-        logger.error(errMsg, (LOG_KEY_REMOTE_ENDPOINT, ud.toString))
+        val errMsg = s"connection not established with remote server: ${up.toString}"
+        logger.error(errMsg, (LOG_KEY_REMOTE_ENDPOINT, up.toString))
         HttpResponse(StatusCodes.custom(GatewayTimeout.intValue, errMsg, errMsg))
     }
 
-  def performResponseParsing[T](implicit ud: UrlDetail, um: Unmarshaller[ResponseEntity, T]):
+  def performResponseParsing[T](implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
   PartialFunction[HttpResponse, Future[Either[HandledErrorException, T]]] = {
     case hr: HttpResponse if List(OK, Accepted).contains(hr.status) =>
-      logger.debug(s"successful response ('${hr.status.value}') received from '${ud.toString}'", (LOG_KEY_REMOTE_ENDPOINT, ud.toString))
+      logger.debug(s"successful response ('${hr.status.value}') received from '${up.toString}'", (LOG_KEY_REMOTE_ENDPOINT, up.toString))
       Unmarshal(hr.entity).to[T].map(Right(_))
 
     case hr: HttpResponse if hr.status ==  BadRequest =>
-      val error = s"error response ('${hr.status.value}') received from '${ud.toString}': (${hr.entity})"
-      logger.error(error, (LOG_KEY_REMOTE_ENDPOINT, ud.toString), (LOG_KEY_RESPONSE_CODE, BadRequest.intValue), (LOG_KEY_ERR_MSG, BadRequest.reason))
+      val error = s"error response ('${hr.status.value}') received from '${up.toString}': (${hr.entity})"
+      logger.error(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString), (LOG_KEY_RESPONSE_CODE, BadRequest.intValue), (LOG_KEY_ERR_MSG, BadRequest.reason))
       Unmarshal(hr.entity).to[String].map { _ =>
         Left(buildHandledError(BAD_REQUEST.withMessage(error))) }
 
     case hr: HttpResponse =>
-      val error = s"error response ('${hr.status.value}') received from '${ud.toString}': (${hr.entity})"
-      logger.error(error, (LOG_KEY_REMOTE_ENDPOINT, ud.toString), (LOG_KEY_ERR_MSG, hr.status))
+      val error = s"error response ('${hr.status.value}') received from '${up.toString}': (${hr.entity})"
+      logger.error(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString), (LOG_KEY_ERR_MSG, hr.status))
       Unmarshal(hr.entity).to[String].map { _ =>
         Left(buildHandledError(UNHANDLED.withMessage(error)))
       }
   }
 
   def sendPlainTextMsgToRemoteEndpoint(payload: String, method: HttpMethod = HttpMethods.POST)
-                                      (implicit ud: UrlDetail): Future[Either[HandledErrorException, String]] = {
-    logger.info(s"Sending ${method} to uri ${ud.host}:${ud.port}/${ud.path}")
+                                      (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
+    logger.info(s"Sending $method to uri ${up.host}:${up.port}/${up.path}")
     val req = HttpRequest(
       method = method,
-      uri = s"/${ud.path}",
+      uri = s"/${up.path}",
       entity = HttpEntity(payload)
     )
     apiRequest(req).flatMap { response =>
@@ -75,12 +75,12 @@ trait HttpRemoteMsgSendingSvc extends RemoteMsgSendingSvc {
     }
   }
 
-  def sendJsonMsgToRemoteEndpoint(payload: String)(implicit ud: UrlDetail): Future[Either[HandledErrorException, String]] = {
+  def sendJsonMsgToRemoteEndpoint(payload: String)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     runWithClientSpan("sendJsonMsgToRemoteEndpoint", "HttpRemoteMsgSendingSvc") {
-      logger.info(s"Sending ${HttpMethods.POST} to uri ${ud.host}:${ud.port}/${ud.path}")
+      logger.info(s"Sending ${HttpMethods.POST} to uri ${up.host}:${up.port}/${up.path}")
       val req = HttpRequest(
         method = HttpMethods.POST,
-        uri = s"/${ud.path}",
+        uri = s"/${up.path}",
         entity = HttpEntity(MediaTypes.`application/json`, payload)
       )
       apiRequest(req).flatMap { response =>
@@ -90,12 +90,12 @@ trait HttpRemoteMsgSendingSvc extends RemoteMsgSendingSvc {
     }
   }
 
-  def sendBinaryMsgToRemoteEndpoint(payload: Array[Byte])(implicit ud: UrlDetail): Future[Either[HandledErrorException, PackedMsg]] = {
+  def sendBinaryMsgToRemoteEndpoint(payload: Array[Byte])(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
     runWithClientSpan("sendBinaryMsgToRemoteEndpoint", "HttpRemoteMsgSendingSvc") {
-      logger.info(s"Sending ${HttpMethods.POST} to uri ${ud.host}:${ud.port}/${ud.path}")
+      logger.info(s"Sending ${HttpMethods.POST} to uri ${up.host}:${up.port}/${up.path}")
       val req = HttpRequest(
         method = HttpMethods.POST,
-        uri = s"/${ud.path}",
+        uri = s"/${up.path}",
         entity = HttpEntity(HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE, payload)
       )
       apiRequest(req).flatMap { response =>
@@ -109,7 +109,7 @@ trait HttpRemoteMsgSendingSvc extends RemoteMsgSendingSvc {
 
 
 trait RemoteMsgSendingSvc {
-  def sendPlainTextMsgToRemoteEndpoint(payload: String, method: HttpMethod = HttpMethods.POST)(implicit ud: UrlDetail): Future[Either[HandledErrorException, String]]
-  def sendJsonMsgToRemoteEndpoint(payload: String)(implicit ud: UrlDetail): Future[Either[HandledErrorException, String]]
-  def sendBinaryMsgToRemoteEndpoint(payload: Array[Byte])(implicit ud: UrlDetail): Future[Either[HandledErrorException, PackedMsg]]
+  def sendPlainTextMsgToRemoteEndpoint(payload: String, method: HttpMethod = HttpMethods.POST)(implicit up: UrlParam): Future[Either[HandledErrorException, String]]
+  def sendJsonMsgToRemoteEndpoint(payload: String)(implicit up: UrlParam): Future[Either[HandledErrorException, String]]
+  def sendBinaryMsgToRemoteEndpoint(payload: Array[Byte])(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]]
 }

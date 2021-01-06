@@ -2,9 +2,9 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
-import com.evernym.verity.actor.ActorMessageObject
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
-import com.evernym.verity.actor.agent.msghandler.incoming.{PackedMsgParam, RestMsgParam}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -22,12 +22,12 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   override final def receiveAgentCmd: Receive = agentCmdReceiver orElse retryCmdReceiver
 
   val retryCmdReceiver: Receive = LoggingReceive.withLabel("retryCmdReceiver") {
-    case Init                                     => init()
+    case FailedMsgRetrierInit                     => init()
     case CheckRetryJobScheduled                   => scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
     case RetryUndeliveredMsgs if sender == self   => resendUndeliveredMsgsIfAny()
   }
 
-  self ! Init
+  self ! FailedMsgRetrierInit
 
   def init(): Unit = {
     scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
@@ -41,7 +41,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
         val jobId = "RetryUndeliveredMsgs"
         scheduleJob(
           jobId,
-          scheduledJobInitialDelay,
           scheduledJobInterval,
           RetryUndeliveredMsgs
         )
@@ -103,7 +102,7 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
 
   override def postCommandExecution(cmd: Any): Unit = {
     cmd match {
-      case _: PackedMsgParam | _: RestMsgParam =>
+      case _: ProcessPackedMsg | _: ProcessRestMsg =>
         scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
       case _ => //nothing to do
     }
@@ -123,7 +122,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class
-  def scheduledJobInitialDelay: Int
   def scheduledJobInterval: Int
   def getMsgIdsEligibleForRetries: Set[MsgId]
   def updateUndeliveredMsgCountMetrics(): Unit
@@ -133,6 +131,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   def removeItemFromWatcher(itemId: ItemId): Unit
 }
 
-case object RetryUndeliveredMsgs extends ActorMessageObject
-case object CheckRetryJobScheduled extends ActorMessageObject
-case object Init extends ActorMessageObject
+case object RetryUndeliveredMsgs extends ActorMessage
+case object CheckRetryJobScheduled extends ActorMessage
+case object FailedMsgRetrierInit extends ActorMessage

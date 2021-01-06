@@ -1,12 +1,13 @@
 package com.evernym.verity.transformations.transformers.v1
 
-import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
+import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.transformations.transformers.<=>
 import scalapb.GeneratedMessage
 
 /**
  * serializes/deserializes scala PB generated message
- * @param objectCodeMapper a mapping between the object (scala PB generated message) and an unique code assigned to it
+ * @param objectCodeMapper a mapping between the object (scala PB generated message)
+ *                         and an unique code assigned to it
  */
 class ProtoBufTransformerV1(objectCodeMapper: ObjectCodeMapperBase)
   extends (Any <=> Array[Byte]) {
@@ -24,7 +25,6 @@ class ProtoBufTransformerV1(objectCodeMapper: ObjectCodeMapperBase)
 
 }
 
-object DefaultProtoBufTransformerV1 extends ProtoBufTransformerV1(DefaultObjectCodeMapper)
 
 /**
  * for 'DefaultProtoBufTransformer', to be able to persist any event/snapshot,

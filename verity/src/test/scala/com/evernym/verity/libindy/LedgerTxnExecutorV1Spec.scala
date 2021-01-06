@@ -6,28 +6,31 @@ import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
+import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
+import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV1, SubmitToLedger}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.ErrorCode.PoolLedgerTimeout
 import org.hyperledger.indy.sdk.IndyException
 import org.hyperledger.indy.sdk.pool.Pool
+import org.mockito.invocation.InvocationOnMock
 import org.mockito.scalatest.MockitoSugar
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 
-class LedgerTxnExecutorV1Spec extends ActorSpec
-  with BasicSpecWithIndyCleanup with MockitoSugar {
+class LedgerTxnExecutorV1Spec
+  extends ActorSpec
+    with BasicSpecWithIndyCleanup
+    with MockitoSugar{
 
   val maxWaitTime: Duration = 50000.millis
-  override lazy val walletAPI: WalletAPI = mock[WalletAPI]
+  lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
-  lazy val mockWalletAPI: WalletAPI = new WalletAPI(null, null, null) {
-    override def signLedgerRequest(sr: SubmitReqParam): Future[LedgerRequest] = Future(sr.reqDetail)
-  }
   lazy val poolConnManager: IndyLedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig) {
     override def poolConn: Some[Pool] = Some(null)
   }
@@ -36,7 +39,7 @@ class LedgerTxnExecutorV1Spec extends ActorSpec
   }
 
   lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
-  lazy val wap: WalletAccessParam =  buildWalletAccessParam(submitterDID, "test-key")
+  implicit lazy val wap: WalletAPIParam =  WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 
   lazy val targetDidPair: DidPair = DidPair("VFN92wTpay26L64XnEQsfR", "GPxvxemamgNTYpe1J6J1ivr5qwsBDWFCxHHzZG67mhW3")
@@ -57,6 +60,8 @@ class LedgerTxnExecutorV1Spec extends ActorSpec
               |"op":"REPLY"}""".stripMargin
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
+          when(mockWalletAPI.executeAsync[LedgerRequest](any[SignLedgerRequest])(any[WalletAPIParam]))
+            .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).request))
           val response = Await.result(
             ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime
           )

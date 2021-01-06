@@ -1,40 +1,50 @@
 package com.evernym.verity.agentmsg
 
-import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.{MsgPackFormat, WalletApiBuilder}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackParam, PackedMsg}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.{IndyLedgerPoolConnManager, LibIndyWalletProvider}
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.testkit.util.TestUtil
-import org.hyperledger.indy.sdk.wallet.Wallet
+import com.evernym.verity.util.TestWalletService
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
-trait AgentMsgSpecBase extends BasicSpecWithIndyCleanup with CommonSpecUtil {
 
-  lazy val config:AppConfig = new TestAppConfig()
-  lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(config)
-  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(config)
-  lazy val walletAPI: WalletAPI = new WalletAPI(walletProvider, TestUtil, poolConnManager)
+trait AgentMsgSpecBase
+  extends BasicSpecWithIndyCleanup
+    with CommonSpecUtil{
+
+  lazy val appConfig:AppConfig = new TestAppConfig()
+  lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(appConfig)
+  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
+  lazy val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
+  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
 
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 
   def typ: String
 
-  lazy val aliceWap: WalletAccessParam = createOrOpenWallet(s"alice-$typ", walletAPI)
-  lazy val aliceCloudAgencyAgentWap: WalletAccessParam = createOrOpenWallet(s"alice-cloud-agency-$typ", walletAPI)
-  lazy val aliceCloudAgentWap: WalletAccessParam = createOrOpenWallet(s"alice-cloud-agent-$typ", walletAPI)
+  lazy val aliceWap: WalletAPIParam =
+    createWallet(s"alice-$typ", walletAPI)
+  lazy val aliceCloudAgencyAgentWap: WalletAPIParam =
+    createWallet(s"alice-cloud-agency-$typ", walletAPI)
+  lazy val aliceCloudAgentWap: WalletAPIParam =
+    createWallet(s"alice-cloud-agent-$typ", walletAPI)
 
-  lazy val aliceCloudAgentKeyInfo: KeyInfo = KeyInfo(Left(aliceCloudAgentKey.verKey))
-  lazy val aliceKeyInfo: KeyInfo = KeyInfo(Left(aliceKey.verKey))
+  lazy val aliceCloudAgentKeyParam: KeyParam = KeyParam(Left(aliceCloudAgentKey.verKey))
+  lazy val aliceKeyParam: KeyParam = KeyParam(Left(aliceKey.verKey))
 
-  lazy val aliceKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam())(aliceWap)
-  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam())(aliceCloudAgencyAgentWap)
-  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKeyParam())(aliceCloudAgentWap)
+  lazy val aliceKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceWap)
+  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgencyAgentWap)
+  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgentWap)
 
   //TODO why does this need to be mutable? Tests need to be able to be run independently.
   var lastPackedMsg: PackedMsg = _
@@ -65,8 +75,9 @@ trait AgentMsgSpecBase extends BasicSpecWithIndyCleanup with CommonSpecUtil {
 }
 
 
-trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
-  with AgentMsgSpecBase {
+trait AgentTransformerSpec
+  extends BasicSpecWithIndyCleanup
+    with AgentMsgSpecBase {
 
   def msgPackFormat: MsgPackFormat
   def msgFamilyVersion: MsgFamilyVersion
@@ -74,12 +85,10 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
   def msg: Any
 
   def getEncryptParamFromAliceToAliceCloudAgent: EncryptParam = {
-    val recipKeys = Set(aliceCloudAgentKeyInfo)
-    val senderKeyOpt = Option(aliceKeyInfo)
+    val recipKeys = Set(aliceCloudAgentKeyParam)
+    val senderKeyOpt = Option(aliceKeyParam)
     EncryptParam(recipKeys, senderKeyOpt)
   }
-
-  def walletFor(name: String): Wallet = walletAPI.wallets(name).wallet
 
   def runPackTests(): Unit = {
     "Alice" - {
@@ -88,8 +97,7 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
 
           val jsonString = DefaultMsgCodec.toJson(msg)
           lastPackedMsg = agentMsgTransformer.pack(msgPackFormat,
-            jsonString, getEncryptParamFromAliceToAliceCloudAgent,
-            PackParam(openWalletIfNotOpened = true))(aliceWap)
+            jsonString, getEncryptParamFromAliceToAliceCloudAgent)(aliceWap)
         }
       }
     }
@@ -97,7 +105,7 @@ trait AgentTransformerSpec extends BasicSpecWithIndyCleanup
 
   //should only be called inside of tests
   lazy val unpacked: AgentMsgWrapper = agentMsgTransformer.unpack(lastPackedMsg.msg,
-    KeyInfo(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+    KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
 
   def runUnpackTests(): Unit = {
     "Alice cloud agent" - {

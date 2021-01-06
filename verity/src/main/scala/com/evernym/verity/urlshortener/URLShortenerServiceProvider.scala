@@ -2,17 +2,17 @@ package com.evernym.verity.urlshortener
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.SHORTEN_URL
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.URL_SHORTENER_SVC_SELECTED
 import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.util.Util.{getJsonStringFromMap, logger}
 
-case class UrlShortened(shortUrl: String) extends ActorMessageClass
-case class UrlShorteningFailed(errorCode: String, errorMsg: String) extends ActorMessageClass
+case class UrlShortened(shortUrl: String) extends ActorMessage
+case class UrlShorteningFailed(errorCode: String, errorMsg: String) extends ActorMessage
 
-case class UrlInfo(url: String) extends ActorMessageClass {
+case class UrlInfo(url: String) extends ActorMessage {
   def json: String = getJsonStringFromMap(Map(TYPE -> SHORTEN_URL, URL -> url))
 }
 

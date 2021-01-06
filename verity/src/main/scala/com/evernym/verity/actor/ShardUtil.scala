@@ -6,7 +6,7 @@ import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 object ShardUtil {
 
@@ -86,6 +86,7 @@ trait ShardRegionNames extends HasShardRegionNames{
   lazy val userAgentRegionName: String = USER_AGENT_REGION_ACTOR_NAME
   lazy val userAgentPairwiseRegionName: String = USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
   lazy val activityTrackerRegionName: String = ACTIVITY_TRACKER_REGION_ACTOR_NAME
+  lazy val walletActorRegionName: String = WALLET_REGION_ACTOR_NAME
 }
 
 trait ShardRegionCommon extends ShardRegionNames {

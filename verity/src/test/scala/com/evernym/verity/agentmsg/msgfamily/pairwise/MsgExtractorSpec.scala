@@ -3,14 +3,14 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.agentmsg.{AgentMsgSpecBase, DefaultMsgCodec}
 import com.evernym.verity.protocol.engine
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
-import com.evernym.verity.vault.WalletAccessParam
+import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.actor.wallet.PackedMsg
 
 
 class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
@@ -35,15 +35,15 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
     CreateConnectionReqMsg_MFV_0_6(MSG_TYPE_DETAIL_CREATE_CONNECTION, sourceId = "test-id-1")
 
   lazy val aliceCloudMsgExtractor: MsgExtractor = {
-    implicit val acWap: WalletAccessParam = aliceCloudAgentWap
-    new MsgExtractor(aliceCloudAgentKeyInfo, walletAPI)
+    implicit val acWap: WalletAPIParam = aliceCloudAgentWap
+    new MsgExtractor(aliceCloudAgentKeyParam, walletAPI)
   }
   lazy val aliceMsgExtractor: MsgExtractor = {
-    implicit val aWap: WalletAccessParam = aliceWap
-    new MsgExtractor(aliceKeyInfo, walletAPI)
+    implicit val aWap: WalletAPIParam = aliceWap
+    new MsgExtractor(aliceKeyParam, walletAPI)
   }
 
-  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyInfo))
+  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyParam))
 
   def setup(): Unit = {
     //touch each of these lazy vals

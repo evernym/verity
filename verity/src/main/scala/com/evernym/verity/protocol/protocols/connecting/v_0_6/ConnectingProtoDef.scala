@@ -75,7 +75,7 @@ object ConnectingProtoDef
   override lazy val initParamNames: Set[String] = Set(
     NAME,
     LOGO_URL,
-    THIS_AGENT_WALLET_SEED,
+    THIS_AGENT_WALLET_ID,
     AGENCY_DID,
     AGENCY_DID_VER_KEY,
     CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON,

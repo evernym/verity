@@ -12,22 +12,21 @@ import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifierForUserAgent
-import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
+import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.libindy.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -41,10 +40,12 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
+import com.evernym.verity.actor.wallet.{CreateNewKey, PackedMsg, StoreTheirKey}
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -56,7 +57,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
-    with MsgNotifierForUserAgent {
+    with MsgNotifierForUserAgent
+    with AgentSnapshotter[UserAgentState] {
 
   type StateType = UserAgentState
   var state = new UserAgentState
@@ -264,7 +266,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       else state.myDidDoc_!.endpoints_!.endpoints
     val comMethods = endpoints.map { ep =>
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
-        .filterByKeyIds(ep.authKeyIds.toSeq)
+        .filterByKeyIds(ep.authKeyIds)
         .map(_.verKey).toSet
       val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
       ComMethodDetail(ep.`type`, ep.value, cmp)
@@ -300,17 +302,24 @@ class UserAgent(val agentActorContext: AgentActorContext)
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, state.myDid)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
-    val (futResp, agentDID) = createNewPairwiseEndpointBase(createKeyReqMsg.forDID, Option(createKeyReqMsg.forDIDVerKey), isEdgeAgent = false)
+    val (futResp, agentDID) = createNewPairwiseEndpointBase(
+      createKeyReqMsg.forDID, Option(createKeyReqMsg.forDIDVerKey), isEdgeAgent = false)
     val sndr = sender()
     handleInitPairwiseConnResp(agentDID, futResp, sndr)
+  }
+
+  def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
+    val nkc = agentWalletAPI.walletAPI.createNewKey()
+    val (respFut, _) = createNewPairwiseEndpointBase(nkc.did, Option(nkc.verKey), isEdgeAgent = true)
+    respFut.map(_ => Option(ControlMsg(Ctl.KeyCreated(nkc.did, nkc.verKey))))
   }
 
   def createNewPairwiseEndpointBase(forDID: DID, verKeyOpt: Option[VerKey]=None, isEdgeAgent: Boolean): (Future[Any], DID) = {
     val forVerKey = verKeyOpt.getOrElse(getVerKeyReqViaCache(forDID))
 
     val endpointDID = if (! isEdgeAgent) {
-      val pairwiseKeyResult = agentActorContext.walletAPI.createNewKey(CreateNewKeyParam())
-      agentActorContext.walletAPI.storeTheirKey(StoreTheirKeyParam(forDID, forVerKey), ignoreIfAlreadyExists = true)
+      val pairwiseKeyResult = agentActorContext.walletAPI.createNewKey(CreateNewKey())
+      agentActorContext.walletAPI.storeTheirKey(StoreTheirKey(forDID, forVerKey, ignoreIfAlreadyExists = true))
       writeAndApply(AgentDetailSet(forDID, pairwiseKeyResult.did))
       pairwiseKeyResult.did
     } else forDID
@@ -320,17 +329,9 @@ class UserAgent(val agentActorContext: AgentActorContext)
     (resp, endpointDID)
   }
 
-  def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
-    val nkc = walletDetail.walletAPI.createNewKey()
-    val (respFut, _) = createNewPairwiseEndpointBase(nkc.did, Option(nkc.verKey), isEdgeAgent = true)
-    respFut.map { _ =>
-      Option(ControlMsg(Ctl.KeyCreated(nkc.did, nkc.verKey)))
-    }
-  }
-
   def buildSetupCreateKeyEndpoint(forDID: DID, newAgentPairwiseVerKeyDID: DID): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(newAgentPairwiseVerKeyDID, forDID,
-      state.myDid_!, state.thisAgentKeyDID, agentWalletSeed)
+      state.myDid_!, state.thisAgentKeyDID, agentWalletId)
   }
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -422,7 +423,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
             ucm.comMethod.value),
           appConfig)
         ucm.comMethod
-      case COM_METHOD_TYPE_HTTP_ENDPOINT  => UrlDetail(ucm.comMethod.value); ucm.comMethod
+      case COM_METHOD_TYPE_HTTP_ENDPOINT  => UrlParam(ucm.comMethod.value); ucm.comMethod
       case COM_METHOD_TYPE_FWD_PUSH       =>
         if (state.sponsorRel.isEmpty){
           throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("no sponsor registered - cannot register fwd method"))
@@ -476,8 +477,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
           case x => throw new RuntimeException("unsupported msg pack format: " + x)
         }
       val authEncParam = EncryptParam(
-        Set(KeyInfo(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
-        Option(KeyInfo(Left(agentVerKey)))
+        Set(KeyParam(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
+        Option(KeyParam(Left(agentVerKey)))
       )
       val packedMsg = agentActorContext.agentMsgTransformer.pack(reqMsgContext.msgPackFormat, updateMsgStatusReq, authEncParam)
       val rmi = reqMsgContext.copy()
@@ -492,7 +493,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     success.map { case (fromDID, respMsg) =>
       respMsg match {
         case pm: PackedMsg =>
-          val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(pm.msg, KeyInfo(Left(agentVerKey)))
+          val unpackedAgentMsg = agentActorContext.agentMsgTransformer.unpack(pm.msg, KeyParam(Left(agentVerKey)))
           val msgIds = unpackedAgentMsg.msgPackFormat match {
             case MPF_MSG_PACK   => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_5].uids
             case MPF_INDY_PACK  => unpackedAgentMsg.headAgentMsg.convertTo[MsgStatusUpdatedRespMsg_MFV_0_6].uids
@@ -572,8 +573,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val agentVerKey = state.thisAgentVerKeyReq
     Future.traverse(filteredPairwiseConns) { pc =>
       val encParam = EncryptParam(
-        Set(KeyInfo(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
-        Option(KeyInfo(Left(agentVerKey)))
+        Set(KeyParam(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
+        Option(KeyParam(Left(agentVerKey)))
       )
       val packedMsg = agentActorContext.agentMsgTransformer.pack(MPF_MSG_PACK, getMsg, encParam)
       val rmi = reqMsgContext.copy()
@@ -590,7 +591,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         try {
           val agentVerKey = state.thisAgentVerKeyReq
           val result = respMsgs.map { case (fromDID, respMsg) =>
-            val amw = agentActorContext.agentMsgTransformer.unpack(respMsg.msg, KeyInfo(Left(agentVerKey)))
+            val amw = agentActorContext.agentMsgTransformer.unpack(respMsg.msg, KeyParam(Left(agentVerKey)))
             val msgs = reqMsgContext.msgPackFormat match {
               case MPF_MSG_PACK | MPF_INDY_PACK => amw.headAgentMsg.convertTo[GetMsgsRespMsg_MFV_0_5].msgs
               case x => throw new BadRequestErrorException(BAD_REQUEST.statusCode, Option("msg pack format not supported: " + x))
@@ -670,7 +671,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
         userAgentPairwiseRegionName,
         state.myDid_!,
         state.thisAgentKeyDID,
-        agentWalletSeed)
+        agentWalletId)
     )
     val filteredConfs = getFilteredConfigs(Set(NAME_KEY, LOGO_URL_KEY))
 
@@ -681,8 +682,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case LOGO_URL                                 => Parameter(LOGO_URL, agentLogoUrl(filteredConfs))
       case AGENCY_DID                               => Parameter(AGENCY_DID, agencyDIDReq)
       case AGENCY_DID_VER_KEY                       => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
-      case THIS_AGENT_WALLET_SEED                   => Parameter(THIS_AGENT_WALLET_SEED, agentWalletSeedReq)
-      case NEW_AGENT_WALLET_SEED                    => Parameter(NEW_AGENT_WALLET_SEED, agentActorEntityId)
+      case THIS_AGENT_WALLET_ID                     => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
+      case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, agentActorEntityId)
       case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, createKeyEndpointSetupDetailJson)
       case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, state.myDid_!)
 
@@ -696,7 +697,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
     }
 
-    getAgencyVerKeyFut map paramMap
+    agencyVerKeyFut map paramMap
 
   }
 
@@ -711,8 +712,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def encParamFromThisAgentToOwner: EncryptParam = {
     EncryptParam(
-      Set(KeyInfo(Left(getVerKeyReqViaCache(state.myDid_!)))),
-      Option(KeyInfo(Left(state.thisAgentVerKeyReq)))
+      Set(KeyParam(Left(getVerKeyReqViaCache(state.myDid_!)))),
+      Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
   }
 
@@ -758,20 +759,20 @@ case class PairwiseConnSetExt(agentDID: DID, reqMsgContext: ReqMsgContext)
 case class PendingAuthKey(rka: RequesterKeyAdded, applied: Boolean = false)
 
 //cmd
-case object GetAllComMethods extends ActorMessageObject
-case object GetPushComMethods extends ActorMessageObject
-case object GetHttpComMethods extends ActorMessageObject
-case object GetFwdComMethods extends ActorMessageObject
-case object GetSponsorRel extends ActorMessageObject
-case class DeleteComMethod(value: String, reason: String) extends ActorMessageClass
+case object GetAllComMethods extends ActorMessage
+case object GetPushComMethods extends ActorMessage
+case object GetHttpComMethods extends ActorMessage
+case object GetFwdComMethods extends ActorMessage
+case object GetSponsorRel extends ActorMessage
+case class DeleteComMethod(value: String, reason: String) extends ActorMessage
 
 //response msgs
-case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessageClass
-case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessageClass
-case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessageClass
-case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessageClass
+case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessage
+case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessage
+case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessage
+case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessage
 
-case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Option[String]=None) extends ActorMessageClass {
+case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Option[String]=None) extends ActorMessage {
 
   def filterByType(comMethodType: Int): Set[ComMethodDetail] = {
     filterByTypes(Seq(comMethodType))
@@ -803,8 +804,8 @@ trait UserAgentStateUpdateImpl
 
   def msgAndDelivery: Option[MsgAndDelivery] = state.msgAndDelivery
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
@@ -820,8 +821,7 @@ trait UserAgentStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

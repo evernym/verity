@@ -4,7 +4,7 @@ import akka.actor.Props
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, HasProps}
+import com.evernym.verity.actor.{ActorMessage, HasProps}
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.urlmapper.UrlAdded
 
@@ -49,5 +49,5 @@ object UrlStore extends HasProps {
 }
 
 //cmds
-case class AddUrl(url: String) extends ActorMessageClass
-case object GetActualUrl extends ActorMessageObject
+case class AddUrl(url: String) extends ActorMessage
+case object GetActualUrl extends ActorMessage

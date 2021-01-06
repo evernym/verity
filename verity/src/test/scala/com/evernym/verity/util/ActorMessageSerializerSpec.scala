@@ -2,7 +2,7 @@ package com.evernym.verity.util
 
 import akka.actor.ActorSystem
 import akka.serialization._
-import com.evernym.verity.actor.{ActorMessage, ActorMessageClass, ForIdentifier, ShardUtil}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ShardUtil}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.testkit.BasicSpec
@@ -74,7 +74,7 @@ class ActorMessageSerializerSpec extends BasicSpec {
 }
 
 object TestMessages {
-  case class TestMessage1(name: String) extends ActorMessageClass
-  case class TestMessage2() extends ActorMessageClass
+  case class TestMessage1(name: String) extends ActorMessage
+  case class TestMessage2() extends ActorMessage
 }
 

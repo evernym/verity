@@ -5,7 +5,7 @@ import java.util.concurrent.TimeoutException
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, Terminated}
 import akka.util.Timeout
 import akka.pattern.ask
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
@@ -16,7 +16,6 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-
 
 
 class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
@@ -199,7 +198,7 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
     }
   }
 
-  def checkPersistentActor(expectedTimeout: Duration, msg: ActorMessageClass, conf: Config): Unit = {
+  def checkPersistentActor(expectedTimeout: Duration, msg: ActorMessage, conf: Config): Unit = {
     val appConfig = new TestAppConfig(Option(conf))
     val watcher = system.actorOf(Props(new WatcherActor(appConfig, expectedTimeout)), name = s"Watcher-$nextActorId")
     val response: Future[Any] = watcher ? msg
@@ -233,19 +232,18 @@ object TestActor {
     idCount += 1
     idCount
   }
-  case class WatchBaseActor(name: String) extends ActorMessageClass
-  case class WatchSingletonChildActor(name: String) extends ActorMessageClass
-  case class ReceiveTimeoutQuestion() extends ActorMessageClass
-  case class ReceiveTimeoutAnswer(timeout: Duration) extends ActorMessageClass
-  case class WrongTimeoutReported(timeout: Duration) extends ActorMessageClass
-  case class ActorStopped(awakeMillis: Long) extends ActorMessageClass
+  case class WatchBaseActor(name: String) extends ActorMessage
+  case class WatchSingletonChildActor(name: String) extends ActorMessage
+  case class ReceiveTimeoutQuestion() extends ActorMessage
+  case class ReceiveTimeoutAnswer(timeout: Duration) extends ActorMessage
+  case class WrongTimeoutReported(timeout: Duration) extends ActorMessage
+  case class ActorStopped(awakeMillis: Long) extends ActorMessage
 }
 
 import TestActor._
 
 
 class TestBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
-  val logger: Logger = getLoggerByClass(classOf[TestBaseActor])
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
@@ -264,7 +262,6 @@ class TestBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
 }
 
 class TestSingletonChildActor(val appConfig: AppConfig) extends SingletonChildrenPersistentActor {
-  val logger: Logger = getLoggerByClass(classOf[TestSingletonChildActor])
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>

@@ -1,67 +1,57 @@
 package com.evernym.verity.agentmsg.msgpacker
 
-import java.util.concurrent.ExecutionException
-
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.wallet.{PackedMsg, UnpackMsg, UnpackedMsg}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.util.JsonUtil.jsonArray
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.InvalidStructureException
-import org.hyperledger.indy.sdk.crypto.Crypto
-import org.hyperledger.indy.sdk.wallet.{Wallet, WalletItemNotFoundException}
+
+import scala.concurrent.Future
 
 /**
  * this uses 'indy' (https://github.com/hyperledger/indy-sdk/blob/master/libindy/src/api/crypto.rs)
  * for 'pack' and 'unpack' functions
- * @param msgPackFormat
  */
-class IndyPackTransformer(val msgPackFormat: MsgPackFormat)
+class IndyPackTransformer
   extends MsgTransformer {
+
+  val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
 
   val logger: Logger = getLoggerByClass(classOf[IndyPackTransformer])
 
-  override def pack(wallet: Wallet, msg: String, recipVerKeys: Set[VerKey],
-                    senderVerKey: Option[VerKey], packParam: PackParam): PackedMsg = {
-    val recipKeysJson = jsonArray(recipVerKeys)
-    val cryptoBoxBytes = senderVerKey match {
-      case None =>
-        Crypto.packMessage(wallet, recipKeysJson, null, msg.getBytes).get
-      case Some(senderKey) =>
-        Crypto.packMessage(wallet, recipKeysJson, senderKey, msg.getBytes).get
-    }
-    PackedMsg(cryptoBoxBytes)
+  override def pack(msg: String,
+                    recipVerKeyParams: Set[KeyParam],
+                    senderVerKeyParam: Option[KeyParam])
+                   (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
+    walletAPI.packMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam)
   }
 
-  override def unpack(wallet: Wallet, msg: Array[Byte], fromVerKey: Option[VerKey],
-                      unpackParam: UnpackParam): AgentBundledMsg = {
-    try {
-      val binaryMsg = Crypto.unpackMessage(wallet, msg).get
-      val jsonStringMsg = new String(binaryMsg)
-      val resultMap = DefaultMsgCodec.fromJson[Map[String,String]](jsonStringMsg)
-      val msgJsonString = resultMap("message")
-      val senderVerKeyOpt = resultMap.get("sender_verkey")
-      val recipVerKeyOpt = resultMap.get("recipient_verkey")
-      val unpackedMsg = UnpackedMsg(msgJsonString, senderVerKeyOpt, recipVerKeyOpt)
-      AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
-    } catch {
-      case e: BadRequestErrorException => throw e
-      case e: ExecutionException =>
-        e.getCause match {
-          case e: WalletItemNotFoundException =>
-            throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(e.getMessage))
-          case _: InvalidStructureException =>
-            throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("invalid packed message"))
-          case _: Exception =>
-            throw new BadRequestErrorException(UNHANDLED.statusCode,
-              Option("unhandled error while unpacking message"))
-        }
-      case _: Exception =>
-        throw new BadRequestErrorException(UNHANDLED.statusCode,
-          Option("unhandled error while unpacking message"))
+  override def unpack(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam],
+                      unpackParam: UnpackParam)(implicit wap: WalletAPIParam, walletAPI: WalletAPI)
+  : AgentBundledMsg = {
+    val um = walletAPI.unpackMsg(msg)
+    prepareAgentBundledMsg(um, unpackParam)
+  }
+
+  override def unpackAsync(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
+                          (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
+    walletAPI.executeAsync[UnpackedMsg](UnpackMsg(msg)).map { um =>
+      prepareAgentBundledMsg(um, unpackParam)
     }
+  }
+
+  private def prepareAgentBundledMsg(um: UnpackedMsg, unpackParam: UnpackParam): AgentBundledMsg = {
+    val binaryMsg = um.msg
+    val jsonStringMsg = new String(binaryMsg)
+    val resultMap = DefaultMsgCodec.fromJson[Map[String, String]](jsonStringMsg)
+    val msgJsonString = resultMap("message")
+    val senderVerKeyOpt = resultMap.get("sender_verkey")
+    val recipVerKeyOpt = resultMap.get("recipient_verkey")
+    val unpackedMsg = UnpackedMsg(msgJsonString, senderVerKeyOpt, recipVerKeyOpt)
+    AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
   }
 }

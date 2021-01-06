@@ -3,15 +3,15 @@ package com.evernym.verity.actor.cluster_singleton
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.agent.maintenance.{ProcessPending, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, GetRegisteredRouteSummary, GetRouteBatch, GetRouteBatchResult, InternalMsgRouteParam, RoutingAgentBucketMapperV1}
-import com.evernym.verity.actor.persistence.{AlreadyDone, BaseNonPersistentActor, Done, Start, Stop}
+import com.evernym.verity.actor.base.{CoreActorExtended, AlreadyDone, Done, Ping, Stop}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
 class RouteMaintenanceHelper(val appConfig: AppConfig, val agentMsgRouter: AgentMsgRouter)
-  extends BaseNonPersistentActor {
+  extends CoreActorExtended {
 
   override def receiveCmd: Receive = {
     case mcw: MaintenanceCmdWrapper  => getRequiredActor(mcw.taskId).forward(mcw.cmd)
@@ -23,7 +23,7 @@ class RouteMaintenanceHelper(val appConfig: AppConfig, val agentMsgRouter: Agent
 }
 
 class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsgRouter)
-  extends BaseNonPersistentActor {
+  extends CoreActorExtended {
 
   override def receiveCmd: Receive = {
     case Init                         => handleInit()
@@ -48,7 +48,7 @@ class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsg
     }
     if (action.isEmpty) {
       action = Option(raa)
-      scheduleJob(scheduledJobId, 10, 30, ProcessPending)
+      scheduleJob(scheduledJobId, 30, ProcessPending)
       sender ! Done
     } else {
       sender ! AlreadyDone
@@ -143,7 +143,7 @@ class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsg
 
   lazy val actionCmds: List[Any] = {
     action match {
-      case Some(_: RestartAllActors)  => List(Stop(), Start(), Stop())
+      case Some(_: RestartAllActors)  => List(Stop(), Ping(), Stop())
       case _                          => List.empty
     }
   }
@@ -176,11 +176,11 @@ object RouteActionExecutor {
     Props(new RouteActionExecutor(appConfig, agentMsgRouter))
 }
 
-case class MaintenanceCmdWrapper(taskId: String, cmd: Any) extends ActorMessageClass
+case class MaintenanceCmdWrapper(taskId: String, cmd: Any) extends ActorMessage
 
-case class RestartAllActors(actorTypeIdsStr: String, restartTaskIfAlreadyRunning: Boolean) extends ActorMessageClass
-case object GetStatus extends ActorMessageObject
+case class RestartAllActors(actorTypeIdsStr: String, restartTaskIfAlreadyRunning: Boolean) extends ActorMessage
+case object GetStatus extends ActorMessage
 
-case class ActionStatus(routeStatus: Map[EntityId, RouteStatus]) extends ActorMessageClass
+case class ActionStatus(routeStatus: Map[EntityId, RouteStatus]) extends ActorMessage
 
-case object Init extends ActorMessageObject
+case object Init extends ActorMessage

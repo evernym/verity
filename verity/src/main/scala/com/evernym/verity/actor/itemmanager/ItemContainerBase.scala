@@ -9,17 +9,16 @@ import akka.pattern.ask
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, _}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, Done}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.{HasLogger, VerKey}
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.TimeZoneUtil._
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -28,13 +27,10 @@ import scala.util.{Failure, Success}
 trait ItemContainerBase
   extends BasePersistentActor
     with ItemCommandHandlerBase
-    with DefaultPersistenceEncryption
-    with HasLogger {
+    with DefaultPersistenceEncryption {
 
   import context._
   implicit def appConfig: AppConfig
-
-  val logger: Logger = getLoggerByClass(classOf[ItemContainerBase])
 
   override def receiveCmdHandler: Receive = {
     val conditionalReceiveCmd = if (itemContainerConfig.isEmpty) receiveCmdBeforeItemConfigSet
@@ -183,8 +179,6 @@ trait ItemContainerBase
 
   lazy val itemManagerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_MANAGER_REGION_ACTOR_NAME)
 
-  lazy val scheduledJobInitialDelay: Int = appConfig.getConfigIntOption(
-    ITEM_CONTAINER_SCHEDULED_JOB_INITIAL_DELAY_IN_SECONDS).getOrElse(60)
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     ITEM_CONTAINER_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
   lazy val itemMigrationChunkSize: Int = appConfig.getConfigIntOption(
@@ -215,7 +209,6 @@ trait ItemContainerBase
       val jobId = "CheckForPeriodicTaskExecution"
       scheduleJob(
         jobId,
-        scheduledJobInitialDelay,
         scheduledJobInterval,
         InternalCmdWrapper(CheckForPeriodicTaskExecution)
       )
@@ -684,7 +677,7 @@ case class ItemDetail(status: Int, detail: Option[String], isFromMigration: Bool
     id.status == status && id.detail == detail
   }
 }
-case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessageClass
+case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessage
 case class MigrationCheckResult(checkedAt: ZonedDateTime,
                                 migrateToLatestVersionedContainers: Boolean=false,
                                 migrateToNextLinkedContainer: Boolean=false,
@@ -693,14 +686,14 @@ case class MigrationCheckResult(checkedAt: ZonedDateTime,
 case class MigrationStatus(startedAt: Option[ZonedDateTime], finishedAt: Option[ZonedDateTime])
 case class MigratedItemDetail(id: ItemId, toContainerEntityId: ItemContainerEntityId)
 
-case class ItemNotFound(id: ItemId) extends ActorMessageClass
+case class ItemNotFound(id: ItemId) extends ActorMessage
 
 case class ItemContainerConfig(itemType: ItemType,
                                entityIdMapperVersion: VersionId,
                                managerEntityId: ItemManagerEntityId,
                                ownerVerKey: Option[VerKey],
                                migrateItemsToNextLinkedContainer: Boolean,
-                               migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessageClass {
+                               migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
 
   def currentVersionIsNotLatest: Boolean = {
     !ItemConfigManager.isLatestVersion(itemType, entityIdMapperVersion)
@@ -715,24 +708,24 @@ case class ItemContainerState(itemContainerConfig: Option[ItemContainerConfig] =
                               migratedItems: Set[MigratedItemDetail],
                               migrationStatus: Map[ItemContainerEntityId, MigrationStatus],
                               migratedContainers: Map[ItemContainerEntityId, MigratedContainer],
-                              scheduledJobDetail: ScheduledJobDetail) extends ActorMessageClass
+                              scheduledJobDetail: ScheduledJobDetail) extends ActorMessage
 
 
-case object CheckForPeriodicTaskExecution extends ActorMessageObject
-case class ExecuteAndForwardReq(containerSequenceId: Int, cmd: Any) extends ActorMessageClass
-case class ExecuteAndForwardResp(containerSequenceId: Int, respFromContainerEntityId: ItemContainerEntityId, resp: Any) extends ActorMessageClass
+case object CheckForPeriodicTaskExecution extends ActorMessage
+case class ExecuteAndForwardReq(containerSequenceId: Int, cmd: Any) extends ActorMessage
+case class ExecuteAndForwardResp(containerSequenceId: Int, respFromContainerEntityId: ItemContainerEntityId, resp: Any) extends ActorMessage
 
-case object GetContainerStatus extends ActorMessageObject
+case object GetContainerStatus extends ActorMessage
 
 /**
  *
  * @param id container entity id
  * @param items Map[ItemStatus, ItemCount]
  */
-case class ContainerStatus(id: ItemContainerEntityId, items: Map[String, Int]) extends ActorMessageClass
-case class ContainerItems(items: Map[ItemId, ItemDetail]) extends ActorMessageClass
-case class MigratedContainer(time: ZonedDateTime, isStorageCleaned: Boolean) extends ActorMessageClass
+case class ContainerStatus(id: ItemContainerEntityId, items: Map[String, Int]) extends ActorMessage
+case class ContainerItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
+case class MigratedContainer(time: ZonedDateTime, isStorageCleaned: Boolean) extends ActorMessage
 
-case class UpdatePrevContainerId(id: ItemContainerEntityId) extends ActorMessageClass
-case class UpdateNextContainerId(id: ItemContainerEntityId) extends ActorMessageClass
-case class CleanStorage(requestedByItemContainerId: ItemContainerEntityId) extends ActorMessageClass
+case class UpdatePrevContainerId(id: ItemContainerEntityId) extends ActorMessage
+case class UpdateNextContainerId(id: ItemContainerEntityId) extends ActorMessage
+case class CleanStorage(requestedByItemContainerId: ItemContainerEntityId) extends ActorMessage

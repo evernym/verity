@@ -12,7 +12,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller, GetBlockedList, UnblockCaller, UnblockResourceForCaller, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UnwarnCaller, UnwarnResourceForCaller, UsageWarningStatusChunk, WarnCaller, WarnResourceForCaller}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResourceUsages, ResourceUsages}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
@@ -211,4 +211,4 @@ case class UpdateResourcesUsageLimit(resourceUsageLimits: List[ResourceUsageLimi
 
 
 case class ResourceUsageCounterDetail(resourceName: String, bucketId: Int, newCount: Option[Int])
-case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessageClass
+case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessage

@@ -2,20 +2,20 @@ package com.evernym.verity.http.route_handlers
 
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.agent.agency.AgencyIdUtil
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
+import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
+import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}
+import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msg_tracer.MsgTraceProvider
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.vault.WalletAccessParam
+import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 
 /**
- * provides access to platform
+ * provides access to platform objects
+ * to be able to communicate/send messages to agency agent actor
  */
 trait PlatformServiceProvider
   extends AgencyIdUtil
@@ -27,22 +27,21 @@ trait PlatformServiceProvider
 
   lazy val logger: Logger = getLoggerByClass(classOf[PlatformServiceProvider])
 
-  var agencyDID: DID = _
-  implicit var wap: WalletAccessParam = _
+  var agencyDIDPair: DidPair = _
+  implicit var wap: WalletAPIParam = _
 
-  def getAgencyDIDFut: Future[DID] = {
+  def getAgencyDidPairFut: Future[DidPair] = {
     Option(wap).map { _ =>
-      Future.successful(agencyDID)
+      Future.successful(agencyDIDPair)
     }.getOrElse {
       getAgencyDID(agentActorContext.generalCache).flatMap { agencyId =>
-        agencyDID = agencyId
-        agentActorContext.agentMsgRouter.execute(GetRoute(agencyDID)) map {
-          case Some(aa: ActorAddressDetail) =>
-            wap = WalletAccessParam(aa.address, agentActorContext.walletAPI,
-              agentActorContext.walletConfig, agentActorContext.appConfig, closeAfterUse=false)
-            agencyDID
-          case None =>
-            agencyDID
+        agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(agencyId, GetAgencyAgentDetail)) map {
+          case aad: AgencyAgentDetail =>
+            wap = WalletAPIParam(aad.walletId)
+            agencyDIDPair = DidPair(aad.did, aad.verKey)
+            agencyDIDPair
+          case _ =>
+            throw new RuntimeException("agency agent not yet setup")
         }
       }
     }

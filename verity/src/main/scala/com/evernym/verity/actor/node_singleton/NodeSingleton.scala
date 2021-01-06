@@ -4,11 +4,12 @@ import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.metrics.MetricsReader
@@ -16,11 +17,7 @@ import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
 
 
-object NodeSingleton {
-  def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
-}
-
-class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor with HasActorResponseTimeout {
+class NodeSingleton(val appConfig: AppConfig) extends CoreActorExtended with HasActorResponseTimeout {
 
   def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
     singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
@@ -109,7 +106,11 @@ class NodeSingleton(val appConfig: AppConfig) extends BaseNonPersistentActor wit
     context.child(name).getOrElse(context.actorOf(props, name))
 }
 
-case object DrainNode extends ActorMessageObject
-case object DrainInitiated extends ActorMessageObject
+case object DrainNode extends ActorMessage
+case object DrainInitiated extends ActorMessage
 case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
-  extends ActorMessageClass
+  extends ActorMessage
+
+object NodeSingleton {
+  def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
+}

@@ -5,7 +5,6 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.didcomm.decorators.PleaseAck
-import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
@@ -530,13 +529,8 @@ class IssueCredentialSpec
       "age"  -> "41"
   )
 
-  lazy val credPreviewTypeStr = MsgFamily.typeStrFromMsgType(IssueCredentialProtoDef.msgFamily, "credential-preview")
-
   def buildCredPreview(): CredPreview = {
-    val credAttributes = credValues.map { case (name, value) =>
-      CredPreviewAttribute(name, value, None)
-    }.toVector
-    CredPreview(credPreviewTypeStr, credAttributes)
+    IssueCredential.buildCredPreview(credValues)
   }
 
   def buildSendOffer(autoIssue: Option[Boolean] = None): Offer = {

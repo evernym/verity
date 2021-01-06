@@ -7,11 +7,11 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
-import com.evernym.verity.actor.persistence.{ActorDetail, BaseNonPersistentActor, GetActorDetail}
+import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
@@ -114,21 +114,58 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
 
   override def overrideConfig: Option[Config] = Option {
     ConfigFactory parseString {
-      s"verity.agent.actor-state-cleanup.enabled = true"
+      s"""
+         |verity {
+         |  agent {
+         |    actor-state-cleanup {
+         |      enabled = true
+         |
+         |      manager {
+         |        registration {
+         |          batch-size = 100
+         |          batch-item-sleep-interval-in-millis = 0
+         |        }
+         |
+         |        processor {
+         |          batch-size = 100
+         |          batch-item-sleep-interval-in-millis = 0
+         |        }
+         |
+         |        scheduled-job {
+         |          initial-delay-in-seconds = 10
+         |          interval-in-seconds = 2
+         |        }
+         |      }
+         |
+         |      executor {
+         |        batch-size = 1
+         |        scheduled-job {
+         |          initial-delay-in-seconds = 1
+         |          interval-in-seconds = 3
+         |        }
+         |      }
+         |    }
+         |
+         |    migrate-thread-contexts {
+         |      scheduled-job {
+         |        initial-delay-in-seconds = -1
+         |      }
+         |    }
+         |  }
+         |}
+         """.stripMargin
     }
+  }
+}
+
+class DummyAgentActor extends CoreActorExtended {
+  override def receiveCmd: Receive = {
+    case fas: FixActorState             =>
+      fas.senderActorRef ! InitialActorState(fas.actorDID, isRouteSet = true, 1)
+      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 1, 0)
   }
 }
 
 object DummyAgentActor {
   def props: Props = Props(new DummyAgentActor)
-}
-
-class DummyAgentActor extends BaseNonPersistentActor {
-  override def receiveCmd: Receive = {
-    case fas: FixActorState             =>
-      fas.senderActorRef ! InitialActorState(fas.actorDID, 1)
-      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 1, 0)
-  }
-
-  override def appConfig: AppConfig = ???
 }

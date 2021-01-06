@@ -55,16 +55,7 @@ trait ActorSystemConfig {
         loggers = ["akka.event.slf4j.Slf4jLogger", "com.evernym.verity.actor.testkit.QuietTestEventListener"]
         stdout-loglevel = "off"
 
-        debug {
-          receive = on
-        }
-
-        actor {
-          provider = "akka.cluster.ClusterActorRefProvider"
-        }
-
         remote {
-          log-remote-lifecycle-events = off
           artery.canonical {
             hostname = "127.0.0.1"
             port = $port
@@ -88,6 +79,11 @@ trait ActorSystemConfig {
         }
 
         actor {
+          debug {
+            receive = on
+          }
+
+          provider = "akka.cluster.ClusterActorRefProvider"
 
           serializers {
             protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
@@ -96,10 +92,13 @@ trait ActorSystemConfig {
           }
 
           serialization-bindings {
-            "com.evernym.verity.actor.PersistentMultiEventMsg" = protoser
-            "com.evernym.verity.actor.PersistentEventMsg" = protoser
-            "com.evernym.verity.actor.PersistentStateMsg" = protoser
+            "com.evernym.verity.actor.DeprecatedEventMsg" = protoser        //kept to satisfy config validation
+            "com.evernym.verity.actor.DeprecatedStateMsg" = protoser        //kept to satisfy config validation
+            "com.evernym.verity.actor.DeprecatedMultiEventMsg" = protoser   //kept to satisfy config validation
+
             "com.evernym.verity.actor.PersistentMsg" = protoser
+            "com.evernym.verity.actor.PersistentMultiEventMsg" = protoser
+
             "com.evernym.verity.actor.ActorMessage" = kryo-akka
           }
 
@@ -115,7 +114,6 @@ trait ActorSystemConfig {
     overrideConfig.getOrElse(ConfigFactory.empty())
       .withFallback(levelDBJournal(tdir)) //default persistence
       .withFallback(baseConfig)
-
   }
 
 

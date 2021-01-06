@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
@@ -128,7 +128,7 @@ class DefaultSMSSender(val config: AppConfig) extends Actor with ActorLogging {
 case class SmsSent(serviceId: String, providerId: String)
 case class SmsSendingFailed(errorCode: String, errorMsg: String)
 
-case class SmsInfo(to: String, text: String) extends ActorMessageClass {
+case class SmsInfo(to: String, text: String) extends ActorMessage {
   def json: String = getJsonStringFromMap(Map(TYPE -> SEND_SMS, PHONE_NO -> to, TEXT -> text))
 }
 

@@ -5,8 +5,8 @@ import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import ch.qos.logback.classic.PatternLayout
 import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.{CoreConstants, LayoutBase}
 import ch.qos.logback.core.CoreConstants.LINE_SEPARATOR
+import ch.qos.logback.core.LayoutBase
 import com.evernym.verity.util.OptionUtil
 
 import scala.collection.JavaConverters._

@@ -3,9 +3,9 @@ package com.evernym.verity.http.base.open
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.Status.MSG_STATUS_SENT
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_TOKEN_XFERRED, CREATE_MSG_TYPE_TOKEN_XFER_OFFER, CREATE_MSG_TYPE_TOKEN_XFER_REQ}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.actor.wallet.PackedMsg
 
 trait TokenTransferSpec { this : EndpointHandlerBaseSpec =>
 

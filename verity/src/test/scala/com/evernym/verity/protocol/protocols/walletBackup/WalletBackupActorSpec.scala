@@ -5,12 +5,11 @@ import java.util.UUID
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
@@ -19,6 +18,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.typesafe.config.Config
 
 class WalletBackupActorSpec
@@ -229,7 +229,7 @@ trait WalletBackupSpecUtil extends DeadDropSpecUtil {
 
   lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.DID}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
 
-  lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.walletAPI, mockEdgeAgent.walletExt, Option(passphrase))(mockEdgeAgent.wap)
+  lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.walletAPI, Option(passphrase))(mockEdgeAgent.wap)
 
   def backupInitParams = BackupInitParams(deadDropData.recoveryVerKey, deadDropData.address, cloudAgentAddress.getBytes())
 

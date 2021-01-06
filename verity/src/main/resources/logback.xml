@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+
+<configuration scan="true" scanPeriod="60 seconds">
 
     <!-- TODO: configure below properties as per need/environment -->
     <property name="logFileBaseFolderPath" value="/tmp" />

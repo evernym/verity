@@ -7,7 +7,7 @@ import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.http.common.HttpRemoteMsgSendingSvc
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
@@ -17,7 +17,7 @@ class IBMInviterDemoScript extends HttpRemoteMsgSendingSvc {
   override lazy val logger: Logger = getLoggerByClass(classOf[IBMInviterDemoScript])
   implicit lazy val _system: ActorSystem = ActorSystem()
 
-  val urlDetail = UrlDetail("https://agency.interop.ti.verify-creds.com")
+  val urlParam = UrlParam("https://agency.interop.ti.verify-creds.com")
   val mainAuth = Option("admin", "adminpw")   //confirm this with IBM if these are correct user name and password
   var agentId: String = _
   var agentPwd: String = _
@@ -41,13 +41,13 @@ class IBMInviterDemoScript extends HttpRemoteMsgSendingSvc {
     agentId = _agentId
     agentPwd = _agentPwd
     val json = s"""{"id":"$agentId","pass":"$agentPwd"}"""
-    val respFut = sendGeneralMsgToRemoteEndpoint(json, mainAuth)(urlDetail.copy(pathOpt=Option("api/v1/agents")))
+    val respFut = sendGeneralMsgToRemoteEndpoint(json, mainAuth)(urlParam.copy(pathOpt=Option("api/v1/agents")))
     handleRespFut(respFut)
   }
 
   def createInvitation(): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint(s"""{"direct_route": true}""",
-      agentAuth)(urlDetail.copy(pathOpt=Option("api/v1/connection_invitations")))
+      agentAuth)(urlParam.copy(pathOpt=Option("api/v1/connection_invitations")))
     handleRespFut(respFut, { resp =>
       val jsonObject = new JSONObject(resp)
       val url = jsonObject.getString("url")
@@ -57,19 +57,19 @@ class IBMInviterDemoScript extends HttpRemoteMsgSendingSvc {
 
   def checkConnection(id: String): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("", agentAuth,
-      method = HttpMethods.GET)(urlDetail.copy(pathOpt=Option(s"api/v1/connection_invitations/$id")))
+      method = HttpMethods.GET)(urlParam.copy(pathOpt=Option(s"api/v1/connection_invitations/$id")))
     handleRespFut(respFut)
   }
 
   def listConnections(): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("", agentAuth,
-      method = HttpMethods.GET)(urlDetail.copy(pathOpt=Option(s"api/v1/connection_invitations")))
+      method = HttpMethods.GET)(urlParam.copy(pathOpt=Option(s"api/v1/connection_invitations")))
     handleRespFut(respFut)
   }
 
   def acceptInvitation(invitation: String): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint(s"""{"url": "$invitation"}""",
-      agentAuth)(urlDetail.copy(pathOpt=Option("api/v1/connections")))
+      agentAuth)(urlParam.copy(pathOpt=Option("api/v1/connections")))
     handleRespFut(respFut, { resp =>
       val jsonObject = new JSONObject(resp)
       val remote = jsonObject.getString("remote")
@@ -79,43 +79,43 @@ class IBMInviterDemoScript extends HttpRemoteMsgSendingSvc {
 
   def listCredentials(): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("", agentAuth,
-      method = HttpMethods.GET)(urlDetail.copy(pathOpt=Option(s"api/v1/credentials")))
+      method = HttpMethods.GET)(urlParam.copy(pathOpt=Option(s"api/v1/credentials")))
     handleRespFut(respFut)
   }
 
   def acceptCredential(id: String): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("""{"state":"accepted"}""", agentAuth,
-      method = HttpMethods.PATCH)(urlDetail.copy(pathOpt=Option(s"api/v1/credentials/$id")))
+      method = HttpMethods.PATCH)(urlParam.copy(pathOpt=Option(s"api/v1/credentials/$id")))
     handleRespFut(respFut)
   }
 
   def listProofRequests(): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("", agentAuth,
-      method = HttpMethods.GET)(urlDetail.copy(pathOpt=Option(s"api/v1/verifications")))
+      method = HttpMethods.GET)(urlParam.copy(pathOpt=Option(s"api/v1/verifications")))
     handleRespFut(respFut)
   }
 
   def generateProof(id: String): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("""{"state":"proof_generated"}""", agentAuth,
-      method = HttpMethods.PATCH)(urlDetail.copy(pathOpt=Option(s"api/v1/verifications/$id")))
+      method = HttpMethods.PATCH)(urlParam.copy(pathOpt=Option(s"api/v1/verifications/$id")))
     handleRespFut(respFut)
   }
 
   def shareProof(id: String): Unit = {
     val respFut = sendGeneralMsgToRemoteEndpoint("""{"state":"proof_shared"}""", agentAuth,
-      method = HttpMethods.PATCH)(urlDetail.copy(pathOpt=Option(s"api/v1/verifications/$id")))
+      method = HttpMethods.PATCH)(urlParam.copy(pathOpt=Option(s"api/v1/verifications/$id")))
     handleRespFut(respFut)
   }
 
   def sendGeneralMsgToRemoteEndpoint(payload: String,
                                      basicAuth: Option[(String, String)]=None,
                                      method: HttpMethod = HttpMethods.POST)
-                                    (implicit ud: UrlDetail): Future[Either[HandledErrorException, String]] = {
-    println("host: " + s"${ud.host}")
-    println("path: " + s"/${ud.path}")
+                                    (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
+    println("host: " + s"${up.host}")
+    println("path: " + s"/${up.path}")
     val req = HttpRequest(
       method = method,
-      uri = s"/${ud.path}",
+      uri = s"/${up.path}",
       entity = HttpEntity(MediaTypes.`application/json`, payload)
     )
     val reqAfterAddingAuth = basicAuth.map { case (userName, userPwd) =>

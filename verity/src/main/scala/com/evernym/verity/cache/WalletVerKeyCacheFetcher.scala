@@ -1,14 +1,16 @@
 package com.evernym.verity.cache
 
 
+import com.evernym.verity.actor.wallet.GetVerKeyOpt
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 
-case class GetWalletVerKeyParam(did: DID, getFromPool: Boolean = false, wap: WalletAccessParam) {
+case class GetWalletVerKeyParam(did: DID, getFromPool: Boolean = false, wap: WalletAPIParam) {
   override def toString: String = s"DID: $did, getKeyFromPool: $getFromPool"
 }
 
@@ -29,7 +31,7 @@ class WalletVerKeyCacheFetcher(val walletAPI: WalletAPI, config: AppConfig) exte
   override def getByKeyDetail(kd: KeyDetail): Map[String, Any] = {
     val gvp = kd.key.asInstanceOf[GetWalletVerKeyParam]
     val verKeyOpt = walletAPI.getVerKeyOption(
-      KeyInfo(Right(GetVerKeyByDIDParam(gvp.did, getKeyFromPool = gvp.getFromPool))))(gvp.wap)
+      GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(gvp.did, getKeyFromPool = gvp.getFromPool)))))(gvp.wap)
     val result: Option[Map[String, Any]] = verKeyOpt.map(vk => Map(gvp.did -> vk))
     result.getOrElse(Map.empty)
   }

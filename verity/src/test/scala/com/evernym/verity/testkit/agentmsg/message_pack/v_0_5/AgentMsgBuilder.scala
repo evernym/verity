@@ -9,7 +9,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, InviteCreateMsgDetail_MFV_0_5, PairwiseMsgUids, RedirectConnReqMsgDetail_MFV_0_5}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
-import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.protocol.engine.Constants.{MFV_1_0, MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail, SenderDetail}
@@ -20,7 +20,8 @@ import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
 import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, Connect_MFV_0_5, CreateAgent_MFV_0_5, CreateKey_MFV_0_5, CreateMsg_MFV_0_5, GetConfigs_MFV_0_5, GetMsg_MFV_0_5, GetMsgsByConns_MFV_0_5, RemoveConfigs_MFV_0_5, SendMsgs_MFV_0_5, SignUp_MFV_0_5, TestComMethod, TestConfigDetail, UpdateConfigs_MFV_0_5, UpdateConnStatus_MFV_0_5, UpdateMsgStatusByConns_MFV_0_5, UpdateMsgStatus_MFV_0_5}
-import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyInfo, SealParam}
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyParam, SealParam}
 import org.json.JSONObject
 
 import scala.util.Left
@@ -553,15 +554,15 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       )
 
       val theirAgentEncParam = EncryptParam(
-        Set(KeyInfo(Right(GetVerKeyByDIDParam(pcd.lastSentInvite.senderDetail.agentKeyDlgProof.get.agentDID,
+        Set(KeyParam(Right(GetVerKeyByDIDParam(pcd.lastSentInvite.senderDetail.agentKeyDlgProof.get.agentDID,
           getKeyFromPool = false)))),
-        Option(KeyInfo(Right(GetVerKeyByDIDParam(reqSenderKeyDlgProof.agentDID, getKeyFromPool = false))))
+        Option(KeyParam(Right(GetVerKeyByDIDParam(reqSenderKeyDlgProof.agentDID, getKeyFromPool = false))))
       )
 
       val agentPayloadMsgs = buildAgentMsgPackParam(agentMsgs, theirAgentEncParam)
 
       val remoteAgencySealInfo = SealParam(
-        KeyInfo(Right(GetVerKeyByDIDParam(pcd.lastSentInvite.senderAgencyDetail.DID, getKeyFromPool = false))))
+        KeyParam(Right(GetVerKeyByDIDParam(pcd.lastSentInvite.senderAgencyDetail.DID, getKeyFromPool = false))))
 
       val fwdRouteForAgentPairwiseActor = FwdRouteMsg(pcd.myCloudAgentPairwiseDidPair.DID, Left(remoteAgencySealInfo))
 
@@ -636,15 +637,15 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       val remoteAgentAndAgencyIdentity = asCloudAgent.remoteAgentAndAgencyIdentityOpt.get
 
       val theirAgentEncParam = EncryptParam(
-        Set(KeyInfo(Right(GetVerKeyByDIDParam(remoteAgentAndAgencyIdentity.agentDID, getKeyFromPool = false)))),
-        Option(KeyInfo(Right(GetVerKeyByDIDParam(pairwiseConnDetail(connId).myPairwiseDidPair.DID, getKeyFromPool = false))))
+        Set(KeyParam(Right(GetVerKeyByDIDParam(remoteAgentAndAgencyIdentity.agentDID, getKeyFromPool = false)))),
+        Option(KeyParam(Right(GetVerKeyByDIDParam(pairwiseConnDetail(connId).myPairwiseDidPair.DID, getKeyFromPool = false))))
       )
 
       val agentPayloadMsgs = buildCoreCreateGeneralMsgWithVersion(msgTypeVersion, includeSendMsg, msgType,
         corePayloadMsg, replyToMsgId, title, detail)(theirAgentEncParam)
 
       val remoteAgencySealInfo = SealParam(
-        KeyInfo(Right(GetVerKeyByDIDParam(remoteAgentAndAgencyIdentity.agencyDID, getKeyFromPool = false))))
+        KeyParam(Right(GetVerKeyByDIDParam(remoteAgentAndAgencyIdentity.agencyDID, getKeyFromPool = false))))
 
       val fwdRouteForAgentPairwiseActor = FwdRouteMsg(remoteAgentAndAgencyIdentity.agentDID, Left(remoteAgencySealInfo))
 

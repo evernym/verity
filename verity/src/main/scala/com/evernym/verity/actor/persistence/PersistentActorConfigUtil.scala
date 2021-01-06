@@ -3,15 +3,28 @@ package com.evernym.verity.actor.persistence
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.{getConfBooleanValue, getConfIntValue}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.typesafe.config.ConfigException
-import com.typesafe.scalalogging.Logger
-
-import scala.concurrent.duration.{Duration, _}
 
 object PersistentActorConfigUtil {
 
-  private val logger: Logger = getLoggerByName("PersistentActorConfigUtil")
+  /**
+   * reads 'recover-from-snapshots' configuration
+   *
+   * @param appConfig
+   * @param defaultValue
+   * @param entityCategory
+   * @param entityName
+   * @param entityId
+   * @return receive timeout
+   */
+  def getRecoverFromSnapshot(appConfig: AppConfig,
+                             defaultValue: Boolean,
+                             entityCategory: String,
+                             entityName: String,
+                             entityId: String): Boolean = {
+
+    val confValue = getConfBooleanValue(appConfig, entityCategory, entityName, entityId, RECOVER_FROM_SNAPSHOT)
+    confValue.getOrElse(defaultValue)
+  }
 
   /**
    * reads 'snapshot after n event' configuration

@@ -7,6 +7,7 @@ import com.evernym.verity.testkit.util.TestUtil.getSigningKey
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.WalletUtil._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -56,18 +57,13 @@ trait CommonSpecUtil {
     DidPair(dinfo.did, dinfo.verKey)
   }
 
-  def buildWalletAccessParam(name: String, key: String): WalletAccessParam = {
-    WalletAccessParam(name, key, testWalletConfig, closeAfterUse = false)
-  }
-
-  def createOrOpenWallet(name: String, walletAPI: WalletAPI): WalletAccessParam = {
-    val key = walletAPI.generateWalletKey()
-    val wap = buildWalletAccessParam(name, key)
+  def createWallet(walletId: String, walletAPI: WalletAPI): WalletAPIParam = {
+    val wap = WalletAPIParam(walletId)
     try {
-      walletAPI.createAndOpenWallet(wap)
+      walletAPI.createWallet(wap)
     } catch {
       case _: WalletAlreadyExist =>
-        walletAPI.openWallet(wap)
+        //nothing to do
     }
     wap
   }

@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relati
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.AcceptConnReqMsg_MFV_0_6
@@ -138,7 +138,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
     }
     for (
-      agencyVerKey <- getAgencyVerKeyFut
+      agencyVerKey <- agencyVerKeyFut
     ) yield  {
       paramMap(agencyVerKey) orElse super.stateDetailsWithAgencyVerKey(agencyVerKey)
     }
@@ -191,13 +191,6 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
 
-  /**
-   * state to be snapshotted
-   *
-   * @return
-   */
-  override def snapshotState: Option[AgencyAgentPairwiseState] =
-    if (state.threadContext.forall(_.contexts.isEmpty)) Option(state) else None
 }
 
 trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
@@ -205,8 +198,8 @@ trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
 trait AgencyAgentPairwiseStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>
 
-  override def setAgentWalletSeed(seed: String): Unit = {
-    state = state.withAgentWalletSeed(seed)
+  override def setAgentWalletId(walletId: String): Unit = {
+    state = state.withAgentWalletId(walletId)
   }
 
   override def setAgencyDID(did: DID): Unit = {
@@ -218,8 +211,7 @@ trait AgencyAgentPairwiseStateUpdateImpl
   }
 
   def removeThreadContext(pinstId: PinstId): Unit = {
-    val curThreadContexts = state.threadContext.map(_.contexts).getOrElse(Map.empty)
-    val afterRemoval = curThreadContexts - pinstId
+    val afterRemoval = state.currentThreadContexts - pinstId
     state = state.withThreadContext(ThreadContext(afterRemoval))
   }
 

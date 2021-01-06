@@ -1,9 +1,11 @@
 package com.evernym.verity.testkit.mock.edge_agent
 
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.wallet.StoreTheirKey
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
 /**
  *
@@ -12,7 +14,7 @@ import com.evernym.verity.vault._
  * @param wap wallet access param
  */
 class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
-                            (implicit val wa: WalletAPI, val wap: WalletAccessParam) {
+                            (implicit val wa: WalletAPI, val wap: WalletAPIParam) {
 
   /**
    * their pairwise DID pair
@@ -38,13 +40,13 @@ class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
 
   def setMyCloudAgentPairwiseDidPair(did: DID, verKey: VerKey): Unit = {
     checkIfDidPairNotYetSet(myCloudAgentPairwiseDidPair, "myCloudAgentPairwiseDidPair")
-    wa.storeTheirKey(StoreTheirKeyParam(did, verKey))
+    wa.storeTheirKey(StoreTheirKey(did, verKey))
     myCloudAgentPairwiseDidPair = DidPair(did, verKey)
   }
 
   def setTheirPairwiseDidPair(did: DID, verKey: VerKey): Unit = {
     checkIfDidPairNotYetSet(theirPairwiseDidPair, "theirPairwiseDidPair")
-    wa.storeTheirKey(StoreTheirKeyParam(did, verKey))
+    wa.storeTheirKey(StoreTheirKey(did, verKey))
     theirPairwiseDidPair = DidPair(did, verKey)
   }
 
@@ -56,15 +58,15 @@ class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
   //TODO: this should go to specific class
   def setTheirCloudAgentPairwiseDidPair(did: DID, verKey: VerKey): Unit = {
     checkTheirCloudAgentPairwiseDidPairNotYetSet()
-    wa.storeTheirKey(StoreTheirKeyParam(did, verKey))
+    wa.storeTheirKey(StoreTheirKey(did, verKey))
     theirCloudAgentPairwiseDidPair = DidPair(did, verKey)
   }
 
   //TODO: this should go to specific class
   def getEncryptParamForOthersCloudAgent: EncryptParam = {
     EncryptParam(
-      Set(KeyInfo(Right(GetVerKeyByDIDParam(theirCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
-      Option(KeyInfo(Right(GetVerKeyByDIDParam(myPairwiseDidPair.DID, getKeyFromPool = false))))
+      Set(KeyParam(Right(GetVerKeyByDIDParam(theirCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
+      Option(KeyParam(Right(GetVerKeyByDIDParam(myPairwiseDidPair.DID, getKeyFromPool = false))))
     )
   }
 

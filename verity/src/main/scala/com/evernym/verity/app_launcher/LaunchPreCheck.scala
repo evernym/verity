@@ -13,7 +13,8 @@ import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSy
 import com.evernym.verity.cache.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.constants.Constants.{AGENCY_DID_KEY, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID}
 import com.evernym.verity.util.Util.logger
-import com.evernym.verity.vault.{WalletAccessParam, WalletDoesNotExist, WalletInvalidState}
+import com.evernym.verity.vault.WalletUtil._
+import com.evernym.verity.vault.{WalletDoesNotExist, WalletInvalidState}
 import com.evernym.verity.Exceptions
 
 import scala.concurrent.{Await, Future, TimeoutException}
@@ -90,13 +91,15 @@ object LaunchPreCheck {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
-      val wap = WalletAccessParam("test-wallet-name-" + UUID.randomUUID().toString, "test-enc-key", aac.walletConfig)
-      aac.walletAPI.openWallet(wap)
+      val walletId = "test-wallet-name-" + UUID.randomUUID().toString
+      val wap = generateWalletParamSync(walletId, aac.appConfig, aac.walletProvider)
+      aac.walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
     } catch {
-      case _ : WalletInvalidState | _ : WalletDoesNotExist =>
+      //TODO: this logic doesn't seem to be working, should come back to this and fix it
+      case e @ (_ : WalletInvalidState | _ : WalletDoesNotExist) =>
       //NOTE: we are catching these exceptions which is thrown if invalid/wrong data (in our case non existent wallet name)
       //is passed but at least they confirm that connection with wallet storage was successful.
-      //TODO: may wanna just catch a single exception which works for different wallet storages (file based or sql based etc)
+      //TODO: may wanna just catch a single exception which works for different wallet storage (file based or sql based etc)
       case e: Exception =>
         val errorMsg =
           "wallet storage connection check failed (" +

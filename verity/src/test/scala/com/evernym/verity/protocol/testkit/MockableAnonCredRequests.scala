@@ -1,7 +1,10 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.protocol.engine.{AnonCredRequests, DID}
-import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.{IssuerCreateAndStoreCredentialDefResult, IssuerCreateSchemaResult}
+import java.util.UUID
+
+import com.evernym.verity.actor.wallet.CreatedCredReq
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.external_api_access.AnonCredRequests
 
 import scala.util.Try
 
@@ -67,15 +70,23 @@ object MockableAnonCredRequests {
         	"key_correctness_proof" : "<key_correctness_proof>"
         }""".stripMargin)
 
-    override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[String] =     Try(
-      s"""
+    override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Try[CreatedCredReq] = Try(
+      CreatedCredReq(
+        s"""
         {
           "prover_did" : <prover-DID>,
           "cred_def_id" : $credDefId,
           "blinded_ms" : <blinded_master_secret>,
           "blinded_ms_correctness_proof" : <blinded_ms_correctness_proof>,
           "nonce": <nonce>
+        }""".stripMargin,
+        s"""
+        {
+          "master_secret_blinding_data":{"v_prime":"v_prime","vr_prime":null},
+          "nonce":"nonce",
+          "master_secret_name":"master_secret_name"
         }""".stripMargin
+      )
     )
 
     override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String, revRegistryId: String, blobStorageReaderHandle: Int): Try[String] = Try(
@@ -87,6 +98,14 @@ object MockableAnonCredRequests {
           "signature": <signature>,
           "signature_correctness_proof": <signature_correctness_proof>
      }""".stripMargin
+    )
+
+    def storeCred(credId: String,
+                  credReqMetadataJson: String,
+                  credJson: String,
+                  credDefJson: String,
+                  revRegDefJson: String): Try[String] = Try(
+      Option(credId).getOrElse("cred-id")
     )
 
     override def credentialsForProofReq(proofRequest: String): Try[String] = Try(

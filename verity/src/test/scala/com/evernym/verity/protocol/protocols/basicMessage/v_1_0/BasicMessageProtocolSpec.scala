@@ -5,23 +5,15 @@ import java.util.UUID
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.extractString
-import com.evernym.verity.protocol.engine.Envelope1
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessage._
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
-import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Signal._
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
-import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
-import com.evernym.verity.util.Base64Util
-import com.evernym.verity.util.TimeUtil._
-import org.joda.time.base.BaseDateTime
-import org.scalatest.Assertion
 
 import scala.language.{implicitConversions, reflectiveCalls}
 

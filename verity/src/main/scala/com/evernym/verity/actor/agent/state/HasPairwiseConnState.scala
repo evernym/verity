@@ -14,7 +14,8 @@ import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
-import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAccessParam}
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
 import scala.util.Left
 
@@ -81,7 +82,7 @@ trait PairwiseConnStateBase {
       updateLegacyRelationshipState(cc.theirEdgeDID, lrd)
   }
 
-  def wap: WalletAccessParam
+  def wap: WalletAPIParam
   def walletVerKeyCacheHelper: WalletVerKeyCacheHelper
   def agentMsgTransformer: AgentMsgTransformer
   def encParamBuilder: EncryptionParamBuilder = new EncryptionParamBuilder(walletVerKeyCacheHelper)
@@ -178,7 +179,7 @@ trait PairwiseConnStateBase {
   def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>
-        val theirAgencySealParam = SealParam(KeyInfo(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(
+        val theirAgencySealParam = SealParam(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(
           ld.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(ld.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),

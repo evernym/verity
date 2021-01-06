@@ -1,13 +1,11 @@
 package com.evernym.verity.actor.agent.user
 
-import akka.actor.PoisonPill
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SetupAgentEndpoint
 import com.evernym.verity.actor.agentRegion
-import com.evernym.verity.actor.persistence.{ActorDetail, Done, GetActorDetail}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
-import com.evernym.verity.agentmsg.msgpacker.PackedMsg
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
@@ -17,7 +15,8 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestComMethod
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 
 
@@ -31,7 +30,7 @@ trait UserAgentSpecScaffolding
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
   override lazy val mockAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlDetail("localhost:9001"), platform.agentActorContext.appConfig)
+    new MockAgencyAdmin(system, UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
 
   override lazy val mockEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
     platform.agentActorContext.appConfig, mockAgencyAdmin)
@@ -160,12 +159,8 @@ trait UserAgentSpecScaffolding
 
   protected def restartSpecs(): Unit = {
     "when tried to restart actor" - {
-      "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-        ua ! PoisonPill
-        expectNoMessage()
-        Thread.sleep(1000)
-        aa ! GetActorDetail
-        expectMsgType[ActorDetail]
+      "should be successful and respond" taggedAs UNSAFE_IgnoreAkkaEvents in {
+        restartActor(ua)
       }
     }
   }

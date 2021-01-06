@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AnonCreds, LedgerReadAccess, LedgerWriteAccess}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.State.Undefined
 
 object CredDefDefinition extends CredDefDefinitionTrait

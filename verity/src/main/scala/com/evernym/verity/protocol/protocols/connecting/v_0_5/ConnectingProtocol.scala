@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqRedirectedMsgHelper, ConnectingMsgHelper, RedirectConnReqMsgHelper}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, PackedMsg}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
@@ -17,6 +17,7 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.push_notification.PushNotifMsgBuilder
+import com.evernym.verity.actor.wallet.PackedMsg
 
 
 //noinspection ScalaDeprecation
@@ -37,7 +38,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,Pro
   lazy val myPairwiseVerKeyReq : VerKey = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID_VER_KEY)
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
-    val seed = params.find(_.name == THIS_AGENT_WALLET_SEED).get.value
+    val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
     initWalletDetail(seed)
     ConnectingState(
       ctx.SERVICES_DEPRECATED.appConfig,
@@ -114,7 +115,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,Pro
  * @param uid - unique message id
  */
 
-case class GetInviteDetail_MFV_0_5(override val uid: MsgId) extends GetInviteDetail with ActorMessageClass {
+case class GetInviteDetail_MFV_0_5(override val uid: MsgId) extends GetInviteDetail with ActorMessage {
   val msgName: MsgName = MSG_TYPE_GET_INVITE_DETAIL
   val msgFamily: MsgFamily = ConnectingMsgFamily
 }

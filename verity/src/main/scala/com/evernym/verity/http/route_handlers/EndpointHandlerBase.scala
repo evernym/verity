@@ -39,8 +39,8 @@ trait EndpointHandlerBase
   }
 
   def sendToAgencyAgent(msg: Any): Future[Any] = {
-    getAgencyDIDFut flatMap { DID =>
-      platform.agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(DID, msg))
+    getAgencyDidPairFut flatMap { didPair =>
+      platform.agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(didPair.DID, msg))
     }
   }
 

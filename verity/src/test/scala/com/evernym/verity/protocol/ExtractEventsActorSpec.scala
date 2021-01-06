@@ -2,6 +2,8 @@ package com.evernym.verity.protocol
 
 import akka.actor.Props
 import akka.testkit.EventFilter
+import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
+import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.actor.persistence.Done
 import com.evernym.verity.actor.protocols.{BaseProtocolActorSpec, MockControllerActorBase, SendActorMsg, SendControlMsg}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
@@ -91,7 +93,15 @@ class ExtractEventsActorSpec
           )
         )
         expectMsg(Done)
-        sendToMockController(CTRL_ID_2, SendActorMsg(FromProtocol(CTRL_ID_1)))
+
+
+        val mockRel = Relationship(
+          PAIRWISE_RELATIONSHIP,
+          "mockRel1",
+          Some(DidDoc(CTRL_ID_2)),
+          Seq(DidDoc(CTRL_ID_OTHER)),
+        )
+        sendToMockController(CTRL_ID_2, SendActorMsg(FromProtocol(CTRL_ID_1, mockRel)))
         Thread.sleep(1000)
 
         system.actorOf(ExtractEventsActor.prop(
@@ -107,7 +117,6 @@ class ExtractEventsActorSpec
         events.last shouldBe an[ExtractionComplete]
         events.slice(0, events.size - 1).foreach(_ shouldBe an[ExtractedEvent])
       }
-
     }
 
   //overriding agent msg routing mapping to make the flow working

@@ -6,6 +6,8 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil.{isThreadedInviteId, parseThreadedInviteId}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.MoveProtocol
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
@@ -33,13 +35,17 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
   def handleHandshakeReuse(m: Msg.HandshakeReuse): Any = {
     if (m.`~thread` == null || m.`~thread`.pthid == null) {
       ctx.send(Msg.buildProblemReport(s"Message $m has invalid '~thread` field", "invalid-reuse-message"))
-      return
     }
-    ctx.apply(ConnectionReuseRequested())
-    val resp = Msg.HandshakeReuseAccepted(m.`~thread`)
-    ctx.send(resp)
-    ctx.signal(Signal.ConnectionReused(m.`~thread`, ctx.getRoster.selfId_!))
-    ctx.apply(ConnectionReused())
+    else {
+      ctx.apply(ConnectionReuseRequested())
+      val resp = Msg.HandshakeReuseAccepted(m.`~thread`)
+      ctx.send(resp)
+      ctx.signal(Signal.ConnectionReused(m.`~thread`, ctx.getRoster.selfId_!))
+
+      handleThreadInviteId(m.`~thread`.pthid)
+
+      ctx.apply(ConnectionReused())
+    }
   }
 
   def receivedHandshakeReuseAccepted(m: Msg.HandshakeReuseAccepted): Any = {
@@ -62,14 +68,25 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
     }
   }
 
+  def handleThreadInviteId(id: Option[String]): Unit = {
+    id.foreach{ id =>
+      if(isThreadedInviteId(id)) {
+        parseThreadedInviteId(id)
+          .foreach{ p =>
+            ctx.signal(MoveProtocol(p.protoRefStr, p.relationshipId, ctx.getRoster.selfId_!, p.threadId))
+          }
+      }
+    }
+  }
+
 
   override def applyEvent: ApplyEvent = {
     case (_: State.Uninitialized             , _ , e: Initialized          ) =>
       val paramMap = e.params map { p => InitParamBase(p.name, p.value) }
       (State.Initialized(), initialize(paramMap))
-    case (_: State.Initialized               , _ , e: ConnectionReuseRequested  ) =>
+    case (_: State.Initialized               , _ , _: ConnectionReuseRequested  ) =>
       (State.ConnectionReuseRequested(), ctx.getRoster)
-    case (_: State.ConnectionReuseRequested  , _ , e: ConnectionReused  )         =>
+    case (_: State.ConnectionReuseRequested  , _ , _: ConnectionReused  )         =>
       (State.ConnectionReused(), ctx.getRoster)
   }
 

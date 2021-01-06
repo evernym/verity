@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, AgencyAgentState}
+import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
 import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
 import com.evernym.verity.protocol.protocols.committedAnswer.{v_1_0 => committedAnswer_v10}
@@ -17,7 +17,7 @@ import com.evernym.verity.protocol.protocols.trustping.{v_1_0 => trustping_v10}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef_v06}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
-import com.evernym.verity.protocol.{LegacyPackagingContextSet, PackagingContextSet, ReceivedOrderIncremented, ReceivedOrdersSet, SenderOrderIncremented, SenderOrderSet, SetDomainId, SetPinstId}
+import com.evernym.verity.protocol._
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
 
@@ -272,7 +272,9 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     222 -> presentProof_v10.PresentationProposed,
     223 -> presentProof_v10.ProposeReceived,
-    224 -> SponsorRel
+    224 -> SponsorRel,
+
+    225 -> ChangePairwiseRelIds
   )
 
 }

@@ -326,6 +326,11 @@ trait ProtocolContext[P,R,M,E,S,I]
     case SetDomainId(id) =>
       shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
 
+    case ChangePairwiseRelIds(self, other) =>
+      val s = shadowBackState.getOrElse(Backstate())
+      val newRoster = s.roster.changeSelfId(self).changeOtherId(other)
+      s.copy(roster = newRoster)
+
     case s: SponsorRel => Backstate()
       shadowBackState.getOrElse(Backstate()).copy(sponsorRel = Option(s))
 

@@ -8,6 +8,8 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
+import com.evernym.verity.actor.agent.relationship.RelationshipLike
+import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
@@ -29,7 +31,7 @@ import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.legacy.services._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
-import com.evernym.verity.protocol.{Control, CtlEnvelope}
+import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.{ParticipantUtil, Util}
 import com.evernym.verity.vault.{WalletAPI, WalletConfig}
@@ -114,16 +116,23 @@ class ActorProtocolContainer[
       toBaseBehavior()
       // Ask for sponsor details from domain and record metric for initialized protocol
       agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
-    case ProtocolCmd(FromProtocol(fromPinstId), _) =>
-      toCopyEventsBehavior()
-      context.system.actorOf(
-        ExtractEventsActor.prop(
-          appConfig,
-          entityName,
-          fromPinstId,
-          self
-        )
-      )
+    case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
+      newRel.relationshipType match {
+        case PAIRWISE_RELATIONSHIP =>
+          val changeRelEvt = ChangePairwiseRelIds(newRel.myDid_!, newRel.theirDid_!)
+          toCopyEventsBehavior(changeRelEvt)
+          context.system.actorOf(
+            ExtractEventsActor.prop(
+              appConfig,
+              entityName,
+              fromPinstId,
+              self
+            )
+          )
+        case _ =>
+          logger.warn(s"Command to Move protocol (fromPinstId: $fromPinstId) to a NON-PAIRWISE relationship")
+      }
+
     case ProtocolCmd(stc: SetThreadContext, None) => handleSetThreadContext(stc.tcd)
     case ProtocolCmd(_, metadata) =>
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
@@ -179,20 +188,19 @@ class ActorProtocolContainer[
       stash()
   }
 
-  def toCopyEventsBehavior(): Unit = {
+  def toCopyEventsBehavior(changeRelEvt: Any): Unit = {
     logger.debug("becoming copyEventsBehavior")
-    setNewReceiveBehaviour(copyEventsBehavior)
+    setNewReceiveBehaviour(copyEventsBehavior(changeRelEvt))
   }
 
-  final def copyEventsBehavior: Receive = {
+  final def copyEventsBehavior(changeRelEvt: Any): Receive = {
     case ProtocolCmd(ExtractedEvent(event), None) =>
-      persistExt(event)(
-        { _ =>
-          applyRecordedEvent(event)
-        }
-      )
+      persistExt(event)( _ => applyRecordedEvent(event) )
     case ProtocolCmd(ExtractionComplete(), None) =>
-      toBaseBehavior()
+      persistExt(changeRelEvt){ _ =>
+        applyRecordedEvent(changeRelEvt)
+        toBaseBehavior()
+      }
     case msg: Any =>
       logger.debug(s"$protocolIdForLog received msg: $msg while copy events")
       stash()
@@ -625,4 +633,4 @@ case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessageClass
 case class ThreadContextStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
 case class ThreadContextNotStoredInProtoActor(pinstId: PinstId, protoRef: ProtoRef) extends ActorMessageClass
 
-case class FromProtocol(fromPinstId: PinstId)
+case class FromProtocol(fromPinstId: PinstId, newRelationship: RelationshipLike)

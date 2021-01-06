@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
@@ -215,7 +216,18 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val inviteObj = new JSONObject(invite)
 
         inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+
         inviteObj.has("@id") shouldBe true
+        InviteUtil.isThreadedInviteId(inviteObj.getString("@id"))
+        val threadedInviteId = InviteUtil.parseThreadedInviteId(
+          inviteObj.getString("@id")
+        ).get
+        threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+        threadedInviteId.relationshipId shouldBe verifier.did_!
+        threadedInviteId.threadId shouldBe verifier.currentInteraction.get.threadId.get
+
+
+
         inviteObj.getString("profileUrl") shouldBe logoUrl
         inviteObj.getString("label") shouldBe orgName
         inviteObj.getString("public_did") should endWith(publicDid)

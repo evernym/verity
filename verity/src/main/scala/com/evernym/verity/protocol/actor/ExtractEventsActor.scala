@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.actor
 
-import akka.actor.{ActorRef, PoisonPill, Props}
+import akka.actor.{ActorRef, Props}
+import com.evernym.verity.actor.base.Stop
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.PinstId
@@ -31,7 +32,7 @@ class ExtractEventsActor(override val appConfig: AppConfig,
 
   override def postActorRecoveryCompleted(): List[Future[Any]] = {
     dest ! ProtocolCmd(ExtractionComplete(), None)
-    self ! PoisonPill
+    self ! Stop()
 
     List.empty
   }

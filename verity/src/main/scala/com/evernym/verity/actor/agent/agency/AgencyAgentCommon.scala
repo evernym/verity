@@ -63,6 +63,7 @@ trait AgencyAgentCommon
           case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, newActorId)
           case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
           case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
+          case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
           //TODO: below parameter is required by dead drop protocol (but not used by it if it is running on cloud agency)
           case OTHER_ID                                 => Parameter(OTHER_ID, "")

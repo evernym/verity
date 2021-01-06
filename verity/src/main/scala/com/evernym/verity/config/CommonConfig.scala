@@ -349,6 +349,9 @@ trait CommonConfig {
   val MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS =
     s"$MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB.interval-in-seconds"
 
+  val VERITY_ENDORSER = s"$VERITY_AGENT.endorser"
+  val VERITY_ENDORSER_DEFAULT_DID = s"$VERITY_ENDORSER.did"
+
   val LOGGING = s"$VERITY.logging"
   val LOGGING_IGNORE_FILTER_NAMES = s"$LOGGING.ignore-logger-filter.logger-name-contains"
 }

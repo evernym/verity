@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
-import com.evernym.verity.actor.persistence.Done
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.protocols.{BaseProtocolActorSpec, MockControllerActorBase, SendActorMsg, SendControlMsg}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig

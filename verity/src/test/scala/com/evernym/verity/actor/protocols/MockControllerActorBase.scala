@@ -2,12 +2,13 @@ package com.evernym.verity.actor.protocols
 
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.ActorMessageClass
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, InternalMsgRouteParam, SetRoute}
 import com.evernym.verity.actor.agent.user.GetSponsorRel
-import com.evernym.verity.actor.persistence.{BaseNonPersistentActor, Done, HasActorResponseTimeout}
+import com.evernym.verity.actor.base.{CoreActor, Done}
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.constants.InitParamConstants._
@@ -30,7 +31,7 @@ import scala.concurrent.Future
  *     for further processing
  */
 trait MockControllerActorBase
-  extends BaseNonPersistentActor
+  extends CoreActor
     with ActorLaunchesProtocol
     with HasActorResponseTimeout
     with HasLogger {
@@ -137,7 +138,7 @@ trait MockControllerActorBase
     case AGENCY_DID_VER_KEY       => Parameter(AGENCY_DID_VER_KEY, "agency-ver-key")
   }
 
-  override def walletSeed: String = getClass.getSimpleName
+  override def agentWalletIdReq: String = getClass.getSimpleName
   override def domainId: DomainId = controllerData.myDID
   override def logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 }
@@ -153,7 +154,7 @@ case class ControllerData(myDID: DID,
   def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("other DID not supplied"))
 }
 
-case class SetupController(data: ControllerData) extends ActorMessageClass
-case class SendActorMsg(msg: Any) extends ActorMessageClass
-case class SendControlMsg(msg: Any) extends ActorMessageClass
-case class ProtoIncomingMsg(msg: Any) extends ActorMessageClass
+case class SetupController(data: ControllerData) extends ActorMessage
+case class SendActorMsg(msg: Any) extends ActorMessage
+case class SendControlMsg(msg: Any) extends ActorMessage
+case class ProtoIncomingMsg(msg: Any) extends ActorMessage

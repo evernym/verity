@@ -18,23 +18,26 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.libindy.{LedgerAccessApi, WalletAccessLibindy}
+import com.evernym.verity.libindy.ledger.LedgerAccessApi
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.legacy.services._
-import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
+import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.{ParticipantUtil, Util}
-import com.evernym.verity.vault.{WalletAPI, WalletConfig}
+import com.evernym.verity.vault.WalletConfig
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
@@ -334,10 +337,13 @@ class ActorProtocolContainer[
 
   @silent
   override def createServices: Option[Services] = {
+
     Some(new LegacyProtocolServicesImpl[M,E,I](
       eventRecorder, sendsMsgs, agentActorContext.appConfig,
       agentActorContext.walletAPI, agentActorContext.generalCache,
       agentActorContext.remoteMsgSendingSvc, agentActorContext.agentMsgTransformer,
+      this, this, this))
+  }
 
 
   // For each sharded actor, there will be one region actor per type per node. The region

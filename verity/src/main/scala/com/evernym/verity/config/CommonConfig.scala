@@ -5,7 +5,9 @@ trait CommonConfig {
 
   val VERITY = "verity"
 
-  val VERITY_FUTURE_THREAD_POOL_SIZE = s"$VERITY.future-thread-pool-size"
+  val VERITY_THREAD_POOLS = s"$VERITY.thread-pools"
+  val VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.default-future.size"
+  val VERITY_WALLET_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.wallet-future.size"
 
   val VERITY_DOMAIN_URL_PREFIX = s"$VERITY.domain-url-prefix"
   val VERITY_ENDPOINT = s"$VERITY.endpoint"

@@ -8,5 +8,5 @@ if ! grep -q "deb https://repo.corp.evernym.com/deb evernym-agency-dev-ubuntu ma
 fi
 
 sudo apt-get update
-sudo apt-get install -y libmysqlstorage=0.1.0+4.8
+sudo apt-get install -y libmysqlstorage=0.1.11
 

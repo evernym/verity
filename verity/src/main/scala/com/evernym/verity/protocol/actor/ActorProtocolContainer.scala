@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.actor
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
@@ -39,6 +38,7 @@ import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
@@ -499,6 +499,8 @@ class ActorProtocolContainer[
     grantedAccessRights,
     LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
   )
+
+  override lazy val urlShortening: UrlShorteningAccess = ???
 
   final override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     eventPersistenceFailure(cause, event)

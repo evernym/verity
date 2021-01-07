@@ -7,6 +7,7 @@ import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, Led
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Read, ReadStorage, Write, WriteStorage}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
@@ -130,6 +131,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   }
 
   registerWithSystem()
+
+  override def urlShortening: UrlShorteningAccess = ???
 }
 
 trait Logs {

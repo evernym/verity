@@ -42,6 +42,14 @@ trait WalletAccess
              signType: SignType
             ): Try[Boolean]
 
+  final def verify2(msg: Array[Byte],
+             sig: Array[Byte],
+             verKeyUsed: VerKey,
+             signType: SignType
+            )(handler: Try[Boolean] => Unit): Unit = {handler(verify(msg, sig, verKeyUsed, signType))}
+
+
+
 
   def storeTheirDid(did: DID, verKey: VerKey): Try[Unit]
 

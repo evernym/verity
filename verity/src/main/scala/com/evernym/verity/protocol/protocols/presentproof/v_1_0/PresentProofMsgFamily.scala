@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortenedRTM, InviteShorteningFailedRTM, ShortenInviteRTM}
 
 object PresentProofMsgFamily
   extends MsgFamily {
@@ -126,8 +127,8 @@ package object Ctl {
                      comment: String) extends CtlMsg
   case class Reject(reason: Option[String]) extends CtlMsg
   case class Status() extends CtlMsg
-  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends CtlMsg
-  case class InviteShorteningFailed(invitationId: String, reason: String) extends CtlMsg
+  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends CtlMsg with InviteShortenedRTM
+  case class InviteShorteningFailed(invitationId: String, reason: String) extends CtlMsg with InviteShorteningFailedRTM
 }
 
 // Signal Messages
@@ -140,7 +141,8 @@ package object Sig {
                             predicates: Seq[PresentationPreviewPredicate],
                             comment: String) extends SigMsg
   case class PresentationResult(verification_result: String, requested_presentation: AttributesPresented) extends SigMsg
-  case class ShortenInvite(invitationId: String, inviteURL: String) extends SigMsg
+  //FIXME: RTM -> Shorten Proof
+  case class ShortenInvite(invitationId: String, inviteURL: String) extends SigMsg with ShortenInviteRTM
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
   case class StatusReport(status: String, results: Option[PresentationResult], error: Option[Problem])
 

@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLoggerLike}
 
 import scala.util.Try
@@ -89,6 +90,8 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     override def serviceEndpoint: ServiceEndpoint = ???
 
     override def ledger: LedgerAccess = ???
+
+    override def urlShortening: UrlShorteningAccess = ???
   }
 
   //TODO merge with next

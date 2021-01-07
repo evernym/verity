@@ -1,6 +1,5 @@
 import java.nio.file.{Files, Path, Paths}
 
-import sbt.Keys.update
 import sbt._
 import sbt.internal.util.ManagedLogger
 

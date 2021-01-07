@@ -10,7 +10,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
@@ -106,9 +106,9 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
     runWithInternalSpan(s"openWallet", "WalletActor") {
       walletProvider.openAsync(
         walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
-        .map(w =>SetWallet(Option(w)))
+        .map(w => SetWallet(Option(w)))
         .recover {
-          case _: WalletNotOpened =>  SetWallet(None)
+          case _: WalletNotOpened => SetWallet(None)
         }.pipeTo(self)
     }
   }

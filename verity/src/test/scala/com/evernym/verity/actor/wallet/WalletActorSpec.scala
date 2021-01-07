@@ -1,5 +1,7 @@
 package com.evernym.verity.actor.wallet
 
+import java.util.UUID
+
 import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.actor.agent.DidPair
@@ -13,7 +15,7 @@ import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0._
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Msg, PresentProof, ProofAttribute, ProofRequestUtil}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.RevocationDetails
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.JsonUtil.seqToJson
@@ -23,7 +25,6 @@ import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
 import org.scalatest.concurrent.Eventually
 
-import java.util.UUID
 import scala.concurrent.duration.DurationInt
 
 
@@ -266,18 +267,8 @@ class WalletActorSpec
 
     "when sent CredForProofReq command" - {
       "should respond with a credential for the proof req" in {
-        withCredReceived({ cd: CredData =>
-          val verifierProofRequest = {
-            val proofAttributes = List(ProofAttribute(Option("age"), None, None, None, self_attest_allowed=true))
-            val req = Request("", Option(proofAttributes), None, None, None)
-            val proofRequest = ProofRequestUtil.requestToProofRequest(req)
-            val proofReqStr = proofRequest.map(DefaultMsgCodec.toJson).get
-            Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), proofReqStr)))
-          }
-          val proofReqStr = PresentProof.extractRequest(verifierProofRequest).get
-          holderWalletActor ! CredForProofReq(proofReqStr)
-          val credForProofReq = expectMsgType[String]
-          logger.info("credForProofReq: " + credForProofReq)
+        withCredForProofReqCreated({ cfpr: CredForProofReqData =>
+          logger.info("credForProofReq: " + cfpr.credForProofReq)
         })
       }
     }
@@ -291,10 +282,35 @@ class WalletActorSpec
     }
 
     "when sent CreateProof command" - {
-      "should respond with a proof" ignore {
-        holderWalletActor ! CreateProof("proofRequest", "usedCredentials", "schemas",
-          "credentialDefs", "revStates", "masterSecret")
-        expectMsgType[String]
+      "should respond with a proof" ignore {    //TODO: complete this test and make it un-ignored
+        withCredForProofReqCreated({ cfpr: CredForProofReqData =>
+          val proofReq =
+            s"""
+               {
+                  "nonce":"nonce-1",
+                  "name":"age-proof-req",
+                  "version":"1.0",
+                  "requested_attributes":{
+                    "attest1":{"name":"name","self_attest_allowed":false},
+                    "attest2":{"name":"age","self_attest_allowed":false},
+                  },
+                  "requested_predicates":{},
+                  "ver":"1.0"
+               }""".stripMargin
+          val schemas =
+            s"""
+               "schema1_id":"test-schema"
+                """.stripMargin
+          val credDefs =
+            s"""
+               "cred_def1_id":"${cfpr.credDef.credDefId}"
+                """.stripMargin
+
+          holderWalletActor ! CreateProof(proofReq, cfpr.credForProofReq, schemas,
+            credDefs, null, "masterSecret")
+          val proof = expectMsgType[String]
+          logger.info("proof: " + proof)
+        })
       }
     }
   }
@@ -307,6 +323,23 @@ class WalletActorSpec
   def storeTheirKeyInWallet(nk: NewKeyCreated, walletActor: agentRegion): Unit = {
     walletActor ! StoreTheirKey(nk.did, nk.verKey)
     expectMsgType[TheirKeyStored]
+  }
+
+  def withCredForProofReqCreated[T](f: CredForProofReqData => T): T = {
+    withCredReceived { cd: CredData =>
+      val verifierProofRequest = {
+        val proofAttributes = List(ProofAttribute(Option("age"), None, None, None, self_attest_allowed = true))
+        val req = Request("", Option(proofAttributes), None, None, None)
+        val proofRequest = ProofRequestUtil.requestToProofRequest(req)
+        val proofReqStr = proofRequest.map(DefaultMsgCodec.toJson).get
+        Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), proofReqStr)))
+      }
+      val proofReqStr = PresentProof.extractRequest(verifierProofRequest).get
+      holderWalletActor ! CredForProofReq(proofReqStr)
+      val credForProofReq = expectMsgType[String]
+      val data = CredForProofReqData(credForProofReq, cd.credReqData.credDef)
+      f(data)
+    }
   }
 
   def withCredReceived[T](f: CredData => T): T = {
@@ -364,3 +397,4 @@ class WalletActorSpec
 
 case class CredReqData(credDef: CreatedCredDef, credOffer: String, credReq: String, credReqMetaData: String)
 case class CredData(cred: String, credReqData: CredReqData)
+case class CredForProofReqData(credForProofReq: String, credDef: CreatedCredDef)

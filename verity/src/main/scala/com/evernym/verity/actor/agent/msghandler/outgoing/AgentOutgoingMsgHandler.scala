@@ -46,18 +46,14 @@ trait AgentOutgoingMsgHandler
     case ProtocolOutgoingMsg(sd: ServiceDecorator, to, _, rmId, _, pDef, tcd) =>
       handleProtocolServiceDecorator(sd, to, rmId, pDef, tcd)
 
-
     //pinst -> actor protocol container (send method) -> this actor
     case pom: ProtocolOutgoingMsg    => handleProtocolOutgoingMsg(pom)
 
     //pinst -> actor driver (sendToForwarder method) -> this actor
     case ssm: SendSignalMsg          => handleSendSignalMsg(ssm)
 
-    //this actor -> this actor (after done some pre processing work)
-    case pssm: ProcessSendSignalMsg  => processSendSignalMsg(pssm.ssm)
-
     //this actor -> this actor
-    case ssm: SendStoredMsgToSelf       => handleSendStoredMsgToSelf(ssm.msgId)
+    case ssm: SendStoredMsgToSelf    => handleSendStoredMsgToSelf(ssm.msgId)
   }
 
   /**
@@ -185,7 +181,7 @@ trait AgentOutgoingMsgHandler
     //during connections protocol, when first message 'request' is received from other side,
     //that participant is unknown and hence it is stored as 'unknown_sender_participant_id' in the thread context
     //and when it responds with 'response' message, it just adds that in thread object
-    //but for recipient it may look unfamilier and for now, filtering it.
+    //but for recipient it may look unfamiliar and for now, filtering it.
     val updatedPmd = protoMsgDetail.map { pmd =>
       pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID))
     }

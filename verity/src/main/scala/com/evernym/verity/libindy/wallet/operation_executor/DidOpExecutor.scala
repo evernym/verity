@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutionException
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.vault.WalletExt
 import org.hyperledger.indy.sdk.InvalidStructureException
 import org.hyperledger.indy.sdk.did.{Did, DidJSONParameters}

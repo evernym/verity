@@ -281,10 +281,12 @@ class LegacyWalletAPI(appConfig: AppConfig,
       } catch {
         case e: BadRequestErrorException => throw e
         case e: WalletItemNotFoundException =>
+          logger.error("error while legacy unpack1: " + e.getMessage)
           throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(e.getMessage))
         case _: InvalidStructureException =>
           throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("invalid packed message"))
         case e: Exception =>
+          logger.error("error while legacy unpack2: " + e.getMessage)
           throw new BadRequestErrorException(UNHANDLED.statusCode,
             Option("unhandled error while unpacking message"))
       }
@@ -293,7 +295,14 @@ class LegacyWalletAPI(appConfig: AppConfig,
 
   def unpackMsg(msg: Array[Byte])(implicit wap: WalletAPIParam): UnpackedMsg = {
     executeOpWithWalletInfo("unpack msg", { we: WalletExt =>
-      UnpackedMsg(Crypto.unpackMessage(we.wallet, msg).get, None, None)
+      try {
+        UnpackedMsg(Crypto.unpackMessage(we.wallet, msg).get, None, None)
+      } catch {
+        case e: Exception =>
+          logger.error("error while unpack: " + e.getMessage)
+          throw new BadRequestErrorException(UNHANDLED.statusCode,
+            Option("unhandled error while unpacking message"))
+      }
     })
   }
 

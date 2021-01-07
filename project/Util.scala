@@ -6,7 +6,7 @@ import com.typesafe.sbt.packager.linux.LinuxPackageMapping
 import com.typesafe.sbt.packager.linux.LinuxPlugin.autoImport.packageMapping
 import sbt.Def.Classpath
 import sbt._
-import sbt.internal.inc.classpath.ClasspathUtilities
+import sbt.internal.inc.classpath.ClasspathUtil
 import sbt.internal.inc.{Analysis, LastModified, Stamps}
 import sbtassembly.MergeStrategy
 import xsbti.compile.analysis._
@@ -18,7 +18,7 @@ import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS, _}
 import scala.language.postfixOps
 
 object Util {
-  lazy implicit val inGitlabCI: Boolean = sys.env.get("CI").isDefined
+  lazy implicit val inGitlabCI: Boolean = sys.env.contains("CI")
 
     /* Scala's incremental compilation depends on file timestamps with millisecond resolution.
      Compressed artifacts drop millisecond resolution on file stimestamps. Use truncateStamps
@@ -42,7 +42,7 @@ object Util {
         Stamps(
           stamps.getAllProductStamps.asScala.toMap.mapValues(truncateMtime),
           stamps.getAllSourceStamps.asScala.toMap.mapValues(truncateMtime),
-          stamps.getAllBinaryStamps.asScala.toMap.mapValues(truncateMtime)
+          stamps.getAllLibraryStamps.asScala.toMap.mapValues(truncateMtime)
         )
       }
 
@@ -94,7 +94,7 @@ object Util {
   }
 
   def findAdditionalJars(dependencies: Classpath, packagedPathPrefix: String, jarNames: Seq[String]): Seq[(File, String)] = {
-    val depLibs = dependencies.map(_.data).filter(ClasspathUtilities.isArchive)
+    val depLibs = dependencies.map(_.data).filter(f => ClasspathUtil.isArchive(f.toPath))
     jarNames
       .map { jarName =>
         depLibs.find(_.getName.contains(jarName))

@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture
 
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.util.UtilBase
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
 

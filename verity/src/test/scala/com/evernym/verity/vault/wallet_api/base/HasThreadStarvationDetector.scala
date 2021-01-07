@@ -1,4 +1,4 @@
-package com.evernym.integrationtests.e2e.third_party_apis.wallet_api.base
+package com.evernym.verity.vault.wallet_api.base
 
 import akka.event.Logging
 import com.evernym.verity.actor.testkit.ActorSpec

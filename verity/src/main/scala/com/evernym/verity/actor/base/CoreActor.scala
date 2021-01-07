@@ -76,7 +76,7 @@ trait CoreActor extends Actor {
 
   private def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
     genericLogger.error(s"[$actorId]: crashed and about to restart => " +
-      s"message being processed while error happened: $message, " +
+      message.map(m => s"message being processed while error happened: " + m).getOrElse("") +
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
   }
 

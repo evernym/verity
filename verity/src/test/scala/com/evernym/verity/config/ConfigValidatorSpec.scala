@@ -79,9 +79,9 @@ class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
         resourceUsageRuleConfValidator.isValidToken("122.175.56.232/1") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("122.175.56.232/10") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/032") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/000") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/032") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/032") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/0") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/000") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/1") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/10") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("52.32.27.13/10") shouldBe true

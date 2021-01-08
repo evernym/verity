@@ -42,6 +42,91 @@ class WriteSchemaSpec
   }
 
   "SchemaProtocol" - {
+    "should signal problem if Write ctl msg have null name" in { f =>
+      f.writer.initParams(Map(
+        "issuerDid" -> "V4SGRU86Z58d6TV7PBUe6f"
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(null, schemaVersion, schemaAttrsJson)
+
+            val pr = f.writer expect signal[ProblemReport]
+            println(pr)
+            f.writer.state shouldBe a[State.Initialized]
+          })
+        })
+      }
+    }
+
+    "should signal problem if Write ctl msg have null version" in { f =>
+      f.writer.initParams(Map(
+        "issuerDid" -> "V4SGRU86Z58d6TV7PBUe6f"
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(schemaName, null, schemaAttrsJson)
+
+            val pr = f.writer expect signal[ProblemReport]
+            println(pr)
+            f.writer.state shouldBe a[State.Initialized]
+          })
+        })
+      }
+    }
+
+    "should signal problem if Write ctl msg have null attributes list" in { f =>
+      f.writer.initParams(Map(
+        "issuerDid" -> "V4SGRU86Z58d6TV7PBUe6f"
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(schemaName, schemaVersion, null)
+
+            val pr = f.writer expect signal[ProblemReport]
+            println(pr)
+            f.writer.state shouldBe a[State.Initialized]
+          })
+        })
+      }
+    }
+
+    "should signal problem if Write ctl msg have empty attributes list" in { f =>
+      f.writer.initParams(Map(
+        "issuerDid" -> "V4SGRU86Z58d6TV7PBUe6f"
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(schemaName, schemaVersion, Seq.empty)
+
+            val pr = f.writer expect signal[ProblemReport]
+            println(pr)
+            f.writer.state shouldBe a[State.Initialized]
+          })
+        })
+      }
+    }
+
+    "should signal problem if Write ctl msg have null atrribute in attributes list" in { f =>
+      f.writer.initParams(Map(
+        "issuerDid" -> "V4SGRU86Z58d6TV7PBUe6f"
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(schemaName, schemaVersion, Seq("name", null))
+
+            val pr = f.writer expect signal[ProblemReport]
+            println(pr)
+            f.writer.state shouldBe a[State.Initialized]
+          })
+        })
+      }
+    }
+
     "should fail when issuer did doesn't have ledger permissions" in {f =>
       f.writer.initParams(Map(
         "issuerDid" -> MockableLedgerAccess.MOCK_NO_DID

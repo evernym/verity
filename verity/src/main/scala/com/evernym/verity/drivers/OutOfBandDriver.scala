@@ -9,7 +9,9 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.MoveProtocol
 class OutOfBandDriver(cp: ActorDriverGenParam) extends ActorDriver(cp){
 
   override def signal[A]: SignalHandler[A] = {
-    case se @ SignalEnvelope(_: MoveProtocol, _, _, _, _) => processSignalMsg(se)
+    case se @ SignalEnvelope(_: MoveProtocol, _, _, _, _) =>
+      processSignalMsg(se)
+      sendSignalMsg(se)
     case sig: SignalEnvelope[A] => sendSignalMsg(sig)
   }
 }

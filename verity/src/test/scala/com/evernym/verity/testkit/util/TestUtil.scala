@@ -1,18 +1,8 @@
 package com.evernym.verity.testkit.util
 
-import java.util.concurrent.ExecutionException
-
-import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.UtilBase
-import com.evernym.verity.vault.WalletExt
 import org.abstractj.kalium.keys.SigningKey
-import org.hyperledger.indy.sdk.did.Did
 import org.iq80.leveldb.util.FileUtils
-
-import scala.compat.java8.FutureConverters
-import scala.concurrent.Future
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 object TestUtil extends UtilBase {
 
@@ -32,14 +22,6 @@ object TestUtil extends UtilBase {
       case e: Exception =>
         logger.warn("error occurred during deleting indy client directory...: " + e.getMessage)
     }
-  }
-
-  override def getVerKey(did: DID,
-                         walletExt: WalletExt,
-                         getKeyFromPool: Boolean,
-                         poolConnManager: LedgerPoolConnManager): Future[String] = {
-    FutureConverters.toScala(Did.keyForLocalDid(walletExt.wallet, did))
-      .recover{ case e: Exception => throw new ExecutionException(e)}
   }
 
   override def performSystemExit(status: Int = -1): Unit = {

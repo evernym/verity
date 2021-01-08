@@ -47,7 +47,7 @@ trait ClientWalletAPISpecBase
   var failedResp: Int = 0
   def totalRespCount: Int = successResp + failedResp
 
-  lazy val libIndyMetricsCollector: ActorRef = platform.libindyMetricsCollector
+  lazy val libIndyMetricsCollector: ActorRef = platform.libIndyMetricsCollector
 
   def printExecutorMetrics(): Unit = {
     //libIndyMetricsCollector ! CollectLibindyMetrics()

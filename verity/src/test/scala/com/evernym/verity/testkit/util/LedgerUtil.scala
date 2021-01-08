@@ -42,8 +42,8 @@ class LedgerUtil (val appConfig: AppConfig,
   private val walletId = submitterDID + "_" + LocalDateTime.now().toString
 
   val walletProvider = new LibIndyWalletProvider(appConfig)
-  val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
-  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
+  val walletService = new TestWalletService(appConfig, walletProvider)
+  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider)
 
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)
 

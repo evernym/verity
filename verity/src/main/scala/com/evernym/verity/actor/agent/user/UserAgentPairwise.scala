@@ -15,7 +15,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
-import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
+import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
@@ -150,6 +150,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       state = state
         .withMySelfRelDID(os.ownerDID)
         .withOwnerAgentKeyDID(os.agentDID)
+      updateStateWithOwnerAgentKey()
     case ads: AgentDetailSet      =>
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
@@ -228,25 +229,23 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   def handleAgentDetailSet(ad: AgentDetailSet): Unit = {
     state = state.withThisAgentKeyId(ad.agentKeyDID)
-    val isThisAnEdeAgent = ad.forDID == ad.agentKeyDID
-    val agentKeyTags: Set[Tags] = if (isThisAnEdeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
+    val isThisAnEdgeAgent = ad.forDID == ad.agentKeyDID
+    val agentKeyTags: Set[Tags] = if (isThisAnEdgeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
     val myDidDoc = RelationshipUtil.prepareMyDidDoc(ad.forDID, ad.agentKeyDID, agentKeyTags)
     state = state.withRelationship(PairwiseRelationship("pairwise", Option(myDidDoc)))
-    if (! isThisAnEdeAgent) {
-      state = state.copy(relationship = state.relWithNewAuthKeyAddedInMyDidDoc(
-        ad.forDID, Set(EDGE_AGENT_KEY)))
+    updateStateWithOwnerAgentKey()
+  }
+
+  def updateStateWithOwnerAgentKey(): Unit = {
+    if (agentWalletId.isDefined) {
+      state.ownerAgentKeyDID.foreach { ownerAgentDID =>
+        state = state.copy(relationship = state.relWithNewAuthKeyAddedInMyDidDoc(
+          ownerAgentDID, getVerKeyReqViaCache(ownerAgentDID), Set(OWNER_AGENT_KEY)))
+      }
     }
   }
 
-  def authedMsgSenderVerKeys: Set[VerKey] = {
-    val authedDIDS = (
-      ownerAgentKeyDID  ++                          //owner agent (if internal msgs are sent encrypted)
-      state.myDid ++                                //my edge pairwise DID
-      state.theirDid ++                             //their pairwise DID
-      state.theirAgentKeyDID                        //their agent key DID
-    ).toSet
-    authedDIDS.filter(_.nonEmpty).map(getVerKeyReqViaCache(_))
-  }
+  def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys
 
   def retryEligibilityCriteriaProvider(): RetryEligibilityCriteria = {
     (state.myDid, state.theirDidDoc.isDefined) match {
@@ -907,6 +906,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           )
         }
         .getOrElse(state)
+      updateStateWithOwnerAgentKey()
     }
   }
 

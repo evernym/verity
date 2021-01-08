@@ -9,6 +9,9 @@ import com.evernym.verity.vault.wallet_api.base.NonActorClientWalletAPISpec
  */
 
 //NOTE: this one exercises "ASYNC wallet api"
+//TODO: This Async test fails most of the time with
+// 'swallowing exception during message send akka.actor.dungeon.SerializationCheckFailedException'
+// need to come back to it and see if we find/fix root cause
 class NonActorAsyncWalletAPISpec
   extends NonActorClientWalletAPISpec
     with MySqlWalletAPISpec {

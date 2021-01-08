@@ -13,7 +13,6 @@ import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
@@ -25,8 +24,8 @@ trait AgentMsgSpecBase
   lazy val appConfig:AppConfig = new TestAppConfig()
   lazy val poolConnManager: LedgerPoolConnManager =  new IndyLedgerPoolConnManager(appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
-  lazy val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
-  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.build(appConfig, TestUtil, walletService, walletProvider, poolConnManager)
+  lazy val walletService = new TestWalletService(appConfig, walletProvider)
+  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider)
 
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 

@@ -56,16 +56,18 @@ trait ShardUtil {
                    props: Props,
                    extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
                    extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
-                   passivateIdleEntityAfter: FiniteDuration = null
+                   passivateIdleEntityAfter: Option[FiniteDuration] = None
                    )(implicit system: ActorSystem): ActorRef = {
-    var clusterSettings = ClusterShardingSettings(system)
-    if (passivateIdleEntityAfter != null) {
-      clusterSettings = clusterSettings.withPassivateIdleAfter(passivateIdleEntityAfter)
+    val defaultClusterSetting = ClusterShardingSettings(system)
+
+    val finalClusterSettings = passivateIdleEntityAfter match {
+      case Some(pt) => defaultClusterSetting.withPassivateIdleAfter(pt)
+      case None     => defaultClusterSetting
     }
     ClusterSharding(system).start(
       typeName          = typeName,
       entityProps       = props,
-      settings          = clusterSettings,
+      settings          = finalClusterSettings,
       extractEntityId   = extractEntityId,
       extractShardId    = extractShardId(ShardIdExtractor(appConfig, typeName))
     )

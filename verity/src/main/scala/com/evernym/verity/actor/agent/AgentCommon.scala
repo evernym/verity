@@ -24,6 +24,7 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
+import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.actor.ProtocolIdDetail
@@ -105,6 +106,8 @@ trait AgentCommon
 
   lazy val singletonParentProxyActor: ActorRef =
     getActorRefFromSelection(SINGLETON_PARENT_PROXY, agentActorContext.system)(agentActorContext.appConfig)
+
+  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
   def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
     try {

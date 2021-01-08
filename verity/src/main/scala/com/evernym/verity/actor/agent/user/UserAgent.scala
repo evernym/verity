@@ -695,6 +695,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       // we should do some long term backward/forward compatible fix may be
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).getOrElse(state.myDid_!))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
+      case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
     }
 
     agencyVerKeyFut map paramMap

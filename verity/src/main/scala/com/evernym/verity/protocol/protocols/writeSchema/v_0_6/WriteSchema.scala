@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants.MY_ISSUER_DID
+import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
@@ -11,6 +11,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Error, Initialized, Processing}
 import com.evernym.verity.util.JsonUtil.seqToJson
+import org.hyperledger.indy.sdk.ledger.Ledger.appendRequestEndorser
 
 import scala.util.{Failure, Success}
 
@@ -56,8 +57,18 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
           ctx.signal(StatusReport(schemaId))
         case Failure(e: LedgerRejectException) if missingVkErr(submitterDID, e) =>
           ctx.logger.warn(e.toString)
-          ctx.apply(AskedForEndorsement(schemaId, schemaJson))
-          ctx.signal(NeedsEndorsement(schemaId, schemaJson))
+          val endorserDid = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+          if (endorserDid.nonEmpty) {
+            val schemaJsonWithEndorser = appendRequestEndorser(schemaJson, endorserDid).get
+            ctx.wallet.signRequest(submitterDID, schemaJsonWithEndorser) match {
+              case Success(ledgerRequest) =>
+                ctx.signal(NeedsEndorsement(schemaId, ledgerRequest.req))
+                ctx.apply(AskedForEndorsement(schemaId, ledgerRequest.req))
+              case Failure(e) => problemReport(e)
+            }
+          } else {
+            problemReport(new Exception("No default endorser defined"))
+          }
         case Failure(e) => problemReport(e)
       }
 

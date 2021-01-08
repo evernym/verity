@@ -298,6 +298,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case LOGO_URL                               => Parameter(LOGO_URL, agentLogoUrl(filteredConfigs.configs))
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
+        case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+
         //this is legacy way of how public DID is being handled
         //'ownerDIDReq' is basically a self relationship id
         // (which may be wrong to be used as public DID, but thats how it is being used so far)

@@ -1,6 +1,6 @@
 package com.evernym.integrationtests.e2e.third_party_apis.wallet_api
 
-import com.evernym.integrationtests.e2e.third_party_apis.wallet_api.base.ActorClientWalletAPISpecBase
+import com.evernym.verity.vault.wallet_api.base.ActorClientWalletAPISpecBase
 
 /**
  * this is an integration test and it depends on mysql based wallet storage
@@ -10,7 +10,8 @@ import com.evernym.integrationtests.e2e.third_party_apis.wallet_api.base.ActorCl
 
 //NOTE: this one exercises "SYNC wallet api" from within actors
 class ActorSyncWalletAPISpec
-  extends ActorClientWalletAPISpecBase {
+  extends ActorClientWalletAPISpecBase
+    with MySqlWalletAPISpec {
 
   val totalUsers: Int = 1000
 

@@ -8,7 +8,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCmdErrorResponse, WalletCreated}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_DURATION
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletUtil._
@@ -23,21 +22,17 @@ import scala.concurrent.Future
  * TODO: may be we need to decide if we need to use "actor based wallet service"
  * for test client code as well
  * @param appConfig
- * @param util
  * @param walletProvider
- * @param ledgerPoolManager
  */
 class TestWalletService(appConfig:AppConfig,
-                        util: UtilBase,
-                        walletProvider: WalletProvider,
-                        ledgerPoolManager: LedgerPoolConnManager)
+                        walletProvider: WalletProvider)
   extends WalletService {
 
   private val walletConfig: WalletConfig = buildWalletConfig(appConfig)
 
   override protected def execute(walletId: String, cmd: Any): Future[Any] = {
     implicit val wp: WalletParam = generateWalletParamSync(walletId, appConfig, walletProvider, walletConfig)
-    implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util: UtilBase, ledgerPoolManager)
+    implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, None)
 
     val resp = cmd match {
       case CreateWallet =>

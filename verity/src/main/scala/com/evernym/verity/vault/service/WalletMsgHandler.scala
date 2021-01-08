@@ -3,14 +3,14 @@ package com.evernym.verity.vault.service
 
 import java.util.concurrent.ExecutionException
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
 import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, LedgerWalletOpExecutor}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.HashAlgorithm.SHA256
-import com.evernym.verity.util.{HashUtil, UtilBase}
+import com.evernym.verity.util.HashUtil
 import com.evernym.verity.vault.{WalletConfig, WalletExt, WalletProvider}
 
 import scala.concurrent.Future
@@ -83,15 +83,15 @@ object WalletMsgHandler {
   }
 
   private def handlePackMsg(pm: PackMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[PackedMsg] = {
-    CryptoOpExecutor.handlePackMsg(pm, wmp.util, wmp.poolManager)
+    CryptoOpExecutor.handlePackMsg(pm, wmp.poolManager)
   }
 
   private def handleLegacyPackMsg(pm: LegacyPackMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[PackedMsg] = {
-    CryptoOpExecutor.handleLegacyPackMsg(pm, wmp.util, wmp.poolManager)
+    CryptoOpExecutor.handleLegacyPackMsg(pm, wmp.poolManager)
   }
 
   private def handleLegacyUnpackMsg(msg: LegacyUnpackMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[UnpackedMsg] = {
-    CryptoOpExecutor.handleLegacyUnpackMsg(msg, wmp.util, wmp.poolManager)
+    CryptoOpExecutor.handleLegacyUnpackMsg(msg, wmp.poolManager)
   }
 
   private def handleVerifySigByKeyParam(vs: VerifySigByKeyParam)
@@ -155,7 +155,7 @@ object WalletMsgHandler {
     gvk.keyParam.verKeyParam.fold (
       l => Future.successful(l),
       r => {
-        wmp.util.getVerKey(r.did, we, r.getKeyFromPool, wmp.poolManager)
+        DidOpExecutor.getVerKey(r.did, r.getKeyFromPool, wmp.poolManager)
       }
     )
   }
@@ -165,13 +165,11 @@ object WalletMsgHandler {
  * a parameter to be used by WalletMsgHandler
  * @param walletProvider
  * @param walletParam
- * @param util
  * @param poolManager
  */
 case class WalletMsgParam(walletProvider: WalletProvider,
                           walletParam: WalletParam,
-                          util: UtilBase,
-                          poolManager: LedgerPoolConnManager) {
+                          poolManager: Option[LedgerPoolConnManager]=None) {
 }
 
 /**

@@ -62,8 +62,8 @@ trait AgentActorContext extends ActorContext {
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
   lazy val walletService: WalletService = new ActorWalletService(system)
-  lazy val walletAPI: WalletAPI = WalletApiBuilder.build(
-    appConfig, util, walletService, walletProvider, poolConnManager)
+  lazy val walletAPI: WalletAPI = buildWalletAPI(
+    appConfig, walletService, walletProvider, Option(poolConnManager))
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val walletConfig: WalletConfig = buildWalletConfig(appConfig)
@@ -93,6 +93,12 @@ trait AgentActorContext extends ActorContext {
       }
     }
   }
+
+  def buildWalletAPI(appConfig: AppConfig,
+                     walletService: WalletService,
+                     walletProvider: WalletProvider,
+                     poolConnManager: Option[LedgerPoolConnManager]=None): WalletAPI =
+    WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider, poolConnManager)
 }
 
 
@@ -108,14 +114,13 @@ class DefaultLedgerSvc(val system: ActorSystem,
 
 object WalletApiBuilder {
 
-  def build(appConfig: AppConfig,
-            util: UtilBase,
-            walletService: WalletService,
-            walletProvider: WalletProvider,
-            poolConnManager: LedgerPoolConnManager): WalletAPI = {
+  def createWalletAPI(appConfig: AppConfig,
+                      walletService: WalletService,
+                      walletProvider: WalletProvider,
+                      poolConnManager: Option[LedgerPoolConnManager]=None): WalletAPI = {
     val walletApiConfigPath = "verity.wallet-api"
     appConfig.getConfigStringOption(walletApiConfigPath) match {
-      case Some("legacy")     => new LegacyWalletAPI(appConfig, walletProvider, util, poolConnManager)
+      case Some("legacy")     => new LegacyWalletAPI(appConfig, walletProvider, poolConnManager)
       case Some("standard")   => new StandardWalletAPI(walletService)
       case _                  => throw new RuntimeException(s"invalid value for configuration: '$walletApiConfigPath'")
     }

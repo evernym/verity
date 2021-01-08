@@ -10,12 +10,11 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.util.UtilBase
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletExt, WalletNotOpened, WalletProvider}
@@ -24,7 +23,7 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.Future
 
 
-class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerPoolConnManager)
+class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
   extends CoreActor
     with Stash {
 
@@ -39,7 +38,7 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
   def preInitReceiver: Receive = {
     case swp: SetWalletParam  =>
       walletParamOpt = Option(swp.wp)
-      wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, util, poolManager))
+      wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, Option(poolManager)))
       tryOpeningWalletIfExists()
   }
 
@@ -106,9 +105,9 @@ class WalletActor(val appConfig: AppConfig, util: UtilBase, poolManager: LedgerP
     runWithInternalSpan(s"openWallet", "WalletActor") {
       walletProvider.openAsync(
         walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
-        .map(w =>SetWallet(Option(w)))
+        .map(w => SetWallet(Option(w)))
         .recover {
-          case _: WalletNotOpened =>  SetWallet(None)
+          case _: WalletNotOpened => SetWallet(None)
         }.pipeTo(self)
     }
   }

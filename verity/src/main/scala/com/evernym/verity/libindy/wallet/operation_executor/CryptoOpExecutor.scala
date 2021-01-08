@@ -4,8 +4,7 @@ package com.evernym.verity.libindy.wallet.operation_executor
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
-import com.evernym.verity.util.UtilBase
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
 import com.evernym.verity.actor.wallet.{GetVerKey, LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
 import com.evernym.verity.protocol.engine.VerKey
@@ -21,11 +20,11 @@ import scala.concurrent.Future
 
 object CryptoOpExecutor extends OpExecutorBase {
 
-  def handleLegacyPackMsg(lpm: LegacyPackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
+  def handleLegacyPackMsg(lpm: LegacyPackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
                          (implicit we: WalletExt): Future[PackedMsg] = {
     val resp = for (
-      recipKey      <- verKeyFuture(lpm.recipVerKeyParams, util, ledgerPoolManager).map(_.head);
-      senderVerKey  <- verKeyFuture(lpm.senderVerKeyParam.toSet, util, ledgerPoolManager).map(_.headOption)
+      recipKey      <- verKeyFuture(lpm.recipVerKeyParams, ledgerPoolManager).map(_.head);
+      senderVerKey  <- verKeyFuture(lpm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
     ) yield {
       val fut = senderVerKey match {
         case None             => Crypto.anonCrypt(recipKey, lpm.msg)
@@ -36,11 +35,11 @@ object CryptoOpExecutor extends OpExecutorBase {
     resp.flatten
   }
 
-  def handleLegacyUnpackMsg(lum: LegacyUnpackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
+  def handleLegacyUnpackMsg(lum: LegacyUnpackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
                            (implicit we: WalletExt): Future[UnpackedMsg] = {
 
     val result = for (
-      fromVerKey <- verKeyFuture(lum.fromVerKeyParam.toSet, util, ledgerPoolManager).map(_.head)
+      fromVerKey <- verKeyFuture(lum.fromVerKeyParam.toSet, ledgerPoolManager).map(_.head)
     ) yield {
       val result = if (lum.isAnonCryptedMsg) {
         Crypto.anonDecrypt(we.wallet, fromVerKey, lum.msg)
@@ -61,15 +60,15 @@ object CryptoOpExecutor extends OpExecutorBase {
     result.flatten
   }
 
-  def handlePackMsg(pm: PackMsg, util: UtilBase, ledgerPoolManager: LedgerPoolConnManager)
+  def handlePackMsg(pm: PackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
                    (implicit we: WalletExt): Future[PackedMsg] = {
     // Question: Should JSON validation for msg happen here or is it left to libindy?
     // Question: Since libindy expects bytes, should msg be bytes and not string. This will
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
 
     val result = for (
-      recipKeys     <- verKeyFuture(pm.recipVerKeyParams, util, ledgerPoolManager);
-      senderVerKey  <- verKeyFuture(pm.senderVerKeyParam.toSet, util, ledgerPoolManager).map(_.headOption)
+      recipKeys     <- verKeyFuture(pm.recipVerKeyParams, ledgerPoolManager);
+      senderVerKey  <- verKeyFuture(pm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
     ) yield {
       val recipKeysJson = jsonArray(recipKeys)
       Crypto.packMessage(we.wallet, recipKeysJson, senderVerKey.orNull, pm.msg)

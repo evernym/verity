@@ -2,7 +2,7 @@ package com.evernym.verity.libindy.wallet.operation_executor
 
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 
 import scala.concurrent.Future

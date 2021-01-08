@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.state.base
 
 import com.evernym.verity.actor.State
-import com.evernym.verity.actor.agent.relationship.Tags.AGENT_KEY_TAG
+import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, KeyId, Relationship}
 import com.evernym.verity.actor.agent.{ConnectionStatus, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
@@ -96,6 +96,8 @@ trait AgentStateInterface extends State {
   def thisAgentVerKey: Option[VerKey] = thisAgentAuthKey.filter(_.verKeyOpt.isDefined).map(_.verKey)
   def thisAgentVerKeyReq: VerKey = thisAgentVerKey.getOrElse(throw new RuntimeException("this agent ver key not found"))
 
+  def ownerAgentVerKey: Option[VerKey] = relationship.flatMap(_.myDidDocAuthKeyByTag(OWNER_AGENT_KEY)).map(_.verKey)
+
   def theirAgentAuthKey: Option[AuthorizedKeyLike] = relationship.flatMap(_.theirDidDocAuthKeyByTag(AGENT_KEY_TAG))
   def theirAgentAuthKeyReq: AuthorizedKeyLike = theirAgentAuthKey.getOrElse(
     throw new RuntimeException("their agent auth key not yet set"))
@@ -108,7 +110,7 @@ trait AgentStateInterface extends State {
     relationship.flatMap(_.myDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
   def theirAuthVerKeys: Set[VerKey] =
     relationship.flatMap(_.theirDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
-  def allAuthedVerKeys: Set[VerKey] = myAuthVerKeys ++ theirAuthVerKeys
+  def allAuthedVerKeys: Set[VerKey] = myAuthVerKeys ++ theirAuthVerKeys ++ theirAgentVerKey ++ ownerAgentVerKey
 
   def serializedSize: Int
 }

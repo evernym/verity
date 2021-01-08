@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status.INVALID_VALUE
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.WalletCmdErrorResponse
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil
@@ -50,7 +50,7 @@ trait WalletService extends AsyncToSync {
     val startTime = Instant.now()
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        logger.error(s"error while executing wallet command: ${cmd.toString}, error msg: ${wer.sd.statusMsg}",
+        logger.error(s"error while executing wallet command: ${cmd.getClass.getSimpleName}, error msg: ${wer.sd.statusMsg}",
           (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
         MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         wer.sd.statusCode match {
@@ -84,6 +84,6 @@ trait AsyncToSync {
 
   def convertToSyncReq[T](fut: Future[T]): T = {
     //TODO: finalize timeout
-    Await.result(fut, FiniteDuration(300, TimeUnit.SECONDS))
+    Await.result(fut, FiniteDuration(50, TimeUnit.SECONDS))
   }
 }

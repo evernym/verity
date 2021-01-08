@@ -7,7 +7,6 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.protocols.HasAppConfig
-import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.StandardWalletAPI
@@ -19,7 +18,7 @@ trait HasWalletHelper extends CommonSpecUtil { this: HasAppConfig =>
 
   val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
   val walletProvider = new LibIndyWalletProvider(appConfig)
-  val walletService = new TestWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
+  val walletService = new TestWalletService(appConfig, walletProvider)
   val walletAPI = new StandardWalletAPI(walletService)
 
   implicit lazy val wap: WalletAPIParam = {

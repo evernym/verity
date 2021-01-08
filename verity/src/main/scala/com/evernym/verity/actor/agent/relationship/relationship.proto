@@ -120,8 +120,9 @@ enum Tags {
     option (scalapb.enum_options).extends = "TagLike";
     option (scalapb.enum_options).companion_extends = "TagLikeCompanion";
     AGENT_KEY_TAG = 0 [(scalapb.enum_value).extends = "AgentKeyTag"];
-    EDGE_AGENT_KEY = 1 [(scalapb.enum_value).extends = "AgentKeyTag"];
+    EDGE_AGENT_KEY = 1 [(scalapb.enum_value).extends = "EdgeAgentKeyTag"];
     CLOUD_AGENT_KEY = 2 [(scalapb.enum_value).extends = "CloudAgentKeyTag"];
     RECIP_KEY = 3 [(scalapb.enum_value).extends = "RecipKeyTag"];
-    RECOVERY_KEY = 4 [(scalapb.enum_value).extends = "RecipKeyTag"];
+    RECOVERY_KEY = 4 [(scalapb.enum_value).extends = "RecoveryKeyTag"];
+    OWNER_AGENT_KEY = 5 [(scalapb.enum_value).extends = "OwnerAgentKeyTag"];
 }

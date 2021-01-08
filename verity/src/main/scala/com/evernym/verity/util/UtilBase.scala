@@ -14,7 +14,6 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
@@ -31,8 +30,6 @@ import org.apache.commons.codec.digest.DigestUtils
 import org.velvia.MsgPack
 import org.velvia.MsgPackUtils.unpackMap
 
-import scala.concurrent.Future
-
 
 // TODO should not be needed here, should remove utils that use it
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -48,8 +45,6 @@ case class PackedMsgWrapper(msg: Array[Byte], reqMsgContext: ReqMsgContext) exte
 
 trait UtilBase {
   val logger: Logger = getLoggerByClass(classOf[UtilBase])
-
-  def getVerKey(did: DID, walletExt: WalletExt, getKeyFromPool: Boolean, poolConnManager: LedgerPoolConnManager): Future[VerKey]
 
   def replaceVariables(str: String, map: Map[String, String]): String ={
     val encodedStr = map.foldLeft(str)((s:String, x:(String,String)) => ( "#\\{" + x._1 + "\\}" ).r.

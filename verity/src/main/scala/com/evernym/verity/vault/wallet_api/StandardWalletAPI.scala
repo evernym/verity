@@ -1,6 +1,6 @@
 package com.evernym.verity.vault.wallet_api
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.{WalletCreated, _}
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, FutureConverter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass

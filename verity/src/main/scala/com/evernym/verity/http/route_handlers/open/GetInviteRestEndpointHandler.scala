@@ -16,7 +16,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.constants.Constants.{RESOURCE_TYPE_ENDPOINT, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.protocol.actor.{ActorProtocol, MsgEnvelope}
+import com.evernym.verity.protocol.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, MsgId, ProtoDef}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_v_0_5}
@@ -46,17 +46,24 @@ trait GetInviteRestEndpointHandler
   def getInviteDetail(aid: ActorItemDetail): Future[Any] = {
     implicit val actorEntityId: String = aid.actorEntityId
     val protocolDefs: Set[ProtoDef] = Set(ConnectingProtoDef_v_0_5, ConnectingProtoDef_v_0_6)
-    val cmd = protocolDefs.find(pd => ActorProtocol.buildTypeName(pd) == aid.regionTypeName) match {
+    val msg = protocolDefs.find(pd => ActorProtocol.buildTypeName(pd) == aid.regionTypeName) match {
       case Some(ConnectingProtoDef_v_0_5)   => GetInviteDetail_MFV_0_5(aid.uid)
       case Some(ConnectingProtoDef_v_0_6)   => GetInviteDetail_MFV_0_6(aid.uid)
       case _                                =>
         throw new NotImplementedErrorException("get invite detail not supported for given token")
     }
+
     val regionActor = ClusterSharding(platform.agentActorContext.system).shardRegion(aid.regionTypeName)
     //TODO (msg-extractor): come back here and see if values given in MsgEnvelope are correct or not?
-    val pem = MsgEnvelope(cmd.typedMsg.msg, cmd.typedMsg.msgType, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID,
+    val pem = MsgEnvelope(msg.typedMsg.msg, msg.typedMsg.msgType, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID,
       Option(MsgFamilyUtil.getNewMsgUniqueId), Option(DEFAULT_THREAD_ID))
-    val getInviteDetailFut = regionActor ? ForIdentifier(actorEntityId, pem)
+
+    val cmd = ProtocolCmd(
+      pem,
+      None
+    )
+
+    val getInviteDetailFut = regionActor ? ForIdentifier(actorEntityId, cmd)
     handleGetInviteDetailFut(getInviteDetailFut)
   }
 

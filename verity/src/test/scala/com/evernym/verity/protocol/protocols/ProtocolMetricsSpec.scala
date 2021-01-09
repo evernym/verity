@@ -3,13 +3,14 @@ package com.evernym.verity.protocol.protocols
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpec_V_0_7
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.{CustomMetrics, MetricWithTags}
 import com.evernym.verity.metrics.MetricHelpers.{SPONSOR_ID, SPONSOR_ID2, getMetricWithTags}
+import com.evernym.verity.metrics.{CustomMetrics, MetricWithTags}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING}
 import kamon.tag.TagSet
 
 
 trait ProtocolMetricsSpec
+
 class AriesProtocolMetricSpec
   extends ProtocolMetricsSpec
     with AgencyAgentPairwiseSpec_V_0_7 {

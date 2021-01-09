@@ -39,7 +39,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     case prm: ProcessRestMsg          => handleRestMsg(prm)
 
     //edge agent -> agency routing service -> self rel actor (user agent actor) -> this actor (pairwise agent actor)
-    case mfr: MsgForRelationship[_]   => handleMsgForRel(mfr)
+    case mfr: MsgForRelationship   => handleMsgForRel(mfr)
 
     //pinst -> actor driver -> this actor
     case mfd: SignalMsgFromDriver     => handleSignalMsgFromDriver(mfd)
@@ -208,7 +208,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     // THIS IS A STOPGAP AND SHOULD NOT BE EXPANDED
     val imp = STOP_GAP_MsgTypeMapper.changedMsgParam(aimp)
 
-    val (msgToBeSent: TypedMsg[_], threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
+    val (msgToBeSent: TypedMsg, threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
       (imp.msgType.familyName, imp.msgType.familyVersion, imp.msgType.msgName) match {
 
         //this is special case where connecting protocols (0.5 & 0.6)
@@ -262,16 +262,16 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     }
   }
 
-  protected def sendTypedMsgToProtocol[A](tmsg: TypedMsgLike[A],
-                                          relationshipId: Option[RelationshipId],
-                                          threadId: ThreadId,
-                                          senderParticipantId: ParticipantId,
-                                          msgRespConfig: Option[MsgRespConfig],
-                                          msgPackFormat: Option[MsgPackFormat],
-                                          msgTypeDeclarationFormat: Option[TypeFormat],
-                                          usesLegacyGenMsgWrapper: Boolean=false,
-                                          usesLegacyBundledMsgWrapper: Boolean=false)
-                                          (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
+  protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,
+                                       relationshipId: Option[RelationshipId],
+                                       threadId: ThreadId,
+                                       senderParticipantId: ParticipantId,
+                                       msgRespConfig: Option[MsgRespConfig],
+                                       msgPackFormat: Option[MsgPackFormat],
+                                       msgTypeDeclarationFormat: Option[TypeFormat],
+                                       usesLegacyGenMsgWrapper: Boolean=false,
+                                       usesLegacyBundledMsgWrapper: Boolean=false)
+                                       (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
     // flow diagram: ctl + proto, step 14
     val msgEnvelope = buildMsgEnvelope(tmsg, threadId, senderParticipantId)
     val pair = pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipId, threadId)
@@ -368,7 +368,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg[_], ThreadId, Option[DID], Option[MsgRespConfig]) = {
+  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
@@ -387,7 +387,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     rmc
   }
 
-  def buildMsgEnvelope[A](typedMsg: TypedMsgLike[A], threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope[A] = {
+  def buildMsgEnvelope(typedMsg: TypedMsgLike, threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope = {
     MsgEnvelope(typedMsg.msg, typedMsg.msgType, selfParticipantId,
       senderParticipantId, Option(getNewMsgId), Option(threadId))
   }
@@ -440,7 +440,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * which is sent from user/agency agent actor.
    * @param mfr message for relationship
    */
-  def handleMsgForRel(mfr: MsgForRelationship[_]): Unit = {
+  def handleMsgForRel(mfr: MsgForRelationship): Unit = {
     // flow diagram: ctl + proto, step 13
     logger.debug(s"msg for relationship received in $persistenceId: " + mfr)
     mfr.reqMsgContext.foreach { rmc: ReqMsgContext =>

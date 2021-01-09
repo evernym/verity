@@ -1,7 +1,5 @@
 package com.evernym.integrationtests.e2e.apis
 
-import java.util.UUID
-
 import com.evernym.integrationtests.e2e.apis.SdkFlowSpec.metricKey
 import com.evernym.integrationtests.e2e.env.AppInstance.Verity
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
@@ -23,6 +21,8 @@ import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
 import org.scalatest.concurrent.Eventually
+
+import java.util.UUID
 
 
 class SdkFlowSpec
@@ -230,6 +230,25 @@ class SdkFlowSpec
       Seq("first_name", "last_name", "license_num")
     )
 
+    // Reuse connection from connection
+    presentProofViaOob_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      Seq("first_name", "last_name", "license_num"),
+      true
+    )
+
+    issueCredentialViaOob_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
+      "cred_name1",
+      "tag",
+      true
+    )
   }
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {

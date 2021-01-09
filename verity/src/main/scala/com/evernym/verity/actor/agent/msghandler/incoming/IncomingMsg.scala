@@ -67,7 +67,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
  * @param msgPackFormat
  * @param msgTypeDeclarationFormat
  */
-case class MsgForRelationship[A](msgToBeSent: TypedMsgLike[A],
+case class MsgForRelationship(msgToBeSent: TypedMsgLike,
                                  threadId: ThreadId,
                                  senderParticipantId: ParticipantId,
                                  msgPackFormat: Option[MsgPackFormat],

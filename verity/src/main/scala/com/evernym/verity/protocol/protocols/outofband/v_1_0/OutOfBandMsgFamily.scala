@@ -26,6 +26,7 @@ object OutOfBandMsgFamily extends MsgFamily {
   )
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
     classOf[Signal.ConnectionReused]  -> "relationship-reused",
+    classOf[Signal.MoveProtocol]      -> "move-protocol",
     classOf[Signal.ProblemReport]     -> "problem-report"
   )
 }
@@ -36,6 +37,7 @@ case class Identity(DID: DID, verKey: VerKey)
 
 object Signal {
   case class ConnectionReused(`~thread`: Thread, relationship: DID) extends SignalMsg
+  case class MoveProtocol(protoRefStr: String, fromRelationship: DID, toRelationship: DID, threadId: ThreadId)
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SignalMsg
   def buildProblemReport(description: String, code: String): Signal.ProblemReport = {
     Signal.ProblemReport(
@@ -68,8 +70,9 @@ object Msg {
                                  `request~attach`: Vector[AttachmentDescriptor],
                                  service: Vector[ServiceFormatted],
                                  profileUrl: Option[String],
-                                 public_did: Option[String]) extends Msg {
-    val `@id`: String = MsgIdProvider.getNewMsgId
+                                 public_did: Option[String],
+                                 `@id`: String = MsgIdProvider.getNewMsgId
+                                ) extends Msg {
     val `@type`: String = MsgFamily.typeStrFromMsgType(OutOfBandMsgFamily.msgType(getClass))
 
     // TODO - this should be dynamic (configurable?) but for now it is hardcoded

@@ -1,22 +1,21 @@
 package com.evernym.verity.actor.testkit
 
-import java.util.concurrent.TimeUnit
-
-import akka.{actor => classic}
 import akka.actor.typed
 import akka.persistence.testkit.scaladsl.{PersistenceTestKit, SnapshotTestKit}
 import akka.testkit.{ImplicitSender, TestEventListener, TestKit, TestKitBase}
+import akka.{actor => classic}
+import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
-import com.evernym.verity.ActorErrorResp
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
@@ -98,7 +97,9 @@ trait HasTestActorSystem extends HasActorSystem {
 trait ActorSpec extends TestSuite with ActorSpecLike with OverrideConfig {
   this: BasicSpecBase =>
 
-  lazy val (as, conf) = AkkaTestBasic.systemWithConfig(overrideConfig)
+  lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
+    overrideConfig
+  )
   implicit lazy val system: classic.ActorSystem = as
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
 }

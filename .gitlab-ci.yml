@@ -45,7 +45,7 @@ license-data-check:
     - mkdir -p $CI_PROJECT_DIR/.sbt && cp -r ~/.sbt/* $CI_PROJECT_DIR/.sbt/.
   tags:
     - docker-machine
-    - compute-xlarge
+    - compute-2xlarge
 
 unit-test:
   extends: .test

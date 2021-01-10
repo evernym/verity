@@ -197,11 +197,11 @@ class WalletActorSpec
         val issuerKeyParam = KeyParam(Right(GetVerKeyByDIDParam(issuerKey.did, getKeyFromPool = false)))
         storeTheirKeyInWallet(issuerKey, holderWalletActor)
 
-        val proverKey = createKeyInWallet(holderWalletActor)
-        val proverKeyParam = KeyParam(Right(GetVerKeyByDIDParam(proverKey.did, getKeyFromPool = false)))
-        storeTheirKeyInWallet(proverKey, issuerWalletActor)
+        val holderKey = createKeyInWallet(holderWalletActor)
+        val holderKeyParam = KeyParam(Right(GetVerKeyByDIDParam(holderKey.did, getKeyFromPool = false)))
+        storeTheirKeyInWallet(holderKey, issuerWalletActor)
 
-        issuerWalletActor ! PackMsg(testByteMsg, recipVerKeyParams = Set(proverKeyParam), senderVerKeyParam = Some(issuerKeyParam))
+        issuerWalletActor ! PackMsg(testByteMsg, recipVerKeyParams = Set(holderKeyParam), senderVerKeyParam = Some(issuerKeyParam))
         val packedMsg = expectMsgType[PackedMsg]
         issuerWalletActor ! UnpackMsg(packedMsg.msg)
         expectMsgType[WalletCmdErrorResponse]
@@ -220,14 +220,14 @@ class WalletActorSpec
         val issuerKeyParam = KeyParam(Right(GetVerKeyByDIDParam(issuerKey.did, getKeyFromPool = false)))
         storeTheirKeyInWallet(issuerKey, holderWalletActor)
 
-        val proverKey = createKeyInWallet(holderWalletActor)
-        val proverKeyParam = KeyParam(Right(GetVerKeyByDIDParam(proverKey.did, getKeyFromPool = false)))
-        storeTheirKeyInWallet(proverKey, issuerWalletActor)
+        val holderKey = createKeyInWallet(holderWalletActor)
+        val holderKeyParam = KeyParam(Right(GetVerKeyByDIDParam(holderKey.did, getKeyFromPool = false)))
+        storeTheirKeyInWallet(holderKey, issuerWalletActor)
 
-        issuerWalletActor ! LegacyPackMsg(testByteMsg, Set(proverKeyParam), Some(issuerKeyParam))
+        issuerWalletActor ! LegacyPackMsg(testByteMsg, Set(holderKeyParam), Some(issuerKeyParam))
         val packedMsg = expectMsgType[PackedMsg]
 
-        holderWalletActor ! LegacyUnpackMsg(packedMsg.msg, fromVerKeyParam = Some(proverKeyParam), isAnonCryptedMsg = false)
+        holderWalletActor ! LegacyUnpackMsg(packedMsg.msg, fromVerKeyParam = Some(holderKeyParam), isAnonCryptedMsg = false)
         val unpackedMsg = expectMsgType[UnpackedMsg]
         assert(testByteMsg.sameElements(unpackedMsg.msg))
       }

@@ -5,7 +5,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
-import com.evernym.verity.testkit.{BasicFixtureSpec, TestWalletHelper}
+import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterAll
 
@@ -16,7 +16,7 @@ class WriteSchemaSpec
   extends TestsProtocolsImpl(WriteSchemaDefinition)
     with BasicFixtureSpec
     with BeforeAndAfterAll
-    with TestWalletHelper {
+    with HasTestWalletAPI {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()

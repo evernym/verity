@@ -2,13 +2,10 @@ package com.evernym.verity.protocol.protocols.deaddrop
 
 import java.util.UUID
 
-import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, SignMsg}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.util.TestWalletService
+import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.apache.commons.codec.digest.DigestUtils
@@ -33,20 +30,8 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
   }
 
   def generatePayload(): DeadDropData = {
-    val poolConnManager = new IndyLedgerPoolConnManager(appConfig)
-    val walletProvider = new LibIndyWalletProvider(appConfig)
-    val walletService = new TestWalletService(appConfig, walletProvider)
-    implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.createWalletAPI(
-      appConfig, walletService, walletProvider)
-
-    lazy val wap = {
-      val key = walletProvider.generateKeySync()
-      val wap = WalletAPIParam(key)
-      walletAPI.createWallet(wap)
-      wap
-    }
-
-    prepareDeadDropData(walletAPI)(wap)
+    val testWallet = new TestWallet(createWallet = true)
+    prepareDeadDropData(testWallet.walletAPI)(testWallet.wap)
   }
 
 }

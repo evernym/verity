@@ -3,19 +3,17 @@ package com.evernym.verity.testkit.util
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter, TransactionAuthorAgreement}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.util.{OptionUtil, TestWalletService}
+import com.evernym.verity.testkit.HasTestWalletAPI
+import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
 
@@ -23,14 +21,18 @@ import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 
-class LedgerUtil (val appConfig: AppConfig,
+class LedgerUtil (override val appConfig: AppConfig,
                   val poolConfigName: Option[String],
                   val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y",
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
                   val taa: Option[TransactionAuthorAgreement] = None,
                   val genesisTxnPath: Option[String] = None)
-  extends CommonSpecUtil {
+  extends CommonSpecUtil
+    with HasTestWalletAPI {
+
+  override def agentWalletId: Option[String] = Option(submitterDID + "_" + LocalDateTime.now().toString)
+  override def createWallet: Boolean = true
 
   lazy val poolConnManager: LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(appConfig, poolConfigName, genesisTxnPath)
@@ -39,15 +41,7 @@ class LedgerUtil (val appConfig: AppConfig,
   }
   // Read requests don't require a particular submitterDID, so here is a random one
   private val privateGetDID: DID = "KZyKVMqt5ShMvxLF1zKM7F"
-  private val walletId = submitterDID + "_" + LocalDateTime.now().toString
-
-  val walletProvider = new LibIndyWalletProvider(appConfig)
-  val walletService = new TestWalletService(appConfig, walletProvider)
-  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider)
-
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)
-
-  private implicit val wap: WalletAPIParam = createWallet(walletId, walletAPI)
 
 //  var currentTAA = taa
 //  var defaultTAA = ConfigUtil.findTAAConfig(appConfig, "1.0.0")

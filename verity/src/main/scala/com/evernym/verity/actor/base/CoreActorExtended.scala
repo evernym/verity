@@ -2,23 +2,22 @@ package com.evernym.verity.actor.base
 
 import java.io.Serializable
 
-import akka.actor.ReceiveTimeout
+import akka.actor.{PoisonPill, ReceiveTimeout}
 import com.evernym.verity.actor.ActorMessage
 
-
 /**
- * core actor extended with few common commands (including receive timeout handler)
- * and has actor timers for scheduled jobs
+ * this actor adds few common/base command handler (Ping, Stop, ReceiveTimeout) to 'CoreActor'
+ * and has some utility methods for scheduled jobs
  */
 trait CoreActorExtended extends CoreActor with HasActorTimers {
 
-  override def receive: Receive = baseCommandHandler(cmdHandler)
+  override def receive: Receive = extendedCoreCommandHandler(cmdHandler)
 
-  final def baseCommandHandler(actualCmdReceiver: Receive): Receive =
-    handleBaseCommand orElse
+  final def extendedCoreCommandHandler(actualCmdReceiver: Receive): Receive =
+    handleExtendedCmd orElse
       coreCommandHandler(actualCmdReceiver)
 
-  private def handleBaseCommand: Receive = {
+  private def handleExtendedCmd: Receive = {
     case s: Ping        =>
       if (s.sendBackConfirmation) sender ! Done
 
@@ -39,8 +38,12 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
     }
   }
 
+  def stopActor(): Unit = {
+    context.self ! PoisonPill
+  }
+
   override def setNewReceiveBehaviour(receiver: Receive): Unit = {
-    context.become(baseCommandHandler(receiver))
+    context.become(extendedCoreCommandHandler(receiver))
   }
 
 }

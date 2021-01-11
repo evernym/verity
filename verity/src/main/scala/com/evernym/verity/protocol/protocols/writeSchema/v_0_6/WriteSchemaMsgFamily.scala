@@ -43,11 +43,9 @@ case class NeedsEndorsement(schemaId: String, schemaJson: String) extends Signal
 trait SchemaControl extends Control with MsgBase
 case class Write(name: String, version: String, attrNames: Seq[String]) extends Msg with SchemaControl {
   override def validate(): Unit = {
-    if (name == null) throw new NullPointerException("Schema name should not be null")
-    if (version == null) throw new NullPointerException("Schema version should not be null")
-    if (attrNames == null) throw new NullPointerException("Schema attrNames should not be null")
-    if (attrNames.isEmpty) throw new Exception("Attributes list should not be empty")
-    if (attrNames.contains(null)) throw new NullPointerException("Attributes list should not contain null values")
+    checkRequired("name", name)
+    checkRequired("version", version)
+    checkRequired("attrNames", attrNames)
   }
 }
 

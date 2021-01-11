@@ -28,12 +28,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def mainHandleControl: (WriteSchemaState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) =>
-      try{
-        m.validate()
-        writeSchemaToLedger(m, s)
-      } catch {
-        case e: Throwable => ctx.signal(ProblemReport(e.getMessage))
-      }
+      writeSchemaToLedger(m, s)
   }
 
   override def applyEvent: ApplyEvent = {

@@ -128,7 +128,7 @@ class ProtocolRegistrySpec extends BasicSpec {
 
   }
 
-  case class TestMsg5(int: Int) extends TypedMsgLike[TestMsg5]{
+  case class TestMsg5(int: Int) extends TypedMsgLike{
     def msg = this
     def msgName = "TEST-MSG-5"
     def msgType = MsgType(EVERNYM_QUALIFIER, MSG_FAMILY_UNKNOWN, MFV_UNKNOWN, msgName)

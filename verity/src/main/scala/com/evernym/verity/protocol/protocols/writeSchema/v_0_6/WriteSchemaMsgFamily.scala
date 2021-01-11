@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
+import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 

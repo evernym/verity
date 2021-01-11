@@ -6,10 +6,10 @@ import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
+import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.PresentProofContext
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
@@ -279,7 +279,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
         }
         else {
           ctx.signal(
-            buildOobInvite(presentationRequest, stateData)
+            buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData)
               .recover{
                 case e: Exception =>
                   ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
@@ -381,7 +381,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
 
-  def buildOobInvite(request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[Sig.ShortenInvite] = {
+  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[Sig.ShortenInvite] = {
     val service = InviteUtil.buildServiced(stateData.agencyVerkey, ctx)
 
     val attachement = Try(
@@ -392,7 +392,10 @@ object PresentProof {
         request)
     )
 
-    val invite = InviteUtil.buildInvite(
+    val invite = InviteUtil.buildInviteWithThreadedId(
+      protoRef,
+      ctx.getRoster.selfId_!,
+      ctx.`threadId_!`,
       stateData.agentName,
       stateData.logoUrl,
       stateData.publicDid,

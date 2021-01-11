@@ -134,4 +134,19 @@ case class Roster[R](participants: Vector[ParticipantId] = Vector[ParticipantId]
 
   def senderFromId(id: ParticipantId) = Sender(Option(id), Option(id).flatMap(participantIndex), roleForId(id))
 
+  def changeSelfId(newId: ParticipantId): Roster[R] = {
+    selfIndex match {
+      case Some(idx) => copy(participants = participants.updated(idx, newId))
+      case None => withParticipant(newId, true)
+    }
+  }
+
+  def changeOtherId(newId: ParticipantId) = {
+    if (hasOther) {
+      copy(participants = participants.updated(otherIndex(), newId))
+    }
+    else {
+      withParticipant(newId)
+    }
+  }
 }

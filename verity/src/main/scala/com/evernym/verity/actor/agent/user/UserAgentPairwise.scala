@@ -39,7 +39,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
+import com.evernym.verity.protocol.actor.{FromProtocol, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, Parameter, VerKey, _}
 import com.evernym.verity.protocol.protocols._
@@ -51,6 +51,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupThei
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{InviteShortened => IssueCredInviteShortened, InviteShorteningFailed => IssueCredInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{ShortenInvite => IssueCredShortenInvite}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.MoveProtocol
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{InviteShortened => PresentProofInviteShortened, InviteShorteningFailed => PresentProofInviteShorteningFailed}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.{ShortenInvite => PresentProofShortenInvite}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSSendingFailed, SMSSent, InviteShortened => RelInviteShortened, InviteShorteningFailed => RelInviteShorteningFailed}
@@ -65,7 +66,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import org.json.JSONObject
 
 import scala.concurrent.Future
-import scala.util.{Failure, Left, Success}
+import scala.util.{Failure, Left, Success, Try}
 
 /**
  Represents the part of a user agent that's dedicated to a single pairwise
@@ -298,6 +299,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case LOGO_URL                               => Parameter(LOGO_URL, agentLogoUrl(filteredConfigs.configs))
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
+        case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+
         //this is legacy way of how public DID is being handled
         //'ownerDIDReq' is basically a self relationship id
         // (which may be wrong to be used as public DID, but thats how it is being used so far)
@@ -320,10 +323,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)
   }
 
-  override def postUpdateConfig(tupdateConf: TypedMsg[UpdateConfigReqMsg], senderVerKey: Option[VerKey]): Unit = {
+  override def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
-    tupdateConf.msg.configs.filter(_.name == configName).foreach { c =>
+    tupdateConf.configs.filter(_.name == configName).foreach { c =>
       val msgs = Set(
         UpdateMsgExpirationTime_MFV_0_5(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt),
         UpdateMsgExpirationTime_MFV_0_6(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt))
@@ -735,13 +738,14 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     //pinst (connections 1.0) -> connections actor driver -> this actor
     case SignalMsgFromDriver(utd: UpdateTheirDid, _, _, _)                => handleUpdateTheirDid(utd)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
-    case SignalMsgFromDriver(si: RelShortenInvite, _, _, _)                  => handleRelationshipShorteningInvite(si)
+    case SignalMsgFromDriver(si: RelShortenInvite, _, _, _)               => handleRelationshipShorteningInvite(si)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
     case SignalMsgFromDriver(ssi: SendSMSInvite, _, _, _)                 => handleSendingSMSInvite(ssi)
     //pinst (issue-credential 1.0) -> issue-credential actor driver -> this actor
     case SignalMsgFromDriver(si: IssueCredShortenInvite, _, _, _)         => handleIssueCredShorteningInvite(si)
     //pinst (present-proof 1.0) -> present-proof actor driver -> this actor
     case SignalMsgFromDriver(si: PresentProofShortenInvite, _, _, _)      => handlePresentProofShorteningInvite(si)
+    case SignalMsgFromDriver(si: MoveProtocol, _, _, _)                   => handleMoveProtocol(si)
   }
 
   def handleUpdateTheirDid(utd: UpdateTheirDid):Future[Option[ControlMsg]] = {
@@ -801,6 +805,63 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           case e: Exception => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Unknown error: ${e}")))
         }
     }
+  }
+
+  def handleMoveProtocol(signal: MoveProtocol): Future[Option[ControlMsg]] = {
+
+    val protoEntry = Try(
+      ProtoRef.fromString(signal.protoRefStr)
+    )
+    .map(protocolRegistry.find_!)
+
+    val oldPinstId = protoEntry
+      .map{ e =>
+        resolvePinstId(
+          e.protoDef,
+          e.pinstIdResol,
+          Some(signal.fromRelationship),
+          signal.threadId,
+          None
+        )
+      }
+
+    val msg = for (
+      p <- oldPinstId;
+      r <- Try(state.relationship.getOrElse(throw new Exception("No relationship define for this actor")))
+    ) yield FromProtocol(p, r)
+
+    val toPinstPair = protoEntry
+      .map{ e =>
+        val pinst = resolvePinstId(
+          e.protoDef,
+          e.pinstIdResol,
+          relationshipId,
+          signal.threadId,
+          None
+        )
+
+        PinstIdPair(pinst, e.protoDef)
+      }
+
+    val values = for (
+      p <- toPinstPair;
+      m <- msg
+    ) yield (p, m)
+
+    values match {
+      case Success((p, m)) => tellProtocolActor(
+        p,
+        m,
+        self
+      )
+      case Failure(exception) => logger.warn(
+        s"Unable to Move protocol from rel ${signal.fromRelationship} to ${signal.toRelationship} " +
+          s"for thread: ${signal.threadId} on a ${signal.protoRefStr}",
+        exception
+      )
+    }
+
+    Future.successful(None)
   }
 
   def handleUpdateTheirDidDoc(stdd: SetupTheirDidDoc):Future[Option[ControlMsg]] = {

@@ -36,4 +36,6 @@ object InitParamConstants {
   val CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON = "createAgentEndpointSetupDetailJson"
 
   val CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON = "createKeyEndpointSetupDetailJson"
+
+  val DEFAULT_ENDORSER_DID = "defaultEndorserDid"
 }

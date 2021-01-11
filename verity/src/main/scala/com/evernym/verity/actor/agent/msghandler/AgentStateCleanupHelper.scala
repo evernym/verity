@@ -1,15 +1,15 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor._
-import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
 import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
+import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.protocol.actor.{ActorProtocol, SetThreadContext, ThreadContextNotStoredInProtoActor, ThreadContextStoredInProtoActor}
+import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.engine.{DID, PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 
@@ -158,7 +158,10 @@ trait AgentStateCleanupHelper {
                 val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, contextualId)
                 if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
                   threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
-                  val cmd = ForIdentifier(pinstId, SetThreadContext(tcd))
+                  val cmd = ForIdentifier(
+                    pinstId,
+                    ProtocolCmd(SetThreadContext(tcd), None)
+                  )
                   e -> Option(cmd)
                 } else e -> None
               } else {

@@ -54,7 +54,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
     e.protoDef.msgFamily.msgTypes.map(mt => mt.normalizedMsgType -> e)
   }.toMap
 
-  private def msgToEntry: TypedMsgLike[_] => Option[Entry[A]] = { tm =>
+  private def msgToEntry: TypedMsgLike => Option[Entry[A]] = { tm =>
     if (supportedMsg_DEPRECATED.isDefinedAt(tm.msg)) {
       supportedMsg_DEPRECATED.lift(tm.msg)
     } else {
@@ -62,21 +62,21 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
     }
   }
 
-  def entryForMsg_![B](tmsg: TypedMsgLike[B]): Entry[A] = {
+  def entryForMsg_![B](tmsg: TypedMsgLike): Entry[A] = {
     entryForMsg[B](tmsg) getOrElse {
       throw new UnsupportedMessageType(tmsg.msg, registeredProtocols.keys)
     }
   }
 
-  def entryForMsg[B](tmsg: TypedMsgLike[B]): Option[Entry[A]] = {
+  def entryForMsg[B](tmsg: TypedMsgLike): Option[Entry[A]] = {
     msgToEntry(tmsg)
   }
 
-  def protoDefForMsg[B](tmsg: TypedMsgLike[B]): Option[ProtoDef] = {
+  def protoDefForMsg[B](tmsg: TypedMsgLike): Option[ProtoDef] = {
     entryForMsg(tmsg).map(_.protoDef)
   }
 
-  def protoDefForMsg_![B](tmsg: TypedMsgLike[B]): ProtoDef = {
+  def protoDefForMsg_![B](tmsg: TypedMsgLike): ProtoDef = {
     protoDefForMsg(tmsg).getOrElse(
       throw new UnsupportedMessageType(tmsg.msg, registeredProtocols.keys)
     )

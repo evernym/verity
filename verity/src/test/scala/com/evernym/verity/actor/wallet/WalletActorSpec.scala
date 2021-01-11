@@ -9,6 +9,7 @@ import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.KEY_ED25519
@@ -19,6 +20,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Rev
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletAPIParam}
+import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
 import org.scalatest.concurrent.Eventually
@@ -31,6 +33,8 @@ class WalletActorSpec
     with BasicSpec
     with ImplicitSender
     with Eventually {
+
+  val logger: Logger = getLoggerByClass(classOf[WalletActorSpec])
 
   lazy val issuerKeySeed: String = UUID.randomUUID().toString.replace("-", "")
   lazy val holderKeySeed: String = UUID.randomUUID().toString.replace("-", "")
@@ -193,11 +197,11 @@ class WalletActorSpec
         val issuerKeyParam = KeyParam(Right(GetVerKeyByDIDParam(issuerKey.did, getKeyFromPool = false)))
         storeTheirKeyInWallet(issuerKey, holderWalletActor)
 
-        val proverKey = createKeyInWallet(holderWalletActor)
-        val proverKeyParam = KeyParam(Right(GetVerKeyByDIDParam(proverKey.did, getKeyFromPool = false)))
-        storeTheirKeyInWallet(proverKey, issuerWalletActor)
+        val holderKey = createKeyInWallet(holderWalletActor)
+        val holderKeyParam = KeyParam(Right(GetVerKeyByDIDParam(holderKey.did, getKeyFromPool = false)))
+        storeTheirKeyInWallet(holderKey, issuerWalletActor)
 
-        issuerWalletActor ! PackMsg(testByteMsg, recipVerKeyParams = Set(proverKeyParam), senderVerKeyParam = Some(issuerKeyParam))
+        issuerWalletActor ! PackMsg(testByteMsg, recipVerKeyParams = Set(holderKeyParam), senderVerKeyParam = Some(issuerKeyParam))
         val packedMsg = expectMsgType[PackedMsg]
         issuerWalletActor ! UnpackMsg(packedMsg.msg)
         expectMsgType[WalletCmdErrorResponse]
@@ -216,14 +220,14 @@ class WalletActorSpec
         val issuerKeyParam = KeyParam(Right(GetVerKeyByDIDParam(issuerKey.did, getKeyFromPool = false)))
         storeTheirKeyInWallet(issuerKey, holderWalletActor)
 
-        val proverKey = createKeyInWallet(holderWalletActor)
-        val proverKeyParam = KeyParam(Right(GetVerKeyByDIDParam(proverKey.did, getKeyFromPool = false)))
-        storeTheirKeyInWallet(proverKey, issuerWalletActor)
+        val holderKey = createKeyInWallet(holderWalletActor)
+        val holderKeyParam = KeyParam(Right(GetVerKeyByDIDParam(holderKey.did, getKeyFromPool = false)))
+        storeTheirKeyInWallet(holderKey, issuerWalletActor)
 
-        issuerWalletActor ! LegacyPackMsg(testByteMsg, Set(proverKeyParam), Some(issuerKeyParam))
+        issuerWalletActor ! LegacyPackMsg(testByteMsg, Set(holderKeyParam), Some(issuerKeyParam))
         val packedMsg = expectMsgType[PackedMsg]
 
-        holderWalletActor ! LegacyUnpackMsg(packedMsg.msg, fromVerKeyParam = Some(proverKeyParam), isAnonCryptedMsg = false)
+        holderWalletActor ! LegacyUnpackMsg(packedMsg.msg, fromVerKeyParam = Some(holderKeyParam), isAnonCryptedMsg = false)
         val unpackedMsg = expectMsgType[UnpackedMsg]
         assert(testByteMsg.sameElements(unpackedMsg.msg))
       }
@@ -233,7 +237,7 @@ class WalletActorSpec
       "should respond with CredReq in a json string" in {
         withCredReqCreated { crd: CredReqData =>
           //add assertions
-          println("cred req: " + crd.credReq)
+          logger.info("cred req: " + crd.credReq)
         }
       }
     }
@@ -249,7 +253,7 @@ class WalletActorSpec
     "when sent CreateCred command" - {
       "should respond with a created credential" in {
         withCredReceived({ crd: CredData =>
-          println("cred: " + crd.cred)
+          logger.info("cred: " + crd.cred)
         })
       }
     }
@@ -264,7 +268,7 @@ class WalletActorSpec
     "when sent CredForProofReq command" - {
       "should respond with a credential for the proof req" in {
         withCredForProofReqCreated({ cfpr: CredForProofReqData =>
-          println("credForProofReq: " + cfpr.credForProofReq)
+          logger.info("credForProofReq: " + cfpr.credForProofReq)
         })
       }
     }
@@ -305,7 +309,7 @@ class WalletActorSpec
           holderWalletActor ! CreateProof(proofReq, cfpr.credForProofReq, schemas,
             credDefs, null, "masterSecret")
           val proof = expectMsgType[String]
-          println("proof: " + proof)
+          logger.info("proof: " + proof)
         })
       }
     }
@@ -361,30 +365,30 @@ class WalletActorSpec
   }
 
   def prepareBasicCredReqSetup(): CredReqData = {
-    println("new key created")
+    logger.info("new key created")
     val schema = Anoncreds.issuerCreateSchema(issuerDidPair.DID, "test-schema", "1.0",
       seqToJson(Array("name", "age"))).get()
-    println("schema created: " + schema)
+    logger.info("schema created")
     issuerWalletActor ! CreateCredDef(issuerDID = issuerDidPair.DID,
       schemaJson = schema.getSchemaJson,
       tag = "tag",
       sigType = Some("CL"),
       revocationDetails = Some(RevocationDetails(support_revocation = false, "tails_file", 5).toString))
     val createdCredDef = expectMsgType[CreatedCredDef](60.second)
-    println("cred def created: " + createdCredDef)
+    logger.info("cred def created")
 
     issuerWalletActor ! CreateCredOffer(createdCredDef.credDefId)
     val credOfferJson = expectMsgType[String]
-    println("cred offer created: " + credOfferJson)
+    logger.info("cred offer created")
 
     holderWalletActor ! CreateMasterSecret(UUID.randomUUID().toString)
     val masterSecretId = expectMsgType[String]
-    println("master secret created")
+    logger.info("master secret created")
 
     holderWalletActor ! CreateCredReq(createdCredDef.credDefId, proverDID = holderDidPair.DID,
       createdCredDef.credDefJson, credOfferJson, masterSecretId)
     val credReq = expectMsgType[CreatedCredReq]
-    println("cred req created: " + credReq)
+    logger.info("cred req created")
 
     CredReqData(createdCredDef, credOfferJson, credReq.credReqJson, credReq.credReqMetadataJson)
   }

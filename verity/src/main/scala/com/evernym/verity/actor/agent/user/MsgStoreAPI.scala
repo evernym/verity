@@ -167,29 +167,5 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       else existingFailedAttemptCount
     writeAndApply(MsgDeliveryStatusUpdated(umds.uid, umds.to, umds.statusCode,
       umds.statusDetail.getOrElse(Evt.defaultUnknownValueForStringType), getMillisForCurrentUTCZonedDateTime, newFailedAttemptCount))
-    updateUndeliveredMsgCountMetrics()
-    updateFailedAttemptCountMetrics()
-    updateFailedMsgCountMetrics()
-  }
-
-  /**
-   * To be overrridden by implementing class
-   */
-  def updateUndeliveredMsgCountMetrics(): Unit = {
-    //specific actor can override this
-  }
-
-  /**
-   * To be overridden by implementing class
-   */
-  def updateFailedAttemptCountMetrics(): Unit = {
-    //specific actor can override this
-  }
-
-  /**
-   * To be overridden by implementing class
-   */
-  def updateFailedMsgCountMetrics(): Unit = {
-    //specific actor can override this
   }
 }

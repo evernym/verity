@@ -22,9 +22,9 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   override final def receiveAgentCmd: Receive = agentCmdReceiver orElse retryCmdReceiver
 
   val retryCmdReceiver: Receive = LoggingReceive.withLabel("retryCmdReceiver") {
-    case FailedMsgRetrierInit                     => init()
-    case CheckRetryJobScheduled                   => scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
-    case RetryUndeliveredMsgs if sender == self   => resendUndeliveredMsgsIfAny()
+    case FailedMsgRetrierInit   => init()
+    case CheckRetryJobScheduled => scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
+    case RetryUndeliveredMsgs   => resendUndeliveredMsgsIfAny()
   }
 
   self ! FailedMsgRetrierInit
@@ -61,7 +61,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   }
 
   def resendUndeliveredMsgsIfAny(): Unit = {
-    updateUndeliveredMsgCountMetrics()
     val pendingMsgs = getMsgIdsEligibleForRetries
     logger.debug(s"[$persistenceId]: pending msgs during retry undelivered msg: " + pendingMsgs)
     if (pendingMsgs.nonEmpty) {
@@ -124,7 +123,6 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   def batchSize: Option[Int] = None   //can be overridden by implementing class
   def scheduledJobInterval: Int
   def getMsgIdsEligibleForRetries: Set[MsgId]
-  def updateUndeliveredMsgCountMetrics(): Unit
   def sendMsgToTheirAgent(uid: MsgId, isItARetryAttempt: Boolean, mpf: MsgPackFormat): Future[Any]
   def agentCmdReceiver: Receive
   def addItemToWatcher(itemId: ItemId): Unit

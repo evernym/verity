@@ -21,11 +21,11 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1607"
+val debPkgDepLibIndyMinVersion = "1.15.0~1618"
 val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1607"
+val libIndyVer = "1.15.0~1618"
 val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),

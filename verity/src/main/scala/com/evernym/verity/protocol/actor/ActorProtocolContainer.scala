@@ -222,9 +222,9 @@ class ActorProtocolContainer[
     resp match {
       case Success(r)  =>
         r match {
-          case () => //if unit then nothing to do
+          case ()               => //if unit then nothing to do
           case fut: Future[Any] => handleFuture(fut, msgIdOpt)
-          case x => sendRespToCaller(x, msgIdOpt, sndr)
+          case x                => sendRespToCaller(x, msgIdOpt, sndr)
         }
 
       case Failure(e) =>
@@ -244,7 +244,7 @@ class ActorProtocolContainer[
     }
   }
 
-  def handleProtocolCmd(cmd: ProtocolCmd) = {
+  def handleProtocolCmd(cmd: ProtocolCmd): Unit = {
     logger.debug(s"$protocolIdForLog handling ProtocolCmd: " + cmd)
 
     cmd.metadata.foreach { m =>
@@ -260,9 +260,9 @@ class ActorProtocolContainer[
       case c: Control =>
         val newMsgId = MsgFamilyUtil.getNewMsgUniqueId
         (newMsgId, c, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
-      case MsgEnvelope(msg: Control, _, _, _, Some(msgId), Some(thId)) =>
+      case MsgEnvelope(msg: Control, _, _, _, Some(msgId), Some(thId))  =>
         (msgId, msg, CtlEnvelope(msg, msgId, thId))
-      case MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId)) =>
+      case MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId))   =>
         (msgId, msg, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
       case m: MsgWithSegment =>
         (m.msgId, m, m)
@@ -291,17 +291,13 @@ class ActorProtocolContainer[
   }
 
   def sendRespToCaller(resp: Any, msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
-    sndr.foreach{ x =>
-      if(x == self) {
-        println("SDF")
-      }
-      else {x ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt)}
-
+    sndr.filter(_ != self).foreach { ar =>
+      ar ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt)
     }
   }
 
-  def setForwarderParams(_walletSeed: String, fwder: ActorRef): Unit = {
-    msgForwarder.setForwarder(fwder)
+  def setForwarderParams(_walletSeed: String, forwarder: ActorRef): Unit = {
+    msgForwarder.setForwarder(forwarder)
     agentWalletId = Option(_walletSeed)
   }
 
@@ -393,11 +389,11 @@ class ActorProtocolContainer[
   //TODO move agentActorContext.smsSvc to be handled here (uses a future)
   class MsgSender extends SendsMsgsForContainer[M](this) {
 
-    def send(pmsg: ProtocolOutgoingMsg): Unit = {
-      val fromAgentId = ParticipantUtil.agentId(pmsg.from)
-      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(fromAgentId, pmsg))
+    def send(pom: ProtocolOutgoingMsg): Unit = {
+      val fromAgentId = ParticipantUtil.agentId(pom.from)
+      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(fromAgentId, pom))
       MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "sent-to-agent-actor",
-        pmsg.requestMsgId, outMsg = Option(pmsg.msg))
+        pom.requestMsgId, outMsg = Option(pom.msg))
     }
 
     //dhh It surprises me to see this feature exposed here. I would have expected it
@@ -424,7 +420,6 @@ class ActorProtocolContainer[
 
 
   def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = {
-    val t = 0
     def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any): Unit = {
       val typeName = SegmentedStateStore.buildTypeName(definition.msgFamily.protoRef, definition.segmentedStateName.get)
       val segmentedStateRegion = ClusterSharding.get(context.system).shardRegion(typeName)
@@ -611,7 +606,6 @@ case class WalletParam(walletAPI: WalletAPI, walletConfig: WalletConfig)
  * @param frm
  * @param msgId
  * @param thId
- * @tparam A
  */
 case class MsgEnvelope(msg: Any,
                        msgType: MsgType,

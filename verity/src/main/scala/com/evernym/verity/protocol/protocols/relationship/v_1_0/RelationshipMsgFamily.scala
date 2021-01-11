@@ -73,7 +73,7 @@ object Msg {
                         recipientKeys: Vector[VerKey],
                         routingKeys: Option[Vector[VerKey]],
                         profileUrl: Option[String],
-                        `@type`: String = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation",
+                        `@type`: String = s"https://${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/invitation", //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation",
                         `@id`: String = MsgIdProvider.getNewMsgId) extends BaseInvitation {
 
     def routingKeys_! : Vector[VerKey] = routingKeys.getOrElse(Vector.empty)
@@ -87,7 +87,7 @@ object Msg {
                                  service: Vector[ServiceFormatted],
                                  profileUrl: Option[String],
                                  public_did: Option[String],
-                                 `@type`: String = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/" +
+                                 `@type`: String = s"https://${MsgFamily.COMMUNITY_QUALIFIER}"+//"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/" +
                                    OutOfBandMsgFamily.name + "/1.0/invitation",
                                  `@id`: String = MsgIdProvider.getNewMsgId) extends BaseInvitation
 }

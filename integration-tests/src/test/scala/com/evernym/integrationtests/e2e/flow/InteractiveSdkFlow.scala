@@ -16,6 +16,7 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, COMMUNITY_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -363,7 +364,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
             createdRespMsg = msg
             println("created response: " + msg)
             msg shouldBe an[JSONObject]
-            msg.getString("@type") shouldBe "did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"
+            msg.getString("@type") shouldBe s"https://${EVERNYM_QUALIFIER}/relationship/1.0/created" //"did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"  //TODO: un-hardcode this
             threadId = msg.getJSONObject("~thread").getString("thid")
           }
 

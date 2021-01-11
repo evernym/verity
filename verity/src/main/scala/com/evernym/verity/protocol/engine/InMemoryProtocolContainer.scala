@@ -26,7 +26,8 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
                                                   driver: Option[Driver]=None,
                                                   parentLogContext: JournalContext=JournalContext(),
                                                   walletAccessProvider: Option[()=>WalletAccess] = None,
-                                                  ledgerAccessProvider: Option[()=>LedgerAccess] = None )
+                                                  ledgerAccessProvider: Option[()=>LedgerAccess] = None,
+                                                  urlShorteningAccessProvider: Option[()=>UrlShorteningAccess] = None)
 
 /**
   * Protocols may run standalone but they most likely will be run in
@@ -132,7 +133,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
 
   registerWithSystem()
 
-  override def urlShortening: UrlShorteningAccess = ???
+  override def urlShortening: UrlShorteningAccess =
+    pce.urlShorteningAccessProvider.map(_()).getOrElse(throw new RuntimeException("no url shortener access provided to container"))
 }
 
 trait Logs {

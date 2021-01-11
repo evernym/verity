@@ -5,6 +5,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
@@ -38,12 +39,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     case (st: State.InvitationCreated       , m: Ctl.OutOfBandInvitation    ) => outOfBandInvitation(st, m)
     case (st: State.Created                 , m: Ctl.SMSOutOfBandInvitation ) => outOfBandInvitation(st, m)
     case (st: State.InvitationCreated       , m: Ctl.SMSOutOfBandInvitation ) => outOfBandInvitation(st, m)
-    case (_: State.InvitationCreated        , m: Ctl.InviteShortened        ) =>
-      ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
     case (_: State.InvitationCreated        , m: Ctl.SMSSent                ) =>
       ctx.signal(Signal.SMSInvitationSent(m.invitationId))
-    case (_: State.InvitationCreated        , _: Ctl.InviteShorteningFailed ) =>
-      ctx.signal(Signal.buildProblemReport("Shortening failed", shorteningFailed))
     case (_: State.InvitationCreated        , _: Ctl.SMSSendingFailed ) =>
       ctx.signal(Signal.buildProblemReport("SMS sending failed", smsSendingFailed))
     case (st: State                         , m: Ctl                        ) => // unexpected state
@@ -91,16 +88,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg)
-    if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(invitationMsg.`@id`, inviteURL))
-    else
+    if (m.shortInvite.getOrElse(defaultShortInviteOption)) {
+      ctx.urlShortening.handleShortening(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
+    } else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
 
   def connectionInvitation(st: State.InvitationCreated, m: Ctl.ConnectionInvitation): Unit = {
     val inviteURL = prepareInviteUrl(st.invitation)
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(st.invitation.`@id`, inviteURL))
+      ctx.urlShortening.handleShortening(ShortenInvite(st.invitation.`@id`, inviteURL), shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, st.invitation.`@id`))
   }
@@ -152,7 +149,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(invitationMsg.`@id`, inviteURL))
+      ctx.urlShortening.handleShortening(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -172,7 +169,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(invitationMsg.`@id`, inviteURL))
+      ctx.urlShortening.handleShortening(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -311,6 +308,13 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = ???
 
+    def shortenerHandler(msg: UrlShortenMsg): Unit =
+    msg match {
+      case m: InviteShortened =>
+        ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
+      case _: InviteShorteningFailed =>
+        ctx.signal(Signal.buildProblemReport("Shortening failed", shorteningFailed))
+    }
 }
 
 sealed trait Role

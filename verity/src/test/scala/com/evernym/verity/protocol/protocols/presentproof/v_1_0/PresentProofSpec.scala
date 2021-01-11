@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import java.util.UUID
-
 import com.evernym.verity.actor.wallet.CreatedCredReq
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
@@ -10,7 +9,7 @@ import com.evernym.verity.protocol.engine.external_api_access.{AnonCredRequests,
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -202,6 +201,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         var nonce: Option[Nonce] = None
 
+        verifier urlShortening MockableUrlShorteningAccess.shortened
         // Verifier starts protocol
         (verifier engage prover) ~ Ctl.Request(
           "",
@@ -211,10 +211,12 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           Some(true)
         )
 
-        val shortenInvite = verifier expect signal[Sig.ShortenInvite]
+        // successful shortening
+        val invitation = verifier expect signal[Sig.Invitation]
+        invitation.shortInviteURL shouldBe Some("http://short.url")
 
-        shortenInvite.inviteURL should not be empty
-        val base64 = shortenInvite.inviteURL.split("oob=")(1)
+        invitation.inviteURL should not be empty
+        val base64 = invitation.inviteURL.split("oob=")(1)
         val invite = new String(Base64Util.getBase64Decoded(base64))
         val inviteObj = new JSONObject(invite)
 
@@ -249,13 +251,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           s.data.requests should have size 1
           nonce = Some(s.data.requests.head.nonce)
         }
-
-        // successful shortening
-        verifier ~ Ctl.InviteShortened(shortenInvite.invitationId, shortenInvite.inviteURL, "http://short.url")
-        val invitation = verifier expect signal[Sig.Invitation]
-        invitation.invitationId shouldBe shortenInvite.invitationId
-        invitation.inviteURL shouldBe shortenInvite.inviteURL
-        invitation.shortInviteURL shouldBe Some("http://short.url")
 
         prover ~ Ctl.AttachedRequest(attachedRequest)
 
@@ -306,7 +301,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       "should handle Out-Of-Band Invitation shortening failed path" in { f =>
         val (verifier, prover) = indyAccessMocks(f)
 
-        var nonce: Option[Nonce] = None
+        verifier urlShortening MockableUrlShorteningAccess.shorteningFailed
 
         // Verifier starts protocol
         (verifier engage prover) ~ Ctl.Request(
@@ -317,47 +312,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           Some(true)
         )
 
-        val shortenInvite = verifier expect signal[Sig.ShortenInvite]
-
-        shortenInvite.inviteURL should not be empty
-        val base64 = shortenInvite.inviteURL.split("oob=")(1)
-        val invite = new String(Base64Util.getBase64Decoded(base64))
-        val inviteObj = new JSONObject(invite)
-
-        inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
-        inviteObj.has("@id") shouldBe true
-        inviteObj.getString("profileUrl") shouldBe logoUrl
-        inviteObj.getString("label") shouldBe orgName
-        inviteObj.getString("public_did") should endWith(publicDid)
-
-        inviteObj.getJSONArray("service")
-          .getJSONObject(0)
-          .getJSONArray("routingKeys")
-          .getString(1) shouldBe agencyVerkey
-
-        val attachmentBase64 = inviteObj
-          .getJSONArray("request~attach")
-          .getJSONObject(0)
-          .getJSONObject("data")
-          .getString("base64")
-
-        val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
-        val attachmentObj = new JSONObject(attachment)
-
-        attachmentObj.getString("@id") should not be empty
-        attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation"
-        attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
-
-        val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
-
-        verifier.backstate.roster.selfRole_! shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
-
         // failed shortening
-        verifier ~ Ctl.InviteShorteningFailed(shortenInvite.invitationId, "Failed")
         val problemReport = verifier expect signal[Sig.ProblemReport]
         problemReport.description.code shouldBe ProblemReportCodes.shorteningFailed
 

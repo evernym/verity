@@ -4,7 +4,7 @@ import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortenedRTM, InviteShorteningFailedRTM, ShortenInviteRTM}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
 import com.evernym.verity.util.MsgIdProvider
@@ -20,8 +20,8 @@ object RelationshipMsgFamily extends MsgFamily {
     "Init"                       -> classOf[Init],
     "create"                     -> classOf[Ctl.Create],
     "key-created"                -> classOf[Ctl.KeyCreated],
-    "invite-shortened"           -> classOf[Ctl.InviteShortened],
-    "invite-shortening-failed"   -> classOf[Ctl.InviteShorteningFailed],
+    "invite-shortened"           -> classOf[InviteShortened],
+    "invite-shortening-failed"   -> classOf[InviteShorteningFailed],
     "sms-sent"                   -> classOf[Ctl.SMSSent],
     "sms-sending-failed"         -> classOf[Ctl.SMSSendingFailed],
     "connection-invitation"      -> classOf[Ctl.ConnectionInvitation],
@@ -34,7 +34,7 @@ object RelationshipMsgFamily extends MsgFamily {
     classOf[Signal.Created]            -> "created",
     classOf[Signal.Invitation]         -> "invitation",
     classOf[Signal.ProblemReport]      -> "problem-report",
-    classOf[Signal.ShortenInvite]      -> "shorten-invite",
+    classOf[ShortenInvite]             -> "shorten-invite",
     classOf[Signal.SendSMSInvite]      -> "send-sms-invite",
     classOf[Signal.SMSInvitationSent]  -> "sms-invitation-sent"
   )
@@ -48,8 +48,6 @@ object Signal {
   case class CreatePairwiseKey() extends SignalMsg
   case class Created(did: DID, verKey: VerKey) extends SignalMsg
   case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
-  //FIXME: RTM -> Shorten Rel
-  case class ShortenInvite(invitationId: String, inviteURL: String) extends SignalMsg with ShortenInviteRTM
   case class SendSMSInvite(invitationId: String, inviteURL: String, senderName: String, phoneNo: String) extends SignalMsg
   case class SMSInvitationSent(invitationId: String)
   case class ProblemReport(description: ProblemDescription) extends SignalMsg
@@ -109,8 +107,6 @@ object Ctl {
   case class Init(params: Parameters) extends Ctl
   case class Create(label: Option[String], logoUrl: Option[String], phoneNumber: Option[String]=None) extends Ctl
   case class KeyCreated(did: DID, verKey: VerKey) extends Ctl
-  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl with InviteShortenedRTM
-  case class InviteShorteningFailed(invitationId: String, reason: String) extends Ctl with InviteShorteningFailedRTM
   case class SMSSent(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl
   case class SMSSendingFailed(invitationId: String, reason: String) extends Ctl
 

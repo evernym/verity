@@ -15,7 +15,7 @@ class RelationshipUtilSpec
 
   override def createWallet = true
 
-  lazy val relDidPair: NewKeyCreated = {
+  val relDidPair: NewKeyCreated = {
     walletAPI.createNewKey(CreateNewKey(seed = Option("0000000000000000000000000000TEST")))          //key to represent current/this agent
     walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000OTHER")))          //key to represent some other agent
     walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
@@ -162,6 +162,21 @@ class RelationshipUtilSpec
           myDidDoc.authorizedKeys_!.keys shouldBe Seq(
             AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty),
             AuthorizedKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
+          )
+          val updatedDidDoc = updatedDidDocWithMigratedAuthKeys(Option(myDidDoc))(relUtilParamPostRecovery)
+          updatedDidDoc.isDefined shouldBe true
+          updatedDidDoc.foreach { dd =>
+            dd shouldBe myDidDoc
+          }
+        }
+      }
+
+      "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with key id as empty value" - {
+        "should provide unmodified did doc" in {
+          val myDidDoc = prepareMyDidDoc("", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamPostRecovery)
+          myDidDoc.authorizedKeys_!.keys shouldBe Seq(
+            AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty),
+            AuthorizedKey("", "", Set(EDGE_AGENT_KEY))
           )
           val updatedDidDoc = updatedDidDocWithMigratedAuthKeys(Option(myDidDoc))(relUtilParamPostRecovery)
           updatedDidDoc.isDefined shouldBe true

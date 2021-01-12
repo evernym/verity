@@ -87,6 +87,6 @@ trait AsyncToSync {
 
   def convertToSyncReq[T](fut: Future[T]): T = {
     //TODO: finalize timeout
-    Await.result(fut, FiniteDuration(50, TimeUnit.SECONDS))
+    Await.result(fut, FiniteDuration(250, TimeUnit.SECONDS))
   }
 }

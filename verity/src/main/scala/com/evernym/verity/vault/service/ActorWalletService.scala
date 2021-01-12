@@ -18,6 +18,6 @@ class ActorWalletService(system: ActorSystem) extends WalletService {
 
   override def execute(walletId: String, cmd: Any): Future[Any] = {
     //TODO: finalize timeout
-    walletActorRegion.ask(ForIdentifier(walletId, cmd))(Timeout(FiniteDuration(40, TimeUnit.SECONDS)))
+    walletActorRegion.ask(ForIdentifier(walletId, cmd))(Timeout(FiniteDuration(200, TimeUnit.SECONDS)))
   }
 }

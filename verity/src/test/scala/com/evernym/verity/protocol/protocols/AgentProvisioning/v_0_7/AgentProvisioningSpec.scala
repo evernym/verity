@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{Agen
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.{AgentProvisioningDefinition, AgentProvisioningState}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
-import com.evernym.verity.testkit.{BasicFixtureSpec, TestWalletHelper}
+import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.TimeUtil.{longToDateString, now}
 import com.evernym.verity.util.Base64Util.getBase64Encoded
 
@@ -21,7 +21,7 @@ import scala.language.{implicitConversions, reflectiveCalls}
 class AgentProvisioningSpec
   extends TestsProtocolsImpl(AgentProvisioningDefinition, Option(OneToOneDomain))
     with BasicFixtureSpec
-    with TestWalletHelper {
+    with HasTestWalletAPI {
 
   import TestingVars._
 
@@ -232,7 +232,7 @@ class AgentProvisioningSpec
   override val containerNames: Set[ContainerName] = Set(TestingVars.REQUESTER, TestingVars.PROVISIONER)
 }
 
-object TestingVars extends CommonSpecUtil with TestWalletHelper {
+object TestingVars extends CommonSpecUtil with HasTestWalletAPI {
   lazy val walletAccess: WalletAccessAPI = WalletAccessTest.walletAccess()
 
   val REQUESTER = "requester"

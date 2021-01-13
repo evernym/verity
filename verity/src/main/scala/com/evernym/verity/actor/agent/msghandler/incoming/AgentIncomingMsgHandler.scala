@@ -39,7 +39,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     case prm: ProcessRestMsg          => handleRestMsg(prm)
 
     //edge agent -> agency routing service -> self rel actor (user agent actor) -> this actor (pairwise agent actor)
-    case mfr: MsgForRelationship[_]   => handleMsgForRel(mfr)
+    case mfr: MsgForRelationship      => handleMsgForRel(mfr)
 
     //pinst -> actor driver -> this actor
     case mfd: SignalMsgFromDriver     => handleSignalMsgFromDriver(mfd)
@@ -141,49 +141,36 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     //NOTE: this reqMsgContext is to pass some msg context information (like client's ip address, msg sender ver key etc)
     //which was being used by existing agent message
     implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, rmc)
-    if (handleDecryptedMsg(reqMsgContext).isDefinedAt(amw)) {
-      // flow diagram: fwd, step 8 -- Re-examine after decrypt.
-      handleDecryptedMsg(reqMsgContext)(amw)
-    } else if (incomingMsgHandler(reqMsgContext).isDefinedAt(amw)) {
-      // flow diagram: legacy, step 8 -- Same as FWD till here. Now, handle MsgPacked format.
-      runWithInternalSpan(s"${amw.msgType}", "AgentIncomingMsgHandler") {
-        incomingMsgHandler(reqMsgContext)(amw)
-      }
-    } else {
-      // flow diagram: ctl + proto, step 8 -- Same as fwd till here. Now, begin protocol handling.
-      extractMsgAndSendToProtocol(IncomingMsgParam(amw, amw.headAgentMsgDetail.msgType), msgThread)
+    internalDecryptedPayload(amw) match {
+      case Some(dp) if dp.decryptedMsg.isDefined  =>
+        //given internal payload (in agent msg wrapper) got decrypted by this agent
+        //and hence asked to process that payload instead
+        handlePackedMsg(dp.ep.payload, reqMsgContext, dp.ep.thread)
+      case Some(_) if handleOtherAgentMsgHandler.isDefinedAt(amw) =>
+        //given internal payload (in agent msg wrapper) didn't get decrypted by this agent
+        // mostly it should be destined for edge agent to be decrypted
+        // so check if it is a forward message and process it if it is
+        handleOtherAgentMsgHandler(reqMsgContext)(amw)
+      case _                                   =>
+        //the agent msg wrapper is the main message to be processed further
+        //either it is legacy native message processed by agent actor
+        // or it is protocol message to be processed by protocol actors
+        if (incomingMsgHandler(reqMsgContext).isDefinedAt(amw)) {
+          // flow diagram: legacy, step 8 -- Same as FWD till here. Now, handle MsgPacked format.
+          runWithInternalSpan(s"${amw.msgType}", "AgentIncomingMsgHandler") {
+            incomingMsgHandler(reqMsgContext)(amw)
+          }
+        } else {
+          // flow diagram: ctl + proto, step 8 -- Same as fwd till here. Now, begin protocol handling.
+          extractMsgAndSendToProtocol(IncomingMsgParam(amw, amw.headAgentMsgDetail.msgType), msgThread)
+        }
     }
   }
 
-  def handleDecryptedMsg(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Unit] = {
-    case amw: AgentMsgWrapper
-      if amw.isMatched(MFV_0_5, CREATE_MSG_TYPE_GENERAL) &&
-        shallBeHandledByThisAgent(amw) =>
-      val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
-      extractMsgPayload(amw).foreach { payload =>
-        handlePackedMsg(payload, reqMsgContext, createMsgReq.thread)
-      }
-
-    case amw: AgentMsgWrapper
-      if amw.isMatched(MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG) &&
-        shallBeHandledByThisAgent(amw) =>
-      val srm = SendRemoteMsgHelper.buildReqMsg(amw)
-      extractMsgPayload(amw).foreach { payload =>
-        handlePackedMsg(payload, reqMsgContext, srm.threadOpt)
-      }
-
-    /**
-     * this agent received a forward message, it doesn't know the internal payload type
-     * so it checks if the forward is targeted for it's edge agent
-     * (as of now that is the only use case we want to support, later on it can be expanded)
-     * and in that case it stores and optionally sends to the edge agent as well (if com methods are registered)
-     */
+  def handleOtherAgentMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Unit] = {
     case amw: AgentMsgWrapper
       if amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD) =>
-      val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
-      if (shallBeHandledByThisAgent(amw)) {
-        handlePackedMsg(fwdMsg.`@msg`, reqMsgContext)
-      } else {
+        val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
         AgentMsgRouter.getDIDForRoute(fwdMsg.`@fwd`) match {
           case Success(fwdToDID) =>
             if (relationshipId.contains(fwdToDID) || domainId == fwdToDID) {
@@ -196,7 +183,6 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
             }
           case Failure(e) => throw e
         }
-      }
   }
 
   def extractMsgAndSendToProtocol(aimp: IncomingMsgParam, msgThread: Option[Thread]=None)
@@ -208,7 +194,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     // THIS IS A STOPGAP AND SHOULD NOT BE EXPANDED
     val imp = STOP_GAP_MsgTypeMapper.changedMsgParam(aimp)
 
-    val (msgToBeSent: TypedMsg[_], threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
+    val (msgToBeSent: TypedMsg, threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
       (imp.msgType.familyName, imp.msgType.familyVersion, imp.msgType.msgName) match {
 
         //this is special case where connecting protocols (0.5 & 0.6)
@@ -262,16 +248,16 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     }
   }
 
-  protected def sendTypedMsgToProtocol[A](tmsg: TypedMsgLike[A],
-                                          relationshipId: Option[RelationshipId],
-                                          threadId: ThreadId,
-                                          senderParticipantId: ParticipantId,
-                                          msgRespConfig: Option[MsgRespConfig],
-                                          msgPackFormat: Option[MsgPackFormat],
-                                          msgTypeDeclarationFormat: Option[TypeFormat],
-                                          usesLegacyGenMsgWrapper: Boolean=false,
-                                          usesLegacyBundledMsgWrapper: Boolean=false)
-                                          (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
+  protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,
+                                       relationshipId: Option[RelationshipId],
+                                       threadId: ThreadId,
+                                       senderParticipantId: ParticipantId,
+                                       msgRespConfig: Option[MsgRespConfig],
+                                       msgPackFormat: Option[MsgPackFormat],
+                                       msgTypeDeclarationFormat: Option[TypeFormat],
+                                       usesLegacyGenMsgWrapper: Boolean=false,
+                                       usesLegacyBundledMsgWrapper: Boolean=false)
+                                       (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
     // flow diagram: ctl + proto, step 14
     val msgEnvelope = buildMsgEnvelope(tmsg, threadId, senderParticipantId)
     val pair = pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipId, threadId)
@@ -368,7 +354,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg[_], ThreadId, Option[DID], Option[MsgRespConfig]) = {
+  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
@@ -387,7 +373,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     rmc
   }
 
-  def buildMsgEnvelope[A](typedMsg: TypedMsgLike[A], threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope[A] = {
+  def buildMsgEnvelope(typedMsg: TypedMsgLike, threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope = {
     MsgEnvelope(typedMsg.msg, typedMsg.msgType, selfParticipantId,
       senderParticipantId, Option(getNewMsgId), Option(threadId))
   }
@@ -397,50 +383,38 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * @param amw agent message wrapper
    * @return
    */
-  def extractMsgPayload(amw: AgentMsgWrapper): Option[Array[Byte]] = {
+  def extractMsgPayload(amw: AgentMsgWrapper): Option[ExtractedPayload] = {
     if (amw.isMatched(MFV_0_5, CREATE_MSG_TYPE_GENERAL)) {
-      amw.tailAgentMsgs.headOption.map { msg =>
-        val md = msg.convertTo[GeneralCreateMsgDetail_MFV_0_5]
-        md.`@msg`
-      }
+      val msg = amw.tailAgentMsgs.head
+      val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
+      val msgDetail = msg.convertTo[GeneralCreateMsgDetail_MFV_0_5]
+      Option(ExtractedPayload(msgDetail.`@msg`, createMsgReq.thread, None))
     } else if (amw.isMatched(MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG)) {
       val srm = SendRemoteMsgHelper.buildReqMsg(amw)
-      Option(srm.`@msg`)
+      Option(ExtractedPayload(srm.`@msg`, srm.threadOpt, None))
     } else if (amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD)) {
       val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
-      Option(fwdMsg.`@msg`)
+      Option(ExtractedPayload(fwdMsg.`@msg`, None, None))
     } else None
   }
 
-  /**
-   * determines if received message (agent message wrapper) is decryptable by this agent or not
-   * if this agent can decrypt it, that means, this agent should handle it
-   * else, it should try to send/forward it to its edge agent
-   * @param amw agent message wrapper
-   * @return
-   */
-  def shallBeHandledByThisAgent(amw: AgentMsgWrapper): Boolean = {
-    def isDecryptable(msg: Array[Byte]): Boolean = {
-      try {
-        msgExtractor.unpack(PackedMsg(msg))
-        true
+  def internalDecryptedPayload(amw: AgentMsgWrapper): Option[DecryptedPayload] =
+    extractMsgPayload(amw).map { ep =>
+      val amw = try {
+        Option(msgExtractor.unpack(PackedMsg(ep.payload)))
       } catch {
         case _: Exception =>
-          false
+          None
       }
+      DecryptedPayload(amw, ep)
     }
-
-    extractMsgPayload(amw).exists { msg =>
-      isDecryptable(msg)
-    }
-  }
 
   /**
    * handles message for relationship handled by this actor (pairwise actor)
    * which is sent from user/agency agent actor.
    * @param mfr message for relationship
    */
-  def handleMsgForRel(mfr: MsgForRelationship[_]): Unit = {
+  def handleMsgForRel(mfr: MsgForRelationship): Unit = {
     // flow diagram: ctl + proto, step 13
     logger.debug(s"msg for relationship received in $persistenceId: " + mfr)
     mfr.reqMsgContext.foreach { rmc: ReqMsgContext =>
@@ -523,3 +497,6 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    */
   def allAuthedKeys: Set[VerKey] = configuredAuthedKeys ++ authedMsgSenderVerKeys
 }
+
+case class ExtractedPayload(payload: Array[Byte], thread: Option[Thread], decryptedMsg: Option[AgentMsgWrapper])
+case class DecryptedPayload(decryptedMsg: Option[AgentMsgWrapper], ep: ExtractedPayload)

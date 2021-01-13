@@ -20,7 +20,6 @@ variables:
 
 stages:
   - check
-#  - compile
   - test
   - package
   - publish
@@ -46,21 +45,7 @@ license-data-check:
     - mkdir -p $CI_PROJECT_DIR/.sbt && cp -r ~/.sbt/* $CI_PROJECT_DIR/.sbt/.
   tags:
     - docker-machine
-    - compute-xlarge
-
-# compile:
-#   extends: .test
-#   script:
-#     - sbt clean compile test:compile
-#   stage: compile
-#   artifacts:
-#     name: "$CI_JOB_NAME"
-#     expire_in: '5 hrs'
-#     paths:
-#       - target
-#       - project/target
-#       - project/project/target
-#       - verity/target
+    - compute-2xlarge
 
 unit-test:
   extends: .test

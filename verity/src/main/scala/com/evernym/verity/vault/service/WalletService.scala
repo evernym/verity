@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.Status.INVALID_VALUE
+import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.WalletCmdErrorResponse
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
@@ -39,6 +39,8 @@ trait WalletService extends AsyncToSync {
     convertToSyncReq(executeAsync(walletId, cmd))
   }
 
+  lazy val BAD_REQ_ERRORS = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
+
   /**
    * asynchronous/non-blocking wallet service call
    * @param walletId
@@ -50,12 +52,13 @@ trait WalletService extends AsyncToSync {
     val startTime = Instant.now()
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        logger.error(s"error while executing wallet command: ${cmd.getClass.getSimpleName}, error msg: ${wer.sd.statusMsg}",
-          (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
         MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
-        wer.sd.statusCode match {
-          case INVALID_VALUE.statusCode => throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
-          case _                        => throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
+        if (BAD_REQ_ERRORS.map(_.statusCode).contains(wer.sd.statusCode)) {
+          throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
+        } else {
+          logger.error(s"error while executing wallet command: ${cmd.getClass.getSimpleName}, error msg: ${wer.sd.statusMsg}",
+            (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
+          throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         }
       case r => r.asInstanceOf[T] //TODO: can we get rid of this .asInstanceOf method?
     }.map { resp =>
@@ -84,6 +87,6 @@ trait AsyncToSync {
 
   def convertToSyncReq[T](fut: Future[T]): T = {
     //TODO: finalize timeout
-    Await.result(fut, FiniteDuration(50, TimeUnit.SECONDS))
+    Await.result(fut, FiniteDuration(250, TimeUnit.SECONDS))
   }
 }

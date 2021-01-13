@@ -16,7 +16,7 @@ trait CredDefDefinitionTrait extends ProtocolDefinition[WriteCredDef, Role, Msg,
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID)
+  override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID, DEFAULT_ENDORSER_DID)
 
   override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess, LedgerWriteAccess)
 

@@ -107,8 +107,9 @@ object CryptoOpExecutor extends OpExecutorBase {
           case _@ (_:InvalidStructureException |_: InvalidParameterException) =>
             throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
               Option("signature verification failed"), Option(detail))
-          case _: Exception => throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
-            Option("unhandled error"), Option(detail))
+          case _: Exception =>
+            throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
+              Option("unhandled error"), Option(detail))
       }
   }
 }

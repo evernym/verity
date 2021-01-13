@@ -456,7 +456,10 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         offer)
     )
 
-    val invite = InviteUtil.buildInvite(
+    val invite = InviteUtil.buildInviteWithThreadedId(
+      definition.msgFamily.protoRef,
+      ctx.getRoster.selfId_!,
+      ctx.`threadId_!`,
       s.agentName,
       s.logoUrl,
       s.publicDid,

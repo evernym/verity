@@ -1,20 +1,16 @@
 package com.evernym.integrationtests.e2e.flow
 
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
-import com.evernym.integrationtests.e2e.sdk.vcx.{VcxIssueCredential, VcxPresentProof, VcxBasicMessage}
+import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
@@ -28,8 +24,11 @@ import com.evernym.verity.util.{Base64Util, OptionUtil}
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
-import org.scalatest.time.{Seconds, Span}
 
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
@@ -39,6 +38,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
   import InteractiveSdkFlow._
 
   val system: ActorSystem = ActorSystem.create("InteractiveSdkFlow")
+
+  var iterationCountMap: mutable.Map[String, Int] = mutable.Map()
 
   def availableSdk(app: ApplicationAdminExt)(implicit scenario: Scenario): Unit = {
     app.sdks.foreach { sdk =>
@@ -628,16 +629,95 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
+  def acceptOobInvite(inviterSdk: VeritySdkProvider,
+                      inviterMsgReceiverSdkProvider: VeritySdkProvider,
+                      inviteeSdk: VeritySdkProvider,
+                      inviteeMsgReceiverSdkProvider: VeritySdkProvider,
+                      relationshipId: String,
+                      inviteUrl: AtomicReference[String])
+                     (implicit scenario: Scenario) = {
+    val inviterName = inviteeSdk.sdkConfig.name
+    val inviteeName = inviteeSdk.sdkConfig.name
+
+    val inviterMsgReceiver = receivingSdk(Option(inviterMsgReceiverSdkProvider))
+    val inviteeMsgReceiver = receivingSdk(Option(inviteeMsgReceiverSdkProvider))
+
+    var inviteeConnection: ConnectionsV1_0 = null
+
+    var connReq: JSONObject = null
+
+    s"[$inviteeName] accept connection from invite" in {
+      inviteeConnection = inviteeSdk.connectingWithOutOfBand_1_0(relationshipId, "", inviteUrl.get())
+      inviteeConnection.accept(inviteeSdk.context)
+    }
+
+    s"[$inviterName] receive a signal about 'request-received' msg" in {
+      inviterMsgReceiver.expectMsg("request-received") { msg =>
+        connReq = msg
+      }
+    }
+
+    s"[$inviterName] receive a signal about 'response-sent' msg" in {
+      inviterMsgReceiver.expectMsg("response-sent") { connResp =>
+        println("connResp: " + connResp)
+        val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
+        val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
+        val theirDID = connReq.getJSONObject("conn").getString("DID")
+        val relData = RelData(relationshipId, connJson.getString("DID"), Option(theirDID))
+        inviterSdk.updateRelationship(relationshipId, relData)
+      }
+    }
+
+    s"[$inviteeName] receives 'response' message" in {
+      inviteeMsgReceiver.expectMsg("response") { response =>
+        val sigData = response.getJSONObject("connection~sig").getString("sig_data")
+        val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
+        val myDID = connReq.getJSONObject("conn").getString("DID")
+        val relData = RelData(relationshipId, myDID, Option(connJson.getString("DID")))
+        inviteeConnection.status(inviteeSdk.context)
+        inviteeSdk.updateRelationship(relationshipId, relData)
+      }
+    }
+  }
+
+  def reuseRelOob(inviterSdk: VeritySdkProvider,
+                  inviterMsgReceiverSdkProvider: VeritySdkProvider,
+                  inviteeSdk: VeritySdkProvider,
+                  inviteeMsgReceiverSdkProvider: VeritySdkProvider,
+                  relationshipId: String,
+                  inviteUrl: AtomicReference[String])
+                 (implicit scenario: Scenario)= {
+    val inviterName = inviteeSdk.sdkConfig.name
+    val inviteeName = inviteeSdk.sdkConfig.name
+
+    val inviterMsgReceiver = receivingSdk(Option(inviterMsgReceiverSdkProvider))
+    val inviteeMsgReceiver = receivingSdk(Option(inviteeMsgReceiverSdkProvider))
+
+    s"[$inviteeName] handshake reuse" in {
+      val reuseDID = inviterSdk.relationship_!(relationshipId).owningDID
+      inviteeSdk
+        .outOfBand_1_0(reuseDID, inviteUrl.get())
+        .handshakeReuse(inviteeSdk.context)
+    }
+
+    s"[$inviterName] receive 'relationship-reused' signal msg" in {
+      inviterMsgReceiver.expectMsg("relationship-reused") { msg =>
+        assert(msg.getJSONObject("~thread").getString("pthid") != null)
+      }
+    }
+  }
+
   def issueCredentialViaOob_1_0(issuer: ApplicationAdminExt,
                                 holder: ApplicationAdminExt,
                                 relationshipId: String,
                                 credValues: Map[String, String],
                                 credDefName: String,
-                                credTag: String)
+                                credTag: String,
+                                reuseRel: Boolean = false)
                                (implicit scenario: Scenario): Unit = {
     val issuerSdk = issuer.sdks.head
     val holderSdk = holder.sdks.head
-    issueCredentialViaOob_1_0(issuerSdk, issuerSdk, holderSdk, holderSdk, relationshipId, credValues, credDefName, credTag)
+    issueCredentialViaOob_1_0(issuerSdk, issuerSdk, holderSdk, holderSdk, relationshipId, credValues, credDefName, credTag, reuseRel)
   }
 
   def issueCredentialViaOob_1_0(issuerSdk: VeritySdkProvider,
@@ -647,17 +727,18 @@ trait InteractiveSdkFlow extends MetricsFlow {
                                 relationshipId: String,
                                 credValues: Map[String, String],
                                 credDefName: String,
-                                credTag: String)
+                                credTag: String,
+                                reuseRel: Boolean)
                          (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
     val holderName = holderSdk.sdkConfig.name
 
     var relDid = ""
-    var inviteUrl = ""
-    var connReq: JSONObject = null
-    var inviteeConnection: ConnectionsV1_0 = null
+    val inviteUrl: AtomicReference[String] = new AtomicReference[String]("")
 
-    s"issue credential (1.0) to $holderName from $issuerName via Out-of-band invite" - {
+    val count = iterCount("presentProofViaOob_1_0")
+
+    s"issue credential (1.0) to $holderName from $issuerName via Out-of-band invite$count" - {
       val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
       val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
 
@@ -675,47 +756,37 @@ trait InteractiveSdkFlow extends MetricsFlow {
         val issueCred = issuerSdk.issueCredential_1_0(relDid, credDefId, credValues, "comment-123", byInvitation = true)
         issueCred.offerCredential(issuerSdk.context)
         issuerMsgReceiver.expectMsg("protocol-invitation") { msg =>
-          inviteUrl = msg.getString("inviteURL")
+          inviteUrl.getAndSet(msg.getString("inviteURL"))
         }
       }
 
-      s"[$holderName] accept connection from invite" in {
-        inviteeConnection = holderSdk.connectingWithOutOfBand_1_0(relationshipId, "", inviteUrl)
-        inviteeConnection.accept(holderSdk.context)
+      if (reuseRel) {
+        reuseRelOob(
+          issuerSdk,
+          issuerMsgReceiverSdkProvider,
+          holderSdk,
+          holderMsgReceiverSdkProvider,
+          relationshipId,
+          inviteUrl
+        )
+      }
+      else {
+        acceptOobInvite(
+          issuerSdk,
+          issuerMsgReceiverSdkProvider,
+          holderSdk,
+          holderMsgReceiverSdkProvider,
+          relationshipId,
+          inviteUrl
+        )
       }
 
-      s"[$issuerName] receive a signal about 'request-received' msg" in {
-        issuerMsgReceiver.expectMsg("request-received") { msg =>
-          connReq = msg
-        }
-      }
 
-      s"[$issuerName] receive a signal about 'response-sent' msg" in {
-        issuerMsgReceiver.expectMsg("response-sent") { connResp =>
-          println("connResp: " + connResp)
-          val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
-          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
-          val theirDID = connReq.getJSONObject("conn").getString("DID")
-          val relData = RelData(relationshipId, connJson.getString("DID"), Option(theirDID))
-          issuerSdk.updateRelationship(relationshipId, relData)
-        }
-      }
-
-      s"[$holderName] receives 'response' message" taggedAs UNSAFE_IgnoreLog in {
-        holderMsgReceiver.expectMsg("response") { response =>
-          val sigData = response.getJSONObject("connection~sig").getString("sig_data")
-          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
-          val myDID = connReq.getJSONObject("conn").getString("DID")
-          val relData = RelData(relationshipId, myDID, Option(connJson.getString("DID")))
-          inviteeConnection.status(holderSdk.context)
-          holderSdk.updateRelationship(relationshipId, relData)
-        }
-      }
 
       s"[$holderName] request credential from attached offer" in {
         val offerMsg = {
           val inviteStr = Base64Util.urlDecodeToStr(
-            Uri(inviteUrl)
+            Uri(inviteUrl.get)
               .query()
               .getOrElse(
                 "oob",
@@ -761,11 +832,12 @@ trait InteractiveSdkFlow extends MetricsFlow {
                              prover: ApplicationAdminExt,
                              relationshipId: String,
                              proofName: String,
-                             attributes: Seq[String])
+                             attributes: Seq[String],
+                             reuseRel: Boolean = false)
                              (implicit scenario: Scenario): Unit = {
     val verifierSdk = verifier.sdks.head
     val proverSdk = prover.sdks.head
-    presentProofViaOob_1_0(verifierSdk, verifierSdk, proverSdk, proverSdk, relationshipId, proofName, attributes)
+    presentProofViaOob_1_0(verifierSdk, verifierSdk, proverSdk, proverSdk, relationshipId, proofName, attributes, reuseRel)
   }
 
   def presentProofViaOob_1_0(verifierSdk: VeritySdkProvider,
@@ -774,17 +846,17 @@ trait InteractiveSdkFlow extends MetricsFlow {
                              proverMsgReceiverSdkProvider: VeritySdkProvider,
                              relationshipId: String,
                              proofName: String,
-                             attributes: Seq[String])
+                             attributes: Seq[String],
+                             reuseRel: Boolean)
                              (implicit scenario: Scenario): Unit = {
     val verifierName = verifierSdk.sdkConfig.name
     val proverName = proverSdk.sdkConfig.name
 
     var relDid = ""
-    var inviteUrl = ""
-    var connReq: JSONObject = null
-    var inviteeConnection: ConnectionsV1_0 = null
+    val inviteUrl: AtomicReference[String] = new AtomicReference[String]("")
+    val count = iterCount("presentProofViaOob_1_0")
 
-    s"present proof (1.0) to $proverName from $verifierName via Out-of-band invite" - {
+    s"present proof (1.0) to $proverName from $verifierName via Out-of-band invite$count" - {
       val verifierMsgReceiver = receivingSdk(Option(verifierMsgReceiverSdkProvider))
       val holderMsgReceiver = receivingSdk(Option(proverMsgReceiverSdkProvider))
 
@@ -815,47 +887,36 @@ trait InteractiveSdkFlow extends MetricsFlow {
           .request(verifierSdk.context)
 
           verifierMsgReceiver.expectMsg("protocol-invitation") { msg =>
-          inviteUrl = msg.getString("inviteURL")
+          inviteUrl.getAndSet(msg.getString("inviteURL"))
         }
       }
 
-      s"[$proverName] accept connection from invite" in {
-        inviteeConnection = proverSdk.connectingWithOutOfBand_1_0(relationshipId, "", inviteUrl)
-        inviteeConnection.accept(proverSdk.context)
+      if (reuseRel) {
+        reuseRelOob(
+          verifierSdk,
+          verifierMsgReceiverSdkProvider,
+          proverSdk,
+          proverMsgReceiverSdkProvider,
+          relationshipId,
+          inviteUrl
+        )
+      }
+      else {
+        acceptOobInvite(
+          verifierSdk,
+          verifierMsgReceiverSdkProvider,
+          proverSdk,
+          proverMsgReceiverSdkProvider,
+          relationshipId,
+          inviteUrl
+        )
       }
 
-      s"[$verifierName] receive a signal about 'request-received' msg" in {
-        verifierMsgReceiver.expectMsg("request-received") { msg =>
-          connReq = msg
-        }
-      }
-
-      s"[$verifierName] receive a signal about 'response-sent' msg" in {
-        verifierMsgReceiver.expectMsg("response-sent") { connResp =>
-          println("connResp: " + connResp)
-          val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
-          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
-          val theirDID = connReq.getJSONObject("conn").getString("DID")
-          val relData = RelData(relationshipId, connJson.getString("DID"), Option(theirDID))
-          verifierSdk.updateRelationship(relationshipId, relData)
-        }
-      }
-
-      s"[$proverName] receives 'response' message" taggedAs UNSAFE_IgnoreLog in {
-        holderMsgReceiver.expectMsg("response") { response =>
-          val sigData = response.getJSONObject("connection~sig").getString("sig_data")
-          val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
-          val myDID = connReq.getJSONObject("conn").getString("DID")
-          val relData = RelData(relationshipId, myDID, Option(connJson.getString("DID")))
-          inviteeConnection.status(proverSdk.context)
-          proverSdk.updateRelationship(relationshipId, relData)
-        }
-      }
 
       s"[$proverName] present proof from attached offer" in {
         val requestMsg = {
           val inviteStr = Base64Util.urlDecodeToStr(
-            Uri(inviteUrl)
+            Uri(inviteUrl.get)
               .query()
               .getOrElse(
                 "oob",
@@ -1027,6 +1088,12 @@ trait InteractiveSdkFlow extends MetricsFlow {
     presentProof_1_0_with_proposal(verifierSdk, verifierSdk, holderSdk, holderSdk, relationshipId, proofName, attributes)
   }
 
+  def iterCount(methodName: String): String = {
+    val curCount = iterationCountMap.getOrElse(methodName, 0)
+    iterationCountMap.put(methodName, curCount + 1)
+    if (curCount == 0) "" else s" [$curCount]"
+  }
+
   def presentProof_1_0_with_proposal(verifierSdk: VeritySdkProvider,
                                      verifierMsgReceiverSdk: VeritySdkProvider,
                                      holderSdk: VeritySdkProvider,
@@ -1037,6 +1104,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
                                     (implicit scenario: Scenario): Unit = {
     val holderName = holderSdk.sdkConfig.name
     val verifierName = verifierSdk.sdkConfig.name
+
+
+
     s"present proof with proposal from $holderName verifier $verifierName on relationship ($relationshipId)" - {
       val verifierMsgReceiver = receivingSdk(Option(verifierMsgReceiverSdk))
       val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdk))

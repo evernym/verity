@@ -475,7 +475,7 @@ trait BasePersistentActor
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =
     handleBasePersistenceCmd orElse
-      baseCommandHandler(actualReceiver) orElse
+      extendedCoreCommandHandler(actualReceiver) orElse
       msgDeleteCallbackHandler
 
   override def receiveCommand: Receive =
@@ -486,7 +486,6 @@ trait BasePersistentActor
     context.become(basePersistentCmdHandler(receiver))
   }
 
-  final override def cmdHandler: Receive = receiveCmd
   override def receiveRecover: Receive = handleEvent
 
   def receiveCmd: Receive

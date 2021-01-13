@@ -18,7 +18,7 @@ import com.evernym.verity.protocol.protocols.trustping.{v_1_0 => trustping_v10}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef_v06}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
-import com.evernym.verity.protocol.{LegacyPackagingContextSet, PackagingContextSet, ReceivedOrderIncremented, ReceivedOrdersSet, SenderOrderIncremented, SenderOrderSet, SetDomainId, SetPinstId}
+import com.evernym.verity.protocol._
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
 
@@ -276,7 +276,8 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     224 -> SponsorRel,
 
     225 -> UserAgentState,
-    226 -> UserAgentPairwiseState
+    226 -> UserAgentPairwiseState,
+    227 -> ChangePairwiseRelIds
   )
 
 }

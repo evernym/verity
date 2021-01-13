@@ -2,19 +2,13 @@ package com.evernym.verity.actor.base
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Actor, Cancellable, Timers}
-import com.evernym.verity.logging.LoggingUtil
-import com.typesafe.scalalogging.Logger
+import akka.actor.{Actor, Timers}
 
 import scala.concurrent.duration.Duration
 
 trait HasActorTimers extends Timers { this: CoreActorExtended with Actor =>
 
-  private val logger: Logger = LoggingUtil.getLoggerByName("HasActorMsgScheduler")
-
   type JobId = String
-
-  var scheduledJobs: Map[JobId, Cancellable] = Map.empty
 
   /**
    *
@@ -33,18 +27,10 @@ trait HasActorTimers extends Timers { this: CoreActorExtended with Actor =>
   }
 
   def stopScheduledJob(jobId: JobId): Unit = {
-    scheduledJobs.get(jobId).foreach { job =>
-      try {
-        job.cancel()
-        scheduledJobs -= jobId
-      } catch {
-        case e: RuntimeException =>
-          logger.debug(s"[$actorId] scheduled job cancellation failed: " + e.getLocalizedMessage)
-      }
-    }
+    timers.cancel(jobId)
   }
 
   def stopAllScheduledJobs(): Unit = {
-    scheduledJobs.keySet.foreach(stopScheduledJob)
+    timers.cancelAll()
   }
 }

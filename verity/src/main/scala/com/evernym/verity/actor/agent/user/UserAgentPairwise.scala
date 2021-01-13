@@ -39,7 +39,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
+import com.evernym.verity.protocol.actor.{FromProtocol, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, Parameter, VerKey, _}
 import com.evernym.verity.protocol.protocols._
@@ -49,8 +49,8 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUpdated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.{ConnectionsMsgFamily, Ctl}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.MoveProtocol
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSSendingFailed, SMSSent}
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.TimeZoneUtil._
@@ -58,10 +58,11 @@ import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import org.json.JSONObject
 
 import scala.concurrent.Future
-import scala.util.{Failure, Left, Success}
+import scala.util.{Failure, Left, Success, Try}
 
 /**
  Represents the part of a user agent that's dedicated to a single pairwise
@@ -294,6 +295,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case LOGO_URL                               => Parameter(LOGO_URL, agentLogoUrl(filteredConfigs.configs))
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
+        case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+
         //this is legacy way of how public DID is being handled
         //'ownerDIDReq' is basically a self relationship id
         // (which may be wrong to be used as public DID, but thats how it is being used so far)
@@ -316,10 +319,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)
   }
 
-  override def postUpdateConfig(tupdateConf: TypedMsg[UpdateConfigReqMsg], senderVerKey: Option[VerKey]): Unit = {
+  override def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
-    tupdateConf.msg.configs.filter(_.name == configName).foreach { c =>
+    tupdateConf.configs.filter(_.name == configName).foreach { c =>
       val msgs = Set(
         UpdateMsgExpirationTime_MFV_0_5(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt),
         UpdateMsgExpirationTime_MFV_0_6(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt))
@@ -732,6 +735,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     case SignalMsgFromDriver(utd: UpdateTheirDid, _, _, _)                => handleUpdateTheirDid(utd)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
     case SignalMsgFromDriver(ssi: SendSMSInvite, _, _, _)                 => handleSendingSMSInvite(ssi)
+    case SignalMsgFromDriver(si: MoveProtocol, _, _, _)                   => handleMoveProtocol(si)
   }
 
   def handleUpdateTheirDid(utd: UpdateTheirDid):Future[Option[ControlMsg]] = {
@@ -770,6 +774,63 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           case e: Exception => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Unknown error: ${e}")))
         }
     }
+  }
+
+  def handleMoveProtocol(signal: MoveProtocol): Future[Option[ControlMsg]] = {
+
+    val protoEntry = Try(
+      ProtoRef.fromString(signal.protoRefStr)
+    )
+    .map(protocolRegistry.find_!)
+
+    val oldPinstId = protoEntry
+      .map{ e =>
+        resolvePinstId(
+          e.protoDef,
+          e.pinstIdResol,
+          Some(signal.fromRelationship),
+          signal.threadId,
+          None
+        )
+      }
+
+    val msg = for (
+      p <- oldPinstId;
+      r <- Try(state.relationship.getOrElse(throw new Exception("No relationship define for this actor")))
+    ) yield FromProtocol(p, r)
+
+    val toPinstPair = protoEntry
+      .map{ e =>
+        val pinst = resolvePinstId(
+          e.protoDef,
+          e.pinstIdResol,
+          relationshipId,
+          signal.threadId,
+          None
+        )
+
+        PinstIdPair(pinst, e.protoDef)
+      }
+
+    val values = for (
+      p <- toPinstPair;
+      m <- msg
+    ) yield (p, m)
+
+    values match {
+      case Success((p, m)) => tellProtocolActor(
+        p,
+        m,
+        self
+      )
+      case Failure(exception) => logger.warn(
+        s"Unable to Move protocol from rel ${signal.fromRelationship} to ${signal.toRelationship} " +
+          s"for thread: ${signal.threadId} on a ${signal.protoRefStr}",
+        exception
+      )
+    }
+
+    Future.successful(None)
   }
 
   def handleUpdateTheirDidDoc(stdd: SetupTheirDidDoc):Future[Option[ControlMsg]] = {

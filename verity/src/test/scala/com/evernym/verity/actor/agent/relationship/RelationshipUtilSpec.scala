@@ -1,27 +1,27 @@
 package com.evernym.verity.actor.agent.relationship
 
-import java.util.UUID
-
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
-import com.evernym.verity.vault.WalletAPIParam
-import com.evernym.verity.actor.agent.{WalletApiBuilder, WalletVerKeyCacheHelper}
+import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, HasTestWalletAPI}
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.util.TestWalletService
-import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.OptionValues
 
 
 class RelationshipUtilSpec
   extends BasicSpecWithIndyCleanup
+    with HasTestWalletAPI
     with OptionValues {
 
-  lazy val relDidPair: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())
+  override def createWallet = true
+
+  val relDidPair: NewKeyCreated = {
+    walletAPI.createNewKey(CreateNewKey(seed = Option("0000000000000000000000000000TEST")))          //key to represent current/this agent
+    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000OTHER")))          //key to represent some other agent
+    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
+
+    walletAPI.createNewKey(CreateNewKey())
+  }
 
   lazy val relUtilParamDuringRecovery: RelUtilParam =
     RelUtilParam(new TestAppConfig(), Option("thisAgentKeyId"), None)
@@ -170,25 +170,21 @@ class RelationshipUtilSpec
           }
         }
       }
+
+      "when called 'updatedDidDocWithMigratedAuthKeys' with DidDoc with key id as empty value" - {
+        "should provide unmodified did doc" in {
+          val myDidDoc = prepareMyDidDoc("", "SpUiyicXonPRdaJre4S1TJ", Set.empty)(relUtilParamPostRecovery)
+          myDidDoc.authorizedKeys_!.keys shouldBe Seq(
+            AuthorizedKey("SpUiyicXonPRdaJre4S1TJ", "F5BERxEyX6uDhgXCbizxJB1z3SGnjHbjfzwuTytuK4r5", Set.empty),
+            AuthorizedKey("", "", Set(EDGE_AGENT_KEY))
+          )
+          val updatedDidDoc = updatedDidDocWithMigratedAuthKeys(Option(myDidDoc))(relUtilParamPostRecovery)
+          updatedDidDoc.isDefined shouldBe true
+          updatedDidDoc.foreach { dd =>
+            dd shouldBe myDidDoc
+          }
+        }
+      }
     }
-  }
-
-  val appConfig = new TestAppConfig()
-  val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
-  val walletProvider = new LibIndyWalletProvider(appConfig)
-  val walletService = new TestWalletService(appConfig, walletProvider)
-  implicit lazy val walletAPI: WalletAPI = WalletApiBuilder.createWalletAPI(
-    appConfig, walletService, walletProvider)
-  implicit lazy val wap: WalletAPIParam = {
-    val wp = WalletAPIParam(UUID.randomUUID().toString)
-    walletAPI.createWallet(wp)
-    wp
-  }
-
-  lazy val walletVerKeyCacheHelper: WalletVerKeyCacheHelper = {
-    walletAPI.createNewKey(CreateNewKey(seed = Option("0000000000000000000000000000TEST")))          //key to represent current/this agent
-    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000OTHER")))          //key to represent some other agent
-    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
-    new WalletVerKeyCacheHelper(wap, walletAPI, appConfig)
   }
 }

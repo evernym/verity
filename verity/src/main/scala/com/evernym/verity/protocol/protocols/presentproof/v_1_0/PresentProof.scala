@@ -7,10 +7,10 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg}
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
+import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.PresentProofContext
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
@@ -284,7 +284,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
     }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
-    buildOobInvite(presentationRequest, stateData) match {
+    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) match {
       //1. build request,
       case Success(invite) =>
         ctx.urlShortening.handleShortening(invite, shortenerHandler)
@@ -381,7 +381,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
 
-  def buildOobInvite(request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[ShortenInvite] = {
+  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[ShortenInvite] = {
     val service = InviteUtil.buildServiced(stateData.agencyVerkey, ctx)
 
     val attachement = Try(
@@ -392,7 +392,10 @@ object PresentProof {
         request)
     )
 
-    val invite = InviteUtil.buildInvite(
+    val invite = InviteUtil.buildInviteWithThreadedId(
+      protoRef,
+      ctx.getRoster.selfId_!,
+      ctx.`threadId_!`,
       stateData.agentName,
       stateData.logoUrl,
       stateData.publicDid,

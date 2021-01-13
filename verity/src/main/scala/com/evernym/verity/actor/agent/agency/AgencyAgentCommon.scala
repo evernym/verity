@@ -63,6 +63,7 @@ trait AgencyAgentCommon
           case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, newActorId)
           case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
           case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
+          case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
           //TODO: below parameter is required by dead drop protocol (but not used by it if it is running on cloud agency)
           case OTHER_ID                                 => Parameter(OTHER_ID, "")
@@ -128,23 +129,26 @@ trait AgencyAgentCommon
     logger.debug(s"Cloud Agent provisioning requested: $requester")
 
     val newActorId = getNewActorId
-    val (domainDID, domainVk, requesterVk) = requester match {
+    val provParamFut = requester match {
       case NeedsCloudAgent(requesterKeys, _) =>
-        (requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey)
+        Future.successful(ProvisioningParam(requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey))
       case NeedsEdgeAgent(requesterVk, _) =>
-        val domainKeys = agentActorContext.walletAPI.createNewKey()
-        (domainKeys.did, domainKeys.verKey, requesterVk)
+        agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { nk =>
+          ProvisioningParam(nk.did, nk.verKey, requesterVk)
+        }
     }
-    prepareNewAgentWalletData(domainDID, domainVk, newActorId).map { agentPairwiseKey =>
-      val setupEndpoint = SetupAgentEndpoint_V_0_7(
-        threadId,
-        domainDID,
-        agentPairwiseKey.did,
-        requesterVk,
-        requester.sponsorRel
-      )
-      userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
-      None
+    provParamFut.flatMap { pp =>
+      prepareNewAgentWalletData(pp.domainDID, pp.domainVerKey, newActorId).map { agentPairwiseKey =>
+        val setupEndpoint = SetupAgentEndpoint_V_0_7(
+          threadId,
+          pp.domainDID,
+          agentPairwiseKey.did,
+          pp.requestVerKey,
+          requester.sponsorRel
+        )
+        userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
+        None
+      }
     }
   }
 
@@ -169,3 +173,5 @@ trait AgencyAgentCommon
 
   def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, None)
 }
+
+case class ProvisioningParam(domainDID: DID, domainVerKey: VerKey, requestVerKey: VerKey)

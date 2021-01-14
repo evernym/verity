@@ -28,7 +28,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       Base58Util.encode(signedVerKey)
     }
 
-    "when sent rest api request msg on disabled api" - {
+    "when sent write-schema rest api request msg on disabled api" - {
       "should respond with NotImplemented" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = false
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -42,7 +42,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api request msg without authorization header" - {
+    "when sent write-schema rest api request msg without authorization header" - {
       "should respond with Unauthorized" in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -55,7 +55,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api request msg with authorization header without ':'" - {
+    "when sent write-schema rest api request msg with authorization header without ':'" - {
       "should respond with Unauthorized" in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -69,7 +69,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api request msg with authorization header with too many ':'" - {
+    "when sent write-schema rest api request msg with authorization header with too many ':'" - {
       "should respond with Unauthorized" in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -83,7 +83,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api request msg with invalid authorisation verkey" - {
+    "when sent write-schema rest api request msg with invalid authorisation verkey" - {
       "should respond with Unauthorized" in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -97,7 +97,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api request msg with invalid authorisation signature" - {
+    "when sent write-schema rest api request msg with invalid authorisation signature" - {
       "should respond with Unauthorized" in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -111,7 +111,26 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent valid rest api request msg" - {
+    "when sent valid issuer setup rest api request msg" - {
+      "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
+        overrideRestEnable = true
+        val (_, lastPayload) = withExpectNewRestMsgAtRegisteredEndpoint({
+          val createIssuerPayload = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/create","@id":"${UUID.randomUUID.toString}"}""")
+          buildPostReq(s"/api/$routingDid/issuer-setup/0.6/${UUID.randomUUID.toString}",
+            HttpEntity.Strict(ContentTypes.`application/json`, createIssuerPayload),
+            Seq(RawHeader("X-API-key", s"$verKey:$signature"))
+          ) ~> epRoutes ~> check {
+            status shouldBe Accepted
+            header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
+            responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
+          }
+        })
+        lastPayload.isDefined shouldBe true
+        lastPayload.get.contains("did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/public-identifier-created") shouldBe true
+      }
+    }
+
+    "when sent valid write schema rest api request msg" - {
       "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -125,7 +144,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent valid rest api request msg without threadId" - {
+    "when sent valid write schema rest api request msg without threadId" - {
       "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6",
@@ -139,7 +158,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent valid rest api request msg with case insensitive auth header" - {
+    "when sent valid write schema rest api request msg with case insensitive auth header" - {
       "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -153,7 +172,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api msg with wrong protocol family name" - {
+    "when sent write schema rest api msg with wrong protocol family name" - {
       "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema-wrong/0.6/${UUID.randomUUID.toString}",
@@ -167,7 +186,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api msg with wrong protocol version" - {
+    "when sent write schema rest api msg with wrong protocol version" - {
       "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
         buildPostReq(s"/api/$routingDid/write-schema/0.0/${UUID.randomUUID.toString}",
           HttpEntity.Strict(ContentTypes.`application/json`, payload),
@@ -180,7 +199,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api msg with invalid JSON payload" - {
+    "when sent write schema rest api msg with invalid JSON payload" - {
       "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -194,7 +213,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api msg with invalid JSON payload - added comma" - {
+    "when sent write schema rest api msg with invalid JSON payload - added comma" - {
       "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -208,7 +227,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api msg without @type in JSON payload" - {
+    "when sent write schema rest api msg without @type in JSON payload" - {
       "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/$routingDid/write-schema/0.6/${UUID.randomUUID.toString}",
@@ -222,7 +241,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
-    "when sent rest api msg with invalid route" - {
+    "when sent write schema rest api msg with invalid route" - {
       "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true
         buildPostReq(s"/api/invalid-route/write-schema/0.6/${UUID.randomUUID.toString}",

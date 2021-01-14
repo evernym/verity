@@ -282,10 +282,9 @@ lazy val commonLibraryDependencies = {
 
     //kamon monitoring dependencies
     "io.kamon" % "kanela-agent" % kanelaAgentVer,    //a java agent needed to capture akka related metrics
-    "io.kamon" %% "kamon-core" % kamonVer,
+
     "io.kamon" %% "kamon-bundle" % kamonVer,
     "io.kamon" %% "kamon-prometheus" % kamonVer,
-
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
     //other dependencies

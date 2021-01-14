@@ -279,8 +279,8 @@ trait BasePersistentActor
     case dmem: DeprecatedMultiEventMsg  => undoTransformAndApplyEvents(dmem.events)     //legacy/deprecated multi event (proto buf serialized)
     case dem: DeprecatedEventMsg        => undoTransformAndApplyEvents(Seq(dem))        //legacy/deprecated event (proto buf serialized)
 
-    case pm: PersistentMsg              => undoTransformAndApplyEvents(Seq(pm))         //new persistent msg
     case pmem: PersistentMultiEventMsg  => undoTransformAndApplyEvents(pmem.events)     //new persistent multi event msg
+    case pm: PersistentMsg              => undoTransformAndApplyEvents(Seq(pm))         //new persistent msg
 
     case evt: Any                       => applyReceivedEvent(evt)
   }
@@ -353,8 +353,8 @@ trait BasePersistentActor
         case te: TransformedEvent     =>    //deprecated java serialized event
           val pem = DeprecatedEventMsg(te.transformationId, te.eventCode, te.data)
           lookupTransformer(pem.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(pem)
-        case pem: DeprecatedEventMsg  =>    //deprecated proto buf serialized event
-          lookupTransformer(pem.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(pem)
+        case dem: DeprecatedEventMsg  =>    //deprecated proto buf serialized event
+          lookupTransformer(dem.transformationId, Option(LEGACY_PERSISTENT_OBJECT_TYPE_EVENT)).undo(dem)
         case pm: PersistentMsg        =>
           lookupTransformer(pm.transformationId).undo(pm)
       }

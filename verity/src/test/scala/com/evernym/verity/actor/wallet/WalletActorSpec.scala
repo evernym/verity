@@ -305,9 +305,14 @@ class WalletActorSpec
             s"""
                "cred_def1_id":"${cfpr.credDef.credDefId}"
                 """.stripMargin
-
+          val revStates =
+            s"""
+               {
+                  "${cfpr.credDef.credDefId}": {
+                  }
+               }""".stripMargin
           holderWalletActor ! CreateProof(proofReq, cfpr.credForProofReq, schemas,
-            credDefs, null, "masterSecret")
+            credDefs, revStates, "masterSecret")
           val proof = expectMsgType[String]
           logger.info("proof: " + proof)
         })

@@ -52,7 +52,7 @@ object AnoncredsWalletOpExecutor extends OpExecutorBase {
 
   def handleCreateProof(cp: CreateProof)(implicit we: WalletExt): Future[String] = {
     Anoncreds.proverCreateProof(we.wallet,
-      cp.proofRequest, cp.usedCredentials, cp.masterSecret,
+      cp.proofRequest, cp.requestedCredentials, cp.masterSecret,
       cp.schemas, cp.credentialDefs, cp.revStates)
   }
 }

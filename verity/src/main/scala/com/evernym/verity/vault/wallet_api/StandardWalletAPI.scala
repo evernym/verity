@@ -122,7 +122,7 @@ class StandardWalletAPI(walletService: WalletService)
                  (implicit wap: WalletAPIParam): String= {
     walletService.executeSync[String](wap.walletId,
       CreateProof(proofRequest, usedCredentials, schemas,
-        credentialDefs, revStates, masterSecret))
+        credentialDefs, masterSecret, revStates))
   }
 
   //no wallet needed

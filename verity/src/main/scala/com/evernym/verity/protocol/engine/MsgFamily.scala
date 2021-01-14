@@ -2,28 +2,23 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.MsgTypeParsingException
-import com.evernym.verity.config.CommonConfig.MESSAGE_TYPE_HTTP
 import com.evernym.verity.config.AppConfigWrapper
 
 import scala.util.matching.Regex
-
 
 object MsgFamily {
 
   //TODO: Evernym qualifier given below is just a test string,
   // we'll have to decide what it should be?
 
-  val EVERNYM_QUALIFIER: MsgFamilyQualifier = "didcomm.evernym.com" //"123456789abcdefghi1234"
+  val QUALIFIER_FORMAT_HTTP = false
 
+  val EVERNYM_QUALIFIER: MsgFamilyQualifier = if(QUALIFIER_FORMAT_HTTP) "didcomm.evernym.com" else "123456789abcdefghi1234"
 
-  val COMMUNITY_QUALIFIER: MsgFamilyQualifier = "didcomm.org" //"BzCbsNYhMrjHiqZDTUASHg"
+  val COMMUNITY_QUALIFIER: MsgFamilyQualifier = if (QUALIFIER_FORMAT_HTTP) "didcomm.org" else "BzCbsNYhMrjHiqZDTUASHg"
 
-  val MSG_FAMILY_DID_METHOD: String = "https" //"sov"
-
-  val VALID_MESSAGE_TYPE_REG_EX: Regex = "(https)://(.*)/(.*)/(.*)/(.*)".r //"(?:did)?(?::)?([A-z]*):(?://)?([A-z.]*)(?:;spec)?(?:/)([A-z.]*)/([0-9.]*)/([A-z.]*)".r
-//    if(AppConfigWrapper.getConfigBooleanReq(MESSAGE_TYPE_HTTP)) {
-//    "(https)://(.*)/(.*)/(.*)/(.*)".r
-//  } else "did:(.*):(.*);spec/(.*)/(.*)/(.*)".r
+  val VALID_MESSAGE_TYPE_REG_EX_HTTP: Regex = "(https)://(.*)/(.*)/(.*)/(.*)".r
+  val VALID_MESSAGE_TYPE_REG_EX_DID: Regex = "did:(.*):(.*);spec/(.*)/(.*)/(.*)".r
 
   def typeStrFromMsgType(msgType: MsgType): String = typeStrFromMsgType(
     msgType.familyQualifier,
@@ -47,13 +42,15 @@ object MsgFamily {
                                msgName: MsgName
                               ): String = {
     //note: if the string format below changes, we will need to change VALID_MESSAGE_TYPE_REG_EX above accordingly
-    if(AppConfigWrapper.getConfigBooleanReq(MESSAGE_TYPE_HTTP)) {  s"$MSG_FAMILY_DID_METHOD://$familyQualifier/$familyName/$familyVersion/$msgName"
-    } else s"did:$MSG_FAMILY_DID_METHOD:$familyQualifier;spec/$familyName/$familyVersion/$msgName"
+    if(familyQualifier.contains("http")) {  s"https://$familyQualifier/$familyName/$familyVersion/$msgName"
+    } else s"did:sov:$familyQualifier;spec/$familyName/$familyVersion/$msgName"
   }
 
   final def msgTypeFromTypeStr(typeStr: String): MsgType = {
     typeStr match {
-      case VALID_MESSAGE_TYPE_REG_EX(_, msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType) =>
+      case VALID_MESSAGE_TYPE_REG_EX_DID(_, msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType) =>
+        MsgType(msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType)
+      case VALID_MESSAGE_TYPE_REG_EX_HTTP(_, msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType) =>
         MsgType(msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType)
       case _ =>
         throw new MsgTypeParsingException(typeStr)

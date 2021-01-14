@@ -44,11 +44,24 @@ trait PairwiseConnStateBase {
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit
 
+  /**
+   * used to update the relationship object with their DID doc information (with legacy routing details)
+   * and also it updates connection status
+   * @param relScopeDID
+   * @param lrd
+   */
   def updateLegacyRelationshipState(relScopeDID: DID, lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
     updateRelAndConnection(theirDidDoc)
   }
 
+  /**
+   * used to update the relationship object with their DID doc information (with standard routing details)
+   * and also it updates connection status
+   * @param relScopeDID
+   * @param agentKeyDID
+   * @param rd
+   */
   def updateRelationshipState(relScopeDID: DID, agentKeyDID: DID, rd: RoutingDetail): Unit = {
     val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, agentKeyDID, Option(Right(rd)))
     updateRelAndConnection(theirDidDoc)

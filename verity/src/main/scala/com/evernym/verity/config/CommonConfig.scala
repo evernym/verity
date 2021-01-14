@@ -5,7 +5,9 @@ trait CommonConfig {
 
   val VERITY = "verity"
 
-  val VERITY_FUTURE_THREAD_POOL_SIZE = s"$VERITY.future-thread-pool-size"
+  val VERITY_THREAD_POOLS = s"$VERITY.thread-pools"
+  val VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.default-future.size"
+  val VERITY_WALLET_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.wallet-future.size"
 
   val VERITY_DOMAIN_URL_PREFIX = s"$VERITY.domain-url-prefix"
   val VERITY_ENDPOINT = s"$VERITY.endpoint"
@@ -351,6 +353,9 @@ trait CommonConfig {
   val MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB = s"$MIGRATE_THREAD_CONTEXTS.scheduled-job"
   val MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS =
     s"$MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB.interval-in-seconds"
+
+  val VERITY_ENDORSER = s"$VERITY_AGENT.endorser"
+  val VERITY_ENDORSER_DEFAULT_DID = s"$VERITY_ENDORSER.did"
 
   val LOGGING = s"$VERITY.logging"
   val LOGGING_IGNORE_FILTER_NAMES = s"$LOGGING.ignore-logger-filter.logger-name-contains"

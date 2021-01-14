@@ -4,6 +4,7 @@
 *.pid
 
 # sbt specific
+.bsp/
 .sbt/
 .ivy2/
 .cache

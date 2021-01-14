@@ -10,6 +10,12 @@ message SetDomainId {
     string domainId = 1;
 }
 
+message ChangePairwiseRelIds {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string newSelfId = 1;
+    string newOtherId = 2;
+}
+
 //Note: this is not used any more kept for backward compatibility
 message SetPinstId {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";

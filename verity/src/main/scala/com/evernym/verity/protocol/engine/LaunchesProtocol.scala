@@ -42,8 +42,8 @@ trait LaunchesProtocol {
    */
   def getPinstId(protoDef: ProtoDef): Option[PinstId] = None
 
-  def resolvePinstId[A](protoDef: ProtoDef, resolver: PinstIdResolver, relationshipId: Option[RelationshipId],
-                        threadId: ThreadId, msg: Option[TypedMsgLike[A]]=None): PinstId = {
+  def resolvePinstId(protoDef: ProtoDef, resolver: PinstIdResolver, relationshipId: Option[RelationshipId],
+                        threadId: ThreadId, msg: Option[TypedMsgLike]=None): PinstId = {
     resolver.resolve(
       protoDef,
       domainId,
@@ -54,24 +54,24 @@ trait LaunchesProtocol {
     )
   }
 
-  private def pinstIdForProtoDef[A](msg: TypedMsgLike[A], relationshipId: Option[RelationshipId],
+  private def pinstIdForProtoDef(msg: TypedMsgLike, relationshipId: Option[RelationshipId],
                                     threadId: ThreadId, protoDef: ProtoDef, resolver: PinstIdResolver): PinstId = {
     getPinstId(protoDef).getOrElse(resolvePinstId(protoDef, resolver, relationshipId, threadId, Option(msg)))
   }
 
-  protected def pinstIdForMsg[A](msg: TypedMsgLike[A], relationshipId: Option[RelationshipId],
+  protected def pinstIdForMsg(msg: TypedMsgLike, relationshipId: Option[RelationshipId],
                                  threadId: ThreadId): Option[PinstIdPair] = {
     protocolRegistry.entryForMsg(msg)
       .map(e => PinstIdPair(pinstIdForProtoDef(msg, relationshipId, threadId, e.protoDef, e.pinstIdResol), e.protoDef))
   }
 
-  protected def pinstIdForMsg_![A](tms: TypedMsgLike[A], relationshipId: Option[RelationshipId],
+  protected def pinstIdForMsg_!(tms: TypedMsgLike, relationshipId: Option[RelationshipId],
                                    threadId: ThreadId): PinstIdPair = {
     val entry = protocolRegistry.entryForMsg_!(tms)
     PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
   }
 
-  private def typedMsgPair[A](m: A): TypedMsgPair[A] = {
+  private def typedMsgPair(m: Any): TypedMsgPair = {
     val entry = protocolRegistry.entryForUntypedMsg_!(m)
     val msgFamily = entry.protoDef.msgFamily
     val typedMsg = try {
@@ -91,7 +91,7 @@ trait LaunchesProtocol {
       tmsgPair.entry.protoDef, tmsgPair.entry.pinstIdResol), tmsgPair.entry.protoDef)
   }
 
-  def typedMsg[A](m: A): TypedMsgLike[A] = {
+  def typedMsg(m: Any): TypedMsgLike = {
     typedMsgPair(m).typedMsg
   }
 
@@ -101,4 +101,4 @@ trait LaunchesProtocol {
 }
 
 case class PinstIdPair(id: PinstId, protoDef: ProtoDef)
-case class TypedMsgPair[A](typedMsg: TypedMsgLike[A], entry: Entry[_])
+case class TypedMsgPair(typedMsg: TypedMsgLike, entry: Entry[_])

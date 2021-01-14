@@ -22,7 +22,7 @@ class LibindyMetricsCollectorSpec
     with Eventually {
 
   implicit lazy val system: ActorSystem = AkkaTestBasic.system()
-  lazy val libindyMetricsCollector: ActorRef = platform.libindyMetricsCollector
+  lazy val libindyMetricsCollector: ActorRef = platform.libIndyMetricsCollector
   lazy val clientIpAddress: String = "127.0.0.1"
   lazy val reqId: ReqId = UUID.randomUUID().toString
 

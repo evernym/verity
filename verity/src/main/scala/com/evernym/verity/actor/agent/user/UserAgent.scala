@@ -6,7 +6,7 @@ import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor
+import com.evernym.verity.{ActorErrorResp, UrlParam, actor}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent._
@@ -40,7 +40,6 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
@@ -571,7 +570,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     )
 
     val agentVerKey = state.thisAgentVerKeyReq
-    Future.traverse(filteredPairwiseConns) { pc =>
+    val result = Future.traverse(filteredPairwiseConns) { pc =>
       val encParam = EncryptParam(
         Set(KeyParam(Left(getVerKeyReqViaCache(pc.agentKeyDID)))),
         Option(KeyParam(Left(agentVerKey)))
@@ -579,9 +578,15 @@ class UserAgent(val agentActorContext: AgentActorContext)
       val packedMsg = agentActorContext.agentMsgTransformer.pack(MPF_MSG_PACK, getMsg, encParam)
       val rmi = reqMsgContext.copy()
       rmi.data = reqMsgContext.data.filter(kv => Set(CLIENT_IP_ADDRESS, MSG_PACK_VERSION).contains(kv._1))
-      agentActorContext.agentMsgRouter.execute(
-        PackedMsgRouteParam(pc.agentKeyDID, packedMsg, rmi)).mapTo[PackedMsg].map (r => (pc.forDID, r))
+      agentActorContext.agentMsgRouter.execute(PackedMsgRouteParam(pc.agentKeyDID, packedMsg, rmi))
+        .map {
+          case pm: PackedMsg        => Option(pc.forDID, pm)
+          case aer: ActorErrorResp  =>
+            logger.error("error occurred while getting messages from connection: " + aer)
+            None
+        }
     }
+    result.map(_.flatten)
   }
 
   def handleGetMsgsRespMsgFromPairwiseActor(respFut: Future[List[(String, PackedMsg)]], sndr: ActorRef)
@@ -695,6 +700,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       // we should do some long term backward/forward compatible fix may be
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).getOrElse(state.myDid_!))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
+      case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
     }
 
     agencyVerKeyFut map paramMap

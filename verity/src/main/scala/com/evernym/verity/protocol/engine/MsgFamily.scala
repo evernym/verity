@@ -15,6 +15,7 @@ object MsgFamily {
 
   val EVERNYM_QUALIFIER: MsgFamilyQualifier = "didcomm.evernym.com" //"123456789abcdefghi1234"
 
+
   val COMMUNITY_QUALIFIER: MsgFamilyQualifier = "didcomm.org" //"BzCbsNYhMrjHiqZDTUASHg"
 
   val MSG_FAMILY_DID_METHOD: String = "https" //"sov"
@@ -94,7 +95,7 @@ trait MsgFamily {
   def msgType(msgName: MsgName): MsgType = MsgType(qualifier, name, version, msgName)
   def msgType(cls: Class[_]): MsgType = msgType(lookupAllMsgName(cls))
 
-  def typedMsg[A](msg: A): TypedMsg[A] = {
+  def typedMsg[A](msg: A): TypedMsg = {
     val msgType = MsgType(qualifier, name, version, lookupInputMsgName(msg.getClass))
     TypedMsg(msg, msgType)
   }

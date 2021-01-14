@@ -1,6 +1,5 @@
-package com.evernym.integrationtests.e2e.third_party_apis.wallet_api.base
+package com.evernym.verity.vault.wallet_api.base
 
-import java.io.File
 import java.util.UUID
 
 import akka.actor.ActorRef
@@ -33,7 +32,7 @@ trait ClientWalletAPISpecBase
   implicit def testCodeExecutionContext: ExecutionContext = {
     com.evernym.verity.ExecutionContextProvider.futureExecutionContext
     //comment above and uncomment/modify below to use custom thread pool
-    //ExecutionContext.fromExecutor(Executors.newFixedThreadPool(20))
+    //ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
   }
 
   ////NOTE: enable below function call to check for thread starvation for 'testCodeExecutionContext'
@@ -45,7 +44,10 @@ trait ClientWalletAPISpecBase
   def waitForAllResponses(): Unit
 
   var successResp: Int = 0
-  lazy val libIndyMetricsCollector: ActorRef = platform.libindyMetricsCollector
+  var failedResp: Int = 0
+  def totalRespCount: Int = successResp + failedResp
+
+  lazy val libIndyMetricsCollector: ActorRef = platform.libIndyMetricsCollector
 
   def printExecutorMetrics(): Unit = {
     //libIndyMetricsCollector ! CollectLibindyMetrics()
@@ -62,13 +64,11 @@ trait ClientWalletAPISpecBase
   def walletAPIConfig: Config = ConfigFactory parseString {
     """
       verity.wallet-api = "standard"                   # use "legacy" to test 'legacy wallet api'
-      verity.lib-indy.wallet.type = "mysql"
       """
   }
 
-  def walletStorageConfig: Config =
-    ConfigFactory.parseFile(new File("verity/src/main/resources/wallet-storage.conf"))
-      .resolve()
+  //for file based wallet nothing needs to be set
+  def walletStorageConfig: Config = ConfigFactory.parseString("""""")
 }
 
 //------------- helper classes/traits
@@ -90,7 +90,7 @@ trait UserWalletSetupHelper {
   }
 
   protected def _baseWalletSetupWithAsyncAPI(userId: Int, walletAPI: WalletAPI)
-                                            (implicit ec: ExecutionContext): Future[Option[VerKey]] = {
+                                            (implicit ec: ExecutionContext): Future[Any] = {
     implicit val wap: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
     println(s"[$userId] about to start executing wallet operations for an user")
     val result = for (
@@ -98,7 +98,7 @@ trait UserWalletSetupHelper {
     ) yield {
       println(s"[$userId] wallet created")
 
-      val fut1 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { r =>
+      val fut1 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { _ =>
         println(s"[$userId] new key created")
       }
 

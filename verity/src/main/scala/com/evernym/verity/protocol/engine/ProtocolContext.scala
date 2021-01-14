@@ -2,9 +2,10 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, SponsorRel, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
+import com.evernym.verity.actor.agent._
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
@@ -17,9 +18,9 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
+import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
-import com.github.ghik.silencer.silent
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -326,6 +327,11 @@ trait ProtocolContext[P,R,M,E,S,I]
     case SetDomainId(id) =>
       shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
 
+    case ChangePairwiseRelIds(self, other) =>
+      val s = shadowBackState.getOrElse(Backstate())
+      val newRoster = s.roster.changeSelfId(self).changeOtherId(other)
+      s.copy(roster = newRoster)
+
     case s: SponsorRel => Backstate()
       shadowBackState.getOrElse(Backstate()).copy(sponsorRel = Option(s))
 
@@ -363,7 +369,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def handleInternalSystemMsg(sysMsg: InternalSystemMsg): Any = {
     sysMsg match {
       case GivenDomainId(id)           => apply(SetDomainId(id))
-      case GivenSponsorRel(s)           => apply(s)
+      case GivenSponsorRel(s)          => apply(s)
       case stc: StoreThreadContext     =>
         val curPackagingContext = backstate.packagingContext
         if (curPackagingContext.isEmpty) {
@@ -672,9 +678,9 @@ case class SegmentStorageFailed() extends ActorMessage
 case class ExternalStorageComplete(externalId: SegmentKey)
 case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
 
-  def msgIdOpt: Option[MsgId] = msg match {
-    case e: Envelope1[_] => e.msgId
-    case c: CtlEnvelope[_] => Option(c.msgId)
+  def msgId: MsgId = msg match {
+    case e: Envelope1[_] => e.msgId.getOrElse(MsgFamilyUtil.getNewMsgUniqueId)
+    case c: CtlEnvelope[_] => Option(c.msgId).getOrElse(MsgFamilyUtil.getNewMsgUniqueId)
   }
 }
 

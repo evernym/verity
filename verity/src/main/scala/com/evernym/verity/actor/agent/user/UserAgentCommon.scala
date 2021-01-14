@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.agent.user
 
-import java.time.ZonedDateTime
-
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.BadRequestErrorException
@@ -35,6 +33,7 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
 import com.evernym.verity.vault._
 
+import java.time.ZonedDateTime
 import scala.concurrent.Future
 
 /**
@@ -62,8 +61,8 @@ trait UserAgentCommon
    */
   def agentCommonMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Any] = {
     case amw: AgentMsgWrapper if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_CONFIGS) =>
-      val tmsg = TypedMsg(UpdateConfigMsgHelper.buildReqMsg(amw), amw.msgType)
-      handleUpdateConfigPackedReq(tmsg)
+      val msg = UpdateConfigMsgHelper.buildReqMsg(amw)
+      handleUpdateConfigPackedReq(msg)
 
     case amw: AgentMsgWrapper if amw.isMatched(MFV_0_5, MSG_TYPE_REMOVE_CONFIGS) =>
       handleRemoveConfigMsg(RemoveConfigMsgHelper.buildReqMsg(amw))
@@ -133,7 +132,7 @@ trait UserAgentCommon
     sender ! AgencyIdentitySet(saw.did)
   }
 
-  def postUpdateConfig(tupdateConf: TypedMsg[UpdateConfigReqMsg], senderVerKey: Option[VerKey]): Unit = {}
+  def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
 
   def notifyUser(nu: NotifyUserViaPushNotif): Unit = {
     sendPushNotif(nu.pushNotifData, updateDeliveryStatus = false, None)
@@ -148,11 +147,11 @@ trait UserAgentCommon
     }
   }
 
-  def handleUpdateConfigPackedReq(tupdateConf: TypedMsg[UpdateConfigReqMsg])(implicit reqMsgContext: ReqMsgContext): Unit = {
+  def handleUpdateConfigPackedReq(tupdateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
       addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE,
         MSG_TYPE_UPDATE_CONFIGS, ownerDID)
-      handleUpdateConfig(tupdateConf.msg)
+      handleUpdateConfig(tupdateConf)
       postUpdateConfig(tupdateConf, reqMsgContext.latestDecryptedMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg)

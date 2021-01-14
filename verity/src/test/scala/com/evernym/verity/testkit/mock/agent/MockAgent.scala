@@ -3,12 +3,13 @@ package com.evernym.verity.testkit.mock.agent
 import java.util.UUID
 
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.testkit.AgentDIDDetail
+import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
 import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
 import com.evernym.verity.util.Util.{getAgentKeyDlgProof, logger}
 import com.evernym.verity.vault._
@@ -16,13 +17,17 @@ import com.evernym.verity.vault._
 /**
  * a mock agent
  */
-trait MockAgent extends HasWalletHelper with HasAppConfig {
+trait MockAgent
+  extends HasTestWalletAPI
+    with CommonSpecUtil
+    with HasAppConfig {
 
   def myDIDDetail: AgentDIDDetail  //selfDID detail
   def appConfig: AppConfig
   def initSpecific(): Unit = {}
 
-  override def name: String = myDIDDetail.name
+  def name: String = myDIDDetail.name
+  override def createWallet: Boolean = true
 
   //my all pairwise connection's DID details
   var pairwiseConnDetails: Map[String, MockPairwiseConnDetail] = Map.empty

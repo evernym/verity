@@ -53,7 +53,7 @@ val veritySdkVer    = "0.0.0-SNAPSHOT"
 val vcxWrapperVer   = "0.10.1.1124"
 
 // compiler plugin versions
-val silencerVersion = "1.6.0"
+val silencerVersion = "1.7.1"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -142,7 +142,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 lazy val settings = Seq(
   organization := "com.evernym",
   version := s"${major.value}.${minor.value}.${patch.value}",
-  scalaVersion := "2.12.10",
+  scalaVersion := "2.12.12",
   scalacOptions := Seq(
     "-feature",
     "-unchecked",
@@ -282,15 +282,15 @@ lazy val commonLibraryDependencies = {
 
     //kamon monitoring dependencies
     "io.kamon" % "kanela-agent" % kanelaAgentVer,    //a java agent needed to capture akka related metrics
-    "io.kamon" %% "kamon-core" % kamonVer,
+
     "io.kamon" %% "kamon-bundle" % kamonVer,
     "io.kamon" %% "kamon-prometheus" % kamonVer,
-
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
     //other dependencies
-    "commons-net" % "commons-net" % "3.6",        //used for CIDR based ip address validation/checking/comparision
-                                                      // (for internal apis and may be few other places)
+    "commons-net" % "commons-net" % "3.7.2",      //used for CIDR based ip address validation/checking/comparision
+                                                    // (for internal apis and may be few other places)
+    "commons-codec" % "commons-codec" % "1.15",
     "org.velvia" %% "msgpack4s" % "0.6.0",        //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "1.18",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd

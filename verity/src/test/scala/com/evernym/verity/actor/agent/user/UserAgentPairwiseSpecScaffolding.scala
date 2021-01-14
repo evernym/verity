@@ -213,10 +213,11 @@ trait UserAgentPairwiseSpecScaffolding
       mockRemoteEdgeCloudAgent.wap)
   }
 
-  def receivedGeneralMsgWithoutAcceptingInvite_V_0_5(
-                                                      connId: String, hint: String,
-                                                      msgType: String, expectSilentPushNotif: Boolean = false,
-                                                      expectAlertingPushNotif: Boolean = false): Unit = {
+  def receivedGeneralMsgWithoutAcceptingInvite_V_0_5(connId: String,
+                                                     hint: String,
+                                                     msgType: String,
+                                                     expectSilentPushNotif: Boolean = false,
+                                                     expectAlertingPushNotif: Boolean = false): Unit = {
     s"when received CREATE_MSG ($msgType) msg [$hint]" - {
       "should respond with error" in {
         val oldPushMsgCount = MockPusher.pushedMsg.size

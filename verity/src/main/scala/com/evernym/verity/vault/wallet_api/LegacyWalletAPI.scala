@@ -12,12 +12,12 @@ import com.evernym.verity.actor.wallet.{GetVerKeyOpt, _}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.LedgerPoolConnManager
+import com.evernym.verity.libindy.wallet.operation_executor.DidOpExecutor
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.util.Util._
-import com.evernym.verity.util.UtilBase
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
@@ -35,8 +35,7 @@ import scala.concurrent.{Await, Future}
 
 class LegacyWalletAPI(appConfig: AppConfig,
                       walletProvider: WalletProvider,
-                      util: UtilBase,
-                      ledgerPoolManager: LedgerPoolConnManager)
+                      ledgerPoolManager: Option[LedgerPoolConnManager])
   extends WalletAPI {
 
   val logger: Logger = getLoggerByClass(getClass)
@@ -170,9 +169,9 @@ class LegacyWalletAPI(appConfig: AppConfig,
     keyParam.verKeyParam.fold(
       l => Future.successful(l),
       r => {
-        executeOpWithWalletInfo("get ver key", { we: WalletExt =>
+        executeOpWithWalletInfo("get ver key", { implicit we: WalletExt =>
           logger.debug("about to get DID ver key => wallet name: DID: " + r.did)
-          util.getVerKey(r.did, we, r.getKeyFromPool, ledgerPoolManager)
+          DidOpExecutor.getVerKey(r.did, r.getKeyFromPool, ledgerPoolManager)
         })
       }
     )
@@ -182,7 +181,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     keyParam.verKeyParam.fold(
       l => Future.successful(l),
       r => {
-        util.getVerKey(r.did, we, r.getKeyFromPool, ledgerPoolManager)
+        DidOpExecutor.getVerKey(r.did, r.getKeyFromPool, ledgerPoolManager)
       }
     )
   }
@@ -389,7 +388,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
 
   def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
     val wp = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
-    implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, util, ledgerPoolManager)
+    implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, ledgerPoolManager)
     val resp = cmd match {
       case CreateWallet =>
         val walletExt = WalletMsgHandler.handleCreateAndOpenWalletSync()

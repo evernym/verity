@@ -2,7 +2,7 @@ package com.evernym.verity.libindy.wallet.operation_executor
 
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 
 import scala.concurrent.Future
@@ -52,7 +52,7 @@ object AnoncredsWalletOpExecutor extends OpExecutorBase {
 
   def handleCreateProof(cp: CreateProof)(implicit we: WalletExt): Future[String] = {
     Anoncreds.proverCreateProof(we.wallet,
-      cp.proofRequest, cp.usedCredentials, cp.masterSecret,
+      cp.proofRequest, cp.requestedCredentials, cp.masterSecret,
       cp.schemas, cp.credentialDefs, cp.revStates)
   }
 }

@@ -2,7 +2,7 @@ package com.evernym.verity.actor.base
 
 import java.time.LocalDateTime
 
-import akka.actor.{Actor, ActorRef, PoisonPill}
+import akka.actor.{Actor, ActorRef}
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
@@ -11,10 +11,10 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
 /**
- * core actor for almost all actors (persistent or non-persistent) used in this codebase
+ * this core actor is used for almost all actors in this codebase (persistent or non-persistent)
  * this is mostly to reuse start/stop metrics tracking and
- * generic incoming command validation and (like if command extends 'ActorMessage' serializable interface or not etc)
- * generic exception handling during command processing
+ * generic incoming command validation (like if command extends 'ActorMessage' serializable interface or not etc)
+ * and generic exception handling during command processing
  */
 trait CoreActor extends Actor {
 
@@ -38,8 +38,13 @@ trait CoreActor extends Actor {
       throw new RuntimeException(s"[$actorId] incoming command not extending 'ActorMessage' interface: $cmd")
   }
 
+  /**
+   * to be supplied by implemented class
+   * @return
+   */
   def receiveCmd: Receive
-  def cmdHandler: Receive = receiveCmd
+
+  final def cmdHandler: Receive = receiveCmd
 
   // We have need of a super generic logging. But this is too high level to define a generic logger
   // So we have this private logger for those needs but should not be sub-classes
@@ -70,13 +75,9 @@ trait CoreActor extends Actor {
     MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
   }
 
-  def stopActor(): Unit = {
-    context.self ! PoisonPill
-  }
-
   private def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
     genericLogger.error(s"[$actorId]: crashed and about to restart => " +
-      s"message being processed while error happened: $message, " +
+      message.map(m => s"message being processed while error happened: $m, ").getOrElse("") +
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
   }
 

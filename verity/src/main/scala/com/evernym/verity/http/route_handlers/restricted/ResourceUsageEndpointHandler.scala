@@ -211,4 +211,4 @@ case class UpdateResourcesUsageLimit(resourceUsageLimits: List[ResourceUsageLimi
 
 
 case class ResourceUsageCounterDetail(resourceName: String, bucketId: Int, newCount: Option[Int])
-case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessageClass
+case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessage

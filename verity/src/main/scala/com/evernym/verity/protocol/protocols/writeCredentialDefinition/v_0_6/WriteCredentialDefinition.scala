@@ -1,14 +1,16 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants.MY_ISSUER_DID
+import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.LedgerRejectException
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
+import org.hyperledger.indy.sdk.ledger.Ledger.appendRequestEndorser
 
 import scala.util.{Failure, Success, Try}
 
@@ -61,8 +63,18 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
           ctx.signal(StatusReport(credDefId))
         case Failure(e: LedgerRejectException) if missingVkErr(submitterDID, e) =>
           ctx.logger.warn(e.toString)
-          ctx.apply(AskedForEndorsement(credDefId, credDefJson))
-          ctx.signal(NeedsEndorsement(credDefId, credDefJson))
+          val endorserDid = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+          if (endorserDid.nonEmpty) {
+            val credDefJsonWithEndorser = appendRequestEndorser(credDefJson, endorserDid).get
+            ctx.wallet.signRequest(submitterDID, credDefJsonWithEndorser) match {
+              case Success(ledgerRequest) =>
+                ctx.signal(NeedsEndorsement(credDefId, ledgerRequest.req))
+                ctx.apply(AskedForEndorsement(credDefId, ledgerRequest.req))
+              case Failure(e) => problemReport(e)
+            }
+          } else {
+            problemReport(new Exception("No default endorser defined"))
+          }
         case Failure(e) => problemReport(e)
       }
     } catch {

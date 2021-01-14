@@ -34,18 +34,17 @@ val sharedLibDeps = Seq(
 )
 
 //dependency versions
-val akkaVer = "2.6.8"
-val akkaHttpVer = "10.1.12"
-val akkaMgtVer = "1.0.8"
-val alpAkkaVer = "2.0.1"
-val indyWrapperVer = "1.16.0-rc-161"
-val jacksonVer = "2.11.1"
-val kamonVer = "2.1.6"
-val dispatchVer = "0.13.1"
-val circeVer = "0.8.0"
-val sdnotifyVer = "1.3" // NOTE: Do not downgrade SDNotify to 1.1!
-//       Downgrading SDNotify from 1.3 to 1.1 to resolve jna eviction warnings between libindy 1.8.2/1.10.0 and
-//       SDNotify 1.3 result in: java.lang.NoClassDefFoundError: Could not initialize class com.sun.jna.Native
+val indyWrapperVer  = "1.15.0-dev-1607"
+
+val akkaVer         = "2.6.10"
+val akkaHttpVer     = "10.2.2"
+val akkaMgtVer      = "1.0.9"
+val alpAkkaVer      = "2.0.2"
+val kamonVer        = "2.1.9"
+val kanelaAgentVer  = "1.0.7"
+val jacksonVer      = "2.11.1"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
+                                  // around base64 decoding etc, should look into it.
+val sdnotifyVer     = "1.3"
 
 //test dependency versions
 val scalatestVer = "3.2.0"
@@ -54,7 +53,7 @@ val veritySdkVer = "0.4.5-77b158ab"
 val vcxWrapperVer = "0.10.1.1131"
 
 // compiler plugin versions
-val silencerVersion = "1.6.0"
+val silencerVersion = "1.7.1"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -143,7 +142,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 lazy val settings = Seq(
   organization := "com.evernym",
   version := s"${major.value}.${minor.value}.${patch.value}",
-  scalaVersion := "2.12.10",
+  scalaVersion := "2.12.12",
   scalacOptions := Seq(
     "-feature",
     "-unchecked",
@@ -166,6 +165,7 @@ lazy val settings = Seq(
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
   resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
   resolvers += Resolver.bintrayRepo("bfil", "maven"),
+
   Test / parallelExecution := false,
   Test / logBuffered := false,
   Global / parallelExecution := false,
@@ -186,12 +186,12 @@ lazy val settings = Seq(
 lazy val testSettings = Seq (
   //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", s"target/test-reports/$projectName"),
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),        // standard test output, a bit verbose
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oNCXEHLOPQRM"), // summarized test output
+  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
+  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oNCXEHLOPQRM"),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
-  // an issue was found when we run 'sbt test' related to class loading
-  // (which was somehow breaking deserialization process)
+  // an issue was found related to class loading when we run 'sbt test'
+  // (which was somehow breaking the deserialization process)
   // so to fix that, had to add below setting
   Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.Flat
 )
@@ -242,65 +242,61 @@ lazy val commonLibraryDependencies = {
 
   val akkaGrp = "com.typesafe.akka"
 
-  //akka related
   val coreDeps = Seq.apply(
+
+    //akka dependencies
     akkaGrp %% "akka-actor" % akkaVer,
     akkaGrp %% "akka-persistence" % akkaVer,
     akkaGrp %% "akka-cluster-sharding" % akkaVer,
     akkaGrp %% "akka-http" % akkaHttpVer,
 
-    //akka management api
-    "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,
-    "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,
+    //akka persistence dependencies
+    akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
 
+    //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,
+    "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,                //not using as such
+    "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,   //not using as such
 
-    "com.twitter" %% "chill-akka" % "0.9.5",
+    //other akka dependencies
+    "com.twitter" %% "chill-akka" % "0.9.5",    //serialization/deserialization for akka remoting
 
-    "org.hyperledger" % "indy" % indyWrapperVer,   //debPkgDepLibIndyMinVersion,
-
-    "org.json" % "json" % "20180813",
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",
+    //hyper-ledger indy dependencies
+    "org.hyperledger" % "indy" % indyWrapperVer,
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
-    //persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
+    //message codec dependencies (native classes to json and vice versa) [used by JacksonMsgCodec]
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-json-org" % jacksonVer,    //JSONObject serialization/deserialization
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVer,      //Java "time" data type serialization/deserialization
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVer,          //Scala classes serialization/deserialization
 
-    //helper/utility dependencies
-    "commons-net" % "commons-net" % "3.6",
+    //sms service implementation dependencies
+    "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
+    "org.glassfish.jersey.core" % "jersey-client" % "2.25"                          //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
+      excludeAll ExclusionRule(organization = "javax.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
+    "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
-    //sms
-    "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",
+    //kamon monitoring dependencies
+    "io.kamon" % "kanela-agent" % kanelaAgentVer,    //a java agent needed to capture akka related metrics
 
-    "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,
-    "com.fasterxml.jackson.datatype" % "jackson-datatype-json-org" % jacksonVer,
-    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVer,
-    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVer,
-
-    "org.glassfish.jersey.core" % "jersey-client" % "2.25"
-      excludeAll ExclusionRule(organization = "javax.inject"), //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
-
-    //kamon
-    "io.kamon" % "kanela-agent" % "1.0.5",    //a java agent needed to capture akka related metrics
-    "io.kamon" %% "kamon-core" % kamonVer,
     "io.kamon" %% "kamon-bundle" % kamonVer,
     "io.kamon" %% "kamon-prometheus" % kamonVer,
-
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
-    //others
+    //other dependencies
+    "commons-net" % "commons-net" % "3.7.2",      //used for CIDR based ip address validation/checking/comparision
+                                                    // (for internal apis and may be few other places)
+    "commons-codec" % "commons-codec" % "1.15",
+    "org.velvia" %% "msgpack4s" % "0.6.0",        //used by legacy pack/unpack operations
+    "org.fusesource.jansi" % "jansi" % "1.18",    //used by protocol engine for customized logging
+    "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-    "info.faljse" % "SDNotify" % sdnotifyVer,       //needed by app state manager to notify to systemd
-    "org.velvia" %% "msgpack4s" % "0.6.0",
-
-    "org.fusesource.jansi" % "jansi" % "1.18",
-
-    "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1"
-
+    //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
   )
 
   //for macro libraries that are compile-time-only
@@ -322,9 +318,9 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
-    "org.iq80.leveldb" % "leveldb" % "0.11", //to be used in E2E tests
+    "org.iq80.leveldb" % "leveldb" % "0.11",      //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
-    "org.abstractj.kalium" % "kalium" % "0.8.0", // java binding for nacl
+    "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
       exclude ("org.hyperledger", "indy"),
@@ -334,7 +330,7 @@ lazy val commonLibraryDependencies = {
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 
-    //post akka 2.6 upgrade, had to add below dependencies test dependency with akka http version
+    //post akka 2.6 upgrade, had to add below test dependencies with given akka http version
     //need to come back to this and see if there is better way to fix it
     akkaGrp %% "akka-http-spray-json" % akkaHttpVer,
     akkaGrp %% "akka-http-xml" % akkaHttpVer,
@@ -367,7 +363,6 @@ lazy val protoBufSettings = Seq(
 ) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
 
 lazy val confFiles = Set (
-  "environment.conf",
   "akka.conf",
   "dynamodb.conf",
   "lib-indy.conf",
@@ -387,14 +382,14 @@ lazy val confFiles = Set (
 )
 
 lazy val mergeStrategy: PartialFunction[String, MergeStrategy] = {
-  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.concat
-  case PathList(ps @ _*) if ps.last equals "module-info.class" => MergeStrategy.concat
-  case PathList("systemd", "systemd.service")               => MergeStrategy.first
-  case PathList("mime.types")                               => MergeStrategy.first
-  case PathList(ps @ _*) if ps.last endsWith ".proto"       => MergeStrategy.first
-  case PathList("reference.conf")                           => referenceConfMerge()
-  case s if confFiles.contains(s)                           => MergeStrategy.discard
-  case s                                                    => MergeStrategy.defaultMergeStrategy(s)
+  case PathList("META-INF", "io.netty.versions.properties")     => MergeStrategy.concat
+  case PathList(ps @ _*) if ps.last equals "module-info.class"  => MergeStrategy.concat
+  case PathList("systemd", "systemd.service")                   => MergeStrategy.first
+  case PathList("mime.types")                                   => MergeStrategy.first
+  case PathList(ps @ _*) if ps.last endsWith ".proto"           => MergeStrategy.first
+  case PathList("reference.conf")                               => referenceConfMerge()
+  case s if confFiles.contains(s)                               => MergeStrategy.discard
+  case s                                                        => MergeStrategy.defaultMergeStrategy(s)
 }
 
 /*

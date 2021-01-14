@@ -1,30 +1,38 @@
 package com.evernym.verity.testkit
 
+import java.util.UUID
+
+import com.evernym.verity.actor.agent.{WalletApiBuilder, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.protocol.protocols.{HasAppConfig, HasWallet}
-import com.evernym.verity.util.Util
-import com.evernym.verity.util.Util.getNewActorId
-import com.evernym.verity.vault.service.NonActorWalletService
-import com.evernym.verity.vault.{AgentWalletAPI, WalletAPI}
+import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
+import com.evernym.verity.util.TestWalletService
+import com.evernym.verity.vault.wallet_api.WalletAPI
 
-
-trait TestWalletHelper extends HasWallet with HasAppConfig {
-  val appConfig = new TestAppConfig
-  val walletDetail: AgentWalletAPI = {
-
-    val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
-    val walletProvider = new LibIndyWalletProvider(appConfig)
-    val walletService = new NonActorWalletService(appConfig, Util, walletProvider, poolConnManager)
-    val walletAPI = new WalletAPI(walletService, walletProvider)
-    AgentWalletAPI(walletAPI, getNewActorId)
+class TestWallet(createWallet: Boolean=false) extends HasTestWalletAPI {
+  if (createWallet) {
+    agentWalletAPI.walletAPI.createWallet(wap)
   }
 }
 
-class TestWallet(createWallet: Boolean=false) extends TestWalletHelper {
-  if (createWallet) {
-    walletDetail.walletAPI.createWallet(wap)
+trait HasTestWalletAPI extends HasAgentWallet with HasAppConfig {
+
+  def createWallet: Boolean = false
+
+  override def agentWalletId: Option[String] = Option(UUID.randomUUID().toString)
+
+  def appConfig: AppConfig = new TestAppConfig
+
+  lazy val walletAPI: WalletAPI = {
+    val walletProvider = new LibIndyWalletProvider(appConfig)
+    val walletService = new TestWalletService(appConfig, walletProvider)
+    val api = WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider)
+    if (createWallet) {
+      api.createWallet(wap)
+    }
+    api
   }
+
+  lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, walletAPI, appConfig)
 }

@@ -32,7 +32,7 @@ class IndyPackTransformerSpec extends AgentTransformerSpec {
     "when tried to deserialize it" - {
       "should be able to deserialize it successfully" in {
         val unpackedMsgWrapper = agentMsgTransformer.unpack(
-          lastPackedMsg.msg, KeyInfo(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+          lastPackedMsg.msg, KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
         unpackedMsgWrapper.headAgentMsg.msg shouldBe DefaultMsgCodec.toJson(msg)
       }
     }
@@ -50,7 +50,7 @@ class IndyPackTransformerSpec extends AgentTransformerSpec {
     "when tried to unpack it with indy pack" - {
       "should be able to successfully do it" in {
         lazy val unpacked: AgentMsgWrapper = agentMsgTransformer.unpack(lastPackedMsg.msg,
-          KeyInfo(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+          KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
         val msgType = unpacked.msgType
         unpacked.msgPackFormat shouldBe msgPackFormat
         msgType.familyName shouldBe MSG_FAMILY_AGENT_PROVISIONING

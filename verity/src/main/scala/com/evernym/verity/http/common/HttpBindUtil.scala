@@ -19,7 +19,7 @@ trait HttpBindUtil extends HttpsSupport with CorsSupport {
 
   def bindHttpPorts(routes: Route, appConfig: AppConfig): Future[Seq[BindResult]] = {
     val httpBindFuture = try {
-      val sbFut = Http().bindAndHandle(corsHandler(routes), appConfig.getConfigStringReq(HTTP_INTERFACE), appConfig.getConfigIntReq(HTTP_PORT))
+      val sbFut = Http().newServerAt(appConfig.getConfigStringReq(HTTP_INTERFACE), appConfig.getConfigIntReq(HTTP_PORT)).bind(corsHandler(routes))
       sbFut.map(sb => BindResult(s"started listening on port ${appConfig.getConfigIntReq(HTTP_PORT)}", sb))
     } catch {
       case e: Exception =>
@@ -31,8 +31,9 @@ trait HttpBindUtil extends HttpsSupport with CorsSupport {
     val httpsBindFutureOpt = try {
       appConfig.getConfigIntOption(HTTP_SSL_PORT).flatMap { httpsPort =>
         getHttpsConnectionContext.map { https =>
-          val sbFut = Http().bindAndHandle(corsHandler(routes), appConfig.getConfigStringReq(HTTP_INTERFACE), httpsPort,
-            connectionContext = https)
+          val sbFut = Http().newServerAt(appConfig.getConfigStringReq(HTTP_INTERFACE), httpsPort)
+            .enableHttps(https)
+            .bind(corsHandler(routes))
           sbFut.map(sb => BindResult(s"started listening on port $httpsPort", sb))
         }
       }

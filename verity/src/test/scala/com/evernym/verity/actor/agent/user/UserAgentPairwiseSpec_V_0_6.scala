@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_HTTP_ENDPOINT, COM_METHOD_TYPE_PUSH, DEFAULT_INVITE_SENDER_LOGO_URL, DEFAULT_INVITE_SENDER_NAME}
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED_OFFER, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, getNewMsgUniqueId}
@@ -14,7 +14,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
 class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -87,7 +87,7 @@ trait UserAgentPairwiseSpec_V_0_6
       "should respond with CONNECTION_CREATED msg" in {
         val (resp, receivedMsgOpt) = withExpectNewMsgAtRegisteredEndpoint {
           val msg = prepareCreateConnection(Option(connId), Option(phoneNo))
-          ua ! PackedMsgParam(msg, reqMsgContext)
+          ua ! ProcessPackedMsg(msg, reqMsgContext)
           expectMsgType[PackedMsg] //this expectation of a message is temporary until we start returning generic success messages upon receiving agent messages.
         }
         val agentMsg = mockEdgeAgent.handleReceivedAgentMsg(receivedMsgOpt.map(_.msg).get)
@@ -103,7 +103,7 @@ trait UserAgentPairwiseSpec_V_0_6
     s"when sent CREATE_KEY msg ($connId)" - {
       "should respond with KEY_CREATED msg" taggedAs (UNSAFE_IgnoreLog) in {
         val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.DID, connId)
-        ua ! PackedMsgParam(msg, reqMsgContext)
+        ua ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         val resp = handlePairwiseKeyCreatedResp(pm, buildConnIdMap(connId))
         agentPairwiseDID = resp.withPairwiseDID
@@ -123,7 +123,7 @@ trait UserAgentPairwiseSpec_V_0_6
         val msg = prepareCreateInvite(
           mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.DID,
           Option(connId1New), includeKeyDlgProof = true)
-        uap ! PackedMsgParam(msg, reqMsgContext)
+        uap ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         val icr = handleInviteCreatedResp(pm, buildConnIdMap(connId1New))
         threadId = icr.`~thread`.thid.get
@@ -168,8 +168,8 @@ trait UserAgentPairwiseSpec_V_0_6
           invite.connReqId)
 
         val theirAgentEncParam = EncryptParam(
-          Set(KeyInfo(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
-          Option(KeyInfo(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
+          Set(KeyParam(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
+          Option(KeyParam(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
         )
         val msg = buildReceivedReqMsg_1_0(AgentPackMsgUtil(agentMsg, theirAgentEncParam))
         uap ! wrapAsPackedMsgParam(msg)

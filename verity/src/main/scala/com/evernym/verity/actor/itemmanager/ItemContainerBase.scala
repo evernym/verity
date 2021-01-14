@@ -677,7 +677,7 @@ case class ItemDetail(status: Int, detail: Option[String], isFromMigration: Bool
     id.status == status && id.detail == detail
   }
 }
-case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessageClass
+case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessage
 case class MigrationCheckResult(checkedAt: ZonedDateTime,
                                 migrateToLatestVersionedContainers: Boolean=false,
                                 migrateToNextLinkedContainer: Boolean=false,
@@ -686,14 +686,14 @@ case class MigrationCheckResult(checkedAt: ZonedDateTime,
 case class MigrationStatus(startedAt: Option[ZonedDateTime], finishedAt: Option[ZonedDateTime])
 case class MigratedItemDetail(id: ItemId, toContainerEntityId: ItemContainerEntityId)
 
-case class ItemNotFound(id: ItemId) extends ActorMessageClass
+case class ItemNotFound(id: ItemId) extends ActorMessage
 
 case class ItemContainerConfig(itemType: ItemType,
                                entityIdMapperVersion: VersionId,
                                managerEntityId: ItemManagerEntityId,
                                ownerVerKey: Option[VerKey],
                                migrateItemsToNextLinkedContainer: Boolean,
-                               migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessageClass {
+                               migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
 
   def currentVersionIsNotLatest: Boolean = {
     !ItemConfigManager.isLatestVersion(itemType, entityIdMapperVersion)
@@ -708,24 +708,24 @@ case class ItemContainerState(itemContainerConfig: Option[ItemContainerConfig] =
                               migratedItems: Set[MigratedItemDetail],
                               migrationStatus: Map[ItemContainerEntityId, MigrationStatus],
                               migratedContainers: Map[ItemContainerEntityId, MigratedContainer],
-                              scheduledJobDetail: ScheduledJobDetail) extends ActorMessageClass
+                              scheduledJobDetail: ScheduledJobDetail) extends ActorMessage
 
 
-case object CheckForPeriodicTaskExecution extends ActorMessageObject
-case class ExecuteAndForwardReq(containerSequenceId: Int, cmd: Any) extends ActorMessageClass
-case class ExecuteAndForwardResp(containerSequenceId: Int, respFromContainerEntityId: ItemContainerEntityId, resp: Any) extends ActorMessageClass
+case object CheckForPeriodicTaskExecution extends ActorMessage
+case class ExecuteAndForwardReq(containerSequenceId: Int, cmd: Any) extends ActorMessage
+case class ExecuteAndForwardResp(containerSequenceId: Int, respFromContainerEntityId: ItemContainerEntityId, resp: Any) extends ActorMessage
 
-case object GetContainerStatus extends ActorMessageObject
+case object GetContainerStatus extends ActorMessage
 
 /**
  *
  * @param id container entity id
  * @param items Map[ItemStatus, ItemCount]
  */
-case class ContainerStatus(id: ItemContainerEntityId, items: Map[String, Int]) extends ActorMessageClass
-case class ContainerItems(items: Map[ItemId, ItemDetail]) extends ActorMessageClass
-case class MigratedContainer(time: ZonedDateTime, isStorageCleaned: Boolean) extends ActorMessageClass
+case class ContainerStatus(id: ItemContainerEntityId, items: Map[String, Int]) extends ActorMessage
+case class ContainerItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
+case class MigratedContainer(time: ZonedDateTime, isStorageCleaned: Boolean) extends ActorMessage
 
-case class UpdatePrevContainerId(id: ItemContainerEntityId) extends ActorMessageClass
-case class UpdateNextContainerId(id: ItemContainerEntityId) extends ActorMessageClass
-case class CleanStorage(requestedByItemContainerId: ItemContainerEntityId) extends ActorMessageClass
+case class UpdatePrevContainerId(id: ItemContainerEntityId) extends ActorMessage
+case class UpdateNextContainerId(id: ItemContainerEntityId) extends ActorMessage
+case class CleanStorage(requestedByItemContainerId: ItemContainerEntityId) extends ActorMessage

@@ -2,9 +2,9 @@ package com.evernym.verity.actor.itemmanager
 
 import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.actor.base.BaseNonPersistentActor
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.constants.ActorNameConstants.ITEM_CONTAINER_REGION_ACTOR_NAME
-import com.evernym.verity.actor.{ActorMessageClass, ForIdentifier}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.Logger
 
 
 class ItemManagerTaskExecutor(val appConfig: AppConfig, val itemManagerEntityId: ItemManagerEntityId)
-  extends BaseNonPersistentActor {
+  extends CoreActorExtended {
 
   val logger: Logger = getLoggerByClass(classOf[ItemManagerTaskExecutor])
 
@@ -101,9 +101,9 @@ class ItemManagerTaskExecutor(val appConfig: AppConfig, val itemManagerEntityId:
 
 }
 
-case class ExecuteAgainstItemContainerLinkedList(headContainerEntityId: ItemContainerEntityId, tailContainerId: ItemContainerEntityId, cmd: Any) extends ActorMessageClass
-case class ActiveContainerStatus(containers: Map[ItemContainerEntityId, Map[String, Int]]) extends ActorMessageClass
-case class AllItems(items: Map[ItemId, ItemDetail]) extends ActorMessageClass
+case class ExecuteAgainstItemContainerLinkedList(headContainerEntityId: ItemContainerEntityId, tailContainerId: ItemContainerEntityId, cmd: Any) extends ActorMessage
+case class ActiveContainerStatus(containers: Map[ItemContainerEntityId, Map[String, Int]]) extends ActorMessage
+case class AllItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
 
 /**
  *

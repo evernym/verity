@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.util.TimeZoneUtil._
-import com.evernym.verity.vault.{EncryptParam, KeyInfo}
+import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.util.Left
 
@@ -47,8 +47,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       val getMsgsRespMsg = GetMsgsMsgHelper.buildRespMsg(filteredMsgs)(reqMsgContext.agentMsgContext)
 
       val encParam = EncryptParam(
-        Set(KeyInfo(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
-        Option(KeyInfo(Left(state.thisAgentVerKeyReq)))
+        Set(KeyParam(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
+        Option(KeyParam(Left(state.thisAgentVerKeyReq)))
       )
       val logPrefix = "\n  => "
       logger.debug(s"filtered get msgs: $logPrefix" + filteredMsgs.mkString(logPrefix))
@@ -77,8 +77,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
     val msgStatusUpdatedRespMsg = UpdateMsgStatusMsgHelper.buildRespMsg(updateMsgStatus.uids,
       updateMsgStatus.statusCode)(reqMsgContext.agentMsgContext)
     val encParam = EncryptParam(
-      Set(KeyInfo(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
-      Option(KeyInfo(Left(state.thisAgentVerKeyReq)))
+      Set(KeyParam(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
+      Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
 
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg)
@@ -167,29 +167,5 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       else existingFailedAttemptCount
     writeAndApply(MsgDeliveryStatusUpdated(umds.uid, umds.to, umds.statusCode,
       umds.statusDetail.getOrElse(Evt.defaultUnknownValueForStringType), getMillisForCurrentUTCZonedDateTime, newFailedAttemptCount))
-    updateUndeliveredMsgCountMetrics()
-    updateFailedAttemptCountMetrics()
-    updateFailedMsgCountMetrics()
-  }
-
-  /**
-   * To be overrridden by implementing class
-   */
-  def updateUndeliveredMsgCountMetrics(): Unit = {
-    //specific actor can override this
-  }
-
-  /**
-   * To be overridden by implementing class
-   */
-  def updateFailedAttemptCountMetrics(): Unit = {
-    //specific actor can override this
-  }
-
-  /**
-   * To be overridden by implementing class
-   */
-  def updateFailedMsgCountMetrics(): Unit = {
-    //specific actor can override this
   }
 }

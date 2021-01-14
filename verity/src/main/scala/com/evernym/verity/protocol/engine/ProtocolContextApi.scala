@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent

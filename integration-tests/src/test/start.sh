@@ -64,7 +64,7 @@ start_process() {
   ## setup (including integration jars to have level db dependency available to this verity jar)
   echo "`(TZ=":UTC" date '+%FT%H:%M:%S')` starting..." >> "$verityLogFileName"
   jarFile="$(find ${PROJECT_DIR}/verity/target/scala-2.12 -name 'verity-assembly*.jar')"
-  kanelaAgentJar="${PROJECT_DIR}/integration-tests/lib/kanela-agent-1.0.5.jar"
+  kanelaAgentJar="${PROJECT_DIR}/integration-tests/lib/kanela-agent-1.0.7.jar"
   startCmd="java -javaagent:$kanelaAgentJar -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${JDWP_PORT} -Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener -cp ${jarFile}:${integrationJar}:${PROJECT_DIR}/verity/src/main/resources:${PROJECT_DIR}/integration-tests/src/test/resources/common:${PROJECT_DIR}/integration-tests/src/test/resources/${appTypeName} ${main} >> $verityLogFileName 2>&1 &"
   envStr="$(env)"
   appendToProgressLog "         Environment Vars: ${envStr}"
@@ -83,7 +83,7 @@ start_process() {
 
 }
 
-index=$(echo "${APPLICATIONS[@]/$3//}" | cut -d/ -f1 | wc -w | tr -d ' ')
+index=$(echo "${APPLICATIONS[@]/$APP_TYPE//}" | cut -d/ -f1 | wc -w | tr -d ' ')
 
 start_process ${APPLICATIONS[$index]} "com.evernym.verity.Main"
 

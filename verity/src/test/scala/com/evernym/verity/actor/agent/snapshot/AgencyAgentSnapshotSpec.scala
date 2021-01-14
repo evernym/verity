@@ -4,7 +4,7 @@ import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.agency.{AgencyAgentScaffolding, AgencyAgentState}
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.relationship.AnywiseRelationship
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -60,7 +60,7 @@ class AgencyAgentSnapshotSpec
   def sendConnectMsg(): Unit = {
     import mockEdgeAgent.v_0_5_req._
     val msg = prepareConnectMsg(useRandomDetails = true)
-    aa ! PackedMsgParam(msg, reqMsgContext)
+    aa ! ProcessPackedMsg(msg, reqMsgContext)
     expectMsgType[PackedMsg]
   }
 

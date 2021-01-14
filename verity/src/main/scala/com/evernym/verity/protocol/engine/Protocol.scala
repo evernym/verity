@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.protocol.engine.external_api_access.AccessRight
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateProtoDef
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.{Control, SystemMsg}
@@ -62,7 +63,7 @@ trait ProtocolDefinition[P,R,M,E,S,I] extends SegmentedStateProtoDef[S] {
     }
   }
 
-  def protocolIdSuffix[A](typedMsg: TypedMsgLike[A]): Option[String] = None
+  def protocolIdSuffix(typedMsg: TypedMsgLike): Option[String] = None
 
 }
 

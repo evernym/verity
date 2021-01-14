@@ -57,7 +57,7 @@ sbt "project integrationTests" test:console
 once you see sbt prompt, copy paste below code and press Enter
 ```
 import com.evernym.integrationtests.e2e.env.MockAgentService
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 ```
 **Notes:** 
 * Below is an example for setting up CAS agency agent.   
@@ -68,6 +68,6 @@ It can be load balancer port (if you have configured a load balancer) or
 it can be port of any node of the cluster.
 * Replicate this step for other agent service (cas/eas/vas etc) as well.
 ```
-val casAgencyAgentService = new MockAgentService(UrlDetail("http://localhost:6701")) 
+val casAgencyAgentService = new MockAgentService(UrlParam("http://localhost:6701")) 
 casAgencyAgentService.setupAgency()
 ```

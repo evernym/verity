@@ -1,14 +1,18 @@
 package com.evernym.verity.vault.service
 
-import java.time.temporal.ChronoUnit
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
-import akka.util.Timeout
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.Status.INVALID_VALUE
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.WalletCmdErrorResponse
+import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
+import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
+import com.evernym.verity.metrics.MetricsWriter
+import com.typesafe.scalalogging.Logger
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
 
@@ -18,6 +22,8 @@ import scala.reflect.ClassTag
 
 
 trait WalletService extends AsyncToSync {
+
+  protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
   /**
    * synchronous/BLOCKING wallet service call
@@ -33,6 +39,8 @@ trait WalletService extends AsyncToSync {
     convertToSyncReq(executeAsync(walletId, cmd))
   }
 
+  lazy val BAD_REQ_ERRORS = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
+
   /**
    * asynchronous/non-blocking wallet service call
    * @param walletId
@@ -44,9 +52,13 @@ trait WalletService extends AsyncToSync {
     val startTime = Instant.now()
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        wer.sd.statusCode match {
-          case INVALID_VALUE.statusCode => throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
-          case _ => throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
+        MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
+        if (BAD_REQ_ERRORS.map(_.statusCode).contains(wer.sd.statusCode)) {
+          throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
+        } else {
+          logger.error(s"error while executing wallet command: ${cmd.getClass.getSimpleName}, error msg: ${wer.sd.statusMsg}",
+            (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
+          throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         }
       case r => r.asInstanceOf[T] //TODO: can we get rid of this .asInstanceOf method?
     }.map { resp =>
@@ -54,9 +66,10 @@ trait WalletService extends AsyncToSync {
       val seconds = ChronoUnit.SECONDS.between(startTime, endTime)
       Kamon
         .histogram("span_processing_time_seconds", MeasurementUnit.time.seconds)
-        .withTag("operation", s"wallet cmd: ${cmd.getClass.getSimpleName}")
+        .withTag("operation", s"${cmd.getClass.getSimpleName}")
         .withTag("component", "WalletService")
         .record(seconds)
+      MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
       resp
     }
   }
@@ -71,13 +84,9 @@ trait WalletService extends AsyncToSync {
 }
 
 trait AsyncToSync {
-  //TODO: finalize the wallet service timeout
-  //TODO: when this timeout was set around 15-25 seconds,
-  // the 'write-def' protocol was failing during sdk flow test, should find out why and fix it.
-  val WALLET_SERVICE_TIMEOUT: FiniteDuration = FiniteDuration(50, TimeUnit.SECONDS)
-  implicit val defaultTimeout: Timeout = Timeout(WALLET_SERVICE_TIMEOUT)
 
   def convertToSyncReq[T](fut: Future[T]): T = {
-    Await.result(fut, WALLET_SERVICE_TIMEOUT)
+    //TODO: finalize timeout
+    Await.result(fut, FiniteDuration(250, TimeUnit.SECONDS))
   }
 }

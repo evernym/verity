@@ -2,11 +2,12 @@ package com.evernym.verity.protocol.protocols.tokenizer
 
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.protocol.engine.SignatureResult
+import com.evernym.verity.protocol.engine.external_api_access
+import com.evernym.verity.protocol.engine.external_api_access.SignatureResult
 import com.evernym.verity.protocol.protocols.tokenizer.State.{TokenCreated, TokenFailed, TokenReceived}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, Requester, SigningTokenErr, Tokenizer}
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
-import com.evernym.verity.testkit.{BasicFixtureSpec, TestWalletHelper}
+import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.Base64Util.getBase64Encoded
 
 import scala.language.{implicitConversions, reflectiveCalls}
@@ -15,7 +16,7 @@ import scala.util.{Failure, Try}
 class TokenizerSpec
   extends TestsProtocolsImpl(TokenizerDefinition)
     with BasicFixtureSpec
-    with TestWalletHelper {
+    with HasTestWalletAPI {
 
   import TestingVars._
 
@@ -44,7 +45,7 @@ class TokenizerSpec
     }
     "should generate a token" in {s =>
       interaction (s.requester, s.tokenizer) {
-        s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignatureResult("SIGN".getBytes, "V1")))
+        s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(external_api_access.SignatureResult("SIGN".getBytes, "V1")))
         s.requester ~ AskForToken(ID, SPONSOR_ID, ComMethodDetail(1, "12345"))
         s.requester.role shouldBe Requester
         s.tokenizer.role shouldBe Tokenizer
@@ -57,7 +58,7 @@ class TokenizerSpec
 
     "should generate a token again" in {s =>
       interaction (s.requester, s.tokenizer) {
-        s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignatureResult("SIGN".getBytes, "V1")))
+        s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(external_api_access.SignatureResult("SIGN".getBytes, "V1")))
         s.requester ~ AskForToken(ID, SPONSOR_ID, ComMethodDetail(1, "12345"))
         s.tokenizer.role shouldBe Tokenizer
         s.tokenizer.state shouldBe a[TokenCreated]
@@ -76,7 +77,7 @@ class TokenizerSpec
     //TODO: This should eventually be handled in Jackson parser - work around to get release out
     "should fail if value protocol message contains null" in { s =>
       interaction(s.requester, s.tokenizer) {
-        s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignatureResult("SIGN".getBytes, "V1")))
+        s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(external_api_access.SignatureResult("SIGN".getBytes, "V1")))
         s.requester ~ AskForToken(null, SPONSOR_ID, ComMethodDetail(1, "12345"))
         assertFailedState(s.tokenizer.state, "missing argName: sponseeId")
       }

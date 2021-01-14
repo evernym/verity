@@ -20,16 +20,16 @@ import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
 import com.evernym.verity.actor.wallet.WalletActor
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
-
 import java.time.ZoneId
+
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration._
 
 class Platform(val aac: AgentActorContext)
   extends MsgTracingRegionActors
@@ -100,11 +100,13 @@ class Platform(val aac: AgentActorContext)
   //wallet actor
   val walletActorRegion: ActorRef = createRegion(
     WALLET_REGION_ACTOR_NAME,
-    buildProp(Props(new WalletActor(agentActorContext.appConfig, agentActorContext.util, agentActorContext.poolConnManager)), Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)),
-    passivateIdleEntityAfter = appConfig.getConfigIntOption(CommonConfig.WALLET_ACTOR_PASSIVATE_TIME) match {
-      case Some(duration) => duration.second
-      case None => 10.minute
-    }
+    buildProp(
+      Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager)),
+      Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)
+    ),
+    passivateIdleEntityAfter = Option(
+      passivateDuration(WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)
+    )
   )
 
   object agentPairwise extends ShardActorObject {
@@ -204,10 +206,24 @@ class Platform(val aac: AgentActorContext)
   createCusterSingletonManagerActor(SingletonParent.props(CLUSTER_SINGLETON_PARENT))
 
   //Agent to collect metrics from Libindy
-  val libindyMetricsCollector: ActorRef =
+  val libIndyMetricsCollector: ActorRef =
     agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")
 
+  /**
+   * utility function to compute passivation time
+   * @param confName
+   * @param defaultDurationInSeconds
+   * @return
+   */
+  def passivateDuration(confName: String,
+                        defaultDurationInSeconds: FiniteDuration): FiniteDuration = {
+    //assumption is that the config duration is in seconds
+    appConfig.getConfigIntOption(confName) match {
+      case Some(duration) => duration.second
+      case None           => defaultDurationInSeconds
+    }
+  }
 }

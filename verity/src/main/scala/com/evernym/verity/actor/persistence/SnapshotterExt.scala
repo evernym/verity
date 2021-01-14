@@ -109,9 +109,9 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
   }
 
   /**
-   * transforms given generic proto buf wrapper message (TransformedState, PersistentData)
-   * by 'transformer' to a plain (deserialized, decrypted) state object
-   * which actor can use to replace it's state.
+   * transforms given generic proto buf wrapper message (DeprecatedStateMsg, PersistentMsg)
+   * by 'transformer' to a plain (decrypted and deserialized) state object
+   * which actor can use to recover it's state.
    *
    * instead of hardcoding transformer, we lookup appropriate transformer based on
    * 'transformationId' available in serialized state to make sure it is backward compatible.
@@ -132,11 +132,11 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
   }
 
   /**
-   * gets called after event handler is called (post recovery, not during recovery)
+   * gets called after event handler is called (post actor recovery only [not during actor recovery])
    * to determine if a snapshot needs to be persisted or not
    *
    */
-  override def snapshotPostStateChangeIfNeeded(): Unit = {
+  override def executeOnStateChangePostRecovery(): Unit = {
     snapshotConfig.snapshotEveryNEvents match {
       case Some(n) if n > 0 && lastSequenceNr % n == 0 => saveSnapshotStateIfAvailable()
       case _                                           => None
@@ -148,7 +148,7 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    * and snapshot will be only saved if there is no snapshot saved/offered so far
    * and number of events already greater than equal to 'snapshotEveryNEvents'
    */
-  override def snapshotPostActorRecovery(): Unit = {
+  override def executeOnPostActorRecovery(): Unit = {
     snapshotConfig.snapshotEveryNEvents match {
       case Some(n) if n > 0 && lastSequenceNr >= n && ! isSnapshotExists => saveSnapshotStateIfAvailable()
       case _                                                             => None
@@ -213,12 +213,14 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
     appConfig.getConfigIntOption(PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES)
       .getOrElse(190000)
 
-  final override def receiveRecover: Receive = defaultSnapshotOfferReceiver orElse handleEvent
+  final override def receiveRecover: Receive =
+    defaultSnapshotOfferReceiver orElse
+      handleEvent
 
   final override def receiveCommand: Receive =
-    handleCommand(cmdHandler) orElse
+    basePersistentCmdHandler(cmdHandler) orElse
       snapshotCallbackHandler orElse
-      receiveCmdBase
+      receiveUnhandled
 
   var isSnapshotExists: Boolean = false
   private val throttledLogger = new ThrottledLogger[SnapshotterLogMessages](logger, min_period = 30.minutes)

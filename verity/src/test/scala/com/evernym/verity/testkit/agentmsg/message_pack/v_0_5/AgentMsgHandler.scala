@@ -8,7 +8,7 @@ import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV
 import com.evernym.verity.testkit.mock.HasCloudAgent
 import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_5, ComMethodUpdated_MFV_0_5, ConfigsMsg_MFV_0_5, ConfigsRemoved_MFV_0_5, ConfigsUpdated_MFV_0_5, ConnStatusUpdated_MFV_0_5, Connected_MFV_0_5, InviteMsgDetail_MFV_0_5, KeyCreated_MFV_0_5, MsgCreated_MFV_0_5, MsgStatusUpdatedByConns_MFV_0_5, MsgStatusUpdated_MFV_0_5, MsgsByConns_MFV_0_5, MsgsSent_MFV_0_5, Msgs_MFV_0_5, SignedUp_MFV_0_5}
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyInfo}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
 
 /**
  * this will handle received/incoming/response agent messages
@@ -263,9 +263,8 @@ trait AgentMsgHandler {
      */
     protected def unsealResp_MPV_0_5(rmw: Array[Byte], unsealFromDID: DID)
     : AgentMsgWrapper = {
-      val fromKeyInfo = KeyInfo(Right(GetVerKeyByDIDParam(unsealFromDID, getKeyFromPool = false)))
-      val unpackTransformDetail = UnpackParam()
-      agentMsgTransformer.unpack(rmw, fromKeyInfo, unpackTransformDetail)
+      val fromKeyParam = KeyParam(Right(GetVerKeyByDIDParam(unsealFromDID, getKeyFromPool = false)))
+      agentMsgTransformer.unpack(rmw, fromKeyParam)
     }
 
   }

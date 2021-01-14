@@ -31,7 +31,7 @@ import com.evernym.verity.testkit.util._
 import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
@@ -49,7 +49,7 @@ trait AgentMsgSenderHttpWrapper
   extends CommonSpecUtil
     with LedgerClient {
 
-  def urlDetail: UrlDetail
+  def urlParam: UrlParam
 
   val respWaitTime: Duration = 15.seconds
 
@@ -57,9 +57,9 @@ trait AgentMsgSenderHttpWrapper
 
   implicit val system: ActorSystem = AkkaTestBasic.system()
   def appConfig: AppConfig = new TestAppConfig()
-  implicit val url: UrlDetail = urlDetail
+  implicit val url: UrlParam = urlParam
 
-  private def getConnection(ep: UrlDetail): Flow[HttpRequest, HttpResponse, Any] = {
+  private def getConnection(ep: UrlParam): Flow[HttpRequest, HttpResponse, Any] = {
     Http().outgoingConnection(ep.host, ep.port)
   }
 
@@ -86,7 +86,7 @@ trait AgentMsgSenderHttpWrapper
     Logger("TestAPIExecutor").info("    " + msg)
   }
 
-  private def apiRequest(request: HttpRequest)(implicit url: UrlDetail): Future[HttpResponse] =
+  private def apiRequest(request: HttpRequest)(implicit url: UrlParam): Future[HttpResponse] =
     Source.single(request).via(getConnection(url)).runWith(Sink.head).recover {
       case _ =>
         val errMsg = s"connection not established with remote server ${url.toString}"
@@ -94,27 +94,27 @@ trait AgentMsgSenderHttpWrapper
         HttpResponse(StatusCodes.custom(GatewayTimeout.intValue, errMsg, errMsg))
     }
 
-  private def sendPostMsgToEndpoint(payload: String)(implicit url: UrlDetail, urlPath: String):
+  private def sendPostMsgToEndpoint(payload: String)(implicit url: UrlParam, urlPath: String):
   Either[StatusDetailResp, String] = {
     sendMsgToEndpoint(buildPostReq(s"$urlPath", HttpEntity(MediaTypes.`application/json`, payload)))
   }
 
-  private def sendPutMsgToEndpoint(payload: String)(implicit url: UrlDetail, urlPath: String):
+  private def sendPutMsgToEndpoint(payload: String)(implicit url: UrlParam, urlPath: String):
   Either[StatusDetailResp, String] = {
     sendMsgToEndpoint(buildPutReq(s"$urlPath", HttpEntity(MediaTypes.`application/json`, payload)))
   }
 
-  private def sendPostMsgWrapperToEndpoint(payload: Array[Byte])(implicit url: UrlDetail, urlPath: String):
+  private def sendPostMsgWrapperToEndpoint(payload: Array[Byte])(implicit url: UrlParam, urlPath: String):
   Either[StatusDetailResp, Array[Byte]] = {
     val req = buildPostReq(urlPath, HttpEntity(MediaTypes.`application/octet-stream`, payload))
     sendMsgWrapperToEndpoint(req)
   }
 
-  private def sendGetMsgToEndpoint(implicit url: UrlDetail, urlPath: String): Either[StatusDetailResp, String] = {
+  private def sendGetMsgToEndpoint(implicit url: UrlParam, urlPath: String): Either[StatusDetailResp, String] = {
     sendMsgToEndpoint(buildGetReq(s"$urlPath"))
   }
 
-  private def sendMsgToEndpoint(hr: HttpRequest)(implicit url: UrlDetail): Either[StatusDetailResp, String] = {
+  private def sendMsgToEndpoint(hr: HttpRequest)(implicit url: UrlParam): Either[StatusDetailResp, String] = {
     hr.addHeader(`X-Real-Ip`(RemoteAddress(InetAddress.getLocalHost)))
     val respFut = apiRequest(hr).flatMap { response =>
       response.status match {
@@ -142,7 +142,7 @@ trait AgentMsgSenderHttpWrapper
     resolveFutResponse(respFut)
   }
 
-  private def sendMsgWrapperToEndpoint(hr: HttpRequest)(implicit url: UrlDetail):
+  private def sendMsgWrapperToEndpoint(hr: HttpRequest)(implicit url: UrlParam):
   Either[StatusDetailResp, Array[Byte]] = {
     val respFut = apiRequest(hr).flatMap { response =>
       response.status match {
@@ -188,13 +188,13 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def sendPostRequest(payload: String, respHandlerFuncOpt: Option[String => Any] = None)
-                     (implicit url: UrlDetail, urlPath: String): Any = {
+                     (implicit url: UrlParam, urlPath: String): Any = {
     val resp = sendPostMsgToEndpoint(payload)(url, urlPath)
     handleResponse(resp, respHandlerFuncOpt)
   }
 
   def sendPutRequest(payload: String, respHandlerFuncOpt: Option[String => Any] = None)
-                     (implicit url: UrlDetail, urlPath: String): Any = {
+                     (implicit url: UrlParam, urlPath: String): Any = {
     val resp = sendPutMsgToEndpoint(payload)(url, urlPath)
     handleResponse(resp, respHandlerFuncOpt)
   }
@@ -215,7 +215,7 @@ trait AgentMsgSenderHttpWrapper
   def sendPostRequestWithPackedMsg(packedMsg: PackedMsg,
                                    respHandlerFuncOpt: Option[(PackedMsg, Map[String, Any]) => Any],
                                    otherData: Map[String, Any] = Map.empty)
-                                  (implicit url: UrlDetail, urlPath: String="/agency/msg"): Any = {
+                                  (implicit url: UrlParam, urlPath: String="/agency/msg"): Any = {
     val resp = sendPostMsgWrapperToEndpoint(packedMsg.msg)(url, urlPath)
     resp match {
       case Right(rsp: Array[Byte]) =>
@@ -229,7 +229,7 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def sendGetRequest(respHandlerFuncOpt: Option[String => Unit] = None)
-                               (implicit url: UrlDetail, urlPath: String): Any = {
+                               (implicit url: UrlParam, urlPath: String): Any = {
     val resp = sendGetMsgToEndpoint(url, urlPath)
     resp match {
       case Right(rsp: String) => respHandlerFuncOpt.foreach (f => f(rsp)); rsp
@@ -239,7 +239,7 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def sendFetchAgencyKeyRequest(respHandlerFuncOpt: Option[AgencyPublicDid => Unit] = None)
-                               (implicit url: UrlDetail, urlPath: String): Any = {
+                               (implicit url: UrlParam, urlPath: String): Any = {
     val resp = sendGetMsgToEndpoint(url, urlPath)
     resp match {
       case Right(rsp: String) =>
@@ -498,7 +498,7 @@ trait AgentMsgSenderHttpWrapper
     val timestamp = TimeUtil.nowDateString
 
     val encrypted = mockClientAgent.walletAPI.signMsg {
-      SignMsg(KeyInfo(
+      SignMsg(KeyParam(
         Left(sponsorKeys.verKey)),
         (nonce + timestamp + id + sponsorId).getBytes()
       )

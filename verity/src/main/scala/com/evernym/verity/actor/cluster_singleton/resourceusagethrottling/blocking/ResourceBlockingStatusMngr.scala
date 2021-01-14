@@ -153,13 +153,13 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
 
 }
 
-trait UpdateBlockingStatus extends ActorMessageClass
+trait UpdateBlockingStatus extends ActorMessage
 
 case class GetBlockedList(onlyBlocked: Boolean, onlyUnblocked: Boolean, onlyActive: Boolean,
                           inChunks: Boolean, ids: Option[String]=None,
-                          resourceNames: Option[String]=None) extends ActorMessageClass
+                          resourceNames: Option[String]=None) extends ActorMessage
 
-object GetBlockedList extends ActorMessageObject {
+object GetBlockedList extends ActorMessage {
   def apply(onlyBlocked: String, onlyUnblocked: String, onlyActive: String, inChunks: Boolean,
             ids: Option[String], resourceNames: Option[String]): GetBlockedList = {
     val gbl = GetBlockedList(strToBoolean(onlyBlocked), strToBoolean(onlyUnblocked),
@@ -200,27 +200,27 @@ case class BlockingDetail(blockFrom: Option[ZonedDateTime], blockTill: Option[Zo
  * @param resourcesStatus blocking status for different resources (endpoint/messages) for the entity
  */
 case class EntityBlockingStatus(status: BlockingDetail, resourcesStatus: Map[ResourceName, BlockingDetail])
-  extends ActorMessageClass
+  extends ActorMessage
 
 case class BlockCaller(entityId: EntityId,
                        blockFrom: Option[ZonedDateTime]=None,
                        blockPeriod: Option[Long]=None,
-                       allBlockedResources: Option[String]=None) extends ActorMessageClass
+                       allBlockedResources: Option[String]=None) extends ActorMessage
 
 case class BlockResourceForCaller(entityId: EntityId,
                                   resourceName: ResourceName,
                                   blockFrom: Option[ZonedDateTime]=None,
-                                  blockPeriod: Option[Long]=None) extends ActorMessageClass
+                                  blockPeriod: Option[Long]=None) extends ActorMessage
 
 case class UnblockCaller(entityId: EntityId,
                          unblockFrom: Option[ZonedDateTime]=None,
                          unblockPeriod: Option[Long]=None,
-                         allBlockedResources: Option[String]=None) extends ActorMessageClass
+                         allBlockedResources: Option[String]=None) extends ActorMessage
 
 case class UnblockResourceForCaller(entityId: EntityId,
                                     resourceName: ResourceName,
                                     unblockFrom: Option[ZonedDateTime]=None,
-                                    unblockPeriod: Option[Long]=None) extends ActorMessageClass
+                                    unblockPeriod: Option[Long]=None) extends ActorMessage
 
 /**
  * used to send blocking status from cluster singleton to each node
@@ -229,7 +229,7 @@ case class UnblockResourceForCaller(entityId: EntityId,
  * @param totalChunks total chunks
  */
 case class UsageBlockingStatusChunk(usageBlockingStatus: Map[EntityId, EntityBlockingStatus],
-                                    currentChunkNumber: Int, totalChunks: Int) extends ActorMessageClass
+                                    currentChunkNumber: Int, totalChunks: Int) extends ActorMessage
 
 
 object ResourceBlockingStatusMngr {

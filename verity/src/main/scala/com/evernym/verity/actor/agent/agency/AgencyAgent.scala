@@ -15,6 +15,7 @@ import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentState
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
+import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.cache._
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -26,7 +27,8 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
-import com.evernym.verity.{Exceptions, UrlDetail}
+import com.evernym.verity.vault.KeyParam
+import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
 import scala.io.Source
@@ -57,7 +59,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     case ck: CreateKey                          => createKey(ck)
     case SetEndpoint                            => setEndpoint()
     case UpdateEndpoint                         => updateEndpoint()
-    case smw: PackedMsgWrapper                  => handlePackedMsg(smw)
+    case pmw: PackedMsgWrapper                  => handlePackedMsg(pmw)
     case apd: AgentProvisioningDone             =>
       sendUntypedMsgToProtocol(
         CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey),
@@ -89,19 +91,19 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   def sendAgencyAgentDetail(): Unit = {
-    getAgencyAgentDetail() match {
+    agencyAgentDetail() match {
       case Some(aad)  => sender ! aad
       case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }
 
-  def getAgencyAgentDetail(): Option[AgencyAgentDetail] = {
+  def agencyAgentDetail(): Option[AgencyAgentDetail] = {
     state.agencyDID map { ad =>
       AgencyAgentDetail(ad, getAgencyVerKey(ad, fromPool = GET_AGENCY_VER_KEY_FROM_POOL), entityId)
     }
   }
 
-  def updateAgencyEndpointInLedger(url: UrlDetail): Unit = {
+  def updateAgencyEndpointInLedger(url: UrlParam): Unit = {
     val sndr = sender()
     // This is sort of an example of the problem with futures that Jason wrote about.
     // However, it's not very troubling, because the closure just sends a response;
@@ -153,7 +155,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
       setAgentWalletId(entityId)
       agentActorContext.walletAPI.createWallet(wap)
       val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKey(seed = ck.seed))
-      AgencyAgent.setAgencyAgentDetail(AgencyAgentDetail(createdKey.did, createdKey.verKey, entityId))
       writeAndApply(KeyCreated(createdKey.did))
       val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, createdKey.did))
       val sndr = sender()
@@ -274,33 +275,33 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   // Here, a "packed message" is one that's anoncrypted for the agency.
-  // Unsealing it means decrypting it and finding a "forward" inside.
+  // Unsealing/unpacking it means decrypting it and finding a "forward" inside.
   // According to Rajesh in mid July 2020, we are not currently using
   // this function (it's dead code).
 
   //this is in case we directly want to send endpoint requests to
   // agency agent to unseal instead of unsealing it at endpoint layer
-  def handlePackedMsg(smw: PackedMsgWrapper): Unit = {
+  def handlePackedMsg(pmw: PackedMsgWrapper): Unit = {
     val sndr = sender()
-    processPackedMsg(smw).recover {
+    agentMsgTransformer.unpackAsync(
+      pmw.msg, KeyParam(Left(agencyVerKey)), UnpackParam(isAnonCryptedMsg = true)
+    ).flatMap { implicit amw =>
+      handleUnpackedMsg(pmw)
+    }.map { r =>
+      sndr ! r
+    }.recover {
       case e: Exception =>
         handleException(e, sndr)
     }
   }
 
+  lazy val agencyVerKey: VerKey = getVerKeyReqViaCache(agencyDIDReq)
+
   def sendLocalAgencyIdentity(withDetail: Boolean = false): Unit = {
-    getAgencyAgentDetail() match {
-      case Some(aad) =>
+    agencyAgentDetail() match {
+      case Some(aad)  =>
         val ledgerDetail = if (withDetail) Option(agencyLedgerDetail()) else None
         sender ! AgencyPublicDid(aad.did, aad.verKey, ledgerDetail)
-      case None =>
-        throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
-    }
-  }
-
-  override def getAgencyDidPairFut: Future[DidPair] = Future {
-    getAgencyAgentDetail() match {
-      case Some(aad)  =>  DidPair(aad.did, aad.verKey)
       case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }
@@ -332,11 +333,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
         state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
       }
       .getOrElse(state)
-
-    getAgencyAgentDetail() match {
-      case Some(aad)  => AgencyAgent.setAgencyAgentDetail(aad)
-      case None       => //nothing to do
-    }
   }
 
   override def isReadyToHandleIncomingMsg: Boolean = state.isEndpointSet
@@ -362,7 +358,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
 }
 
 //response
-case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessageClass {
+case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessage {
 
   def rightOption(v: Either[StatusDetail, String]): Option[String] = v.fold(_ => None, r => Option(r))
   def leftOption(v: Either[StatusDetail, String]): Option[StatusDetail] = v.fold(sd => Option(sd), _ => None)
@@ -381,11 +377,11 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Op
   def isErrorFetchingAnyData: Boolean = isErrorInFetchingVerKey || isErrorInFetchingEndpoint
 }
 
-case object GetAgencyAgentDetail extends ActorMessageObject
-case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessageClass
+case object GetAgencyAgentDetail extends ActorMessage
+case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage
 
 //cmds
-case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessageClass
+case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessage
 
 /**
  * this message is to get agency identity detail for any agency DID (can be local/self agency or other remote agency)
@@ -393,18 +389,18 @@ case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMess
  * @param getVerKey determines if ver key needs to be received
  * @param getEndpoint determines if endpoint needs to be received
  */
-case class GetAgencyIdentity(did: DID, getVerKey: Boolean = true, getEndpoint: Boolean = true) extends ActorMessageClass
+case class GetAgencyIdentity(did: DID, getVerKey: Boolean = true, getEndpoint: Boolean = true) extends ActorMessage
 
-case class CreateKey(seed: Option[String] = None) extends ActorMessageClass {
+case class CreateKey(seed: Option[String] = None) extends ActorMessage {
   override def toString: String = {
     val redacted = seed.map(_ => "redacted")
     s"CreateKey($redacted)"
   }
 }
 
-case object SetEndpoint extends ActorMessageObject
+case object SetEndpoint extends ActorMessage
 
-case object UpdateEndpoint extends ActorMessageObject
+case object UpdateEndpoint extends ActorMessage
 
 trait AgencyAgentStateImpl extends AgentStateImplBase
 
@@ -431,12 +427,4 @@ trait AgencyAgentStateUpdateImpl
   def addPinst(pri: ProtocolRunningInstances): Unit = {
     state = state.withProtoInstances(pri)
   }
-}
-
-object AgencyAgent extends AgencyIdUtil {
-  private var _agencyAgentDetail: Option[AgencyAgentDetail] = None
-
-  def agencyAgentDetail: Option[AgencyAgentDetail] = _agencyAgentDetail
-  def setAgencyAgentDetail(aad: AgencyAgentDetail): Unit =
-    _agencyAgentDetail = Option(aad)
 }

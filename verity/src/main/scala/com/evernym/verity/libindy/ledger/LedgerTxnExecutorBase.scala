@@ -16,12 +16,13 @@ import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{DID, WalletAccess}
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
 import com.evernym.verity.util.Util.getJsonStringFromMap
 import com.evernym.verity.util.{TAAUtil, Util}
-import com.evernym.verity.vault.WalletAPI
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.IndyException
 import org.hyperledger.indy.sdk.ledger.Ledger
@@ -146,9 +147,10 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
     Future.successful(request)
       .flatMap { r => Future(appendTAAToRequest(r, r.taa)) }
       .flatMap{ r =>
-        if(r.needsSigning) walletAPI
-          .getOrElse(throw new Exception("WalletAPI required for signing ledger transactions"))
-          .signLedgerRequest(SignLedgerRequest(r, submitterDetail))
+        if(r.needsSigning)
+          walletAPI
+            .getOrElse(throw new Exception("WalletAPI required for signing ledger transactions"))
+            .executeAsync[LedgerRequest](SignLedgerRequest(r, submitterDetail))(submitterDetail.wapReq)
         else Future.successful(r)
       }
   }

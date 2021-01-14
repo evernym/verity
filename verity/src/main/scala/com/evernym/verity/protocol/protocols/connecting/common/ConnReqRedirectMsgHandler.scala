@@ -117,17 +117,17 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, MSG_STATUS_REDIRECTED.statusCode, theirDidDocDetailOpt))
 
     theirDidDocDetailOpt.foreach { _ =>
-      walletDetail.walletAPI.storeTheirKey(
+      walletAPI.storeTheirKey(
         StoreTheirKey(rcrm.senderAgencyDetail.DID,
           rcrm.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
 
-      walletDetail.walletAPI.storeTheirKey(
+      walletAPI.storeTheirKey(
         StoreTheirKey(rcrm.senderDetail.DID,
           rcrm.senderDetail.verKey, ignoreIfAlreadyExists = true))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
-      walletDetail.walletAPI.storeTheirKey(
+      walletAPI.storeTheirKey(
         StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }

@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.msghandler.incoming.PackedMsgParam
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.{ActorErrorResp, UrlDetail}
+import com.evernym.verity.{ActorErrorResp, UrlParam}
 import org.scalatest.concurrent.Eventually
 
 
@@ -23,7 +23,7 @@ trait AgencyAgentScaffolding
     with Eventually {
 
   override lazy val mockAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlDetail("localhost:9001"), platform.agentActorContext.appConfig)
+    new MockAgencyAdmin(system, UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
 
   override lazy val mockEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
     platform.agentActorContext.appConfig, mockAgencyAdmin)
@@ -88,7 +88,7 @@ trait AgencyAgentScaffolding
       "when sent get-token msg" - {
         "should respond with token" in {
           val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId", ComMethodDetail(1, validTestPushNotifToken))
-          aa ! PackedMsgParam(msg, reqMsgContext)
+          aa ! ProcessPackedMsg(msg, reqMsgContext)
           val packedMsg = expectMsgType[PackedMsg]
           val token = mockEdgeAgent.v_0_1_resp.handleSendToken(packedMsg, mockAgencyAdmin.agencyPublicDid.get.DID)
           assert(token.sponsorId == "sponsorId")

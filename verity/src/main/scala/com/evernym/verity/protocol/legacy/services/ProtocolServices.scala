@@ -1,15 +1,14 @@
 package com.evernym.verity.protocol.legacy.services
 
 import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
-import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.RemoteMsgSendingSvc
-import com.evernym.verity.protocol.actor.{MsgQueueServiceProvider, WalletParam}
+import com.evernym.verity.protocol.actor.MsgQueueServiceProvider
 import com.evernym.verity.protocol.engine.{DID, RecordsEvents, SERVICES_DEPRECATION_DATE, SendsMsgs, VerKey}
-import com.evernym.verity.texter.SMSSender
-import com.evernym.verity.vault.{WalletAPI, WalletAPIParam, AgentWalletAPI}
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.WalletAPIParam
 
 /** General services provided to protocols.
   *
@@ -25,16 +24,13 @@ import com.evernym.verity.vault.{WalletAPI, WalletAPIParam, AgentWalletAPI}
   */
 trait ProtocolServices[M,E,I] {
   def appConfig: AppConfig
-  def walletParam: WalletParam
+  def walletAPI: WalletAPI
   def generalCache: Cache
-  def smsSvc: SMSSender
-  def agentMsgRouter: AgentMsgRouter
   def remoteMsgSendingSvc: RemoteMsgSendingSvc
   def agentMsgTransformer: AgentMsgTransformer
   def tokenToActorMappingProvider: TokenToActorMappingProvider
   def msgQueueServiceProvider: MsgQueueServiceProvider
   def connectEndpointServiceProvider: CreateKeyEndpointServiceProvider
-  def agentProvisioningServiceProvider: AgentEndpointServiceProvider
 }
 
 @deprecated("We are no longer using services. Most of these services shouldn't " +
@@ -42,36 +38,28 @@ trait ProtocolServices[M,E,I] {
 class LegacyProtocolServicesImpl[M,E,I](val eventRecorder: RecordsEvents,
                                         val sendsMsgs: SendsMsgs,
                                         val appConfig: AppConfig,
-                                        val walletParam: WalletParam,
+                                        val walletAPI: WalletAPI,
                                         val generalCache: Cache,
-                                        val smsSvc: SMSSender,
-                                        val agentMsgRouter: AgentMsgRouter,
                                         val remoteMsgSendingSvc: RemoteMsgSendingSvc,
                                         val agentMsgTransformer: AgentMsgTransformer,
                                         val tokenToActorMappingProvider: TokenToActorMappingProvider,
                                         val msgQueueServiceProvider: MsgQueueServiceProvider,
-                                        val connectEndpointServiceProvider: CreateKeyEndpointServiceProvider,
-                                        val agentProvisioningServiceProvider: AgentEndpointServiceProvider
+                                        val connectEndpointServiceProvider: CreateKeyEndpointServiceProvider
                                      ) extends ProtocolServices[M,E,I]
 
 
 trait DEPRECATED_HasWallet {
 
   def appConfig: AppConfig
-  def walletParam: WalletParam
+  def walletAPI: WalletAPI
 
-  lazy val walletAPI: WalletAPI = walletParam.walletAPI
+  var walletId: String = _
+  implicit lazy val wap: WalletAPIParam = WalletAPIParam(walletId)
 
-  var walletDetail: AgentWalletAPI = _
-
-  def initWalletDetail(seed: String): Unit = {
-    walletDetail = AgentWalletAPI(walletAPI, seed)
-  }
-
-  implicit lazy val wap: WalletAPIParam = WalletAPIParam(walletDetail.walletId)
+  def initWalletDetail(seed: String): Unit = walletId = seed
 
   lazy val walletVerKeyCacheHelper: WalletVerKeyCacheHelper = {
-    new WalletVerKeyCacheHelper(wap, walletDetail.walletAPI, appConfig)
+    new WalletVerKeyCacheHelper(WalletAPIParam(walletId), walletAPI, appConfig)
   }
 
   def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): VerKey =

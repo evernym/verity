@@ -1,22 +1,20 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, _}
 import com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
 import com.evernym.verity.actor.agent.msghandler.outgoing.{AgentOutgoingMsgHandler, OutgoingMsgParam}
-import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.MsgPackFormat
-import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
+import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.actor.InitProtocolReq
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.util.MsgIdProvider
-import com.evernym.verity.vault.KeyInfo
+import com.evernym.verity.vault.KeyParam
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -58,7 +56,7 @@ trait AgentMsgHandler
         //      (search for 'sendUntypedMsgToProtocol' method in UserAgent.scala to see these messages)
         //      (few others are like GetMsgs, UpdateMsgExpirationTime etc)
 
-        val tm = typedMsg[Any](m)
+        val tm = typedMsg(m)
         sendTypedMsgToProtocol(tm, relationshipId, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID,
           Option(MsgRespConfig(isSyncReq(m))), None, None)
       } catch protoExceptionHandler
@@ -128,8 +126,8 @@ trait AgentMsgHandler
    * key info belonging to "this" agent (edge/cloud)
    * @return
    */
-  lazy val thisAgentKeyInfo: KeyInfo = KeyInfo(Left(state.thisAgentVerKeyReq))
-  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyInfo, agentActorContext.walletAPI)
+  lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(state.thisAgentVerKeyReq))
+  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, agentActorContext.walletAPI)
 
   def getNewMsgId: MsgId = MsgIdProvider.getNewMsgId
 

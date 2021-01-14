@@ -2,7 +2,7 @@ package com.evernym.verity.metrics
 
 import com.evernym.verity.Exceptions.FeatureNotEnabledException
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.{ActorMessageClass, MetricsFilterCriteria}
+import com.evernym.verity.actor.{ActorMessage, MetricsFilterCriteria}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
@@ -50,8 +50,8 @@ object MetricsReader {
   def getNodeMetrics(criteria: MetricsFilterCriteria = MetricsFilterCriteria()): NodeMetricsData = {
     metricsReporter.map { mp =>
       val metadata = if (criteria.includeMetaData) Some(buildMetadata) else None
-      val fixedMetrics = mp.getFixedMetrics
-      val resetMetrics = if (criteria.includeReset && explicitlyReset) mp.getResetMetrics else List.empty
+      val fixedMetrics = mp.fixedMetrics
+      val resetMetrics = if (criteria.includeReset && explicitlyReset) mp.postResetMetrics else List.empty
       val allMetrics = fixedMetrics ++ resetMetrics
       val allFilteredMetrics = if (criteria.filtered) MetricsFilter.filterMetrics(allMetrics) else allMetrics
       val allFinalMetrics = allFilteredMetrics.map { m =>
@@ -71,5 +71,5 @@ object MetricsReader {
 }
 
 case class MetaData(nodeName: String, timestamp: String, lastResetTimestamp: String)
-case class NodeMetricsData(metadata: Option[MetaData], metrics: List[MetricDetail]) extends ActorMessageClass
-case class AllNodeMetricsData (data: List[NodeMetricsData]) extends ActorMessageClass
+case class NodeMetricsData(metadata: Option[MetaData], metrics: List[MetricDetail]) extends ActorMessage
+case class AllNodeMetricsData (data: List[NodeMetricsData]) extends ActorMessage

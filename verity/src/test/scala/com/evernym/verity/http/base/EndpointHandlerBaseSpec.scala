@@ -22,7 +22,7 @@ import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingSvcListener
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util._
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 
@@ -74,12 +74,12 @@ trait EndpointHandlerBaseSpec
     testRestrictedRestApis()
   }
 
-  lazy val mockConsumerAgencyAdmin = new MockAgencyAdmin(system, UrlDetail("localhost:9001/agency/msg"), appConfig)
+  lazy val mockConsumerAgencyAdmin = new MockAgencyAdmin(system, UrlParam("localhost:9001/agency/msg"), appConfig)
   lazy val mockConsumerCloudAgent: MockConsumerCloudAgent = buildMockConsumerCloudAgent(mockConsumerAgencyAdmin)
   lazy val mockConsumerEdgeAgent1: MockConsumerEdgeAgent = buildMockConsumerEdgeAgent(mockConsumerAgencyAdmin)
   lazy val mockConsumerEdgeAgent2: MockConsumerEdgeAgent = buildMockConsumerEdgeAgent(mockConsumerAgencyAdmin)
 
-  lazy val mockEntAgencyAdmin = new MockAgencyAdmin(system, UrlDetail("localhost:9002/agency/msg"), appConfig)
+  lazy val mockEntAgencyAdmin = new MockAgencyAdmin(system, UrlParam("localhost:9002/agency/msg"), appConfig)
   lazy val mockEntCloudAgent: MockEntCloudAgent = buildMockEntCloudAgent(mockEntAgencyAdmin)
   lazy val mockEntEdgeAgent1: MockEntEdgeAgent = buildMockEnterpriseEdgeAgent(mockEntAgencyAdmin)
   lazy val mockEntEdgeAgent2: MockEntEdgeAgent = buildMockEnterpriseEdgeAgent(mockEntAgencyAdmin)
@@ -111,7 +111,7 @@ trait EndpointHandlerBaseSpec
       super.checkIfRestApiEnabled()
   }
 
-  val AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME = "akka.test.http-route-timeout-in-seconds"
+  val AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME = "verity.test.http-route-timeout-in-seconds"
 
   implicit def default(implicit system: ActorSystem): RouteTestTimeout =
     RouteTestTimeout(buildDurationInSeconds(appConfig.getConfigIntReq(AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME)))
@@ -121,7 +121,7 @@ trait EndpointHandlerBaseSpec
   }
 
   def buildMockConsumerEdgeAgent(mockAgencyAdmin: MockAgencyAdmin): MockConsumerEdgeAgent = {
-    val mcea = new MockConsumerEdgeAgent(UrlDetail("localhost:9001/agency/msg"), appConfig)
+    val mcea = new MockConsumerEdgeAgent(UrlParam("localhost:9001/agency/msg"), appConfig)
     mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
     mcea
   }
@@ -139,7 +139,7 @@ trait EndpointHandlerBaseSpec
   }
 
   def buildMockEnterpriseEdgeAgent(mockAgencyAdmin: MockAgencyAdmin): MockEntEdgeAgent = {
-    val meea = new MockEntEdgeAgent(UrlDetail("localhost:9002/agency/msg"), appConfig)
+    val meea = new MockEntEdgeAgent(UrlParam("localhost:9002/agency/msg"), appConfig)
     meea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
     meea
   }

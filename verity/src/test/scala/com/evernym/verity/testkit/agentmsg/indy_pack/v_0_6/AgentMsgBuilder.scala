@@ -22,7 +22,7 @@ import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentPackMsgUtil,
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.util.MsgIdProvider._
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, KeyInfo}
+import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.json.JSONObject
 
 import scala.util.Left
@@ -427,10 +427,10 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
     def prepareWalletBackupRestoreMsg(backupInitParams: BackupInitParams, encryptForVerKey: VerKey): PackMsgParam = {
       val agentMsg = WalletBackupRestoreMsg(MSG_TYPE_DETAIL_WALLET_BACKUP_RESTORE)
 
-      val fromKeyInfo = KeyInfo(Left(backupInitParams.recoveryVk))
-      val forKeyInfo = KeyInfo(Left(encryptForVerKey))
+      val fromKeyParam = KeyParam(Left(backupInitParams.recoveryVk))
+      val forKeyParam = KeyParam(Left(encryptForVerKey))
 
-      val encryptParam = EncryptParam(Set(forKeyInfo), Option(fromKeyInfo))
+      val encryptParam = EncryptParam(Set(forKeyParam), Option(fromKeyParam))
       AgentPackMsgUtil(agentMsg, encryptParam)
     }
 

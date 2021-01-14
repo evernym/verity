@@ -5,11 +5,9 @@ import java.util.UUID
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, SignMsg}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.vault.service.NonActorWalletService
-import com.evernym.verity.vault.{KeyInfo, WalletAPI, WalletAPIParam}
+import com.evernym.verity.testkit.TestWallet
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.apache.commons.codec.digest.DigestUtils
 
 trait DeadDropSpecUtil extends CommonSpecUtil {
@@ -24,27 +22,16 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
     val recoveryVerKey = nkc.verKey
     val namespace = passphrase  //TODO: is it ok to use passphrase as namespace?
     val locator = DigestUtils.sha256Hex(
-      walletAPI.signMsg(SignMsg(KeyInfo(Left(recoveryVerKey)), namespace.getBytes)))
+      walletAPI.signMsg(SignMsg(KeyParam(Left(recoveryVerKey)), namespace.getBytes)))
     val hashedAddress = DigestUtils.sha256Hex(recoveryVerKey + locator)
     val locatorSignature =
-      walletAPI.signMsg(SignMsg(KeyInfo(Left(recoveryVerKey)), locator.getBytes))
+      walletAPI.signMsg(SignMsg(KeyParam(Left(recoveryVerKey)), locator.getBytes))
     DeadDropData(recoveryVerKey, hashedAddress, locator, locatorSignature, dataOpt.getOrElse("test-data".getBytes))
   }
 
   def generatePayload(): DeadDropData = {
-    val poolConnManager = new IndyLedgerPoolConnManager(appConfig)
-    val walletProvider = new LibIndyWalletProvider(appConfig)
-    val walletService = new NonActorWalletService(appConfig, TestUtil, walletProvider, poolConnManager)
-    implicit lazy val walletAPI: WalletAPI = new WalletAPI(walletService, walletProvider)
-
-    lazy val wap = {
-      val key = walletAPI.generateWalletKey()
-      val wap = WalletAPIParam(key)
-      walletAPI.createWallet(wap)
-      wap
-    }
-
-    prepareDeadDropData(walletAPI)(wap)
+    val testWallet = new TestWallet(createWallet = true)
+    prepareDeadDropData(testWallet.walletAPI)(testWallet.wap)
   }
 
 }

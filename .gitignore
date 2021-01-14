@@ -4,6 +4,7 @@
 *.pid
 
 # sbt specific
+.bsp/
 .sbt/
 .ivy2/
 .cache
@@ -30,3 +31,6 @@ project/plugins/project/
 # Mac OS
 .DS_Store
 /doc/mxgraph-parse/.vscode/
+
+# akka diagnostics
+**/akka-diagnostics/*

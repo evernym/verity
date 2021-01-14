@@ -4,11 +4,12 @@ import java.time.ZonedDateTime
 
 import akka.actor.ActorSystem
 import com.evernym.verity.Status._
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.protocol.engine.{DID, WalletAccess}
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam
-import com.evernym.verity.vault.service.WalletParam
 
 import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -48,6 +49,7 @@ case class CredDefV1(id: String,
 trait Submitter {
   def did: DID
   def wap: Option[WalletAPIParam]
+  def wapReq: WalletAPIParam = wap.getOrElse(throw new Exception("Signed Requests require Wallet Info"))
 }
 object Submitter {
   def apply(did: DID, wap: Option[WalletAPIParam]): Submitter = WriteSubmitter(did, wap)
@@ -60,7 +62,7 @@ case class ReadSubmitter() extends Submitter {
 }
 
 
-case class LedgerRequest(req: String, needsSigning: Boolean=true, taa: Option[TransactionAuthorAgreement]=None){
+case class LedgerRequest(req: String, needsSigning: Boolean=true, taa: Option[TransactionAuthorAgreement]=None) extends ActorMessage {
   def prepared(newRequest: String): LedgerRequest = this.copy(req=newRequest)
 }
 

@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyCreated, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
@@ -63,6 +63,7 @@ trait AgencyAgentCommon
           case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, newActorId)
           case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
           case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
+          case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
           //TODO: below parameter is required by dead drop protocol (but not used by it if it is running on cloud agency)
           case OTHER_ID                                 => Parameter(OTHER_ID, "")
@@ -128,37 +129,40 @@ trait AgencyAgentCommon
     logger.debug(s"Cloud Agent provisioning requested: $requester")
 
     val newActorId = getNewActorId
-    val (domainDID, domainVk, requesterVk) = requester match {
+    val provParamFut = requester match {
       case NeedsCloudAgent(requesterKeys, _) =>
-        (requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey)
+        Future.successful(ProvisioningParam(requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey))
       case NeedsEdgeAgent(requesterVk, _) =>
-        val domainKeys = agentActorContext.walletAPI.createNewKey()
-        (domainKeys.did, domainKeys.verKey, requesterVk)
+        agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { nk =>
+          ProvisioningParam(nk.did, nk.verKey, requesterVk)
+        }
     }
-    prepareNewAgentWalletData(domainDID, domainVk, newActorId).map { agentPairwiseKey =>
-      val setupEndpoint = SetupAgentEndpoint_V_0_7(
-        threadId,
-        domainDID,
-        agentPairwiseKey.did,
-        requesterVk,
-        requester.sponsorRel
-      )
-      userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
-      None
+    provParamFut.flatMap { pp =>
+      prepareNewAgentWalletData(pp.domainDID, pp.domainVerKey, newActorId).map { agentPairwiseKey =>
+        val setupEndpoint = SetupAgentEndpoint_V_0_7(
+          threadId,
+          pp.domainDID,
+          agentPairwiseKey.did,
+          pp.requestVerKey,
+          requester.sponsorRel
+        )
+        userAgentRegion ! ForIdentifier(newActorId, setupEndpoint)
+        None
+      }
     }
   }
 
   def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, walletId: String): Future[NewKeyCreated]  = {
     implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
-    val fut1 = agentActorContext.walletService.executeAsync[WalletCreated.type](walletId, CreateWallet)
-    val fut2 = agentActorContext.walletService.executeAsync[TheirKeyCreated](walletId, StoreTheirKey(requesterDid, requesterVerKey))
-    val fut3 = agentActorContext.walletService.executeAsync[NewKeyCreated](walletId, CreateNewKey())
+    val fut1 = walletAPI.executeAsync[WalletCreated.type](CreateWallet)
+    val fut2 = walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(requesterDid, requesterVerKey))
+    val fut3 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey())
     fut1.map { _ =>
       //below futures should be only executed when fut1 (create wallet) is done
-      for {
-        _ <- fut2;
+      for (
+        _       <- fut2;
         fut3Res <- fut3
-      } yield fut3Res
+      ) yield fut3Res
     }.flatten
   }
 
@@ -169,3 +173,5 @@ trait AgencyAgentCommon
 
   def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, None)
 }
+
+case class ProvisioningParam(domainDID: DID, domainVerKey: VerKey, requestVerKey: VerKey)

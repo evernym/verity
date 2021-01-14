@@ -4,9 +4,10 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.wallet.{PackedMsg, UnpackedMsg}
+import com.evernym.verity.actor.wallet.{LegacyUnpackMsg, PackedMsg, UnpackedMsg}
 import com.evernym.verity.util.MessagePackUtil
-import com.evernym.verity.vault.{KeyInfo, WalletAPI, WalletAPIParam}
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -22,32 +23,33 @@ class MsgPackTransformer
   val logger: Logger = getLoggerByClass(classOf[MsgPackTransformer])
 
   override def pack(msg: String,
-                    recipVerKeys: Set[KeyInfo],
-                    senderVerKey: Option[KeyInfo],
-                    packParam: PackParam)
+                    recipVerKeyParams: Set[KeyParam],
+                    senderVerKeyParam: Option[KeyParam])
                    (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
 
     val msgBytes = MessagePackUtil.convertJsonStringToPackedMsg(msg)
-    walletAPI.LEGACY_pack(msgBytes, recipVerKeys, senderVerKey)
+    walletAPI.LEGACY_packMsg(msgBytes, recipVerKeyParams, senderVerKeyParam)
   }
 
   override def unpack(msg: Array[Byte],
-                      fromVerKey: Option[KeyInfo],
+                      fromVerKeyParamOpt: Option[KeyParam],
                       unpackParam: UnpackParam)
                      (implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentBundledMsg = {
-    val result = walletAPI.LEGACY_unpack(msg, fromVerKey, unpackParam.isAnonCryptedMsg)
-    val msgUnpacked = MessagePackUtil.convertPackedMsgToJsonString(result.msg)
-    val unpackedMsg = UnpackedMsg(msgUnpacked, result.senderVerKey, None)
-    AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
+    val um = walletAPI.LEGACY_unpackMsg(msg, fromVerKeyParamOpt, unpackParam.isAnonCryptedMsg)
+    prepareAgentBundledMsg(um, unpackParam)
   }
 
-  override def unpackAsync(msg: Array[Byte], fromVerKey: Option[KeyInfo], unpackParam: UnpackParam)
+  override def unpackAsync(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
 
-    walletAPI.LEGACY_unpackAsync(msg, fromVerKey, unpackParam.isAnonCryptedMsg).map { r =>
-      val msgUnpacked = MessagePackUtil.convertPackedMsgToJsonString(r.msg)
-      val unpackedMsg = UnpackedMsg(msgUnpacked, r.senderVerKey, None)
-      AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
+    walletAPI.executeAsync[UnpackedMsg](LegacyUnpackMsg(msg, fromVerKeyParamOpt, unpackParam.isAnonCryptedMsg)).map { um =>
+      prepareAgentBundledMsg(um, unpackParam)
     }
+  }
+
+  private def prepareAgentBundledMsg(um: UnpackedMsg, unpackParam: UnpackParam): AgentBundledMsg = {
+    val msgUnpacked = MessagePackUtil.convertPackedMsgToJsonString(um.msg)
+    val unpackedMsg = UnpackedMsg(msgUnpacked, um.senderVerKey, None)
+    AgentMsgParseUtil.parse(unpackedMsg, unpackParam.parseParam)
   }
 }

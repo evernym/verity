@@ -3,11 +3,11 @@ package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PAIRWISE_DID, MY_PUBLIC_DID, NAME, THEIR_PAIRWISE_DID}
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.didcomm.decorators.PleaseAck
-import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -311,6 +311,17 @@ class IssueCredentialSpec
 
       inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
       inviteObj.has("@id") shouldBe true
+
+      inviteObj.has("@id") shouldBe true
+      InviteUtil.isThreadedInviteId(inviteObj.getString("@id"))
+      val threadedInviteId = InviteUtil.parseThreadedInviteId(
+        inviteObj.getString("@id")
+      ).get
+      threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+      threadedInviteId.relationshipId shouldBe issuer.did_!
+      threadedInviteId.threadId shouldBe issuer.currentInteraction.get.threadId.get
+
+
       inviteObj.getString("profileUrl") shouldBe logoUrl
       inviteObj.getString("label") shouldBe orgName
       inviteObj.getString("public_did") should endWith(publicDid)
@@ -518,13 +529,8 @@ class IssueCredentialSpec
       "age"  -> "41"
   )
 
-  lazy val credPreviewTypeStr = MsgFamily.typeStrFromMsgType(IssueCredentialProtoDef.msgFamily, "credential-preview")
-
   def buildCredPreview(): CredPreview = {
-    val credAttributes = credValues.map { case (name, value) =>
-      CredPreviewAttribute(name, value, None)
-    }.toVector
-    CredPreview(credPreviewTypeStr, credAttributes)
+    IssueCredential.buildCredPreview(credValues)
   }
 
   def buildSendOffer(autoIssue: Option[Boolean] = None): Offer = {

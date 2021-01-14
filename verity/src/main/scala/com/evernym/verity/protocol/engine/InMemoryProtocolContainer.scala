@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.protocol.actor.ServiceDecorator
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, LedgerAccessController, WalletAccess, WalletAccessController}
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Read, ReadStorage, Write, WriteStorage}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}

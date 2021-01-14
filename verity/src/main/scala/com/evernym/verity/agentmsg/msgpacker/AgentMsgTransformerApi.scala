@@ -6,7 +6,8 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.JsonUtil.getDeserializedJson
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{KeyInfo, WalletAPI, WalletAPIParam}
+import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -33,38 +34,37 @@ object AgentMsgTransformerApi {
 
   def pack(mpf: MsgPackFormat,
            msg: String,
-           recipVerKeys: Set[KeyInfo],
-           senderVerKey: Option[KeyInfo],
-           packParam: PackParam = PackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    msgTransformer(mpf).pack(msg, recipVerKeys, senderVerKey, packParam)
+           recipVerKeyParams: Set[KeyParam],
+           senderVerKeyParamOpt: Option[KeyParam])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
+    msgTransformer(mpf).pack(msg, recipVerKeyParams, senderVerKeyParamOpt)
   }
 
   def unpack(msg: Array[Byte],
-             fromVerKeyOpt: Option[KeyInfo],
+             fromVerKeyParamOpt: Option[KeyParam],
              unpackParam: UnpackParam = UnpackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentMsgWrapper = {
 
-    val (transformer, fromVerKey) = if (isIndyPacked(msg)) {
+    val (transformer, fromVerKeyParam) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)
     } else {
-      (msgPackTransformer, fromVerKeyOpt)
+      (msgPackTransformer, fromVerKeyParamOpt)
     }
 
-    val unpackedMsg = transformer.unpack(msg, fromVerKey, unpackParam)
+    val unpackedMsg = transformer.unpack(msg, fromVerKeyParam, unpackParam)
     AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
   }
 
   def unpackAsync(msg: Array[Byte],
-                  fromVerKeyOpt: Option[KeyInfo],
+                  fromVerKeyParamOpt: Option[KeyParam],
                   unpackParam: UnpackParam = UnpackParam())
                  (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentMsgWrapper] = {
 
-    val (transformer, fromVerKey) = if (isIndyPacked(msg)) {
+    val (transformer, fromVerKeyParam) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)
     } else {
-      (msgPackTransformer, fromVerKeyOpt)
+      (msgPackTransformer, fromVerKeyParamOpt)
     }
 
-    transformer.unpackAsync(msg, fromVerKey, unpackParam).map { unpackedMsg =>
+    transformer.unpackAsync(msg, fromVerKeyParam, unpackParam).map { unpackedMsg =>
       AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
     }
   }

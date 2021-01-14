@@ -9,7 +9,7 @@ import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, ItemManagerEntityId, ItemType}
 import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.actor.{ActorMessageClass, ActorMessageObject, ForIdentifier}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -18,7 +18,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ActorErrorResp
-import com.evernym.verity.actor.base.BaseNonPersistentActor
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -30,7 +30,8 @@ import scala.concurrent.Future
  * @param appConfig application configuration
  * @param childActorDetails child actor to be created by this Watcher Manager actor
  */
-class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[WatcherChildActorDetail]) extends BaseNonPersistentActor {
+class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[WatcherChildActorDetail])
+  extends CoreActorExtended {
   val logger: Logger = getLoggerByClass(classOf[WatcherManager])
 
   childActorDetails.foreach { cad =>
@@ -60,7 +61,7 @@ class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[Watche
 }
 
 
-trait WatcherBase extends BaseNonPersistentActor with HasActorResponseTimeout with HasAppConfig {
+trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with HasAppConfig {
   implicit def appConfig: AppConfig
 
   val logger: Logger = getLoggerByClass(classOf[WatcherBase])
@@ -190,14 +191,14 @@ trait WatcherBase extends BaseNonPersistentActor with HasActorResponseTimeout wi
   def pendingActiveRegisteredItemMetricsName: String
 }
 
-case object CheckForPeriodicTaskExecution extends ActorMessageObject
-case class AddItem(itemId: ItemId, status: Option[Int], detail: Option[String]) extends ActorMessageClass
-case class RemoveItem(itemId: ItemId) extends ActorMessageClass
-case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessageClass
+case object CheckForPeriodicTaskExecution extends ActorMessage
+case class AddItem(itemId: ItemId, status: Option[Int], detail: Option[String]) extends ActorMessage
+case class RemoveItem(itemId: ItemId) extends ActorMessage
+case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
 case class WatcherChildActorDetail(enabledConfName: String, actorName: String, actorProp: Props)
 
 object WatcherManager {
   val name: String = WATCHER_MANAGER
   def props(appConfig: AppConfig, childActorDetails: Set[WatcherChildActorDetail]): Props =
-    Props(classOf[WatcherManager], appConfig, childActorDetails)
+    Props(new WatcherManager(appConfig, childActorDetails))
 }

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.maintenance
 
-import com.evernym.verity.actor.ActorMessageObject
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.CommonConfig
 
@@ -16,4 +16,4 @@ trait ActorStateCleanupBase { this: BasePersistentActor =>
 }
 
 
-case object ProcessPending extends ActorMessageObject
+case object ProcessPending extends ActorMessage

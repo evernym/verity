@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.HttpBindUtil
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.UrlDetail
+import com.evernym.verity.UrlParam
 import com.typesafe.scalalogging.Logger
 
 trait BaseHttpListener[T] extends HttpBindUtil {
@@ -25,13 +25,13 @@ trait BaseHttpListener[T] extends HttpBindUtil {
   val logger: Logger = getLoggerByName("edge-http")
   override lazy implicit val system: ActorSystem = ActorSystem("edge-json-msg", appConfig.getLoadedConfig)
 
-  protected def listeningEndpoint: UrlDetail
+  protected def listeningEndpoint: UrlParam
 
   def listeningUrl: String
 
   def edgeRoute: Route
 
   def init(): Unit = {
-    Http().bindAndHandle(corsHandler(edgeRoute), "localhost", listeningEndpoint.port)
+    Http().newServerAt("localhost", listeningEndpoint.port).bind(corsHandler(edgeRoute))
   }
 }

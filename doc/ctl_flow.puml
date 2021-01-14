@@ -44,7 +44,7 @@ note over AgentIncomingMsgHandler #ffffff: sendTypedMsgToProtocol( )
 AgentIncomingMsgHandler -> ActorLaunchesProtocol
 note over ActorLaunchesProtocol #ffffff: tellProtocol( ) -- Message given to\nprotocol subsystem.
 ActorLaunchesProtocol -> ActorProtocolContainer
-note over ActorProtocolContainer #ffffff: sendRespToCaller( )
+note over ActorProtocolContainer #ffffff: walletAPI( )
 
 group 300: nothread
 autonumber 301

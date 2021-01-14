@@ -15,7 +15,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAPIParam}
+import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
 import scala.util.Left
 
@@ -44,11 +44,24 @@ trait PairwiseConnStateBase {
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String = MSG_STATUS_ACCEPTED.statusCode): Unit
 
+  /**
+   * used to update the relationship object with their DID doc information (with legacy routing details)
+   * and also it updates connection status
+   * @param relScopeDID
+   * @param lrd
+   */
   def updateLegacyRelationshipState(relScopeDID: DID, lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
     updateRelAndConnection(theirDidDoc)
   }
 
+  /**
+   * used to update the relationship object with their DID doc information (with standard routing details)
+   * and also it updates connection status
+   * @param relScopeDID
+   * @param agentKeyDID
+   * @param rd
+   */
   def updateRelationshipState(relScopeDID: DID, agentKeyDID: DID, rd: RoutingDetail): Unit = {
     val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, agentKeyDID, Option(Right(rd)))
     updateRelAndConnection(theirDidDoc)
@@ -179,7 +192,7 @@ trait PairwiseConnStateBase {
   def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>
-        val theirAgencySealParam = SealParam(KeyInfo(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(
+        val theirAgencySealParam = SealParam(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(
           ld.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(ld.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),

@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNY
 import com.evernym.verity.protocol.engine.{DID, MsgFamilyQualifier, MsgName, VerKey}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, KeyInfo, SealParam, WalletAPIParam}
+import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
 
 
@@ -93,7 +93,7 @@ object AgentMsgPackagingUtil {
           fwdMsgType = packedMsg.metadata.map(_.msgTypeStr)
         )
         updatedPackedMsg = fr.encryptInfo.fold(
-          si => agentMsgTransformer.pack(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyInfo), None)),
+          si => agentMsgTransformer.pack(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyParam), None)),
           ei => agentMsgTransformer.pack(msgPackFormat, fwdMsg, ei)
         )
       }
@@ -161,7 +161,7 @@ object AgentMsgPackagingUtil {
           val remaining = routingKeys.tail
           val encryptWith = remaining.head
           val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg, COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
-          val newPackedMsg = agentMsgTransformer.pack(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyInfo(Left(encryptWith))), None))
+          val newPackedMsg = agentMsgTransformer.pack(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyParam(Left(encryptWith))), None))
           if (remaining.size >= 2) {
             packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
           } else {

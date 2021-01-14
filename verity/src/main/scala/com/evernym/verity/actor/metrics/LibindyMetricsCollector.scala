@@ -1,27 +1,23 @@
 package com.evernym.verity.actor.metrics
 
-import akka.Done
 import akka.actor.Actor
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.{ActorMessageClass, MetricsFilterCriteria}
-import com.evernym.verity.metrics.{MetricsReader, MetricsWriter}
+import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util.Util.logger
 import org.hyperledger.indy.sdk.metrics.Metrics
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
-case class CollectLibindyMetrics() extends ActorMessageClass
-case class CollectLibindySuccess() extends ActorMessageClass
-case class CollectLibindyFailed(e: String) extends ActorMessageClass
-
 class LibindyMetricsCollector extends Actor {
+
+  final override def receive: Receive = {
+    case CollectLibindyMetrics() => this.collectLibindyMetrics()
+  }
+
   def collectLibindyMetrics(): Unit = {
     val replyTo = sender()
     toFuture(Metrics.collectMetrics).onComplete {
@@ -43,10 +39,9 @@ class LibindyMetricsCollector extends Actor {
     }
   }
 
-  final override def receive = {
-    case CollectLibindyMetrics() => this.collectLibindyMetrics()
-  }
-
 }
 
 case class LibindyMetricsRecord(value: Long, tags: Map[String, String])
+case class CollectLibindyMetrics() extends ActorMessage
+case class CollectLibindySuccess() extends ActorMessage
+case class CollectLibindyFailed(e: String) extends ActorMessage

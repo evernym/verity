@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
 import com.evernym.verity.testkit.BasicSpec
-
 
 import scala.util.Try
 

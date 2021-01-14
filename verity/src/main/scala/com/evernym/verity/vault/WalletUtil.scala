@@ -5,9 +5,12 @@ import java.util.UUID
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_ENCRYPTION
 import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.WalletParam
 import org.apache.commons.codec.digest.DigestUtils
+
+import scala.concurrent.Future
 
 object WalletUtil {
 
@@ -23,20 +26,38 @@ object WalletUtil {
     } else new DefaultWalletConfig
   }
 
-  def generateWalletParam(walletId: String,
+  //TODO: there are some code duplicate in below methods, see if we can fix it
+  def generateWalletParamAsync(walletId: String,
                           appConfig: AppConfig,
-                          walletProvider: WalletProvider): WalletParam = {
+                          walletProvider: WalletProvider): Future[WalletParam] = {
     val walletConfig = buildWalletConfig(appConfig)
-    generateWalletParam(walletId, appConfig, walletProvider, walletConfig)
+    generateWalletParamAsync(walletId, appConfig, walletProvider, walletConfig)
   }
 
-  def generateWalletParam(walletId: String,
+  private def generateWalletParamAsync(walletId: String,
                           appConfig: AppConfig,
                           walletProvider: WalletProvider,
-                          walletConfig: WalletConfig): WalletParam = {
+                          walletConfig: WalletConfig): Future[WalletParam] = {
     val walletName = getWalletName(walletId, appConfig)
-    val encryptionKey = walletProvider.generateKey(Option(getWalletKeySeed(walletId, appConfig)))
-    WalletParam(walletId, walletName, encryptionKey, walletConfig)
+    walletProvider.generateKeyAsync(Option(getWalletKeySeed(walletId, appConfig))).map { key =>
+      WalletParam(walletId, walletName, key, walletConfig)
+    }
+  }
+
+  def generateWalletParamSync(walletId: String,
+                              appConfig: AppConfig,
+                              walletProvider: WalletProvider): WalletParam = {
+    val walletConfig = buildWalletConfig(appConfig)
+    generateWalletParamSync(walletId, appConfig, walletProvider, walletConfig)
+  }
+
+  def generateWalletParamSync(walletId: String,
+                               appConfig: AppConfig,
+                               walletProvider: WalletProvider,
+                               walletConfig: WalletConfig): WalletParam = {
+    val walletName = getWalletName(walletId, appConfig)
+    val key = walletProvider.generateKeySync(Option(getWalletKeySeed(walletId, appConfig)))
+    WalletParam(walletId, walletName, key, walletConfig)
   }
 
   private def getWalletName(entityId: String, appConfig: AppConfig): String = {

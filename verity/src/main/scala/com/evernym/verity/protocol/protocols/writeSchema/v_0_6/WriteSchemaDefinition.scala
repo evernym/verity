@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.actor.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AnonCreds, LedgerReadAccess, LedgerWriteAccess}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.Undefined
 
 object WriteSchemaDefinition extends WriteSchemaDefTrait
@@ -16,7 +17,7 @@ trait WriteSchemaDefTrait extends ProtocolDefinition[WriteSchema, Role, Msg, Any
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID)
+  override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID, DEFAULT_ENDORSER_DID)
 
   override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess, LedgerWriteAccess)
 

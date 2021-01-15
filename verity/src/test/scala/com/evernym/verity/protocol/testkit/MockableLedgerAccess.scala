@@ -13,6 +13,7 @@ import scala.util.{Failure, Try}
 
 object MockableLedgerAccess {
   val MOCK_NO_DID = "MOCK_NO_DID"
+  val MOCK_NOT_ENDORSER = "MOCK_NOT_ENDORSER"
   def apply(): MockableLedgerAccess = {
     new MockableLedgerAccess()
   }
@@ -36,12 +37,20 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     )
   )
 
+  lazy val invalidEndorserError: String = "Rule for this action is: 1 TRUSTEE signature is required OR 1 STEWARD " +
+    "signature is required OR 1 ENDORSER signature is required OR 1 signature of any role is required with additional" +
+    " metadata fees schema\\nFailed checks:\\nConstraint: 1 TRUSTEE signature is required, Error: Not enough TRUSTEE " +
+    "signatures\\nConstraint: 1 STEWARD signature is required, Error: Not enough STEWARD signatures\\nConstraint: " +
+    "1 ENDORSER signature is required, Error: Not enough ENDORSER signatures\\nConstraint: 1 signature of any role " +
+    "is required with additional metadata fees schema, Error: Fees are required for this txn type"
+
   override def getCredDef(credDefId: String): Try[GetCredDefResp] =
     if(ledgerAvailable) Try(credDefs.getOrElse(credDefId, throw new Exception("Unknown cred def")))
     else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
 
   override def writeCredDef(submitterDID: DID, credDefJson: String): Try[Either[StatusDetail, TxnResp]] =
     if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+    else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
     else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
     else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
 
@@ -51,6 +60,7 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
 
   override def writeSchema(submitterDID: String, schemaJson: String): Try[Either[StatusDetail, TxnResp]] =
     if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+    else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
     else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
     else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
 }

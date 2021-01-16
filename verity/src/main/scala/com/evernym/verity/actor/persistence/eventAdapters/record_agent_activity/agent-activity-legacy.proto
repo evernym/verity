@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor.persistent.event_adapters.record_agent_activity;
+
+//This is a Legacy Event. Do not use. Used only for conversion to the most recent event.
+message RecordingAgentActivityV0 {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
+    string domainId = 1;
+    string timestamp = 2;
+    string sponsorId = 3;
+    string activityType = 4;
+    string relId = 5;
+    string stateKey = 6;
+    string sponseeId = 7;
+}

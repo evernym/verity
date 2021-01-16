@@ -1,14 +1,13 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
 import com.evernym.verity.actor.{AgentDetailSet, AgentKeyDlgProofSet, MsgAnswered, MsgCreated, OwnerSetForAgent, TheirAgencyIdentitySet, TheirAgentDetailSet, TheirAgentKeyDlgProofSet}
-import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_USER_AGENT_ACTOR, KEY_VALUE_MAPPER_ACTOR_NAME}
+import com.evernym.verity.constants.ActorNameConstants._
 
 trait AgentEventSetter extends BasePersistentStore {
 
   val thisAgencyAgentEntityId             = "000"
   val selfRelAgentEntityId                = "111"    //entity id of UserAgent actor
   val myPairwiseRelAgentEntityId          = "222"    //entity id of UserAgentPairwise actor
-  val userAgentPairwisePersistenceId      = s"UserAgentPairwise-$myPairwiseRelAgentEntityId"
 
   val thisAgencyAgentDIDKeySeed           = "00000000000000000000000000000000"
   val selfRelDIDKeySeed                   = "00000000000000000000000000000002"
@@ -18,6 +17,9 @@ trait AgentEventSetter extends BasePersistentStore {
   val theirPairwiseRelDIDKeySeed          = "00000000000000000000000000000006"
   val theirPairwiseAgentDIDKeySeed        = "00000000000000000000000000000007"
   val theirAgencyDIDKeySeed               = "00000000000000000000000000000008"
+
+  val selfRelAgentPersistenceId           = PersistenceIdParam(USER_AGENT_REGION_ACTOR_NAME, selfRelAgentEntityId)
+  val myPairwiseRelAgentPersistenceId     = PersistenceIdParam(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME, myPairwiseRelAgentEntityId)
 
   lazy val thisAgencyAgentDIDPair         = generateNewDid(Option(thisAgencyAgentDIDKeySeed))
   lazy val mySelfRelDIDPair               = generateNewDid(Option(selfRelDIDKeySeed))
@@ -29,17 +31,17 @@ trait AgentEventSetter extends BasePersistentStore {
   lazy val theirAgencyAgentDIDPair        = generateNewDid(Option(theirAgencyDIDKeySeed))
 
   def setupBasicAgencyAgent(): Unit = {
-    //TODO: set up more events for agency agent
-    storeAgencyDIDKeyValueMapping(thisAgencyAgentDIDPair.DID)(PersistParam.default(KEY_VALUE_MAPPER_ACTOR_NAME))
+    //NOTE: set up more events for agency agent
+    storeAgencyDIDKeyValueMapping(thisAgencyAgentDIDPair.DID)
   }
 
   def setupBasicUserAgent(): Unit = {
     setupBasicUserAgentWalletData()
-    //TODO: add more events for user agent actor here
-    storeAgentRoute(mySelfRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, selfRelAgentEntityId)(PersistParam.default(selfRelAgentEntityId))
+    //NOTE: add more events for basic setup of user agent actor here
+    storeAgentRoute(mySelfRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, selfRelAgentEntityId)
   }
 
-  def setupBasicUserAgentWalletData(): Unit = {
+  private def setupBasicUserAgentWalletData(): Unit = {
     createWallet(selfRelAgentEntityId)
     createNewKey(selfRelAgentEntityId, Option(selfRelDIDKeySeed))
     createNewKey(selfRelAgentEntityId, Option(selfRelAgentDIDKeySeed))
@@ -50,7 +52,7 @@ trait AgentEventSetter extends BasePersistentStore {
     storeUserAgentPairwiseEvents()
   }
 
-  def setupBasicUserAgentPairwiseWalletData(): Unit = {
+  private def setupBasicUserAgentPairwiseWalletData(): Unit = {
     createNewKey(selfRelAgentEntityId, Option(myPairwiseRelDIDKeySeed))
     createNewKey(selfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
     createNewKey(selfRelAgentEntityId, Option(theirPairwiseRelDIDKeySeed))
@@ -59,8 +61,8 @@ trait AgentEventSetter extends BasePersistentStore {
   }
 
   private def storeUserAgentPairwiseEvents(): Unit = {
-    addEventsToPersistentStorage(userAgentPairwisePersistenceId, basicEvents)(PersistParam.default(myPairwiseRelAgentEntityId))
-    storeAgentRoute(myPairwiseRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, myPairwiseRelAgentEntityId)(PersistParam.default(myPairwiseRelAgentEntityId))
+    addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicEvents)
+    storeAgentRoute(myPairwiseRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, myPairwiseRelAgentEntityId)
   }
 
   lazy val basicEvents = scala.collection.immutable.Seq(

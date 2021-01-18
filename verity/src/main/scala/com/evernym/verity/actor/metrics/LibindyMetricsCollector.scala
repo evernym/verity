@@ -1,9 +1,8 @@
 package com.evernym.verity.actor.metrics
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorSystem}
 import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Main.agentMsgRouter.system
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToMap
@@ -15,7 +14,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
-class LibindyMetricsCollector extends Actor {
+class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Actor {
 
   final override def receive: Receive = {
     case CollectLibindyMetrics() => this.collectLibindyMetrics()
@@ -23,7 +22,9 @@ class LibindyMetricsCollector extends Actor {
 
   def collectLibindyMetrics(): Unit = {
     val replyTo = sender()
-    val delayFuture = akka.pattern.after(10.seconds, using = system.scheduler)(Future.failed(new Exception("Metrics was not collected in 10s interval")))
+    val delayFuture = akka.pattern.after(10.seconds, using = actorSystem.scheduler)(
+      Future.failed(new Exception("Metrics was not collected in 10s interval"))
+    )
     val metricsFuture = toFuture(Metrics.collectMetrics)
     Future.firstCompletedOf(Seq(metricsFuture, delayFuture)).onComplete {
       case Success(metrics) =>

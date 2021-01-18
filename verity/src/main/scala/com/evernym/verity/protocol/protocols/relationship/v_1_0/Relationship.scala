@@ -89,7 +89,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg)
     if (m.shortInvite.getOrElse(defaultShortInviteOption)) {
-      ctx.urlShortening.handleShortening(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
     } else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -97,7 +97,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
   def connectionInvitation(st: State.InvitationCreated, m: Ctl.ConnectionInvitation): Unit = {
     val inviteURL = prepareInviteUrl(st.invitation)
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.handleShortening(ShortenInvite(st.invitation.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(st.invitation.`@id`, inviteURL), shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, st.invitation.`@id`))
   }
@@ -149,7 +149,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.handleShortening(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -169,7 +169,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.handleShortening(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }

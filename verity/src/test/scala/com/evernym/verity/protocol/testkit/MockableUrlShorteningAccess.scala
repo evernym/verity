@@ -16,6 +16,6 @@ object MockableUrlShorteningAccess {
 class MockableUrlShorteningAccess(mockShortening: UrlShorteningAccess = MockableUrlShorteningAccess.defaultUrlShorteningSuccess)
   extends UrlShorteningAccess {
 
-  override def handleShortening(si: ShortenInvite, handler: UrlShortenMsg => Unit): Unit =
-    mockShortening.handleShortening(si, handler)
+  override def shorten(si: ShortenInvite, handler: UrlShortenMsg => Unit): Unit =
+    mockShortening.shorten(si, handler)
 }

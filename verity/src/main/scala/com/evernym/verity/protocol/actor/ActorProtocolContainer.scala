@@ -35,8 +35,10 @@ import com.evernym.verity.libindy.ledger.LedgerAccessApi
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.protocol.engine.asyncAccess.AsyncProtocolService
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg, UrlShorteningAccess}
+import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
@@ -79,7 +81,8 @@ class ActorProtocolContainer[
     with MsgTraceProvider
     with HasAgentWallet
     with HasAppConfig
-    with AgentIdentity {
+    with AgentIdentity
+    with AsyncProtocolService {
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -101,6 +104,7 @@ class ActorProtocolContainer[
   var agentWalletId: Option[String] = None
   def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
 
+  //FIXME -> RTM: Add check to make sure receive, store, async protocol are not going on????
   def toBaseBehavior(): Unit = {
     logger.debug("becoming baseBehavior")
     setNewReceiveBehaviour(baseBehavior)
@@ -155,21 +159,31 @@ class ActorProtocolContainer[
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
-  def toStoringBehavior(): Unit = {
-    logger.debug("becoming storingBehavior")
-    setNewReceiveBehaviour(storingBehavior)
+  def toProtocolAsyncBehavior(): Unit = {
+    logger.debug("becoming toProtocolAsyncBehavior")
+    setNewReceiveBehaviour(asyncProtocolBehavior)
+  }
+
+  final def asyncProtocolBehavior: Receive = storingBehavior orElse asyncServiceBehavior
+
+  //FIXME -> Maybe this is the base for receive, store, and async service?
+  final def asyncServiceBehavior: Receive = {
+    case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
+      logger.debug(s"$protocolIdForLog received StoreComplete")
+      urlShortenerComplete()
+      if(servicesComplete(pendingSegments)) toBaseBehavior()
+    case msg: Any => // we can't make a stronger assertion about type because erasure
+      logger.debug(s"$protocolIdForLog received msg: $msg while handling async behavior in protocol - (segmented state, url-shortener, ledger, wallet")
+      stash()
   }
 
   final def storingBehavior: Receive = {
     case ProtocolCmd(_: SegmentStorageComplete, _) =>
       logger.debug(s"$protocolIdForLog received StoreComplete")
-      toBaseBehavior()
+      if(servicesComplete()) toBaseBehavior()
     case ProtocolCmd(_: SegmentStorageFailed, _) =>
       logger.error(s"failed to store segment")
-      toBaseBehavior()
-    case msg: Any => // we can't make a stronger assertion about type because erasure
-      logger.debug(s"$protocolIdForLog received msg: $msg while storing data")
-      stash()
+      if(servicesComplete()) toBaseBehavior()
   }
 
   //TODO -> RTM: Add documentation for this
@@ -419,7 +433,6 @@ class ActorProtocolContainer[
       agentActorContext.s3API upload(id, data) onComplete cb
   }
 
-
   def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = {
     def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any): Unit = {
       val typeName = SegmentedStateStore.buildTypeName(definition.msgFamily.protoRef, definition.segmentedStateName.get)
@@ -436,7 +449,7 @@ class ActorProtocolContainer[
     }
 
     def saveStorageState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      toStoringBehavior()
+      toProtocolAsyncBehavior()
       logger.debug(s"storing storage state: $data")
       storageService.write(segmentAddress + segmentKey, data.toByteArray, {
         case Success(storageInfo: StorageInfo) =>
@@ -456,7 +469,7 @@ class ActorProtocolContainer[
     }
 
     def saveSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      toStoringBehavior()
+      toProtocolAsyncBehavior()
       data match {
         case segmentData if maxSegmentSize(segmentData) =>
           val cmd = SaveSegmentedState(segmentKey, segmentData)
@@ -509,7 +522,22 @@ class ActorProtocolContainer[
     LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
   )
 
-  override lazy val urlShortening: UrlShorteningAccess = ???
+  override lazy val urlShortening: UrlShorteningAccess = {
+    (si: ShortenInvite, handler: UrlShortenMsg => Unit) => {
+      urlShortenerInProgress()
+      system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) onComplete {
+        case Success(m) =>
+          m match {
+            case UrlShortened(shortUrl) => handler(InviteShortened(si.invitationId, si.inviteURL, shortUrl))
+            case UrlShorteningFailed(_, msg) => handler(InviteShorteningFailed(si.invitationId, msg))
+          }
+          addToMsgQueue(UrlShortenerServiceComplete())
+        case Failure(e) =>
+          handler(InviteShorteningFailed(si.invitationId, e.getMessage))
+          addToMsgQueue(UrlShortenerServiceComplete())
+      }
+    }
+  }
 
   final override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     eventPersistenceFailure(cause, event)

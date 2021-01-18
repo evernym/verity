@@ -11,6 +11,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.Init
+import com.evernym.verity.protocol.engine.asyncAccess.AsyncProtocolService
 import com.evernym.verity.protocol.engine.external_api_access.AccessRight
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
@@ -37,7 +38,9 @@ import scala.util.Try
 trait ProtocolContext[P,R,M,E,S,I]
   extends ProtocolContextApi[P,R,M,E,S,I]
     with SegmentedStateContext[P,R,M,E,S,I]
-    with JournalLogging with JournalProtocolSupport{
+    with JournalLogging
+    with JournalProtocolSupport
+    with AsyncProtocolService {
 
   def pinstId: PinstId
 
@@ -389,12 +392,14 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  /**
+  * Refer to def finalizeState() documentation for async finalizeState
+  */
   def withShadowAndRecord[A](f: => A): A = {
     try {
       constructShadow()
       val result = f
-      storeSegments()
-      recordEvents getOrElse finalizeState
+      handleAsyncServices()
       result
     } catch {
       case e: Exception => abortTransaction(); throw e
@@ -406,6 +411,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     pendingEvents = Vector()
     pendingSegments = None
     clearShadowState()
+    clearAsyncServices()
     record("protocol context cleaned up")
   }
 
@@ -450,6 +456,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     * There are two places that can call finalizeState
     * 1) when event persistence is complete
     * 2) when storage/segment persistence is complete
+    * 3) async protocol service
     * readyToFinalize ensures that both processes are complete
     */
   def finalizeState(): Unit = {
@@ -457,13 +464,30 @@ trait ProtocolContext[P,R,M,E,S,I]
       state = shadowState.getOrElse(state)
       backstate = shadowBackState.getOrElse(backstate)
       clearShadowState()
+      clearAsyncServices()
 
       processOutputBoxes()
       processNextInboxMsg()
     }
   }
 
-  def readyToFinalize: Boolean = pendingEvents.isEmpty && pendingSegments.isEmpty
+  /*
+    it seems, there will be two types of async services:
+    1) DuringMsgHanding:
+      wallet, ledger, url-shortning, store-segment etc, for most of these, there would be a callback handler
+        (I am not sure how/when you'll decide to finalize state for this type). There can/will be nested async service calls.
+    2) PostMsgHandling:
+      record-event
+ */
+  //FIXME -> RTM document how this happens. Store segment, record event async
+  //FIXME -> RTM: How is retrieving segments handled? I only see events and storage.
+  def readyToFinalize: Boolean = pendingEvents.isEmpty && servicesComplete(pendingSegments)
+  def handleAsyncServices(): Unit = {
+    //FIXME -> RTM: async protocol service has already been kicked off, waiting will need to happen in the appropriate places
+    storeSegments()
+    recordEvents getOrElse finalizeState
+    // Wallet // Ledger // Url // events // segments
+  }
 
   def eventPersistenceFailure(cause: Throwable, event: Any): Unit = {
     logger.error(s"Protocol failed to persist event: ${event.getClass.getSimpleName} because: $cause")
@@ -675,6 +699,7 @@ case class DataRetrieved() extends ActorMessage
 case class DataNotFound() extends ActorMessage
 case class SegmentStorageComplete() extends ActorMessage
 case class SegmentStorageFailed() extends ActorMessage
+case class UrlShortenerServiceComplete() extends ActorMessage
 case class ExternalStorageComplete(externalId: SegmentKey)
 case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
 

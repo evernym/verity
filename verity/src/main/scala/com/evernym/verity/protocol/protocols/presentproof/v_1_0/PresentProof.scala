@@ -287,7 +287,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
     buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) match {
       //1. build request,
       case Success(invite) =>
-        ctx.urlShortening.handleShortening(invite, shortenerHandler)
+        ctx.urlShortening.shorten(invite, shortenerHandler)
       case Failure(e) =>
         ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
         Sig.buildProblemReport(

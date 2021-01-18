@@ -94,7 +94,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   def sendInvite(offer: OfferCred, s: State.Initialized): Unit = {
     buildOobInvite(offer, s) match {
       case Success(invite) =>
-        ctx.urlShortening.handleShortening(invite, shortenerHandler)
+        ctx.urlShortening.shorten(invite, shortenerHandler)
       case Failure(e) =>
         ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
         SignalMsg.buildProblemReport(

@@ -104,7 +104,6 @@ class ActorProtocolContainer[
   var agentWalletId: Option[String] = None
   def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
 
-  //FIXME -> RTM: Add check to make sure receive, store, async protocol are not going on????
   def toBaseBehavior(): Unit = {
     logger.debug("becoming baseBehavior")
     setNewReceiveBehaviour(baseBehavior)
@@ -554,6 +553,7 @@ class ActorProtocolContainer[
   override lazy val urlShortening: UrlShorteningAccess = {
     (si: ShortenInvite, handler: UrlShortenMsg => Unit) => {
       urlShortenerInProgress()
+      toProtocolAsyncBehavior()
       system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) onComplete {
         case Success(m) =>
           m match {

@@ -1,7 +1,7 @@
 # Instructions
 
 Scripts to start application locally.
-It assumes all pre-requisites setup work (dynamodb, mysql, ledger, load balancer etc) is already 
+It **assumes** all pre-requisites setup work (dynamodb, mysql, ledger, load balancer etc) is already 
 completed and those services are up and running.
 
 ## Agent services
@@ -56,18 +56,18 @@ sbt "project integrationTests" test:console
 
 once you see sbt prompt, copy paste below code and press Enter
 ```
-import com.evernym.integrationtests.e2e.env.MockAgentService
+import com.evernym.integrationtests.e2e.env.AgencyAgentSetupHelper
 import com.evernym.verity.UrlParam
 ```
 **Notes:** 
 * Below is an example for setting up CAS agency agent.   
 * Port '6701' given in below code block is an example port number, change it accordingly. 
-This is the "http" port where agent service is listening for rest api.
+This is the "http" port where agent service is listening on.
 When you run agent service, it prints this port on the console.
 It can be load balancer port (if you have configured a load balancer) or
 it can be port of any node of the cluster.
-* Replicate this step for other agent service (cas/eas/vas etc) as well.
+* Keep calling 'setupAgencyAgent' with different port to setup different agency agent'.
 ```
-val casAgencyAgentService = new MockAgentService(UrlParam("http://localhost:6701")) 
-casAgencyAgentService.setupAgency()
+val helper = new AgencyAgentSetupHelper() 
+helper.setupAgencyAgent(UrlParam("http://localhost:6701"))
 ```

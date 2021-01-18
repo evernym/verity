@@ -56,7 +56,7 @@ trait HasCloudAgent { this: MockAgent =>
   }
 
   def setAgencyIdentity(ad: AgencyPublicDid): Unit = {
-    storeTheirKey(ad.DID, ad.verKey)
+    storeTheirKey(ad.DID, ad.verKey, ignoreIfAlreadyExists = true)
     agencyPublicDid = Option(ad)
   }
 

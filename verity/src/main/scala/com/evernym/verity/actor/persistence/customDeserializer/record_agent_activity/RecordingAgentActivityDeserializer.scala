@@ -1,12 +1,13 @@
-package com.evernym.verity.actor.persistence.eventAdapters
+package com.evernym.verity.actor.persistence.customDeserializer.record_agent_activity
 
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
+import com.evernym.verity.actor.persistence.customDeserializer.BaseDeserializer
 import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.RecordingAgentActivityV0
 
-object RecordingAgentActivityEventAdapter
-  extends BaseEventAdapter {
+object RecordingAgentActivityDeserializer
+  extends BaseDeserializer {
 
-  override def convert(msg: Array[Byte]): Any = {
+  override def deserialize(msg: Array[Byte]): Any = {
     try {
       RecordingAgentActivity.parseFrom(msg)
     } catch {
@@ -24,4 +25,3 @@ object RecordingAgentActivityEventAdapter
     }
   }
 }
-

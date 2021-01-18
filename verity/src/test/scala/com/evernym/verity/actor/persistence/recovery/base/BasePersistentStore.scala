@@ -9,6 +9,7 @@ import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
+import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.transformations.transformers.v1._
@@ -26,13 +27,9 @@ trait BasePersistentStore
   extends ActorSpec
     with BasicSpec {
 
-  override def overrideConfig: Option[Config] = Option(
-    ConfigFactory.parseString(
-      """
-        |""".stripMargin)
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
-  )
+  lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)
+  lazy val keyValueMapperEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_KEY_VALUE_MAPPER)
+  lazy val agentRouteStoreEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
     walletAPI.createWallet(WalletAPIParam(walletId))
@@ -44,12 +41,13 @@ trait BasePersistentStore
 
   def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
                      (implicit pp: PersistParam = PersistParam()): Unit = {
-    val routeStoreEntityId = RoutingAgentUtil.getBucketEntityId(agentDID)
-    addEventsToPersistentStorage(PersistenceIdParam(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, routeStoreEntityId),
+    val entityId = RoutingAgentUtil.getBucketEntityId(agentDID)
+    val persistenceId = PersistenceIdParam(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, entityId)
+    addEventsToPersistentStorage(persistenceId,
       scala.collection.immutable.Seq(
         RouteSet(agentDID, actorTypeId, address)
       )
-    )(pp.copy(encryptionKey = Option("4k3kejd845k4k3j")))
+    )(pp.copy(encryptionKey = Option(agentRouteStoreEncKey)))
   }
 
   /**
@@ -57,11 +55,12 @@ trait BasePersistentStore
    * this method will store proper event to setup the agency DID in that actor
    */
   def storeAgencyDIDKeyValueMapping(agencyDID: DID)(implicit pp: PersistParam = PersistParam()): Unit = {
-    addEventsToPersistentStorage(PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME),
+
+    addEventsToPersistentStorage(keyValueMapperPersistenceId,
       scala.collection.immutable.Seq(
         MappingAdded(AGENCY_DID_KEY, agencyDID)
       )
-    )(pp.copy(encryptionKey = Option("krkifcjk4io5k4k4kl")))
+    )(pp.copy(encryptionKey = Option(keyValueMapperEncKey)))
   }
 
   /**
@@ -74,7 +73,7 @@ trait BasePersistentStore
                                   (implicit pp: PersistParam = PersistParam()): Unit = {
     val objectCodeMapper = pp.objectCodeMapper.getOrElse(DefaultObjectCodeMapper)
     validateObjectCodeMapping(objectCodeMapper, events)
-    val transformer = getEventTransformer(persistenceId, objectCodeMapper)
+    val transformer = getEventTransformer(persistenceId.entityId, objectCodeMapper)
     val transformedEvents = events.map(evt => transformer.execute(evt))
     persTestKit.persistForRecovery(persistenceId.toString, transformedEvents)
   }
@@ -89,7 +88,7 @@ trait BasePersistentStore
                                     (implicit pp: PersistParam = PersistParam()): Unit = {
     val objectCodeMapper = pp.objectCodeMapper.getOrElse(DefaultObjectCodeMapper)
     validateObjectCodeMapping(objectCodeMapper, snapshots)
-    val transformer = getStateTransformer(persistenceId, objectCodeMapper)
+    val transformer = getStateTransformer(persistenceId.entityId, objectCodeMapper)
     val transformedSnapshots = snapshots.zipWithIndex.map { case (state, index) =>
       val transformedState = transformer.execute(state)
       (SnapshotMeta(index, index), transformedState)
@@ -104,33 +103,45 @@ trait BasePersistentStore
     }
   }
 
-  private def getEventTransformer(persistenceIdParam: PersistenceIdParam,
+  private def getEventTransformer(entityId: EntityId,
                                   objectCodeMapper: ObjectCodeMapperBase)(implicit pp: PersistParam)
   : <=>[Any, _ >: TransformedMsg] = {
-    getTransformer(persistenceIdParam, objectCodeMapper, "event")
+    getTransformer(entityId, objectCodeMapper, "event")
   }
 
-  private def getStateTransformer(persistenceIdParam: PersistenceIdParam,
+  private def getStateTransformer(entityId: EntityId,
                                   objectCodeMapper: ObjectCodeMapperBase)(implicit pp: PersistParam)
   : <=>[Any, _ >: TransformedMsg] = {
-    getTransformer(persistenceIdParam, objectCodeMapper, "state")
+    getTransformer(entityId, objectCodeMapper, "state")
   }
 
-  private def getTransformer(persistenceIdParam: PersistenceIdParam,
+  private def getTransformer(entityId: EntityId,
                              objectCodeMapper: ObjectCodeMapperBase,
                              objectType: String)(implicit pp: PersistParam)
     : <=>[Any, _ >: TransformedMsg] = {
     val encKey = pp.encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(persistenceIdParam.entityId, appConfig))
+      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(entityId, appConfig))
     (pp.transformerId, objectType) match {
-      case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "event")  => legacy.createLegacyEventTransformer(encKey, objectCodeMapper)
-      case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "state")  => legacy.createLegacyStateTransformer(encKey, objectCodeMapper)
-      case (PERSISTENCE_TRANSFORMATION_ID_V1, _)            => v1.createPersistenceTransformerV1(encKey, objectCodeMapper)
-      case other                                            => throw new RuntimeException("transformer not supported for: " + other)
+      case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "event")  =>
+        legacy.createLegacyEventTransformer(encKey, objectCodeMapper)
+      case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "state")  =>
+        legacy.createLegacyStateTransformer(encKey, objectCodeMapper)
+      case (PERSISTENCE_TRANSFORMATION_ID_V1, _)            =>
+        v1.createPersistenceTransformerV1(encKey, objectCodeMapper)
+      case other                                            =>
+        throw new RuntimeException("transformer not supported for: " + other)
     }
   }
 
   type TransformedMsg = DeprecatedEventMsg with DeprecatedStateMsg with PersistentMsg
+
+  override def overrideConfig: Option[Config] = Option(
+    ConfigFactory.parseString(
+      """
+        |""".stripMargin)
+      .withFallback(EventSourcedBehaviorTestKit.config)
+      .withFallback(PersistenceTestKitSnapshotPlugin.config)
+  )
 }
 
 /**

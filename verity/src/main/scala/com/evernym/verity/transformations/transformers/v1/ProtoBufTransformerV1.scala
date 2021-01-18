@@ -1,8 +1,7 @@
 package com.evernym.verity.transformations.transformers.v1
 
-import com.evernym.verity.actor.persistence.eventAdapters.RecordingAgentActivityEventAdapter
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.transformations.transformers.<=>
+import com.evernym.verity.transformations.transformers.{<=>, ObjectBuilder}
 import scalapb.GeneratedMessage
 
 /**
@@ -20,30 +19,8 @@ class ProtoBufTransformerV1(objectCodeMapper: ObjectCodeMapperBase)
   }
 
   override val undo: Array[Byte] => Any = { msg =>
-    EventBuilder.buildEvent(msg, objectCodeMapper)
-  }
-
-}
-
-object EventBuilder {
-
-  def buildEvent(msg: Array[Byte], objectCodeMapper: ObjectCodeMapperBase): Any = {
     val (typeCode, msgBytes) = CodeMsgExtractorV1.unpack(msg)
-    baseBuildEvent(typeCode, msgBytes, objectCodeMapper)
-  }
-
-  /*
-    This can happen when an event has been refactored unintentionally and now two events map to one object.
-    This is a Recovery mechanism to support legacy events and his not meant as a planned solution.
-    We are doing this to compensate for an error we see in the system but we should consider a more wholistic approach
-      when we have the need to upcast an event from an old event to a new event.
-   */
-  def baseBuildEvent(typeCode: Int, msgBytes: Array[Byte], objectCodeMapper: ObjectCodeMapperBase): Any = {
-    typeCode match {
-      //RecordingAgentActivity
-      case 201  => RecordingAgentActivityEventAdapter.convert(msgBytes)
-      case _    => objectCodeMapper.objectFromCode(typeCode, msgBytes)
-    }
+    ObjectBuilder.create(typeCode, msgBytes, objectCodeMapper)
   }
 
 }

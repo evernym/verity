@@ -470,7 +470,7 @@ trait BasePersistentActor
 
   private def handleBasePersistenceCmd: Receive = {
     case GetActorDetail     =>
-      sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
+      sender ! ActorDetail(persistenceId, totalPersistedEvents, totalRecoveredEvents)
   }
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =

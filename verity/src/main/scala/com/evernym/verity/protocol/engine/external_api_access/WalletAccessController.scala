@@ -95,4 +95,7 @@ class WalletAccessController(accessRights: Set[AccessRight], walletAccessImpl: W
   override def signRequest(submitterDID: DID, request: String): Try[LedgerRequest] =
     runIfAllowed(AnonCreds, {walletAccessImpl.signRequest(submitterDID, request)})
 
+  override def multiSignRequest(submitterDID: DID, request: String): Try[LedgerRequest] =
+    runIfAllowed(AnonCreds, {walletAccessImpl.multiSignRequest(submitterDID, request)})
+
 }

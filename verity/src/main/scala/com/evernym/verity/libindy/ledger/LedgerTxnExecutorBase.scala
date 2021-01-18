@@ -355,6 +355,16 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
     submitWriteRequest(Submitter(submitterDID, None), signedRequest)
   }
 
+  override def prepareSchemaForEndorsement(submitterDID: DID,
+                                           schemaJson: String,
+                                           endorserDID: DID,
+                                           walletAccess: WalletAccess): LedgerRequest = {
+    val schemaReq = LedgerRequest(buildSchemaRequest(submitterDID, schemaJson).get, needsSigning=false, taa=None)
+    val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
+    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID)
+    walletAccess.multiSignRequest(submitterDID, reqWithEndorser.get).get
+  }
+
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
                    walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
@@ -362,6 +372,16 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
     val reqWithOptTAA = appendTAAToRequest(credDefReq, currentTAA)
     val signedRequest = reqWithOptTAA.prepared(walletAccess.signRequest(submitterDID, reqWithOptTAA.req).get.req)
     submitWriteRequest(Submitter(submitterDID, None), signedRequest)
+  }
+
+  override def prepareCredDefForEndorsement(submitterDID: DID,
+                                            credDefJson: String,
+                                            endorserDID: DID,
+                                            walletAccess: WalletAccess): LedgerRequest = {
+    val credDefReq = LedgerRequest(buildCredDefRequest(submitterDID, credDefJson).get, needsSigning=false, taa=None)
+    val reqWithOptTAA = appendTAAToRequest(credDefReq, currentTAA)
+    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID)
+    walletAccess.multiSignRequest(submitterDID, reqWithEndorser.get).get
   }
 
   override def getSchema(submitterDetail: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {

@@ -21,6 +21,7 @@ object WalletMsgHandler {
     cmd match {
       case cnk: CreateNewKey                => handleCreateNewKey(cnk)
       case slr: SignLedgerRequest           => handleSignLedgerReq(slr)
+      case mslr: MultiSignLedgerRequest     => handleMultiSignLedgerReq(mslr)
       case cd: CreateDID                    => handleCreateDID(cd)
       case stk: StoreTheirKey               => handleStoreTheirKey(stk)
       case gvk: GetVerKey                   => handleGetVerKey(gvk)
@@ -125,6 +126,13 @@ object WalletMsgHandler {
     LedgerWalletOpExecutor.handleSignRequest(
       slr.submitterDetail.did,
       slr.request)
+  }
+
+  private def handleMultiSignLedgerReq(mslr: MultiSignLedgerRequest)(implicit walletExt: WalletExt): Future[LedgerRequest] = {
+    LedgerWalletOpExecutor.handleMultiSignRequest(
+      mslr.submitterDetail.did,
+      mslr.request
+    )
   }
 
   /**

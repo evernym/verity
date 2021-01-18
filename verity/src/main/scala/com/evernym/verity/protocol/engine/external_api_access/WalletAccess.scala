@@ -54,6 +54,8 @@ trait WalletAccess
   def storeTheirDid(did: DID, verKey: VerKey): Try[Unit]
 
   def signRequest(submitterDID: DID, request: String): Try[LedgerRequest]
+
+  def multiSignRequest(submitterDID: DID, request: String): Try[LedgerRequest]
 }
 
 object WalletAccess {

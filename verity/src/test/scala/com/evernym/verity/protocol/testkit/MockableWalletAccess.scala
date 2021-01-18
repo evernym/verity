@@ -64,6 +64,8 @@ class MockableWalletAccess(mockNewDid: () => Try[(String, String)] = randomDid  
 
   override def signRequest(submitterDID: DID, request:  String): Try[LedgerRequest] = Try(LedgerRequest(request))
 
+  override def multiSignRequest(submitterDID: DID, request:  String): Try[LedgerRequest] = Try(LedgerRequest(request))
+
   override def verify(signer: ParticipantId,
                       msg: Array[Byte],
                       sig: Array[Byte],

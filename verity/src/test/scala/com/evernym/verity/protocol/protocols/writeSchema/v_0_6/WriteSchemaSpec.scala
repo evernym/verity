@@ -50,9 +50,27 @@ class WriteSchemaSpec
   }
 
   "SchemaProtocol" - {
-    "should signal it needs endorsement when issuer did doesn't have ledger permissions" in {f =>
+    "should signal it needs endorsement when issuer did is not written to ledger" in {f =>
       f.writer.initParams(Map(
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson)
+
+            val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+            val json = new JSONObject(needsEndorsement.schemaJson)
+            json.getString("endorser") shouldBe defaultEndorser
+            f.writer.state shouldBe a[State.WaitingOnEndorser]
+          })
+        })
+      }
+    }
+
+    "should signal it needs endorsement when issuer did doesn't have ledger permissions" in {f =>
+      f.writer.initParams(Map(
+        MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
         withDefaultWalletAccess(f, {

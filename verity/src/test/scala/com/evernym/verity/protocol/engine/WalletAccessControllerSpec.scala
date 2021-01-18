@@ -120,6 +120,8 @@ class WalletAccessControllerSpec extends BasicSpec {
 
     override def signRequest(submitterDID: DID,
                              request: String): Try[LedgerRequest] = ???
+
+    override def multiSignRequest(submitterDID: DID, request: String): Try[LedgerRequest] = ???
   }
 }
 

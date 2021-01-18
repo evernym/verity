@@ -159,24 +159,39 @@ class ActorProtocolContainer[
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
+  /**
+   * Becomes asyncProtocolBehavior.
+   * Read asyncProtocolBehavior documentation.
+   */
   def toProtocolAsyncBehavior(): Unit = {
     logger.debug("becoming toProtocolAsyncBehavior")
     setNewReceiveBehaviour(asyncProtocolBehavior)
   }
 
-  final def asyncProtocolBehavior: Receive = storingBehavior orElse asyncServiceBehavior
+  /**
+   * When a protocol needs some asynchronous behavior done and the finalization of the state needs to wait until completion,
+   * the 'Receive' method is transitioned to asyncProtocolBehavior.
+   * This behavior handles things like the url-shortener, segmented state storage, wallet and ledger access.
+   * The behavior is not transitioned back to the base behavior until all services have completed.
+   */
+  final def asyncProtocolBehavior: Receive = storingBehavior orElse asyncServiceBehavior orElse stashProtocolAsyncBehavior
 
-  //FIXME -> Maybe this is the base for receive, store, and async service?
+  /**
+   * This Receive is chained off asyncProtocolBehavior.
+   * handles url-shortener and eventually wallet and ledger access.
+   */
   final def asyncServiceBehavior: Receive = {
     case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
       logger.debug(s"$protocolIdForLog received StoreComplete")
       urlShortenerComplete()
       if(servicesComplete(pendingSegments)) toBaseBehavior()
-    case msg: Any => // we can't make a stronger assertion about type because erasure
-      logger.debug(s"$protocolIdForLog received msg: $msg while handling async behavior in protocol - (segmented state, url-shortener, ledger, wallet")
-      stash()
   }
 
+  /**
+   * This Receive is chained off asyncProtocolBehavior.
+   * When a protocol uses segmented state to store a segment or some type of storage, this happens asynchronously.
+   * Incoming messages and protocol finalization should not happen until the completion of storing.
+   */
   final def storingBehavior: Receive = {
     case ProtocolCmd(_: SegmentStorageComplete, _) =>
       logger.debug(s"$protocolIdForLog received StoreComplete")
@@ -186,16 +201,30 @@ class ActorProtocolContainer[
       if(servicesComplete()) toBaseBehavior()
   }
 
-  //TODO -> RTM: Add documentation for this
-  //dhh I'd like to understand the significance of changing receive behavior.
-  // Is this part of the issue Jason wrote about with futures, where we are
-  // going into different modes at different points in a sequence of actions
-  // that contains multiple waits?
+  /**
+   * This Receive is chained off asyncProtocolBehavior.
+   * stashes any message received while a asyncProtocolBehavior type process is in progress.
+   */
+  final def stashProtocolAsyncBehavior: Receive = {
+    case msg: Any => // we can't make a stronger assertion about type because erasure
+      logger.debug(s"$protocolIdForLog received msg: $msg while handling async behavior in protocol - (segmented state, url-shortener, ledger, wallet")
+      stash()
+  }
+
+  /**
+   * Becomes retrievingBehavior.
+   * Read retrievingBehavior documentation.
+   */
   def toRetrievingBehavior(): Unit = {
     logger.debug("becoming retrievingBehavior")
     setNewReceiveBehaviour(retrievingBehavior)
   }
 
+  /**
+   * Behavior changes to handle messages regarding storage retrieval.
+   * When a protocol stores state using the segmented state infrastructure, this happens asynchronously.
+   * Incoming messages and protocol finalization should not happen until the completion of retrieving the storage.
+   */
   final def retrievingBehavior: Receive = {
     case ProtocolCmd(_: DataRetrieved, _) =>
       logger.debug(s"$protocolIdForLog received DataRetrieved")

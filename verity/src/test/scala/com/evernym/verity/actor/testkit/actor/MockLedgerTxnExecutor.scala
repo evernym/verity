@@ -91,6 +91,11 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
                   schemaJson: String,
                   walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = ???
 
+  def prepareSchemaForEndorsement(submitterDID: DID,
+                                  schemaJson: String,
+                                  endorserDID: DID,
+                                  walletAccess: WalletAccess): LedgerRequest = ???
+
   def getSchema(submitter: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
     Future(
       schemas.get(schemaId).map { schema =>
@@ -104,6 +109,11 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
                    walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = ???
+
+  def prepareCredDefForEndorsement(submitterDID: DID,
+                                   credDefJson: String,
+                                   endorserDID: DID,
+                                   walletAccess: WalletAccess): LedgerRequest = ???
 
   def getCredDef(submitter: Submitter, credDefId: String): Future[Either[StatusDetail, GetCredDefResp]] = {
     Future(

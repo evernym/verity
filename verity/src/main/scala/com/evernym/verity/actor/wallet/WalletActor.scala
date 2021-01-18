@@ -224,6 +224,8 @@ case class CreateProof(proofRequest: String, requestedCredentials: String, schem
 
 case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
+case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
+
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage
 

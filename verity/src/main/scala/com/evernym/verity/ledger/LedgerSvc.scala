@@ -261,6 +261,19 @@ trait LedgerSvc {
     }
   }
 
+  final def prepareSchemaForEndorsement(submitterDID: DID,
+                                        schemaJson: String,
+                                        endorserDID: DID,
+                                        walletAccess: WalletAccess): Future[LedgerRequest] = {
+    try {
+      val r = ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
+      Future.successful(r)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
+  }
+
   final def writeCredDef(submitterDID: DID,
                          credDefJson: String,
                          walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
@@ -273,6 +286,19 @@ trait LedgerSvc {
       case e: Exception =>
         Future.successful(Left(UNHANDLED.withMessage(
           s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)))
+    }
+  }
+
+  final def prepareCredDefForEndorsement(submitterDID: DID,
+                                         credDefJson: String,
+                                         endorserDID: DID,
+                                         walletAccess: WalletAccess): Future[LedgerRequest] = {
+    try {
+      val r = ledgerTxnExecutor.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
+      Future.successful(r)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
     }
   }
 

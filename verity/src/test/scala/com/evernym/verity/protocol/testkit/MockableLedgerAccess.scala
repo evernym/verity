@@ -8,6 +8,7 @@ import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.Status
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, LedgerAccessException, LedgerRejectException, WalletAccessController}
+import org.json.JSONObject
 
 import scala.util.{Failure, Try}
 
@@ -63,6 +64,18 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
     else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
     else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+
+  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Try[LedgerRequest] = {
+    val json = new JSONObject(schemaJson)
+    json.put("endorser", endorserDID)
+    Try(LedgerRequest(json.toString))
+  }
+
+  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Try[LedgerRequest] = {
+    val json = new JSONObject(credDefJson)
+    json.put("endorser", endorserDID)
+    Try(LedgerRequest(json.toString))
+  }
 }
 
 

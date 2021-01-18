@@ -61,6 +61,16 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
     ))
   }
 
+  override def multiSignRequest(submitterDID: DID, request: String): Try[LedgerRequest] = {
+    val ledgerRequest = LedgerRequest(request)
+    val submitter = Submitter(submitterDID, Some(wap))
+
+    Try(Await.result(
+      walletApi.executeAsync[LedgerRequest](MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq),
+      maxWaitTime
+    ))
+  }
+
   override def verify(signer: ParticipantId,
                       msg: Array[Byte],
                       sig: Array[Byte],

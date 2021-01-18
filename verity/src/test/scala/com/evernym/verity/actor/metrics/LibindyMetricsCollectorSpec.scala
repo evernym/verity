@@ -33,8 +33,22 @@ class LibindyMetricsCollectorSpec
         libindyMetricsCollector ! CollectLibindyMetrics()
         expectMsgType[CollectLibindySuccess]
         val criteria = MetricsFilterCriteria(filtered = false)
-        awaitCond(MetricsReader.getNodeMetrics(criteria).metrics.exists(
-          metricDetail => metricDetail.name.contains("libindy_threadpool_active_count")), 60.seconds)
+        awaitCond(
+          MetricsReader.getNodeMetrics(criteria).metrics.exists(
+            metricDetail => {
+              metricDetail.name.contains("libindy_threadpool_threads_count") &&
+              metricDetail.value.isValidInt &&
+              metricDetail.tags.get.contains("label")
+            }
+          ) &&
+          MetricsReader.getNodeMetrics(criteria).metrics.exists(
+            metricDetail => metricDetail.name.contains("libindy_command") &&
+              metricDetail.value.isValidInt &&
+              metricDetail.tags.get.contains("command") &&
+              metricDetail.tags.get.contains("stage")
+          ),
+          60.seconds
+        )
       }
     }
   }

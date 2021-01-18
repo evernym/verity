@@ -276,38 +276,54 @@ class WalletActorSpec
     "when sent CreateProof command with invalid value" - {
       "should respond with error message" in {
         holderWalletActor ! CreateProof("proofRequest", "usedCredentials", "schemas",
-          "credentialDefs", "revStates", "masterSecret")
+          "credentialDefs", "masterSecret", "revStates")
         expectMsgType[WalletCmdErrorResponse]
       }
     }
 
     "when sent CreateProof command" - {
-      "should respond with a proof" ignore {    //TODO: complete this test and make it un-ignored
+      "should respond with a proof" in {
         withCredForProofReqCreated({ cfpr: CredForProofReqData =>
           val proofReq =
             s"""
                {
-                  "nonce":"nonce-1",
+                  "nonce":"123432421212",
                   "name":"age-proof-req",
                   "version":"1.0",
                   "requested_attributes":{
                     "attest1":{"name":"name","self_attest_allowed":false},
-                    "attest2":{"name":"age","self_attest_allowed":false},
+                    "attest2":{"name":"age","self_attest_allowed":false}
                   },
                   "requested_predicates":{},
                   "ver":"1.0"
-               }""".stripMargin
-          val schemas =
+               }"""
+          val requestedCredentials =
             s"""
-               "schema1_id":"test-schema"
-                """.stripMargin
-          val credDefs =
-            s"""
-               "cred_def1_id":"${cfpr.credDef.credDefId}"
-                """.stripMargin
-
-          holderWalletActor ! CreateProof(proofReq, cfpr.credForProofReq, schemas,
-            credDefs, null, "masterSecret")
+              {
+                "self_attested_attributes":{},
+                "requested_attributes":{
+                  "attest1":{"cred_id":"${cfpr.credData.credId}","revealed":true},
+                  "attest2":{"cred_id":"${cfpr.credData.credId}","revealed":true}
+                },
+                "requested_predicates":{}
+              }"""
+          val schemasJson =
+            s"""{
+              "${cfpr.credData.credReqData.schemaId}": ${cfpr.credData.credReqData.schemaJson}
+              }"""
+          val credDefsJson =
+            s"""{
+              "${cfpr.credData.credReqData.credDef.credDefId}": ${cfpr.credData.credReqData.credDef.credDefJson}
+              }"""
+          val revStates = """{}"""
+          holderWalletActor ! CreateProof(
+            proofReq,
+            requestedCredentials,
+            schemasJson,
+            credDefsJson,
+            cfpr.credData.credReqData.masterSecretId,
+            revStates
+          )
           val proof = expectMsgType[String]
           logger.info("proof: " + proof)
         })
@@ -337,7 +353,7 @@ class WalletActorSpec
       val proofReqStr = PresentProof.extractRequest(verifierProofRequest).get
       holderWalletActor ! CredForProofReq(proofReqStr)
       val credForProofReq = expectMsgType[String]
-      val data = CredForProofReqData(credForProofReq, cd.credReqData.credDef)
+      val data = CredForProofReqData(credForProofReq, cd)
       f(data)
     }
   }
@@ -352,10 +368,9 @@ class WalletActorSpec
     val credValuesJson = IssueCredential.buildCredValueJson(credPreview)
     issuerWalletActor ! CreateCred(crd.credOffer, crd.credReq, credValuesJson, null, -1)
     val cred = expectMsgType[String]
-    val cd = CredData(cred, crd)
     holderWalletActor ! StoreCred(UUID.randomUUID().toString, crd.credDef.credDefJson, crd.credReqMetaData, cred, null)
-    expectMsgType[String]
-
+    val credId = expectMsgType[String]
+    val cd = CredData(credId, cred, crd)
     f(cd)
   }
 
@@ -369,6 +384,7 @@ class WalletActorSpec
     val schema = Anoncreds.issuerCreateSchema(issuerDidPair.DID, "test-schema", "1.0",
       seqToJson(Array("name", "age"))).get()
     logger.info("schema created")
+
     issuerWalletActor ! CreateCredDef(issuerDID = issuerDidPair.DID,
       schemaJson = schema.getSchemaJson,
       tag = "tag",
@@ -388,13 +404,23 @@ class WalletActorSpec
     holderWalletActor ! CreateCredReq(createdCredDef.credDefId, proverDID = holderDidPair.DID,
       createdCredDef.credDefJson, credOfferJson, masterSecretId)
     val credReq = expectMsgType[CreatedCredReq]
-    logger.info("cred req created")
+    logger.info("cred req created: " + credReq)
 
-    CredReqData(createdCredDef, credOfferJson, credReq.credReqJson, credReq.credReqMetadataJson)
+    CredReqData(schema.getSchemaId, schema.getSchemaJson,
+      createdCredDef, credOfferJson, masterSecretId,
+      credReq.credReqJson, credReq.credReqMetadataJson)
   }
 
 }
 
-case class CredReqData(credDef: CreatedCredDef, credOffer: String, credReq: String, credReqMetaData: String)
-case class CredData(cred: String, credReqData: CredReqData)
-case class CredForProofReqData(credForProofReq: String, credDef: CreatedCredDef)
+case class CredReqData(schemaId: String,
+                       schemaJson: String,
+                       credDef: CreatedCredDef,
+                       credOffer: String,
+                       masterSecretId: String,
+                       credReq: String,
+                       credReqMetaData: String)
+
+case class CredData(credId: String, cred: String, credReqData: CredReqData)
+
+case class CredForProofReqData(credForProofReq: String, credData: CredData)

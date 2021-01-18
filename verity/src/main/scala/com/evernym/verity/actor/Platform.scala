@@ -63,21 +63,10 @@ class Platform(val aac: AgentActorContext)
     AGENCY_AGENT_REGION_ACTOR_NAME,
     buildProp(Props(new AgencyAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_AGENCY_AGENT)))
 
-  object agencyAgent extends ShardActorObject {
-    def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
-      agencyAgentRegion.tell(ForIdentifier(id, msg), sender)
-    }
-    def ?(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Future[Any] = {
-      agencyAgentRegion ? ForIdentifier(id, msg)
-    }
-  }
-
   //agency agent actor for pairwise connection
   val agencyAgentPairwiseRegion: ActorRef = createRegion(
     AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
     buildProp(Props(new AgencyAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_AGENCY_AGENT_PAIRWISE)))
-
-
 
   //agent actor
   val userAgentRegion: ActorRef = createRegion(
@@ -88,6 +77,24 @@ class Platform(val aac: AgentActorContext)
   val userAgentPairwiseRegion: ActorRef = createRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
     buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+
+  object agencyAgent extends ShardActorObject {
+    def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
+      agencyAgentRegion.tell(ForIdentifier(id, msg), sender)
+    }
+    def ?(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Future[Any] = {
+      agencyAgentRegion ? ForIdentifier(id, msg)
+    }
+  }
+
+  object agentPairwise extends ShardActorObject {
+    def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
+      userAgentPairwiseRegion.tell(ForIdentifier(id, msg), sender)
+    }
+    def ?(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Future[Any] = {
+      userAgentPairwiseRegion ? ForIdentifier(id, msg)
+    }
+  }
 
   //activity tracker actor
   val activityTrackerRegion: ActorRef = createRegion(
@@ -105,36 +112,9 @@ class Platform(val aac: AgentActorContext)
       Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)
     ),
     passivateIdleEntityAfter = Option(
-      passivateDuration(WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)
+      passivateDuration(NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)
     )
   )
-
-  object agentPairwise extends ShardActorObject {
-    def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
-      userAgentPairwiseRegion.tell(ForIdentifier(id, msg), sender)
-    }
-    def ?(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Future[Any] = {
-      userAgentPairwiseRegion ? ForIdentifier(id, msg)
-    }
-  }
-
-  def createCusterSingletonManagerActor(singletonProps: Props): ActorRef = {
-    agentActorContext.system.actorOf(
-      ClusterSingletonManager.props(
-        singletonProps = singletonProps,
-        terminationMessage = PoisonPill,
-        settings = ClusterSingletonManagerSettings(agentActorContext.system)
-      ),
-      name = CLUSTER_SINGLETON_MANAGER)
-  }
-
-  def createClusterSingletonProxyActor(singletonManagerPath: String): ActorRef = {
-    agentActorContext.system.actorOf(
-      ClusterSingletonProxy.props(
-        singletonManagerPath = singletonManagerPath,
-        settings = ClusterSingletonProxySettings(agentActorContext.system)),
-      name = CLUSTER_SINGLETON_MANAGER_PROXY)
-  }
 
   //token manager
   val tokenToActorItemMapperRegion: ActorRef = createRegion(
@@ -176,9 +156,12 @@ class Platform(val aac: AgentActorContext)
     ResourceUsageTracker.props(agentActorContext.appConfig, agentActorContext.actionExecutor))
 
   //other region actors
-  val agentRouteStoreRegion: ActorRef = createRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, AgentRouteStore.props)
-  val itemManagerRegion: ActorRef = createRegion(ITEM_MANAGER_REGION_ACTOR_NAME, ItemManager.props)
-  val itemContainerRegion: ActorRef = createRegion(ITEM_CONTAINER_REGION_ACTOR_NAME, ItemContainer.props)
+  val agentRouteStoreRegion: ActorRef =
+    createRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, AgentRouteStore.props)
+  val itemManagerRegion: ActorRef =
+    createRegion(ITEM_MANAGER_REGION_ACTOR_NAME, ItemManager.props)
+  val itemContainerRegion: ActorRef =
+    createRegion(ITEM_CONTAINER_REGION_ACTOR_NAME, ItemContainer.props)
 
   // protocol region actors
   val protocolRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
@@ -211,6 +194,24 @@ class Platform(val aac: AgentActorContext)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")
+
+  def createCusterSingletonManagerActor(singletonProps: Props): ActorRef = {
+    agentActorContext.system.actorOf(
+      ClusterSingletonManager.props(
+        singletonProps = singletonProps,
+        terminationMessage = PoisonPill,
+        settings = ClusterSingletonManagerSettings(agentActorContext.system)
+      ),
+      name = CLUSTER_SINGLETON_MANAGER)
+  }
+
+  def createClusterSingletonProxyActor(singletonManagerPath: String): ActorRef = {
+    agentActorContext.system.actorOf(
+      ClusterSingletonProxy.props(
+        singletonManagerPath = singletonManagerPath,
+        settings = ClusterSingletonProxySettings(agentActorContext.system)),
+      name = CLUSTER_SINGLETON_MANAGER_PROXY)
+  }
 
   /**
    * utility function to compute passivation time

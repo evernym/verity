@@ -110,6 +110,7 @@ object CustomMetrics {
 
   final val AS_AKKA_ACTOR_TYPE_PREFIX = s"$AS_AKKA_ACTOR.type"
   final val AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX = "started.count"
+  final val AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX = "restarted.count"
   final val AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX = "stopped.count"
 
   final val AS_START_TIME = s"$AS.start-time-in-millis"

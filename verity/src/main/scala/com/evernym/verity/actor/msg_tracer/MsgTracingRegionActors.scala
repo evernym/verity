@@ -5,6 +5,7 @@ import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REG
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.MsgTracer
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker
+import com.evernym.verity.config.CommonConfig.NON_PERSISTENT_ACTOR_BASE
 
 trait MsgTracingRegionActors { this: Platform =>
 

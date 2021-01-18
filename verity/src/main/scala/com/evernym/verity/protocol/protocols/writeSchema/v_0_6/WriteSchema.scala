@@ -55,7 +55,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         case Success(_) =>
           ctx.apply(SchemaWritten(schemaId))
           ctx.signal(StatusReport(schemaId))
-        case Failure(e: LedgerRejectException) if missingVkErr(submitterDID, e) =>
+        case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
           ctx.logger.warn(e.toString)
           val endorserDid = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
           if (endorserDid.nonEmpty) {
@@ -91,8 +91,8 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       .map(_.value)
       .getOrElse(throw MissingIssuerDID)
 
-  def missingVkErr(did: DID, e: LedgerRejectException): Boolean =
-    e.msg.contains(s"verkey for $did cannot be found")
+  def missingVkOrEndorserErr(did: DID, e: LedgerRejectException): Boolean =
+    e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
 
   def initialize(params: Seq[ParameterStored]): Roster[Role] = {
     //TODO: this still feels like boiler plate, need to come back and fix it

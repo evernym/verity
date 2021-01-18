@@ -34,7 +34,6 @@ import scalapb.GeneratedMessage
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-
 /**
  * base class for almost all persistent actors used in this codebase
  */
@@ -49,7 +48,7 @@ trait BasePersistentActor
     with Stash {
 
   //NOTE: don't remove/change below three vals else it won't be backward compatible
-  override lazy val entityName: String = self.path.parent.parent.name
+  override lazy val entityName: String = extractNameFromPath(self.path, 2)
   override lazy val actorId: String = entityName + "-" + entityId
   override lazy val persistenceId: String = actorId
 

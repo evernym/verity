@@ -142,10 +142,6 @@ trait CommonConfig {
   val SALT_WALLET_ENCRYPTION = s"$SALT.wallet-encryption"
   val SALT_EVENT_ENCRYPTION = s"$SALT.event-encryption"
 
-  val PASSIVATE_TIME_IN_SECONDS = "passivate-time-in-seconds"
-  val SHARDED_ACTOR_PASSIVATE_TIME = s"$VERITY.sharded-actor-passivate-time"
-  val WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS = s"$SHARDED_ACTOR_PASSIVATE_TIME.WalletActor.$PASSIVATE_TIME_IN_SECONDS"
-
   private val SECRET = s"$VERITY.secret"
   val SECRET_ROUTING_AGENT = s"$SECRET.routing-agent"
   val SECRET_URL_STORE = s"$SECRET.url-mapper-actor"
@@ -303,8 +299,21 @@ trait CommonConfig {
   val SNAPSHOT_AFTER_N_EVENTS = "snapshot.after-n-events"
   val KEEP_N_SNAPSHOTS = "snapshot.keep-n-snapshots"
   val DELETE_EVENTS_ON_SNAPSHOTS = "snapshot.delete-events-on-snapshots"
+  val PASSIVATE_TIME_IN_SECONDS = "passivate-time-in-seconds"
 
-  val PERSISTENT_ACTOR = s"$VERITY.persistent-actor"
+  val SUPERVISED_STRATEGY = "supervised-strategy"
+  val SUPERVISED_STRATEGY_ENABLED = s"$SUPERVISED_STRATEGY.enabled"
+  val BACKOFF_SUPERVISED_STRATEGY = s"$SUPERVISED_STRATEGY.backoff"
+  val BACKOFF_SUPERVISED_STRATEGY_MIN_SECONDS = s"$BACKOFF_SUPERVISED_STRATEGY.min-seconds"
+  val BACKOFF_SUPERVISED_STRATEGY_MAX_SECONDS = s"$BACKOFF_SUPERVISED_STRATEGY.max-seconds"
+  val BACKOFF_SUPERVISED_STRATEGY_RANDOM_FACTOR = s"$BACKOFF_SUPERVISED_STRATEGY.random-factor"
+
+  private val NON_PERSISTENT_ACTOR = s"$VERITY.non-persistent-actor"
+  val NON_PERSISTENT_ACTOR_BASE = s"$NON_PERSISTENT_ACTOR.base"
+  val NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS = s"$NON_PERSISTENT_ACTOR_BASE.WalletActor.$PASSIVATE_TIME_IN_SECONDS"
+
+
+  private val PERSISTENT_ACTOR = s"$VERITY.persistent-actor"
   val PERSISTENT_ACTOR_BASE = s"$PERSISTENT_ACTOR.base"
   val PERSISTENT_SINGLETON_CHILDREN = s"$PERSISTENT_ACTOR.singleton-children"
   val PERSISTENT_PROTOCOL_CONTAINER = s"$PERSISTENT_ACTOR.protocol-container"

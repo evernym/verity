@@ -1,8 +1,7 @@
 package com.evernym.verity.transformations.transformers.legacy
 
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.transformations.transformers.<=>
-import com.evernym.verity.transformations.transformers.v1.EventBuilder
+import com.evernym.verity.transformations.transformers.{<=>, ObjectBuilder}
 import scalapb.GeneratedMessage
 
 /**
@@ -18,7 +17,7 @@ class LegacyProtoBufTransformer(objectCodeMapper: ObjectCodeMapperBase)
   }
 
   override val undo: TransParam[Any] => Any = { param =>
-    EventBuilder.baseBuildEvent(param.codeReq, param.msg.asInstanceOf[Array[Byte]], objectCodeMapper)
+    ObjectBuilder.create(param.codeReq, param.msg.asInstanceOf[Array[Byte]], objectCodeMapper)
   }
 
 }

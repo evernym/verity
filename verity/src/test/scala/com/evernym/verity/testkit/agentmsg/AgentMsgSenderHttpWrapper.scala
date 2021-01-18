@@ -815,8 +815,13 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def setupAgency(seedOpt: Option[String]=None): Unit = {
-    val dd = setupAgencyAgentKey(seedOpt)
-    bootstrapAgency(dd)
+    setupAgencyAgentKey(seedOpt)
+    bootstrapAgencyAgentToLedger()
+  }
+
+  def bootstrapAgencyAgentToLedger(): Unit = {
+    fetchAgencyKey()
+    bootstrapAgency(mockClientAgent.agencyPublicDid.get)
     setupAgencyEndpoint()
   }
 

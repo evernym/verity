@@ -52,6 +52,10 @@ trait CommonSpecUtil {
     AgentDIDDetail(nameOpt.getOrElse(did), seed, did, verKey)
   }
 
+  def generateNewDid(seed: String): DidPair = {
+    generateNewDid(seedOpt = Option(seed))
+  }
+
   def generateNewDid(seedOpt: Option[String]=None): DidPair = {
     val dinfo = generateNewAgentDIDDetail(seedOpt=seedOpt)
     DidPair(dinfo.did, dinfo.verKey)

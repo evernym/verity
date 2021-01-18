@@ -2,15 +2,15 @@ package com.evernym.verity.actor.persistence.recovery
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
-import com.evernym.verity.actor.base.{Done, Ping}
+import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.persistence.recovery.base.{BasePersistentStore, PersistParam, PersistenceIdParam}
+import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoverySpec, PersistParam, PersistenceIdParam}
 import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.RecordingAgentActivityV0
 import com.evernym.verity.constants.ActorNameConstants._
 import scalapb.GeneratedMessageCompanion
 
 class ActivityTrackerRecoverySpec
-  extends BasePersistentStore {
+  extends BaseRecoverySpec {
 
   def at: agentRegion = agentRegion(entityId, activityTrackerRegionActor)
 
@@ -21,9 +21,10 @@ class ActivityTrackerRecoverySpec
 
   "ActivityTracker actor" - {
     "when try to recover with legacy and new events" - {
-      "should be able to successfully recovered" in {
-        at ! Ping(sendBackConfirmation = true)
-        expectMsgType[Done.type]
+      "should be able to successfully recover" in {
+        at ! GetActorDetail
+        val ad = expectMsgType[ActorDetail]
+        assertActorDetail(ad, persistenceId, 3)
       }
     }
   }

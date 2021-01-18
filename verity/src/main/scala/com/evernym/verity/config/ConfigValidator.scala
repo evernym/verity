@@ -82,6 +82,14 @@ trait ConfigReaderHelper {
     readOptionalConfig(config.getLong, key)
   }
 
+  def getConfigDoubleReq(key: String): Double = {
+    readReqConfig(config.getDouble, key)
+  }
+
+  def getConfigDoubleOption(key: String): Option[Double] = {
+    readOptionalConfig(config.getDouble, key)
+  }
+
   def getConfigBooleanOption(key: String): Option[Boolean] = {
     readOptionalConfig(config.getBoolean, key)
   }

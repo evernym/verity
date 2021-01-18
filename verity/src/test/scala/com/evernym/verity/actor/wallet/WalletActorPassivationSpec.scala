@@ -45,7 +45,7 @@ class WalletActorPassivationSpec
   }
 
   override def overrideConfig: Option[Config] = Option {
-    val confStr = s"verity.sharded-actor-passivate-time.WalletActor.passivate-time-in-seconds = 2"
+    val confStr = s"verity.non-persistent-actor.base.WalletActor.passivate-time-in-seconds = 2"
     ConfigFactory.parseString(confStr)
   }
 }

@@ -160,28 +160,29 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   //this is for backward compatibility
   val legacyEventReceiver: Receive = {
 
-    //includes details of 'their' cloud agent (agent DID, agent key and delegation proof signature)
-    case rkd: TheirAgentKeyDlgProofSet =>
-      val lrd = LegacyRoutingDetail("", agentKeyDID = rkd.DID, agentVerKey = rkd.delegatedKey, rkd.signature)
-      updateLegacyRelationshipState("", lrd)
-
     //includes details of 'their' edge pairwise DID and 'their' cloud agent DID
-    case rcd: TheirAgentDetailSet =>
-      val theirDidDoc = state.relationship.flatMap(_.theirDidDoc.map(_.copy(did = rcd.DID)))
+    case tads: TheirAgentDetailSet =>
+      val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(tads.DID,tads.agentKeyDID, None)
       state = state
         .relationship
         .map { r =>
-          state.withRelationship(r.update(_.thoseDidDocs.setIfDefined(theirDidDoc.map(Seq(_)))))
+          state.withRelationship(r.update(_.thoseDidDocs.setIfDefined(Option(Seq(theirDidDoc)))))
         }
         .getOrElse(state)
       state = state.withConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
 
+
+    //includes details of 'their' cloud agent (cloud agent DID, cloud agent ver key key and delegation proof signature)
+    case takdps: TheirAgentKeyDlgProofSet =>
+      val lrd = LegacyRoutingDetail("", agentKeyDID = takdps.DID, agentVerKey = takdps.delegatedKey, takdps.signature)
+      updateLegacyRelationshipState(state.theirDid_!, lrd)
+
     //includes details of 'their' agency
-    case rad: TheirAgencyIdentitySet =>
+    case tais: TheirAgencyIdentitySet =>
       //TODO This can be more easily done by teaching the LegacyRoutingServiceEndpoint and RoutingServiceEndpoint how to do the conversion.
       val updatedDidDoc = state.relationship.flatMap(_.theirDidDoc.map { tdd =>
         val updatedEndpointSeq: Seq[EndpointADT] = tdd.endpoints_!.endpoints.map(_.endpointADTX).map {
-          case lep: LegacyRoutingServiceEndpoint => lep.copy(agencyDID = rad.DID)
+          case lep: LegacyRoutingServiceEndpoint => lep.copy(agencyDID = tais.DID)
           case ep: RoutingServiceEndpoint        => ep
           case _                                 => throw new MatchError("unsupported endpoint matched")
         }.map(EndpointADT.apply)

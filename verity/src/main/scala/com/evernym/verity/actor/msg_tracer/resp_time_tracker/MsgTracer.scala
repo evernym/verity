@@ -4,7 +4,7 @@ import java.time.Instant
 
 import akka.actor.Props
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.base.{CoreActorExtended, Done}
+import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeMetricsRecorder
 
@@ -14,7 +14,9 @@ import scala.concurrent.duration._
  * msg tracer sharded actor
  * @param appConfig
  */
-class MsgTracer(val appConfig: AppConfig) extends CoreActorExtended {
+class MsgTracer(val appConfig: AppConfig)
+  extends CoreActorExtended
+    with DoNotRecordLifeCycleMetrics {
 
   val msgTracingMetricsRecorder = new MsgRespTimeMetricsRecorder(appConfig)
 

@@ -10,6 +10,8 @@ import scala.concurrent.duration.FiniteDuration
 
 object ShardUtil {
 
+  val SHARD_ACTOR_PATH_ELEMENT = "sharding"
+
   val forIdentifierEntityIdExtractor: ExtractEntityId  = {
     case ForIdentifier(id, cmd)     => (id, cmd)
   }
@@ -72,6 +74,7 @@ trait ShardUtil {
       extractShardId    = extractShardId(ShardIdExtractor(appConfig, typeName))
     )
   }
+
 }
 
 trait HasShardRegionNames {

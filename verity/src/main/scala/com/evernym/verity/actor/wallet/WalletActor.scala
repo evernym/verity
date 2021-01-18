@@ -218,8 +218,8 @@ case class StoreCred(credId: String, credDefJson: String,
 
 case class CredForProofReq(proofRequest: String) extends WalletCommand
 
-case class CreateProof(proofRequest: String, usedCredentials: String, schemas: String,
-                       credentialDefs: String, revStates: String, masterSecret: String)
+case class CreateProof(proofRequest: String, requestedCredentials: String, schemas: String,
+                       credentialDefs: String, masterSecret: String, revStates: String)
   extends WalletCommand
 
 case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand

@@ -87,9 +87,9 @@ trait MockAgent
     mpcd
   }
 
-  def storeTheirKey(did: DID, verKey: VerKey): Unit = {
+  def storeTheirKey(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit = {
     logger.debug(s"Store their key for did: $did")
-    val skp = StoreTheirKey(did, verKey)
+    val skp = StoreTheirKey(did, verKey, ignoreIfAlreadyExists)
     walletAPI.storeTheirKey(skp)(wap)
   }
 

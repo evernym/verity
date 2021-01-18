@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorRef}
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
+import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
 import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.Logger
  * generic incoming command validation (like if command extends 'ActorMessage' serializable interface or not etc)
  * and generic exception handling during command processing
  */
-trait CoreActor extends Actor {
+trait CoreActor extends Actor with EntityIdentifier {
 
   override def receive: Receive = coreCommandHandler(cmdHandler)
 
@@ -50,34 +50,35 @@ trait CoreActor extends Actor {
   // So we have this private logger for those needs but should not be sub-classes
   protected val genericLogger: Logger = LoggingUtil.getLoggerByName(getClass.getSimpleName)
 
-  lazy val isShardedActor: Boolean = self.path.toString.contains("sharding")
-  lazy val isClusterSingletonChild: Boolean = self.path.toString.contains("cluster-singleton-mngr")
-
-  lazy val entityId: String = self.path.name
-  lazy val entityName: String =
-    if (isShardedActor || isClusterSingletonChild) self.path.parent.parent.name
-    else entityId
-  lazy val actorId: String = if (entityName != entityId) entityName + "-" + entityId else entityId
+  genericLogger.debug(s"[$actorId]: actor creation started")
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    if (recordRestartCountMetrics)
+      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX")
+    genericLogger.debug(s"[$actorId]: in pre restart")
     logCrashReason(reason, message)
     super.preRestart(reason, message)
   }
 
   override def preStart(): Unit = {
-    MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
+    if (recordStartCountMetrics)
+      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
+    genericLogger.debug(s"[$actorId]: in pre start")
     beforeStart()
+    super.preStart()
   }
 
   override def postStop(): Unit = {
-    genericLogger.debug("in post stop: " + self.path)
+    if (recordStopCountMetrics)
+      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
+    genericLogger.debug(s"[$actorId]: in post stop")
     afterStop()
-    MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
+    super.postStop()
   }
 
   private def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
     genericLogger.error(s"[$actorId]: crashed and about to restart => " +
-      message.map(m => s"message being processed while error happened: " + m).getOrElse("") +
+      message.map(m => s"message being processed while error happened: $m, ").getOrElse("") +
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
   }
 
@@ -108,5 +109,9 @@ trait CoreActor extends Actor {
   def setNewReceiveBehaviour(receiver: Receive): Unit = {
     context.become(coreCommandHandler(receiver))
   }
+
+  val recordStartCountMetrics = true
+  val recordRestartCountMetrics = true
+  val recordStopCountMetrics = true
 }
 

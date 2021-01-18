@@ -43,11 +43,11 @@ trait AgentStateCleanupHelper {
       threadContextMigrationStatus.foreach { case (pinstId, tcms) =>
         //only proceed if thread context exists for the given pinst id
         getThreadContexts.get(pinstId).foreach { _ =>
-          val caldPinstId = getCalcPinstIdForBasicMsgProtoDef(pinstId)
+          val calcPinstId = getCalcPinstIdForBasicMsgProtoDef(pinstId)
           val updatedStatus = tcms.copy(
-            candidateProtoActors = buildProtoRefs(pinstId, tcms.candidateProtoActors, Option(caldPinstId)),
-            successResponseFromProtoActors = buildProtoRefs(pinstId, tcms.successResponseFromProtoActors, Option(caldPinstId)),
-            nonSuccessResponseFromProtoActors = buildProtoRefs(pinstId, tcms.nonSuccessResponseFromProtoActors, Option(caldPinstId))
+            candidateProtoActors = buildProtoRefs(pinstId, tcms.candidateProtoActors, Option(calcPinstId)),
+            successResponseFromProtoActors = buildProtoRefs(pinstId, tcms.successResponseFromProtoActors, Option(calcPinstId)),
+            nonSuccessResponseFromProtoActors = buildProtoRefs(pinstId, tcms.nonSuccessResponseFromProtoActors, Option(calcPinstId))
           )
           threadContextMigrationStatus += pinstId -> updatedStatus
           if (updatedStatus.isAllRespReceived) {

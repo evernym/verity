@@ -2,17 +2,19 @@ package com.evernym.verity.util
 
 import java.util
 
+import com.evernym.verity.actor.metrics.LibindyMetricsRecord
 import com.evernym.verity.protocol.engine.util.DbcUtil
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
 import org.json.{JSONException, JSONObject}
 
 //TODO move to MsgCodec?
 object JsonUtil {
 
   private val jsonMapper = {
-    new ObjectMapper()
-      .registerModule(DefaultScalaModule)
+    val objectMapper = new ObjectMapper() with ScalaObjectMapper
+    objectMapper.registerModule(DefaultScalaModule)
+    objectMapper
   }
 
   def mapToJson(map: Map[String, Any]): String = {
@@ -27,6 +29,10 @@ object JsonUtil {
 
   def deserializeJsonStringToMap[K, V](msg: String): Map[K, V] = {
     jsonMapper.readValue(msg, classOf[Map[K,V]])
+  }
+
+  def deserializeJsonStringToObject[T](metrics: String)(implicit m: Manifest[T]): T = {
+    jsonMapper.readValue[T](metrics)
   }
 
   // TODO we need a better way to determine if a msg is JSON or MsgPack

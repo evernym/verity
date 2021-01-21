@@ -173,17 +173,19 @@ class ActorProtocolContainer[
    * This behavior handles things like the url-shortener, segmented state storage, wallet and ledger access.
    * The behavior is not transitioned back to the base behavior until all services have completed.
    */
-  final def asyncProtocolBehavior: Receive = storingBehavior orElse asyncServiceBehavior orElse stashProtocolAsyncBehavior
+  final def asyncProtocolBehavior: Receive = storingBehavior orElse asyncProtocolServiceBehavior orElse stashProtocolAsyncBehavior
 
   /**
    * This Receive is chained off asyncProtocolBehavior.
    * handles url-shortener and eventually wallet and ledger access.
    */
-  final def asyncServiceBehavior: Receive = {
+  final def asyncProtocolServiceBehavior: Receive = {
+    //TODO: This is where WalletServiceComplete and LedgerServiceComplete will happen
     case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
-      logger.debug(s"$protocolIdForLog received StoreComplete")
+      logger.debug(s"$protocolIdForLog received UrlShortenerServiceComplete")
       urlShortenerComplete()
-      if(servicesComplete(pendingSegments)) toBaseBehavior()
+      toBaseBehavior()
+      handleAllAsyncServices()
   }
 
   /**
@@ -194,10 +196,10 @@ class ActorProtocolContainer[
   final def storingBehavior: Receive = {
     case ProtocolCmd(_: SegmentStorageComplete, _) =>
       logger.debug(s"$protocolIdForLog received StoreComplete")
-      if(servicesComplete()) toBaseBehavior()
+      if(allAsyncProtocolServicesComplete(pendingSegments)) toBaseBehavior()
     case ProtocolCmd(_: SegmentStorageFailed, _) =>
       logger.error(s"failed to store segment")
-      if(servicesComplete()) toBaseBehavior()
+      if(allAsyncProtocolServicesComplete(pendingSegments)) toBaseBehavior()
   }
 
   /**
@@ -551,9 +553,10 @@ class ActorProtocolContainer[
   )
 
   override lazy val urlShortening: UrlShorteningAccess = {
+    urlShortenerInProgress()
+    toProtocolAsyncBehavior()
     (si: ShortenInvite, handler: UrlShortenMsg => Unit) => {
-      urlShortenerInProgress()
-      toProtocolAsyncBehavior()
+      logger.debug("in url shortening callback")
       system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) onComplete {
         case Success(m) =>
           m match {

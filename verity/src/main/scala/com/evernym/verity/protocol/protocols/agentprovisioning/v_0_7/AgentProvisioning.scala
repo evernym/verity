@@ -223,7 +223,7 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     )
 
   def problemReport(logErr: String, optMsg: Option[String]=None): Unit = {
-    ctx.logger.error(logErr)
+    ctx.logger.info(logErr)
     ctx.apply(ProvisionFailed(logErr))
     ctx.send(ProblemReport(optMsg.getOrElse(DefaultProblem.err)))
   }

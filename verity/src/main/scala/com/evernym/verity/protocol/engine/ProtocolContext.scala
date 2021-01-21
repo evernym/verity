@@ -177,12 +177,9 @@ trait ProtocolContext[P,R,M,E,S,I]
   def setupInflightMsg[A](msgId: Option[MsgId], threadId: Option[ThreadId],
                           sender: SenderLike[R], segment: Option[Any] = None)(f: => A): A = {
     inFlight = inFlight.map(_.copy(msgId = msgId, threadId = threadId)).orElse(
-      Some(InFlight(msgId, threadId, sender, segment)))
-    try {
-      f
-    } finally {
-      inFlight = None
-    }
+    Some(InFlight(msgId, threadId, sender, segment)))
+
+    f
   }
 
   //TODO can we make this private?
@@ -263,6 +260,7 @@ trait ProtocolContext[P,R,M,E,S,I]
               } catch {
                 case me: MatchError =>
                   recordWarn(s"no protocol message handler for: ${me.getMessage}")
+                  abortTransaction()
                   throw new NoProtocolMsgHandler(
                     state.getClass.getSimpleName,
                     sender.role.map(_.toString).getOrElse("UNKNOWN"),
@@ -399,10 +397,21 @@ trait ProtocolContext[P,R,M,E,S,I]
     try {
       constructShadow()
       val result = f
-      handleAsyncServices()
+      handleAllAsyncServices()
       result
     } catch {
       case e: Exception => abortTransaction(); throw e
+    }
+  }
+
+  /**
+   * Internal Protocol Services need to complete before storing and event persistence - (url shortener, wallet, and ledger services)
+   * A flag is set in 'AsyncProtocolService' when a specific internal protocol service is in-progress.
+   */
+  def handleAllAsyncServices(): Unit = {
+    if (internalAsyncProtocolServicesComplete()) {
+      storeSegments()
+      recordEvents getOrElse finalizeState
     }
   }
 
@@ -411,7 +420,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     pendingEvents = Vector()
     pendingSegments = None
     clearShadowState()
-    clearAsyncServices()
+    clearInternalAsyncServices()
     record("protocol context cleaned up")
   }
 
@@ -453,18 +462,19 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   /**
-    * There are two places that can call finalizeState
-    * 1) when event persistence is complete
+    * There are three places that can call finalizeState
+    * 1) Internal Protocol async services
     * 2) when storage/segment persistence is complete
-    * 3) async protocol service
-    * readyToFinalize ensures that both processes are complete
+    * 3) when event persistence is complete
+    * readyToFinalize ensures that processes are complete
     */
   def finalizeState(): Unit = {
     if (readyToFinalize) {
       state = shadowState.getOrElse(state)
       backstate = shadowBackState.getOrElse(backstate)
+      inFlight = None
       clearShadowState()
-      clearAsyncServices()
+      clearInternalAsyncServices()
 
       processOutputBoxes()
       processNextInboxMsg()
@@ -481,14 +491,18 @@ trait ProtocolContext[P,R,M,E,S,I]
  */
   //FIXME -> RTM document how this happens. Store segment, record event async
   //FIXME -> RTM: How is retrieving segments handled? I only see events and storage.
-  def readyToFinalize: Boolean = pendingEvents.isEmpty && servicesComplete(pendingSegments)
-  def handleAsyncServices(): Unit = {
-    //FIXME -> RTM: async protocol service has already been kicked off, waiting will need to happen in the appropriate places
-    storeSegments()
-    recordEvents getOrElse finalizeState
-    // Wallet // Ledger // Url // events // segments
-  }
+  /**
+   * Finalization cannot happen until all protocol services are complete.
+   * This includes:
+   *  1. Protocol 'Internal Services' - url shortener, wallet, and ledger services
+   *  2. 'Segmented State' storage
+   *  3. 'Event Persistence'
+   */
+  def readyToFinalize: Boolean = pendingEvents.isEmpty && allAsyncProtocolServicesComplete(pendingSegments)
 
+  /**
+   * This is called when the base 'onPersistFailure' or 'onPersistRejected' from akka persistence is invoked
+   */
   def eventPersistenceFailure(cause: Throwable, event: Any): Unit = {
     logger.error(s"Protocol failed to persist event: ${event.getClass.getSimpleName} because: $cause")
     abortTransaction()
@@ -497,6 +511,11 @@ trait ProtocolContext[P,R,M,E,S,I]
     processOutputBoxes()
   }
 
+  /**
+   * Akka Persistence takes a callback when persisting an event. When the event is successful, the callback is called.
+   * This function is called within that callback.
+   * When the persistence fails, 'onPersistFailure' or 'onPersistRejected' is called.
+   */
   def eventPersistSuccess(event: Any): Unit = {
     logger.debug(s"successfully persisted event: $event")
     pendingEvents = Vector()

@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols.walletBackup
+package com.evernym.verity.protocol.actor.agent
 
 import java.util.UUID
 
@@ -8,17 +8,18 @@ import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
+import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
 import com.evernym.verity.util.Base64Util
-import com.evernym.verity.actor.wallet.PackedMsg
 import com.typesafe.config.Config
 
 class WalletBackupActorSpec

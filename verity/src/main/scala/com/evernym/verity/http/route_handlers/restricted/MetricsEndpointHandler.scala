@@ -25,7 +25,7 @@ trait MetricsEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def fetchMetrics(gqp: GetMetricQueryParam): Future[Any] = {
+  protected def fetchMetrics(gqp: GetMetricQueryParam): Future[Any] = {
     (platform.libIndyMetricsCollector ? CollectLibindyMetrics()).flatMap(_ => {
       if (gqp.offAllNodes) {
         platform.singletonParentProxy ? GetMetricsOfAllNodes(gqp.filterCriteria)
@@ -35,7 +35,7 @@ trait MetricsEndpointHandler { this: HttpRouteWithPlatform =>
     })
   }
 
-  def resetMetrics(ofAllNodes: Boolean): Future[Any] = {
+  protected def resetMetrics(ofAllNodes: Boolean): Future[Any] = {
     if (ofAllNodes) {
       platform.singletonParentProxy ? ResetMetricsOfAllNodes
     } else {

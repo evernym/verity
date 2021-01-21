@@ -20,7 +20,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
 
   implicit val akkActorResponseTimeout: Timeout
 
-  def reloadConfig(onAllNodes: String): Future[Any] = {
+  protected def reloadConfig(onAllNodes: String): Future[Any] = {
     if (onAllNodes == YES) {
       platform.singletonParentProxy ? RefreshConfigOnAllNodes
     } else {
@@ -28,7 +28,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def overrideConfig(onAllNodes: String, str: String): Future[Any] = {
+  protected def overrideConfig(onAllNodes: String, str: String): Future[Any] = {
     if (onAllNodes == YES) {
       platform.singletonParentProxy ? OverrideConfigOnAllNodes(str)
     } else {
@@ -36,26 +36,26 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def sendToRouteMaintenanceHelper(taskId: String, cmd: Any): Future[Any] = {
+  protected def sendToRouteMaintenanceHelper(taskId: String, cmd: Any): Future[Any] = {
     platform.singletonParentProxy ? ForRouteMaintenanceHelper(MaintenanceCmdWrapper(taskId, cmd))
   }
 
-  def resetActorStateCleanupManager: Future[Any] = {
+  protected def resetActorStateCleanupManager: Future[Any] = {
     platform.singletonParentProxy ? ForActorStateCleanupManager(Reset)
   }
 
-  def updateActorStateCleanupConfig(cmd: Any): Future[Any] = {
+  protected def updateActorStateCleanupConfig(cmd: Any): Future[Any] = {
     platform.singletonParentProxy ? ForActorStateCleanupManager(cmd)
   }
 
-  def getActorStateManagerCleanupStatus(detailOpt: Option[String]): Future[Any] = {
+  protected def getActorStateManagerCleanupStatus(detailOpt: Option[String]): Future[Any] = {
     val getStatusCmd = if (detailOpt.map(_.toUpperCase).contains(YES)) {
       GetManagerStatus(includeDetails = true)
     } else GetManagerStatus()
     platform.singletonParentProxy ? ForActorStateCleanupManager(getStatusCmd)
   }
 
-  def getActorStateCleanupExecutorStatus(entityId: String, detailOpt: Option[String]): Future[Any] = {
+  protected def getActorStateCleanupExecutorStatus(entityId: String, detailOpt: Option[String]): Future[Any] = {
     val getStatusCmd = if (detailOpt.map(_.toUpperCase).contains(YES)) {
       GetExecutorStatus(includeDetails = true)
     } else GetExecutorStatus()

@@ -3,12 +3,12 @@ package com.evernym.verity.testkit.util.http_listener
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.http.common.HttpBindUtil
+import com.evernym.verity.http.common.HttpServerUtil
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.UrlParam
 import com.typesafe.scalalogging.Logger
 
-trait BaseHttpListener[T] extends HttpBindUtil {
+trait BaseHttpListener[T] extends HttpServerUtil {
 
   private var allMsgs: List[T] = List.empty
 

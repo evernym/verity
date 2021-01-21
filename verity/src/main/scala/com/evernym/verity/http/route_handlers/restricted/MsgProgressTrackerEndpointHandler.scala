@@ -23,25 +23,23 @@ import scala.concurrent.Future
 
 trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
 
-  def configureTracking(trackingId: String, ct: ConfigureTracking): Future[Any] = {
+  protected def configureTracking(trackingId: String, ct: ConfigureTracking): Future[Any] = {
     platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, ct)
   }
 
-  def startTracking(trackingId: String): Future[Any] = {
+  protected def startTracking(trackingId: String): Future[Any] = {
     platform.singletonParentProxy ? SendCmdToAllNodes(StartProgressTracking(trackingId))
   }
 
-  def stopTracking(trackingId: String): Future[Any] = {
+  protected def stopTracking(trackingId: String): Future[Any] = {
     platform.singletonParentProxy ? SendCmdToAllNodes(StopProgressTracking(trackingId))
   }
 
-  def getAllIdsBeingTracked: Future[Any] = {
+  protected def getAllIdsBeingTracked: Future[Any] = {
     Future.successful(MsgProgressTrackerCache.allIdsBeingTracked)
   }
 
-
-
-  def getRecordedEvents(forIpAddress: String, reqId: Option[ReqId],
+  protected def getRecordedEvents(forIpAddress: String, reqId: Option[ReqId],
                         domainTrackingId: Option[String],
                         relTrackingId: Option[String],
                         withEvents: Option[String],
@@ -49,7 +47,7 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
     MsgProgressTracker.getRecordedRequests(forIpAddress, reqId, domainTrackingId, relTrackingId, withEvents)
   }
 
-  def msgProgressBackendResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+  protected def msgProgressBackendResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case Done                 => HttpResponse(StatusCodes.OK, entity="OK")
     case vr @ (_: TrackingIds | _: TrackingConfigured)
                               => handleExpectedResponse(vr)
@@ -57,7 +55,7 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
     case other                => handleUnexpectedResponse(other)
   }
 
-  def generatePinstLinkDetail(reqUriPath: String): PinstIdLinkDetail = {
+  protected def generatePinstLinkDetail(reqUriPath: String): PinstIdLinkDetail = {
     val prefix = reqUriPath.substring(0, reqUriPath.lastIndexOf("/"))
     PinstIdLinkDetail(prefix, "?withEvents=Y")
   }

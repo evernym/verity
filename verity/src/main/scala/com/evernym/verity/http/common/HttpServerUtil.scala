@@ -13,14 +13,14 @@ import com.evernym.verity.Exceptions
 import scala.concurrent.Future
 
 
-trait HttpBindUtil extends HttpsSupport with CorsSupport {
+trait HttpServerUtil extends HttpsSupport with CorsSupport {
 
   implicit def system: ActorSystem
 
-  def bindHttpPorts(routes: Route, appConfig: AppConfig): Future[Seq[BindResult]] = {
+  protected def startNewServer(routes: Route, appConfig: AppConfig): Future[Seq[HttpServerBindResult]] = {
     val httpBindFuture = try {
       val sbFut = Http().newServerAt(appConfig.getConfigStringReq(HTTP_INTERFACE), appConfig.getConfigIntReq(HTTP_PORT)).bind(corsHandler(routes))
-      sbFut.map(sb => BindResult(s"started listening on port ${appConfig.getConfigIntReq(HTTP_PORT)}", sb))
+      sbFut.map(sb => HttpServerBindResult(s"started listening on port ${appConfig.getConfigIntReq(HTTP_PORT)}", sb))
     } catch {
       case e: Exception =>
         val errorMsg = "unable to bind to http port " +
@@ -34,7 +34,7 @@ trait HttpBindUtil extends HttpsSupport with CorsSupport {
           val sbFut = Http().newServerAt(appConfig.getConfigStringReq(HTTP_INTERFACE), httpsPort)
             .enableHttps(https)
             .bind(corsHandler(routes))
-          sbFut.map(sb => BindResult(s"started listening on port $httpsPort", sb))
+          sbFut.map(sb => HttpServerBindResult(s"started listening on port $httpsPort", sb))
         }
       }
     } catch {
@@ -48,4 +48,4 @@ trait HttpBindUtil extends HttpsSupport with CorsSupport {
   }
 }
 
-case class BindResult(msg: String, serverBinding: Http.ServerBinding)
+case class HttpServerBindResult(msg: String, serverBinding: Http.ServerBinding)

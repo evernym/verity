@@ -20,7 +20,7 @@ import scala.concurrent.Future
  */
 trait SmsApiEndpointHandler extends ResourceUsageCommon { this: HttpRouteWithPlatform =>
 
-  def sendSms(jsonStr: String): Future[Any] = {
+  protected def sendSms(jsonStr: String): Future[Any] = {
     val agencyPayloadData = getMapWithStringValueFromJsonString(jsonStr)
     val phoneNo = getRequiredField(PHONE_NO, agencyPayloadData)
     val text = getRequiredField(TEXT, agencyPayloadData)

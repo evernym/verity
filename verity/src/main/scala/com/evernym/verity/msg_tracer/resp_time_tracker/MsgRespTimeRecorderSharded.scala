@@ -16,7 +16,7 @@ trait MsgRespTimeRecorderSharded { this : MsgTraceProvider =>
 
   def msgSender: Option[ActorRef] = None
 
-  lazy val shardedMsgTraceRecorder: MsgRespTimeRecorder = new MsgRespTimeRecorder {
+  protected lazy val shardedMsgTraceRecorder: MsgRespTimeRecorder = new MsgRespTimeRecorder {
 
     protected def sendToMsgTracerRegion(reqId: ReqId, msg: Any): Unit = {
       val sndr = msgSender.getOrElse(ActorRef.noSender)

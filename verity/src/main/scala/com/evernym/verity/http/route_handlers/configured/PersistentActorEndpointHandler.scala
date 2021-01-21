@@ -42,16 +42,21 @@ trait PersistentActorEndpointHandler
                 pathPrefix(Segment / Segment) { (actorTypeName, actorEntityId) =>
                   path("data") {
                     (get & pathEnd) {
-                      parameters('asHtml ? "N", 'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
-                        (inHtml, reload, recoverFromSnapshot, persEncKeyConfPath) =>
+                      parameters('asHtml ? "N", 'reload ? "N", 'withData ? "N",
+                        'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
+                        (inHtml, reload, withData, recoverFromSnapshot, persEncKeyConfPath) =>
                         complete {
                           getPersistentActorEvents(actorTypeName, actorEntityId, reload, recoverFromSnapshot, persEncKeyConfPath)
                             .map[ToResponseMarshallable] {
                               case pdw: PersistentDataWrapper =>
+                                val persistentData =
+                                  if (withData == "N")
+                                    pdw.data.map(d => d.copy(event = d.event.getClass.getSimpleName))
+                                  else pdw.data
                                 if (inHtml == YES) {
-                                  val resp = pdw.data.map(_.toString).mkString("<br><br>")
+                                  val resp = persistentData.map(_.toString).mkString("<br><br>")
                                   HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
-                                } else handleExpectedResponse(pdw.data.map(_.toString))
+                                } else handleExpectedResponse(persistentData.map(_.toString))
                               case e => handleUnexpectedResponse(e)
                             }
                         }

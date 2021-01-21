@@ -33,7 +33,7 @@ object LaunchPreCheck {
     checkLedgerPoolConnection(aac)
   }
 
-  def checkLedgerPoolConnection(aac: AgentActorContext, delay: Int = 0): Unit = {
+  private def checkLedgerPoolConnection(aac: AgentActorContext, delay: Int = 0): Unit = {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
@@ -63,7 +63,7 @@ object LaunchPreCheck {
     }
   }
 
-  def checkAkkaEventStorageConnection(aac: AgentActorContext, delay: Int = 0): Unit = {
+  private def checkAkkaEventStorageConnection(aac: AgentActorContext, delay: Int = 0): Unit = {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
@@ -86,7 +86,7 @@ object LaunchPreCheck {
     }
   }
 
-  def checkWalletStorageConnection(aac: AgentActorContext, delay: Int = 0): Unit = {
+  private def checkWalletStorageConnection(aac: AgentActorContext, delay: Int = 0): Unit = {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")

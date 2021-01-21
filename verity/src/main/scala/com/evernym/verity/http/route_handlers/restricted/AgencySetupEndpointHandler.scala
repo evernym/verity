@@ -25,7 +25,7 @@ import scala.util.Left
  */
 trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
 
-  def getActorIdByDID(toDID: DID): Future[Either[StatusDetail, ActorAddressDetail]] = {
+  protected def getActorIdByDID(toDID: DID): Future[Either[StatusDetail, ActorAddressDetail]] = {
     val respFut = platform.agentActorContext.agentMsgRouter.execute(GetRoute(toDID))
     respFut map {
       case Some(aa: ActorAddressDetail) => Right(aa)
@@ -34,20 +34,20 @@ trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def getOrCreateActorIdFut(did: DID): Future[Either[StatusDetail, String]] = getActorIdByDID(did) map {
+  protected def getOrCreateActorIdFut(did: DID): Future[Either[StatusDetail, String]] = getActorIdByDID(did) map {
     case Right(aa: ActorAddressDetail) => Right(aa.address)
     case Left(AGENT_NOT_YET_CREATED) => Right(getNewActorId)
     case e => Left(getUnhandledError(e))
   }
 
-  def getAgencyDIDOptFut: Future[Option[String]] = {
+  protected def getAgencyDIDOptFut: Future[Option[String]] = {
     val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
     platform.agentActorContext.generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
       cqr.getAgencyDIDOpt
     }
   }
 
-  def createKey(cak: Option[CreateAgencyKey]): Future[Any] = {
+  protected def createKey(cak: Option[CreateAgencyKey]): Future[Any] = {
     getAgencyDIDOptFut flatMap { adOpt =>
       adOpt.map { _ =>
         Future.successful(new ForbiddenErrorException())
@@ -58,7 +58,7 @@ trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def setEndpoint(cmd: Any): Future[Any] = {
+  protected def setEndpoint(cmd: Any): Future[Any] = {
     getAgencyDIDOptFut flatMap { adOpt =>
       adOpt.map { ad =>
         getActorIdByDID(ad) flatMap {
@@ -74,7 +74,7 @@ trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def adminMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+  protected def adminMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case _:EndpointSet        => OK
     case ad: AgencyPublicDid  => handleExpectedResponse(ad)
     case e                    => handleUnexpectedResponse(e)

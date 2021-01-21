@@ -27,7 +27,7 @@ trait PlatformServiceProvider
 
   lazy val logger: Logger = getLoggerByClass(classOf[PlatformServiceProvider])
 
-  var agencyDIDPair: DidPair = _
+  protected var agencyDIDPair: DidPair = _
   implicit var wap: WalletAPIParam = _
 
   def getAgencyDidPairFut: Future[DidPair] = {

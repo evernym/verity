@@ -1,0 +1,1 @@
+This package should contain any specs to test multi node cluster setup.

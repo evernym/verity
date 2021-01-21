@@ -17,7 +17,7 @@ import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
-import com.evernym.verity.vault.{KeyParam, WalletExt, WalletNotOpened, WalletProvider}
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt, WalletNotOpened, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -171,6 +171,10 @@ case class StoreTheirKey(theirDID: DID, theirDIDVerKey: VerKey, ignoreIfAlreadyE
 
 case class GetVerKeyOpt(keyParam: KeyParam) extends WalletCommand
 
+object GetVerKey {
+  def apply(did: DID, getKeyFromPool: Boolean = false): GetVerKey =
+    GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool))))
+}
 case class GetVerKey(keyParam: KeyParam) extends WalletCommand
 
 case class SignMsg(keyParam: KeyParam, msg: Array[Byte]) extends WalletCommand

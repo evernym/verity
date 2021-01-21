@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
+package com.evernym.verity.protocol.actor.agent
 
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentPairwiseSpec_V_0_6

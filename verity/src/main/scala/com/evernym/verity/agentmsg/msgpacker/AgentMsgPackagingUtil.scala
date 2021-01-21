@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdReqMsg_MFV_0_5, FwdReqMsg_MFV_1_0_1}
@@ -16,6 +17,8 @@ import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
+
+import scala.concurrent.Future
 
 
 object AgentMsgPackagingUtil {
@@ -44,10 +47,10 @@ object AgentMsgPackagingUtil {
    * @return
    */
   def buildAgentMsg(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam)
-                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
+                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
     runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
       val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
-      agentMsgTransformer.pack(msgPackFormat, agentMsgJson, packMsgParam.encryptParam)
+      agentMsgTransformer.packAsync(msgPackFormat, agentMsgJson, packMsgParam.encryptParam)
     }
   }
 
@@ -63,10 +66,11 @@ object AgentMsgPackagingUtil {
    */
   def buildRoutedAgentMsgFromPackMsgParam(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam,
                                           fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
-                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
+                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
 
-    val packedAgentMsg = buildAgentMsg(msgPackFormat, packMsgParam)
-    buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
+    buildAgentMsg(msgPackFormat, packMsgParam).flatMap { packedAgentMsg =>
+      buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
+    }
   }
 
   /**
@@ -79,26 +83,51 @@ object AgentMsgPackagingUtil {
    * @param wap
    * @return
    */
-  def buildRoutedAgentMsg(msgPackFormat: MsgPackFormat, packedMsg: PackedMsg,
-                          fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
-                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
+  def buildRoutedAgentMsg(msgPackFormat: MsgPackFormat,
+                          packedMsg: PackedMsg,
+                          fwdRoutes: List[FwdRouteMsg],
+                          fwdMsgTypeVersion: String = MTV_1_0)
+                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
     runWithInternalSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil") {
-      var updatedPackedMsg = packedMsg
-      fwdRoutes.foreach { fr =>
-        val fwdMsg = buildFwdJsonMsg(
-          msgPackFormat,
-          fr.to,
-          updatedPackedMsg.msg,
-          fwdMsgTypeVersion = fwdMsgTypeVersion,
-          fwdMsgType = packedMsg.metadata.map(_.msgTypeStr)
-        )
-        updatedPackedMsg = fr.encryptInfo.fold(
-          si => agentMsgTransformer.pack(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyParam), None)),
-          ei => agentMsgTransformer.pack(msgPackFormat, fwdMsg, ei)
-        )
+      if (fwdRoutes.isEmpty) Future.successful(packedMsg)
+      else {
+        buildFwdMsg(msgPackFormat, packedMsg, fwdRoutes, fwdMsgTypeVersion)
       }
-      updatedPackedMsg
     }
+  }
+
+  private def buildFwdMsg(msgPackFormat: MsgPackFormat,
+                          packedMsg: PackedMsg,
+                          fwdRoutes: List[FwdRouteMsg],
+                          fwdMsgTypeVersion: String = MTV_1_0)
+                          (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+    if (fwdRoutes.isEmpty) throw new RuntimeException("empty fwdRoutes not supported")
+    buildFwdMsgForRoute(msgPackFormat, packedMsg, fwdRoutes.head, fwdMsgTypeVersion).flatMap { pm =>
+      fwdRoutes match {
+        case _ :: Nil  => Future.successful(pm)
+        case _ :: tail => buildFwdMsg(msgPackFormat, pm, tail, fwdMsgTypeVersion)
+        case _         => throw new RuntimeException("fwdRoutes not supported")
+      }
+    }
+  }
+
+  private def buildFwdMsgForRoute(
+                                   msgPackFormat: MsgPackFormat,
+                                   packedMsg: PackedMsg,
+                                   fwdRoutes: FwdRouteMsg,
+                                   fwdMsgTypeVersion: String = MTV_1_0
+                                 )(implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+    val fwdMsg = buildFwdJsonMsg(
+      msgPackFormat,
+      fwdRoutes.to,
+      packedMsg.msg,
+      fwdMsgTypeVersion = fwdMsgTypeVersion,
+      fwdMsgType = packedMsg.metadata.map(_.msgTypeStr)
+    )
+    fwdRoutes.encryptInfo.fold(
+      si => agentMsgTransformer.packAsync(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyParam), None)),
+      ei => agentMsgTransformer.packAsync(msgPackFormat, fwdMsg, ei)
+    )
   }
 
   /**
@@ -149,23 +178,23 @@ object AgentMsgPackagingUtil {
   def packMsgForRoutingKeys(msgPackFormat: MsgPackFormat,
                             msg: Array[Byte],
                             routingKeys: Seq[VerKey],
-                            msgType: String
-                           )
-                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
+                            msgType: String)
+                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
     runWithInternalSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil") {
       routingKeys.size match {
-        case 0 => PackedMsg(msg)
+        case 0 => Future.successful(PackedMsg(msg))
         case 1 => throw new RuntimeException("insufficient routing keys: " + routingKeys)
         case _ =>
           val to = routingKeys.head
           val remaining = routingKeys.tail
           val encryptWith = remaining.head
           val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg, COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
-          val newPackedMsg = agentMsgTransformer.pack(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyParam(Left(encryptWith))), None))
-          if (remaining.size >= 2) {
-            packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
-          } else {
-            newPackedMsg
+          agentMsgTransformer.packAsync(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyParam(Left(encryptWith))), None)).flatMap { newPackedMsg =>
+            if (remaining.size >= 2) {
+              packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
+            } else {
+              Future.successful(newPackedMsg)
+            }
           }
       }
     }

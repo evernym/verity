@@ -7,13 +7,12 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil.convertTo
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.protocols.walletBackup
-import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupSpecUtil
 import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.protocol.actor.agent.{CloudAgentDetail, WalletBackupSpecUtil}
 
 
 trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : EndpointHandlerBaseSpec =>
@@ -184,7 +183,7 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
           val rca = new String(decoded)
           rca shouldBe cloudAgentAddress
 
-          recoveredCloudAddress = convertTo[walletBackup.CloudAgentDetail](rca)
+          recoveredCloudAddress = convertTo[CloudAgentDetail](rca)
           mockNewEdgeAgent.setCloudAgentDetail(recoveredCloudAddress.did, recoveredCloudAddress.verKey)
         }
       }

@@ -15,15 +15,15 @@ import scala.concurrent.Future
 
 trait ItemManagerEndpointHandler { this: HttpRouteWithPlatform =>
 
-  def getActiveItemContainerList(itemManagerId: String): Future[Any] = {
+  protected def getActiveItemContainerList(itemManagerId: String): Future[Any] = {
     platform.itemManagerRegion ? ForIdentifier(itemManagerId, ExternalCmdWrapper(GetActiveContainers, None))
   }
 
-  def getStatusOfItemManager(itemManagerId: String): Future[Any] = {
+  protected def getStatusOfItemManager(itemManagerId: String): Future[Any] = {
     platform.itemManagerRegion ? ForIdentifier(itemManagerId, ExternalCmdWrapper(GetState, None))
   }
 
-  def getStatusOfItemContainer(itemContainerId: String): Future[Any] = {
+  protected def getStatusOfItemContainer(itemContainerId: String): Future[Any] = {
     platform.itemContainerRegion ? ForIdentifier(itemContainerId, ExternalCmdWrapper(GetState, None))
   }
 

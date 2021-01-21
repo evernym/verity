@@ -41,7 +41,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     case (st: State.InvitationCreated       , m: Ctl.SMSOutOfBandInvitation ) => outOfBandInvitation(st, m)
     case (_: State.InvitationCreated        , m: Ctl.SMSSent                ) =>
       ctx.signal(Signal.SMSInvitationSent(m.invitationId))
-    case (_: State.InvitationCreated        , _: Ctl.SMSSendingFailed ) =>
+    case (_: State.InvitationCreated        , _: Ctl.SMSSendingFailed       ) =>
       ctx.signal(Signal.buildProblemReport("SMS sending failed", smsSendingFailed))
     case (st: State                         , m: Ctl                        ) => // unexpected state
       ctx.signal(Signal.buildProblemReport(
@@ -78,16 +78,9 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   def connectionInvitation(st: State.Created, m: Ctl.ConnectionInvitation): Unit = {
     createInviteCreatedEvent(st)
-
-    val invitationMsg = Invitation(
-      st.label,
-      ctx.serviceEndpoint,
-      Vector(st.verKey),
-      Option(Vector(st.verKey, st.agencyVerKey)),
-      stringToOption(st.profileUrl)
-    )
-
+    val invitationMsg = prepareConnectionInvitation(st)
     val inviteURL = prepareInviteUrl(invitationMsg)
+
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
       ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
      else
@@ -106,15 +99,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     st.phoneNumber match {
       case Some(phoneNo) =>
         createInviteCreatedEvent(st)
-
-        val invitationMsg = Invitation(
-          st.label,
-          ctx.serviceEndpoint,
-          Vector(st.verKey),
-          Option(Vector(st.verKey, st.agencyVerKey)),
-          stringToOption(st.profileUrl)
-        )
-
+        val invitationMsg = prepareConnectionInvitation(st)
         val inviteURL = prepareInviteUrl(invitationMsg)
         ctx.signal(Signal.SendSMSInvite(invitationMsg.`@id`, inviteURL, st.label, phoneNo))
       case None =>
@@ -130,6 +115,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       case None =>
         ctx.signal(smsNoPhoneNumberSignal)
     }
+  }
+
+  def prepareConnectionInvitation(st:State.Created): Invitation = {
+    Invitation(
+      st.label,
+      ctx.serviceEndpoint,
+      Vector(st.verKey),
+      Option(Vector(st.agencyVerKey)),
+      stringToOption(st.profileUrl)
+    )
   }
 
   def outOfBandInvitation(st: State.Created, m: Ctl.OutOfBandInvitation): Unit = {

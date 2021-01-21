@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent
 
 import java.time.ZonedDateTime
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -75,9 +75,10 @@ trait AgentCommon
   override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
 
   def agentActorContext: AgentActorContext
+  def system: ActorSystem = agentActorContext.system
+  def walletAPI: WalletAPI = agentActorContext.walletAPI
   def agentWalletId: Option[String] = state.agentWalletId
   def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
-  def walletAPI: WalletAPI = agentActorContext.walletAPI
 
   def agencyDIDReq: DID = state.agencyDID.getOrElse(
     throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, Option("agent not yet created")))
@@ -87,12 +88,11 @@ trait AgentCommon
   def ownerAgentKeyDID: Option[DID]
   def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
 
-  lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, agentWalletAPI.walletAPI, appConfig)
-  def getVerKeyReqViaCache(did: DID, getFromPool: Boolean = false): VerKey = walletVerKeyCacheHelper.getVerKeyReqViaCache(did, getFromPool)
-
   lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (
     AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
   )
+  lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, walletAPI, appConfig)
+  def getVerKeyReqViaCache(did: DID, getFromPool: Boolean = false): VerKey = walletVerKeyCacheHelper.getVerKeyReqViaCache(did, getFromPool)
 
   /**
    * per agent actor cache
@@ -163,6 +163,17 @@ trait AgentCommon
     }
   }
 
+  def resolvePinstId(protoDef: ProtoDef, resolver: PinstIdResolver, relationshipId: Option[RelationshipId],
+                     threadId: ThreadId, msg: Option[TypedMsgLike]=None): PinstId = {
+    resolver.resolve(
+      protoDef,
+      domainId,
+      relationshipId,
+      Option(threadId),
+      msg.flatMap(protoDef.protocolIdSuffix),
+      state.contextualId
+    )
+  }
 }
 
 /**

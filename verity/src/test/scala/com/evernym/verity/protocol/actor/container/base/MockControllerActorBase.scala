@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.protocols
+package com.evernym.verity.protocol.actor.container.base
 
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -13,7 +13,7 @@ import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.protocol.actor.{InitProtocolReq, MsgEnvelope}
+import com.evernym.verity.protocol.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.engine
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.MsgIdProvider
@@ -49,7 +49,7 @@ trait MockControllerActorBase
   }
 
   def postSetupCmdHandler: Receive = {
-    case ipr: InitProtocolReq   => handleInitProtocolReq(ipr)
+    case ipr: InitProtocolReq   => handleInitProtocolReq(ipr, None)
     case SendActorMsg(msg)      => sendToProtocolActor(msg)
     case SendControlMsg(msg)    => buildAndSendToProtocol(msg)
     case GetSponsorRel          => //TODO: decide what to do
@@ -101,6 +101,7 @@ trait MockControllerActorBase
   def controllerData: ControllerData = controllerDataOpt.getOrElse(
     throw new RuntimeException("controller data not yet setup"))
   def agentActorContext: AgentActorContext = controllerData.agentActorContext
+  def registeredProtocols: ProtocolRegistry[ActorDriverGenParam] = agentActorContext.protocolRegistry
 
   lazy val selfParticipantId: String = s"$domainId/$domainId"
   lazy val senderParticipantId: String =

@@ -104,20 +104,26 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
       msgExpirationTime = msgExpirationTime ++ Map(me.msgType -> me.timeInSeconds)
   }
 
-  def updateMsgIndexes(msgId: MsgId, msg: Msg): Unit = {
-    if (msg.statusCode == MSG_STATUS_RECEIVED.statusCode) {
-      unseenMsgIds += msgId
-    } else if (MsgHelper.seenMsgStatusCodes.contains(msg.statusCode)) {
-      seenMsgIds += msgId
-      unseenMsgIds -= msgId
-    }
-    msg.refMsgId.foreach { refMsgId =>
-      refMsgIdToMsgId += refMsgId -> msgId
+  def getReplyToMsgId(msgId: MsgId): Option[MsgId] = {
+    refMsgIdToMsgId.get(msgId)
+  }
+
+  def checkIfMsgExists(uidOpt: Option[MsgId]): Unit = {
+    uidOpt.foreach { uid =>
+      if (getMsgOpt(uid).isEmpty) {
+        throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: $uid"))
+      }
     }
   }
 
-  def getReplyToMsgId(msgId: MsgId): Option[MsgId] = {
-    refMsgIdToMsgId.get(msgId)
+  def checkIfMsgStatusCanBeUpdatedToNewStatus(ums: UpdateMsgStatusReqMsg): Unit = {
+    val uids = ums.uids.map(_.trim).toSet
+    uids.foreach { uid =>
+      getMsgOpt(uid) match {
+        case Some(msg) => validateNonConnectingMsgs(uid, msg, ums)
+        case None => throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("not allowed"))
+      }
+    }
   }
 
   def addToMsgs(msgId: MsgId, msg: Msg): Unit
@@ -145,29 +151,33 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
   def removeFromMsgDeliveryStatus(msgIds: Set[MsgId]): Unit
   def removeFromMsgDeliveryStatus(msgId: MsgId): Unit = removeFromMsgDeliveryStatus(Set(msgId))
 
-  def updateMsgDeliveryState(msgId: MsgId, mdsu: Option[MsgDeliveryStatusUpdated]=None): Unit = {
+  private def updateMsgIndexes(msgId: MsgId, msg: Msg): Unit = {
+    if (msg.statusCode == MSG_STATUS_RECEIVED.statusCode) {
+      unseenMsgIds += msgId
+    } else if (MsgHelper.seenMsgStatusCodes.contains(msg.statusCode)) {
+      seenMsgIds += msgId
+      unseenMsgIds -= msgId
+    }
+    msg.refMsgId.foreach { refMsgId =>
+      refMsgIdToMsgId += refMsgId -> msgId
+    }
+  }
+
+  private def updateMsgDeliveryState(msgId: MsgId, mdsu: Option[MsgDeliveryStatusUpdated]=None): Unit = {
     getMsgOpt(msgId).foreach { msg =>
       val deliveryStatus = getMsgDeliveryStatus(msgId)
       msgDeliveryState.foreach(_.updateDeliveryState(msgId, msg, deliveryStatus, mdsu))
     }
   }
 
-  def checkIfMsgExists(uidOpt: Option[MsgId]): Unit = {
-    uidOpt.foreach { uid =>
-      if (getMsgOpt(uid).isEmpty) {
-        throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(s"msg not found with uid: $uid"))
-      }
-    }
-  }
-
-  def checkIfMsgAlreadyNotInAnsweredState(msgId: MsgId): Unit = {
+  private def checkIfMsgAlreadyNotInAnsweredState(msgId: MsgId): Unit = {
     if (getMsgOpt(msgId).exists(m => validAnsweredMsgStatuses.contains(m.statusCode))){
       throw new BadRequestErrorException(MSG_VALIDATION_ERROR_ALREADY_ANSWERED.statusCode,
         Option("msg is already answered (uid: " + msgId + ")"))
     }
   }
 
-  def validateNonConnectingMsgs(uid: MsgId, msg: Msg, ums: UpdateMsgStatusReqMsg): Unit = {
+  private def validateNonConnectingMsgs(uid: MsgId, msg: Msg, ums: UpdateMsgStatusReqMsg): Unit = {
     //if msg is already answered, lets not update it and throw appropriate error
     if (validAnsweredMsgStatuses.contains(ums.statusCode)) {
       checkIfMsgAlreadyNotInAnsweredState(uid)
@@ -182,18 +192,8 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
     }
   }
 
-  def checkIfMsgStatusCanBeUpdatedToNewStatus(ums: UpdateMsgStatusReqMsg): Unit = {
-    val uids = ums.uids.map(_.trim).toSet
-    uids.foreach { uid =>
-      getMsgOpt(uid) match {
-        case Some(msg) => validateNonConnectingMsgs(uid, msg, ums)
-        case None => throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("not allowed"))
-      }
-    }
-  }
-
-  def removeMsgIfReceivedByDestination(msgId: MsgId): Unit = {
-    if (isMsgCandidateForRemoval(msgId)) removedMsgsFromState(Set(msgId))
+  private def removeMsgIfReceivedByDestination(msgId: MsgId): Unit = {
+    if (isStateMessagesCleanupEnabled && isMsgCandidateForRemoval(msgId)) removedMsgsFromState(Set(msgId))
   }
 
   /**
@@ -205,7 +205,7 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
    * @param msgId
    * @return
    */
-  def isMsgCandidateForRemoval(msgId: MsgId): Boolean = {
+  private def isMsgCandidateForRemoval(msgId: MsgId): Boolean = {
     getMsgOpt(msgId).forall { msg =>
       val msgDelivery = getMsgDeliveryStatus(msgId)
       val isMsgSuccessfullyDelivered = msgDelivery.exists(_._2.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode)
@@ -257,17 +257,15 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
     }
   }
 
-  def removedMsgsFromState(msgIds: Set[MsgId]): Unit = {
-    if (isStateMessagesCleanupEnabled) {
-      removeFromMsgs(msgIds)
-      removeFromMsgDetails(msgIds)
-      removeFromMsgPayloads(msgIds)
-      removeFromMsgDeliveryStatus(msgIds)
-      removeMsgsFromLocalIndexState(msgIds)
-    }
+  private def removedMsgsFromState(msgIds: Set[MsgId]): Unit = {
+    removeFromMsgs(msgIds)
+    removeFromMsgDetails(msgIds)
+    removeFromMsgPayloads(msgIds)
+    removeFromMsgDeliveryStatus(msgIds)
+    removeMsgsFromLocalIndexState(msgIds)
   }
 
-  def removeMsgsFromLocalIndexState(msgIds: Set[MsgId]): Unit = {
+  private def removeMsgsFromLocalIndexState(msgIds: Set[MsgId]): Unit = {
     seenMsgIds --= msgIds
     unseenMsgIds --= msgIds
     refMsgIdToMsgId = refMsgIdToMsgId.filterNot { case (refMsgId, msgId) =>
@@ -280,12 +278,12 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
    * and hence it would be ok to just consider message delivery status to
    * know if that message can be considered as delivered and acknowledged too
    */
-  lazy val isMsgAckNeeded: Boolean =
+  private lazy val isMsgAckNeeded: Boolean =
     ! appConfig
       .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 
-  lazy val isStateMessagesCleanupEnabled: Boolean =
+  private lazy val isStateMessagesCleanupEnabled: Boolean =
     appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
 }
 

@@ -1,10 +1,9 @@
 package com.evernym.verity.actor.resourceusagethrottling.tracking
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.Constants.{RESOURCE_TYPE_ENDPOINT, RESOURCE_TYPE_MESSAGE}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper
@@ -12,18 +11,19 @@ import com.evernym.verity.util.Util.logger
 
 trait ResourceUsageCommon {
 
-  def agentActorContext: AgentActorContext
+  def system: ActorSystem
 
-  lazy val resourceUsageTrackerRegion: ActorRef =
-    ClusterSharding(agentActorContext.system).shardRegion(RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME)
+  protected lazy val resourceUsageTrackerRegion: ActorRef =
+    ClusterSharding(system).shardRegion(RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME)
 
-  def addUserResourceUsage(ipAddress: IpAddress, resourceType: ResourceType,
-                           resourceName: ResourceName, userIdOpt: Option[UserId], sendBackAck: Boolean=false): Unit = {
+  protected def addUserResourceUsage(ipAddress: IpAddress, resourceType: ResourceType,
+                           resourceName: ResourceName, userIdOpt: Option[UserId],
+                           sendBackAck: Boolean=false): Unit = {
     ResourceUsageTracker.addUserResourceUsage(ipAddress, resourceType,
       resourceName, sendBackAck, userIdOpt)(resourceUsageTrackerRegion)
   }
 
-  def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {
+  protected def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {
     // Set resource usage counts to 0 for each resource (entityId, resourceName)
     // Get bucket IDs for all buckets associated with resourceName
     val buckets: Set[Int] = Set(

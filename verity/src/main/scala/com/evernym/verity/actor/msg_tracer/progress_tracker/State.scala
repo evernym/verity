@@ -60,7 +60,7 @@ case class State(reqId: ReqId,
         (copy(
           summary = summary
             .copy(
-              outMsgParam = summary.updateOutMsgParam(MsgParam(msgId = ermps.outMsgId)))),
+              outMsgParam = summary.updateOutMsgParam(TrackMsgParam(msgId = ermps.outMsgId)))),
           ermps.context, ermps.context)
 
       case ermps: EventOutMsgPackagingFinished       =>
@@ -93,12 +93,12 @@ case class State(reqId: ReqId,
 }
 
 case class Summary(trackingParam: TrackingParam = TrackingParam(),
-                   inMsgParam: MsgParam = MsgParam(),
-                   outMsgParam: MsgParam = MsgParam(),
+                   inMsgParam: TrackMsgParam = TrackMsgParam(),
+                   outMsgParam: TrackMsgParam = TrackMsgParam(),
                    protoParam: ProtoParam = ProtoParam(),
                    status: Option[String] = None) {
 
-  def updateInMsgParam(newMsgParam: MsgParam): MsgParam = {
+  def updateInMsgParam(newMsgParam: TrackMsgParam): TrackMsgParam = {
     inMsgParam.merge(newMsgParam)
   }
 
@@ -110,7 +110,7 @@ case class Summary(trackingParam: TrackingParam = TrackingParam(),
     copy(outMsgParam = outMsgParam.copy(msgType = msgType(outMsgParam.msgName, protoParam)))
   }
 
-  def updateOutMsgParam(newMsgParam: MsgParam): MsgParam = {
+  def updateOutMsgParam(newMsgParam: TrackMsgParam): TrackMsgParam = {
     outMsgParam.merge(newMsgParam)
   }
 
@@ -149,24 +149,24 @@ case class EventRouteGetFinished(additionalContext: String) {
 
 case class EventReceivedByAgent(additionalContext: String,
                                 trackingParam: TrackingParam,
-                                inMsgParam: MsgParam) {
+                                inMsgParam: TrackMsgParam) {
   val context = s"received-by-agent ($additionalContext)"
 }
 
-case class EventUnpackedByAgent(additionalContext: String, inMsgParam: MsgParam) {
+case class EventUnpackedByAgent(additionalContext: String, inMsgParam: TrackMsgParam) {
   val context = s"unpacked-by-agent ($additionalContext)" +
     inMsgParam.msgType.map(mn => s" [$mn]").getOrElse("")
 }
 
 case class EventInMsgProcessingStarted(trackingParam: TrackingParam,
-                                       inMsgParam: MsgParam,
+                                       inMsgParam: TrackMsgParam,
                                        protoParam: ProtoParam) {
   val context = "incoming-msg-processing-started"
 }
 
 case class EventProtocolMsgProgress(additionalContext: String,
-                                    inMsgParam: MsgParam,
-                                    outMsgParam: MsgParam,
+                                    inMsgParam: TrackMsgParam,
+                                    outMsgParam: TrackMsgParam,
                                     protoParam: ProtoParam)  {
   val context = s"$additionalContext"
 }
@@ -175,7 +175,7 @@ case class EventOutMsgPackagingStarted(outMsgId: Option[String]=None) {
   val context = "outgoing-msg-packaging-started"
 }
 
-case class EventOutMsgPackagingFinished(outMsgParam: MsgParam)  {
+case class EventOutMsgPackagingFinished(outMsgParam: TrackMsgParam)  {
   val context = "outgoing-msg-packaging-finished"
 }
 
@@ -196,18 +196,20 @@ case class EventWrapper(event: Any,
                         @JsonDeserialize(contentAs = classOf[Long]) atEpochMillis: Long = Instant.now().toEpochMilli,
                         @JsonDeserialize(contentAs = classOf[Long]) timeTakenInMillis: Option[Long]=None)
 
-case class MsgParam(msgId: Option[String]=None, msgName: Option[String]=None,
-                    msgType: Option[String]=None, replyToMsgId: Option[String]=None) {
+case class TrackMsgParam(msgId: Option[String]=None, msgName: Option[String]=None,
+                         msgType: Option[String]=None, replyToMsgId: Option[String]=None) {
 
-  def merge(nmp: MsgParam): MsgParam = {
+  def merge(nmp: TrackMsgParam): TrackMsgParam = {
     val mid   = msgId orElse nmp.msgId
     val mn    = msgName orElse nmp.msgName
     val rtmid = replyToMsgId orElse nmp.replyToMsgId
-    MsgParam(msgId = mid, msgName = mn, msgType = msgType, replyToMsgId = rtmid)
+    TrackMsgParam(msgId = mid, msgName = mn, msgType = msgType, replyToMsgId = rtmid)
   }
 }
 
-case class TrackingParam(domainTrackingId: Option[String]=None, relTrackingId: Option[String]=None, threadId: Option[String]=None) {
+case class TrackingParam(domainTrackingId: Option[String]=None,
+                         relTrackingId: Option[String]=None,
+                         threadId: Option[String]=None) {
   def merge(ntp: TrackingParam): TrackingParam = {
     val dti = domainTrackingId orElse ntp.domainTrackingId
     val rti = ntp.relTrackingId orElse relTrackingId

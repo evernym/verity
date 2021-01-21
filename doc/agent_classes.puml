@@ -11,17 +11,18 @@ interface AgentPersistentActor
 interface BasePersistentActor
 abstract class PersistentActor <<sys>>
 interface EventPersistenceEncryption
-interface ActorBase
+interface CoreActorExtended
 interface CoreActor
 abstract class Actor <<sys>>
-interface HasActorMsgScheduler
+interface EntityIdentifier
+interface HasActorTimers
 abstract class Timers <<sys>>
 interface HasActorResponseTimeout
 interface DeleteMsgHandler
 interface HasTransformationRegistry
 interface LegacyTransformationRegistry
 abstract class Stash <<sys>>
-interface DefaultPersistenceEncryption
+class DefaultPersistenceEncryption
 interface HasAppConfig
 interface UserAgentCommonStateUpdateImpl
 interface AgentStateUpdateInterface
@@ -33,8 +34,6 @@ interface HasAgentWallet
 interface HasWallet
 interface HasSetRoute
 interface ResourceUsageCommon
-interface ActorLaunchesProtocol
-interface LaunchesProtocol
 interface ProtocolEngineExceptionHandler
 interface AgentIncomingMsgHandler
 interface AgentOutgoingMsgHandler
@@ -74,10 +73,11 @@ interface HasAgentMsgTransformer
 interface MsgNotifierForUserAgentPairwise
 interface FailedMsgRetrier
 class AgencyAgent <<focus>>
-interface AgencyIdUtil
-class AgencyAgentPairwise <<focus>>
 interface AgencyAgentCommon
-abstract class AgencyAgentPairwiseStateUpdateImpl <<sys>>
+interface AgencyAgentStateUpdateImpl
+interface AgencyPackedMsgHandler
+class AgencyAgentPairwise <<focus>>
+interface AgencyAgentPairwiseStateUpdateImpl
 
 UserAgent -up-|> UserAgentCommon
 UserAgent -* UserAgentStateUpdateImpl
@@ -96,19 +96,19 @@ AgentPersistentActor -* DefaultPersistenceEncryption
 AgentPersistentActor --* HasAppConfig
 BasePersistentActor -up-|> PersistentActor
 BasePersistentActor -* EventPersistenceEncryption
-BasePersistentActor --* ActorBase
+BasePersistentActor --* CoreActorExtended
 BasePersistentActor -* HasActorResponseTimeout
 BasePersistentActor -* DeleteMsgHandler
 BasePersistentActor --* HasTransformationRegistry
 BasePersistentActor -down-* Stash
-ActorBase -up-|> CoreActor
-ActorBase -* HasActorMsgScheduler
+CoreActorExtended -up-|> CoreActor
+CoreActorExtended -* HasActorTimers
 CoreActor -up-|> Actor
-HasActorMsgScheduler -up-|> Timers
+CoreActor -* EntityIdentifier
+HasActorTimers -up-|> Timers
 HasTransformationRegistry -up-|> LegacyTransformationRegistry
 UserAgentCommonStateUpdateImpl -up-|> AgentStateUpdateInterface
 AgentMsgHandler -up-|> AgentCommon
-AgentMsgHandler -down-* ActorLaunchesProtocol
 AgentMsgHandler -down-* ProtocolEngineExceptionHandler
 AgentMsgHandler --* AgentIncomingMsgHandler
 AgentMsgHandler --* AgentOutgoingMsgHandler
@@ -121,7 +121,6 @@ AgentCommon --* HasAgentWallet
 AgentCommon -* HasSetRoute
 AgentCommon --* ResourceUsageCommon
 HasAgentWallet -up-|> HasWallet
-ActorLaunchesProtocol -up-|> LaunchesProtocol
 AgentOutgoingMsgHandler -up-|> SendOutgoingMsg
 AgentOutgoingMsgHandler -down-* AgentIdentity
 AgentOutgoingMsgHandler -down-* HasAgentActivity
@@ -157,15 +156,21 @@ AgentMsgSender -down-* HasLogger
 UsesConfigs -up-|> HasAppConfig
 MsgDeliveryResultHandler -up-|> HasAgentMsgTransformer
 MsgNotifierForUserAgentPairwise -up-|> MsgNotifierForUserAgentCommon
-AgencyAgent -up-|> AgencyIdUtil
-AgencyAgentPairwise -up-|> AgencyAgentCommon
-AgencyAgentPairwise -down-* AgencyAgentPairwiseStateUpdateImpl
-AgencyAgentPairwise -down-* PairwiseConnState
-AgencyAgentPairwise -down-* AgentSnapshotter
+AgencyAgent -up-|> AgencyAgentCommon
+AgencyAgent -* AgencyAgentStateUpdateImpl
+AgencyAgent -* AgencyPackedMsgHandler
+AgencyAgent -down-* AgentSnapshotter
 AgencyAgentCommon -up-|> AgentPersistentActor
 AgencyAgentCommon --* AgentMsgHandler
 AgencyAgentCommon -down-* ShardRegionFromActorContext
 AgencyAgentCommon --* MsgNotifier
 AgencyAgentCommon -* LEGACY_connectingSignalHandler
+AgencyAgentStateUpdateImpl -up-|> AgentStateUpdateInterface
+AgencyPackedMsgHandler -up-|> ResourceUsageCommon
+AgencyAgentPairwise -up-|> AgencyAgentCommon
+AgencyAgentPairwise -* AgencyAgentPairwiseStateUpdateImpl
+AgencyAgentPairwise -down-* PairwiseConnState
+AgencyAgentPairwise -down-* AgentSnapshotter
+AgencyAgentPairwiseStateUpdateImpl -up-|> AgentStateUpdateInterface
 
 @enduml

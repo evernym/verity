@@ -20,7 +20,7 @@ import scala.concurrent.Future
 
 trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
 
-  def buildConfigRenderOptions(origComments: String, comments: String,
+  protected def buildConfigRenderOptions(origComments: String, comments: String,
                                formatted: String, json: String): ConfigRenderOptions = {
     ConfigRenderOptions.defaults().
       setOriginComments(origComments.toUpperCase == YES).
@@ -29,7 +29,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
       setJson(json.toUpperCase == YES)
   }
 
-  def getProperlyRenderedConfigValue(path: String, config: Config, cro: ConfigRenderOptions): String = {
+  protected def getProperlyRenderedConfigValue(path: String, config: Config, cro: ConfigRenderOptions): String = {
     try {
       config.getValue(path).valueType() match {
         case LIST => "[" +config.getList(path).asScala.map(e => e.render(cro)).mkString(",")+ "]"
@@ -46,7 +46,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def buildGetConfigsResp(pathOpt: Option[String], cro: ConfigRenderOptions): String = {
+  protected def buildGetConfigsResp(pathOpt: Option[String], cro: ConfigRenderOptions): String = {
     val config = platform.agentActorContext.appConfig.getLoadedConfig
     pathOpt.map { path =>
       getProperlyRenderedConfigValue(path, config, cro)
@@ -55,7 +55,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def getConfigs(origComments: String, comments: String, formatted: String,
+  protected def getConfigs(origComments: String, comments: String, formatted: String,
                  json: String, pathOpt: Option[String]): Future[String] = {
     Future {
       val cro = buildConfigRenderOptions(origComments, comments, formatted, json)
@@ -63,7 +63,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def updateAppStatus(uas: UpdateAppStatus): Future[Any] = {
+  protected def updateAppStatus(uas: UpdateAppStatus): Future[Any] = {
     val causeDetail = CauseDetail(APP_STATUS_UPDATE_MANUAL.statusCode, uas.reason.getOrElse("manual-update"))
     AppStateManager << SuccessEventParam(ManualUpdate(uas.newStatus), uas.context.getOrElse(CONTEXT_MANUAL_UPDATE), causeDetail)
     Future("Done")

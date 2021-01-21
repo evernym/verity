@@ -27,7 +27,7 @@ trait PackedMsgEndpointHandler
   def getAgencyDidPairFut: Future[DidPair]
   implicit def wap: WalletAPIParam
 
-  def handleAgentMsgResponse: PartialFunction[(Any, ReqMsgContext), ToResponseMarshallable] = {
+  protected def handleAgentMsgResponse: PartialFunction[(Any, ReqMsgContext), ToResponseMarshallable] = {
 
     case (rmw: PackedMsg, _: ReqMsgContext) =>
       incrementAgentMsgSucceedCount
@@ -46,7 +46,7 @@ trait PackedMsgEndpointHandler
    * @param pmw packed msg wrapper
    * @return
    */
-  def sendPackedMsgToAgencyAgent(pmw: PackedMsgWrapper): Future[Any] = {
+  protected def sendPackedMsgToAgencyAgent(pmw: PackedMsgWrapper): Future[Any] = {
     getAgencyDidPairFut flatMap { adp =>
       agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(adp.DID, pmw))
     }
@@ -57,7 +57,7 @@ trait PackedMsgEndpointHandler
    * @param pmw packed msg wrapper
    * @return
    */
-  def processPackedMsg(pmw: PackedMsgWrapper): Future[Any] = {
+  protected def processPackedMsg(pmw: PackedMsgWrapper): Future[Any] = {
     // flow diagram: fwd + ctl + proto + legacy, step 3 -- Decrypt and check message type.
     getAgencyDidPairFut flatMap { adp =>
       agentActorContext.agentMsgTransformer.unpackAsync(
@@ -68,7 +68,7 @@ trait PackedMsgEndpointHandler
     }
   }
 
-  def handleAgentMsgReqForOctetStreamContentType(implicit reqMsgContext: ReqMsgContext): Route = {
+  protected def handleAgentMsgReqForOctetStreamContentType(implicit reqMsgContext: ReqMsgContext): Route = {
     // flow diagram: fwd + ctl + proto + legacy, step 2 -- Detect binary content.
     import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
     entity(as[Array[Byte]]) { data =>
@@ -80,12 +80,12 @@ trait PackedMsgEndpointHandler
     }
   }
 
-  def handleAgentMsgReqForUnsupportedContentType(x: Any)(implicit reqMsgContext: ReqMsgContext): Route = {
+  protected def handleAgentMsgReqForUnsupportedContentType(x: Any)(implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgFailedCount(Map("class" -> "InvalidContentType"))
     reject
   }
 
-  def handleAgentMsgReq(implicit req: HttpRequest, remoteAddress: RemoteAddress): Route = {
+  protected def handleAgentMsgReq(implicit req: HttpRequest, remoteAddress: RemoteAddress): Route = {
     // flow diagram: fwd + ctl + proto + legacy, step 1 -- Packed msg arrives.
     incrementAgentMsgCount
     implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))

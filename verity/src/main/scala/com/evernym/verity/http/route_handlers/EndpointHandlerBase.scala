@@ -33,18 +33,18 @@ trait EndpointHandlerBase
 
   def endpointRoutes: Route = ignoreTrailingSlash { baseRoute }
 
-  def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+  protected def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case ai: AgencyPublicDid     => handleExpectedResponse(ai)
     case e                       => handleUnexpectedResponse(e)
   }
 
-  def sendToAgencyAgent(msg: Any): Future[Any] = {
+  protected def sendToAgencyAgent(msg: Any): Future[Any] = {
     getAgencyDidPairFut flatMap { didPair =>
       platform.agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(didPair.DID, msg))
     }
   }
 
-  def handleGetAgencyIdentity(withDetail: Boolean)(implicit remoteAddress: RemoteAddress): Route = {
+  protected def handleGetAgencyIdentity(withDetail: Boolean)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT, "GET_agency", None)
     complete {
       sendToAgencyAgent(GetLocalAgencyIdentity(withDetail)).map[ToResponseMarshallable] {
@@ -53,7 +53,7 @@ trait EndpointHandlerBase
     }
   }
 
-  val agencyRoute: Route =
+  protected val agencyRoute: Route =
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
         pathPrefix("agency") {

@@ -19,20 +19,20 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
 
   override type ControllerProviderInputType = ActorDriverGenParam
 
-  def agentActorContext: AgentActorContext
-  protected implicit lazy val protocolRegistry: ProtocolRegistry[ControllerProviderInputType] = agentActorContext.protocolRegistry
+  def registeredProtocols: ProtocolRegistry[ActorDriverGenParam]
+  protected implicit lazy val protocolRegistry: ProtocolRegistry[ControllerProviderInputType] = registeredProtocols
   implicit val system: ActorSystem = context.system
 
   def stateDetailsFor: Future[PartialFunction[String, Parameter]]
 
-  def handleInitProtocolReq(ipr: InitProtocolReq): Unit = {
+  def handleInitProtocolReq(ipr: InitProtocolReq, sponsorRel: Option[SponsorRel]): Unit = {
     logger.debug(s"about to get values for init params:" + ipr.stateKeys)
     val sndr = sender()
     try {
       stateDetailsFor.map { paramMapper =>
         logger.debug(s"init params received")
         val parameters = ipr.stateKeys.map(paramMapper)
-        sndr ! ProtocolCmd(InitProtocol(domainId, parameters), None)
+        sndr ! ProtocolCmd(InitProtocol(domainId, parameters, sponsorRel), None)
         logger.debug(s"init params sent")
       }.recover {
         case e: MatchError =>
@@ -56,7 +56,7 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
 
     val cmd = ProtocolCmd(
       msgEnvelope,
-      Some(ProtocolMetadata(threadContextDetail, agentWalletIdReq, self))
+      Some(ProtocolMetadata(self, agentWalletIdReq, threadContextDetail))
     )
     ActorProtocol(pinstIdPair.protoDef)
       .region

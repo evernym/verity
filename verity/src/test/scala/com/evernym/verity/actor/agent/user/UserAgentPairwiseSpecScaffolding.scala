@@ -230,7 +230,6 @@ trait UserAgentPairwiseSpecScaffolding
     }
   }
 
-
   def receivedGeneralMsg_V_0_5(connId: String, hint: String, msgType: String,
                                expectSilentPushNotif: Boolean = false,
                                expectAlertingPushNotif: Boolean = false,

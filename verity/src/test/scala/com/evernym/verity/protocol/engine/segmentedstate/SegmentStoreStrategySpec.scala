@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.protocol.engine.segmentedstate
 
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.{Bucket_2_Legacy, Bucket_4, OneToOne, OneToOneDomain}
 import com.evernym.verity.testkit.BasicSpec

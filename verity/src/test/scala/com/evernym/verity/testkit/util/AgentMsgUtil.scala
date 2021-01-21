@@ -14,6 +14,9 @@ import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+
 case class TypedMsg(`@type`: TypeDetail)
 
 case class Connect_MFV_0_5(`@type`: TypeDetail, fromDID: DID, fromDIDVerKey: VerKey)
@@ -179,7 +182,7 @@ object AgentPackMsgUtil {
   def preparePackedRequestForAgent(agentMsgParam: PackMsgParam)
                                   (implicit msgPackFormat: MsgPackFormat,
                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam)
+    awaitResult(AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam))
   }
 
   def preparePackedRequestForRoutes(fwdMsgTypeVersion: String,
@@ -187,6 +190,10 @@ object AgentPackMsgUtil {
                                     fwdRoutes: List[FwdRouteMsg])
                                    (implicit msgPackFormat: MsgPackFormat,
                                     agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)
+    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion))
+  }
+
+  def awaitResult(fut: Future[PackedMsg]): PackedMsg = {
+    Await.result(fut, 5.seconds)
   }
 }

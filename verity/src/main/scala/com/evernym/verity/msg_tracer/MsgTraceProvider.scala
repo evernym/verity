@@ -56,12 +56,12 @@ trait HasAsyncReqContext {
   /**
    * after how much time record stored in 'asyncReqContext' should be considered as not required
    */
-  val maxAliveMillis: Int = 5*60*1000 //5 min
+  protected val maxAliveMillis: Int = 5*60*1000 //5 min
 
   /**
    * remove stale recorders (to handle unhappy paths where record doesn't gets cleaned up)
    */
-  def removeStale(): Unit = {
+  protected def removeStale(): Unit = {
     runWithInternalSpan("removeStale", "HasAsyncReqContext"){
       val curEpochMillis = Instant.now().toEpochMilli
       val (matched, _) = asyncReqContext.partition(r => (curEpochMillis - r._2.capturedAtEpochMillis) < maxAliveMillis)
@@ -69,12 +69,12 @@ trait HasAsyncReqContext {
     }
   }
 
-  def storeAsyncReqContext(reqMsgId: ReqMsgId, msgName: String, reqId: ReqId, clientIpAddress: Option[String]=None): Unit = {
+  protected def storeAsyncReqContext(reqMsgId: ReqMsgId, msgName: String, reqId: ReqId, clientIpAddress: Option[String]=None): Unit = {
     removeStale()
     asyncReqContext = asyncReqContext + (reqMsgId -> AsyncReqContext(reqId, msgName, clientIpAddress))
   }
 
-  def asyncReqContextViaReqMsgId(reqMsgId: ReqMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
+  protected def asyncReqContextViaReqMsgId(reqMsgId: ReqMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
     runWithInternalSpan("asyncReqContextViaReqMsgId", "HasAsyncReqContext"){
       val (matched, others) = asyncReqContext.partition(_._1 == reqMsgId)
       if (removeMatched) {
@@ -84,7 +84,7 @@ trait HasAsyncReqContext {
     }
   }
 
-  def asyncReqContextViaRespMsgId(respMsgId: RespMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
+  protected def asyncReqContextViaRespMsgId(respMsgId: RespMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
     runWithInternalSpan("asyncReqContextViaRespMsgId", "HasAsyncReqContext"){
       val (matched, others) = asyncReqContext.partition(r => r._2.respMsgId.contains(respMsgId))
       if (removeMatched) {
@@ -100,7 +100,7 @@ trait HasAsyncReqContext {
    * @param reqMsgId request msg id
    * @param respMsgId response msg id
    */
-  def updateAsyncReqContext(reqMsgId: ReqMsgId, respMsgId: RespMsgId, msgName: Option[String]=None): Unit = {
+  protected def updateAsyncReqContext(reqMsgId: ReqMsgId, respMsgId: RespMsgId, msgName: Option[String]=None): Unit = {
     runWithInternalSpan("updateAsyncReqContext", "HasAsyncReqContext"){
       val (matched, _) = asyncReqContext.partition(_._1 == reqMsgId)
       matched.foreach { m =>
@@ -111,13 +111,13 @@ trait HasAsyncReqContext {
     }
   }
 
-  def withReqMsgId(reqMsgId: ReqMsgId, f: AsyncReqContext => Unit): Unit = {
+  protected def withReqMsgId(reqMsgId: ReqMsgId, f: AsyncReqContext => Unit): Unit = {
     asyncReqContextViaReqMsgId(reqMsgId, removeMatched = true).foreach { arc =>
       f(arc)
     }
   }
 
-  def withRespMsgId(respMsgId: RespMsgId, f: AsyncReqContext => Unit): Unit = {
+  protected def withRespMsgId(respMsgId: RespMsgId, f: AsyncReqContext => Unit): Unit = {
     asyncReqContextViaRespMsgId(respMsgId, removeMatched = true).foreach { arc =>
       f(arc)
     }

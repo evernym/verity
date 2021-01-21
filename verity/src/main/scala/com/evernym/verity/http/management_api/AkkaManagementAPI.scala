@@ -10,21 +10,19 @@ import com.evernym.verity.config.CommonConfig.{AKKA_MNGMNT_HTTP_API_CREDS, AKKA_
 
 import scala.concurrent.Future
 
-trait AkkaManagementAPI {
-  def appConfig: AppConfig
-  def system: ActorSystem
+class AkkaManagementAPI(protected val appConfig: AppConfig, protected val system: ActorSystem) {
   import scala.collection.JavaConverters._
 
   case class Credential(userName: String, password: String)
 
-  lazy val allowedCredentials: List[Credential] =
+  protected lazy val allowedCredentials: List[Credential] =
     appConfig.getLoadedConfig.getObjectList(AKKA_MNGMNT_HTTP_API_CREDS).asScala.map { acs =>
       val un = acs.toConfig.getString("username")
       val pwd = acs.toConfig.getString("password")
       Credential(un, pwd)
     }.toList
 
-  def verifyAkkaManagementAPICred(suppliedCreds: Credentials): Future[Option[String]] = {
+  protected def verifyAkkaManagementAPICred(suppliedCreds: Credentials): Future[Option[String]] = {
     suppliedCreds match {
       case p @ Credentials.Provided(id) =>
         Future {
@@ -35,7 +33,7 @@ trait AkkaManagementAPI {
     }
   }
 
-  def startAkkaManagementHttpApiListenerIfEnabled(): Unit = {
+  def startHttpServerIfEnabled(): Unit = {
     val isEnabled = appConfig.getConfigStringOption(AKKA_MNGMNT_HTTP_ENABLED)
     val startAkkaManagementAPIServer = isEnabled.isDefined && isEnabled.map(_.toUpperCase).contains(YES)
     if (startAkkaManagementAPIServer) {

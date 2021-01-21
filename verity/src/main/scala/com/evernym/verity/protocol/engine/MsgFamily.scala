@@ -42,7 +42,7 @@ object MsgFamily {
                                msgName: MsgName
                               ): String = {
     //note: if the string format below changes, we will need to change VALID_MESSAGE_TYPE_REG_EX above accordingly
-    if(familyQualifier.contains("http")) {  s"https://$familyQualifier/$familyName/$familyVersion/$msgName"
+    if(QUALIFIER_FORMAT_HTTP) {  s"https://$familyQualifier/$familyName/$familyVersion/$msgName"
     } else s"did:sov:$familyQualifier;spec/$familyName/$familyVersion/$msgName"
   }
 

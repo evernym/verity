@@ -365,7 +365,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
             createdRespMsg = msg
             println("created response: " + msg)
             msg shouldBe an[JSONObject]
-            msg.getString("@type") shouldBe s"https://${EVERNYM_QUALIFIER}/relationship/1.0/created" //"did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"  //TODO: un-hardcode this
+            msg.getString("@type") should (be (s"https://${EVERNYM_QUALIFIER}/relationship/1.0/created") or be ("did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"))
             threadId = msg.getJSONObject("~thread").getString("thid")
           }
 

@@ -173,6 +173,9 @@ trait UserAgentPairwiseSpec_V_0_7
         val msg = prepareAcceptInviteMsgForAgent(connId, includeSendMsg = true, inviteDetail)
         uap ! wrapAsPackedMsgParam(msg)
         expectMsgType[PackedMsg]
+        //TODO: had to add to make sure connection acceptance takes effect in user agent pairwise actor
+        // should come back and fix the actual issue
+        java.lang.Thread.sleep(3000)
       }
     }
   }

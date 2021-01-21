@@ -1,10 +1,8 @@
 package com.evernym.verity.actor.agent.user
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.ALREADY_EXISTS
 import com.evernym.verity.actor.agent.Thread
-import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated}
+import com.evernym.verity.actor.{Evt, MsgAnswered}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
@@ -52,22 +50,8 @@ trait LEGACY_connectingSignalHandler { this: UserAgentCommon =>
                       threadOpt: Option[Thread],
                       refMsgId: Option[MsgId],
                       payloadParam: Option[StorePayloadParam],
-                      useAsyncPersist: Boolean): MsgStored = {
-    val msgCreatedEvent = buildMsgCreatedEvt(msgName, senderDID,
-      msgId, sendMsg = sendMsg, statusCode, threadOpt, refMsgId)
-    storeMsg(msgCreatedEvent, payloadParam, useAsyncPersist)
+                      useAsyncPersist: Boolean): MsgStoredEvents = {
+    storeMsg(msgId, msgName, senderDID, statusCode, sendMsg, threadOpt, refMsgId, payloadParam, useAsyncPersist)
   }
 
-  def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId, sendMsg: Boolean,
-                         msgStatus: String, threadOpt: Option[Thread], LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
-    checkIfMsgAlreadyNotExists(msgId)
-    MsgHelper.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg,
-      msgStatus, threadOpt, LEGACY_refMsgId)
-  }
-
-  def checkIfMsgAlreadyNotExists(msgId: MsgId): Unit = {
-    if (getMsgOpt(msgId).isDefined) {
-      throw new BadRequestErrorException(ALREADY_EXISTS.statusCode, Option("msg with uid already exists: " + msgId))
-    }
-  }
 }

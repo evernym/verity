@@ -98,8 +98,8 @@ trait BasePersistentActor
   def transformedEvent(evt: Any): GeneratedMessage = {
     try {
       evt match {
-        case x: MultiEvent   => PersistentMultiEventMsg(x.evts.map(eventTransformer.execute))
-        case e               => eventTransformer.execute(e)
+        case me: MultiEvent   => PersistentMultiEventMsg(me.evts.map(eventTransformer.execute))
+        case e                => eventTransformer.execute(e)
       }
     } catch {
       case e: Exception =>
@@ -126,12 +126,9 @@ trait BasePersistentActor
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
-  final def persistEvent(event: Any, sync: Boolean)(handler: Any => Unit): Unit = {
+  final def persistEvent(events: List[Any], sync: Boolean)(handler: Any => Unit): Unit = {
     persistStart = System.currentTimeMillis()
     val successHandler = handler andThen { _ =>
-      val eventDetail = buildEventDetail(event)
-      logger.trace(eventDetail + " event persisted", ("event", event.getClass.getSimpleName),
-        (LOG_KEY_PERSISTENCE_ID, persistenceId))
       trackPersistenceSuccess()
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_PERSIST)
     }
@@ -139,35 +136,43 @@ trait BasePersistentActor
     incrementTotalPersistedEvents()
 
     try {
-      event match {
-        case evt: Any =>
-          val te = transformedEvent(evt)
-          PersistenceSerializerValidator.validate(te, appConfig)
-          if (sync) {
-            super.persist(te)(successHandler)
-          } else {
-            super.persistAsync(te)(successHandler)
-          }
+      val tes = events.map(transformedEvent)
+      tes.foreach(te => PersistenceSerializerValidator.validate(te, appConfig))
+      if (sync) {
+        super.persistAll(tes)(successHandler)
+      } else {
+        super.persistAllAsync(tes)(successHandler)
       }
     } catch {
       case e: Exception =>
-        val errorMsg = s"error during persisting actor event ${event.getClass.getSimpleName}: ${Exceptions.getErrorMsg(e)}"
+        val allEventNames = events.map(_.getClass.getSimpleName).mkString(", ")
+        val errorMsg = s"error during persisting actor event $allEventNames: ${Exceptions.getErrorMsg(e)}"
         trackPersistenceFailure()
         handlePersistenceFailure(e, errorMsg)
     }
   }
 
   final def persistExt(event: Any)(handler: Any => Unit): Unit = {
-    persistEvent(event, sync = true)(handler)
+    persistEvent(List(event), sync = true)(handler)
+  }
+
+  final def persistExtAll(events: List[Any])(handler: Any => Unit): Unit = {
+    persistEvent(events, sync = true)(handler)
   }
 
   final def persistAsyncExt(event: Any)(handler: Any => Unit): Unit = {
-    persistEvent(event, sync = false)(handler)
+    persistEvent(List(event), sync = false)(handler)
   }
 
-  def writeWithoutApply(evt: Any): Unit = persistExt(evt)(emptyEventHandler)
+  final def persistAsyncAllExt(events: List[Any])(handler: Any => Unit): Unit = {
+    persistEvent(events, sync = false)(handler)
+  }
 
-  def asyncWriteWithoutApply(evt: Any): Unit = persistAsyncExt(evt)(emptyEventHandler)
+  def writeWithoutApply(event: Any): Unit = persistExt(event)(emptyEventHandler)
+
+  def asyncWriteWithoutApply(event: Any): Unit = persistAsyncExt(event)(emptyEventHandler)
+
+  def asyncWriteWithoutApplyAll(events: List[Any]): Unit = persistAsyncAllExt(events)(emptyEventHandler)
 
   def writeAndApply(evt: Any): Unit = {
     runWithInternalSpan("writeAndApply", "BasePersistentActor") {
@@ -175,10 +180,23 @@ trait BasePersistentActor
     }
   }
 
+  def writeAndApplyAll(events: List[Any]): Unit = {
+    runWithInternalSpan("writeAndApplyAll", "BasePersistentActor") {
+      persistExtAll(events)(receiveRecover)
+    }
+  }
+
   def asyncWriteAndApply(evt: Any): Unit= {
     runWithInternalSpan("asyncWriteAndApply", "BasePersistentActor") {
       asyncWriteWithoutApply(evt)
       applyEvent(evt)
+    }
+  }
+
+  def asyncWriteAndApplyAll(events: List[Any]): Unit= {
+    runWithInternalSpan("asyncWriteAndApplyAll", "BasePersistentActor") {
+      asyncWriteWithoutApplyAll(events)
+      events.map(applyEvent)
     }
   }
 

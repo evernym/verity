@@ -12,7 +12,6 @@ import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
@@ -23,8 +22,6 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, Submitter, TxnResp}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.KeyParam
@@ -49,10 +46,9 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   type StateType = AgencyAgentState
   var state = new AgencyAgentState
 
-  override final def receiveAgentCmd: Receive = cmdReceiver
+  override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 
   val cmdReceiver: Receive = LoggingReceive.withLabel("cmdReceiver") {
-    case saw: SetAgentActorDetail               => setAgentActorDetail(saw)
     case gad: GetAgencyIdentity                 => sendAgencyIdentity(gad)
     case GetAgencyAgentDetail                   => sendAgencyAgentDetail()
     case glai: GetLocalAgencyIdentity           => sendLocalAgencyIdentity(glai.withDetail)
@@ -60,17 +56,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     case SetEndpoint                            => setEndpoint()
     case UpdateEndpoint                         => updateEndpoint()
     case pmw: PackedMsgWrapper                  => handlePackedMsg(pmw)
-    case apd: AgentProvisioningDone             =>
-      sendUntypedMsgToProtocol(
-        CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey),
-        AgentProvisioningDefinition,
-        apd.threadId
-      )
-    case GetSponsorRel => sender() ! SponsorRel.empty
-  }
-
-  override val receiveActorInitSpecificCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
-    case saw: SetAgentActorDetail               => setAgentActorDetail(saw)
   }
 
   override final def receiveAgentEvent: Receive = eventReceiver
@@ -402,7 +387,9 @@ case object SetEndpoint extends ActorMessage
 
 case object UpdateEndpoint extends ActorMessage
 
-trait AgencyAgentStateImpl extends AgentStateImplBase
+trait AgencyAgentStateImpl extends AgentStateImplBase {
+  def domainId: DomainId = relationshipReq.myDid_!
+}
 
 trait AgencyAgentStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgent =>

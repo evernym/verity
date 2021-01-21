@@ -81,7 +81,7 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
   val waitingForSponsor: Receive = LoggingReceive.withLabel("waitingForSponsor") {
     case sponsorRel: SponsorRel =>
       applyEvent(sponsorRel)
-      context.become(receiveCmd)
+      setNewReceiveBehaviour(receiveCmd)
       unstashAll()
     case msg =>
       logger.debug(s"stashing $msg")
@@ -105,7 +105,7 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
   def needsSponsor(activity: AgentActivity): Unit = {
     logger.trace(s"getting sponsor info, activity: $activity")
     stash()
-    context.become(waitingForSponsor)
+    setNewReceiveBehaviour(waitingForSponsor)
     agentMsgRouter.forward(InternalMsgRouteParam(activity.domainId, GetSponsorRel), self)
   }
 

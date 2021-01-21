@@ -96,7 +96,7 @@ trait SendOutgoingMsg {
  * to make sure once the msg is stored (successful persistence) then it tries
  * to send it to edge agent
  */
-case class SendStoredMsgToSelf(msgId: MsgId) extends ActorMessage
+case class SendStoredMsgToMyDomain(msgId: MsgId) extends ActorMessage
 
 case class JsonMsg(msg: String)
 

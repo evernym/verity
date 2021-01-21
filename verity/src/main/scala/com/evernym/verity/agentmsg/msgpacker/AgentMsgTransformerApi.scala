@@ -35,36 +35,43 @@ object AgentMsgTransformerApi {
   def pack(mpf: MsgPackFormat,
            msg: String,
            recipVerKeyParams: Set[KeyParam],
-           senderVerKeyParamOpt: Option[KeyParam])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    msgTransformer(mpf).pack(msg, recipVerKeyParams, senderVerKeyParamOpt)
+           senderVerKeyParam: Option[KeyParam])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
+    msgTransformer(mpf).pack(msg, recipVerKeyParams, senderVerKeyParam)
+  }
+
+  def packAsync(mpf: MsgPackFormat,
+                msg: String,
+                recipVerKeyParams: Set[KeyParam],
+                senderVerKeyParam: Option[KeyParam])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg] = {
+    msgTransformer(mpf).packAsync(msg, recipVerKeyParams, senderVerKeyParam)
   }
 
   def unpack(msg: Array[Byte],
-             fromVerKeyParamOpt: Option[KeyParam],
+             fromVerKeyParam: Option[KeyParam],
              unpackParam: UnpackParam = UnpackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentMsgWrapper = {
 
-    val (transformer, fromVerKeyParam) = if (isIndyPacked(msg)) {
+    val (transformer, fromVerKeyParamFinal) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)
     } else {
-      (msgPackTransformer, fromVerKeyParamOpt)
+      (msgPackTransformer, fromVerKeyParam)
     }
 
-    val unpackedMsg = transformer.unpack(msg, fromVerKeyParam, unpackParam)
+    val unpackedMsg = transformer.unpack(msg, fromVerKeyParamFinal, unpackParam)
     AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
   }
 
   def unpackAsync(msg: Array[Byte],
-                  fromVerKeyParamOpt: Option[KeyParam],
+                  fromVerKeyParam: Option[KeyParam],
                   unpackParam: UnpackParam = UnpackParam())
                  (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentMsgWrapper] = {
 
-    val (transformer, fromVerKeyParam) = if (isIndyPacked(msg)) {
+    val (transformer, fromVerKeyParamFinal) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)
     } else {
-      (msgPackTransformer, fromVerKeyParamOpt)
+      (msgPackTransformer, fromVerKeyParam)
     }
 
-    transformer.unpackAsync(msg, fromVerKeyParam, unpackParam).map { unpackedMsg =>
+    transformer.unpackAsync(msg, fromVerKeyParamFinal, unpackParam).map { unpackedMsg =>
       AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
     }
   }

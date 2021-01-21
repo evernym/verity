@@ -12,8 +12,11 @@ object EncryptionParamBuilder {
 case class EncryptionParamBuilder(walletVerKeyCacheHelper: WalletVerKeyCacheHelper,
                              encryptParam: EncryptParam = EncryptParam(Set.empty, None)) {
 
+  //TODO: this uses cache (which internally uses blocking wallet api call if item not found in cache),
+  // should try to refactor it
   def withRecipDID(did: DID): EncryptionParamBuilder = {
-    copy(encryptParam = encryptParam.copy(recipKeyParams = Set(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(did))))))
+    copy(encryptParam = encryptParam.copy(recipKeyParams =
+      Set(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(did))))))
   }
   def withRecipVerKey(verKey: VerKey): EncryptionParamBuilder = {
     copy(encryptParam = encryptParam.copy(recipKeyParams = Set(KeyParam(Left(verKey)))))

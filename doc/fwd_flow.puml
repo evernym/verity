@@ -6,25 +6,23 @@ autonumber 1
 note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReq( ) -- Packed msg\narrives.
 PackedMsgEndpointHandler --> PackedMsgEndpointHandler
 note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReqForOctetStreamContentType( )\n-- Detect binary content.
+PackedMsgEndpointHandler --> PackedMsgEndpointHandler
+note over PackedMsgEndpointHandler #ffffff: processPackedMsg( ) -- Decrypt and check\nmessage type.
 PackedMsgEndpointHandler -> AgencyPackedMsgHandler
-note over AgencyPackedMsgHandler #ffffff: processPackedMsg( ) -- Decrypt and check\nmessage type.
-AgencyPackedMsgHandler --> AgencyPackedMsgHandler
 note over AgencyPackedMsgHandler #ffffff: handleFwdMsg( ) -- Called after seeing\n"Forward" in plaintext.
 AgencyPackedMsgHandler -> AgentMsgRouter
 note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\npacked messages.
 AgentMsgRouter --> AgentMsgRouter
 note over AgentMsgRouter #ffffff: routePackedMsg( ) -- Find route to\nrelevant actor, send inner msg.
-AgentMsgRouter -> AgentIncomingMsgHandler
-note over AgentIncomingMsgHandler #ffffff: handlePackedMsg( ) -- Receive and\ndecrypt.
-AgentIncomingMsgHandler --> AgentIncomingMsgHandler
-note over AgentIncomingMsgHandler #ffffff: handleAgentMsgWrapper( ) -- Re-examine\nafter decrypt.
+AgentMsgRouter -> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: handleProcessPackedMsg( ) -- Receive and\ndecrypt.
 
 group 100: edge
 autonumber 101
-AgentIncomingMsgHandler --> AgentIncomingMsgHandler
-note over AgentIncomingMsgHandler #ffffff: handleDecryptedMsg( ) -- store outgoing\nmsg.
-AgentIncomingMsgHandler -> AgentMsgHandler
-note over AgentMsgHandler #ffffff: sendStoredMsgToEdge( ) -- Queue msg for\ndelivery to edge.
+AgentMsgProcessor --> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: routingMsgHandler( ) -- store outgoing\nmsg.
+AgentMsgProcessor -> AgentMsgHandler
+note over AgentMsgHandler #ffffff: sendStoredMsgToMyDomain( ) -- Queue msg\nfor delivery to edge.
 end
 
 @enduml

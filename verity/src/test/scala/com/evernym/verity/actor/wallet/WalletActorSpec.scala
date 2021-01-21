@@ -151,15 +151,15 @@ class WalletActorSpec
 
     "when sent GetVerKey command" - {
       "should respond with VerKey" in {
-        issuerWalletActor ! GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(holderDidPair.DID, getKeyFromPool = false))))
+        issuerWalletActor ! GetVerKey(holderDidPair.DID)
         val vk1 = expectMsgType[VerKey]
         vk1 shouldBe holderDidPair.verKey
 
-        holderWalletActor ! GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(issuerDidPair.DID, getKeyFromPool = false))))
+        holderWalletActor ! GetVerKey(issuerDidPair.DID)
         val vk2 = expectMsgType[VerKey]
         vk2 shouldBe issuerDidPair.verKey
 
-        verifierWalletActor ! GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(holderDidPair.DID, getKeyFromPool = false))))
+        verifierWalletActor ! GetVerKey(holderDidPair.DID)
         val vk3 = expectMsgType[VerKey]
         vk3 shouldBe holderDidPair.verKey
       }

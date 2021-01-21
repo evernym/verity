@@ -60,7 +60,7 @@ trait AgentStateCleanupHelper {
 
   def getCalcPinstIdForBasicMsgProtoDef(pinstId: PinstId): PinstId = {
     val tcd = state.currentThreadContexts.get(pinstId)
-    PinstIdResolution.V0_2.resolve(BasicMessageDefinition, domainId, relationshipId, tcd.map(_.threadId), None, contextualId)
+    PinstIdResolution.V0_2.resolve(BasicMessageDefinition, domainId, relationshipId, tcd.map(_.threadId), None, state.thisAgentKeyDID)
   }
 
   def buildProtoRefs(pinstId: PinstId, protoRefStrs: Seq[String]): Set[ProtoRef] = {
@@ -155,7 +155,7 @@ trait AgentStateCleanupHelper {
               val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
               val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
               if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
-                val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, contextualId)
+                val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, state.thisAgentKeyDID)
                 if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
                   threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
                   val cmd = ForIdentifier(
@@ -182,7 +182,7 @@ trait AgentStateCleanupHelper {
 
           Future {
             candidateProtoActors.foreach { case (e, cmd) =>
-              ActorProtocol(e.protoDef).region.tell(cmd, self)
+              ActorProtocol(e.protoDef).region(context.system).tell(cmd, self)
               java.lang.Thread.sleep(migrateThreadContextBatchItemSleepInterval)
             }
           }

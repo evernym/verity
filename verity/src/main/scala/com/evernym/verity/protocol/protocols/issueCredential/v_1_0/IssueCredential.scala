@@ -82,19 +82,16 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.signal(SignalMsg.Sent(proposedCred))
   }
 
-  def shortenerHandler(msg: UrlShortenMsg): Unit =
-    msg match {
-      case m: InviteShortened =>
-        ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
-      case _: InviteShorteningFailed =>
-        ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
-        ctx.apply(ProblemReportReceived("Shortening failed"))
-    }
-
   def sendInvite(offer: OfferCred, s: State.Initialized): Unit = {
     buildOobInvite(offer, s) match {
       case Success(invite) =>
-        ctx.urlShortening.shorten(invite, shortenerHandler)
+        ctx.urlShortening.shorten(invite) {
+          case m: InviteShortened =>
+            ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
+          case _: InviteShorteningFailed =>
+            ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
+            ctx.apply(ProblemReportReceived("Shortening failed"))
+        }
       case Failure(e) =>
         ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
         SignalMsg.buildProblemReport(

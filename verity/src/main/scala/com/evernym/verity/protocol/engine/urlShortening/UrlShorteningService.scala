@@ -2,9 +2,10 @@ package com.evernym.verity.protocol.engine.urlShortening
 
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolService
 
-trait UrlShorteningAccess {
-  def shorten(si: ShortenInvite, handler: UrlShortenMsg => Unit): Unit
+trait UrlShorteningService extends AsyncProtocolService[UrlShortenMsg] {
+  def shorten(si: ShortenInvite)(handler: AsyncHandler): Unit
 }
 
 trait UrlShortenMsg extends MsgBase

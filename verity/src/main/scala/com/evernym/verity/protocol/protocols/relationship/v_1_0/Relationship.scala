@@ -88,16 +88,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg)
-    if (m.shortInvite.getOrElse(defaultShortInviteOption)) {
-      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
-    } else
+    if (m.shortInvite.getOrElse(defaultShortInviteOption))
+      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
+     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
 
   def connectionInvitation(st: State.InvitationCreated, m: Ctl.ConnectionInvitation): Unit = {
     val inviteURL = prepareInviteUrl(st.invitation)
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(st.invitation.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(st.invitation.`@id`, inviteURL))(shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, st.invitation.`@id`))
   }
@@ -149,7 +149,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -169,7 +169,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL), shortenerHandler)
+      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -308,7 +308,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = ???
 
-    def shortenerHandler(msg: UrlShortenMsg): Unit =
+  def shortenerHandler(msg: UrlShortenMsg): Unit =
     msg match {
       case m: InviteShortened =>
         ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))

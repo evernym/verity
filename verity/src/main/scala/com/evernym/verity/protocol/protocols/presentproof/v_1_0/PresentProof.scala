@@ -274,20 +274,16 @@ class PresentProof (implicit val ctx: PresentProofContext)
     }
   }
 
-  def shortenerHandler(msg: UrlShortenMsg): Unit =
-    msg match {
-      case m: InviteShortened =>
-        ctx.signal(Sig.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
-      case _: InviteShorteningFailed =>
-        ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
-        apply(Rejection(ctx.getRoster.selfRole.map(_.roleNum).getOrElse(0), "Shortening failed"))
-    }
-
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
     buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) match {
-      //1. build request,
       case Success(invite) =>
-        ctx.urlShortening.shorten(invite, shortenerHandler)
+        ctx.urlShortening.shorten(invite) {
+          case m: InviteShortened =>
+            ctx.signal(Sig.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
+          case _: InviteShorteningFailed =>
+            ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
+            apply(Rejection(ctx.getRoster.selfRole.map(_.roleNum).getOrElse(0), "Shortening failed"))
+        }
       case Failure(e) =>
         ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
         Sig.buildProblemReport(

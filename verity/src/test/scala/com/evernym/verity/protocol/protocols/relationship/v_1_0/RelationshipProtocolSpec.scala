@@ -11,7 +11,7 @@ import com.evernym.verity.protocol.engine.{DebugProtocols, ServiceFormatted, Sig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningService, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -376,7 +376,7 @@ class RelationshipProtocolSpec
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
-        requester urlShortening MockableUrlShorteningAccess.shortened
+        requester urlShortening MockableUrlShorteningService.shortened
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
@@ -405,7 +405,7 @@ class RelationshipProtocolSpec
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
-        requester urlShortening MockableUrlShorteningAccess.shorteningFailed
+        requester urlShortening MockableUrlShorteningService.shorteningFailed
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
@@ -429,7 +429,7 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
-          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
+          requester urlShortening MockableUrlShorteningService.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
@@ -441,7 +441,7 @@ class RelationshipProtocolSpec
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation)
 
-          requester urlShortening MockableUrlShorteningAccess.shortened
+          requester urlShortening MockableUrlShorteningService.shortened
           requester ~ ConnectionInvitation(Some(true))
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkInvitationData(inviteMsg2)
@@ -456,7 +456,7 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
-          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
+          requester urlShortening MockableUrlShorteningService.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
@@ -629,7 +629,7 @@ class RelationshipProtocolSpec
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
-        requester urlShortening MockableUrlShorteningAccess.shortened
+        requester urlShortening MockableUrlShorteningService.shortened
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
@@ -657,7 +657,7 @@ class RelationshipProtocolSpec
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
-        requester urlShortening MockableUrlShorteningAccess.shorteningFailed
+        requester urlShortening MockableUrlShorteningService.shorteningFailed
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
@@ -681,7 +681,7 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
-          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
+          requester urlShortening MockableUrlShorteningService.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
@@ -693,7 +693,7 @@ class RelationshipProtocolSpec
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation)
 
-          requester urlShortening MockableUrlShorteningAccess.shortened
+          requester urlShortening MockableUrlShorteningService.shortened
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkOOBInvitationData(inviteMsg2)
@@ -708,7 +708,7 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
-          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
+          requester urlShortening MockableUrlShorteningService.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]

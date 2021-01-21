@@ -35,9 +35,9 @@ import com.evernym.verity.libindy.ledger.LedgerAccessApi
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.engine.asyncAccess.AsyncProtocolService
+import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg, UrlShorteningAccess}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg, UrlShorteningService}
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -82,7 +82,7 @@ class ActorProtocolContainer[
     with HasAgentWallet
     with HasAppConfig
     with AgentIdentity
-    with AsyncProtocolService {
+    with AsyncProtocolProgress {
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -184,7 +184,7 @@ class ActorProtocolContainer[
     case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
       logger.debug(s"$protocolIdForLog received UrlShortenerServiceComplete")
       urlShortenerComplete()
-      toBaseBehavior()
+      if(allAsyncProtocolServicesComplete(pendingSegments)) toBaseBehavior()
       handleAllAsyncServices()
   }
 
@@ -552,11 +552,11 @@ class ActorProtocolContainer[
     LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
   )
 
-  override lazy val urlShortening: UrlShorteningAccess = {
-    urlShortenerInProgress()
-    toProtocolAsyncBehavior()
-    (si: ShortenInvite, handler: UrlShortenMsg => Unit) => {
+  override lazy val urlShortening: UrlShorteningService = new UrlShorteningService {
+    override def shorten(si: ShortenInvite)(handler: AsyncHandler): Unit = {
       logger.debug("in url shortening callback")
+      urlShortenerInProgress()
+      toProtocolAsyncBehavior()
       system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) onComplete {
         case Success(m) =>
           m match {

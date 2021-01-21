@@ -11,7 +11,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.Init
-import com.evernym.verity.protocol.engine.asyncAccess.AsyncProtocolService
+import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
 import com.evernym.verity.protocol.engine.external_api_access.AccessRight
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
@@ -40,7 +40,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     with SegmentedStateContext[P,R,M,E,S,I]
     with JournalLogging
     with JournalProtocolSupport
-    with AsyncProtocolService {
+    with AsyncProtocolProgress {
 
   def pinstId: PinstId
 
@@ -390,6 +390,8 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  //FIXME -> RTM: Reading segmented state should now happen during the protocol rather than pre-protocol *****
+  //FIXME -> RTM: Storing segment can be handled like the other internal async services. Should be handled within protocol -> cb style
   /**
   * Refer to def finalizeState() documentation for async finalizeState
   */
@@ -489,8 +491,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     2) PostMsgHandling:
       record-event
  */
-  //FIXME -> RTM document how this happens. Store segment, record event async
-  //FIXME -> RTM: How is retrieving segments handled? I only see events and storage.
+  //FIXME -> RTM: Retrieving Segments is done pre-protocol. Should this be moved into the protocol now that there is a way to asynchronously do this?
   /**
    * Finalization cannot happen until all protocol services are complete.
    * This includes:
@@ -530,6 +531,11 @@ trait ProtocolContext[P,R,M,E,S,I]
     shadowBackState = None
   }
 
+  /**
+   * (If run in asynchronously on the ActorProtocolContainer) the actor will change its Receive behavior until
+   *    it knows the segment has been stored. The context will not finalize until the actor is informed of completed storage.
+   *    The actor will then change back to the base behavior.
+   */
   def storeSegments(): Unit = {
     pendingSegments foreach { msg =>
       logger.debug(s"storing segment: $msg")
@@ -537,6 +543,10 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  /**
+   * (If run in an actor) recordEvents blocks execution by inheriting akka persistence's event persistence blocking.
+   */
+  //FIXME -> RTM: Describe how akka persistence is what handles the blocking of the actor, not the manual changing of the actor's behavior
   def recordEvents(): Option[_ >: E with ProtoSystemEvent] = {
     val event = pendingEvents.size match {
       case 0 => None

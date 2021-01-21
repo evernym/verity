@@ -177,9 +177,8 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
       if (cacheUsedTokens) {
         if (ctx.getInFlight.segmentAs[AskedForProvisioning].isDefined)
           throw DuplicateProvisionedApp
-        else {
+        else
           ctx.storeSegment(token.sig, AskedForProvisioning())
-        }
       }
 
       ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))

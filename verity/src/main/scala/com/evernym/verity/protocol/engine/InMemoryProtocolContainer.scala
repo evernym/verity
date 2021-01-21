@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, Led
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Read, ReadStorage, Write, WriteStorage}
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningService
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
@@ -27,7 +27,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
                                                   parentLogContext: JournalContext=JournalContext(),
                                                   walletAccessProvider: Option[()=>WalletAccess] = None,
                                                   ledgerAccessProvider: Option[()=>LedgerAccess] = None,
-                                                  urlShorteningAccessProvider: Option[()=>UrlShorteningAccess] = None)
+                                                  urlShorteningAccessProvider: Option[()=>UrlShorteningService] = None)
 
 /**
   * Protocols may run standalone but they most likely will be run in
@@ -133,7 +133,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
 
   registerWithSystem()
 
-  override def urlShortening: UrlShorteningAccess =
+  override def urlShortening: UrlShorteningService =
     pce.urlShorteningAccessProvider.map(_()).getOrElse(throw new RuntimeException("no url shortener access provided to container"))
 }
 

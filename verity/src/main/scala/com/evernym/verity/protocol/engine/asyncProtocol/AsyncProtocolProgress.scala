@@ -1,9 +1,9 @@
-package com.evernym.verity.protocol.engine.asyncAccess
+package com.evernym.verity.protocol.engine.asyncProtocol
 
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateMsg
 
-//FIXME -> RTM: Don't settle on name
-trait AsyncProtocolService {
+//FIXME -> RTM: Protocol Registry example. Instead of unique function, register
+trait AsyncProtocolProgress {
 
   var awaitingUrlShortener: Boolean = false
   var awaitingLedger: Boolean = false

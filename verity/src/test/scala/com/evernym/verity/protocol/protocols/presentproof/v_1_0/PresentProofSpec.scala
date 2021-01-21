@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningService, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -202,7 +202,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         var nonce: Option[Nonce] = None
 
-        verifier urlShortening MockableUrlShorteningAccess.shortened
+        verifier urlShortening MockableUrlShorteningService.shortened
         // Verifier starts protocol
         (verifier engage prover) ~ Ctl.Request(
           "",
@@ -313,7 +313,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       "should handle Out-Of-Band Invitation shortening failed path" in { f =>
         val (verifier, prover) = indyAccessMocks(f)
 
-        verifier urlShortening MockableUrlShorteningAccess.shorteningFailed
+        verifier urlShortening MockableUrlShorteningService.shorteningFailed
 
         // Verifier starts protocol
         (verifier engage prover) ~ Ctl.Request(

@@ -4,7 +4,7 @@ import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite}
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
 import com.evernym.verity.util.MsgIdProvider
@@ -21,7 +21,6 @@ object RelationshipMsgFamily extends MsgFamily {
     "create"                     -> classOf[Ctl.Create],
     "key-created"                -> classOf[Ctl.KeyCreated],
     "invite-shortened"           -> classOf[InviteShortened],
-    "invite-shortening-failed"   -> classOf[InviteShorteningFailed],
     "sms-sent"                   -> classOf[Ctl.SMSSent],
     "sms-sending-failed"         -> classOf[Ctl.SMSSendingFailed],
     "connection-invitation"      -> classOf[Ctl.ConnectionInvitation],
@@ -34,7 +33,6 @@ object RelationshipMsgFamily extends MsgFamily {
     classOf[Signal.Created]            -> "created",
     classOf[Signal.Invitation]         -> "invitation",
     classOf[Signal.ProblemReport]      -> "problem-report",
-    classOf[ShortenInvite]             -> "shorten-invite",
     classOf[Signal.SendSMSInvite]      -> "send-sms-invite",
     classOf[Signal.SMSInvitationSent]  -> "sms-invitation-sent"
   )

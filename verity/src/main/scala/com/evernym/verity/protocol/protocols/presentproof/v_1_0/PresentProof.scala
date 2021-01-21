@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg}
+import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
@@ -277,10 +277,10 @@ class PresentProof (implicit val ctx: PresentProofContext)
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
     buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) match {
       case Success(invite) =>
-        ctx.urlShortening.shorten(invite) {
-          case m: InviteShortened =>
-            ctx.signal(Sig.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
-          case _: InviteShorteningFailed =>
+        ctx.urlShortening.shorten(invite.inviteURL) {
+          case Success(m) =>
+            ctx.signal(Sig.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
+          case Failure(_) =>
             ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
             apply(Rejection(ctx.getRoster.selfRole.map(_.roleNum).getOrElse(0), "Shortening failed"))
         }

@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg}
+import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, _}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
@@ -85,10 +85,9 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   def sendInvite(offer: OfferCred, s: State.Initialized): Unit = {
     buildOobInvite(offer, s) match {
       case Success(invite) =>
-        ctx.urlShortening.shorten(invite) {
-          case m: InviteShortened =>
-            ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
-          case _: InviteShorteningFailed =>
+        ctx.urlShortening.shorten(invite.inviteURL) {
+          case Success(m) => ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
+          case Failure(_) =>
             ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
             ctx.apply(ProblemReportReceived("Shortening failed"))
         }

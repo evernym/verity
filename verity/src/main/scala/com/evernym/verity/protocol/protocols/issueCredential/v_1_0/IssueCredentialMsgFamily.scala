@@ -4,7 +4,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite}
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 
@@ -43,7 +43,6 @@ object IssueCredMsgFamily
     "reject"                            -> classOf[Ctl.Reject],
     "status"                            -> classOf[Ctl.Status],
     "invite-shortened"                  -> classOf[InviteShortened],
-    "invite-shortening-failed"          -> classOf[InviteShorteningFailed],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -57,7 +56,6 @@ object IssueCredMsgFamily
     classOf[SignalMsg.ProblemReport]          -> "problem-report",
     classOf[SignalMsg.Ack]                    -> "ack-received",
     classOf[SignalMsg.Invitation]             -> "protocol-invitation",
-    classOf[ShortenInvite]                    -> "shorten-invite",
   )
 }
 

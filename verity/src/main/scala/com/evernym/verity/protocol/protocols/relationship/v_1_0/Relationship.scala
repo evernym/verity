@@ -5,7 +5,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg}
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
@@ -13,6 +13,8 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCod
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.Util.isPhoneNumberInValidFormat
 import org.json.JSONObject
+
+import scala.util.{Failure, Success, Try}
 
 
 class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String])
@@ -82,7 +84,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     val inviteURL = prepareInviteUrl(invitationMsg)
 
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`))
      else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -90,7 +92,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
   def connectionInvitation(st: State.InvitationCreated, m: Ctl.ConnectionInvitation): Unit = {
     val inviteURL = prepareInviteUrl(st.invitation)
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(st.invitation.`@id`, inviteURL))(shortenerHandler)
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(st.invitation.`@id`))
     else
       ctx.signal(Signal.Invitation(inviteURL, None, st.invitation.`@id`))
   }
@@ -144,7 +146,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`))
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -164,7 +166,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.urlShortening.shorten(ShortenInvite(invitationMsg.`@id`, inviteURL))(shortenerHandler)
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`))
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -303,13 +305,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = ???
 
-  def shortenerHandler(msg: UrlShortenMsg): Unit =
-    msg match {
-      case m: InviteShortened =>
-        ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
-      case _: InviteShorteningFailed =>
+  def shortenerHandler(inviteId: String): Try[InviteShortened] => Unit = {
+    val handler = (msg: Try[InviteShortened]) => msg match {
+      case Success(m) =>
+        ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), inviteId))
+      case Failure(_) =>
         ctx.signal(Signal.buildProblemReport("Shortening failed", shorteningFailed))
     }
+    handler
+  }
+
 }
 
 sealed trait Role

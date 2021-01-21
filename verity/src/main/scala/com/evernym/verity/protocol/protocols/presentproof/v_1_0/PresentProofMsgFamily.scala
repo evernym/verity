@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite}
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 
 object PresentProofMsgFamily
   extends MsgFamily {
@@ -31,7 +31,6 @@ object PresentProofMsgFamily
     "reject"                   -> classOf[Ctl.Reject],
     "status"                   -> classOf[Ctl.Status],
     "invite-shortened"         -> classOf[InviteShortened],
-    "invite-shortening-failed" -> classOf[InviteShorteningFailed],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -41,7 +40,6 @@ object PresentProofMsgFamily
     classOf[Sig.ProblemReport]        -> "problem-report",
     classOf[Sig.StatusReport]         -> "status-report",
     classOf[Sig.Invitation]           -> "protocol-invitation",
-    classOf[ShortenInvite]            -> "shorten-invite",
   )
 }
 

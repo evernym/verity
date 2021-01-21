@@ -37,7 +37,7 @@ import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, InviteShorteningFailed, ShortenInvite, UrlShortenMsg, UrlShorteningService}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningService}
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -557,19 +557,19 @@ class ActorProtocolContainer[
   )
 
   override lazy val urlShortening: UrlShorteningService = new UrlShorteningService {
-    override def shorten(si: ShortenInvite)(handler: AsyncHandler): Unit = {
+    override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit = {
       logger.debug("in url shortening callback")
       urlShortenerInProgress()
       toProtocolAsyncBehavior()
-      system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(si.inviteURL) onComplete {
+      system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(inviteUrl) onComplete {
         case Success(m) =>
           m match {
-            case UrlShortened(shortUrl) => handler(InviteShortened(si.invitationId, si.inviteURL, shortUrl))
-            case UrlShorteningFailed(_, msg) => handler(InviteShorteningFailed(si.invitationId, msg))
+            case UrlShortened(shortUrl) => handler(Success(InviteShortened(inviteUrl, shortUrl)))
+            case UrlShorteningFailed(_, msg) => handler(Failure(new Exception(msg)))
           }
           addToMsgQueue(UrlShortenerServiceComplete())
         case Failure(e) =>
-          handler(InviteShorteningFailed(si.invitationId, e.getMessage))
+          handler(Failure(e))
           addToMsgQueue(UrlShortenerServiceComplete())
       }
     }

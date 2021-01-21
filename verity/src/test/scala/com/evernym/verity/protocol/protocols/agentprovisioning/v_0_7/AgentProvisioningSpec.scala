@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols.AgentProvisioning.v_0_7
+package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.testkit.CommonSpecUtil
@@ -7,7 +7,6 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.On
 import com.evernym.verity.protocol.engine.{VerKey, WalletAccessTest}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{NoSponsor, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{AgentCreated => AgentCreatedState, _}
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.{AgentProvisioningDefinition, AgentProvisioningState}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}

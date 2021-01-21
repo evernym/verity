@@ -13,17 +13,17 @@ trait ResourceUsageCommon {
 
   def system: ActorSystem
 
-  lazy val resourceUsageTrackerRegion: ActorRef =
+  protected lazy val resourceUsageTrackerRegion: ActorRef =
     ClusterSharding(system).shardRegion(RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME)
 
-  def addUserResourceUsage(ipAddress: IpAddress, resourceType: ResourceType,
+  protected def addUserResourceUsage(ipAddress: IpAddress, resourceType: ResourceType,
                            resourceName: ResourceName, userIdOpt: Option[UserId],
                            sendBackAck: Boolean=false): Unit = {
     ResourceUsageTracker.addUserResourceUsage(ipAddress, resourceType,
       resourceName, sendBackAck, userIdOpt)(resourceUsageTrackerRegion)
   }
 
-  def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {
+  protected def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {
     // Set resource usage counts to 0 for each resource (entityId, resourceName)
     // Get bucket IDs for all buckets associated with resourceName
     val buckets: Set[Int] = Set(

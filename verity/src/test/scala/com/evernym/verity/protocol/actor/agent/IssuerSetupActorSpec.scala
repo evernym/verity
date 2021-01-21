@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols.issuersetup
+package com.evernym.verity.protocol.actor.agent
 
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding

@@ -7,8 +7,6 @@ import com.evernym.verity.protocol.engine.{Parameter, Parameters}
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.OptionValues
 
-
-
 class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
   "Present Proof Protocol Definition" - {
     "should have two roles" in {

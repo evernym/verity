@@ -1,15 +1,15 @@
-package com.evernym.verity.protocol
+package com.evernym.verity.protocol.actor.container
 
 import akka.actor.Props
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.protocols.{BaseProtocolActorSpec, MockControllerActorBase, SendActorMsg, SendControlMsg}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.actor._
+import com.evernym.verity.protocol.actor.container.base.{BaseProtocolActorSpec, MockControllerActorBase, SendActorMsg, SendControlMsg}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Propose
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.Sent

@@ -5,68 +5,41 @@ import java.time.temporal.ChronoUnit
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.apphealth.AppStateConstants.{CONTEXT_AGENT_SERVICE_INIT, CONTEXT_GENERAL}
-import com.evernym.verity.apphealth._
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper, CommonConfigValidatorCreator}
-import com.evernym.verity.http.common.{BindResult, HttpBindUtil}
-import com.evernym.verity.http.management_api.AkkaManagementAPI
-import com.evernym.verity.http.route_handlers.EndpointHandlerBase
+import com.evernym.verity.apphealth.{AppStateManager, CauseDetail, ErrorEventParam, ListeningSuccessful, SeriousSystemError, SuccessEventParam}
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
+import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
 import com.evernym.verity.metrics.{MetricsReader, MetricsWriter}
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
-import com.evernym.verity.Exceptions
+import com.typesafe.scalalogging.Logger
 import sun.misc.{Signal, SignalHandler}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
+class HttpServer(val platform: Platform, routes: Route)
+  extends HttpServerUtil {
 
-trait PlatformLauncher
-  extends HttpBindUtil
-    with EndpointHandlerBase
-    with AkkaManagementAPI
-    with AgentActorContext
-    with App {
+  val logger: Logger = LoggingUtil.getLoggerByClass(classOf[HttpServer])
+  implicit lazy val appConfig: AppConfig = platform.agentActorContext.appConfig
+  implicit lazy val system: ActorSystem = platform.agentActorContext.system
+  lazy implicit val executor: ExecutionContextExecutor = system.dispatcher
 
   def start(): Unit = {
+    LaunchPreCheck.checkReqDependencies(platform.agentActorContext)
     startService(init _)
   }
 
-  override implicit lazy val appConfig: AppConfig = platform.agentActorContext.appConfig
-  override implicit lazy val system: ActorSystem = platform.agentActorContext.system
-  lazy implicit val executor: ExecutionContextExecutor = system.dispatcher
-
-  def endpointRoutes: Route
-
-  class DefaultAgentActorContext extends AgentActorContext {
-    override implicit lazy val appConfig: AppConfig = AppConfigWrapper
-    override implicit lazy val system: ActorSystem = createActorSystem()
-  }
-
-  def agentActorContextProvider: AgentActorContext = new DefaultAgentActorContext()
-
-  lazy val platform: Platform = {
-    val p = new Platform(agentActorContextProvider)
-    LaunchPreCheck.checkReqDependencies(p.agentActorContext)
-    p
-  }
-
-  private def startHttpBinding(): Future[Seq[BindResult]] = {
-    bindHttpPorts(endpointRoutes, appConfig)
-  }
-
-  private def init(): (ActorSystem, Future[Seq[BindResult]]) = {
-    AppConfigWrapper.init(CommonConfigValidatorCreator.baseValidatorCreators)
-    startAkkaManagementHttpApiListenerIfEnabled()
-    val bindResult = startHttpBinding()
-    MetricsReader   //intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is checked as well
+  private def init(): (ActorSystem, Future[Seq[HttpServerBindResult]]) = {
+    val bindResult = startNewServer(routes, appConfig)
     (platform.actorSystem, bindResult)
   }
 
-
-  protected def startService(f:() => (ActorSystem, Future[Seq[BindResult]])): Unit = {
+  private def startService(f:() => (ActorSystem, Future[Seq[HttpServerBindResult]])): Unit = {
     try {
       val serviceStartTime = LocalDateTime.now
       val (actorSystem, bindResultFut) = f()

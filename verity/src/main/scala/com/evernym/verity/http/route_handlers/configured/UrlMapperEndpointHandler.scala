@@ -24,7 +24,7 @@ trait UrlMapperEndpointHandler
   extends HttpRouteBase
     with PlatformServiceProvider {
 
-  def createUrlMapping(urlJson: String): Future[Any] = {
+  protected def createUrlMapping(urlJson: String): Future[Any] = {
     val agencyPayloadData = getMapWithStringValueFromJsonString(urlJson)
     implicit val hashed: String = getRequiredField(HASHED_URL, agencyPayloadData)
     val url = getRequiredField(URL, agencyPayloadData)
@@ -38,7 +38,7 @@ trait UrlMapperEndpointHandler
     }
   }
 
-  def getMappedUrl(implicit hashed: String): Future[Any] = {
+  protected def getMappedUrl(implicit hashed: String): Future[Any] = {
     val respFut = platform.urlStore ? GetActualUrl
     respFut map {
       case Some(url: String) => Url(url)
@@ -47,7 +47,7 @@ trait UrlMapperEndpointHandler
     }
   }
 
-  def urlMapperResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+  protected def urlMapperResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case u: Url => handleExpectedResponse(u)
     case e      => handleUnexpectedResponse(e)
   }

@@ -33,17 +33,17 @@ import scala.concurrent.Future
 trait GetInviteRestEndpointHandler
   extends ResourceUsageCommon { this: HttpRouteWithPlatform =>
 
-  def getInviteMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+  protected def getInviteMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case invDetail: InviteDetail  => handleExpectedResponse(invDetail)
     case jsonMsg: JSONObject      => HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), jsonMsg.toString(2)))
     case e                        => handleUnexpectedResponse(e)
   }
 
-  def getTokenFut(implicit token: String): Future[Any] = {
+  protected def getTokenFut(implicit token: String): Future[Any] = {
     platform.tokenToActorItemMapper ? GetDetail
   }
 
-  def getInviteDetail(aid: ActorItemDetail): Future[Any] = {
+  protected def getInviteDetail(aid: ActorItemDetail): Future[Any] = {
     implicit val actorEntityId: String = aid.actorEntityId
     val protocolDefs: Set[ProtoDef] = Set(ConnectingProtoDef_v_0_5, ConnectingProtoDef_v_0_6)
     val msg = protocolDefs.find(pd => ActorProtocol.buildTypeName(pd) == aid.regionTypeName) match {
@@ -67,7 +67,7 @@ trait GetInviteRestEndpointHandler
     handleGetInviteDetailFut(getInviteDetailFut)
   }
 
-  def getInviteDetailByDIDAndUid(DID: DID, uid: MsgId): Future[Any] = {
+  protected def getInviteDetailByDIDAndUid(DID: DID, uid: MsgId): Future[Any] = {
     val gr = GetRoute(DID)
     val respFut = platform.agentActorContext.agentMsgRouter.execute(gr) flatMap {
       case Some(aa: ActorAddressDetail) =>
@@ -80,7 +80,7 @@ trait GetInviteRestEndpointHandler
     handleGetInviteDetailFut(respFut)
   }
 
-  def handleGetInviteDetailFut(fut: Future[Any]): Future[Any] = {
+  protected def handleGetInviteDetailFut(fut: Future[Any]): Future[Any] = {
     fut map {
       case ProtocolSyncRespMsg(msg: Any, _) => msg    //this is when msg is directly sent to connecting region actor
       case id: InviteDetail => id
@@ -88,14 +88,14 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  def getInviteDetailByToken(token: String): Future[Any] = {
+  protected def getInviteDetailByToken(token: String): Future[Any] = {
     getTokenFut(token) flatMap {
       case Some(td: ActorItemDetail) => getInviteDetail(td)
       case None => Future.successful(new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option(DATA_NOT_FOUND.statusMsg)))
     }
   }
 
-  def handleGetInviteByTokenReq(token: String)(implicit remoteAddress: RemoteAddress): Route = {
+  protected def handleGetInviteByTokenReq(token: String)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
       "GET_agency_invite", None)
     complete {
@@ -105,7 +105,7 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  def handleGetInviteByDIDAndUidReq(DID: DID, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
+  protected def handleGetInviteByDIDAndUidReq(DID: DID, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
       "GET_agency_invite_did", None)
     complete {
@@ -115,7 +115,7 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  def handleGetInvitationAries(base64inv: String)(implicit remoteAddress: RemoteAddress): Route = {
+  protected def handleGetInvitationAries(base64inv: String)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
       "GET_agency_invite_aries", None)
     complete {
@@ -123,7 +123,7 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  def decodeAriesInvitation(base64inv: String): JSONObject = {
+  protected def decodeAriesInvitation(base64inv: String): JSONObject = {
     try {
       new JSONObject(new String(Base64Util.getBase64UrlDecoded(base64inv)))
     } catch {

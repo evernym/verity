@@ -514,7 +514,7 @@ trait BasePersistentActor
 trait HasActorResponseTimeout {
   def appConfig: AppConfig
 
-  implicit lazy val duration: FiniteDuration =
+  protected implicit lazy val duration: FiniteDuration =
     buildDuration(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
   implicit lazy val akkActorResponseTimeout: Timeout = Timeout(duration)
 }

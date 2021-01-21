@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, path, post, reject}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.http.common.HttpBindUtil
+import com.evernym.verity.http.common.HttpServerUtil
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.UrlParam
 import com.typesafe.scalalogging.Logger
@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.Logger
 import scala.collection.immutable.Queue
 
 
-class HttpListener(val appConfig: AppConfig, val listeningPort: Int, endpoint: UrlParam) extends HttpBindUtil {
+class HttpListener(val appConfig: AppConfig, val listeningPort: Int, endpoint: UrlParam) extends HttpServerUtil {
   import akka.http.scaladsl.model.StatusCodes._
 
   private var queue: Queue[Array[Byte]] = Queue.empty

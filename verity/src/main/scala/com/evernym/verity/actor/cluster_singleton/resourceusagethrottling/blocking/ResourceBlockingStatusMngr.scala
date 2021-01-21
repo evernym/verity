@@ -2,7 +2,7 @@ package com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.block
 
 import java.time.ZonedDateTime
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
@@ -146,6 +146,7 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
     singletonParentProxyActor ! SendCmdToAllNodes(changeEvent)
   }
 
+  def system: ActorSystem = aac.system
   override def appConfig: AppConfig = aac.appConfig
   def agentActorContext: AgentActorContext = aac
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)

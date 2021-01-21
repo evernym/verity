@@ -3,6 +3,7 @@ package com.evernym.verity.actor.agent.state
 import akka.actor.Actor.Receive
 import com.evernym.verity.Exceptions.InvalidValueException
 import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
@@ -17,6 +18,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDet
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
+import scala.concurrent.Future
 import scala.util.Left
 
 /**
@@ -113,14 +115,18 @@ trait PairwiseConnStateBase {
    * @return
    */
   def theirRoutingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]] = {
-    state.theirDidDoc.flatMap(_.endpoints_!.filterByKeyIds(state.theirAgentKeyDIDReq).headOption).map(_.endpointADTX) map {
-      case le: LegacyRoutingServiceEndpoint =>
-        Left(LegacyRoutingDetail(le.agencyDID, le.agentKeyDID, le.agentVerKey, le.agentKeyDlgProofSignature))
-      case e: RoutingServiceEndpoint        =>
-        Right(RoutingDetail(state.theirAgentAuthKeyReq.verKey, e.value, e.routingKeys))
-      case _                                =>
-        throw new MatchError("unsupported endpoint matched")
-    }
+    state
+      .theirDidDoc
+      .flatMap(_.endpoints_!.filterByKeyIds(state.theirAgentKeyDIDReq).headOption)
+      .map(_.endpointADTX)
+      .map {
+        case le: LegacyRoutingServiceEndpoint =>
+          Left(LegacyRoutingDetail(le.agencyDID, le.agentKeyDID, le.agentVerKey, le.agentKeyDlgProofSignature))
+        case e: RoutingServiceEndpoint        =>
+          Right(RoutingDetail(state.theirAgentAuthKeyReq.verKey, e.value, e.routingKeys))
+        case _                                =>
+          throw new MatchError("unsupported endpoint matched")
+      }
   }
 
   /**
@@ -149,32 +155,21 @@ trait PairwiseConnStateBase {
   }
 
   def encParamBasedOnMsgSender(senderVerKeyOpt: Option[VerKey]): EncryptParam = {
-    senderVerKeyOpt match {
-      case Some(verKey) =>
-        if (isMyPairwiseVerKey(verKey))
-          encParamBuilder
-            .withRecipDID(ownerDIDReq)
-            .withSenderVerKey(state.thisAgentVerKeyReq)
-            .encryptParam
-        else if (isTheirAgentVerKey(verKey))
-          encParamBuilder
-            .withRecipVerKey(state.theirAgentVerKeyReq)
-            .withSenderVerKey(state.thisAgentVerKeyReq)
-            .encryptParam
-        else
-          encParamBuilder
-            .withRecipVerKey(verKey)
-            .withSenderVerKey(state.thisAgentVerKeyReq)
-            .encryptParam
-      case None => throw new InvalidValueException(Option("no sender ver key found"))
+    val encBuilderWithRecip = senderVerKeyOpt match {
+      case Some(verKey) if isMyPairwiseVerKey(verKey) => encParamBuilder.withRecipDID(ownerDIDReq)
+      case Some(verKey) if isTheirAgentVerKey(verKey) => encParamBuilder.withRecipVerKey(state.theirAgentVerKeyReq)
+      case Some(verKey)                               => encParamBuilder.withRecipVerKey(verKey)
+      case None                                       => throw new InvalidValueException(Option("no sender ver key found"))
     }
+    encBuilderWithRecip
+      .withSenderVerKey(state.thisAgentVerKeyReq)
+      .encryptParam
   }
 
   def buildReqMsgForTheirRoutingService(msgPackFormat: MsgPackFormat,
                                         agentMsgs: List[Any],
                                         wrapInBundledMsgs: Boolean,
-                                        msgType: String
-                                       ): PackedMsg = {
+                                        msgType: String): Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(_: LegacyRoutingDetail)) =>
         val encryptParam =
@@ -183,23 +178,38 @@ trait PairwiseConnStateBase {
             .withSenderVerKey(state.thisAgentVerKeyReq)
             .encryptParam
         val packMsgParam = PackMsgParam(encryptParam, agentMsgs, wrapInBundledMsgs)
-        val packedMsg = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
-        buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, packedMsg.msg, msgType)
+        AgentMsgPackagingUtil.buildAgentMsg(
+          msgPackFormat,
+          packMsgParam
+        )(agentMsgTransformer, wap).flatMap { pm =>
+          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType)
+        }
       case x => throw new RuntimeException("unsupported routing detail (for unpacked msg): " + x)
     }
   }
 
-  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
+  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String):
+  Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>
         val theirAgencySealParam = SealParam(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(
           ld.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(ld.agentKeyDID, Left(theirAgencySealParam))
-        AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),
-          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap)
+        AgentMsgPackagingUtil.buildRoutedAgentMsg(
+          msgPackFormat,
+          PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),
+          List(fwdRouteForAgentPairwiseActor)
+        )(agentMsgTransformer, wap)
       case Some(Right(rd: RoutingDetail)) =>
-        val routingKeys = if (rd.routingKeys.nonEmpty) Vector(rd.verKey) ++ rd.routingKeys else rd.routingKeys
-        AgentMsgPackagingUtil.packMsgForRoutingKeys(MPF_INDY_PACK, packedMsg, routingKeys, msgType)(agentMsgTransformer, wap)
+        val routingKeys =
+          if (rd.routingKeys.contains(rd.verKey)) rd.routingKeys
+          else Vector(rd.verKey) ++ rd.routingKeys
+        AgentMsgPackagingUtil.packMsgForRoutingKeys(
+          MPF_INDY_PACK,
+          packedMsg,
+          routingKeys,
+          msgType
+        )(agentMsgTransformer, wap)
       case x => throw new RuntimeException("unsupported routing detail (for packed msg): " + x)
     }
   }

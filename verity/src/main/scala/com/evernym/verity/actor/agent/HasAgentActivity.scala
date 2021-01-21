@@ -7,7 +7,7 @@ import com.evernym.verity.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.util.TimeUtil
-import com.evernym.verity.util.OptionUtil.optionToEmptyStr
+
 
 trait HasAgentActivity extends ShardRegionCommon {
   object AgentActivityTracker {

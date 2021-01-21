@@ -188,7 +188,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       Option(KeyParam(Left(pairwiseKeyCreated.verKey)))
     )
     val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
-    buildAgentMsg(agentMsgContext.msgPackFormat, param)
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormat, param))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

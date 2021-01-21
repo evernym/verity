@@ -5,7 +5,7 @@ import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent._
+import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
@@ -35,7 +35,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
-import com.evernym.verity.util.{ParticipantUtil, Util}
+import com.evernym.verity.util.Util
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
@@ -109,7 +109,7 @@ class ActorProtocolContainer[
   // This function is only called when the actor is uninitialized; later,
   // the receiver becomes inert.
   final def initialBehavior: Receive = {
-    case ProtocolCmd(InitProtocol(domainId: DomainId, parameters: Set[Parameter]), None)=>
+    case ProtocolCmd(InitProtocol(domainId, parameters, sponsorRelOpt), None)=>
       MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-resp-received",
         "init-msg-id", inMsg = Option("init-param-received"))
       submit(GivenDomainId(domainId))
@@ -120,7 +120,10 @@ class ActorProtocolContainer[
       }
       toBaseBehavior()
       // Ask for sponsor details from domain and record metric for initialized protocol
-      agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
+      sponsorRelOpt match {
+        case Some(sr) => handleSponsorRel(sr)
+        case None     => agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
+      }
     case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
       newRel.relationshipType match {
         case PAIRWISE_RELATIONSHIP =>
@@ -390,10 +393,11 @@ class ActorProtocolContainer[
   class MsgSender extends SendsMsgsForContainer[M](this) {
 
     def send(pom: ProtocolOutgoingMsg): Unit = {
-      val fromAgentId = ParticipantUtil.agentId(pom.from)
-      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(fromAgentId, pom))
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "sent-to-agent-actor",
-        pom.requestMsgId, outMsg = Option(pom.msg))
+      //because the 'agent msg processor' actor contains the response context
+      // this message needs to go back to the same 'agent msg processor' actor
+      // from where it was came earlier to this actor
+      //TODO-amp: shall we find better solution
+      msgForwarder.forwarder.foreach(_ ! pom)
     }
 
     //dhh It surprises me to see this feature exposed here. I would have expected it
@@ -571,7 +575,7 @@ trait MsgQueueServiceProvider {
  * @param domainId domain id
  * @param parameters protocol initialization parameters
  */
-case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessage
+case class InitProtocol(domainId: DomainId, parameters: Set[Parameter], sponsorRel: Option[SponsorRel]) extends ActorMessage
 
 /**
  * This is used by this actor during protocol initialization process.
@@ -590,9 +594,9 @@ case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends Act
   which is then provided into driver and driver uses it to reach to the same agent (launcher)
   who originally forwarded the msg
  */
-case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
+case class ProtocolMetadata(forwarder: ActorRef,
                             walletId: String,
-                            forwarder: ActorRef)
+                            threadContextDetail: ThreadContextDetail)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
 

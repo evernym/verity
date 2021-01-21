@@ -31,11 +31,7 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
     }
   }
 
-  def verKey(forDID: DID): Try[VerKey] = {
-    Try {
-      walletApi.getVerKey(GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(forDID, getKeyFromPool=false)))))
-    }
-  }
+  def verKey(forDID: DID): Try[VerKey] = Try(walletApi.getVerKey(GetVerKey(forDID)))
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Try[SignatureResult] = {
     // currently only one sign type is supported
@@ -100,8 +96,7 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
   def getVerKeyFromParticipantId(participantId: ParticipantId): VerKey = {
     val did = ParticipantUtil.DID(participantId)
-    val key = GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool=false))))
-    walletApi.getVerKey(key)
+    walletApi.getVerKey(GetVerKey(did))
   }
 
   override def storeTheirDid(did: DID, verKey: VerKey): Try[Unit] = {

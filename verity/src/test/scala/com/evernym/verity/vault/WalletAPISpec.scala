@@ -38,8 +38,7 @@ class WalletAPISpec
       "should store their key successfully" in {
         val response = walletAPI.storeTheirKey(StoreTheirKey(bobKey.did, bobKey.verKey))(aliceWap)
         response shouldBe a[TheirKeyStored]
-        val responseVerKey = walletAPI.getVerKey(
-          GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(bobKey.did, getKeyFromPool = false)))))(aliceWap)
+        val responseVerKey = walletAPI.getVerKey(GetVerKey(bobKey.did))(aliceWap)
         responseVerKey shouldBe bobKey.verKey
       }
     }
@@ -48,8 +47,7 @@ class WalletAPISpec
       "should store their key successfully" in {
         val response = walletAPI.storeTheirKey(StoreTheirKey(aliceKey.did, aliceKey.verKey))(bobWap)
         response shouldBe a[TheirKeyStored]
-        val responseVerKey = walletAPI.getVerKey(
-          GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(aliceKey.did, getKeyFromPool = false)))))(bobWap)
+        val responseVerKey = walletAPI.getVerKey(GetVerKey(aliceKey.did))(bobWap)
         responseVerKey shouldBe aliceKey.verKey
       }
     }

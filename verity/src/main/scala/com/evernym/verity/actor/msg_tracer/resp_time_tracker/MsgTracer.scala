@@ -35,9 +35,9 @@ class MsgTracer(val appConfig: AppConfig)
       }
   }
 
-  //after 5 min of inactivity, it should kill itself
+  //after 3 min of inactivity, it should kill itself
   //assumption behind this is that no request should/will take more than 5 min in processing
-  context.setReceiveTimeout(300.seconds)
+  context.setReceiveTimeout(180.seconds)
 }
 
 

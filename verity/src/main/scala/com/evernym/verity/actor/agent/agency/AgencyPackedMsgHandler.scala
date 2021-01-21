@@ -43,7 +43,7 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
       // the community; they are poised to begin step 2 as of July 2020.
       case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(MTV_1_0), _) =>
         handleFwdMsg(FwdMsgHelper.buildReqMsg)(pmw.reqMsgContext)
-      // TODO: It looks to me like we may be routing incorrectly here. We are expeccting an exact
+      // TODO: It looks to me like we may be routing incorrectly here. We are expecting an exact
       // match for a message family version (the string "1.0"), instead of using semantic versioning
       // rules where we route to the nearest handler with a semantically compatible version less than
       // or equal to the one we support.

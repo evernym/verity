@@ -20,6 +20,13 @@ class AgentMsgTransformer(val walletAPI: WalletAPI) {
     AgentMsgTransformerApi.pack(msgPackFormat, msg, encryptParam.recipKeyParams, encryptParam.senderKeyParam)(wap, walletAPI)
   }
 
+  def packAsync(msgPackFormat: MsgPackFormat,
+                msg: String,
+                encryptParam: EncryptParam)
+               (implicit wap: WalletAPIParam): Future[PackedMsg] = {
+    AgentMsgTransformerApi.packAsync(msgPackFormat, msg, encryptParam.recipKeyParams, encryptParam.senderKeyParam)(wap, walletAPI)
+  }
+
   def unpack(msg: Array[Byte], fromKeyParam: KeyParam, unpackParam: UnpackParam = UnpackParam())
             (implicit wap: WalletAPIParam): AgentMsgWrapper = {
     AgentMsgTransformerApi.unpack(msg, Option(fromKeyParam), unpackParam)(wap, walletAPI)
@@ -116,9 +123,12 @@ trait MsgTransformer {
   def pack(msg: String, recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg
 
-  def unpack(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
+  def packAsync(msg: String, recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
+          (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg]
+
+  def unpack(msg: Array[Byte], fromVerKeyParam: Option[KeyParam], unpackParam: UnpackParam)
             (implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentBundledMsg
 
-  def unpackAsync(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
+  def unpackAsync(msg: Array[Byte], fromVerKeyParam: Option[KeyParam], unpackParam: UnpackParam)
                  (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg]
 }

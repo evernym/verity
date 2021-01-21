@@ -37,6 +37,8 @@ import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, Url
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import scala.util.Left
 
 sealed trait Role
@@ -365,7 +367,12 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def getEncryptForDID: DID
 
   def buildAgentPackedMsg(msgPackFormat: MsgPackFormat, param: PackMsgParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)
+    val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)
+    awaitResult(fut)
+  }
+
+  def awaitResult(fut: Future[PackedMsg]): PackedMsg = {
+    Await.result(fut, 5.seconds)
   }
 
   def threadIdReq: ThreadId = ctx.getInFlight.threadId.getOrElse(
@@ -402,14 +409,15 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           encryptionParamBuilder.withRecipDID(ctx.getState.theirAgentKeyDIDReq)
             .withSenderVerKey(ctx.getState.thisAgentVerKeyReq).encryptParam,
           agentMsgs, wrapInBundledMsgs)
-        val packedMsg = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
+        val packedMsgFut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
+        val packedMsg = awaitResult(packedMsgFut)
         buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, packedMsg.msg, msgType)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
   }
 
   def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
-    (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
+    val result = (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(v1: LegacyRoutingDetail), None) =>
         val theirAgencySealParam = SealParam(KeyParam(Left(getVerKeyReqViaCache(
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
@@ -426,6 +434,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
         )(agentMsgTransformer, wap)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
+    awaitResult(result)
   }
   //Duplicate code ends (same code exists in 'PairwiseConnState')
 

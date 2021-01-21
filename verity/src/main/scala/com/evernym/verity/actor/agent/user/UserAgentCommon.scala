@@ -9,7 +9,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
-import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToSelf}
+import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToMyDomain}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -156,7 +156,7 @@ trait UserAgentCommon
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sender ! rp
+      sendRespMsg(rp, sender)
     }
   }
 
@@ -182,7 +182,7 @@ trait UserAgentCommon
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sender ! rp
+      sendRespMsg(rp, sender)
     }
   }
 
@@ -196,7 +196,7 @@ trait UserAgentCommon
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sender ! rp
+      sendRespMsg(rp, sender)
     }
   }
 
@@ -210,19 +210,19 @@ trait UserAgentCommon
     logger.debug("storing outgoing msg")
     runWithInternalSpan("storeOutgoingMessage", "UserAgentCommon") {
       val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)
-      storeMsg(msgId, msgName, MSG_STATUS_RECEIVED, senderDID,
-        sendMsg = true, threadOpt, Option(payloadParam))
+      storeMsg(msgId, msgName, senderDID, MSG_STATUS_RECEIVED.statusCode,
+        sendMsg = true, threadOpt, None, Option(payloadParam))
     }
     logger.debug("packed msg stored")
   }
 
-  override def sendStoredMsgToEdge(msgId:MsgId): Future[Any] = {
-    logger.debug("about to send stored msg: " + msgId)
-    self ? SendStoredMsgToSelf(msgId)
+  override def sendStoredMsgToMyDomain(msgId:MsgId): Future[Any] = {
+    logger.debug("about to send stored msg to my domain (edge): " + msgId)
+    self ? SendStoredMsgToMyDomain(msgId)
   }
 
-  override def sendUnstoredMsgToEdge(omp: OutgoingMsgParam): Future[Any] = {
-    logger.debug("about to send msg to edge: " + omp.givenMsg)
+  override def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Future[Any] = {
+    logger.debug("about to send un stored msg to my domain (edge): " + omp.givenMsg)
     sendMsgToRegisteredEndpoint(PayloadWrapper(omp.msgToBeProcessed, omp.metadata), None)
   }
 
@@ -250,7 +250,7 @@ trait UserAgentCommon
   def handleCoreSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
     case SignalMsgFromDriver(uc: UpdateConfigs, _, _, _)    => handleUpdateConfig(uc)
     case SignalMsgFromDriver(gc: GetConfigs, _, _, _)       =>
-      val cds = getFilteredConfigs(gc.names).map(cd         => Config(cd.name, cd.value))
+      val cds = getFilteredConfigs(gc.names).map(cd => Config(cd.name, cd.value))
       Future.successful(Option(ControlMsg(SendConfig(cds))))
   }
 
@@ -263,8 +263,6 @@ trait UserAgentCommon
     USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(900)
 
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
-
-  override def userDIDForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[DID] = Option(domainId)
 
   def getMsgs(gmr: GetMsgsReqMsg): List[MsgDetail] = {
     val msgAndDelivery = msgAndDeliveryReq
@@ -297,7 +295,9 @@ trait UserAgentCommon
   def msgAndDeliveryReq: MsgAndDelivery
 }
 
-case class MsgStored(msgCreatedEvent: MsgCreated, payloadStoredEvent: Option[MsgPayloadStored])
+case class MsgStoredEvents(msgCreatedEvent: MsgCreated, payloadStoredEvent: Option[MsgPayloadStored]) {
+  def allEvents: List[Any] = List(msgCreatedEvent) ++ payloadStoredEvent
+}
 
 //state
 case class AgentConfig(value: String, lastUpdatedDateTime: ZonedDateTime) {
@@ -356,65 +356,78 @@ trait UserAgentCommonStateUpdateImpl extends AgentStateUpdateInterface {
   def msgAndDelivery: Option[MsgAndDelivery]
   def msgAndDeliveryReq: MsgAndDelivery = msgAndDelivery.getOrElse(MsgAndDelivery())
 
+  def withMsgAndDeliveryState[T](f: MsgAndDelivery => T): T = {
+    f(msgAndDeliveryReq)
+  }
+
   def addToMsgs(msgId: MsgId, msg: Msg): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    updateMsgAndDelivery(msgAndDelivery.copy(msgs = msgAndDelivery.msgs ++ Map(msgId -> msg)))
+    withMsgAndDeliveryState { msgAndDelivery =>
+      updateMsgAndDelivery(msgAndDelivery.copy(msgs = msgAndDelivery.msgs ++ Map(msgId -> msg)))
+    }
   }
 
   def addToMsgDetails(msgId: MsgId, attribs: Map[String, String]): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    val newMsgAttribs = msgAndDelivery.msgDetails.getOrElse(msgId, MsgAttribs()).attribs ++ attribs
-    updateMsgAndDelivery(
-      msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails ++ Map(msgId -> MsgAttribs(newMsgAttribs)))
-    )
+    withMsgAndDeliveryState { msgAndDelivery =>
+      val newMsgAttribs = msgAndDelivery.msgDetails.getOrElse(msgId, MsgAttribs()).attribs ++ attribs
+      updateMsgAndDelivery(
+        msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails ++ Map(msgId -> MsgAttribs(newMsgAttribs)))
+      )
+    }
   }
 
   def addToMsgPayloads(msgId: MsgId, payloadWrapper: PayloadWrapper): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    updateMsgAndDelivery(
-      msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads ++ Map(msgId -> payloadWrapper))
-    )
+    withMsgAndDeliveryState { msgAndDelivery =>
+      updateMsgAndDelivery(
+        msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads ++ Map(msgId -> payloadWrapper))
+      )
+    }
   }
 
   def addToDeliveryStatus(msgId: MsgId, deliveryDetails: Map[String, MsgDeliveryDetail]): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    val newMsgDeliveryByDest =
-      msgAndDelivery.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus ++ deliveryDetails
-    updateMsgAndDelivery(
-      msgAndDelivery.copy(msgDeliveryStatus =
-        msgAndDelivery.msgDeliveryStatus ++ Map(msgId -> MsgDeliveryByDest(newMsgDeliveryByDest)))
-    )
+    withMsgAndDeliveryState { msgAndDelivery =>
+      val newMsgDeliveryByDest =
+        msgAndDelivery.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus ++ deliveryDetails
+      updateMsgAndDelivery(
+        msgAndDelivery.copy(msgDeliveryStatus =
+          msgAndDelivery.msgDeliveryStatus ++ Map(msgId -> MsgDeliveryByDest(newMsgDeliveryByDest)))
+      )
+    }
   }
 
   def removeFromMsgs(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    updateMsgAndDelivery(msgAndDelivery.copy(msgs = msgAndDelivery.msgs -- msgIds))
+    withMsgAndDeliveryState { msgAndDelivery =>
+      updateMsgAndDelivery(msgAndDelivery.copy(msgs = msgAndDelivery.msgs -- msgIds))
+    }
   }
 
   def removeFromMsgDetails(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    updateMsgAndDelivery(msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails -- msgIds))
+    withMsgAndDeliveryState { msgAndDelivery =>
+      updateMsgAndDelivery(msgAndDelivery.copy(msgDetails = msgAndDelivery.msgDetails -- msgIds))
+    }
   }
 
   def removeFromMsgPayloads(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    updateMsgAndDelivery(msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads -- msgIds))
+    withMsgAndDeliveryState { msgAndDelivery =>
+      updateMsgAndDelivery(msgAndDelivery.copy(msgPayloads = msgAndDelivery.msgPayloads -- msgIds))
+    }
   }
 
   def removeFromMsgDeliveryStatus(msgIds: Set[MsgId]): Unit = {
-    val msgAndDelivery = msgAndDeliveryReq
-    updateMsgAndDelivery(msgAndDelivery.copy(msgDeliveryStatus = msgAndDelivery.msgDeliveryStatus -- msgIds))
+    withMsgAndDeliveryState { msgAndDelivery =>
+      updateMsgAndDelivery(msgAndDelivery.copy(msgDeliveryStatus = msgAndDelivery.msgDeliveryStatus -- msgIds))
+    }
   }
 
   def getMsgOpt(msgId: MsgId): Option[Msg] = {
     msgAndDeliveryReq.msgs.get(msgId)
   }
 
+  def getMsgPayload(msgId: MsgId): Option[PayloadWrapper] =
+    msgAndDeliveryReq.msgPayloads.get(msgId)
+
   def getMsgDetails(msgId: MsgId): Map[String, String] = {
     msgAndDeliveryReq.msgDetails.getOrElse(msgId, MsgAttribs()).attribs
   }
-
-  def getMsgPayload(msgId: MsgId): Option[PayloadWrapper] = msgAndDeliveryReq.msgPayloads.get(msgId)
 
   def getMsgDeliveryStatus(msgId: MsgId): Map[String, MsgDeliveryDetail] = {
     msgAndDeliveryReq.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus

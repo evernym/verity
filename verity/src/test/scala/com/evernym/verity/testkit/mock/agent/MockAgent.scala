@@ -46,8 +46,7 @@ trait MockAgent
 
   init()
 
-  def getVerKeyFromWallet(did: DID): VerKey = walletAPI.getVerKey(
-    GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool = false)))))
+  def getVerKeyFromWallet(did: DID): VerKey = walletAPI.getVerKey(GetVerKey(did))
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)

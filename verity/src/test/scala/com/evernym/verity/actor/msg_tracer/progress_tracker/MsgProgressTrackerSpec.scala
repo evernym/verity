@@ -47,7 +47,7 @@ class MsgProgressTrackerSpec
           val connectionId = domainId%3
           val event = EventReceivedByAgent(getClass.getSimpleName,
             trackingParam = TrackingParam(Option(domainId.toString), Option(connectionId.toString)),
-            inMsgParam =  MsgParam(msgName = Option("msg-name")))
+            inMsgParam =  TrackMsgParam(msgName = Option("msg-name")))
 
           sendToIpAddressTracker(RecordEvent(UUID.randomUUID().toString, EventParam(event)))
           expectMsg(Done)

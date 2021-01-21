@@ -22,7 +22,7 @@ trait MockRemoteMsgSendingSvcListener {
 
   def checkForNewMsg(currentMsgCount: Int): Option[PackedMsg] = {
     //this confirms that protocol does sent a message to registered endpoint
-    eventually (timeout(Span(15, Seconds))) {
+    eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
       getTotalAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
       val lastMsgOpt = testRemoteMsgSendingSvc.lastAgentMsgOption
       lastMsgOpt.isDefined shouldBe true
@@ -32,7 +32,7 @@ trait MockRemoteMsgSendingSvcListener {
 
   def checkForNewRestMsg(currentMsgCount: Int): Option[String] = {
     //this confirms that protocol does sent a message to registered endpoint
-    eventually (timeout(Span(15, Seconds))) {
+    eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
       getTotalRestAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
       val lastMsgOpt = testRemoteMsgSendingSvc.lastAgentRestMsgOption
       lastMsgOpt.isDefined shouldBe true

@@ -37,7 +37,7 @@ import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningService}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningController, UrlShorteningService}
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -556,7 +556,12 @@ class ActorProtocolContainer[
     LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
   )
 
-  override lazy val urlShortening: UrlShorteningService = new UrlShorteningService {
+  override lazy val urlShortening = new UrlShorteningController(
+    grantedAccessRights,
+    urlShortener
+  )
+
+  private val urlShortener: UrlShorteningService = new UrlShorteningService {
     override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit = {
       logger.debug("in url shortening callback")
       urlShortenerInProgress()

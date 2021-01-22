@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.engine.MsgBase
 
 import scala.util.Try
 
-trait UrlShorteningService {
+trait UrlShorteningAccess {
   def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit
 }
 

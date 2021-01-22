@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningService, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -302,7 +302,7 @@ class IssueCredentialSpec
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
 
-      issuer urlShortening MockableUrlShorteningService.shortened
+      issuer urlShortening MockableUrlShorteningAccess.shortened
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
 
       // successful shortening
@@ -387,7 +387,7 @@ class IssueCredentialSpec
       issuer walletAccess MockableWalletAccess()
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
-      issuer urlShortening MockableUrlShorteningService.shorteningFailed
+      issuer urlShortening MockableUrlShorteningAccess.shorteningFailed
 
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
       issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()

@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.engine.urlShortening
 import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, UrlShorteningAccess}
 import scala.util.{Failure, Try}
 
-class UrlShorteningController(accessRights: Set[AccessRight], urlShorteningImpl: UrlShorteningService)
-  extends UrlShorteningService {
+class UrlShorteningAccessController(accessRights: Set[AccessRight], urlShorteningImpl: UrlShorteningAccess)
+  extends UrlShorteningAccess {
 
   def runIfAllowed[T](right: AccessRight, f: (Try[T] => Unit) => Unit, handler: Try[T] => Unit): Unit =
     if(accessRights(right)) f(handler)

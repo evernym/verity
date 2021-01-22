@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, Relati
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningService
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.util.MsgUtil
 import com.typesafe.scalalogging.Logger
@@ -196,13 +196,13 @@ class Domain(override val domainId: DomainId,
     usedLedgerAccess = Some(w)
   }
 
-  var usedUrlShorteningAccess: Option[UrlShorteningService] = None
+  var usedUrlShorteningAccess: Option[UrlShorteningAccess] = None
 
-  def provideUrlShorteningAccess(): UrlShorteningService = usedUrlShorteningAccess.get
+  def provideUrlShorteningAccess(): UrlShorteningAccess = usedUrlShorteningAccess.get
 
-  override def urlShorteningAccessProvider: Option[() => UrlShorteningService] = Some(provideUrlShorteningAccess _)
+  override def urlShorteningAccessProvider: Option[() => UrlShorteningAccess] = Some(provideUrlShorteningAccess _)
 
-  def urlShorteningAccess(url: UrlShorteningService) : Unit = {
+  def urlShorteningAccess(url: UrlShorteningAccess) : Unit = {
     usedUrlShorteningAccess = Some(url)
   }
 
@@ -325,7 +325,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
   def ledgerAccessProvider: Option[() => LedgerAccess] = None
 
-  def urlShorteningAccessProvider: Option[() => UrlShorteningService] = None
+  def urlShorteningAccessProvider: Option[() => UrlShorteningAccess] = None
 
   def provideInitParams: Map[String, String] = Map.empty
 

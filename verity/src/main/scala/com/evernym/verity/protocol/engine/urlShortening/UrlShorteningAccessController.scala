@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.urlShortening
 
-import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, UrlShorteningAccess}
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, UrlShorteningAccess => AccessForUrlShortening}
 import scala.util.{Failure, Try}
 
 class UrlShorteningAccessController(accessRights: Set[AccessRight], urlShorteningImpl: UrlShorteningAccess)
@@ -11,6 +11,6 @@ class UrlShorteningAccessController(accessRights: Set[AccessRight], urlShortenin
     else handler(Failure(new IllegalArgumentException))
 
   override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit =
-    runIfAllowed(UrlShorteningAccess, {urlShorteningImpl.shorten(inviteUrl)}, handler)
+    runIfAllowed(AccessForUrlShortening, {urlShorteningImpl.shorten(inviteUrl)}, handler)
 
 }

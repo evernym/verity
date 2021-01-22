@@ -35,9 +35,9 @@ import com.evernym.verity.libindy.ledger.LedgerAccessApi
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
+import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccessController, UrlShorteningAccess}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -165,8 +165,9 @@ class ActorProtocolContainer[
    * Becomes asyncProtocolBehavior.
    * Read asyncProtocolBehavior documentation.
    */
-  def toProtocolAsyncBehavior(): Unit = {
+  def toProtocolAsyncBehavior(s: AsyncProtocolService): Unit = {
     logger.debug("becoming toProtocolAsyncBehavior")
+    addsAsyncProtocolService(s)
     setNewReceiveBehaviour(asyncProtocolBehavior)
   }
 
@@ -186,8 +187,8 @@ class ActorProtocolContainer[
     //TODO: This is where WalletServiceComplete and LedgerServiceComplete will happen
     case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
       logger.debug(s"$protocolIdForLog received UrlShortenerServiceComplete")
-      urlShortenerComplete()
-      if(allAsyncProtocolServicesComplete(pendingSegments)) toBaseBehavior()
+      removesAsyncProtocolService(UrlShorteningProgress)
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
       handleAllAsyncServices()
   }
 
@@ -199,10 +200,10 @@ class ActorProtocolContainer[
   final def storingBehavior: Receive = {
     case ProtocolCmd(_: SegmentStorageComplete, _) =>
       logger.debug(s"$protocolIdForLog received StoreComplete")
-      if(allAsyncProtocolServicesComplete(pendingSegments)) toBaseBehavior()
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
     case ProtocolCmd(_: SegmentStorageFailed, _) =>
       logger.error(s"failed to store segment")
-      if(allAsyncProtocolServicesComplete(pendingSegments)) toBaseBehavior()
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
   }
 
   /**
@@ -483,7 +484,7 @@ class ActorProtocolContainer[
     }
 
     def saveStorageState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      toProtocolAsyncBehavior()
+      toProtocolAsyncBehavior(SegmentStateStoreProgress)
       logger.debug(s"storing storage state: $data")
       storageService.write(segmentAddress + segmentKey, data.toByteArray, {
         case Success(storageInfo: StorageInfo) =>
@@ -503,7 +504,7 @@ class ActorProtocolContainer[
     }
 
     def saveSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      toProtocolAsyncBehavior()
+      toProtocolAsyncBehavior(SegmentStateStoreProgress)
       data match {
         case segmentData if maxSegmentSize(segmentData) =>
           val cmd = SaveSegmentedState(segmentKey, segmentData)
@@ -564,8 +565,7 @@ class ActorProtocolContainer[
   private val urlShortener: UrlShorteningAccess = new UrlShorteningAccess {
     override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit = {
       logger.debug("in url shortening callback")
-      urlShortenerInProgress()
-      toProtocolAsyncBehavior()
+      toProtocolAsyncBehavior(UrlShorteningProgress)
       system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(inviteUrl) onComplete {
         case Success(m) =>
           m match {

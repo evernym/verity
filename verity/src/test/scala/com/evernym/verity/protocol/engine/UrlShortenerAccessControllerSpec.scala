@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.protocol.engine.external_api_access.UrlShorteningAccess
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccessController
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccessController}
 import com.evernym.verity.protocol.testkit.MockableUrlShorteningAccess
 import com.evernym.verity.testkit.BasicSpec
 
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success}
 
 class UrlShortenerAccessControllerSpec extends BasicSpec {
 
@@ -17,7 +17,7 @@ class UrlShortenerAccessControllerSpec extends BasicSpec {
           new MockableUrlShorteningAccess
         )
 
-        controller.shorten("hello") { x => x shouldBe Success }
+        controller.shorten("hello") { x => x shouldBe Success(InviteShortened("hello", "http://short.url")) }
       }
     }
 
@@ -25,7 +25,7 @@ class UrlShortenerAccessControllerSpec extends BasicSpec {
       "should fail the access right checks" in {
         val controller = new UrlShorteningAccessController(Set(), new MockableUrlShorteningAccess)
 
-        controller.shorten("hello") { x => x shouldBe Failure }
+        controller.shorten("hello") { x => assert(x.isFailure)  }
       }
     }
   }

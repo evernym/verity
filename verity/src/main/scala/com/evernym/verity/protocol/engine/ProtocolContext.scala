@@ -411,7 +411,7 @@ trait ProtocolContext[P,R,M,E,S,I]
    * A flag is set in 'AsyncProtocolService' when a specific internal protocol service is in-progress.
    */
   def handleAllAsyncServices(): Unit = {
-    if (internalAsyncProtocolServicesComplete()) {
+    if (asyncProtocolServicesComplete()) {
       storeSegments()
       recordEvents getOrElse finalizeState
     }
@@ -499,7 +499,7 @@ trait ProtocolContext[P,R,M,E,S,I]
    *  2. 'Segmented State' storage
    *  3. 'Event Persistence'
    */
-  def readyToFinalize: Boolean = pendingEvents.isEmpty && allAsyncProtocolServicesComplete(pendingSegments)
+  def readyToFinalize: Boolean = pendingEvents.isEmpty && asyncProtocolServicesComplete()
 
   /**
    * This is called when the base 'onPersistFailure' or 'onPersistRejected' from akka persistence is invoked
@@ -546,7 +546,6 @@ trait ProtocolContext[P,R,M,E,S,I]
   /**
    * (If run in an actor) recordEvents blocks execution by inheriting akka persistence's event persistence blocking.
    */
-  //FIXME -> RTM: Describe how akka persistence is what handles the blocking of the actor, not the manual changing of the actor's behavior
   def recordEvents(): Option[_ >: E with ProtoSystemEvent] = {
     val event = pendingEvents.size match {
       case 0 => None

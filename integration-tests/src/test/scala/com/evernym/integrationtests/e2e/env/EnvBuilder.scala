@@ -490,6 +490,7 @@ object SdkType {
   case object Node extends SdkType
   case object Manual extends SdkType
   case object Rest extends SdkType
+  case object DotNet extends SdkType
 
   def fromString(str: String): SdkType = {
     str.toLowerCase match {
@@ -499,6 +500,7 @@ object SdkType {
       case "node"   => Node
       case "manual" => Manual
       case "rest"   => Rest
+      case "dotnet" => DotNet
       case t => throw new RuntimeException(s"Unknown sdk-type '$t', must be a known type")
     }
   }

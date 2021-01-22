@@ -69,13 +69,6 @@ export MESSAGE_PROGRESS_TRACKING_ENABLED=$message_progress_tracking_enabled
 
 testSuite=${TEST_SUITE:-"*"}
 echo "Begin running integration tests... TEST_SUITE=$testSuite"
-if [[ "$testSuite" == "*" || "$testSuite" == "Protocols" ]]
-then
-  echo "Running protocol Connecting integration tests..."
-  sbt "verity/multi-jvm:testOnly com.evernym.verity.integration.Connecting"
-  echo "Running protocol TicTacToe integration tests..."
-  sbt "verity/multi-jvm:testOnly com.evernym.verity.integration.TicTacToe"
-fi
 if [ "$testSuite" != "Protocols" ]
 then
   suiteSource="${SCRIPT_DIR}/../../../integration-tests/src/test/scala/com/evernym/integrationtests/e2e/apis/$testSuite.scala"

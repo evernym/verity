@@ -390,8 +390,6 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
-  //FIXME -> RTM: Reading segmented state should now happen during the protocol rather than pre-protocol *****
-  //FIXME -> RTM: Storing segment can be handled like the other internal async services. Should be handled within protocol -> cb style
   /**
   * Refer to def finalizeState() documentation for async finalizeState
   */
@@ -483,15 +481,6 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
-  /*
-    it seems, there will be two types of async services:
-    1) DuringMsgHanding:
-      wallet, ledger, url-shortning, store-segment etc, for most of these, there would be a callback handler
-        (I am not sure how/when you'll decide to finalize state for this type). There can/will be nested async service calls.
-    2) PostMsgHandling:
-      record-event
- */
-  //FIXME -> RTM: Retrieving Segments is done pre-protocol. Should this be moved into the protocol now that there is a way to asynchronously do this?
   /**
    * Finalization cannot happen until all protocol services are complete.
    * This includes:
@@ -499,7 +488,7 @@ trait ProtocolContext[P,R,M,E,S,I]
    *  2. 'Segmented State' storage
    *  3. 'Event Persistence'
    */
-  def readyToFinalize: Boolean = pendingEvents.isEmpty && asyncProtocolServicesComplete()
+  def readyToFinalize: Boolean = pendingEvents.isEmpty && asyncProtocolServicesComplete() && pendingSegments.isEmpty
 
   /**
    * This is called when the base 'onPersistFailure' or 'onPersistRejected' from akka persistence is invoked

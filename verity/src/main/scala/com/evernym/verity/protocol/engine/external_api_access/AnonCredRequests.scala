@@ -52,12 +52,4 @@ trait AnonCredRequests {
                   revocRegDefs: String,
                   revocRegs: String): Try[Boolean]
 
-  def verifyProof2(proofRequest: String,
-                  proof: String,
-                  schemas: String,
-                  credentialDefs: String,
-                  revocRegDefs: String,
-                  revocRegs: String)(handler: Try[Boolean] => Unit): Unit = {
-    handler(verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs))
-  }
 }

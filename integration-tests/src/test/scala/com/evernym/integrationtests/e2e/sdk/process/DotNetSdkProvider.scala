@@ -2,7 +2,6 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
@@ -152,7 +151,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     #r "nuget: Evernym.Verity.SDK, $sdkVersion"
     using VeritySDK;
     Console.WriteLine();""".execute()
-    debugPrintln(out)
+    logger.debug(s"available script output: $out")
   }
 
   override def provision_0_7: ProvisionV0_7 = {

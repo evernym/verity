@@ -2,7 +2,6 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
@@ -70,7 +69,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def available(): Unit ={
     val out = """import verity_sdk;print(verity_sdk.__file__)""".execute()
-    debugPrintln(out)
+    logger.debug(s"Python Sdk availability script output: $out")
   }
 
   private def executeCmd(ctx: Context,

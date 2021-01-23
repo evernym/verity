@@ -1,28 +1,5 @@
 package com.evernym.integrationtests.e2e.apis
 
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.msghandler.outgoing.FwdMsg
-import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
-import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily._
-import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.libindy.LibIndyCommon
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
-import com.evernym.verity.testkit.agentmsg._
-import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
-import com.evernym.verity.testkit.util._
-import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, PushNotifMsgHttpListener}
-import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
-import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
-import com.evernym.verity.util._
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.{AdminClient, ApiClientCommon}
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
@@ -34,8 +11,33 @@ import com.evernym.integrationtests.e2e.msg.MsgMap
 import com.evernym.integrationtests.e2e.scenario.Scenario.isRunScenario
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.util.HttpListenerUtil
+import com.evernym.verity.Status._
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
+import com.evernym.verity.actor.agent.msghandler.outgoing.FwdMsg
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
+import com.evernym.verity.agentmsg.msgfamily._
+import com.evernym.verity.agentmsg.msgfamily.pairwise._
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.http.common.StatusDetailResp
+import com.evernym.verity.libindy.LibIndyCommon
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
+import com.evernym.verity.testkit.agentmsg._
+import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
+import com.evernym.verity.testkit.util._
+import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, PushNotifMsgHttpListener}
+import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
+import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
+import com.evernym.verity.util._
+import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
@@ -52,6 +54,8 @@ class ApiFlowSpec
     with ScalaFutures
     with HttpListenerUtil
     with CancelGloballyAfterFailure {
+
+  override val logger: Logger = getLoggerByClass(getClass)
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
@@ -105,24 +109,21 @@ class ApiFlowSpec
   def waitForMsgToBeDelivered(millsToWait: Option[Long] = None): Unit = {
     //waiting enough to make sure msg is delivered by that time (reaches to the target)
     val millisToSleep = millsToWait.getOrElse(TestConstants.defaultWaitTime)
-    printApiCallStartedMsg(s"sleep for $millisToSleep millis for msg delivery (if any)...")
+    logApiStart(s"sleep for $millisToSleep millis for msg delivery (if any)...")
     Thread.sleep(millisToSleep)
-    printApiCallFinishedMsg("sleep finished")
+    logApiFinish("sleep finished")
   }
 
   def bootstrapAgency(did: String, verKey: String): Unit = {
     ledgerUtil.bootstrapNewDID(did, verKey)
   }
 
-  def printApiCallStartedMsg(msg: String): Unit = {
-    println(getSeparatorLine(msg.length))
-    println(msg + s"   ($getCurrentUTCZonedDateTime)")
-    println(getSeparatorLine(msg.length))
+  def logApiStart(msg: String): Unit = {
+    logger.info(s"[START] $msg   ($getCurrentUTCZonedDateTime)")
   }
 
-  def printApiCallFinishedMsg(msg: String): Unit = {
-    println("    " + msg)
-    println("")
+  def logApiFinish(msg: String): Unit = {
+    logger.info(s"[FINISH] $msg")
   }
 
   case class AgencyAdminEnvironment (scenario: Scenario,
@@ -240,7 +241,7 @@ class ApiFlowSpec
           val id = "my-id"
           val sponsorId = "sponsor-token"
           val token = sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
-          println("provision token: " + token)
+          logger.debug(s"provision token: $token")
           token.sponseeId shouldBe id
         }
       }
@@ -263,8 +264,8 @@ class ApiFlowSpec
             msgSending()
           })
           val fwdMsg: FwdMsg = DefaultMsgCodec.fromJson[FwdMsg](latestFwdMsg)
-          println("latestFwdMsg: " + latestFwdMsg)
-          println(s"fwdMsg: $fwdMsg")
+          logger.debug("latestFwdMsg: " + latestFwdMsg)
+          logger.debug(s"fwdMsg: $fwdMsg")
           fwdMsg.sponseeDetails shouldBe "MCM::FwdIntegration"
         }
       }

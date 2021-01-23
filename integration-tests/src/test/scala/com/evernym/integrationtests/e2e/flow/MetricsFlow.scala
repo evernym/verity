@@ -1,13 +1,13 @@
 package com.evernym.integrationtests.e2e.flow
 
+import com.evernym.integrationtests.e2e.scenario.ApplicationAdminExt
+import com.evernym.integrationtests.e2e.util.ReportDumpUtil
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.msg_tracer.MsgTraceProvider
-import com.evernym.integrationtests.e2e.scenario.ApplicationAdminExt
-import com.evernym.integrationtests.e2e.util.ReportDumpUtil
+import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-import com.evernym.verity.testkit.BasicSpec
 
 
 
@@ -79,6 +79,6 @@ trait MetricsFlow {
 
   def dumpMetrics(metrics: List[MetricDetail], aae: ApplicationAdminExt): Unit = {
     val jsonStr = DefaultMsgCodec.toJson(metrics)
-    ReportDumpUtil.dumpData("Metrics", jsonStr, "metrics.json", aae)
+    ReportDumpUtil.dumpData("Metrics", jsonStr, "metrics.json", aae, printDumpDetail = false)
   }
 }

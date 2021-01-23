@@ -1,8 +1,5 @@
 package com.evernym.verity.testkit.agentmsg
 
-import java.net.InetAddress
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
@@ -10,16 +7,22 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
+import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
+import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.StatusDetailResp
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.AllNodeMetricsData
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgId}
@@ -31,13 +34,10 @@ import com.evernym.verity.testkit.util._
 import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlParam
-import com.evernym.verity.agentmsg.tokenizer.SendToken
-import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
-import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
 import com.typesafe.scalalogging.Logger
 
+import java.net.InetAddress
+import java.util.UUID
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, Future}
 import scala.util.Left
@@ -48,6 +48,8 @@ import scala.util.Left
 trait AgentMsgSenderHttpWrapper
   extends CommonSpecUtil
     with LedgerClient {
+
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   def urlParam: UrlParam
 
@@ -265,75 +267,72 @@ trait AgentMsgSenderHttpWrapper
 
   def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
     val response = createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
-//    println("response: " + response)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {
     s"[${mockClientAgent.name}] $msg"
   }
 
-  def printApiCallStartedMsg(msg: String): Unit = {
+  def logApiStart(msg: String): Unit = {
     val finalMsg = buildClientNamePrependedMsg(msg)
-    println(getSeparatorLine(finalMsg.length))
-    println(finalMsg)
-    println(getSeparatorLine(finalMsg.length))
+    logger.info("[START] " + finalMsg)
+
   }
 
-  def printApiCallFinishedMsg(msg: String): Unit = {
+  def logApiFinish(msg: String): Unit = {
     val finalMsg = buildClientNamePrependedMsg(msg)
-    println("    " + finalMsg)
-    println("")
+    logger.info("[FINISH] " + finalMsg)
   }
 
   def setupAgencyKey(seedOpt: Option[String]=None): Any = {
     val seed = seedOpt.getOrElse(UUID.randomUUID().toString.replace("-", ""))
-    printApiCallStartedMsg("setup agency key started...")
+    logApiStart("setup agency key started...")
     val r = sendPostRequest(s"""{"seed":"$seed"}""", Option(mockClientAgent.handleInitResp))(url, s"$agencySetupUrlPathPrefix/key")
-    printApiCallFinishedMsg(s"setup agency key finished: " + r)
+    logApiFinish(s"setup agency key finished: " + r)
     r
   }
 
   def setupAgencyKeyRepeated(): Unit = {
-    printApiCallStartedMsg(s"setup agency key started...")
+    logApiStart(s"setup agency key started...")
     sendPostRequest("", Option(mockClientAgent.handleForbiddenResp))(url,s"$agencySetupUrlPathPrefix/key")
-    printApiCallFinishedMsg(s"setup agency key finished")
+    logApiFinish(s"setup agency key finished")
   }
 
   def setupAgencyEndpoint(): Unit = {
-    printApiCallStartedMsg(s"setup endpoint started...")
+    logApiStart(s"setup endpoint started...")
     sendPostRequest("", Option(mockClientAgent.handleEndpointSet))(url,s"$agencySetupUrlPathPrefix/endpoint")
-    printApiCallFinishedMsg(s"setup endpoint finished")
+    logApiFinish(s"setup endpoint finished")
   }
 
   def setupStartMessageTracking(trackingId: String): Unit = {
-    printApiCallStartedMsg(s"setup message tracking started...")
+    logApiStart(s"setup message tracking started...")
     sendPostRequest("", Option(mockClientAgent.handleMessageTrackingStarted))(url,s"$agencyInternalPathPrefix/msg-progress-tracker/$trackingId")
-    printApiCallFinishedMsg(s"setup message tracking finished")
+    logApiFinish(s"setup message tracking finished")
   }
 
   def reloadConfig(): Unit = {
-    printApiCallStartedMsg(s"reload config started...")
+    logApiStart(s"reload config started...")
     sendPutRequest("", None)(url,s"$agencyInternalPathPrefix/maintenance/config/reload")
-    printApiCallFinishedMsg(s"reload config finished")
+    logApiFinish(s"reload config finished")
   }
 
   def updateAgencyEndpoint(): Unit = {
-    printApiCallStartedMsg(s"update endpoint started...")
+    logApiStart(s"update endpoint started...")
     sendPutRequest("", None)(url,s"$agencySetupUrlPathPrefix/endpoint")
-    printApiCallFinishedMsg(s"update endpoint finished")
+    logApiFinish(s"update endpoint finished")
   }
 
   def setupAgencyEndpointRepeated(): Unit = {
-    printApiCallStartedMsg(s"setup endpoint again started...")
+    logApiStart(s"setup endpoint again started...")
     sendPostRequest("", Option(mockClientAgent.handleForbiddenResp))(url,s"$agencySetupUrlPathPrefix/endpoint")
-    printApiCallFinishedMsg(s"setup endpoint again finished")
+    logApiFinish(s"setup endpoint again finished")
   }
 
   def checkAppStatus(): Any = {
     try {
-      printApiCallStartedMsg(s"checking if app is started and responding at $url...")
+      logApiStart(s"checking if app is started and responding at $url...")
       val r = sendGetRequest(None)(url,"/agency/heartbeat")
-      printApiCallFinishedMsg(s"app is started and responding: " + r)
+      logApiFinish(s"app is started and responding: " + r)
 
       val validResponses = List(
         s"""{"statusCode":"GNR-129","statusMsg":"Listening"}"""
@@ -343,152 +342,152 @@ trait AgentMsgSenderHttpWrapper
       }
     } catch {
       case e: Exception =>
-        printApiCallFinishedMsg(s"app is in unusable state: " + e.getMessage)
+        logApiFinish(s"app is in unusable state: " + e.getMessage)
         throw e
     }
   }
 
   def fetchAgencyKey(): Any = {
-    printApiCallStartedMsg(s"fetch agency key started...")
+    logApiStart(s"fetch agency key started...")
     val r = sendFetchAgencyKeyRequest(Option(mockClientAgent.handleFetchAgencyKey))(url,"/agency")
-    printApiCallFinishedMsg(s"fetch agency key finished: " + r)
+    logApiFinish(s"fetch agency key finished: " + r)
     r
   }
 
   def getConfigAtPath(path: String): String = {
-    printApiCallStartedMsg(s"get config started...")
+    logApiStart(s"get config started...")
     val r = sendGetRequest(None)(url,s"$agencyInternalPathPrefix/health-check/config?path=$path")
-    printApiCallFinishedMsg(s"get config finished: " + r)
+    logApiFinish(s"get config finished: " + r)
     r.toString
   }
 
   def fetchWrongAgencyKey(): Any = {
-    printApiCallStartedMsg(s"fetch agency key started...")
+    logApiStart(s"fetch agency key started...")
     val r = generateNewAgentDIDDetail()
     mockClientAgent.handleFetchAgencyKey(AgencyPublicDid(r.did, r.verKey))
-    printApiCallFinishedMsg(s"fetch agency key finished: " + r)
+    logApiFinish(s"fetch agency key finished: " + r)
     r
   }
 
   def sendConnectWithAgency(): Any = {
-    printApiCallStartedMsg(s"connect started...")
+    logApiStart(s"connect started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareConnectMsgForAgency,
       Option(mockClientAgent.v_0_5_resp.handleConnectedResp))
-    printApiCallFinishedMsg(s"connect finished: " + r)
+    logApiFinish(s"connect finished: " + r)
     r
   }
 
   def sendConnectCreateKey_MFV_0_6(): Any = {
-    printApiCallStartedMsg(s"create key (MFV 0.6) started...")
+    logApiStart(s"create key (MFV 0.6) started...")
     val fromDID = mockClientAgent.myDIDDetail.did
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
-    printApiCallStartedMsg(s"Agency did: ${mockClientAgent.agencyAgentDetailReq.DID}")
+    logApiStart(s"Agency did: ${mockClientAgent.agencyAgentDetailReq.DID}")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareConnectCreateKeyForAgency(fromDID, fromDIDVerKey, mockClientAgent.agencyAgentDetailReq.DID),
       Option(mockClientAgent.v_0_6_resp.handleConnectKeyCreatedResp))
-    printApiCallFinishedMsg(s"create key (MFV 0.6) finished: " + r)
+    logApiFinish(s"create key (MFV 0.6) finished: " + r)
     r
   }
 
   def sendBackupInit_0_6(): Any = {
-    printApiCallStartedMsg(s"wallet backup init (MFV 0.6) started...")
+    logApiStart(s"wallet backup init (MFV 0.6) started...")
     val fromDID = mockClientAgent.myDIDDetail.did
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareWalletBackupInitMsgForAgency(BackupInitParams(fromDIDVerKey, "address", Array(0, 1, 2))),
       None)
-    printApiCallFinishedMsg(s"wallet backup init (MFV 0.6) finished: " + r)
+    logApiFinish(s"wallet backup init (MFV 0.6) finished: " + r)
     r
   }
 
   def sendBackup_0_6(wallet: Any)(implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"backup wallet (MFV 0.6) started...")
+    logApiStart(s"backup wallet (MFV 0.6) started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.prepareWalletBackupMsg(wallet),
       None)
-    printApiCallFinishedMsg(s"backup wallet (MFV 0.6) finished: " + r)
+    logApiFinish(s"backup wallet (MFV 0.6) finished: " + r)
     r
   }
 
   def getMsgsFromAgent_MPV_0_6(implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"send get msgs started...")
+    logApiStart(s"send get msgs started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.prepareGetMsgsForAgent(MTV_1_0),
       Option(mockClientAgent.v_0_5_resp.handleGetMsgsResp))
-    printApiCallFinishedMsg(s"send get msgs finished: " + r)
+    logApiFinish(s"send get msgs finished: " + r)
     r
   }
 
   def sendConnReq_MFV_0_6(): Any = {
-    printApiCallStartedMsg(s"connection request (MFV 0.6) started...")
+    logApiStart(s"connection request (MFV 0.6) started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateInviteForAgency(
         mockClientAgent.agencyPairwiseAgentDetailReq.DID, None), None)
-    printApiCallFinishedMsg(s"connection request (MFV 0.6) finished: " + r)
+    logApiFinish(s"connection request (MFV 0.6) finished: " + r)
     r
   }
 
   // TODO: can be removed with Provisioning 0.5 and 0.6 are removed.
   def sendCreateAgentDeprecated_MFV_0_6(): Any = {
-    printApiCallStartedMsg(s"create agent started...")
+    logApiStart(s"create agent started...")
     val fromDID = mockClientAgent.myDIDDetail.did
-    printApiCallStartedMsg(s"get verkey from wallet started...")
+    logApiStart(s"get verkey from wallet started...")
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
-    printApiCallStartedMsg(s"get verkey from wallet finished...")
-    printApiCallStartedMsg(s"send post request with packed message started...")
+    logApiStart(s"get verkey from wallet finished...")
+    logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateAgentMsgForAgency(
         mockClientAgent.agencyPairwiseAgentDetailReq.DID, fromDID, fromDIDVerKey),
       Option(mockClientAgent.v_0_6_resp.handleAgentCreatedResp))
-    printApiCallStartedMsg(s"send post request with packed message finished...")
-    printApiCallFinishedMsg(s"agent creation finished: " + r)
+    logApiStart(s"send post request with packed message finished...")
+    logApiFinish(s"agent creation finished: " + r)
     r
   }
 
   def sendCreateAgent_MFV_0_6(): AgentCreated_MFV_0_6 = {
-    printApiCallStartedMsg(s"create agent started...")
+    logApiStart(s"create agent started...")
     val fromDID = mockClientAgent.myDIDDetail.did
-    printApiCallStartedMsg(s"get verkey from wallet started...")
+    logApiStart(s"get verkey from wallet started...")
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
-    printApiCallStartedMsg(s"get verkey from wallet finished...")
-    printApiCallStartedMsg(s"send post request with packed message started...")
+    logApiStart(s"get verkey from wallet finished...")
+    logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateAgentMsgForAgency(
         mockClientAgent.agencyPairwiseAgentDetailReq.DID, fromDID, fromDIDVerKey),
       Option(mockClientAgent.v_0_6_resp.handleAgentCreatedResp))
-    printApiCallStartedMsg(s"send post request with packed message finished...")
-    printApiCallFinishedMsg(s"agent creation finished: " + r)
+    logApiStart(s"send post request with packed message finished...")
+    logApiFinish(s"agent creation finished: " + r)
     r.asInstanceOf[AgentCreated_MFV_0_6]
   }
 
   def sendCreateAgentFailures_MFV_0_7(): CreateAgentProblemReport_MFV_0_7 = {
-    printApiCallStartedMsg(s"create agent started 0.7...")
+    logApiStart(s"create agent started 0.7...")
     val fromDID = mockClientAgent.myDIDDetail.did
-    printApiCallStartedMsg(s"get verkey from wallet started...")
+    logApiStart(s"get verkey from wallet started...")
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
-    printApiCallStartedMsg(s"get verkey from wallet finished...")
-    printApiCallStartedMsg(s"create sponsor keys...")
+    logApiStart(s"get verkey from wallet finished...")
+    logApiStart(s"create sponsor keys...")
 
 
-    printApiCallStartedMsg(s"fromDid: $fromDID")
-    printApiCallStartedMsg(s"send post request with packed message started...")
+    logApiStart(s"fromDid: $fromDID")
+    logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_7_req.prepareCreateAgentMsgForAgency(
         mockClientAgent.agencyPairwiseAgentDetailReq.DID, RequesterKeys(fromDID, fromDIDVerKey), None),
       Option(mockClientAgent.v_0_7_resp.handleCreateAgentProblemReport))
-    printApiCallStartedMsg(s"send post request with packed message finished...")
-    printApiCallFinishedMsg(s"agent creation failed: " + r)
+    logApiStart(s"send post request with packed message finished...")
+    logApiFinish(s"agent creation failed: " + r)
     r.asInstanceOf[CreateAgentProblemReport_MFV_0_7]
   }
 
   def sendCreateAgent_MFV_0_7(): AgentCreated_MFV_0_7 = {
-    printApiCallStartedMsg(s"create agent started 0.7...")
+    logApiStart(s"create agent started 0.7...")
     val fromDID = mockClientAgent.myDIDDetail.did
-    printApiCallStartedMsg(s"get verkey from wallet started...")
+    logApiStart(s"get verkey from wallet started...")
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
-    printApiCallStartedMsg(s"get verkey from wallet finished...")
-    printApiCallStartedMsg(s"create sponsor keys...")
+    logApiStart(s"get verkey from wallet finished...")
+    logApiStart(s"create sponsor keys...")
     implicit val wap: WalletAPIParam = mockClientAgent.wap
     lazy val sponsorKeys: NewKeyCreated = mockClientAgent.walletAPI.createNewKey(CreateNewKey(seed=Some("000000000000000000000000Trustee1")))
 
@@ -505,19 +504,19 @@ trait AgentMsgSenderHttpWrapper
     }
 
     val token = Some(AgentProvisioningMsgFamily.ProvisionToken(id, sponsorId, nonce, timestamp, Base64Util.getBase64Encoded(encrypted), sponsorKeys.verKey))
-    printApiCallStartedMsg(s"send post request with packed message started...")
+    logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_7_req.prepareCreateAgentMsgForAgency(
         mockClientAgent.agencyPairwiseAgentDetailReq.DID, RequesterKeys(fromDID, fromDIDVerKey), token),
       Option(mockClientAgent.v_0_7_resp.handleAgentCreatedResp))
-    printApiCallStartedMsg(s"send post request with packed message finished...")
-    printApiCallFinishedMsg(s"agent creation finished: " + r)
+    logApiStart(s"send post request with packed message finished...")
+    logApiFinish(s"agent creation finished: " + r)
     r.asInstanceOf[AgentCreated_MFV_0_7]
   }
 
   def sendGetToken(id: String, sponsorId: String, comMethod: String): SendToken = {
-    printApiCallStartedMsg(s"get token started 0.1...")
-    printApiCallStartedMsg(s"agency did: ${mockClientAgent.agencyAgentDetailReq.DID}")
+    logApiStart(s"get token started 0.1...")
+    logApiStart(s"agency did: ${mockClientAgent.agencyAgentDetailReq.DID}")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_1_req.prepareGetTokenRoute(
         id,
@@ -525,158 +524,158 @@ trait AgentMsgSenderHttpWrapper
         ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod)),
       Option(mockClientAgent.v_0_1_resp.handleSendTokenResp))
 
-    printApiCallFinishedMsg(s"get token finished: " + r)
+    logApiFinish(s"get token finished: " + r)
     r.asInstanceOf[SendToken]
   }
 
   // TODO: can be removed with Provisioning 0.5 and 0.6 are removed.
   def registerWithAgencyDeprecatedProvisioning(): Any = {
-    printApiCallStartedMsg(s"register started...")
+    logApiStart(s"register started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareSignUpMsgForAgency,
       Option(mockClientAgent.v_0_5_resp.handleSignedUpResp))
-    printApiCallFinishedMsg(s"register finished: " + r)
+    logApiFinish(s"register finished: " + r)
     r
   }
 
   def registerWithAgency(): Any = {
-    printApiCallStartedMsg(s"register started...")
+    logApiStart(s"register started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareSignUpMsgForAgency,
       Option(mockClientAgent.v_0_5_resp.handleSignedUpResp))
-    printApiCallFinishedMsg(s"register finished: " + r)
+    logApiFinish(s"register finished: " + r)
     r
   }
 
   def sendCreateAgent(): Any = {
-    printApiCallStartedMsg(s"create agent started...")
+    logApiStart(s"create agent started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareCreateAgentMsgForAgency,
       Option(mockClientAgent.v_0_5_resp.handleAgentCreatedResp))
-    printApiCallFinishedMsg(s"agent creation finished: " + r)
+    logApiFinish(s"agent creation finished: " + r)
     r
   }
 
   def sendUpdateAgentConfig(configs: Set[TestConfigDetail]): Any = {
-    printApiCallStartedMsg(s"update agent config started...")
+    logApiStart(s"update agent config started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareUpdateConfigsForAgentMsgForAgency(configs),
       Option(mockClientAgent.v_0_5_resp.handleConfigsUpdatedResp))
-    printApiCallFinishedMsg(s"update agent config finished: " + r)
+    logApiFinish(s"update agent config finished: " + r)
     r
   }
 
   def sendUpdateAgentComMethod(cm: TestComMethod): Any = {
-    printApiCallStartedMsg(s"update agent com method started...")
+    logApiStart(s"update agent com method started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(cm),
       Option(mockClientAgent.v_0_5_resp.handleComMethodUpdatedResp))
-    printApiCallFinishedMsg(s"update agent com method finished: " + r)
+    logApiFinish(s"update agent com method finished: " + r)
     r
   }
 
   def sendUpdateConnStatus_MFV_0_5(connId: String, statusCode: String)(implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"update connection status started...")
+    logApiStart(s"update connection status started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareUpdateConnStatusMsg(connId, statusCode),
       Option(mockClientAgent.v_0_5_resp.handleConnStatusUpdatedResp))
-    printApiCallFinishedMsg(s"update connection status finished: " + r)
+    logApiFinish(s"update connection status finished: " + r)
     r
   }
 
   def createPairwiseKey_MFV_0_5(connId: String): Any = {
-    printApiCallStartedMsg(s"create pairwise key started...")
+    logApiStart(s"create pairwise key started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareCreateKeyMsgForAgency(connId),
       Option(mockClientAgent.v_0_5_resp.handleKeyCreatedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"create pairwise key finished: " + r)
+    logApiFinish(s"create pairwise key finished: " + r)
     r
   }
 
   def createPairwiseKey_MFV_0_6(connId: String): Any = {
-    printApiCallStartedMsg(s"create key (MFV 0.6) started...")
+    logApiStart(s"create key (MFV 0.6) started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.preparePairwiseCreateKeyForAgency(mockClientAgent.cloudAgentDetailReq.DID, connId),
       Option(mockClientAgent.v_0_6_resp.handlePairwiseKeyCreatedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"create key (MFV 0.6) finished: " + r)
+    logApiFinish(s"create key (MFV 0.6) finished: " + r)
     r
   }
 
   def sendInviteForConn(connId: String, ph: Option[String]=None, includePublicDID: Boolean = false): Any = {
-    printApiCallStartedMsg(s"create & send invite started...")
+    logApiStart(s"create & send invite started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareCreateInviteMsgForAgency(connId, ph, includePublicDID = includePublicDID),
       Option(mockClientAgent.v_0_5_resp.handleInviteCreatedResp),  buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"create & send invite finished: " + r)
+    logApiFinish(s"create & send invite finished: " + r)
     r
   }
 
   def sendInviteForConn_MFV_0_6(connId: String, ph: Option[String]=None, includePublicDID: Boolean = true): Any = {
-    printApiCallStartedMsg(s"connection request (MFV 0.6) started...")
+    logApiStart(s"connection request (MFV 0.6) started...")
     val pairwiseKeyDetail = mockClientAgent.pairwiseConnDetail(connId)
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateInviteForAgency(
         pairwiseKeyDetail.myCloudAgentPairwiseDidPair.DID, Some(connId), ph = ph,
         includeKeyDlgProof = true, includeSendMsg=true, includePublicDID=includePublicDID),
       Option(mockClientAgent.v_0_6_resp.handleInviteCreatedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"connection request (MFV 0.6) finished: " + r)
+    logApiFinish(s"connection request (MFV 0.6) finished: " + r)
     r
   }
 
   def sendMsgsToConn(connId: String, uids: List[String]): Any = {
-    printApiCallStartedMsg(s"send msg started...")
+    logApiStart(s"send msg started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareSendMsgsForAgency(connId, uids),
       Option(mockClientAgent.v_0_5_resp.handleMsgSentResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send msg finished: " + r)
+    logApiFinish(s"send msg finished: " + r)
     r
   }
 
   def answerInviteForConn(connId: String, inviteDetail: InviteDetail): Any = {
-    printApiCallStartedMsg(s"send invite answer started...")
+    logApiStart(s"send invite answer started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connId, includeSendMsg = true, inviteDetail),
       Option(mockClientAgent.v_0_5_resp.handleInviteAnswerCreatedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send invite answer finished: " + r)
+    logApiFinish(s"send invite answer finished: " + r)
     r
   }
 
   def acceptInviteForConn_MFV_0_6(connId: String, inviteDetail: InviteDetail, alreadyAccepted: Boolean): Any = {
-    printApiCallStartedMsg(s"send invite answer started...")
+    logApiStart(s"send invite answer started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareAcceptConnReqMsgForAgency(
         connId, includeSendMsg = true, inviteDetail, alreadyAccepted),
       Option(mockClientAgent.v_0_6_resp.handleConnReqAcceptedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send invite answer finished: " + r)
+    logApiFinish(s"send invite answer finished: " + r)
     r
   }
 
   def redirectConnReq_MFV_0_5(oldConnId: String, connId: String, inviteDetail: InviteDetail): Any = {
-    printApiCallStartedMsg(s"send redirect conn req started...")
+    logApiStart(s"send redirect conn req started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareRedirectConnReqMsgForAgency(oldConnId, connId, inviteDetail),
       Option(mockClientAgent.v_0_5_resp.handleConnReqRedirectedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send redirect conn req finished: " + r)
+    logApiFinish(s"send redirect conn req finished: " + r)
     r
   }
 
   def redirectConnReq_MFV_0_6(oldConnId: String, connId: String, inviteDetail: InviteDetail): Any = {
-    printApiCallStartedMsg(s"send redirect conn request...")
+    logApiStart(s"send redirect conn request...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareRedirectConnReqMsgForAgency(oldConnId, connId, inviteDetail),
       Option(mockClientAgent.v_0_6_resp.handleConnReqRedirectedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send invite answer finished: " + r)
+    logApiFinish(s"send invite answer finished: " + r)
     r
   }
 
   def sendPackedMsgToConn(connId: String, msgType: String, pm: PackedMsg, replyToMsgId: Option[String]=None,
                            title: Option[String] = None, detail: Option[String] = None): Any = {
-    printApiCallStartedMsg(s"send general msg ($msgType) started...")
+    logApiStart(s"send general msg ($msgType) started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareCreateGeneralMsgForConnForAgency(connId,
         includeSendMsg = true, msgType, pm, replyToMsgId, title, detail),
       Option(mockClientAgent.v_0_5_resp.handleGeneralMsgCreatedResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send general msg ($msgType) finished: " + r)
+    logApiFinish(s"send general msg ($msgType) finished: " + r)
     r
   }
 
@@ -687,14 +686,14 @@ trait AgentMsgSenderHttpWrapper
 
   def sendGeneralMsgToConn_MFV_0_6(connId: String, msgType: String, msg: String, replyToMsgId: Option[String]=None,
                                    title: Option[String] = None, detail: Option[String] = None): Any = {
-    printApiCallStartedMsg(s"send general msg 0.6 ($msgType) started...")
+    logApiStart(s"send general msg 0.6 ($msgType) started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareSendRemoteMsgForConnForAgencyWithVersion(
         MFV_1_0, connId, MsgUtil.newMsgId,
         sendMsg=true, msgType, PackedMsg(msg.getBytes),
       replyToMsgId, title, detail),
       Option(mockClientAgent.v_0_6_resp.handleSendRemoteMsgResp), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send general msg 0.6 ($msgType) finished: " + r)
+    logApiFinish(s"send general msg 0.6 ($msgType) finished: " + r)
     r
   }
 
@@ -727,7 +726,7 @@ trait AgentMsgSenderHttpWrapper
 
   def getMetrics(fetchFromAllNodes: Boolean): String = {
     val allNodes = if (fetchFromAllNodes) "Y" else "N"
-    printApiCallStartedMsg(s"query metrics started...")
+    logApiStart(s"query metrics started...")
     val r = sendGetRequest(Some(checkServiceMetric))(url,s"$agencyInternalPathPrefix/metrics?allNodes=$allNodes&includeTags=Y&filtered=N")
     r.asInstanceOf[String]
   }
@@ -749,11 +748,11 @@ trait AgentMsgSenderHttpWrapper
                               statusCodes: Option[List[String]] = None): Any = {
     implicit val msgPackagingContext: AgentMsgPackagingContext =
       agentmsg.AgentMsgPackagingContext(MPF_MSG_PACK, MFV_1_0, packForAgencyRoute = true)
-    printApiCallStartedMsg(s"send get msgs started...")
+    logApiStart(s"send get msgs started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareGetMsgsFromConn(connId, excludePayload, uids, statusCodes),
       Option(mockClientAgent.v_0_5_resp.handleGetMsgsRespFromConn), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send get msgs finished: " + r)
+    logApiFinish(s"send get msgs finished: " + r)
     r
   }
 
@@ -762,7 +761,7 @@ trait AgentMsgSenderHttpWrapper
                                uids: Option[List[String]] = None,
                                statusCodes: Option[List[String]] = None)
                               (implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"send get msgs by conns started...")
+    logApiStart(s"send get msgs by conns started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareGetMsgsFromConns(
           pairwiseDIDs,
@@ -772,7 +771,7 @@ trait AgentMsgSenderHttpWrapper
       ),
       Option(mockClientAgent.v_0_5_resp.handleGetMsgsFromConnsResp)
     )
-    printApiCallFinishedMsg(s"send get msgs by conns finished: " + r)
+    logApiFinish(s"send get msgs by conns finished: " + r)
     r
   }
 
@@ -781,32 +780,32 @@ trait AgentMsgSenderHttpWrapper
                                uids: Option[List[String]] = None,
                                statusCodes: Option[List[String]] = None)
                               (implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"send get msgs by conns started...")
+    logApiStart(s"send get msgs by conns started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareGetMsgsFromConns(pairwiseDIDs,
         excludePayload, uids, statusCodes),
       Option(mockClientAgent.v_0_6_resp.handleGetMsgsByConnsResp))
-    printApiCallFinishedMsg(s"send get msgs by conns finished: " + r)
+    logApiFinish(s"send get msgs by conns finished: " + r)
     r
   }
 
   def updateMsgStatusForConn_MFV_0_5(connId: String, uids: List[String], statusCode: String)
                                     (implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"send update msg started...")
+    logApiStart(s"send update msg started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareUpdateMsgStatusForConn(connId, uids, statusCode),
       Option(mockClientAgent.v_0_5_resp.handleMsgStatusUpdatedRespFromConn), buildConnIdMap(connId))
-    printApiCallFinishedMsg(s"send update msg finished: " + r)
+    logApiFinish(s"send update msg finished: " + r)
     r
   }
 
   def updateMsgStatusByConns(statusCode: String, uidsByConns: List[PairwiseMsgUids])
                             (implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
-    printApiCallStartedMsg(s"send update msg by conns started...")
+    logApiStart(s"send update msg by conns started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_5_req.prepareUpdateMsgStatusByConns(uidsByConns, statusCode),
       Option(mockClientAgent.v_0_5_resp.handleMsgStatusUpdatedByConnsResp))
-    printApiCallFinishedMsg(s"send update msg by conns finished: " + r)
+    logApiFinish(s"send update msg by conns finished: " + r)
     r
   }
 

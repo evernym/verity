@@ -33,7 +33,6 @@ trait VeritySdkProvider {
     val error = s"Protocol - $protocolName - is not supported by the ${this.getClass.getSimpleName} provider -- $msg"
     throw new UnsupportedOperationException(error)
   }
-  implicit val shouldPrintDebug = false
 
   var publicDID: Option[String] = None
 
@@ -207,9 +206,5 @@ object VeritySdkProvider {
       case SdkType.DotNet => new DotNetSdkProvider(c, testDir)
       case _ => throw new Exception("Unknown SDK type, must by a known type")
     }
-  }
-
-  def debugPrintln(x: Any)(implicit shouldPrint: Boolean): Unit = {
-    if(shouldPrint) println(x)
   }
 }

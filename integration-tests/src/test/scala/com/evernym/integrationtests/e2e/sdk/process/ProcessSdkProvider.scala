@@ -3,8 +3,10 @@ package com.evernym.integrationtests.e2e.sdk.process
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider._
 import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider, VeritySdkProvider}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
 import java.io.{BufferedWriter, ByteArrayInputStream, File, FileWriter}
@@ -16,17 +18,21 @@ trait ProcessSdkProvider
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  import VeritySdkProvider._
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   private def printOut(output: String, outType: String = "OUTPUT"): Unit = {
-    debugPrintln(s"====================    ${outType.capitalize}    ====================")
-    debugPrintln(output)
-    debugPrintln("====================  END OUTPUT  ====================")
+    logger.debug(
+      s"""====================    ${outType.capitalize}    ====================
+         |$output
+         |====================  END OUTPUT  ====================""".stripMargin
+    )
   }
   private def printScript(script: String): Unit = {
-    debugPrintln("==================== SCRIPT START ====================")
-    debugPrintln(script)
-    debugPrintln("====================  SCRIPT END  ====================")
+    logger.debug(
+      s"""==================== SCRIPT START ====================
+         |$script
+         |====================  SCRIPT END  ====================""".stripMargin
+    )
   }
 
   case class RunSdkBuilder(script: String, provider: ProcessSdkProvider) {

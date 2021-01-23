@@ -30,7 +30,7 @@ trait AdminClient extends ApiClientCommon with BasicSpec { this: AgentMsgSenderH
         checkAppStatus()
       } catch {
         case _: Exception =>
-          printApiCallFinishedMsg(s"will check again after $waitInSecondsAfterEachAttempt seconds")
+          logApiFinish(s"will check again after $waitInSecondsAfterEachAttempt seconds")
           Thread.sleep(waitInSecondsAfterEachAttempt * 1000)
           checkIfListening(attempt + 1)
       }

@@ -103,7 +103,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         trackingParam
       )
       val msgProcessor =
-          system.actorOf(Props(new AgentMsgProcessor(
+          context.actorOf(Props(new AgentMsgProcessor(
             agentActorContext.appConfig,
             agentActorContext.walletAPI,
             agentActorContext.agentMsgRouter,

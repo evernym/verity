@@ -55,4 +55,10 @@ object AnoncredsWalletOpExecutor extends OpExecutorBase {
       cp.proofRequest, cp.requestedCredentials, cp.masterSecret,
       cp.schemas, cp.credentialDefs, cp.revStates)
   }
+
+  def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String,
+                  revocRegDefs: String, revocRegs: String): Future[Boolean] = {
+    Anoncreds.verifierVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
+      .map(_.booleanValue())
+  }
 }

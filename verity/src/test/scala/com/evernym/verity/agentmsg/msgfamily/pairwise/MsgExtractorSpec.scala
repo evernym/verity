@@ -10,9 +10,13 @@ import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.vault.service.AsyncToSync
 
 
-class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
+class MsgExtractorSpec
+  extends BasicSpec
+    with AgentMsgSpecBase
+    with AsyncToSync {
 
   //TODO GENERAL CONVERSION from PackedMsg to native (case class) and visa versa
 
@@ -40,7 +44,8 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
     new MsgExtractor(aliceKeyParam, walletAPI)(aliceWap)
   }
 
-  def packedMsg: PackedMsg = aliceMsgExtractor.pack(MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyParam))
+  def packedMsg: PackedMsg = convertToSyncReq(aliceMsgExtractor.packAsync(
+    MPF_INDY_PACK, DefaultMsgCodec.toJson(createConnectionMsg), Set(aliceCloudAgentKeyParam)))
 
   def setup(): Unit = {
     //touch each of these lazy vals
@@ -64,7 +69,7 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
       "should return agent message wrapper" in {
         setup()
         val pm = packedMsg
-        aliceCloudMsgExtractor.unpack(pm)
+        convertToSyncReq(aliceCloudMsgExtractor.unpackAsync(pm))
         //TODO need some assertions here; how do we know if it works?
       }
     }
@@ -73,7 +78,7 @@ class MsgExtractorSpec extends BasicSpec with AgentMsgSpecBase {
       "should return extracted items" in {
         setup()
         val pm = packedMsg
-        val amw = aliceCloudMsgExtractor.unpack(pm)
+        val amw = convertToSyncReq(aliceCloudMsgExtractor.unpackAsync(pm))
         val m = aliceCloudMsgExtractor.extract(amw)
         m.meta.threadId shouldBe "0"
         m.msg shouldBe createConnectionMsg

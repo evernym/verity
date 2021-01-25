@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseInterface
-import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackFormat, WalletVerKeyCacheHelper}
+import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackFormat}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
@@ -98,16 +98,14 @@ trait PairwiseConnStateBase {
   }
 
   def wap: WalletAPIParam
-  def walletVerKeyCacheHelper: WalletVerKeyCacheHelper
   def agentMsgTransformer: AgentMsgTransformer
-  def encParamBuilder: EncryptionParamBuilder = new EncryptionParamBuilder(walletVerKeyCacheHelper)
+  def encParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
-  def isTheirAgentVerKey(key: VerKey): Boolean = state.theirAgentAuthKey.exists(_.verKeyOpt.contains(key))
+  def isTheirAgentVerKey(key: VerKey): Boolean =
+    state.theirAgentAuthKey.exists(_.verKeyOpt.contains(key))
 
-  def isMyPairwiseVerKey(verKey: VerKey): Boolean = {
-    val userPairwiseVerKey = walletVerKeyCacheHelper.getVerKeyReqViaCache(state.myDid_!)
-    verKey == userPairwiseVerKey
-  }
+  def isMyPairwiseVerKey(verKey: VerKey): Boolean =
+    state.myDidAuthKey.exists(_.verKeyOpt.contains(verKey))
 
   /**
    * we support two types of routing, one is called legacy (based on connecting 0.5 and 0.6 protocols)
@@ -192,8 +190,7 @@ trait PairwiseConnStateBase {
   Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>
-        val theirAgencySealParam = SealParam(KeyParam(Left(walletVerKeyCacheHelper.getVerKeyReqViaCache(
-          ld.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
+        val theirAgencySealParam = SealParam(KeyParam.fromDID(ld.agencyDID, GET_AGENCY_VER_KEY_FROM_POOL))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(ld.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(
           msgPackFormat,

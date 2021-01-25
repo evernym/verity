@@ -13,9 +13,7 @@ import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeProtoDef
 import com.evernym.verity.storage_services.aws_s3.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
-import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.texter.SMSSender
-import com.evernym.verity.util.UtilBase
 
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -33,11 +31,10 @@ class MockAgentActorContext(val system: ActorSystem,
                             mockParam: MockAgentActorContextParam = MockAgentActorContextParam())
   extends AgentActorContext {
 
-  override lazy val util: UtilBase = TestUtil
   override lazy val smsSvc: SMSSender = new MockSMSSender(appConfig)
   override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(system)
 
-  override lazy val remoteMsgSendingSvc: RemoteMsgSendingSvcType = MockRemoteMsgSendingSvc
+  override lazy val msgSendingSvc: MsgSendingSvcType = MockMsgSendingSvc
   override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager()(system.dispatcher)
   override lazy val agentMsgRouter: AgentMsgRouter = new MockAgentMsgRouter(mockParam.actorTypeToRegions)(appConfig, system)
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)

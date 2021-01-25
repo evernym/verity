@@ -34,6 +34,10 @@ package object vault {
 
   case class GetVerKeyByDIDParam(did: DID, getKeyFromPool: Boolean)
 
+  object KeyParam {
+    def fromVerKey(verKey: String): KeyParam = KeyParam(Left(verKey))
+    def fromDID(did: DID, getKeyFromPool: Boolean = false): KeyParam = KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool)))
+  }
   case class KeyParam(verKeyParam: Either[VerKey, GetVerKeyByDIDParam])
 
   case class SealParam(keyParam: KeyParam)

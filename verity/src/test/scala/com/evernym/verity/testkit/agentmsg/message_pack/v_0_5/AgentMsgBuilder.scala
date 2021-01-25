@@ -21,7 +21,7 @@ import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEn
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, Connect_MFV_0_5, CreateAgent_MFV_0_5, CreateKey_MFV_0_5, CreateMsg_MFV_0_5, GetConfigs_MFV_0_5, GetMsg_MFV_0_5, GetMsgsByConns_MFV_0_5, RemoveConfigs_MFV_0_5, SendMsgs_MFV_0_5, SignUp_MFV_0_5, TestComMethod, TestConfigDetail, UpdateConfigs_MFV_0_5, UpdateConnStatus_MFV_0_5, UpdateMsgStatusByConns_MFV_0_5, UpdateMsgStatus_MFV_0_5}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyParam, SealParam}
+import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam}
 import org.json.JSONObject
 
 import scala.util.Left
@@ -554,15 +554,14 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       )
 
       val theirAgentEncParam = EncryptParam(
-        Set(KeyParam(Right(GetVerKeyByDIDParam(pcd.lastSentInvite.senderDetail.agentKeyDlgProof.get.agentDID,
-          getKeyFromPool = false)))),
-        Option(KeyParam(Right(GetVerKeyByDIDParam(reqSenderKeyDlgProof.agentDID, getKeyFromPool = false))))
+        Set(KeyParam.fromDID(pcd.lastSentInvite.senderDetail.agentKeyDlgProof.get.agentDID)),
+        Option(KeyParam.fromDID(reqSenderKeyDlgProof.agentDID))
       )
 
       val agentPayloadMsgs = buildAgentMsgPackParam(agentMsgs, theirAgentEncParam)
 
       val remoteAgencySealInfo = SealParam(
-        KeyParam(Right(GetVerKeyByDIDParam(pcd.lastSentInvite.senderAgencyDetail.DID, getKeyFromPool = false))))
+        KeyParam.fromDID(pcd.lastSentInvite.senderAgencyDetail.DID))
 
       val fwdRouteForAgentPairwiseActor = FwdRouteMsg(pcd.myCloudAgentPairwiseDidPair.DID, Left(remoteAgencySealInfo))
 
@@ -637,15 +636,14 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       val remoteAgentAndAgencyIdentity = asCloudAgent.remoteAgentAndAgencyIdentityOpt.get
 
       val theirAgentEncParam = EncryptParam(
-        Set(KeyParam(Right(GetVerKeyByDIDParam(remoteAgentAndAgencyIdentity.agentDID, getKeyFromPool = false)))),
-        Option(KeyParam(Right(GetVerKeyByDIDParam(pairwiseConnDetail(connId).myPairwiseDidPair.DID, getKeyFromPool = false))))
+        Set(KeyParam.fromDID(remoteAgentAndAgencyIdentity.agentDID)),
+        Option(KeyParam.fromDID(pairwiseConnDetail(connId).myPairwiseDidPair.DID))
       )
 
       val agentPayloadMsgs = buildCoreCreateGeneralMsgWithVersion(msgTypeVersion, includeSendMsg, msgType,
         corePayloadMsg, replyToMsgId, title, detail)(theirAgentEncParam)
 
-      val remoteAgencySealInfo = SealParam(
-        KeyParam(Right(GetVerKeyByDIDParam(remoteAgentAndAgencyIdentity.agencyDID, getKeyFromPool = false))))
+      val remoteAgencySealInfo = SealParam(KeyParam.fromDID(remoteAgentAndAgencyIdentity.agencyDID))
 
       val fwdRouteForAgentPairwiseActor = FwdRouteMsg(remoteAgentAndAgencyIdentity.agentDID, Left(remoteAgencySealInfo))
 

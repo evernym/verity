@@ -11,7 +11,7 @@ import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpEx
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
-import com.evernym.verity.vault.{WalletConfig, WalletExt, WalletProvider}
+import com.evernym.verity.vault.{KeyParam, WalletConfig, WalletExt, WalletProvider}
 
 import scala.concurrent.Future
 
@@ -97,17 +97,9 @@ object WalletMsgHandler {
 
   private def handleVerifySigByKeyParam(vs: VerifySigByKeyParam)
                               (implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
-    handleGetVerKey(GetVerKey(vs.keyParam)).flatMap { verKey =>
+    handleGetVerKey(vs.keyParam).flatMap { verKey =>
       CryptoOpExecutor.verifySig(verKey, vs.challenge, vs.signature)
     }
-  }
-
-  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[VerKey]] = {
-    handleGetVerKey(GetVerKey(gvko.keyParam))
-      .map(vk => Option(vk))
-      .recover {
-        case _: ExecutionException => None
-      }
   }
 
   private def handleStoreTheirKey(stk: StoreTheirKey)(implicit walletExt: WalletExt): Future[TheirKeyStored]= {
@@ -159,14 +151,25 @@ object WalletMsgHandler {
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
   }
 
-  def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerKey] = {
-    gvk.keyParam.verKeyParam.fold (
-      l => Future.successful(l),
-      r => {
-        DidOpExecutor.getVerKey(r.did, r.getKeyFromPool, wmp.poolManager)
+  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[VerKey]] = {
+    handleGetVerKey(GetVerKey(gvko.did, gvko.getKeyFromPool))
+      .map(vk => Option(vk))
+      .recover {
+        case _: ExecutionException => None
+      }
+  }
+
+  def handleGetVerKey(keyParam: KeyParam)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerKey] = {
+    keyParam.verKeyParam.fold (
+      vk => Future.successful(vk),
+      gvkByDid => {
+        handleGetVerKey(GetVerKey(gvkByDid.did, gvkByDid.getKeyFromPool))
       }
     )
   }
+
+  def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerKey] =
+    DidOpExecutor.getVerKey(gvk.did, gvk.getKeyFromPool, wmp.poolManager)
 }
 
 /**

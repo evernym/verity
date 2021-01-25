@@ -7,6 +7,8 @@ import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSy
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.Exceptions
+import com.evernym.verity.config.validator.DefaultConfigValidatorCreator
+import com.evernym.verity.config.validator.base.{ConfigReaderHelper, ConfigValidatorCreator, ConfigValidatorHelper}
 import com.typesafe.config._
 import com.typesafe.scalalogging.Logger
 
@@ -17,11 +19,11 @@ import com.typesafe.scalalogging.Logger
 trait AppConfig extends ConfigReaderHelper {
 
   val logger: Logger = getLoggerByClass(classOf[AppConfig])
+  var validatorCreators: List[ConfigValidatorCreator] = DefaultConfigValidatorCreator.getAllValidatorCreators
 
-  var validatorCreators: List[ConfigValidatorCreator] = CommonConfigValidatorCreator.getAllValidatorCreators
   var config : Config = _
 
-  init(List.empty)
+  init()
 
   private def loadConfig(): Config = {
     validatedConfig()
@@ -36,7 +38,7 @@ trait AppConfig extends ConfigReaderHelper {
     configValidatorHelper.config
   }
 
-  def init(confValidators: List[ConfigValidatorCreator]): AppConfig = {
+  def init(confValidators: List[ConfigValidatorCreator]=List.empty): AppConfig = {
     try {
       if (Option(config).isEmpty) {
         if (confValidators.nonEmpty) {

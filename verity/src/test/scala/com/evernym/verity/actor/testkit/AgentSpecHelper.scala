@@ -17,7 +17,7 @@ import com.evernym.verity.testkit.BasicSpecBase
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.cloud_agent.{MockConsumerCloudAgent, MockEntCloudAgent}
 import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEdgeAgent, MockEntEdgeAgent}
-import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingSvcListener
+import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -25,7 +25,7 @@ import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import org.scalatest.concurrent.Eventually
 
 trait AgentSpecHelper
-  extends MockRemoteMsgSendingSvcListener
+  extends MockMsgSendingSvcListener
     with ImplicitSender {
   this: BasicSpecBase
     with TestKitBase

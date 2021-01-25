@@ -19,7 +19,7 @@ import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.testkit.mock.cloud_agent.{MockCloudAgentBase, MockConsumerCloudAgent, MockEntCloudAgent}
 import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
-import com.evernym.verity.testkit.mock.remotemsgsendingsvc.MockRemoteMsgSendingSvcListener
+import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util._
 import com.evernym.verity.UrlParam
@@ -47,7 +47,7 @@ trait EndpointHandlerBaseSpec
     with TokenTransferSpec
     with RestApiSpec
     with WalletBackupAndRecoverySpec
-    with MockRemoteMsgSendingSvcListener
+    with MockMsgSendingSvcListener
     with AriesInvitationDecodingSpec {
 
   "Endpoint spec" - {

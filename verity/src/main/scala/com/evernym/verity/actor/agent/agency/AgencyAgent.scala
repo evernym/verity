@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.cache._
 import com.evernym.verity.config.CommonConfig
@@ -137,8 +137,8 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     if (state.relationship.isEmpty) {
       logger.debug("agency agent key setup starting...")
       setAgentWalletId(entityId)
-      agentActorContext.walletAPI.createWallet(wap)
-      val createdKey = agentActorContext.walletAPI.createNewKey(CreateNewKey(seed = ck.seed))
+      agentActorContext.walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
+      val createdKey = agentActorContext.walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = ck.seed))
       writeAndApply(KeyCreated(createdKey.did))
       val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, createdKey.did))
       val sndr = sender()

@@ -340,7 +340,7 @@ class ActorProtocolContainer[
     Some(new LegacyProtocolServicesImpl[M,E,I](
       eventRecorder, sendsMsgs, agentActorContext.appConfig,
       agentActorContext.walletAPI, agentActorContext.generalCache,
-      agentActorContext.remoteMsgSendingSvc, agentActorContext.agentMsgTransformer,
+      agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer,
       this, this, this))
   }
 
@@ -409,7 +409,7 @@ class ActorProtocolContainer[
       )(
         agentActorContext.appConfig,
         agentActorContext.smsSvc,
-        agentActorContext.remoteMsgSendingSvc)
+        agentActorContext.msgSendingSvc)
     }
   }
 

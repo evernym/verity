@@ -23,6 +23,15 @@ object RoutingAgentBucketMapperV1 extends RoutingAgentBucketMapper {
   val versionId = "v1"
 
   override def bucketIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): Int = {
+    // this logic may have a bug if 'did.hashCode' is equal to Int.MinValue
+    // as in that case the math.abs(Int.MinValue) is still Int.MinValue
+    // and it will generate negative number (which wasn't the original intention).
+
+    // the recommended way is to first do 'modulo' operation and then take 'absolute' value
+    // but since this logic is already used and routing DIDs are sharded accordingly
+    // we can't change this now without making sure how we wants to handle backward compatibility
+
+    //NOTE: don't change this logic as it won't be backward compatible
     math.abs(did.hashCode) % numberOfBuckets
   }
 }

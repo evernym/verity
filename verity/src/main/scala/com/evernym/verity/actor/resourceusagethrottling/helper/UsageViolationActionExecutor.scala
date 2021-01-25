@@ -252,7 +252,8 @@ class UsageViolationActionExecutorValidator extends UsageViolationActionExecutor
   override lazy val instructions: Set[Instruction] = buildInstructions()
 }
 
-class UsageViolationActionExecutor(val as: ActorSystem, appConfig: AppConfig) extends UsageViolationActionExecutorBase {
+class UsageViolationActionExecutor(val as: ActorSystem, appConfig: AppConfig)
+  extends UsageViolationActionExecutorBase {
   //keep adding different supported action here
   override lazy val singletonParentProxyActor: Option[ActorRef] = Option(getActorRefFromSelection(SINGLETON_PARENT_PROXY, as)(appConfig))
   override lazy val instructions: Set[Instruction] = buildInstructions()

@@ -18,7 +18,7 @@ import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -450,7 +450,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   override def msgRecipientDID: DID = myPairwiseDIDReq
   override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
-  override lazy val remoteMsgSendingSvc: RemoteMsgSendingSvc = ctx.SERVICES_DEPRECATED.remoteMsgSendingSvc
+  override lazy val msgSendingSvc: MsgSendingSvc = ctx.SERVICES_DEPRECATED.msgSendingSvc
   override lazy val generalCache: Cache = ctx.SERVICES_DEPRECATED.generalCache
   override implicit lazy val agentMsgTransformer: AgentMsgTransformer = ctx.SERVICES_DEPRECATED.agentMsgTransformer
 

@@ -13,22 +13,20 @@ import com.evernym.verity.cache._
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.http.common.{HttpRemoteMsgSendingSvc, RemoteMsgSendingSvc}
+import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.aws_s3.{S3AlpakkaApi, StorageAPI}
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
-import com.evernym.verity.util.{Util, UtilBase}
+import com.evernym.verity.util.Util
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
 import com.evernym.verity.vault.wallet_api.{LegacyWalletAPI, StandardWalletAPI, WalletAPI}
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -38,7 +36,7 @@ trait AgentActorContext extends ActorContext {
   implicit def appConfig: AppConfig
   implicit def system: ActorSystem
 
-  type RemoteMsgSendingSvcType = RemoteMsgSendingSvc
+  type MsgSendingSvcType = MsgSendingSvc
 
   lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = Map (
     KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID -> new KeyValueMapperFetcher(system, appConfig),
@@ -51,13 +49,12 @@ trait AgentActorContext extends ActorContext {
   lazy val actionExecutor: UsageViolationActionExecutor = new UsageViolationActionExecutor(system, appConfig)
   lazy val tokenToActorItemMapperProvider: TokenToActorItemMapperProvider = new TokenToActorItemMapperProvider(system, appConfig)
 
-  lazy val remoteMsgSendingSvc: RemoteMsgSendingSvcType = DefaultRemoteMsgSendingSvc
+  lazy val msgSendingSvc: MsgSendingSvcType = new AkkaHttpMsgSendingSvc(appConfig)
 
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
 
   lazy val smsSvc: SMSSender = _smsSender
 
-  lazy val util: UtilBase = Util
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
@@ -66,20 +63,14 @@ trait AgentActorContext extends ActorContext {
     appConfig, walletService, walletProvider, Option(poolConnManager))
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
-  lazy val walletConfig: WalletConfig = buildWalletConfig(appConfig)
   lazy val s3API: StorageAPI = new S3AlpakkaApi(appConfig.config)
 
   def createActorSystem(): ActorSystem = {
     ActorSystem("verity", AppConfigWrapper.getLoadedConfig)
   }
 
-  object DefaultRemoteMsgSendingSvc extends HttpRemoteMsgSendingSvc {
-    override lazy val logger: Logger = getLoggerByName("DefaultRemoteMsgSendingSvc")
-    implicit lazy val _system: ActorSystem = system
-  }
-
   object _smsSender extends SMSSender {
-    implicit lazy val timeout: Timeout = util.buildTimeout(appConfig, TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS, DEFAULT_SMS_SERVICE_ASK_TIMEOUT_IN_SECONDS)
+    implicit lazy val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS, DEFAULT_SMS_SERVICE_ASK_TIMEOUT_IN_SECONDS)
     val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig), "sms-sender")
 
     override def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]] = {

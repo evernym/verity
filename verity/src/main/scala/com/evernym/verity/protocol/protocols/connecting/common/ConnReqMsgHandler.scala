@@ -160,7 +160,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
       val actualUrl = buildActualInviteUrl(token)
       val shortHashedUrl = HashUtil.hash(SHA256_trunc4)(actualUrl).hex
       val jsonData = getJsonStringFromMap(Map(URL -> actualUrl, HASHED_URL -> shortHashedUrl))
-      val resFut = remoteMsgSendingSvc.sendPlainTextMsgToRemoteEndpoint(jsonData)(param.urlMappingServiceEndpoint)
+      val resFut = msgSendingSvc.sendPlainTextMsg(jsonData)(param.urlMappingServiceEndpoint)
       handleUrlMappingResp(userName, domainId, shortHashedUrl, resFut, tryCount)
     } catch {
       case e: Exception =>

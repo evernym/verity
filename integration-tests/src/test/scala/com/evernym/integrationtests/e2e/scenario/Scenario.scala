@@ -64,7 +64,7 @@ case class ScenarioAppEnvironment(scenario: Scenario, testEnv: IntegrationTestEn
   * @param testDir Full path to the temporary directory created to hold output from the Scenario
   * @param projectDir Full path to the project directory
   * @param connIds connection ids (unique strings) for which it will test different agent messages
-  * @param restartAgencyBeforeEachTest determines if agency instance will be restarted before performing the test
+  * @param restartVerityRandomly determines if verity instance will be restarted randomly before a test
   * @param defaultTimeout Timeout to impose waiting in for messages (expectMsg)
   * @param restartMsgWait how much time it should wait so that message is delivered to recipient
   *                                      before it starts another test which may require agency restart
@@ -74,7 +74,7 @@ case class Scenario(name: String,
                     testDir: Path,
                     projectDir: Path,
                     connIds: Set[String]=Set.empty,
-                    restartAgencyBeforeEachTest: Boolean = false,
+                    restartVerityRandomly: Boolean = false,
                     defaultTimeout: Option[Duration] = None,
                     restartMsgWait: Option[Long] = Option(TestConstants.defaultWaitTime)) {
 

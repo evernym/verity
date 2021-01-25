@@ -37,7 +37,6 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.{FromProtocol, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
@@ -202,8 +201,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   val agentSpecificEventReceiver: Receive = {
     case _ =>
   }
-
-  override lazy val remoteMsgSendingSvc: RemoteMsgSendingSvc = agentActorContext.remoteMsgSendingSvc
 
   def encParamFromThisAgentToOwner: EncryptParam =
     encParamBuilder
@@ -634,14 +631,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     sendRespMsg(rp)
   }
 
-  def getResourceName(msgName: String): String = {
-    msgName match {
-      case CREATE_MSG_TYPE_CONN_REQ => s"${MSG_TYPE_CREATE_MSG}_$msgName"
-      case CREATE_MSG_TYPE_CONN_REQ_ANSWER => s"${MSG_TYPE_CREATE_MSG}_$msgName"
-      case x => x
-    }
-  }
-
   val unAllowedLegacyConnectingMsgNames: Set[String] = Set(
     CREATE_MSG_TYPE_CONN_REQ_ANSWER,
     MSG_TYPE_CONN_REQ_ACCEPTED, MSG_TYPE_CONN_REQ_DECLINED,
@@ -700,10 +689,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         //later on we may have to come back and find out better solution for this
         ParticipantUtil.participantId(UNKNOWN_SENDER_PARTICIPANT_ID, None)
     }
-    logger.trace("msg sender finding => ver key: " + senderVerKey)
-    logger.trace("msg sender finding => edgeVerKey: " + edgeVerKey)
-    logger.trace("msg sender finding => otherEntityEdgeVerKey: " + otherEntityEdgeVerKey)
-    logger.trace("msg sender finding => participant id: " + senderParticipantId)
     senderParticipantId
   }
 
@@ -796,7 +781,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         )(
           agentActorContext.appConfig,
           agentActorContext.smsSvc,
-          agentActorContext.remoteMsgSendingSvc
+          agentActorContext.msgSendingSvc
         ) map { result =>
           logger.info(s"Sent SMS invite to number: ${ssi.phoneNo} with content '${content}'. Result: $result")
           Option(ControlMsg(SMSSent(ssi.invitationId, ssi.inviteURL, shortUrl)))

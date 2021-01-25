@@ -366,6 +366,10 @@ trait CommonConfig {
 
   val LOGGING = s"$VERITY.logging"
   val LOGGING_IGNORE_FILTER_NAMES = s"$LOGGING.ignore-logger-filter.logger-name-contains"
+
+  val MSG_SENDING_SVC = s"$SERVICES.msg-sending-svc"
+  val AKKA_HTTP_MSG_SENDING_SVC = s"$MSG_SENDING_SVC.akka-http-svc"
+  val AKKA_HTTP_MSG_SENDING_SVC_API_TYPE = s"$AKKA_HTTP_MSG_SENDING_SVC.api-type"
 }
 
 object CommonConfig extends CommonConfig

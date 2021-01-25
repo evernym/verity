@@ -122,7 +122,7 @@ class ExtractEventsActorSpec
   //overriding agent msg routing mapping to make the flow working
   // (from actor protocol container to the 'mock controller')
   override lazy val mockRouteStoreActorTypeToRegions = Map(
-    ACTOR_TYPE_USER_AGENT_ACTOR -> createRegion(MOCK_CONTROLLER_REGION_NAME, MockIssueCredControllerActor.props(appConfig))
+    ACTOR_TYPE_USER_AGENT_ACTOR -> createPersistentRegion(MOCK_CONTROLLER_REGION_NAME, MockIssueCredControllerActor.props(appConfig))
   )
 }
 

@@ -75,6 +75,23 @@ object PersistentActorConfigUtil {
   }
 
   /**
+   * reads 'backoff-min-seconds' configuration
+   *
+   * @param appConfig
+   * @param defaultValue
+   * @param entityCategory
+   * @param entityName
+   * @return max-nr-of-retries
+   */
+  def getBackoffMaxNrOfRetries(appConfig: AppConfig,
+                               defaultValue: Int,
+                               entityCategory: String,
+                               entityName: String): Int = {
+    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISED_STRATEGY_MAX_NR_OF_RETRIES, Option(entityName), None)
+    confValue.getOrElse(defaultValue)
+  }
+
+  /**
    * reads 'recover-from-snapshots' configuration
    *
    * @param appConfig

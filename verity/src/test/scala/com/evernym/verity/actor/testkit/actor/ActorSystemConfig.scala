@@ -7,14 +7,14 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
 trait ActorSystemConfig {
 
-  def journalFailingOnLargeEvents: Config = ConfigFactory parseString {
+  def customJournal(journalClass: String): Config = ConfigFactory parseString {
     s"""
       akka {
         persistence {
           journal {
-            plugin = "akka.persistence.journal.FailsOnLargeEventTestJournal"
-            FailsOnLargeEventTestJournal {
-              class = "com.evernym.verity.actor.FailsOnLargeEventTestJournal"
+            plugin = "akka.persistence.journal.CustomJournal"
+            CustomJournal {
+              class = "$journalClass"
               dir = ${tmpdir(systemNameForPort(getNextAvailablePort))}
               native = false
             }

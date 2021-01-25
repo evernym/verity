@@ -8,7 +8,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 class SegmentedStateStoreSpec extends PersistentActorSpec with BasicSpec with ShardUtil {
 
-  private lazy val ssRegion = createRegion("segment-state-region", SegmentedStateStore.props)
+  private lazy val ssRegion = createPersistentRegion("segment-state-region", SegmentedStateStore.props)
 
   lazy val ss1 = agentRegion("segment-address-1", ssRegion)
   lazy val ss2 = agentRegion("segment-address-2", ssRegion)

@@ -1,12 +1,9 @@
-package com.evernym.verity.actor.experimental.supervisor.default
+package com.evernym.verity.actor.persistence.supervisor.default
 
-import akka.actor.Props
 import akka.testkit.EventFilter
-import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
+import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -20,8 +17,12 @@ class ActorMsgHandlerFailureSpec
   lazy val mockUnsupervised = system.actorOf(MockActorMsgHandlerFailure.props(appConfig))
 
   "Unsupervised actor" - {
+
     "when throws an unhandled exception during msg handling" - {
-      "should be stopped" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      //TODO: if we remove 'UNSAFE_IgnoreAkkaEvents', then it fails intermittently
+      // need to find out why
+      "should restart once" taggedAs UNSAFE_IgnoreAkkaEvents in {
+        //TODO: test it restarts only once
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockUnsupervised ! ThrowException
           expectNoMessage()
@@ -36,22 +37,3 @@ class ActorMsgHandlerFailureSpec
       """
   )}
 }
-
-class MockActorMsgHandlerFailure(val appConfig: AppConfig)
-  extends BasePersistentActor
-    with DefaultPersistenceEncryption {
-
-  override def receiveCmd: Receive = {
-    case ThrowException => throw new ArithmeticException("purposefully throwing exception")
-  }
-
-  override def receiveEvent: Receive = ???
-}
-
-
-object MockActorMsgHandlerFailure {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorMsgHandlerFailure(appConfig))
-}
-
-case object ThrowException extends ActorMessage

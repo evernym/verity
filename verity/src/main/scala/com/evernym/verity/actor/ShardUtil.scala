@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
 
 import scala.concurrent.duration.FiniteDuration
@@ -54,12 +55,12 @@ trait ShardUtil {
 
   def appConfig: AppConfig
 
-  def createRegion(typeName: String,
-                   props: Props,
-                   extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
-                   extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
-                   passivateIdleEntityAfter: Option[FiniteDuration] = None
-                   )(implicit system: ActorSystem): ActorRef = {
+  private def createRegionBase(typeName: String,
+                               props: Props,
+                               extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
+                               extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
+                               passivateIdleEntityAfter: Option[FiniteDuration] = None
+                               )(implicit system: ActorSystem): ActorRef = {
     val defaultClusterSetting = ClusterShardingSettings(system)
 
     val finalClusterSettings = passivateIdleEntityAfter match {
@@ -75,6 +76,63 @@ trait ShardUtil {
     )
   }
 
+  def finalActorProps(entityCategory: String, typeName: String, actorProps: Props): Props = {
+    //NOTE: for any persistent shard region actors,
+    // once we are ready (tested/finalized) to use backoff supervisor strategy
+    // we need to change only this function to return back off supervisor actor props
+    // instead of given 'actorProps'
+
+    //NOTE: There will be few other non sharded persistent actors which
+    // we'll have to take care of separately.
+
+    actorProps
+  }
+
+  def createPersistentRegion(typeName: String,
+                             props: Props,
+                             extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
+                             extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
+                             passivateIdleEntityAfter: Option[FiniteDuration] = None
+                            )(implicit system: ActorSystem): ActorRef = {
+
+    createRegionBase(
+      typeName,
+      finalActorProps(PERSISTENT_ACTOR_BASE, typeName, props),
+      extractShardId,
+      extractEntityId,
+      passivateIdleEntityAfter
+    )
+  }
+
+  def createProtoActorRegion(typeName: String,
+                             props: Props,
+                             extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
+                             extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
+                             passivateIdleEntityAfter: Option[FiniteDuration] = None
+                            )(implicit system: ActorSystem): ActorRef = {
+    createRegionBase(
+      typeName,
+      finalActorProps(PERSISTENT_PROTOCOL_CONTAINER, typeName, props),
+      extractShardId,
+      extractEntityId,
+      passivateIdleEntityAfter
+    )
+  }
+
+  def createNonPersistentRegion(typeName: String,
+                                props: Props,
+                                extractShardId: ShardIdExtractor => ExtractShardId = ShardUtil.forIdentifierShardIdExtractor,
+                                extractEntityId: ExtractEntityId = ShardUtil.forIdentifierEntityIdExtractor,
+                                passivateIdleEntityAfter: Option[FiniteDuration] = None
+                               )(implicit system: ActorSystem): ActorRef = {
+    createRegionBase(
+      typeName,
+      props,
+      extractShardId,
+      extractEntityId,
+      passivateIdleEntityAfter
+    )
+  }
 }
 
 trait HasShardRegionNames {

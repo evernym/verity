@@ -55,9 +55,6 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   )
   lazy val routingCache: Cache = new Cache("RC", fetchers)
 
-  lazy val singletonParentProxyActor: ActorRef =
-    getActorRefFromSelection(SINGLETON_PARENT_PROXY, system)
-
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)
   lazy val routingAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)

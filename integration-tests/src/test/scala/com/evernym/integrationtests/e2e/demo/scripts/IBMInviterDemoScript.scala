@@ -5,24 +5,22 @@ import akka.http.scaladsl.model.headers.BasicHttpCredentials
 import akka.http.scaladsl.model.{HttpEntity, HttpMethod, HttpMethods, HttpRequest, MediaTypes}
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.http.common.HttpRemoteMsgSendingSvc
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.http.common.AkkaHttpMsgSendingSvc
 import com.evernym.verity.UrlParam
-import com.typesafe.scalalogging.Logger
+import com.evernym.verity.actor.testkit.TestAppConfig
 import org.json.JSONObject
 
 import scala.concurrent.Future
 
-class IBMInviterDemoScript extends HttpRemoteMsgSendingSvc {
-  override lazy val logger: Logger = getLoggerByClass(classOf[IBMInviterDemoScript])
-  implicit lazy val _system: ActorSystem = ActorSystem()
+
+class IBMInviterDemoScript extends AkkaHttpMsgSendingSvc(new TestAppConfig())(ActorSystem()) {
 
   val urlParam = UrlParam("https://agency.interop.ti.verify-creds.com")
   val mainAuth = Option("admin", "adminpw")   //confirm this with IBM if these are correct user name and password
   var agentId: String = _
   var agentPwd: String = _
 
-  def agentAuth = Option(agentId, agentPwd)
+  def agentAuth: Option[(String, String)] = Option(agentId, agentPwd)
 
   def handleRespFut(respFut: Future[Either[HandledErrorException, String]], f: String => Unit = {_ => }): Unit = {
     println("\nwaiting for response (don't execute any new command before you see response) ...")
@@ -122,7 +120,7 @@ class IBMInviterDemoScript extends HttpRemoteMsgSendingSvc {
       req.addCredentials(BasicHttpCredentials.apply(userName, userPwd))
     }.getOrElse(req)
 
-    apiRequest(reqAfterAddingAuth).flatMap { response =>
+    sendRequest(reqAfterAddingAuth).flatMap { response =>
       val prp = performResponseParsing[String]
       prp(response)
     }

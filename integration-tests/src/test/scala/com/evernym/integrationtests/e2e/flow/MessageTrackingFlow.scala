@@ -1,13 +1,11 @@
 package com.evernym.integrationtests.e2e.flow
 
+import com.evernym.integrationtests.e2e.scenario.ApplicationAdminExt
+import com.evernym.integrationtests.e2e.util.ReportDumpUtil
 import com.evernym.verity.actor.msg_tracer.progress_tracker.RecordedRequests
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.msg_tracer.progress_tracker.{MsgProgressTrackerHtmlGenerator, PinstIdLinkDetail}
-import com.evernym.integrationtests.e2e.scenario.ApplicationAdminExt
-import com.evernym.integrationtests.e2e.util.ReportDumpUtil
-import org.scalatest.concurrent.Eventually
 import com.evernym.verity.testkit.BasicSpec
-
 
 import scala.sys.process._
 
@@ -37,8 +35,8 @@ trait MessageTrackingFlow {
               ReportDumpUtil.dumpData(context, protoJsonResult, s"$pid.json", aae, printDumpDetail = false)
             }
           }
-          ReportDumpUtil.dumpData(context, jsonResult, s"$msgProgressTrackingResultFilename.json", aae)
-          ReportDumpUtil.dumpData(context, htmlResult, s"$msgProgressTrackingResultFilename.html", aae)
+          ReportDumpUtil.dumpData(context, jsonResult, s"$msgProgressTrackingResultFilename.json", aae, printDumpDetail = false)
+          ReportDumpUtil.dumpData(context, htmlResult, s"$msgProgressTrackingResultFilename.html", aae, printDumpDetail = false)
         }
       }
     }

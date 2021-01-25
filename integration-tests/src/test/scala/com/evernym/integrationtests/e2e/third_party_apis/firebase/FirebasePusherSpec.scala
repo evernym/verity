@@ -1,17 +1,21 @@
 package com.evernym.integrationtests.e2e.third_party_apis.firebase
 
 import akka.testkit.TestKit
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig.{FCM_API_HOST, FCM_API_KEY, FCM_API_PATH}
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.push_notification.{FirebasePushServiceParam, FirebasePusher, PushNotifParam}
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec {
+
+  val logger: Logger = getLoggerByClass(getClass)
 
   val extraData = Map(FOR_DID -> "test-ep-id", "data" -> """{"credOffer":{"name":"Home Address","version":"1.0.0","revealedAttributes":[{"label":"Address 1","data":"An Address"},{"label":"Address 2","data":"An Address 2"}]},"issuer":{"name":"Test Issuer","logoUrl":"https://example.com/agent/profile/logo","pairwiseDID":"ha66899sadfjZJGINKN0770"}}""")
   val notifData = Map(BODY -> "notif-body", BADGE_COUNT -> 1)
@@ -30,7 +34,7 @@ class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec 
         val param = PushNotifParam("cm", regTokenId, sendAsAlertPushNotif = false,
           notifData, extraData)
         val response = Await.result(pusher.push(param)(system), Duration(5, "seconds"))
-        println("response: " + response)
+        logger.info("response: " + response)
       }
     }
   }

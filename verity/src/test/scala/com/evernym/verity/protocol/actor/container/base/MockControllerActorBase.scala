@@ -10,6 +10,7 @@ import com.evernym.verity.actor.agent.user.GetSponsorRel
 import com.evernym.verity.actor.base.{CoreActor, Done}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil
@@ -22,15 +23,16 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.Future
 
 /**
- * base class for a controller (client side) of the protocol actor caller
- * protocol actor depends
- *  1) on caller being an actor (at least as of today) for sending back outgoing messages (signal or protocol)
- *  2) it assumes the caller would be reachable by using routing information and
- *     depends on agent message router to send outgoing "protocol message" back to the caller
- *     (in real case agent actors, in tests, it would be this MockController actor)
- *     for further processing
+ * base class for a controller (client side) actor, responsible for:
+ * a) sending 'control' messages to its own ActorProtocolContainer
+ * b) receiving 'signal' messages sent by its own ActorProtocolContainer
+ * c) receiving 'protocol' messages sent by their (other participant) ActorProtocolContainer
+ *
+ * assumptions:
+ * a) this mock controller actor is reachable by agent msg router to be able to send
+ *    'protocol' messages to their ActorProtocolContainer
  */
-trait MockControllerActorBase
+abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorContext: AgentActorContext)
   extends CoreActor
     with ActorLaunchesProtocol
     with HasActorResponseTimeout
@@ -43,20 +45,21 @@ trait MockControllerActorBase
       controllerDataOpt = Option(sc.data)
       agentActorContext.agentMsgRouter.execute(
         SetRoute(domainId, ActorAddressDetail(ACTOR_TYPE_USER_AGENT_ACTOR, entityId))).map { _ =>
-        context.become(receivePostSetup)
+        setNewReceiveBehaviour(receivePostSetup)
         caller ! Done
       }
   }
 
   def postSetupCmdHandler: Receive = {
-    case ipr: InitProtocolReq   => handleInitProtocolReq(ipr, None)
-    case SendActorMsg(msg)      => sendToProtocolActor(msg)
-    case SendControlMsg(msg)    => buildAndSendToProtocol(msg)
-    case GetSponsorRel          => //TODO: decide what to do
+    case ipr: InitProtocolReq       => handleInitProtocolReq(ipr, None)
+    case SendToProtocolActor(msg)   => sendToProtocolActor(msg)
+    case GetSponsorRel              => //TODO: decide what to do
+
+    case SendControlMsg(msg)        => buildAndSendToProtocol(msg)
   }
 
   /**
-   * receives outgoing signal message and send it to the controller actor
+   * receives outgoing signal message and send it to the owner/caller of this 'controller actor'
    * @return
    */
   def receiveOutgoingSignalMsg: Receive = {
@@ -67,7 +70,7 @@ trait MockControllerActorBase
 
   /**
    * receives outgoing protocol message and send it to the
-   * controller actor of their domain which then will send/forward it to its protocol actor
+   * controller actor of their (other participant) domain which then will send/forward it to its protocol actor
    */
   def receiveOutgoingProtoMsg: Receive = {
     case pom: ProtocolOutgoingMsg =>
@@ -77,7 +80,8 @@ trait MockControllerActorBase
   }
 
   /**
-   * receives incoming protocol message and send it to corresponding protocol actor
+   * receives incoming protocol message (from other participant) and send it to
+   * corresponding protocol actor on receiving side
    * @return
    */
   def receiveIncomingProtoMsg: Receive = {
@@ -100,7 +104,6 @@ trait MockControllerActorBase
   var controllerDataOpt: Option[ControllerData] = None
   def controllerData: ControllerData = controllerDataOpt.getOrElse(
     throw new RuntimeException("controller data not yet setup"))
-  def agentActorContext: AgentActorContext = controllerData.agentActorContext
   def registeredProtocols: ProtocolRegistry[ActorDriverGenParam] = agentActorContext.protocolRegistry
 
   lazy val selfParticipantId: String = s"$domainId/$domainId"
@@ -118,13 +121,19 @@ trait MockControllerActorBase
     tellProtocol(controllerData.pinstIdPair, controllerData.threadContextDetail, msgEnvelope, self)
   }
 
-  def buildMsgEnvelope[A](typedMsg: TypedMsgLike): MsgEnvelope = {
-    MsgEnvelope(typedMsg.msg, typedMsg.msgType, selfParticipantId,
-      senderParticipantId, Option(MsgIdProvider.getNewMsgId), Option(controllerData.threadContextDetail.threadId))
+  def buildMsgEnvelope(typedMsg: TypedMsgLike): MsgEnvelope = {
+    MsgEnvelope(
+      typedMsg.msg,
+      typedMsg.msgType,
+      selfParticipantId,
+      senderParticipantId,
+      Option(MsgIdProvider.getNewMsgId),
+      Option(controllerData.threadContextDetail.threadId)
+    )
   }
 
   /**
-   * this is generic implementation can be overridden by specific controller actor
+   * this is base implementation which can be overridden by specific controller actor
    * @return
    */
   override def stateDetailsFor: Future[PartialFunction[String, engine.Parameter]] = Future {
@@ -144,18 +153,24 @@ trait MockControllerActorBase
   override def logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 }
 
+/**
+ *
+ * @param myDID my DID
+ * @param theirDIDOpt optional, present/provided if you want to test their side of the protocol to
+ * @param pinstIdPair
+ * @param threadContextDetailOpt
+ */
 case class ControllerData(myDID: DID,
                           theirDIDOpt: Option[DID],
-                          agentActorContext: AgentActorContext,
                           pinstIdPair: PinstIdPair,
                           threadContextDetailOpt: Option[ThreadContextDetail]=None) {
 
   var threadContextDetail: ThreadContextDetail = threadContextDetailOpt.getOrElse(
     ThreadContextDetail("thread-id-1", MsgPackFormat.MPF_INDY_PACK, TypeFormat.STANDARD_TYPE_FORMAT))
-  def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("other DID not supplied"))
+  def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
 }
 
 case class SetupController(data: ControllerData) extends ActorMessage
-case class SendActorMsg(msg: Any) extends ActorMessage
+case class SendToProtocolActor(msg: Any) extends ActorMessage
 case class SendControlMsg(msg: Any) extends ActorMessage
 case class ProtoIncomingMsg(msg: Any) extends ActorMessage

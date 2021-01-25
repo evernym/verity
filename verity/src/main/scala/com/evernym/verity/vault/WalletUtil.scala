@@ -30,6 +30,7 @@ object WalletUtil {
   def generateWalletParamAsync(walletId: String,
                           appConfig: AppConfig,
                           walletProvider: WalletProvider): Future[WalletParam] = {
+    //TODO: should try to avoid this wallet config creating again and again
     val walletConfig = buildWalletConfig(appConfig)
     generateWalletParamAsync(walletId, appConfig, walletProvider, walletConfig)
   }

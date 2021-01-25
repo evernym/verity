@@ -25,17 +25,8 @@ class MsgExtractor(val keyParam: KeyParam, walletAPI: WalletAPI)(implicit wap: W
     amt.unpackAsync(pm.msg, keyParam, unpackParam)
   }
 
-  def unpack(pm: PackedMsg, unpackParam: UnpackParam = UnpackParam()): AgentMsgWrapper = {
-    amt.unpack(pm.msg, keyParam, unpackParam)
-  }
-
   def packAsync(msgPackFormat: MsgPackFormat, json: JsonStr, recipKeys: Set[KeyParam]): Future[PackedMsg] = {
     amt.packAsync(msgPackFormat, json, EncryptParam(recipKeys, Option(keyParam)))
-  }
-
-
-  def pack(msgPackFormat: MsgPackFormat, json: JsonStr, recipKeys: Set[KeyParam]): PackedMsg = {
-    amt.pack(msgPackFormat, json, EncryptParam(recipKeys, Option(keyParam)))
   }
 
   def extract(amw: AgentMsgWrapper)(implicit protoReg: ProtocolRegistry[_]): MsgPlusMeta = {

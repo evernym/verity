@@ -1,13 +1,11 @@
-package com.evernym.verity.actor.experimental.supervisor.backoff
+package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
-import akka.actor.Props
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.base.Ping
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.experimental.supervisor.SupervisorUtil
+import com.evernym.verity.actor.persistence.supervisor.MockActorCreationFailure
+import com.evernym.verity.actor.persistence.SupervisorUtil
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
@@ -20,16 +18,16 @@ class ActorCreationFailureSpec
   with Eventually {
 
   lazy val mockSupervised = system.actorOf(
-    SupervisorUtil.backoffSupervisorActorProps(
+    SupervisorUtil.onFailureBackoffSupervisorActorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",
       MockActorCreationFailure.props(appConfig)).get)
 
 
-  "BackoffSupervised actor" - {
+  "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception" - {
-      "should be stopped" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      "should be stopped" taggedAs UNSAFE_IgnoreAkkaEvents in { //UNSAFE_IgnoreAkkaEvents is to ignore the unhandled Ping message error message
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockSupervised ! Ping(sendBackConfirmation = true)
           expectNoMessage()
@@ -40,7 +38,7 @@ class ActorCreationFailureSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervised-strategy {
+       verity.persistent-actor.base.supervisor-strategy {
           enabled = true
           backoff {
             min-seconds = 3
@@ -52,24 +50,3 @@ class ActorCreationFailureSpec
       """
   )}
 }
-
-class MockActorCreationFailure(val appConfig: AppConfig)
-  extends BasePersistentActor
-    with DefaultPersistenceEncryption {
-
-  override def receiveCmd: Receive = {
-    case "unhandled" => //nothing to do
-  }
-
-  override def receiveEvent: Receive = ???
-
-  //purposefully throwing it in construction code to mimic actor creation failure
-  throw new ArithmeticException("purposefully throwing exception")
-}
-
-
-object MockActorCreationFailure {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorCreationFailure(appConfig))
-}
-

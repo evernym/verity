@@ -1,27 +1,28 @@
 package com.evernym.integrationtests.e2e.apis
 
-import java.util.UUID
-
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
+import com.evernym.integrationtests.e2e.tag.annotation.Integration
+import com.evernym.verity.Status
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
 import com.evernym.verity.config.{CommonConfig, ConfigUtil}
+import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.ledger.{LedgerPoolConnManager, OpenConnException, TransactionAuthorAgreement}
 import com.evernym.verity.libindy.LibIndyCommon
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
-import com.evernym.integrationtests.e2e.tag.annotation.Integration
-import com.evernym.verity.Status
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory, ConfigUtil => TypesafeConfigUtil}
+import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
 
+import java.util.UUID
 import scala.collection.JavaConverters._
 
 @Integration
@@ -34,6 +35,8 @@ class LedgerFlowSpec extends BasicSpec
   with ScalaFutures
   with BeforeAndAfterEach
   with CancelGloballyAfterFailure {
+
+  override val logger: Logger = getLoggerByClass(getClass)
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
@@ -95,7 +98,7 @@ class LedgerFlowSpec extends BasicSpec
 //        ledgerUtil.defaultTAA = None
         test(taa)
       case None =>
-        println(s"TAA is disabled on the ledger. Skipping scenario: $scenario")
+        logger.info(s"TAA is disabled on the ledger. Skipping scenario: $scenario")
         // succeed -- Do nothing. Test should pass.
     }
   }
@@ -103,7 +106,7 @@ class LedgerFlowSpec extends BasicSpec
   def runDisabledOnLedgerScenario(scenario: String, test: () => Unit): Unit = {
     ledgerUtil.poolConnManager.currentTAA match {
       case Some(_) =>
-        println(s"TAA is enabled on the ledger. Skipping scenario: $scenario")
+        logger.info(s"TAA is enabled on the ledger. Skipping scenario: $scenario")
         // succeed -- Do nothing. Test should pass.
       case None => test()
     }
@@ -195,7 +198,7 @@ class LedgerFlowSpec extends BasicSpec
               }
               caught shouldBe a [OpenConnException]
             } else {
-              println(s"TAA is enabled on the ledger. Skipping test.")
+              logger.info(s"TAA is enabled on the ledger. Skipping test.")
               succeed // Ignore this test
             }
           }
@@ -228,7 +231,7 @@ class LedgerFlowSpec extends BasicSpec
                 e.getMessage should include (Status.TAA_NOT_REQUIRED_BUT_INCLUDED.statusMsg)
               })
             } else {
-              println(s"TAA is enabled on the ledger. Skipping test.")
+              logger.info(s"TAA is enabled on the ledger. Skipping test.")
               succeed  // Ignore this test
             }
           }

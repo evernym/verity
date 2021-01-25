@@ -9,6 +9,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.HttpServerUtil
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.UrlParam
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.immutable.Queue
@@ -17,11 +18,13 @@ import scala.collection.immutable.Queue
 class HttpListener(val appConfig: AppConfig, val listeningPort: Int, endpoint: UrlParam) extends HttpServerUtil {
   import akka.http.scaladsl.model.StatusCodes._
 
+  val logger: Logger = getLoggerByClass(classOf[HttpListener])
+
   private var queue: Queue[Array[Byte]] = Queue.empty
 
 
   def logMsg(msg: String): Unit = {
-    println(s"[listener-localhost:$listeningPort]: " + msg)
+    logger.info(s"[listener-localhost:$listeningPort]: " + msg)
   }
 
   def dequeueOpt: Option[Array[Byte]] = {
@@ -73,7 +76,6 @@ class HttpListener(val appConfig: AppConfig, val listeningPort: Int, endpoint: U
     }
 
   lazy val url = endpoint.url + "msg"
-  val logger: Logger = getLoggerByName("http-listener")
   override lazy implicit val system: ActorSystem = ActorSystem("http-listener", appConfig.getLoadedConfig)
   val bindFuture = Http().newServerAt("localhost", listeningPort).bind(corsHandler(route))
 

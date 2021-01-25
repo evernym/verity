@@ -59,22 +59,22 @@ class Platform(val aac: AgentActorContext)
   }
 
   //agency agent actor
-  val agencyAgentRegion: ActorRef = createRegion(
+  val agencyAgentRegion: ActorRef = createPersistentRegion(
     AGENCY_AGENT_REGION_ACTOR_NAME,
     buildProp(Props(new AgencyAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_AGENCY_AGENT)))
 
   //agency agent actor for pairwise connection
-  val agencyAgentPairwiseRegion: ActorRef = createRegion(
+  val agencyAgentPairwiseRegion: ActorRef = createPersistentRegion(
     AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
     buildProp(Props(new AgencyAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_AGENCY_AGENT_PAIRWISE)))
 
   //agent actor
-  val userAgentRegion: ActorRef = createRegion(
+  val userAgentRegion: ActorRef = createPersistentRegion(
     USER_AGENT_REGION_ACTOR_NAME,
     buildProp(Props(new UserAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
 
   //agent actor for pairwise connection
-  val userAgentPairwiseRegion: ActorRef = createRegion(
+  val userAgentPairwiseRegion: ActorRef = createPersistentRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
     buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
 
@@ -97,7 +97,7 @@ class Platform(val aac: AgentActorContext)
   }
 
   //activity tracker actor
-  val activityTrackerRegion: ActorRef = createRegion(
+  val activityTrackerRegion: ActorRef = createPersistentRegion(
     ACTIVITY_TRACKER_REGION_ACTOR_NAME,
     buildProp(
       Props(new ActivityTracker(agentActorContext.appConfig, agentActorContext.agentMsgRouter)),
@@ -105,7 +105,7 @@ class Platform(val aac: AgentActorContext)
   ))
 
   //wallet actor
-  val walletActorRegion: ActorRef = createRegion(
+  val walletActorRegion: ActorRef = createNonPersistentRegion(
     WALLET_REGION_ACTOR_NAME,
     buildProp(
       Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager)),
@@ -117,7 +117,7 @@ class Platform(val aac: AgentActorContext)
   )
 
   //token manager
-  val tokenToActorItemMapperRegion: ActorRef = createRegion(
+  val tokenToActorItemMapperRegion: ActorRef = createPersistentRegion(
     TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME,
     TokenToActorItemMapper.props(agentActorContext.appConfig),
     forTokenShardIdExtractor,
@@ -134,7 +134,7 @@ class Platform(val aac: AgentActorContext)
   }
 
   //url store
-  val urlStoreRegion: ActorRef = createRegion(
+  val urlStoreRegion: ActorRef = createPersistentRegion(
     URL_STORE_REGION_ACTOR_NAME,
     UrlStore.props(agentActorContext.appConfig),
     forUrlMapperShardIdExtractor,
@@ -151,24 +151,24 @@ class Platform(val aac: AgentActorContext)
   }
 
   //resource usage tracker region actor
-  val resourceUsageTrackerRegion: ActorRef = createRegion(
+  val resourceUsageTrackerRegion: ActorRef = createPersistentRegion(
     RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME,
     ResourceUsageTracker.props(agentActorContext.appConfig, agentActorContext.actionExecutor))
 
   //other region actors
   val agentRouteStoreRegion: ActorRef =
-    createRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, AgentRouteStore.props)
+    createPersistentRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, AgentRouteStore.props)
   val itemManagerRegion: ActorRef =
-    createRegion(ITEM_MANAGER_REGION_ACTOR_NAME, ItemManager.props)
+    createPersistentRegion(ITEM_MANAGER_REGION_ACTOR_NAME, ItemManager.props)
   val itemContainerRegion: ActorRef =
-    createRegion(ITEM_CONTAINER_REGION_ACTOR_NAME, ItemContainer.props)
+    createPersistentRegion(ITEM_CONTAINER_REGION_ACTOR_NAME, ItemContainer.props)
 
   // protocol region actors
   val protocolRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
     .entries
     .map { e =>
       val ap = ActorProtocol(e.protoDef)
-      val region = createRegion(
+      val region = createProtoActorRegion(
         ap.typeName,
         ap.props(agentActorContext))
       ap.typeName -> region
@@ -180,7 +180,7 @@ class Platform(val aac: AgentActorContext)
     .entries.filter(_.protoDef.segmentedStateName.isDefined)
     .map { e =>
       val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef, e.protoDef.segmentedStateName.get)
-      val region = createRegion(
+      val region = createPersistentRegion(
         typeName,
         SegmentedStateStore.props(agentActorContext.appConfig))
       typeName -> region

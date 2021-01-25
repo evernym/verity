@@ -305,10 +305,12 @@ trait UtilBase {
     }
   }
 
+  //TODO: this method is used by protocols and specs
+  //when we change protocols to start using async api, we should change this too
   def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
                            (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
-    val sig = walletAPI.signMsg(SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
+    val sig = walletAPI.executeSync[Array[Byte]](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
     keyDlgProof.copy(signature=Base64Util.getBase64Encoded(sig))
   }
 

@@ -1,10 +1,12 @@
 package com.evernym.verity.protocol.actor.container.base
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
+import akka.testkit.TestKitBase
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
+import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.engine.{DID, PinstIdPair, ProtoDef}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
@@ -44,20 +46,11 @@ trait BaseProtocolActorSpec
       ControllerData(
         myDID,
         theirDIDOpt,
-        agentActorContext,
         PinstIdPair(myDID, protoDef),
         threadContextDetailOpt))
   }
 
-  //checks if the message is coming from correct controller actor
-  //not a perfect way may be, so we can refactor this if we don't like or it doesn't work in all the cases
-  def expectMsgTypeFrom[T](id: String, max: Option[FiniteDuration] = None)(implicit t: ClassTag[T]): T = {
-    val m = max.map(expectMsgType[T](_)).getOrElse(expectMsgType[T])
-    assert(lastSender.toString().contains(id), s"msg received from different controller")
-    m
-  }
-
-  val MOCK_CONTROLLER_REGION_NAME = "MockIssueCredControllerActor"
+  val MOCK_CONTROLLER_REGION_NAME = "MockControllerActor"
 
   lazy val mockControllerRegion: ActorRef = {
     ClusterSharding(system).shardRegion(MOCK_CONTROLLER_REGION_NAME)
@@ -65,5 +58,67 @@ trait BaseProtocolActorSpec
 
   def sendToMockController(id: String, cmd: Any): Unit = {
     mockControllerRegion ! ForIdentifier(id, cmd)
+  }
+
+  //overriding agent msg routing mapping to make the flow working
+  // (from actor protocol container to the 'mock controller')
+  override lazy val mockRouteStoreActorTypeToRegions = Map(
+    ACTOR_TYPE_USER_AGENT_ACTOR -> mockActorRegionActor
+  )
+
+  val mockActorRegionActor: ActorRef = createNonPersistentRegion(MOCK_CONTROLLER_REGION_NAME, mockControllerActorProps)
+  agentRouteStoreRegion
+
+  def mockControllerActorProps: Props
+
+  def buildMockController(protoDef: ProtoDef,
+                          myDID: DID,
+                          theirDID: DID): MockController = {
+    buildMockController(protoDef, myDID, Option(theirDID), None)
+  }
+
+  def buildMockController(protoDef: ProtoDef,
+                          myDID: DID,
+                          theirDIDOpt: Option[DID] = None,
+                          threadContextDetailOpt: Option[ThreadContextDetail]=None): MockController = {
+    MockController(protoDef, myDID, theirDIDOpt, threadContextDetailOpt, mockControllerRegion, this)
+  }
+}
+
+case class MockController(protoDef: ProtoDef,
+                          myDID: DID,
+                          theirDIDOpt: Option[DID] = None,
+                          threadContextDetailOpt: Option[ThreadContextDetail]=None,
+                          mockControllerRegion: ActorRef,
+                          testKit: TestKitBase) {
+
+  def startSetup()(implicit sndr: ActorRef): Unit = {
+    //agentActorContext //to initialize platform
+    val cmd = SetupController(
+      ControllerData(
+        myDID,
+        theirDIDOpt,
+        PinstIdPair(myDID, protoDef),
+        threadContextDetailOpt))
+
+    sendCmd(cmd)
+  }
+
+  def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
+
+  def sendCmd(cmd: Any)(implicit sndr: ActorRef): Unit = {
+    mockControllerRegion ! ForIdentifier(myDID, cmd)
+  }
+
+  def expectMsgType[T](implicit t: ClassTag[T], max: Option[FiniteDuration]=None): T = {
+    val m = max.map(testKit.expectMsgType(_)).getOrElse(testKit.expectMsgType)
+    assert(testKit.lastSender.toString().contains(myDID), s"msg received from different controller")
+    m
+  }
+
+  def expectMsg[T](obj: T)(implicit max: Option[FiniteDuration]=None): T = {
+    val m = max.map(_ => testKit.expectMsg(obj)).getOrElse(testKit.expectMsg(obj))
+    assert(testKit.lastSender.toString().contains(myDID), s"msg received from different controller")
+    m
   }
 }

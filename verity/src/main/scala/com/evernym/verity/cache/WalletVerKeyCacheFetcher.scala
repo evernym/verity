@@ -5,7 +5,7 @@ import com.evernym.verity.actor.wallet.GetVerKeyOpt
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
@@ -30,8 +30,8 @@ class WalletVerKeyCacheFetcher(val walletAPI: WalletAPI, config: AppConfig) exte
 
   override def getByKeyDetail(kd: KeyDetail): Map[String, Any] = {
     val gvp = kd.key.asInstanceOf[GetWalletVerKeyParam]
-    val verKeyOpt = walletAPI.getVerKeyOption(
-      GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(gvp.did, getKeyFromPool = gvp.getFromPool)))))(gvp.wap)
+    val verKeyOpt = walletAPI.executeSync[Option[VerKey]](
+      GetVerKeyOpt(gvp.did, gvp.getFromPool))(gvp.wap)
     val result: Option[Map[String, Any]] = verKeyOpt.map(vk => Map(gvp.did -> vk))
     result.getOrElse(Map.empty)
   }

@@ -87,7 +87,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
       "should respond with expired invite" taggedAs (UNSAFE_IgnoreLog) in {
         eventually {
           val inviteToken = getLastInviteUrlToken
-          val inviteUrl = testRemoteMsgSendingSvc
+          val inviteUrl = testMsgSendingSvc
             .mappedUrls(inviteToken)
             .replace("http://localhost:9000", "")
 
@@ -159,7 +159,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
       "should respond with expired invite" in {
         eventually {
           val inviteToken = getLastInviteUrlToken
-          val inviteUrl = testRemoteMsgSendingSvc
+          val inviteUrl = testMsgSendingSvc
             .mappedUrls(inviteToken)
             .replace("http://localhost:9000", "")
 

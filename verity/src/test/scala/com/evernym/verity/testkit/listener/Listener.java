@@ -22,7 +22,7 @@ public class Listener {
     private MsgHandler handler;
     private HttpServer server;
 
-    final Logger logger = LoggerFactory.getLogger(Listener.class);
+    static final Logger logger = LoggerFactory.getLogger(Listener.class);
 
     public Listener(Integer port, MsgHandler handler) {
         this.port = port;
@@ -60,10 +60,11 @@ public class Listener {
         @Override
         public void log(final Exception ex) {
             if (ex instanceof SocketTimeoutException) {
-                System.err.println("Connection timed out");
+                logger.error("Connection timed out");
             } else if (ex instanceof ConnectionClosedException) {
-                System.err.println(ex.getMessage());
+                logger.debug("ConnectionClosedException: "+ex.getMessage());
             } else {
+                logger.debug("Unexpected : "+ex.getMessage());
                 ex.printStackTrace();
             }
         }

@@ -1,16 +1,5 @@
 package com.evernym.integrationtests.e2e.apis
 
-import java.io.IOException
-import java.nio.file.Path
-import java.util.UUID
-
-import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.ConfigUtilBaseSpec
-import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
-import com.evernym.verity.testkit.util.LedgerUtil
-import com.evernym.verity.util.StrUtil
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
 import com.evernym.integrationtests.e2e.flow.InteractiveSdkFlow.receivingSdk
@@ -18,9 +7,21 @@ import com.evernym.integrationtests.e2e.flow.{AdminFlow, InteractiveSdkFlow, Set
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
+import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigUtilBaseSpec
+import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
+import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
+import com.evernym.verity.testkit.util.LedgerUtil
+import com.evernym.verity.util.StrUtil
+import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 
+import java.io.IOException
+import java.nio.file.Path
+import java.util.UUID
 import scala.util.Random
 
 class MultiSdkFlowSpec
@@ -33,6 +34,8 @@ class MultiSdkFlowSpec
   with VerityConfigFlow
   with AdminFlow
   with Eventually {
+
+  override val logger: Logger = getLoggerByClass(getClass)
 
   override def environmentName: String = StrUtil.classToKebab[MultiSdkFlowSpec]
 

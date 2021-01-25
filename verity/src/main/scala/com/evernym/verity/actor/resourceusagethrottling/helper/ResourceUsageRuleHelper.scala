@@ -3,7 +3,8 @@ package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.resourceusagethrottling._
-import com.evernym.verity.config.{AppConfigWrapper, ResourceUsageRuleConfigValidator}
+import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util._
 import com.typesafe.scalalogging.Logger

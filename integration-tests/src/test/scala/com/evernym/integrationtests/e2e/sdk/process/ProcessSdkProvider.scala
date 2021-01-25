@@ -1,15 +1,16 @@
 package com.evernym.integrationtests.e2e.sdk.process
 
-import java.io.ByteArrayInputStream
-import java.nio.file.{Files, Path}
-
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider._
 import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider, VeritySdkProvider}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
+import java.io.{BufferedWriter, ByteArrayInputStream, File, FileWriter}
+import java.nio.file.{Files, Path}
 import scala.language.{implicitConversions, postfixOps}
 import scala.sys.process._
 
@@ -17,17 +18,21 @@ trait ProcessSdkProvider
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  import VeritySdkProvider._
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   private def printOut(output: String, outType: String = "OUTPUT"): Unit = {
-    debugPrintln(s"====================    ${outType.capitalize}    ====================")
-    debugPrintln(output)
-    debugPrintln("====================  END OUTPUT  ====================")
+    logger.debug(
+      s"""====================    ${outType.capitalize}    ====================
+         |$output
+         |====================  END OUTPUT  ====================""".stripMargin
+    )
   }
   private def printScript(script: String): Unit = {
-    debugPrintln("==================== SCRIPT START ====================")
-    debugPrintln(script)
-    debugPrintln("====================  SCRIPT END  ====================")
+    logger.debug(
+      s"""==================== SCRIPT START ====================
+         |$script
+         |====================  SCRIPT END  ====================""".stripMargin
+    )
   }
 
   case class RunSdkBuilder(script: String, provider: ProcessSdkProvider) {
@@ -35,7 +40,7 @@ trait ProcessSdkProvider
       printScript(script)
 
       val env = provider.interpreter
-      val scriptStream = new ByteArrayInputStream(script.getBytes())
+
 
       def executeScript(tries: Int, lastException: Option[Throwable]=None): String = {
         if(tries >= 2) throw lastException.get
@@ -49,14 +54,44 @@ trait ProcessSdkProvider
           override def buffer[T](f: => T): T = f
         }
 
-        val code = Process(
-          env.cmd +: env.args,
-          env.cwd.toFile,
-          env.envVars.toArray: _*
+        val totalCmd = env.toProcess match {
+          case ProcessSdkProvider.File =>
+            val file = File.createTempFile(sdkTypeAbbreviation, fileSuffix, interpreterWorkingDir.toFile)
+            val bw = new BufferedWriter(new FileWriter(file))
+            bw.write(script)
+            bw.close()
+
+            Some(Seq(env.cmd) ++ env.args ++ Seq(file.toPath.toAbsolutePath.toString))
+          case ProcessSdkProvider.Stream =>
+            Some(Seq(env.cmd) ++ env.args)
+          case _ => None
+        }
+
+        val scriptStream = env.toProcess match {
+          case ProcessSdkProvider.File =>
+            None
+          case ProcessSdkProvider.Stream =>
+            Some(new ByteArrayInputStream(script.getBytes()))
+          case _ => None
+        }
+
+        val code = totalCmd.map { cmd =>
+          val p = Process(
+            cmd,
+            env.cwd.toFile,
+            env.envVars.toArray: _*
+          )
+          scriptStream match {
+            case Some(s) => p.#<(s)
+            case None => p
+          }
+        }
+        .map(
+          _.!(log)
         )
-        .#<{
-          scriptStream
-        }.!(log)
+        .getOrElse(throw new Exception("Unable to build process for sdk provider"))
+
+
 
         def printProcessOutput(): Unit = {
           val out = outBuffer.toString
@@ -100,7 +135,7 @@ trait ProcessSdkProvider
         case s: Seq[_] => {s"[ ${mkParams(s)} ]"}
         case None => noneParam
         case d: AsJsonObject => jsonParam(d)
-        case m: Map[_, _] => jsonParam(MapAsJsonObject(m))
+        case m: Map[_, _] => mapParam(m)
       }
       .mkString(", ")
   }
@@ -121,12 +156,14 @@ trait ProcessSdkProvider
 
   def booleanParam: Boolean => String
   def stringParam: String => String = {s => "\"" + s.replaceAllLiterally("\"", "\\\"") + "\""}
+  def mapParam: Map[_, _] => String
   def noneParam: String
   def jsonParam: AsJsonObject => String
 
   def testDir: Path
 
   def sdkTypeAbbreviation: String
+  def fileSuffix: String
 
   lazy val interpreterWorkingDir: Path =
     Files.createTempDirectory(testDir, sdkTypeAbbreviation)
@@ -149,10 +186,16 @@ trait ProcessSdkProvider
 }
 
 object ProcessSdkProvider {
+  sealed trait ToProcessStrategy
+
+  case object File extends ToProcessStrategy
+  case object Stream extends ToProcessStrategy
+  
   case class InterpreterEnv(cmd: String,
                             cwd: Path,
                             args: Seq[String] = Seq.empty,
-                            envVars: Map[String, String] = Map.empty)
+                            envVars: Map[String, String] = Map.empty,
+                            toProcess: ToProcessStrategy = Stream)
 
   case class MapAsJsonObject(map: Map[_, _]) extends AsJsonObject {
     override def toJson: JSONObject = {

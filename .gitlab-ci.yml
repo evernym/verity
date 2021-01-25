@@ -1,4 +1,4 @@
-image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:a8fdd188
+image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:7ba4aadf
 
 variables:
   MASTER_PROJECT_ID: "327"
@@ -136,8 +136,8 @@ legacy:
       - tags
       - merge_requests
   variables:
-    TEST_SCENARIOS: "scenario1, scenario3"
     TEST_TYPE: "Legacy"
+    TEST_SCENARIOS: "scenario1, scenario2"
 
 legacy-with-restart:
   extends: .integration
@@ -147,8 +147,9 @@ legacy-with-restart:
       - tags
       - merge_requests
   variables:
-    TEST_SCENARIOS: "scenario2"
     TEST_TYPE: "Legacy"
+    TEST_SCENARIOS: "scenario1"
+    TEST_RESTART_VERITY_RANDOMLY: "true"
 
 integration:
   extends: .integration

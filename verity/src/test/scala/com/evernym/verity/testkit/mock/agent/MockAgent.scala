@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
-import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
@@ -34,7 +34,7 @@ trait MockAgent
 
   def setupWallet(): Unit = {
     //creates public DID and ver key and store it into its wallet
-    walletAPI.createNewKey(CreateNewKey(seed = Option(myDIDDetail.DIDSeed)))
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option(myDIDDetail.DIDSeed)))
   }
 
   def init(): Unit = {
@@ -46,7 +46,7 @@ trait MockAgent
 
   init()
 
-  def getVerKeyFromWallet(did: DID): VerKey = walletAPI.getVerKey(GetVerKey(did))
+  def getVerKeyFromWallet(did: DID): VerKey = walletAPI.executeSync[VerKey](GetVerKey(did))
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)
@@ -72,7 +72,7 @@ trait MockAgent
 
   def addNewKey(seedOpt: Option[String]=None): NewKeyCreated = {
     val seed = seedOpt orElse Option(UUID.randomUUID().toString.replace("-", ""))
-    walletAPI.createNewKey(CreateNewKey(seed = seed))
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))
   }
 
   def addNewLocalPairwiseKey(connId: String): MockPairwiseConnDetail = {
@@ -88,8 +88,8 @@ trait MockAgent
 
   def storeTheirKey(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit = {
     logger.debug(s"Store their key for did: $did")
-    val skp = StoreTheirKey(did, verKey, ignoreIfAlreadyExists)
-    walletAPI.storeTheirKey(skp)(wap)
+    val stk = StoreTheirKey(did, verKey, ignoreIfAlreadyExists)
+    walletAPI.executeSync[TheirKeyStored](stk)(wap)
   }
 
   def storeTheirKey(DIDDetail: DidPair): Unit = {

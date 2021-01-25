@@ -52,14 +52,6 @@ trait CoreActor extends Actor with EntityIdentifier {
 
   genericLogger.debug(s"[$actorId]: actor creation started")
 
-  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-    if (recordRestartCountMetrics)
-      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX")
-    genericLogger.debug(s"[$actorId]: in pre restart")
-    logCrashReason(reason, message)
-    super.preRestart(reason, message)
-  }
-
   override def preStart(): Unit = {
     if (recordStartCountMetrics)
       MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
@@ -74,6 +66,14 @@ trait CoreActor extends Actor with EntityIdentifier {
     genericLogger.debug(s"[$actorId]: in post stop")
     afterStop()
     super.postStop()
+  }
+
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    if (recordRestartCountMetrics)
+      MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX")
+    genericLogger.debug(s"[$actorId]: in pre restart")
+    logCrashReason(reason, message)
+    super.preRestart(reason, message)
   }
 
   private def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {

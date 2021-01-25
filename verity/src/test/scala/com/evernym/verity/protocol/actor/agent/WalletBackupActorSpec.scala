@@ -33,7 +33,7 @@ class WalletBackupActorSpec
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
   override def overrideConfig: Option[Config] = Option {
-    AkkaTestBasic.journalFailingOnLargeEvents
+    AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
   }
 
   override def beforeAll(): Unit = {

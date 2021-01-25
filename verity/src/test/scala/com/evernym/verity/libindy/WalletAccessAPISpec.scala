@@ -1,5 +1,6 @@
 package com.evernym.verity.libindy
 
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.external_api_access.InvalidSignType
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
@@ -10,9 +11,9 @@ import scala.util.{Failure, Success}
 
 class WalletAccessAPISpec extends BasicSpec with HasTestWalletAPI {
 
-  agentWalletAPI.walletAPI.createWallet(wap)
+  agentWalletAPI.walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
   val selfParticipantId: ParticipantId = ParticipantUtil.participantId(
-    agentWalletAPI.walletAPI.createNewKey().did, None)
+    agentWalletAPI.walletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
   val walletAccess = new WalletAccessAPI(appConfig, agentWalletAPI.walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()

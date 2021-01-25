@@ -31,8 +31,8 @@ class IndyPackTransformerSpec extends AgentTransformerSpec {
   "Alice cloud agent" - {
     "when tried to deserialize it" - {
       "should be able to deserialize it successfully" in {
-        val unpackedMsgWrapper = agentMsgTransformer.unpack(
-          lastPackedMsg.msg, KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+        val unpackedMsgWrapper = convertToSyncReq(agentMsgTransformer.unpackAsync(
+          lastPackedMsg.msg, KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap))
         unpackedMsgWrapper.headAgentMsg.msg shouldBe DefaultMsgCodec.toJson(msg)
       }
     }
@@ -42,15 +42,15 @@ class IndyPackTransformerSpec extends AgentTransformerSpec {
     "when tried to pack old agent msg with indy pack" - {
       "should be able to successfully do it" in {
         val jsonString = DefaultMsgCodec.toJson(testMsg_0_5)
-        lastPackedMsg = agentMsgTransformer.pack(msgPackFormat,
-          jsonString, getEncryptParamFromAliceToAliceCloudAgent)(aliceWap)
+        lastPackedMsg = convertToSyncReq(agentMsgTransformer.packAsync(msgPackFormat,
+          jsonString, getEncryptParamFromAliceToAliceCloudAgent)(aliceWap))
       }
     }
 
     "when tried to unpack it with indy pack" - {
       "should be able to successfully do it" in {
-        lazy val unpacked: AgentMsgWrapper = agentMsgTransformer.unpack(lastPackedMsg.msg,
-          KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+        lazy val unpacked: AgentMsgWrapper = convertToSyncReq(agentMsgTransformer.unpackAsync(lastPackedMsg.msg,
+          KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap))
         val msgType = unpacked.msgType
         unpacked.msgPackFormat shouldBe msgPackFormat
         msgType.familyName shouldBe MSG_FAMILY_AGENT_PROVISIONING

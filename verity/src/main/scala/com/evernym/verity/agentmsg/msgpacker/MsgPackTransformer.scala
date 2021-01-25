@@ -22,29 +22,12 @@ class MsgPackTransformer
 
   val logger: Logger = getLoggerByClass(classOf[MsgPackTransformer])
 
-  override def pack(msg: String,
-                    recipVerKeyParams: Set[KeyParam],
-                    senderVerKeyParam: Option[KeyParam])
-                   (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-
-    val msgBytes = MessagePackUtil.convertJsonStringToPackedMsg(msg)
-    walletAPI.LEGACY_packMsg(msgBytes, recipVerKeyParams, senderVerKeyParam)
-  }
-
   override def packAsync(msg: String,
                          recipVerKeyParams: Set[KeyParam],
                          senderVerKeyParam: Option[KeyParam])
                         (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg] = {
     val msgBytes = MessagePackUtil.convertJsonStringToPackedMsg(msg)
     walletAPI.executeAsync[PackedMsg](LegacyPackMsg(msgBytes, recipVerKeyParams, senderVerKeyParam))
-  }
-
-  override def unpack(msg: Array[Byte],
-                      fromVerKeyParam: Option[KeyParam],
-                      unpackParam: UnpackParam)
-                     (implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentBundledMsg = {
-    val um = walletAPI.LEGACY_unpackMsg(msg, fromVerKeyParam, unpackParam.isAnonCryptedMsg)
-    prepareAgentBundledMsg(um, unpackParam)
   }
 
   override def unpackAsync(msg: Array[Byte],

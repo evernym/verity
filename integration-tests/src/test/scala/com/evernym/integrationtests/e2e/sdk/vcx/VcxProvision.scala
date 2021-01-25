@@ -1,23 +1,24 @@
 package com.evernym.integrationtests.e2e.sdk.vcx
 
-import java.util.UUID
-
-import com.evernym.verity.util.ExceptionUtil
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedProvision_0_7
-import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider.debugPrintln
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.WalletConfigKey
 import com.evernym.sdk.vcx.VcxException
 import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.DefaultWalletConfig
+import com.evernym.verity.util.ExceptionUtil
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
+import java.util.UUID
+
 protected trait VcxProvision {
-  implicit val shouldPrintDebug: Boolean
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   def sdkConfig: SdkConfig
 
@@ -38,7 +39,7 @@ protected trait VcxProvision {
       .put("wallet_key", walletVal._2)
       .put("pool_name", UUID.randomUUID().toString)
 
-    debugPrintln("provisionConfig: " + provisionConfig.toString())
+    logger.debug("provisionConfig: " + provisionConfig.toString())
     val config = new JSONObject(
       UtilsApi.vcxAgentProvisionAsync(provisionConfig.toString()).get
     )

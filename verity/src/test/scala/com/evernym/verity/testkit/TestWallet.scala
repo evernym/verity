@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.actor.agent.{WalletApiBuilder, WalletVerKeyCacheHelper}
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
@@ -12,7 +13,7 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 
 class TestWallet(createWallet: Boolean=false) extends HasTestWalletAPI {
   if (createWallet) {
-    agentWalletAPI.walletAPI.createWallet(wap)
+    agentWalletAPI.walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
   }
 }
 
@@ -29,7 +30,7 @@ trait HasTestWalletAPI extends HasAgentWallet with HasAppConfig {
     val walletService = new TestWalletService(appConfig, walletProvider)
     val api = WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider)
     if (createWallet) {
-      api.createWallet(wap)
+      api.executeSync[WalletCreated.type](CreateWallet)(wap)
     }
     api
   }

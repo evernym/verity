@@ -45,12 +45,8 @@ trait BasePersistentActor
     with HasActorResponseTimeout
     with DeleteMsgHandler
     with HasTransformationRegistry
+    with PersistentEntityIdentifier
     with Stash {
-
-  //NOTE: don't remove/change below three vals else it won't be backward compatible
-  override lazy val entityName: String = extractNameFromPath(self.path, 2)
-  override lazy val actorId: String = entityName + "-" + entityId
-  override lazy val persistenceId: String = actorId
 
   var totalPersistedEvents: Int = 0
   var totalRecoveredEvents: Int = 0

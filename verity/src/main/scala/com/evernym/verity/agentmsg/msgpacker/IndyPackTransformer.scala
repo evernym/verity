@@ -23,26 +23,11 @@ class IndyPackTransformer
 
   val logger: Logger = getLoggerByClass(classOf[IndyPackTransformer])
 
-  override def pack(msg: String,
-                    recipVerKeyParams: Set[KeyParam],
-                    senderVerKeyParam: Option[KeyParam])
-                   (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    walletAPI.packMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam)
-  }
-
   override def packAsync(msg: String,
                          recipVerKeyParams: Set[KeyParam],
                          senderVerKeyParam: Option[KeyParam])
                         (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg] = {
     walletAPI.executeAsync[PackedMsg](PackMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam))
-  }
-
-  override def unpack(msg: Array[Byte],
-                      fromVerKeyParam: Option[KeyParam],
-                      unpackParam: UnpackParam)(implicit wap: WalletAPIParam, walletAPI: WalletAPI)
-  : AgentBundledMsg = {
-    val um = walletAPI.unpackMsg(msg)
-    prepareAgentBundledMsg(um, unpackParam)
   }
 
   override def unpackAsync(msg: Array[Byte],

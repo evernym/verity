@@ -2,14 +2,13 @@ package com.evernym.verity.protocol.actor.container
 
 import akka.actor.Props
 import akka.testkit.EventFilter
+import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.actor._
-import com.evernym.verity.protocol.actor.container.base.{BaseProtocolActorSpec, MockControllerActorBase, SendActorMsg, SendControlMsg}
+import com.evernym.verity.protocol.actor.container.base.{BaseProtocolActorSpec, MockControllerActorBase, SendControlMsg, SendToProtocolActor}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Propose
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.Sent
@@ -41,19 +40,21 @@ class ExtractEventsActorSpec
       }
 
       "extract events actor should extract all events from protocol actor" in {
-        val CTRL_ID_1: String = CommonSpecUtil.generateNewDid().DID
-        val CTRL_ID_2: String = CommonSpecUtil.generateNewDid().DID     //domain 2 controller
-        sendToMockController(CTRL_ID_1,
-          buildSetupController(CTRL_ID_1, Option(CTRL_ID_2), IssueCredentialProtoDef))
-        expectMsg(Done)
+        val CTRL_ID_1: String = generateNewDid().DID
+        val CTRL_ID_2: String = generateNewDid().DID
 
-        sendToMockController(CTRL_ID_1, SendControlMsg(Propose(credDefId, credValue)))
-        expectMsgTypeFrom[Sent](CTRL_ID_1)
+        val mockController1 = buildMockController(IssueCredentialProtoDef, CTRL_ID_1, CTRL_ID_2) //domain 1 controller
+
+        mockController1.startSetup()
+        mockController1.expectMsg(Done)
+
+        mockController1.sendCmd(SendControlMsg(Propose(credDefId, credValue)))
+        mockController1.expectMsgType[Sent]
 
         system.actorOf(ExtractEventsActor.prop(
           appConfig,
           "issue-credential-1.0-protocol",
-          CTRL_ID_1,
+          mockController1.myDID,
           testActor)
         )
         val events = receiveWhile(5 seconds, .25 seconds) {
@@ -65,49 +66,37 @@ class ExtractEventsActorSpec
       }
 
       "single event stream should return the single event" in {
-        val CTRL_ID_1: String = CommonSpecUtil.generateNewDid().DID
-        val CTRL_ID_2: String = CommonSpecUtil.generateNewDid().DID     //domain 2 controller
-        val CTRL_ID_OTHER: String = CommonSpecUtil.generateNewDid().DID
+        val CTRL_ID_1: String = generateNewDid().DID
+        val CTRL_ID_2: String = generateNewDid().DID
+        val CTRL_ID_OTHER: String = generateNewDid().DID
 
+        val mockController1 = buildMockController(IssueCredentialProtoDef, CTRL_ID_1, CTRL_ID_OTHER) //domain 1 controller
+        val mockController2 = buildMockController(IssueCredentialProtoDef, CTRL_ID_2, CTRL_ID_OTHER) //domain 2 controller
 
         // Start first protocol
-        sendToMockController(
-          CTRL_ID_1,
-          buildSetupController(
-            CTRL_ID_1,
-            Option(CTRL_ID_OTHER),
-            IssueCredentialProtoDef)
-        )
-        expectMsg(Done)
+        mockController1.startSetup()
+        mockController1.expectMsg(Done)
 
-        sendToMockController(CTRL_ID_1, SendControlMsg(Propose(credDefId, credValue)))
-        expectMsgTypeFrom[Sent](CTRL_ID_1)
+        mockController1.sendCmd(SendControlMsg(Propose(credDefId, credValue)))
+        mockController1.expectMsgType[Sent]
 
         // Start second protocol that will copy the first protocol
-        sendToMockController(
-          CTRL_ID_2,
-          buildSetupController(
-            CTRL_ID_2,
-            Option(CTRL_ID_OTHER),
-            IssueCredentialProtoDef
-          )
-        )
-        expectMsg(Done)
-
+        mockController2.startSetup()
+        mockController2.expectMsg(Done)
 
         val mockRel = Relationship(
           PAIRWISE_RELATIONSHIP,
           "mockRel1",
-          Some(DidDoc(CTRL_ID_2)),
-          Seq(DidDoc(CTRL_ID_OTHER)),
+          Some(DidDoc(mockController2.myDID)),
+          Seq(DidDoc(mockController1.theirDID)),
         )
-        sendToMockController(CTRL_ID_2, SendActorMsg(FromProtocol(CTRL_ID_1, mockRel)))
+        mockController2.sendCmd(SendToProtocolActor(FromProtocol(mockController1.myDID, mockRel)))
         Thread.sleep(1000)
 
         system.actorOf(ExtractEventsActor.prop(
           appConfig,
           "issue-credential-1.0-protocol",
-          CTRL_ID_2,
+          mockController2.myDID,
           testActor)
         )
         val events = receiveWhile(5 seconds, .25 seconds) {
@@ -119,15 +108,12 @@ class ExtractEventsActorSpec
       }
     }
 
-  //overriding agent msg routing mapping to make the flow working
-  // (from actor protocol container to the 'mock controller')
-  override lazy val mockRouteStoreActorTypeToRegions = Map(
-    ACTOR_TYPE_USER_AGENT_ACTOR -> createRegion(MOCK_CONTROLLER_REGION_NAME, MockIssueCredControllerActor.props(appConfig))
-  )
+  override lazy val mockControllerActorProps: Props = MockIssueCredControllerActor.props(appConfig, agentActorContext)
 }
 
 object MockIssueCredControllerActor {
-  def props(ac: AppConfig): Props = Props(new MockIssueCredControllerActor(ac))
+  def props(ac: AppConfig, aac: AgentActorContext): Props = Props(new MockIssueCredControllerActor(ac, aac))
 }
 
-class MockIssueCredControllerActor(val appConfig: AppConfig) extends MockControllerActorBase
+class MockIssueCredControllerActor(appConfig: AppConfig, aac: AgentActorContext)
+  extends MockControllerActorBase(appConfig, aac)

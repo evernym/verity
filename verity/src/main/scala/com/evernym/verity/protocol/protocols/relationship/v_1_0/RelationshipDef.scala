@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, Protocol, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.engine.Scope.RelProvisioning
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, UrlShorteningAccess}
 
 object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, RelationshipEvent, State, String] {
   override val msgFamily: MsgFamily = RelationshipMsgFamily
@@ -22,6 +23,9 @@ object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, Relat
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p)
 
   override def scope: Scope.ProtocolScope = RelProvisioning
+
+  override val requiredAccess: Set[AccessRight] = Set(UrlShorteningAccess)
+
 }
 
 object ProblemReportCodes {

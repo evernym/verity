@@ -6,6 +6,7 @@ import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.testkit.InteractionType.{OneParty, TwoParty}
 import com.evernym.verity.util.{MsgIdProvider, MsgUtil}
 import org.scalatest.matchers.should.Matchers
@@ -405,6 +406,10 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
 
     def ledgerAccess(l: LedgerAccess): Unit = {
       domain.ledgerAccess(l)
+    }
+
+    def urlShortening(url: UrlShorteningAccess): Unit = {
+      domain.urlShorteningAccess(url)
     }
 
     def initParams(m: Map[String, String]): Unit = {

@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
+import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
@@ -103,8 +104,6 @@ class PresentProof (implicit val ctx: PresentProofContext)
     case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.Request            ) => handleCtlRequest(msg, s.data)
     case (s                         , _,              msg: Ctl.Status             ) => handleCtlStatus(s, msg)
     case (s                         , _,              msg: Ctl.Reject             ) => handleCtlReject(s, msg)
-    case (_: States.RequestSent     , _,              msg: Ctl.InviteShortened    ) => ctx.signal(Sig.Invitation(msg.longInviteUrl, Option(msg.shortInviteUrl), msg.invitationId))
-    case (_: States.RequestSent     , Some(role),     _: Ctl.InviteShorteningFailed ) => ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed)); apply(Rejection(role.roleNum, "Shortening failed"))
     case (s: State                  , _             , msg: CtlMsg              ) => invalidControlState(s, msg)
   }
 
@@ -194,7 +193,6 @@ class PresentProof (implicit val ctx: PresentProofContext)
             apply(ResultsOfVerification(validity))
             signal(Sig.PresentationResult(validity , simplifiedProof))
         }
-
       case Failure(e) => send(
         Msg.buildProblemReport(s"Invalid presentation -- ${e.getMessage}", invalidPresentation)
       )
@@ -263,38 +261,36 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
     val proofRequest = ProofRequestUtil.requestToProofRequest(ctr)
     val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
+
     proofRequestStr match {
       case Success(str) =>
-        val presentationRequest = Msg.RequestPresentation(
-          "",
-          Vector(
-            buildAttachment(Some(AttIds.request0), str)
-          )
-        )
-
+        val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
         apply(RequestUsed(str))
 
-        if(!ctr.by_invitation.getOrElse(false)) {
-          send(presentationRequest)
-        }
-        else {
-          ctx.signal(
-            buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData)
-              .recover{
-                case e: Exception =>
-                  ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
-                  Sig.buildProblemReport(
-                    "unable to create out-of-band invitation",
-                    invalidRequestedPresentation
-                  )
-              }
-              .get
-          )
-        }
+        if(!ctr.by_invitation.getOrElse(false)) { send(presentationRequest) }
+        else { sendInvite(presentationRequest, stateData) }
       case Failure(e) =>
         signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
     }
+  }
 
+  def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
+    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) match {
+      case Success(invite) =>
+        ctx.urlShortening.shorten(invite.inviteURL) {
+          case Success(m) =>
+            ctx.signal(Sig.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
+          case Failure(_) =>
+            ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
+            apply(Rejection(ctx.getRoster.selfRole.map(_.roleNum).getOrElse(0), "Shortening failed"))
+        }
+      case Failure(e) =>
+        ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
+        Sig.buildProblemReport(
+          "unable to create out-of-band invitation",
+          invalidRequestedPresentation
+        )
+    }
   }
 
   def handleCtlAcceptRequest(s: States.RequestReceived, msg: Ctl.AcceptRequest): Unit = {
@@ -381,7 +377,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
 
-  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[Sig.ShortenInvite] = {
+  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[ShortenInvite] = {
     val service = InviteUtil.buildServiced(stateData.agencyVerkey, ctx)
 
     val attachement = Try(
@@ -408,7 +404,7 @@ object PresentProof {
       serviceEndpoint <- Try(ctx.serviceEndpoint);
       inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
       inviteId        <- Success(invite.`@id`)
-    ) yield Sig.ShortenInvite(inviteId, inviteUrl)
+    ) yield ShortenInvite(inviteId, inviteUrl)
 
     signal
   }

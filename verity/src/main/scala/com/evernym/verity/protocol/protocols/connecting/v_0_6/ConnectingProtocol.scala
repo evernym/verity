@@ -13,10 +13,7 @@ import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
-import com.evernym.verity.cache.Cache
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine._
@@ -40,11 +37,6 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       with AgentMsgSender
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
-
-  override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
-  override lazy val remoteMsgSendingSvc: RemoteMsgSendingSvc = ctx.SERVICES_DEPRECATED.remoteMsgSendingSvc
-  override lazy val generalCache: Cache = ctx.SERVICES_DEPRECATED.generalCache
-  override implicit lazy val agentMsgTransformer: AgentMsgTransformer = ctx.SERVICES_DEPRECATED.agentMsgTransformer
 
   lazy val myPairwiseDIDReq : DID = ctx.getState.myPairwiseDIDReq
   lazy val myPairwiseVerKeyReq : VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)

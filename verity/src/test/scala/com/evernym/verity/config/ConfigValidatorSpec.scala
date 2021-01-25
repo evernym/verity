@@ -3,14 +3,16 @@ package com.evernym.verity.config
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.validator.base.ConfDetail
+import com.evernym.verity.config.validator.{RequiredConfigValidator, RequiredConfigValidatorBase, ResourceUsageRuleConfigValidator}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 
 
 class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
 
-  class TestReqConfigValidator (val config: Config) extends ReqConfigValidator {
-    override val configsToBeValidated: Set[ConfDetail] = new CommonReqConfigValidator(config).configsToBeValidated ++ Set (
+  class TestReqConfigValidator (val config: Config) extends RequiredConfigValidatorBase {
+    override val configsToBeValidated: Set[ConfDetail] = new RequiredConfigValidator(config).configsToBeValidated ++ Set (
       ConfDetail(HTTP_SSL_PORT)
     )
   }

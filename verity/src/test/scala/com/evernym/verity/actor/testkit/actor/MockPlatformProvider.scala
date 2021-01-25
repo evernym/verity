@@ -5,7 +5,6 @@ import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.UrlParam
 import com.evernym.verity.vault.service.WalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -26,7 +25,6 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   lazy val walletService: WalletService = platform.agentActorContext.walletService
   lazy val walletAPI: WalletAPI = platform.agentActorContext.walletAPI
-  lazy val walletConfig: WalletConfig = platform.agentActorContext.walletConfig
 
   lazy val singletonParentProxy: ActorRef = platform.singletonParentProxy
 
@@ -47,7 +45,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
     new MockAgencyAdmin(system, UrlParam(localAgencyEndpoint), platform.agentActorContext.appConfig)
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
-    platform.agentActorContext.remoteMsgSendingSvc.asInstanceOf[MockRemoteMsgSendingSvc].totalAgentMsgsSent
+    platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalAgentMsgsSent
   }
 
   lazy val mockRouteStoreActorTypeToRegions: Map[Int, ActorRef] = Map.empty

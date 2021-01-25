@@ -42,6 +42,8 @@ import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
 
+import scala.util.Random
+
 
 class ApiFlowSpec
   extends BasicSpecWithIndyCleanup
@@ -92,17 +94,17 @@ class ApiFlowSpec
   val CLIENT_MSG_UID_PROOF_1 = "proof1"
   val CLIENT_MSG_UID_PROOF_REQ_2 = "proofReq2"
 
-  val CLIENT_MSG_UID_TOKEN_XFER_OFFER = "tokenXfer1"
-  val CLIENT_MSG_UID_TOKEN_XFER_REQ = "tokenXferReq1"
-  val CLIENT_MSG_UID_TOKEN_XFERRED = "tokenXferred1"
-
   val entName: String = edgeAgentName + " (integration-tests)"
 
-  def restartAgencyProcessesIfRequired(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
-    if (scenario.restartAgencyBeforeEachTest) {
-      env.startEnv(testEnv, restart = true)
-      aae.consumerAgencyAdmin.checkIfListening()
-      aae.enterpriseAgencyAdmin.checkIfListening()
+  def restartVerityInstancesIfRequired(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+    if (scenario.restartVerityRandomly) {
+      val random = Random.nextInt(100)
+      val isEven = (random % 2) == 0
+      if (isEven) {
+        env.startEnv(testEnv, restart = true)
+        aae.consumerAgencyAdmin.checkIfListening()
+        aae.enterpriseAgencyAdmin.checkIfListening()
+      }
     }
   }
 
@@ -192,7 +194,7 @@ class ApiFlowSpec
     def fetchAgencyIdentity(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent fetch agency detail" - {
         "should be able to fetch agency detail" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           fetchAgencyKey()
         }
       }
@@ -201,7 +203,7 @@ class ApiFlowSpec
     def connectWithAgency(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent connect msg" - {
         "should be able to connect" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val cr = sendConnectWithAgency()
         }
       }
@@ -210,7 +212,7 @@ class ApiFlowSpec
     def createKey_MFV_0_6(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent create key msg" - {
         "should respond with key created" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val cr = sendConnectCreateKey_MFV_0_6()
         }
       }
@@ -219,7 +221,7 @@ class ApiFlowSpec
     def connReq_MFV_0_6(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent connection request" - {
         "should respond with connection detail" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val cr = sendConnReq_MFV_0_6()
         }
       }
@@ -228,7 +230,7 @@ class ApiFlowSpec
     def createAgent_MFV_0_6(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent create agent msg" - {
         "should be able to successfully create agent" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val acr = sendCreateAgent_MFV_0_6()
         }
       }
@@ -237,7 +239,7 @@ class ApiFlowSpec
     def getToken(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent get provision token" - {
         "should be able to successfully get token" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val id = "my-id"
           val sponsorId = "sponsor-token"
           val token = sendGetToken(id, sponsorId, edgeHttpEndpointForPushNotif.listeningUrl)
@@ -250,7 +252,7 @@ class ApiFlowSpec
     def createAgent_MFV_0_7(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent create agent msg (V0.7)" - {
         "should be able to successfully create agent" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           sendCreateAgent_MFV_0_7()
         }
       }
@@ -259,7 +261,7 @@ class ApiFlowSpec
     def receiveFwdMsgForSponsor(msgSending: () => Unit)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when cloud agent receives a msg and has registered a fwd com method a msg" - {
         "should be forwarded via http to specified endpoint" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val latestFwdMsg = withLatestPushMessage(edgeHtppEndpointForSponsors, {
             msgSending()
           })
@@ -274,7 +276,7 @@ class ApiFlowSpec
     def createAgentFailures_MFV_0_7(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent incorrect create agent msg (V0.7)" - {
         "should get problem report" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val acr = sendCreateAgentFailures_MFV_0_7()
         }
       }
@@ -283,7 +285,7 @@ class ApiFlowSpec
     def signupWithAgency(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent signup msg" - {
         "should be able to signup" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val sr = registerWithAgency()
         }
       }
@@ -292,7 +294,7 @@ class ApiFlowSpec
     def createAgent(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent create agent msg" - {
         "should be able to successfully create agent" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val acr = sendCreateAgent()
         }
       }
@@ -301,7 +303,7 @@ class ApiFlowSpec
     def createNewKey_0_5(connId: String)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent create key msg (for $connId)" - {
         "should be able to successfully create key for new connection" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val ckr = createPairwiseKey_MFV_0_5(connId)
         }
       }
@@ -310,7 +312,7 @@ class ApiFlowSpec
     def createNewKey_MFV_0_6(connId: String)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent create key msg (for $connId)" - {
         "should be able to successfully create key for new connection" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val ckr = createPairwiseKey_MFV_0_6(connId)
         }
       }
@@ -319,7 +321,7 @@ class ApiFlowSpec
     def queryMetrics()(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when keys are created" - {
         "should be able to successfully query metrics" in {
-          if (!scenario.restartAgencyBeforeEachTest) {
+          if (!scenario.restartVerityRandomly) {
             //metrics are reset on restart, only test when not restarted
             val metrics = getAllNodeMetrics()
           }
@@ -341,7 +343,7 @@ class ApiFlowSpec
                          (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when sent update agent config" - {
         "should be able to successfully update configs" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val cur = sendUpdateAgentConfig(cds)
         }
       }
@@ -350,7 +352,7 @@ class ApiFlowSpec
     def updateAgentComMethod(cm: TestComMethod)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent update agent com method (${cm.value})" - {
         "should be able to successfully update com method" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val cur = sendUpdateAgentComMethod(cm)
         }
       }
@@ -362,7 +364,7 @@ class ApiFlowSpec
         AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
       s"when sent update connection status (for $connId)" - {
         "should be able to successfully update connection status" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val cur = sendUpdateConnStatus_MFV_0_5(connId, statusCode)
         }
       }
@@ -371,7 +373,7 @@ class ApiFlowSpec
     def sendInvitation_MFV_0_5(connId: String, includePublicDID: Boolean = false)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent create and send invite msg after setting required configs (for $connId)" - {
         "should be able to successfully create and send invite msg" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val icr = expectMsgType[CreateInviteResp_MFV_0_5](sendInviteForConn(connId, ph = sendInviteToPhoneNo,
             includePublicDID = includePublicDID))
           if (includePublicDID) {
@@ -388,7 +390,7 @@ class ApiFlowSpec
     def sendInvitation_MFV_0_6(connId: String, includePublicDID: Boolean = false) (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent create and send invite msg after setting required configs (for $connId)" - {
         "should be able to successfully create and send invite msg" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val icr = expectMsgType[ConnReqRespMsg_MFV_0_6](sendInviteForConn_MFV_0_6(connId, ph = sendInviteToPhoneNo,
             includePublicDID = includePublicDID))
           if (includePublicDID) {
@@ -407,7 +409,7 @@ class ApiFlowSpec
       s"when sent get msgs after sending invitation msg (for $connId)" - {
         "should be able to get one msg" in {
 
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
             gmr.msgs.size shouldBe 1
@@ -428,7 +430,7 @@ class ApiFlowSpec
     def answerInvitation(connId: String)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent answer invite msg (for $connId)" - {
         "should be able to successfully accept connection req" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val invite = getInviteFromRemoteConnEdgeOwner(connId)
           val pcd = getPairwiseConnDetail(connId)
           pcd.setTheirPairwiseDidPair(invite.senderDetail.DID, invite.senderDetail.verKey)
@@ -443,7 +445,7 @@ class ApiFlowSpec
     def redirectInvitation_0_5(oldConnId: String, connId: String)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent redirect invite msg (for $connId)" - {
         "should be able to successfully redirect connection req" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val invite = getInviteFromRemoteConnEdgeOwner(connId)
           val iar = expectMsgType[MsgCreated_MFV_0_5](redirectConnReq_MFV_0_5(oldConnId, connId, invite))
           waitForMsgToBeDelivered(scenario.restartMsgWait)
@@ -454,7 +456,7 @@ class ApiFlowSpec
     def redirectInvitation_0_6(oldConnId: String, connId: String)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent redirect invite msg (for $connId)" - {
         "should be able to successfully redirect connection req" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val invite = getInviteFromRemoteConnEdgeOwner(connId)
           val iar = expectMsgType[ConnReqRedirectResp_MFV_0_6](redirectConnReq_MFV_0_6(oldConnId, connId, invite))
           waitForMsgToBeDelivered(scenario.restartMsgWait)
@@ -465,7 +467,7 @@ class ApiFlowSpec
     def acceptInvitation_MFV_0_6(connId: String)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent answer invite msg (for $connId)" - {
         "should be able to successfully accept connection req" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val invite = getInviteFromRemoteConnEdgeOwner(connId)
           val iar = expectMsgType[ConnReqAccepted_MFV_0_6](acceptInviteForConn_MFV_0_6(connId, invite, alreadyAccepted = false))
           addToMsgs(connId, CLIENT_MSG_UID_CONN_REQ_ANSWER_1,
@@ -479,7 +481,7 @@ class ApiFlowSpec
                                       (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent answer invite msg again (for $connId)" - {
         "should respond with an error" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val sdr = expectMsgType[StatusDetailResp](answerInviteForConn(connId,
             getInviteFromRemoteConnEdgeOwner(connId)))
           sdr shouldBe StatusDetailResp(ACCEPTED_CONN_REQ_EXISTS.statusCode, ACCEPTED_CONN_REQ_EXISTS.statusMsg, None)
@@ -491,7 +493,7 @@ class ApiFlowSpec
                                       (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent answer invite msg again (for $connId)" - {
         "should respond with an error" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val sdr = expectMsgType[StatusDetailResp](acceptInviteForConn_MFV_0_6(connId,
             getInviteFromRemoteConnEdgeOwner(connId), alreadyAccepted = true))
           sdr shouldBe StatusDetailResp(ACCEPTED_CONN_REQ_EXISTS.statusCode, ACCEPTED_CONN_REQ_EXISTS.statusMsg, None)
@@ -503,7 +505,7 @@ class ApiFlowSpec
                                           (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent get msgs after accepting invitation (for $connId)" - {
         "should be able to get two msgs" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
             gmr.msgs.size shouldBe 2
@@ -530,7 +532,7 @@ class ApiFlowSpec
                                    (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent get msgs after user accepted invitation (for $connId)" - {
         "should be able to get two msgs" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
           gmr.msgs.size shouldBe 2
           val crMsg = getMsgReq(connId, CLIENT_MSG_UID_CONN_REQ_1)
@@ -579,7 +581,7 @@ class ApiFlowSpec
                            (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent $msgType msg with clientMsgUid: $clientMsgUid (for $connId)" - {
         "should be able to send it successfully" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val replyToMsgId = replyToClientMsgUid.map(clientMsgUid => getMsgUidReq(connId, clientMsgUid))
           val smr = expectMsgType[GeneralMsgCreatedResp_MFV_0_5](sendGeneralMsgToConn(connId, msgType, msg, replyToMsgId))
           lastSentMsgIdByConnId += (connId -> smr.mc.uid)
@@ -603,7 +605,7 @@ class ApiFlowSpec
                            (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent $msgType msg with clientMsgUid: $clientMsgUid (for $connId)" - {
         "should be able to send it successfully" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val replyToMsgId = replyToClientMsgUid.map(clientMsgUid => getMsgUidReq(connId, clientMsgUid))
           val smr = expectMsgType[RemoteMsgSent_MFV_0_6](sendGeneralMsgToConn_MFV_0_6(connId, msgType, msg, replyToMsgId))
           lastSentMsgIdByConnId += (connId -> smr.`@id`)
@@ -617,7 +619,7 @@ class ApiFlowSpec
                          (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent get msgs after sending/receiving $clientMsgUid (for $connId)" - {
         "should be able to get that msg" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
             gmr.msgs.size shouldBe gme.totalMsgs
@@ -661,7 +663,7 @@ class ApiFlowSpec
         "should be able to get msgs by conns" in {
           implicit val msgPackagingContext: AgentMsgPackagingContext =
             AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val pairwiseDIDs = connsIds.map { cids =>
               mockClientAgent.pairwiseConnDetails.filter(cids.contains).values.map(_.myPairwiseDidPair.DID).toList
@@ -678,7 +680,7 @@ class ApiFlowSpec
                                 (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent get msgs to check status for $clientMsgUid (for $connId)" - {
         "should be able to get that msg" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val uid = getMsgUidReq(connId, clientMsgUid)
           val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
           val msg = gmr.msgs.find(_.uid == uid).orNull
@@ -693,7 +695,7 @@ class ApiFlowSpec
         "should be able to update it successfully" in {
           implicit val msgPackagingContext: AgentMsgPackagingContext =
             AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val msgUid = getMsgUidReq(connId, clientMsgUid)
           val umr = updateMsgStatusForConn_MFV_0_5(connId, uids = List(msgUid), statusCode = statusCode)
         }
@@ -706,7 +708,7 @@ class ApiFlowSpec
         AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
       s"when sent update msg status by conns msg ($hint)" - {
         "should be able to update it successfully" in {
-          restartAgencyProcessesIfRequired
+          restartVerityInstancesIfRequired
           val msgUidsByPairwiseDIDs = connIds.map { connId =>
             val con = mockClientAgent.pairwiseConnDetail(connId)
             val connMsgUids = msgsByConns(connId).map(_._2.uid).toList
@@ -1048,7 +1050,7 @@ class ApiFlowSpec
       suiteTempDir,
       projectDir,
       connIds = Set("connId3", "connId4"),
-      restartAgencyBeforeEachTest = true
+      restartVerityRandomly = true
     )
     val clientEnv2: ClientEnvironment = clientEnv1.copy(scenario = scenario2)
     generalEndToEndFlowScenario(clientEnv2)(agencyAdminEnv)

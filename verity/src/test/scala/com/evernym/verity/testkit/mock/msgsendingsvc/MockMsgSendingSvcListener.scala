@@ -1,30 +1,30 @@
-package com.evernym.verity.testkit.mock.remotemsgsendingsvc
+package com.evernym.verity.testkit.mock.msgsendingsvc
 
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.testkit.actor.MockRemoteMsgSendingSvc
+import com.evernym.verity.actor.testkit.actor.MockMsgSendingSvc
 import com.evernym.verity.testkit.BasicSpecBase
 import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
 
-trait MockRemoteMsgSendingSvcListener {
+trait MockMsgSendingSvcListener {
 
   this: BasicSpecBase with Eventually =>
 
   def agentActorContext: AgentActorContext
 
-  lazy val testRemoteMsgSendingSvc: MockRemoteMsgSendingSvc =
-    agentActorContext.remoteMsgSendingSvc.asInstanceOf[MockRemoteMsgSendingSvc]
+  lazy val testMsgSendingSvc: MockMsgSendingSvc =
+    agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc]
 
-  def getTotalAgentMsgSentByCloudAgent: Int = testRemoteMsgSendingSvc.totalAgentMsgsSent
-  def getTotalRestAgentMsgSentByCloudAgent: Int = testRemoteMsgSendingSvc.totalRestAgentMsgsSent
+  def getTotalAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalAgentMsgsSent
+  def getTotalRestAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalRestAgentMsgsSent
 
   def checkForNewMsg(currentMsgCount: Int): Option[PackedMsg] = {
     //this confirms that protocol does sent a message to registered endpoint
     eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
       getTotalAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
-      val lastMsgOpt = testRemoteMsgSendingSvc.lastAgentMsgOption
+      val lastMsgOpt = testMsgSendingSvc.lastAgentMsgOption
       lastMsgOpt.isDefined shouldBe true
       lastMsgOpt.map(PackedMsg(_))
     }
@@ -34,7 +34,7 @@ trait MockRemoteMsgSendingSvcListener {
     //this confirms that protocol does sent a message to registered endpoint
     eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
       getTotalRestAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
-      val lastMsgOpt = testRemoteMsgSendingSvc.lastAgentRestMsgOption
+      val lastMsgOpt = testMsgSendingSvc.lastAgentRestMsgOption
       lastMsgOpt.isDefined shouldBe true
       lastMsgOpt
     }

@@ -48,7 +48,7 @@ case class ShardIdExtractor(appConfig: AppConfig, regionName: String) {
       .getOrElse(100)
 
   def getShardId(entityId: String): String =
-    (math.abs(entityId.hashCode) % numberOfShards).toString
+    math.abs(entityId.hashCode % numberOfShards).toString
 }
 
 trait ShardUtil {

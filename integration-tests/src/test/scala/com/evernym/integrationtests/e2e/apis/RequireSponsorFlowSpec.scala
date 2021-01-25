@@ -105,7 +105,7 @@ class RequireSponsorFlowSpec
   val entName: String = edgeAgentName + " (integration-tests)"
 
   def restartAgencyProcessesIfRequired(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
-    if (scenario.restartAgencyBeforeEachTest) {
+    if (scenario.restartVerityRandomly) {
       env.startEnv(testEnv, restart = true)
       aae.consumerAgencyAdmin.checkIfListening()
       aae.enterpriseAgencyAdmin.checkIfListening()
@@ -339,7 +339,7 @@ class RequireSponsorFlowSpec
     def queryMetrics()(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when keys are created" - {
         "should be able to successfully query metrics" in {
-          if (!scenario.restartAgencyBeforeEachTest) {
+          if (!scenario.restartVerityRandomly) {
             //metrics are reset on restart, only test when not restarted
             val metrics = getAllNodeMetrics()
           }

@@ -5,17 +5,16 @@ import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REG
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.MsgTracer
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgProgressTracker
-import com.evernym.verity.config.CommonConfig.NON_PERSISTENT_ACTOR_BASE
 
 trait MsgTracingRegionActors { this: Platform =>
 
   //message tracing region actor
-  val msgTracerRegion: ActorRef = createRegion(
+  val msgTracerRegion: ActorRef = createNonPersistentRegion(
     MSG_TRACER_REGION_ACTOR_NAME,
     MsgTracer.props(agentActorContext.appConfig))
 
   //message progress tracking region actor (this is not a feature code, only related to troubleshooting)
-  val msgProgressTrackerRegion: ActorRef = createRegion(
+  val msgProgressTrackerRegion: ActorRef = createNonPersistentRegion(
     MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME,
     MsgProgressTracker.props(agentActorContext.appConfig))
 

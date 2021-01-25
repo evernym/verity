@@ -107,7 +107,7 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
 
   override lazy val mockRouteStoreActorTypeToRegions = Map(
     ACTOR_TYPE_USER_AGENT_ACTOR -> {
-      createRegion("DummyActor", DummyAgentActor.props)
+      createPersistentRegion("DummyActor", DummyAgentActor.props)
       ClusterSharding(system).shardRegion("DummyActor")
     }
   )

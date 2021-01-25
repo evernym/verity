@@ -1,14 +1,11 @@
-package com.evernym.verity.actor.experimental.supervisor.backoff
+package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
-import akka.actor.Props
 import akka.testkit.EventFilter
-import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.experimental.supervisor.SupervisorUtil
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
+import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
+import com.evernym.verity.actor.persistence.SupervisorUtil
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -20,15 +17,18 @@ class ActorMsgHandlerFailureSpec
   with Eventually {
 
   lazy val mockSupervised = system.actorOf(
-    SupervisorUtil.backoffSupervisorActorProps(
+    SupervisorUtil.onFailureBackoffSupervisorActorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",
       MockActorMsgHandlerFailure.props(appConfig)).get)
 
-  "Supervised actor" - {
+  "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
-      "should be stopped" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      //TODO: if we remove 'UNSAFE_IgnoreAkkaEvents', then it fails intermittently
+      // need to find out why
+      "should stop and start once" taggedAs UNSAFE_IgnoreAkkaEvents in {
+        //TODO: test it stops and starts once only
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockSupervised ! ThrowException
           expectNoMessage()
@@ -39,7 +39,7 @@ class ActorMsgHandlerFailureSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervised-strategy {
+       verity.persistent-actor.base.supervisor-strategy {
           enabled = true
           backoff {
             min-seconds = 3
@@ -51,22 +51,3 @@ class ActorMsgHandlerFailureSpec
       """
   )}
 }
-
-class MockActorMsgHandlerFailure(val appConfig: AppConfig)
-  extends BasePersistentActor
-    with DefaultPersistenceEncryption {
-
-  override def receiveCmd: Receive = {
-    case ThrowException => throw new ArithmeticException("purposefully throwing exception")
-  }
-
-  override def receiveEvent: Receive = ???
-}
-
-
-object MockActorMsgHandlerFailure {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorMsgHandlerFailure(appConfig))
-}
-
-case object ThrowException extends ActorMessage

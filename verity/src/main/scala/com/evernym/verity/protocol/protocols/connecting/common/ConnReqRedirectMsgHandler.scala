@@ -4,7 +4,7 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{MSG_STATUS_REDIRECTED, REDIRECTED_CONN_REQ_EXISTS}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -117,17 +117,17 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, MSG_STATUS_REDIRECTED.statusCode, theirDidDocDetailOpt))
 
     theirDidDocDetailOpt.foreach { _ =>
-      walletAPI.storeTheirKey(
+      walletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(rcrm.senderAgencyDetail.DID,
           rcrm.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
 
-      walletAPI.storeTheirKey(
+      walletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(rcrm.senderDetail.DID,
           rcrm.senderDetail.verKey, ignoreIfAlreadyExists = true))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
-      walletAPI.storeTheirKey(
+      walletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }

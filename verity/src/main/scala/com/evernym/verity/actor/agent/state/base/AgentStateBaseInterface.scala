@@ -90,6 +90,8 @@ trait AgentStateInterface extends State {
   def myDidDoc_! : DidDoc = myDidDoc.getOrElse(throw new RuntimeException("myDidDoc is not set yet"))
   def myDid: Option[DID] = myDidDoc.map(_.did)
   def myDid_! : DID = myDid.getOrElse(throw new RuntimeException("myDid is not set yet"))
+  def myDidAuthKey: Option[AuthorizedKeyLike] = myDid.flatMap(keyId =>
+    relationship.flatMap(_.myDidDocAuthKeyById(keyId)))
 
   def theirDidDoc: Option[DidDoc] = relationship.flatMap(_.theirDidDoc)
   def theirDidDoc_! : DidDoc = theirDidDoc.getOrElse(throw new RuntimeException("theirDidDoc is not set yet"))

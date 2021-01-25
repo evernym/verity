@@ -31,33 +31,11 @@ object AgentMsgTransformerApi {
       case _ => throw new RuntimeException("given msg-pack format is not supported: " + mpf)
     }
   }
-
-  def pack(mpf: MsgPackFormat,
-           msg: String,
-           recipVerKeyParams: Set[KeyParam],
-           senderVerKeyParam: Option[KeyParam])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    msgTransformer(mpf).pack(msg, recipVerKeyParams, senderVerKeyParam)
-  }
-
   def packAsync(mpf: MsgPackFormat,
                 msg: String,
                 recipVerKeyParams: Set[KeyParam],
                 senderVerKeyParam: Option[KeyParam])(implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg] = {
     msgTransformer(mpf).packAsync(msg, recipVerKeyParams, senderVerKeyParam)
-  }
-
-  def unpack(msg: Array[Byte],
-             fromVerKeyParam: Option[KeyParam],
-             unpackParam: UnpackParam = UnpackParam())(implicit wap: WalletAPIParam, walletAPI: WalletAPI): AgentMsgWrapper = {
-
-    val (transformer, fromVerKeyParamFinal) = if (isIndyPacked(msg)) {
-      (indyPackTransformer, None)
-    } else {
-      (msgPackTransformer, fromVerKeyParam)
-    }
-
-    val unpackedMsg = transformer.unpack(msg, fromVerKeyParamFinal, unpackParam)
-    AgentMsgWrapper(transformer.msgPackFormat, unpackedMsg)
   }
 
   def unpackAsync(msg: Array[Byte],

@@ -19,7 +19,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Msg, Pr
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.RevocationDetails
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.JsonUtil.seqToJson
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
@@ -167,11 +167,11 @@ class WalletActorSpec
 
     "when sent GetVerKeyOpt command" - {
       "should respond with optional VerKey" in {
-        issuerWalletActor ! GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(holderDidPair.DID, getKeyFromPool = false))))
+        issuerWalletActor ! GetVerKeyOpt(holderDidPair.DID)
         expectMsgType[Option[VerKey]]
-        holderWalletActor ! GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(issuerDidPair.DID, getKeyFromPool = false))))
+        holderWalletActor ! GetVerKeyOpt(issuerDidPair.DID)
         expectMsgType[Option[VerKey]]
-        verifierWalletActor ! GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(holderDidPair.DID, getKeyFromPool = false))))
+        verifierWalletActor ! GetVerKeyOpt(holderDidPair.DID)
         expectMsgType[Option[VerKey]]
       }
     }
@@ -180,7 +180,7 @@ class WalletActorSpec
       "should respond with success VerifySigResult" in {
         val newIssuerKey = createKeyInWallet(issuerWalletActor)
         storeTheirKeyInWallet(newIssuerKey, holderWalletActor)
-        val keyParam = KeyParam(Right(GetVerKeyByDIDParam(newIssuerKey.did, getKeyFromPool = false)))
+        val keyParam = KeyParam.fromDID(newIssuerKey.did)
 
         issuerWalletActor ! SignMsg(keyParam, testByteMsg)
         val signature = expectMsgType[Array[Byte]]
@@ -194,11 +194,11 @@ class WalletActorSpec
     "when sent PackMsg command" - {
       "should respond with PackedMsg be successfully unpacked via UnpackMsg" in {
         val issuerKey = createKeyInWallet(issuerWalletActor)
-        val issuerKeyParam = KeyParam(Right(GetVerKeyByDIDParam(issuerKey.did, getKeyFromPool = false)))
+        val issuerKeyParam = KeyParam.fromDID(issuerKey.did)
         storeTheirKeyInWallet(issuerKey, holderWalletActor)
 
         val holderKey = createKeyInWallet(holderWalletActor)
-        val holderKeyParam = KeyParam(Right(GetVerKeyByDIDParam(holderKey.did, getKeyFromPool = false)))
+        val holderKeyParam = KeyParam.fromDID(holderKey.did)
         storeTheirKeyInWallet(holderKey, issuerWalletActor)
 
         issuerWalletActor ! PackMsg(testByteMsg, recipVerKeyParams = Set(holderKeyParam), senderVerKeyParam = Some(issuerKeyParam))
@@ -217,11 +217,11 @@ class WalletActorSpec
     "when sent LegacyPackMsg command" - {
       "should respond with PackedMsg be successfully unpacked via LegacyUnpackMsg" in {
         val issuerKey = createKeyInWallet(issuerWalletActor)
-        val issuerKeyParam = KeyParam(Right(GetVerKeyByDIDParam(issuerKey.did, getKeyFromPool = false)))
+        val issuerKeyParam = KeyParam.fromDID(issuerKey.did)
         storeTheirKeyInWallet(issuerKey, holderWalletActor)
 
         val holderKey = createKeyInWallet(holderWalletActor)
-        val holderKeyParam = KeyParam(Right(GetVerKeyByDIDParam(holderKey.did, getKeyFromPool = false)))
+        val holderKeyParam = KeyParam.fromDID(holderKey.did)
         storeTheirKeyInWallet(holderKey, issuerWalletActor)
 
         issuerWalletActor ! LegacyPackMsg(testByteMsg, Set(holderKeyParam), Some(issuerKeyParam))

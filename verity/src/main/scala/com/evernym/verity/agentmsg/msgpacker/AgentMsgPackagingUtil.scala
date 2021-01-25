@@ -46,7 +46,8 @@ object AgentMsgPackagingUtil {
    * @param wap
    * @return
    */
-  def buildAgentMsg(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam)
+  def buildAgentMsg(msgPackFormat: MsgPackFormat,
+                    packMsgParam: PackMsgParam)
                    (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
     runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
       val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
@@ -64,8 +65,10 @@ object AgentMsgPackagingUtil {
    * @param wap
    * @return
    */
-  def buildRoutedAgentMsgFromPackMsgParam(msgPackFormat: MsgPackFormat, packMsgParam: PackMsgParam,
-                                          fwdRoutes: List[FwdRouteMsg], fwdMsgTypeVersion: String = MTV_1_0)
+  def buildRoutedAgentMsgFromPackMsgParam(msgPackFormat: MsgPackFormat,
+                                          packMsgParam: PackMsgParam,
+                                          fwdRoutes: List[FwdRouteMsg],
+                                          fwdMsgTypeVersion: String = MTV_1_0)
                                          (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
 
     buildAgentMsg(msgPackFormat, packMsgParam).flatMap { packedAgentMsg =>
@@ -111,12 +114,11 @@ object AgentMsgPackagingUtil {
     }
   }
 
-  private def buildFwdMsgForRoute(
-                                   msgPackFormat: MsgPackFormat,
-                                   packedMsg: PackedMsg,
-                                   fwdRoutes: FwdRouteMsg,
-                                   fwdMsgTypeVersion: String = MTV_1_0
-                                 )(implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+  private def buildFwdMsgForRoute(msgPackFormat: MsgPackFormat,
+                                  packedMsg: PackedMsg,
+                                  fwdRoutes: FwdRouteMsg,
+                                  fwdMsgTypeVersion: String = MTV_1_0)
+                                 (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
     val fwdMsg = buildFwdJsonMsg(
       msgPackFormat,
       fwdRoutes.to,
@@ -144,8 +146,7 @@ object AgentMsgPackagingUtil {
                       msgQualifier: MsgFamilyQualifier=EVERNYM_QUALIFIER,
                       msgName: MsgName=MSG_TYPE_FWD,
                       fwdMsgTypeVersion: String = MTV_1_0,
-                      fwdMsgType: Option[String] = None
-                     ): String = {
+                      fwdMsgType: Option[String] = None): String = {
     mpf match {
       case MPF_MSG_PACK =>
         val fwdMsg = DefaultMsgCodec.toJson(

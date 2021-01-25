@@ -55,10 +55,10 @@ sbt test:compile
 ```
 
 ### Unit Tests
-Assumption: 
+Assumptions: 
 
 * libindy library is already installed
-* proto event classes created
+* proto event classes is already generated
 
 ```sbt test```
 

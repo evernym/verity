@@ -8,7 +8,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -121,7 +121,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   private def handleCreateConnection(amw: AgentMsgWrapper): PackedMsg = {
     val cc = amw.headAgentMsg.convertTo[CreateConnectionReqMsg_MFV_0_6]
-    val edgePairwiseKey = walletAPI.createNewKey(CreateNewKey())
+    val edgePairwiseKey = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
     val edgePairwiseKeyCreated = KeyCreated(edgePairwiseKey.did)
     ctx.apply(edgePairwiseKeyCreated)
 
@@ -160,8 +160,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   }
 
   private def processKeyCreatedMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit agentMsgContext: AgentMsgContext): Future[PackedMsg] = {
-    val pairwiseKeyResult = walletAPI.createNewKey(CreateNewKey())
-    walletAPI.storeTheirKey(StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
+    val pairwiseKeyResult = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
+    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)

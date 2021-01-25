@@ -16,11 +16,11 @@ class RelationshipUtilSpec
   override def createWallet = true
 
   val relDidPair: NewKeyCreated = {
-    walletAPI.createNewKey(CreateNewKey(seed = Option("0000000000000000000000000000TEST")))          //key to represent current/this agent
-    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000OTHER")))          //key to represent some other agent
-    walletAPI.createNewKey(CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("0000000000000000000000000000TEST")))          //key to represent current/this agent
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000OTHER")))          //key to represent some other agent
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
 
-    walletAPI.createNewKey(CreateNewKey())
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey())
   }
 
   lazy val relUtilParamDuringRecovery: RelUtilParam =

@@ -65,21 +65,17 @@ TEST_SCENARIOS environment variable.  If the environment variable is not defined
 
 * Run only scenario 1
   ```
-  TEST_SCENARIOS=scenario1 sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.ApiFlowSpec.scala"
+  TEST_SCENARIOS=scenario1 sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec.scala"
   ```
 * Run only scenario 2
   ```
-  TEST_SCENARIOS=scenario2 sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.ApiFlowSpec.scala"
+  TEST_SCENARIOS=scenario2 sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec.scala"
   ```
 * Run both scenario1 and scenario2
   ```
-  TEST_SCENARIOS=scenario1,scenario3 sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.ApiFlowSpec.scala"
-  ```
-* Run both scenario1 and scenario3
-  ```
-  TEST_SCENARIOS=scenario1,scenario sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.ApiFlowSpec.scala"
+  TEST_SCENARIOS=scenario1,scenario2 sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec.scala"
   ```
 * Run all scenarios
   ```
-  TEST_SCENARIOS=* sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.ApiFlowSpec.scala"
+  TEST_SCENARIOS=* sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec.scala"
   ```

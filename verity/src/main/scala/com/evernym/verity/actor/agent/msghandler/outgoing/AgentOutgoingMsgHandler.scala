@@ -10,7 +10,7 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.ReqMsgContext
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
+import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.push_notification.PushNotifResponse
 
 import scala.concurrent.Future
@@ -21,7 +21,7 @@ trait AgentOutgoingMsgHandler
     with AgentIdentity
     with HasAgentActivity { this: AgentMsgHandler with AgentPersistentActor =>
 
-  lazy val defaultSelfRecipKeys = Set(KeyParam(Right(GetVerKeyByDIDParam(domainId, getKeyFromPool = false))))
+  lazy val defaultSelfRecipKeys = Set(KeyParam.fromDID(domainId))
 
   def agentOutgoingCommonCmdReceiver: Receive = {
     case spn: SendPushNotif                 => handleSendPushNotif(spn)

@@ -7,7 +7,7 @@ import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -32,11 +32,11 @@ trait BasePersistentStore
   lazy val agentRouteStoreEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
-    walletAPI.createWallet(WalletAPIParam(walletId))
+    walletAPI.executeSync[WalletCreated.type](CreateWallet)(WalletAPIParam(walletId))
   }
 
   def createNewKey(walletId: String, seed: Option[String]=None): NewKeyCreated = {
-    walletAPI.createNewKey(CreateNewKey(seed = seed))(WalletAPIParam(walletId))
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))(WalletAPIParam(walletId))
   }
 
   def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)

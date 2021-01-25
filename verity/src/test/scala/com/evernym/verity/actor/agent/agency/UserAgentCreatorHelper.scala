@@ -22,7 +22,7 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
   lazy val aap: agentRegion = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
 
   def sponsorKeys(seed: String="000000000000000000000000Trustee1"): NewKeyCreated =
-    walletAPI.createNewKey(CreateNewKey(seed=Some(seed)))
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -135,12 +135,9 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
 
   def getNonce: String = UUID.randomUUID().toString
   def sig(nonce: String, id: String, sponsorId: String, vk: VerKey, timestamp: String): Base64Encoded = {
-    val encrypted = walletAPI.signMsg {
-      SignMsg(KeyParam(
-        Left(vk)),
-        (nonce + timestamp + id + sponsorId).getBytes()
-      )
-    }
+    val encrypted = walletAPI.executeSync[Array[Byte]](
+      SignMsg(KeyParam.fromVerKey(vk), (nonce + timestamp + id + sponsorId).getBytes())
+    )
     Base64Util.getBase64Encoded(encrypted)
   }
 

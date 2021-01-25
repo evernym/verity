@@ -6,13 +6,14 @@ import com.evernym.verity.protocol.actor.ProtoMsg
 import com.evernym.verity.protocol.engine.{MsgFamilyName, MsgFamilyVersion, MsgName, MsgType, VerKey}
 import com.evernym.verity.protocol.engine.Constants._
 
-case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg) extends ProtoMsg {
+case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg)
+  extends ProtoMsg {
 
   def senderVerKey: Option[VerKey] = agentBundledMsg.senderVerKey
   def recipVerKey: Option[VerKey] = agentBundledMsg.recipVerKey
 
   def headAgentMsg: AgentMsg = agentBundledMsg.headAgentMsg
-  def headAgentMsgDetail: MsgFamilyDetail = agentBundledMsg.headAgentMsg.msgFamilyDetail
+  def headAgentMsgDetail: MsgFamilyDetail = headAgentMsg.msgFamilyDetail
   def headAgentMsgType: MsgType = headAgentMsgDetail.msgType
 
   def tailAgentMsgs: List[AgentMsg] = agentBundledMsg.tailAgentMsgs

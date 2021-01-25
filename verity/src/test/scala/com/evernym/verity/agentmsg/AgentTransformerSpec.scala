@@ -9,6 +9,7 @@ import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, HasTestWalletAPI}
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.vault.service.AsyncToSync
 
 trait AgentMsgSpecBase
   extends BasicSpecWithIndyCleanup
@@ -29,9 +30,9 @@ trait AgentMsgSpecBase
   lazy val aliceCloudAgentKeyParam: KeyParam = KeyParam(Left(aliceCloudAgentKey.verKey))
   lazy val aliceKeyParam: KeyParam = KeyParam(Left(aliceKey.verKey))
 
-  lazy val aliceKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceWap)
-  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgencyAgentWap)
-  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.createNewKey(CreateNewKey())(aliceCloudAgentWap)
+  lazy val aliceKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceWap)
+  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceCloudAgencyAgentWap)
+  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceCloudAgentWap)
 
   //TODO why does this need to be mutable? Tests need to be able to be run independently.
   var lastPackedMsg: PackedMsg = _
@@ -64,7 +65,8 @@ trait AgentMsgSpecBase
 
 trait AgentTransformerSpec
   extends BasicSpecWithIndyCleanup
-    with AgentMsgSpecBase {
+    with AgentMsgSpecBase
+    with AsyncToSync {
 
   def msgPackFormat: MsgPackFormat
   def msgFamilyVersion: MsgFamilyVersion
@@ -83,16 +85,16 @@ trait AgentTransformerSpec
         "should be able to pack it" in {
 
           val jsonString = DefaultMsgCodec.toJson(msg)
-          lastPackedMsg = agentMsgTransformer.pack(msgPackFormat,
-            jsonString, getEncryptParamFromAliceToAliceCloudAgent)(aliceWap)
+          lastPackedMsg = convertToSyncReq(agentMsgTransformer.packAsync(msgPackFormat,
+            jsonString, getEncryptParamFromAliceToAliceCloudAgent)(aliceWap))
         }
       }
     }
   }
 
   //should only be called inside of tests
-  lazy val unpacked: AgentMsgWrapper = agentMsgTransformer.unpack(lastPackedMsg.msg,
-    KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap)
+  lazy val unpacked: AgentMsgWrapper = convertToSyncReq(agentMsgTransformer.unpackAsync(lastPackedMsg.msg,
+    KeyParam(Left(aliceCloudAgentKey.verKey)))(aliceCloudAgentWap))
 
   def runUnpackTests(): Unit = {
     "Alice cloud agent" - {

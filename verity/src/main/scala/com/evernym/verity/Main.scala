@@ -21,7 +21,7 @@ object Main extends App {
   val akkaManagementAPI = new AkkaManagementAPI(platform.appConfig, platform.actorSystem)
   akkaManagementAPI.startHttpServerIfEnabled()
 
-  //start http server
+  //start akka http server
   val httpServer = new HttpServer(platform, new HttpRouteHandler(platform).endpointRoutes)
   httpServer.start()
 }

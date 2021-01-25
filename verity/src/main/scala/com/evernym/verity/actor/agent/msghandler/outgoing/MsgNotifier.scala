@@ -202,8 +202,9 @@ trait MsgNotifierForStoredMsgs
                 case Some(keys) if keys.nonEmpty => keys
                 case _ => defaultSelfRecipKeys
               }
-              val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
-              msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
+              msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).map { packedMsg =>
+                msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
+              }
             case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
           logger.debug("message sent to endpoint: " + hcm)

@@ -82,7 +82,7 @@ class LedgerUtil (override val appConfig: AppConfig,
   def getWalletName(did: DID): String = did + "local"
 
   def setupWallet(did: DID, seed: String): NewKeyCreated = {
-    walletAPI.createNewKey(CreateNewKey(Option(did), Option(seed)))
+    walletAPI.executeSync[NewKeyCreated](CreateNewKey(Option(did), Option(seed)))
   }
 
   def bootstrapNewDID(did: DID, verKey: VerKey, role: String = null): Unit = {

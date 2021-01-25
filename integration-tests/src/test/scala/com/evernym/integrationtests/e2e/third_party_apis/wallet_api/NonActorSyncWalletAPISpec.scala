@@ -9,7 +9,7 @@ import com.evernym.verity.vault.wallet_api.base.NonActorClientWalletAPISpec
  */
 
 //NOTE: this one exercises "SYNC wallet api"
-class NonActorSyncWalletApiSpec
+class NonActorSyncWalletAPISpec
   extends NonActorClientWalletAPISpec
     with MySqlWalletAPISpec {
 

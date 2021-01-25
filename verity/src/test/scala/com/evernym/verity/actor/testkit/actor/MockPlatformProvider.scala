@@ -3,15 +3,14 @@ package com.evernym.verity.actor.testkit.actor
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.UrlParam
 import com.evernym.verity.vault.service.WalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
 
-class MockPlatform(system: ActorSystem, appConfig: AppConfig, mockPlatformParam: MockPlatformParam)
-  extends Platform(new MockAgentActorContext(system, appConfig, mockPlatformParam.mockAgentActorContextParam))
+class MockPlatform(agentActorContext: AgentActorContext)
+  extends Platform(agentActorContext)
 
 trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
@@ -19,8 +18,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   def localAgencyEndpoint: String = "localhost:9000"
 
-  lazy val platform: Platform = new MockPlatform(system, appConfig, mockPlatformParam)
-
+  lazy val platform: Platform = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentActorContextParam))
   lazy val agentActorContext: AgentActorContext = platform.agentActorContext
 
   lazy val walletService: WalletService = platform.agentActorContext.walletService
@@ -50,7 +48,6 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   lazy val mockRouteStoreActorTypeToRegions: Map[Int, ActorRef] = Map.empty
   lazy val mockAgentActorContextParam: MockAgentActorContextParam = MockAgentActorContextParam(mockRouteStoreActorTypeToRegions)
-  lazy val mockPlatformParam: MockPlatformParam = MockPlatformParam(mockAgentActorContextParam)
 }
 
 case class MockPlatformParam(mockAgentActorContextParam: MockAgentActorContextParam=MockAgentActorContextParam())

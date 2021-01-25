@@ -96,6 +96,14 @@ case class Scenario(name: String,
 
 object Scenario {
   val scenarioEnvKey = "TEST_SCENARIOS"
+  val restartVerityEnvKey = "TEST_RESTART_VERITY_RANDOMLY"
+
+  def restartVerityRandomly(noEnvVar: Boolean=false, map:Map[String, String] = sys.env): Boolean = {
+    map.get(restartVerityEnvKey) match {
+      case None => noEnvVar
+      case Some(x) => x == "true"
+    }
+  }
 
   def isRunScenario(name: String, noEnvVar: Boolean=true, map:Map[String, String] = sys.env): Boolean = {
     map.get(scenarioEnvKey) match {

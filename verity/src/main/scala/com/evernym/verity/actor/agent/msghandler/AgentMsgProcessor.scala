@@ -29,6 +29,7 @@ import com.evernym.verity.agentmsg.msgfamily.routing.FwdMsgHelper
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE, UNKNOWN_SENDER_PARTICIPANT_ID}
+import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
@@ -42,7 +43,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletAPIParam}
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 
@@ -92,6 +93,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     case pum: ProcessUntypedMsgV2     => sendUntypedMsgToProtocolV2(pum.msg, pum.protoDef, pum.threadId)
 
     //self sent messages (mostly to use async api call)
+    case har: HandleAuthedRestMsg     => handledAuthedRestMsg(har.prm)
     case pum: ProcessUnpackedMsgV1    => handleUnpackedMsgV1(pum.amw, pum.msgThread, pum.rmc)
     case pum: ProcessUnpackedMsgV2    => handleUnpackedMsgV2(pum.amw, pum.internalPayloadWrapper, pum.rmc)
 
@@ -247,7 +249,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                       msgSpecificRecipVerKey: Option[KeyParam]=None): Future[OutgoingMsgParam] = {
     logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey")
     val toDID = ParticipantUtil.agentId(toParticipantId)
-    val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyParam(Right(GetVerKeyByDIDParam(toDID, getKeyFromPool = false)))))
+    val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyParam.fromDID(toDID)))
     msgExtractor.packAsync(msgPackFormat, omp.jsonMsg_!(), recipKeys).map { packedMsg =>
       OutgoingMsgParam(packedMsg, omp.metadata.map(x => x.copy(msgPackFormatStr = msgPackFormat.toString)))
     }
@@ -418,7 +420,16 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       param.trackingParam,
       inMsgParam = TrackMsgParam(msgName = Option(prm.restMsgContext.msgType.msgName)))(prm.restMsgContext.reqMsgContext)
     logger.debug(s"incoming rest msg: " + prm.msg)
-    veritySignature(prm.restMsgContext.auth)
+    val sndr = sender()
+    verifySignature(prm.restMsgContext.auth).onComplete {
+      case Success(true)  => self.tell(HandleAuthedRestMsg(prm), sndr)
+      case Success(false) => handleException(new UnauthorisedErrorException, sndr)
+      case Failure(ex)    => handleException(ex, sndr)
+    }
+  }
+
+  def handledAuthedRestMsg(prm: ProcessRestMsg): Unit = {
+    logger.debug(s"processing authorized rest msg: " + prm.msg)
     preMsgProcessing(prm.restMsgContext.msgType, Option(prm.restMsgContext.auth.verKey))(prm.restMsgContext.reqMsgContext)
     val imp = IncomingMsgParam(ProcessRestMsg(prm.msg, prm.restMsgContext), prm.restMsgContext.msgType)
     val amw = imp.msgToBeProcessed
@@ -499,13 +510,12 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     )
   }
 
-  protected def veritySignature(senderAuth: RestAuthContext): Unit = {
+  protected def verifySignature(senderAuth: RestAuthContext): Future[Boolean] = {
     Base58Util.decode(senderAuth.signature) match {
       case Success(signature) =>
         val toVerify = VerifySigByVerKey(senderAuth.verKey, senderAuth.verKey.getBytes, signature)
-        if (!walletAPI.verifySigWithVerKey(toVerify).verified)
-          throw new UnauthorisedErrorException
-      case Failure(_) => throw new UnauthorisedErrorException
+        CryptoOpExecutor.verifySig(toVerify).map(_.verified)
+      case Failure(_)         => throw new UnauthorisedErrorException
     }
   }
 
@@ -891,6 +901,8 @@ case class ProcessUntypedMsgV2(msg: Any,
 
 
 case class UnhandledMsg(amw: AgentMsgWrapper, rmc: ReqMsgContext, cause: Throwable) extends ActorMessage
+
+case class HandleAuthedRestMsg(prm: ProcessRestMsg) extends ActorMessage
 
 case class SendPushNotif(pcms: Set[ComMethodDetail],
                          pnData: PushNotifData,

@@ -19,6 +19,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 import com.evernym.verity.http.common.MsgSendingSvc
+import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -32,6 +33,7 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
@@ -62,12 +64,13 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqAnswerMsgHandler[S]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
-      with DEPRECATED_HasWallet
+    with DEPRECATED_HasWallet
+    with AsyncToSync
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
 
   val logger: Logger = ctx.logger
 
-  def encryptionParamBuilder: EncryptionParamBuilder = new EncryptionParamBuilder(walletVerKeyCacheHelper)
+  def encryptionParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
   def agencyDIDReq: DID = ctx.getState.agencyDIDOpt.getOrElse(
     throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("agency DID not found"))
@@ -118,8 +121,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
                                      isEdgeAgentsKeyDlgProof: Boolean): Unit = {
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
-    val verifResult = walletAPI.verifySigWithVerKey(
-      VerifySigByVerKey(signedByVerKey, challenge, sig))
+    val vs = VerifySigByVerKey(signedByVerKey, challenge, sig)
+    val verifResult = convertToSyncReq(CryptoOpExecutor.verifySig(vs))
     if (! verifResult.verified) {
       val errorMsgPrefix = if (isEdgeAgentsKeyDlgProof) "local" else "remote"
       val errorMsg = errorMsgPrefix + " agent key delegation proof verification failed"
@@ -294,11 +297,11 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def prepareEdgePayloadStoredEvent(msgId: String, msgName: String, externalPayloadMsg: String): Option[MsgPayloadStored] = {
 
     def prepareEdgeMsg(): Array[Byte] = {
-      val fromKeyParam = KeyParam (Left(ctx.getState.thisAgentVerKeyReq))
-      val forKeyParam = KeyParam(Right(GetVerKeyByDIDParam(getEncryptForDID, getKeyFromPool = false)))
+      val fromKeyParam = KeyParam.fromVerKey(ctx.getState.thisAgentVerKeyReq)
+      val forKeyParam = KeyParam.fromDID(getEncryptForDID)
       val encryptParam = EncryptParam (Set(forKeyParam), Option(fromKeyParam))
-      val packedMsg = ctx.SERVICES_DEPRECATED.agentMsgTransformer.pack(
-        msgPackFormat, externalPayloadMsg, encryptParam)
+      val packedMsg = awaitResult(ctx.SERVICES_DEPRECATED.agentMsgTransformer.packAsync(
+        msgPackFormat, externalPayloadMsg, encryptParam))
       packedMsg.msg
     }
     val payload = prepareEdgeMsg()

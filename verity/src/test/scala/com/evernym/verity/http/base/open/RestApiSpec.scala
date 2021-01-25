@@ -24,7 +24,7 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
     lazy val routingDid = mockEdgeAgent.myDIDDetail.did
     lazy val verKey = mockEdgeAgent.myDIDDetail.verKey
     lazy val signature = {
-      val signedVerKey = mockEdgeAgent.walletAPI.signMsg(SignMsg(KeyParam(Left(verKey)), verKey.getBytes))(mockEdgeAgent.wap)
+      val signedVerKey = mockEdgeAgent.walletAPI.executeSync[Array[Byte]](SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(mockEdgeAgent.wap)
       Base58Util.encode(signedVerKey)
     }
 

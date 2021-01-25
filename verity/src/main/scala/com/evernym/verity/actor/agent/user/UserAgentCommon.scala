@@ -208,11 +208,9 @@ trait UserAgentCommon
   override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
                                 senderDID: DID, threadOpt: Option[Thread]): Unit = {
     logger.debug("storing outgoing msg")
-    runWithInternalSpan("storeOutgoingMessage", "UserAgentCommon") {
-      val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)
-      storeMsg(msgId, msgName, senderDID, MSG_STATUS_RECEIVED.statusCode,
-        sendMsg = true, threadOpt, None, Option(payloadParam))
-    }
+    val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)
+    storeMsg(msgId, msgName, senderDID, MSG_STATUS_RECEIVED.statusCode,
+      sendMsg = true, threadOpt, None, Option(payloadParam))
     logger.debug("packed msg stored")
   }
 

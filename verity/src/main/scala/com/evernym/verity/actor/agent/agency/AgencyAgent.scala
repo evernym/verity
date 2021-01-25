@@ -7,7 +7,6 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, ForbiddenErrorEx
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
@@ -292,14 +291,12 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   override def postActorRecoveryCompleted(): List[Future[Any]] = {
-    runWithInternalSpan("postActorRecoveryCompleted", "AgencyAgent") {
-      List {
-        getAgencyDIDFut().map { cqr =>
-          cqr.getAgencyDIDOpt.map { aDID =>
-            self ? SetAgentActorDetail(aDID, entityId)
-          }.getOrElse {
-            Future.successful("agency agent not yet created")
-          }
+    List {
+      getAgencyDIDFut().map { cqr =>
+        cqr.getAgencyDIDOpt.map { aDID =>
+          self ? SetAgentActorDetail(aDID, entityId)
+        }.getOrElse {
+          Future.successful("agency agent not yet created")
         }
       }
     }

@@ -3,7 +3,6 @@ package com.evernym.verity.msg_tracer.progress_tracker
 import akka.pattern.ask
 import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.constants.ActorNameConstants.MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME
 import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.Exceptions.BadRequestErrorException
@@ -151,12 +150,10 @@ trait MsgProgressTracker extends HasActorResponseTimeout { this: MsgTraceProvide
 
     def recordOutMsgPackagingStarted(inMsgParam: TrackMsgParam=TrackMsgParam(),
                                      outMsgParam: TrackMsgParam=TrackMsgParam()): Unit = {
-      runWithInternalSpan("recordOutMsgPackagingStarted", "MsgProgressTracker") {
-        getAsyncReqContext(inMsgParam.msgId, outMsgParam.msgId).foreach { arc =>
-          arc.clientIpAddress.foreach { cip =>
-            val event = EventOutMsgPackagingStarted(outMsgId = outMsgParam.msgId)
-            recordEvent(cip, arc.reqId, event)
-          }
+      getAsyncReqContext(inMsgParam.msgId, outMsgParam.msgId).foreach { arc =>
+        arc.clientIpAddress.foreach { cip =>
+          val event = EventOutMsgPackagingStarted(outMsgId = outMsgParam.msgId)
+          recordEvent(cip, arc.reqId, event)
         }
       }
     }

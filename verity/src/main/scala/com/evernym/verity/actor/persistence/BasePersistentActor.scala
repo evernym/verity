@@ -170,11 +170,7 @@ trait BasePersistentActor
 
   def asyncWriteWithoutApplyAll(events: List[Any]): Unit = persistAsyncAllExt(events)(emptyEventHandler)
 
-  def writeAndApply(evt: Any): Unit = {
-    runWithInternalSpan("writeAndApply", "BasePersistentActor") {
-      persistExt(evt)(receiveRecover)
-    }
-  }
+  def writeAndApply(evt: Any): Unit = persistExt(evt)(receiveRecover)
 
   def writeAndApplyAll(events: List[Any]): Unit = {
     runWithInternalSpan("writeAndApplyAll", "BasePersistentActor") {

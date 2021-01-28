@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
+import com.evernym.verity.actor.agent.SpanUtil
+import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
@@ -167,7 +169,8 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
         retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) match {
           case Success((schemaJson, credDefJson)) =>
-            val verified = ctx.wallet.verifyProof(
+            runWithInternalSpan("processPresentation","PresentProof") {
+              val verified = ctx.wallet.verifyProof(
                 proofRequestJson,
                 presentationJson,
                 schemaJson,
@@ -176,18 +179,19 @@ class PresentProof (implicit val ctx: PresentProofContext)
                 "{}",
               )
 
-            val correct = checkEncodedAttributes(presentation)
+              val correct = checkEncodedAttributes(presentation)
 
-            val validity = verified
-              .map(_ && correct)
-              .map {
-                case true => ProofValidated
-                case _ => ProofInvalid
-              }
-              .getOrElse(ProofUndefined) // verifyProof throw an exception
+              val validity = verified
+                .map(_ && correct)
+                .map {
+                  case true => ProofValidated
+                  case _ => ProofInvalid
+                }
+                .getOrElse(ProofUndefined) // verifyProof throw an exception
 
-            apply(ResultsOfVerification(validity))
-            signal(Sig.PresentationResult(validity , simplifiedProof))
+              apply(ResultsOfVerification(validity))
+              signal(Sig.PresentationResult(validity, simplifiedProof))
+            }
           case Failure(_) =>
             // Unable to get Ledger Assets
             val validity = ProofUndefined

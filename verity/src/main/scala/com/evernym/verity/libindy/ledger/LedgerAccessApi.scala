@@ -18,22 +18,26 @@ class LedgerAccessApi(ledgerSvc: LedgerSvc, _walletAccess: WalletAccess) extends
 
   override def walletAccess: WalletAccess =  _walletAccess
   override def getCredDef(credDefId: String): Try[GetCredDefResp] = {
-    Await.result(
-      ledgerSvc.getCreDef(credDefId),
-      maxWaitTime
-    ) match {
-      case Right(resp) => Success(resp)
-      case Left(d) => Failure(LedgerAccessException(d.statusMsg))
+    runWithInternalSpan("getCredDef","LedgerAccessApi" ) {
+      Await.result(
+        ledgerSvc.getCreDef(credDefId),
+        maxWaitTime
+      ) match {
+        case Right(resp) => Success(resp)
+        case Left(d) => Failure(LedgerAccessException(d.statusMsg))
+      }
     }
   }
 
   override def getSchema(schemaId: String): Try[GetSchemaResp] = {
+    runWithInternalSpan("getSchema","LedgerAccessApi" ) {
       Await.result(
         ledgerSvc.getSchema(schemaId),
         maxWaitTime
       ) match {
-      case Right(resp) => Success(resp)
-      case Left(d) => Failure(LedgerAccessException(d.statusMsg))
+        case Right(resp) => Success(resp)
+        case Left(d) => Failure(LedgerAccessException(d.statusMsg))
+      }
     }
   }
 

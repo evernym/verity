@@ -246,7 +246,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
-      //FIXME: RTM -> Write test which uses an issuer did that doesn't have write privileges on Ledger
       s"[$issuerName] use write-schema protocol" in {
         val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
         schema.write(issuerSdk.context)

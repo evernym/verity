@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -302,10 +302,15 @@ class IssueCredentialSpec
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
 
+      issuer urlShortening MockableUrlShorteningAccess.shortened
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
-      val shortenInvite = issuer expect signal[SignalMsg.ShortenInvite]
-      shortenInvite.inviteURL should not be empty
-      val base64 = shortenInvite.inviteURL.split("oob=")(1)
+
+      // successful shortening
+      val invitation = issuer expect signal[SignalMsg.Invitation]
+      invitation.shortInviteURL shouldBe Some("http://short.url")
+
+      invitation.inviteURL should not be empty
+      val base64 = invitation.inviteURL.split("oob=")(1)
       val invite = new String(Base64Util.getBase64Decoded(base64))
       val inviteObj = new JSONObject(invite)
 
@@ -348,13 +353,6 @@ class IssueCredentialSpec
 
       issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
 
-      // successful shortening
-      issuer ~ Ctl.InviteShortened(shortenInvite.invitationId, shortenInvite.inviteURL, "http://short.url")
-      val invitation = issuer expect signal[SignalMsg.Invitation]
-      invitation.invitationId shouldBe shortenInvite.invitationId
-      invitation.inviteURL shouldBe shortenInvite.inviteURL
-      invitation.shortInviteURL shouldBe Some("http://short.url")
-
       holder ~ Ctl.AttachedOffer(attachedOffer)
       holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
         s.offer.credential_preview.attributes.size should not be 0
@@ -389,44 +387,12 @@ class IssueCredentialSpec
       issuer walletAccess MockableWalletAccess()
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
+      issuer urlShortening MockableUrlShorteningAccess.shorteningFailed
 
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
-      val shortenInvite = issuer expect signal[SignalMsg.ShortenInvite]
-      shortenInvite.inviteURL should not be empty
-      val base64 = shortenInvite.inviteURL.split("oob=")(1)
-      val invite = new String(Base64Util.getBase64Decoded(base64))
-      val inviteObj = new JSONObject(invite)
-
-      inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
-      inviteObj.has("@id") shouldBe true
-      inviteObj.getString("profileUrl") shouldBe logoUrl
-      inviteObj.getString("label") shouldBe orgName
-      inviteObj.getString("public_did") should endWith(publicDid)
-
-      inviteObj.getJSONArray("service")
-        .getJSONObject(0)
-        .getJSONArray("routingKeys")
-        .getString(1) shouldBe agencyVerkey
-
-      val attachmentBase64 = inviteObj
-        .getJSONArray("request~attach")
-        .getJSONObject(0)
-        .getJSONObject("data")
-        .getString("base64")
-
-      val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
-      val attachmentObj = new JSONObject(attachment)
-
-      attachmentObj.getString("@id") should not be empty
-      attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
-      attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
-
-      val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
-
       issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
 
       // failed shortening
-      issuer ~ Ctl.InviteShorteningFailed(shortenInvite.invitationId, "Failed")
       val problemReport = issuer expect signal[SignalMsg.ProblemReport]
       problemReport.description.code shouldBe ProblemReportCodes.shorteningFailed
 

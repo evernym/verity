@@ -4,6 +4,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 
@@ -41,8 +42,7 @@ object IssueCredMsgFamily
     "issue"                             -> classOf[Ctl.Issue],
     "reject"                            -> classOf[Ctl.Reject],
     "status"                            -> classOf[Ctl.Status],
-    "invite-shortened"                  -> classOf[Ctl.InviteShortened],
-    "invite-shortening-failed"          -> classOf[Ctl.InviteShorteningFailed],
+    "invite-shortened"                  -> classOf[InviteShortened],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -56,7 +56,6 @@ object IssueCredMsgFamily
     classOf[SignalMsg.ProblemReport]          -> "problem-report",
     classOf[SignalMsg.Ack]                    -> "ack-received",
     classOf[SignalMsg.Invitation]             -> "protocol-invitation",
-    classOf[SignalMsg.ShortenInvite]          -> "shorten-invite",
   )
 }
 
@@ -98,9 +97,6 @@ object Ctl {
   case class Issue(revRegistryId: Option[String]=None,
                    comment: Option[String]=Some(""),
                    `~please_ack`: Option[PleaseAck]=None) extends Ctl
-
-  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl
-  case class InviteShorteningFailed(invitationId: String, reason: String) extends Ctl
 }
 
 //signal messages
@@ -115,7 +111,6 @@ object SignalMsg {
   case class ShouldIssue(requestCred: RequestCred) extends SignalMsg
   case class StatusReport(status: String) extends SignalMsg
   case class Ack(status: String) extends SignalMsg
-  case class ShortenInvite(invitationId: String, inviteURL: String) extends SignalMsg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SignalMsg
   def buildProblemReport(description: String, code: String): SignalMsg.ProblemReport = {
     SignalMsg.ProblemReport(

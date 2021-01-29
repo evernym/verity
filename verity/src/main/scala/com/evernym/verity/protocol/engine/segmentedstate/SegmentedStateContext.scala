@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine.segmentedstate
 import com.evernym.verity.actor.StorageReferenceStored
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncProtocol.SegmentStateStoreProgress
 import com.evernym.verity.util.ParticipantUtil
 import scalapb.GeneratedMessage
 
@@ -76,6 +77,7 @@ trait SegmentedStateContext[P,R,M,E,S,I] extends SegmentedStateContextApi { this
     case Right(_) =>
       logger.debug("segment successfully stored")
       pendingSegments = None
+      removesAsyncProtocolService(SegmentStateStoreProgress)
       finalizeState()
       addToMsgQueue(SegmentStorageComplete())
     case Left(e) =>

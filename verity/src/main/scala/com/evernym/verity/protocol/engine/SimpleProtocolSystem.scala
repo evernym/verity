@@ -4,6 +4,7 @@ import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, Relati
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.util.MsgUtil
 import com.typesafe.scalalogging.Logger
@@ -195,6 +196,16 @@ class Domain(override val domainId: DomainId,
     usedLedgerAccess = Some(w)
   }
 
+  var usedUrlShorteningAccess: Option[UrlShorteningAccess] = None
+
+  def provideUrlShorteningAccess(): UrlShorteningAccess = usedUrlShorteningAccess.get
+
+  override def urlShorteningAccessProvider: Option[() => UrlShorteningAccess] = Some(provideUrlShorteningAccess _)
+
+  def urlShorteningAccess(url: UrlShorteningAccess) : Unit = {
+    usedUrlShorteningAccess = Some(url)
+  }
+
   var usedInitParams: Option[Map[String, String]] = None
 
   override def provideInitParams(): Map[String, String] = defaultInitParams ++ usedInitParams.getOrElse(Map.empty)
@@ -314,6 +325,8 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
   def ledgerAccessProvider: Option[() => LedgerAccess] = None
 
+  def urlShorteningAccessProvider: Option[() => UrlShorteningAccess] = None
+
   def provideInitParams: Map[String, String] = Map.empty
 
   def containerFor[A <: Control](c: CtlEnvelope[A], rel: Relationship): Container = {
@@ -348,7 +361,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
       val sss = segmentStoreStrategy(protoDef)
       val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef, sss,
-        initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider)
+        initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider, urlShorteningAccessProvider)
 
       val container = containerProvider(pce)
 

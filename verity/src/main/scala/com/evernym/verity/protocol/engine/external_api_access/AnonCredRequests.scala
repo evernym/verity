@@ -51,4 +51,5 @@ trait AnonCredRequests {
                   credentialDefs: String,
                   revocRegDefs: String,
                   revocRegs: String): Try[Boolean]
+
 }

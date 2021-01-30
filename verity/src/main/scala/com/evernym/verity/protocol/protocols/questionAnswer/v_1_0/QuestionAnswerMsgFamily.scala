@@ -4,7 +4,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.Init
 
 object QuestionAnswerMsgFamily extends MsgFamily {
-  override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
+  override val qualifier: MsgFamilyQualifier = MsgFamily.COMMUNITY_QUALIFIER
   override val name: MsgFamilyName = "questionanswer"
   override val version: MsgFamilyVersion = "1.0"
 

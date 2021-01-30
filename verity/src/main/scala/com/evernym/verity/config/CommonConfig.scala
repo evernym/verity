@@ -163,9 +163,6 @@ trait CommonConfig {
   val MESSAGES = s"$VERITY.msgs"
   val CONN_REQ_MSG_EXPIRATION_TIME_IN_SECONDS = s"$MESSAGES.conn-req-expiration-time-in-seconds"
 
-  val MESSAGE_TYPE = s"$VERITY.message-type"
-  val MESSAGE_TYPE_HTTP = s"$MESSAGE_TYPE.http"
-
   private val CACHE = s"$VERITY.cache"
   val KEY_VALUE_MAPPER_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$CACHE.key-value-mapper-cache-expiration-time-in-seconds"
   val AGENT_CONFIG_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$CACHE.agent-config-cache-expiration-time-in-seconds"

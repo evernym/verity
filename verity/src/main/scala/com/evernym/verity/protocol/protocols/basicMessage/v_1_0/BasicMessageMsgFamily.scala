@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor => A
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming, Localization => l10n}
 
 object BasicMessageMsgFamily extends MsgFamily {
-  override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
+  override val qualifier: MsgFamilyQualifier = MsgFamily.COMMUNITY_QUALIFIER
   override val name: MsgFamilyName = "basicmessage"
   override val version: MsgFamilyVersion = "1.0"
 

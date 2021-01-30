@@ -1,7 +1,6 @@
 package com.evernym.verity.http.route_handlers.open
 
 import java.util.UUID
-
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, entity, handleExceptions, logRequestResult, pathPrefix, _}
 import akka.http.scaladsl.server.directives.BasicDirectives.extract
@@ -91,7 +90,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
   def buildGetStatusMsgType(protoRef: ProtoRef, params: Map[String, String]): MsgType = {
     MsgType(
-      params.getOrElse("familyQualifier", "123456789abcdefghi1234"),
+      MsgFamily.msgQualifierFromQualifierStr(params.getOrElse("family", "123456789abcdefghi1234")),
       protoRef.msgFamilyName,
       protoRef.msgFamilyVersion,
       params.getOrElse("msgName", "get-status")

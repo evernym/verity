@@ -11,6 +11,12 @@ class JsonParsingException(cause: Throwable)
 class MsgTypeParsingException(typeStr: String)
   extends RuntimeException(s"error parsing type string: $typeStr") with MsgCodecException
 
+class UnrecognizedMsgQualifierException(qualifierStr: String)
+  extends RuntimeException(s"error parsing qualifier string: $qualifierStr") with MsgCodecException
+
+class InvalidMsgQualifierException
+  extends RuntimeException(s"error parsing qualifier, qualifier does not match known types") with MsgCodecException
+
 class DecodingException(encoded: String, nativeType: String, cause: Exception)
   extends RuntimeException(s"error decoding object type $nativeType from $encoded", cause) with MsgCodecException
 

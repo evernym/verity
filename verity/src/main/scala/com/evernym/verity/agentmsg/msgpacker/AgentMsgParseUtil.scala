@@ -10,7 +10,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.CreateMsgReqMsg_MFV_0_5
 import com.evernym.verity.agentmsg.msgfamily.{BundledMsg_MFV_0_5, LegacyTypedMsg}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
+import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, msgQualifierFromQualifierStr}
 import com.evernym.verity.protocol.engine.{MissingReqFieldProtocolEngineException, MsgBase}
 import com.evernym.verity.util.MessagePackUtil
 import org.json.JSONObject
@@ -30,9 +30,9 @@ object AgentMsgParseUtil {
     val msgTypeString = map.get(`@TYPE`)
     msgTypeString match {
       case Some(VALID_MESSAGE_TYPE_REG_EX_DID(_, msgQualifier, msgFamily, msgFamilyVersion, msgType)) =>
-        MsgFamilyDetail(msgQualifier, msgFamily, msgFamilyVersion, msgType, None)
+        MsgFamilyDetail(msgQualifierFromQualifierStr(msgQualifier), msgFamily, msgFamilyVersion, msgType, None)
       case Some(VALID_MESSAGE_TYPE_REG_EX_HTTP(_, msgQualifier, msgFamily, msgFamilyVersion, msgType)) =>
-        MsgFamilyDetail(msgQualifier, msgFamily, msgFamilyVersion, msgType, None)
+        MsgFamilyDetail(msgQualifierFromQualifierStr(msgQualifier), msgFamily, msgFamilyVersion, msgType, None)
       case _ => buildMsgFamilyDetailForLegacyMsgs(jsonString)
     }
   }

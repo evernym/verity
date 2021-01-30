@@ -12,7 +12,7 @@ package object engine {
   type DID = String
   type VerKey = String
   type Ledgers = List[Map[String, Any]]
-  type MsgFamilyQualifier = String
+
   type MsgFamilyName = String
   type MsgFamilyVersion = String
   type MsgName = String
@@ -28,6 +28,12 @@ package object engine {
   type SafeThreadId = String
 
   type Nonce = String
+
+  sealed trait MsgFamilyQualifier
+
+  case object EvernymQualifier extends MsgFamilyQualifier
+
+  case object CommunityQualifier extends MsgFamilyQualifier
 
   //NOTE: until we implement threading, we'll use below mentioned thread id
   val DEFAULT_THREAD_ID = "0"

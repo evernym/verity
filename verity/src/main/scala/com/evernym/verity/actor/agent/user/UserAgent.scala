@@ -648,7 +648,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
           val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
             getMsgsByConnsRespMsg, reqMsgContext.agentMsgContext.msgPackFormat == MPF_MSG_PACK)
           val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-          sendRespMsg("GetMsgsResp", rp, sndr)
+          sendRespMsg("GetMsgsByConnsResp", rp, sndr)
         }.recover {
           case e: Exception =>
             handleException(e, sndr)

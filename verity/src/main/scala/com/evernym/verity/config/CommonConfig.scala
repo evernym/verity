@@ -286,6 +286,8 @@ trait CommonConfig {
   val USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB = s"$VERITY_AGENT.periodic-cleanup-scheduled-job"
   val USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS = s"$USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB.interval-in-seconds"
 
+  val USER_AGENT_LEGACY_PUBLIC_IDENTITY_BEHAVIOUR = s"$VERITY_AGENT.legacy-public-identity-behaviour"
+
   val PROVISIONING = s"$VERITY.provisioning"
 
   val PROVISIONING_SPONSORS = s"$PROVISIONING.sponsors"

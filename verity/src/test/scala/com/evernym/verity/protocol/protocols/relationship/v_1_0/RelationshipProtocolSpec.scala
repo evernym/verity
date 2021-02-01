@@ -621,6 +621,36 @@ class RelationshipProtocolSpec
     }
   }
 
+  "Requester asking to prepare OOB invitation, do not have public did" - {
+    implicit val system: TestSystem = new TestSystem()
+
+    val requester = setup("requester", odg = controllerProvider)
+    val provisioner = setup("provisioner")
+    requester.initParams(defaultInitParams.updated(MY_PUBLIC_DID, ""))
+    val specificProfileUrl = Option("some profile url")
+
+    "protocol transitioning to InvitationCreated state" in { _ =>
+      (requester engage provisioner) ~ Create(label, specificProfileUrl)
+      requester expect signal[Signal.Created]
+      requester.state shouldBe a[State.Created]
+
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
+      val inviteMsg = requester expect signal[Signal.Invitation]
+      checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl, hasPublicDid = false)
+      inviteMsg.shortInviteURL shouldBe None
+      val invitation = requester expect state[State.InvitationCreated]
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
+
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
+      checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl, hasPublicDid = false)
+      inviteMsg2.shortInviteURL shouldBe None
+      val invitationAgain = requester expect state[State.InvitationCreated]
+      invitationAgain shouldBe invitation
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
+    }
+  }
+
   "Requester asking to prepare shortened OOB invitation" - {
     val shortUrl = "http://short.url"
 
@@ -1016,16 +1046,26 @@ class RelationshipProtocolSpec
                              label: String = labelStr,
                              profileUrl: Option[String] = Option(defLogo),
                              goal: String = defGoal,
-                             goalCode: String = defGoalCode
+                             goalCode: String = defGoalCode,
+                             hasPublicDid: Boolean = true
                             ): Unit =
-    checkOOBInvitationUrlData(invitation.inviteURL, invitation.invitationId, label, profileUrl, goal, goalCode)
+    checkOOBInvitationUrlData(
+      invitation.inviteURL,
+      invitation.invitationId,
+      label,
+      profileUrl,
+      goal,
+      goalCode,
+      hasPublicDid
+    )
 
   def checkOOBInvitationUrlData(inviteURL: String,
                                 invitationId: String,
                                 label: String = labelStr,
                                 profileUrl: Option[String] = Option(defLogo),
                                 goal: String = defGoal,
-                                goalCode: String = defGoalCode
+                                goalCode: String = defGoalCode,
+                                hasPublicDid: Boolean = true
                                ): Unit = {
     val json = getInvitationJsonFromUrl(inviteURL, "oob")
     json.getString("@id") shouldBe invitationId
@@ -1039,7 +1079,10 @@ class RelationshipProtocolSpec
     json.getString("goal_code") shouldBe goalCode
 
     // check public did
-    json.getString("public_did") shouldBe s"did:sov:$publicDID"
+    if (hasPublicDid)
+      json.getString("public_did") shouldBe s"did:sov:$publicDID"
+    else
+      json.has("public_did") shouldBe false
 
 
     val service = json.getJSONArray("service")

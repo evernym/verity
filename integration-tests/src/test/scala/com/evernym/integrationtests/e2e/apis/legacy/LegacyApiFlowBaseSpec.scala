@@ -370,13 +370,28 @@ trait LegacyApiFlowBaseSpec
       }
     }
 
+    def setupPublicIdentifier()(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
+      "when sent setup issuer create msg" - {
+        "should be able to successfully create public identifier" in {
+          createPublicIdentifier()
+
+          val response = eventually {
+            val latestMsgOpt = edgeHttpEndpointForPackedMsg.getAndResetReceivedMsgs.headOption
+            latestMsgOpt.isDefined shouldBe true
+            latestMsgOpt.get
+          }
+          storePublicIdentifier(response)
+        }
+      }
+    }
+
     def sendInvitation_MFV_0_5(connId: String, includePublicDID: Boolean = false)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent create and send invite msg after setting required configs (for $connId)" - {
         "should be able to successfully create and send invite msg" in withPreCheck {
           val icr = expectMsgType[CreateInviteResp_MFV_0_5](sendInviteForConn(connId, ph = sendInviteToPhoneNo,
             includePublicDID = includePublicDID))
           if (includePublicDID) {
-            icr.md.inviteDetail.senderDetail.publicDID.contains(mockClientAgent.myDIDDetail.did) shouldBe true
+            icr.md.inviteDetail.senderDetail.publicDID.contains(mockClientAgent.publicIdentifier.get.did) shouldBe true
           }
           addToMsgs(connId, CLIENT_MSG_UID_CONN_REQ_1, MsgBasicDetail(icr.mc.uid, CREATE_MSG_TYPE_CONN_REQ, None))
           sendInviteToPhoneNo.foreach { ph =>
@@ -392,7 +407,7 @@ trait LegacyApiFlowBaseSpec
           val icr = expectMsgType[ConnReqRespMsg_MFV_0_6](sendInviteForConn_MFV_0_6(connId, ph = sendInviteToPhoneNo,
             includePublicDID = includePublicDID))
           if (includePublicDID) {
-            icr.inviteDetail.senderDetail.publicDID.contains(mockClientAgent.myDIDDetail.did) shouldBe true
+            icr.inviteDetail.senderDetail.publicDID.contains(mockClientAgent.publicIdentifier.get.did) shouldBe true
           }
           addToMsgs(connId, CLIENT_MSG_UID_CONN_REQ_1, MsgBasicDetail(icr.inviteDetail.connReqId, CREATE_MSG_TYPE_CONN_REQ, None))
           sendInviteToPhoneNo.foreach { ph =>
@@ -776,6 +791,7 @@ trait LegacyApiFlowBaseSpec
           Option(s"${edgeHttpEndpointForPackedMsg.listeningUrl}")))
         ce.enterprise.updateAgentComMethod(TestComMethod("2", COM_METHOD_TYPE_PUSH,
           Option(s"${edgeHttpEndpointForPushNotif.listeningUrl}")))
+        ce.enterprise.setupPublicIdentifier()
         ce.scenario.connIds.foreach(ce.enterprise.createNewKey_0_5)
         if (aae.easVerityInstance.setup) {
           //this is conditional because metrics are exposed on internal api which is only allowed from internal network
@@ -919,6 +935,7 @@ trait LegacyApiFlowBaseSpec
         ce.enterprise.setupTillAgentCreation_MFV_0_7
         ce.enterprise.updateAgentComMethod(TestComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT,
           Option(s"${edgeHttpEndpointForPackedMsg.listeningUrl}")))
+        ce.enterprise.setupPublicIdentifier()
         ce.scenario.connIds.foreach(ce.enterprise.createNewKey_MFV_0_6)
         ce.enterprise.updateAgentConfig(Set(TestConfigDetail(NAME_KEY, Option(entName)),
           TestConfigDetail(LOGO_URL_KEY, Option(edgeAgentLogoUrl))))

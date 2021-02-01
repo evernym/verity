@@ -116,6 +116,8 @@ case class UpdateComMethod_MFV_0_5(`@type`: TypeDetail, comMethod: TestComMethod
 
 case class UpdateComMethod_MFV_0_6(`@type`: String, comMethod: TestComMethod)
 
+case class IssuerSetupCreate_MFV_0_6(`@type`: String)
+
 //response msgs
 case class Connected_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey)
 
@@ -168,6 +170,10 @@ case class ConfigsRemoved_MFV_0_5()
 case class ConfigsMsg_MFV_0_5(configs: Set[TestConfigDetail])
 
 case class ConnReqAccepted_MFV_0_6(`@id`: String)
+
+case class PublicIdentifier(did: DID, verKey: VerKey)
+
+case class PublicIdentifierCreated_MFV_0_6(`@id`: String, identifier: PublicIdentifier)
 
 object AgentPackMsgUtil {
 

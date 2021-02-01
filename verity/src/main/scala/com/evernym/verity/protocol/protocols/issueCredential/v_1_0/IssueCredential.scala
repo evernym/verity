@@ -19,6 +19,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyA
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
+import com.evernym.verity.util.OptionUtil.blankOption
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
 
@@ -292,7 +293,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           paramMap.get(NAME),
           paramMap.get(LOGO_URL),
           paramMap.get(AGENCY_DID_VER_KEY),
-          paramMap.get(MY_PUBLIC_DID),
+          paramMap.get(MY_PUBLIC_DID).flatMap(OptionUtil.blankOption),
         ),
         initialize(params)
       )

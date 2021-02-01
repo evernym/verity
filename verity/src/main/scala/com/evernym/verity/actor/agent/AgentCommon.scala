@@ -210,7 +210,8 @@ case class SetupCreateKeyEndpoint(newAgentKeyDID: DID,
                                   mySelfRelDID: DID,
                                   ownerAgentKeyDID: Option[DID] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
-                                  pid: Option[ProtocolIdDetail]=None) extends ActorMessage
+                                  pid: Option[ProtocolIdDetail]=None,
+                                  publicIdentity: Option[DidPair]=None) extends ActorMessage
 
 trait SetupEndpoint extends ActorMessage {
   def ownerDID: DID

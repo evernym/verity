@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_PAIRWISE, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_CONNECTION, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_SEND_REMOTE_MSG, MSG_TYPE_DETAIL_WALLET_INIT_BACKUP, MSG_TYPE_UPDATE_COM_METHOD, MSG_TYPE_UPDATE_CONN_STATUS, getNewMsgUniqueId}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_PAIRWISE, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_CONNECTION, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_ISSUER_SETUP_CREATE, MSG_TYPE_DETAIL_SEND_REMOTE_MSG, MSG_TYPE_DETAIL_WALLET_INIT_BACKUP, MSG_TYPE_UPDATE_COM_METHOD, MSG_TYPE_UPDATE_CONN_STATUS, getNewMsgUniqueId}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqAcceptedMsg_MFV_0_6, DeclineConnReqMsg_MFV_0_6, RedirectConnReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.agentmsg.wallet_backup.{WalletBackupProvisionMsg, WalletBackupRestoreMsg}
@@ -18,7 +18,7 @@ import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.mock.agent.MockAgent
-import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentPackMsgUtil, ConnReq_MFV_0_6, Connect_MFV_0_6, CreateAgent_MFV_0_6, CreateConnection_MFV_0_6, CreateKey_MFV_0_6, GetMsgsByConns_MFV_0_6, SendRemoteMsg_MFV_0_6, TestComMethod, UpdateComMethod_MFV_0_6, UpdateConnStatus_MFV_0_6}
+import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentPackMsgUtil, ConnReq_MFV_0_6, Connect_MFV_0_6, CreateAgent_MFV_0_6, CreateConnection_MFV_0_6, CreateKey_MFV_0_6, GetMsgsByConns_MFV_0_6, IssuerSetupCreate_MFV_0_6, SendRemoteMsg_MFV_0_6, TestComMethod, UpdateComMethod_MFV_0_6, UpdateConnStatus_MFV_0_6}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.util.MsgIdProvider._
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -205,6 +205,20 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
 
     def prepareUpdateComMethodMsgForAgent(cm: TestComMethod): PackedMsg = {
       prepareUpdateComMethodMsgForAgent(cm, MFV_0_6)
+    }
+
+    def buildSetupIssuerCreateMethodMsgWithVersion(msgFamilyVersion: MsgFamilyVersion): PackMsgParam = {
+      val agentMsg = IssuerSetupCreate_MFV_0_6(MSG_TYPE_DETAIL_ISSUER_SETUP_CREATE)
+      AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToCloudAgent)
+   }
+
+    def prepareSetupIssuerCreateMethodMsgForAgency(): PackedMsg = {
+      val fwdRoute = FwdRouteMsg(cloudAgentRoutingDID, Left(sealParamFromEdgeToAgency))
+      preparePackedRequestForRoutes(MTV_1_0, buildSetupIssuerCreateMethodMsgWithVersion(MTV_1_0), List(fwdRoute))
+    }
+
+    def prepareSetupIssuerCreateMethodMsgForAgent(): PackedMsg = {
+      preparePackedRequestForAgent(buildSetupIssuerCreateMethodMsgWithVersion(MTV_1_0))
     }
 
     def buildCoreConnectCreateKeyMsgWithVersion(fromDID: DID, fromDIDVerKey: VerKey,

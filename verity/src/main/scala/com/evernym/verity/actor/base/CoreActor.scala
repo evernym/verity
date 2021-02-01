@@ -71,7 +71,7 @@ trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX",
         Map("entity-type"-> entityTypeTagName)
       )
-    log.debug(s"[$actorId]: in post stop" + getClass.getSimpleName)
+    log.debug(s"[$actorId]: in post stop")
     afterStop()
     super.postStop()
   }

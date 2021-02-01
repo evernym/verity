@@ -176,16 +176,16 @@ object ConfigUtil {
    * @param appConfig
    * @param defaultReceiveTimeoutInSeconds
    * @param entityCategory
-   * @param entityName
+   * @param entityType
    * @param entityId
    * @return receive timeout
    */
   def getReceiveTimeout(appConfig: AppConfig,
                         defaultReceiveTimeoutInSeconds: Int,
                         entityCategory: String,
-                        entityName: String,
+                        entityType: String,
                         entityId: String): Duration = {
-    val confValue = getConfIntValue(appConfig, entityCategory, RECEIVE_TIMEOUT_SECONDS, Option(entityName), Option(entityId))
+    val confValue = getConfIntValue(appConfig, entityCategory, RECEIVE_TIMEOUT_SECONDS, Option(entityType), Option(entityId))
     val timeout = confValue.getOrElse(defaultReceiveTimeoutInSeconds)
     if (timeout > 0) timeout.seconds else Duration.Undefined
   }
@@ -193,61 +193,61 @@ object ConfigUtil {
   def getConfIntValue(appConfig: AppConfig,
                       entityCategory: String,
                       confName: String,
-                      entityNameOpt: Option[String],
+                      entityTypeOpt: Option[String],
                       entityIdOpt: Option[String]): Option[Int] = {
-    getConfValue(appConfig, entityCategory, confName, entityNameOpt, entityIdOpt).map(_.toInt)
+    getConfValue(appConfig, entityCategory, confName, entityTypeOpt, entityIdOpt).map(_.toInt)
   }
 
   def getConfDoubleValue(appConfig: AppConfig,
                          entityCategory: String,
                          confName: String,
-                         entityNameOpt: Option[String],
+                         entityTypeOpt: Option[String],
                          entityIdOpt: Option[String]): Option[Double] = {
-    getConfValue(appConfig, entityCategory, confName, entityNameOpt, entityIdOpt).map(_.toDouble)
+    getConfValue(appConfig, entityCategory, confName, entityTypeOpt, entityIdOpt).map(_.toDouble)
   }
 
   def getConfBooleanValue(appConfig: AppConfig,
                           entityCategory: String,
                           confName: String,
-                          entityNameOpt: Option[String],
+                          entityTypeOpt: Option[String],
                           entityIdOpt: Option[String]): Option[Boolean] = {
     val entityIdConfValue: Option[Boolean] =
-      (entityNameOpt, entityIdOpt) match {
-        case (Some(entityName), Some(entityId)) =>
-          safeGetAppConfigBooleanOption(s"$entityCategory.$entityName.$entityId.$confName", appConfig)
+      (entityTypeOpt, entityIdOpt) match {
+        case (Some(entityType), Some(entityId)) =>
+          safeGetAppConfigBooleanOption(s"$entityCategory.$entityType.$entityId.$confName", appConfig)
         case _ => None
       }
-    val entityNameConfValue: Option[Boolean] =
-      entityNameOpt match {
-        case Some(entityName) => safeGetAppConfigBooleanOption(s"$entityCategory.$entityName.$confName", appConfig)
+    val entityTypeConfValue: Option[Boolean] =
+      entityTypeOpt match {
+        case Some(entityType) => safeGetAppConfigBooleanOption(s"$entityCategory.$entityType.$confName", appConfig)
         case _ => None
       }
     val categoryConfValue: Option[Boolean] =
       safeGetAppConfigBooleanOption(s"$entityCategory.$confName", appConfig)
 
-    entityIdConfValue orElse entityNameConfValue orElse categoryConfValue
+    entityIdConfValue orElse entityTypeConfValue orElse categoryConfValue
   }
 
   private def getConfValue(appConfig: AppConfig,
                            entityCategory: String,
                            confName: String,
-                           entityNameOpt: Option[String],
+                           entityTypeOpt: Option[String],
                            entityIdOpt: Option[String]): Option[String] = {
     val entityIdConfValue: Option[String] =
-      (entityNameOpt, entityIdOpt) match {
-        case (Some(entityName), Some(entityId)) =>
-          safeGetAppConfigStringOption(s"$entityCategory.$entityName.$entityId.$confName", appConfig)
+      (entityTypeOpt, entityIdOpt) match {
+        case (Some(entityType), Some(entityId)) =>
+          safeGetAppConfigStringOption(s"$entityCategory.$entityType.$entityId.$confName", appConfig)
         case _ => None
       }
-    val entityNameConfValue: Option[String] =
-      entityNameOpt match {
-        case Some(entityName) => safeGetAppConfigStringOption(s"$entityCategory.$entityName.$confName", appConfig)
+    val entityTypeConfValue: Option[String] =
+      entityTypeOpt match {
+        case Some(entityType) => safeGetAppConfigStringOption(s"$entityCategory.$entityType.$confName", appConfig)
         case _ => None
       }
     val categoryConfValue: Option[String] =
       safeGetAppConfigStringOption(s"$entityCategory.$confName", appConfig)
 
-    entityIdConfValue orElse entityNameConfValue orElse categoryConfValue
+    entityIdConfValue orElse entityTypeConfValue orElse categoryConfValue
   }
 
   private def safeGetAppConfigStringOption(key: String, appConfig: AppConfig): Option[String] =

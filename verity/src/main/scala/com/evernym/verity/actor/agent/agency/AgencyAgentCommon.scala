@@ -4,7 +4,7 @@ import akka.pattern.ask
 import akka.event.LoggingReceive
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
@@ -113,19 +113,19 @@ trait AgencyAgentCommon
     }
   }
 
-  override final def handleSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] =
+  override final def handleSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] =
     handleCommonSignalMsgs orElse handleSpecificSignalMsgs
 
-  def handleCommonSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] =
+  def handleCommonSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] =
     handleCoreSignalMsgs orElse handleLegacySignalMsgs
 
-  def handleCoreSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
-    case SignalMsgFromDriver(cr: ConnectionStatusUpdated, _, _, _)             => writeAndApply(cr); Future.successful(None)
-    case SignalMsgFromDriver(idSponsor: IdentifySponsor, _, _, _)              => identifySponsor(idSponsor)
-    case SignalMsgFromDriver(provisioningNeeded: ProvisioningNeeded, _,_, tcd) => provisionAgent(provisioningNeeded, tcd.threadId)
+  def handleCoreSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
+    case SignalMsgParam(cr: ConnectionStatusUpdated, _)                 => writeAndApply(cr); Future.successful(None)
+    case SignalMsgParam(idSponsor: IdentifySponsor, _)                  => identifySponsor(idSponsor)
+    case SignalMsgParam(provNeeded: ProvisioningNeeded, Some(threadId)) => provisionAgent(provNeeded, threadId)
   }
 
-  def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = PartialFunction.empty
+  def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = PartialFunction.empty
 
   def identifySponsor(idSponsor: IdentifySponsor): Future[Option[ControlMsg]] = {
     val sponsorRequired = ConfigUtil.sponsorRequired(appConfig)

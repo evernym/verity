@@ -136,9 +136,7 @@ trait BasePersistentStore
   type TransformedMsg = DeprecatedEventMsg with DeprecatedStateMsg with PersistentMsg
 
   override def overrideConfig: Option[Config] = Option(
-    ConfigFactory.parseString(
-      """
-        |""".stripMargin)
+    ConfigFactory.empty()
       .withFallback(EventSourcedBehaviorTestKit.config)
       .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )

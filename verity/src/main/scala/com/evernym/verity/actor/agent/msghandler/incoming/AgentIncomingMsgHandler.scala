@@ -3,9 +3,8 @@ package com.evernym.verity.actor.agent.msghandler.incoming
 import java.util.UUID
 
 import akka.actor.{ActorRef, Props}
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, AgentMsgProcessor, UnhandledMsg, ProcessUntypedMsgV2, StateParam}
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, AgentMsgProcessor, ProcessUntypedMsgV2, StateParam, UnhandledMsg}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.msg_tracer.progress_tracker.TrackingParam
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.AgentAuthKeyUtil
 import com.evernym.verity.protocol.engine._
@@ -14,6 +13,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 
 import scala.concurrent.Future
 
@@ -32,41 +32,51 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     case mfr: MsgForRelationship          => sendToAgentMsgProcessor(mfr)
 
     //agent-msg-processor-actor -> this actor
-    case mfd: SignalMsgFromDriver         => handleSignalMsgFromDriver(mfd)
+    case psm: ProcessSignalMsg         => handleSignalMsgFromDriver(psm)
 
     //agent-msg-processor-actor -> this actor
     case um: UnhandledMsg                 =>
       runWithInternalSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler") {
         try {
-          if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw))
+          um.rmc.clientIpAddress.foreach(checkToStartIpAddressBasedTracking)
+          if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
+            recordInMsgEvent(um.rmc.id,
+              MsgEvent(
+                s"TrackingId: ${um.amw.headAgentMsg.msgFamilyDetail.hashCode().toString}",
+                um.amw.headAgentMsg.msgFamilyDetail.toString,
+                s"self: ${self.path}"
+              ))
             incomingMsgHandler(um.rmc)(um.amw)
-          else
+          }
+          else {
             handleException(um.cause, sender())
+            recordInMsgEvent(um.rmc.id, MsgEvent.withTypeAndDetail(um.amw.headAgentMsg.msgFamilyDetail.toString, "FAILED: unhandled message"))
+          }
         } catch protoExceptionHandler
       }
   }
 
-  def handleSignalMsgFromDriver(smfd: SignalMsgFromDriver): Unit = {
+  def handleSignalMsgFromDriver(psm: ProcessSignalMsg): Unit = {
     // flow diagram: SIG, step 5
     val sndr = sender()
-    if (handleSignalMsgs.isDefinedAt(smfd)) {
-      handleSignalMsgs(smfd).foreach { dmOpt =>
+    if (handleSignalMsgs.isDefinedAt(psm.smp)) {
+      handleSignalMsgs(psm.smp).foreach { dmOpt =>
         dmOpt.foreach { dm =>
           dm.forRel match {
             case Some(rel) =>
-              val tc = smfd.threadContextDetail
-              val msgForRel = MsgForRelationship(dm.msg, smfd.threadId, selfParticipantId,
+              val tc = psm.threadContextDetail
+              val msgForRel = MsgForRelationship(dm.msg, psm.threadId, selfParticipantId,
                 Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
               agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
             case None =>
-              agentActorContext.protocolRegistry.find(smfd.protoRef).foreach { pd =>
-                sendToAgentMsgProcessor(ProcessUntypedMsgV2(dm.msg, pd.protoDef, smfd.threadId), sndr)
+              agentActorContext.protocolRegistry.find(psm.protoRef).foreach { pd =>
+                sendToAgentMsgProcessor(ProcessUntypedMsgV2(dm.msg, pd.protoDef, psm.threadId), sndr)
               }
           }
         }
       }
     } else {
-      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + smfd.signalMsg)
+      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + psm.smp.signalMsg)
     }
   }
 
@@ -100,8 +110,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         allowedUnauthedMsgTypes,
         allAuthedKeys,
         userIdForResourceUsageTracking,
-        trackingParam
-      )
+        pairwiseRelTrackingIds)
       val msgProcessor =
           context.actorOf(Props(new AgentMsgProcessor(
             agentActorContext.appConfig,
@@ -109,7 +118,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
             agentActorContext.agentMsgRouter,
             agentActorContext.protocolRegistry,
             param
-          )), UUID.randomUUID().toString)
+          )), "amp-" + UUID.randomUUID().toString)
       msgProcessor.tell(cmd, sndr)
     }
   }
@@ -127,8 +136,6 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     agentMsgProcessor.tell(cmd, sender())
   }
 
-  lazy val trackingParam: TrackingParam = TrackingParam(Option(domainId), relationshipId)
-
   /**
    * all/some agent actors (agency agent, agency agent pairwise, user agent and user agent pairwise)
    * do have legacy message handler logic written in those actors itself (non protocol message handlers).
@@ -145,7 +152,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * to the protocol instance which sent the signal
    * @return
    */
-  def handleSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = PartialFunction.empty
+  def handleSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = PartialFunction.empty
 
 
   //TODO: there is opportunity to tight below authorization related code

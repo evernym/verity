@@ -4,7 +4,7 @@ import akka.event.LoggingReceive
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.msghandler.ProcessUnpackedMsgV1
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
@@ -46,8 +46,8 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     case scke: SetupCreateKeyEndpoint   => handleSetupCreateKeyEndpoint(scke)
   }
 
-  override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
-    case SignalMsgFromDriver(crr: ConnReqReceived, _, _, _) => handleConnReqReceived(crr); Future.successful(None)
+  override def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
+    case SignalMsgParam(crr: ConnReqReceived, _) => handleConnReqReceived(crr); Future.successful(None)
   }
 
   override final def receiveAgentEvent: Receive = eventReceiver orElse pairwiseConnReceiver

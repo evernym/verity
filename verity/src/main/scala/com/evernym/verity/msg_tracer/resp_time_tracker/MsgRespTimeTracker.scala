@@ -2,11 +2,10 @@ package com.evernym.verity.msg_tracer.resp_time_tracker
 
 import com.evernym.verity.ReqId
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.{NoResp, RespMode}
-import com.evernym.verity.msg_tracer.MsgTraceProvider
 
 
 trait MsgRespTimeTracker
-  extends MsgRespTimeRecorderSharded { this: MsgTraceProvider =>
+  extends MsgRespTimeRecorderSharded {
 
   /**
    * there are two implementation of msg tracing recorder provider

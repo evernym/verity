@@ -1,27 +1,32 @@
 package com.evernym.verity.actor.msg_tracer.progress_tracker
 
 import akka.pattern.ask
-import java.time.Instant
+import java.time.{Instant, LocalDateTime}
 
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME, SINGLETON_PARENT_PROXY}
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier, SendCmdToAllNodes, StartProgressTracking, StopProgressTracking}
+import com.evernym.verity.actor.{ActorMessage, SendCmdToAllNodes, StopProgressTracking}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.Util.getActorRefFromSelection
-import com.evernym.verity.ReqId
-import org.apache.http.conn.util.InetAddressUtils
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
-import com.evernym.verity.constants.Constants
+import com.evernym.verity.ReqId
+import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics}
+import com.evernym.verity.protocol.engine.MsgId
+import org.apache.http.conn.util.InetAddressUtils
 
 
 //NOTE: This is NOT a feature code, its a utility code to see/troubleshoot msg progress in a system
 
 object MsgProgressTracker {
   def props(appConfig: AppConfig): Props = Props(new MsgProgressTracker(appConfig))
+
+  def isGlobalOrIpAddress(trackingId: String): Boolean = {
+    InetAddressUtils.isIPv4Address(trackingId) ||
+      trackingId == MsgProgressTrackerCache.GLOBAL_TRACKING_ID
+  }
 }
 
 /**
@@ -33,72 +38,94 @@ class MsgProgressTracker(val appConfig: AppConfig)
     with DoNotRecordLifeCycleMetrics
     with HasActorResponseTimeout {
 
-  implicit val isGlobalOrIpAddress: Boolean =
-    InetAddressUtils.isIPv4Address(entityId) ||
-      entityId == "global"
-
-  lazy val maxRequestToRecord: Option[Int] = if (isGlobalOrIpAddress) Some(2000) else Some(5000)
-
-  val defaultTrackingExpiryTimeInMinutes: Int = if (isGlobalOrIpAddress) 10 else 30
-
-  var trackingStarted: Instant  = Instant.now()
-  var finishTrackingAt: Instant = Instant.now().plusMillis(300)
-  var requests = List.empty[State]
-  var otherStartedTrackingIds = List.empty[String]
-
   override def receiveCmd: Receive = {
-    case ct: ConfigureTracking    => handleConfigureTracking(ct)
-    case te: RecordEvent          => handleRecordEvent(te)
-    case ge: GetRecordedRequests  => handleGetRequests(ge)
-    case CheckForPeriodicTask     => finishTrackingIfExceededTime()
+    case ct: ConfigureTracking      => handleConfigureTracking(ct)
+    case rd: RecordReqData          => handleRecordData(rd)
+    case rd: RecordMsgDeliveryData  => handleRecordMsgDeliveryData(rd)
+    case GetState                   => handleGetState()
+    case CheckForPeriodicTask       => finishTrackingIfExceededTime()
   }
 
-  def handleGetRequests(ge: GetRecordedRequests): Unit = {
-
-    val filteredRequests: List[State] = {
-      val reqIdFiltered = ge.reqId match {
-        case Some(rId)  => requests.filter(_.reqId==rId)
-        case None       => requests
-      }
-      val domainFiltered = ge.domainTrackingId match {
-        case Some(tId)  => reqIdFiltered.filter(_.summary.trackingParam.domainTrackingId.contains(tId))
-        case None       => reqIdFiltered
-      }
-      val relTrackingFiltered = ge.relTrackingId match {
-        case Some(cId)  => domainFiltered.filter(_.summary.trackingParam.relTrackingId.contains(cId))
-        case None       => domainFiltered
-      }
-      ge.withEvents match {
-        case Some(ans) if ans == Constants.YES => relTrackingFiltered
-        case _                                 => relTrackingFiltered.map(_.copy(events = None))
-      }
+  def handleRecordMsgDeliveryData(rd: RecordMsgDeliveryData): Unit = {
+    rd match {
+      case romd: RecordOutMsgDeliveryEvent =>
+        val deliveryState = DeliveryState(rd.msgId, deliveryEvents = Option(List(romd.event)))
+        msgDeliveryState = msgDeliveryState :+ deliveryState
     }
-    sender ! RecordedRequests(filteredRequests, finishTrackingAt)
   }
 
-  def handleRecordEvent(re: RecordEvent): Unit = {
-    processEvent(re.event)
-    val prevReqDetail = requests.find(_.reqId==re.reqId).getOrElse(State(re.reqId, clientIpAddress = re.clientIpAddress))
-    val updatedReqDetail = prevReqDetail.updateRequestDetail(re.event)
-    requests = updatedReqDetail +: requests.filterNot(_.reqId == re.reqId)
-    removeOldRequestsIfMaxSizeExceeded()
-    sender ! Done
+  def handleRecordData(rd: RecordReqData): Unit = {
+    if (! reqState.contains(rd.reqId)) {
+      orderedReqIds = orderedReqIds :+ rd.reqId
+    }
+    rd match {
+        //for main events
+      case rs: RecordRoutingEvent        => handleRecordRoutingEvent(rs)
+      case rs: RecordInMsgEvent          => handleRecordInMsgEvent(rs)
+      case rs: RecordOutMsgEvent         => handleRecordOutMsgEvent(rs)
+
+        //for child events
+      case re: RecordRoutingChildEvents  => handleRecordRoutingChildEvents(re)
+      case re: RecordInMsgChildEvents    => handleRecordInMsgChildEvents(re)
+      case re: RecordOutMsgChildEvents   => handleRecordOutMsgChildEvents(re)
+    }
+    removeOldStateItemsIfMaxSizeExceeded()
   }
 
-  def processEvent(eventParam: EventParam): Unit = eventParam.event match {
-    case ips: EventInMsgProcessingStarted =>
-      ips.protoParam.pinstId.foreach { pid =>
-        if (! MsgProgressTrackerCache.isTracked(pid)) {
-          otherStartedTrackingIds = otherStartedTrackingIds :+ pid
-          singletonParentProxyActor ? SendCmdToAllNodes(StartProgressTracking(pid))
-        }
-      }
-    case _  => //nothing to do
+  def handleRecordRoutingEvent(rs: RecordRoutingEvent): Unit = {
+    val currTrackingState = reqState.getOrElse(rs.reqId, RequestState(rs.reqId))
+    val updatedTrackingState = currTrackingState.updateRoutingEvents(rs.event)
+    reqState = reqState + (rs.reqId -> updatedTrackingState)
   }
 
-  def removeOldRequestsIfMaxSizeExceeded(): Unit = {
-    maxRequestToRecord.foreach { mrs =>
-      requests = requests.take(mrs)
+  def handleRecordInMsgEvent(rs: RecordInMsgEvent): Unit = {
+    val currTrackingState = reqState.getOrElse(rs.reqId, RequestState(rs.reqId))
+    val updatedTrackingState = currTrackingState.updateInMsgEvents(rs.event)
+    reqState = reqState + (rs.reqId -> updatedTrackingState)
+  }
+
+  def handleRecordOutMsgEvent(rs: RecordOutMsgEvent): Unit = {
+    val currTrackingState = reqState.getOrElse(rs.reqId, RequestState(rs.reqId))
+    val updatedTrackingState = currTrackingState.updateOutMsgEvents(rs.event)
+    reqState = reqState + (rs.reqId -> updatedTrackingState)
+  }
+
+  def handleRecordRoutingChildEvents(re: RecordRoutingChildEvents): Unit = {
+    val trackingState = reqState.getOrElse(re.reqId, RequestState(re.reqId))
+    val updatedState = trackingState.updateRoutingChildEvents(re.events)
+    reqState = reqState + (re.reqId -> updatedState)
+  }
+
+  def handleRecordInMsgChildEvents(re: RecordInMsgChildEvents): Unit = {
+    val currState = reqState.getOrElse(re.reqId, RequestState(re.reqId))
+    val updatedState = currState.updateInMsgChildEvents(re.inMsgId, re.events)
+    reqState = reqState + (re.reqId -> updatedState)
+  }
+
+  def handleRecordOutMsgChildEvents(re: RecordOutMsgChildEvents): Unit = {
+    val currState = reqState.getOrElse(re.reqId, RequestState(re.reqId))
+    val updatedState = currState.updateOutMsgChildEvents(re.outMsgId, re.events)
+    reqState = reqState + (re.reqId -> updatedState)
+  }
+
+  def handleGetState(): Unit = {
+    val orderedState = orderedReqIds.map { reqId  =>
+      val st = reqState(reqId)
+      st.copy(
+        inMsgEvents = st.inMsgEvents.map(_.sortBy(_.recordedAt.getNano)),
+        outMsgEvents = st.outMsgEvents.map(_.sortBy(_.recordedAt.getNano))
+      )
+    }
+    sender ! RecordedStates(orderedState, msgDeliveryState)
+  }
+
+  private def removeOldStateItemsIfMaxSizeExceeded(): Unit = {
+    maxStateItemsToRecord.foreach { maxItemSize =>
+      val reqIdsToRetain = orderedReqIds.takeRight(maxItemSize)
+      val staleReqIds = orderedReqIds diff reqIdsToRetain
+      orderedReqIds = reqIdsToRetain
+      reqState = reqState -- staleReqIds
+      msgDeliveryState = msgDeliveryState.takeRight(maxItemSize)
     }
   }
 
@@ -106,7 +133,7 @@ class MsgProgressTracker(val appConfig: AppConfig)
     if (ct.stopNow) {
       MsgProgressTrackerCache.stopProgressTracking(entityId)
       sender ! TrackingConfigured("tracking stopped")
-      finishTracking()
+      stopTracking()
     } else {
       ct.trackForMinutes.foreach(setTrackingExpiryTime)
       sender ! TrackingConfigured(s"tracking will be finished at: $finishTrackingAt")
@@ -114,30 +141,42 @@ class MsgProgressTracker(val appConfig: AppConfig)
     }
   }
 
-  def setTrackingExpiryTime(addMinutes: Int): Unit = {
+  private lazy val singletonParentProxyActor: ActorRef =
+    getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
+
+  private def isTrackingExpired: Boolean =
+    Instant.now().toEpochMilli > finishTrackingAt.toEpochMilli
+
+  private def finishTrackingIfExceededTime(): Unit = {
+    if (isTrackingExpired) {
+      stopTracking()
+    }
+  }
+
+  private def stopTracking(): Unit = {
+    val result = singletonParentProxyActor ? SendCmdToAllNodes(StopProgressTracking(entityId))
+    result.map { _ =>
+      stopActor()
+    }
+  }
+
+  private def setTrackingExpiryTime(addMinutes: Int): Unit = {
     finishTrackingAt = Instant.now().plusMillis(addMinutes*60*1000)
   }
 
-  lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
+  implicit val isGlobalOrIpAddress: Boolean = MsgProgressTracker.isGlobalOrIpAddress(entityId)
 
-  def isTrackingExpired: Boolean =
-    Instant.now().toEpochMilli > finishTrackingAt.toEpochMilli
+  val defaultTrackingExpiryTimeInMinutes: Int = if (isGlobalOrIpAddress) 10 else 30
+  var finishTrackingAt: Instant = Instant.now().plusSeconds(60) //this gets overridden with 'defaultTrackingExpiryTimeInMinutes'
+  val maxStateItemsToRecord: Option[Int] = if (isGlobalOrIpAddress) Some(500) else Some(1000)
 
-  def finishTrackingIfExceededTime(): Unit = {
-    if (isTrackingExpired) {
-      val result = singletonParentProxyActor ? SendCmdToAllNodes(StopProgressTracking(entityId))
-      result.map { _ =>
-        finishTracking()
-      }
-    }
-  }
+  var orderedReqIds = List.empty[ReqId]
+  var reqState = Map.empty[ReqId, RequestState]
+  var msgDeliveryState = List.empty[DeliveryState]
 
-  def finishTracking(): Unit = {
-    otherStartedTrackingIds.foreach { tid =>
-      region ! ForIdentifier(tid, ConfigureTracking(stopNow = true))
-    }
-    stopActor()
-  }
+  type ReqId = String
+
+  lazy val region: ActorRef = ClusterSharding(context.system).shardRegion(MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME)
 
   setTrackingExpiryTime(defaultTrackingExpiryTimeInMinutes)
 
@@ -146,8 +185,6 @@ class MsgProgressTracker(val appConfig: AppConfig)
     300,
     CheckForPeriodicTask
   )
-
-  lazy val region: ActorRef = ClusterSharding(context.system).shardRegion(MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME)
 }
 
 trait ProgressTrackerMsg extends ActorMessage
@@ -155,14 +192,136 @@ trait ProgressTrackerMsg extends ActorMessage
 
 //commands
 
-case class RecordEvent(reqId: ReqId, event: EventParam, clientIpAddress:Option[String]=None) extends ProgressTrackerMsg
+case class DeliveryState(msgId: String,
+                         deliveryEvents: Option[List[MsgEvent]] = None)
 
-case class GetRecordedRequests(reqId: Option[ReqId]=None,
-                               domainTrackingId: Option[String]=None,
-                               relTrackingId: Option[String]=None,
-                               withEvents: Option[String]=None) extends ProgressTrackerMsg
+case class RequestState(reqId: String,
+                        routingEvents: Option[List[RoutingEvent]] = None,
+                        inMsgEvents: Option[List[MsgEvent]] = None,
+                        outMsgEvents: Option[List[MsgEvent]] = None) {
 
-case class RecordedRequests(requests: List[State], expiryTime: Instant) extends ProgressTrackerMsg
+  def updateRoutingEvents(event: RoutingEvent): RequestState = {
+    val events = routingEvents.getOrElse(List.empty)
+    val updatedEvent = events.headOption.getOrElse(event)
+    copy(routingEvents = Option(List(updatedEvent)))
+  }
+
+  def updateInMsgEvents(event: MsgEvent): RequestState = {
+    val events = inMsgEvents.getOrElse(List.empty)
+    val updatedEvents = events.filter(_.msgId.isDefined) :+ event
+    copy(inMsgEvents = Option(updatedEvents))
+  }
+
+  def updateOutMsgEvents(event: MsgEvent): RequestState = {
+    val events = outMsgEvents.getOrElse(List.empty)
+    val updatedEvents = events.filter(_.msgId.isDefined) :+ event
+    copy(outMsgEvents = Option(updatedEvents))
+  }
+
+  def updateRoutingChildEvents(events: List[ChildEvent]): RequestState = {
+    val currMsgEvents = routingEvents.getOrElse(List.empty)
+    val headRoutingEvent = currMsgEvents.headOption.getOrElse(RoutingEvent())
+    val updatedChildEvents = headRoutingEvent.childEvents.getOrElse(List.empty) ++ events
+    val updatedInEvent = headRoutingEvent.copy(childEvents =  Option(updatedChildEvents))
+    copy(routingEvents = Option(List(updatedInEvent)))
+  }
+
+  def updateInMsgChildEvents(msgId: MsgId, events: List[ChildEvent]): RequestState = {
+    val currEvents = inMsgEvents.getOrElse(List.empty)
+    val (matchedEvents, otherEvents) = currEvents.partition(_.msgId.contains(msgId))
+    val inEvent = matchedEvents.headOption.getOrElse(MsgEvent())
+    val updatedChildEvents = inEvent.childEvents.getOrElse(List.empty) ++ events
+    val updatedInEvent = inEvent.copy(childEvents =  Option(updatedChildEvents))
+    copy(inMsgEvents = Option(otherEvents :+ updatedInEvent))
+  }
+
+  def updateOutMsgChildEvents(msgId: MsgId, events: List[ChildEvent]): RequestState = {
+    val currEvents = outMsgEvents.getOrElse(List.empty)
+    val (matchedEvents, otherEvents) = currEvents.partition(_.msgId.contains(msgId))
+    val inEvent = matchedEvents.headOption.getOrElse(MsgEvent())
+    val updatedChildEvents = inEvent.childEvents.getOrElse(List.empty) ++ events
+    val updatedInEvent = inEvent.copy(childEvents =  Option(updatedChildEvents))
+    copy(outMsgEvents = Option(otherEvents :+ updatedInEvent))
+  }
+}
+
+object ChildEvent {
+  def apply(typ: String, detail: String): ChildEvent =
+    ChildEvent(typ, Option(detail))
+}
+case class ChildEvent(`type`: String,
+                      detail: Option[String]=None,
+                      recordedAt: LocalDateTime = LocalDateTime.now())
+
+trait RecordData extends ProgressTrackerMsg
+
+trait RecordReqData extends RecordData {
+  def reqId: ReqId
+}
+
+trait RecordMsgDeliveryData extends RecordData {
+  def msgId: MsgId
+}
+
+object RecordInMsgChildEvents {
+  def apply(reqId: String, inMsgId: MsgId, event: ChildEvent): RecordInMsgChildEvents =
+    RecordInMsgChildEvents(reqId, inMsgId, List(event))
+}
+case class RecordInMsgChildEvents(reqId: String, inMsgId: MsgId, events: List[ChildEvent]) extends RecordReqData
+
+object RecordOutMsgChildEvents {
+  def apply(reqId: String, outMsgId: MsgId, event: ChildEvent): RecordOutMsgChildEvents =
+    RecordOutMsgChildEvents(reqId, outMsgId, List(event))
+}
+case class RecordOutMsgChildEvents(reqId: String, outMsgId: MsgId, events: List[ChildEvent]) extends RecordReqData
+
+object RecordRoutingChildEvents {
+  def apply(reqId: String, event: ChildEvent): RecordRoutingChildEvents = RecordRoutingChildEvents(reqId, List(event))
+}
+case class RecordRoutingChildEvents(reqId: String, events: List[ChildEvent]) extends RecordReqData
+
+
+object MsgEvent {
+  def withOnlyId(msgId: String): MsgEvent =
+    MsgEvent(optionId(msgId), None, None)
+  def withOnlyType(msgType: String): MsgEvent =
+    MsgEvent(None, Option(msgType), None)
+  def withOnlyDetail(detail: String): MsgEvent =
+    MsgEvent(None, None, Option(detail))
+  def withTypeAndDetail(msgType: String, detail: String): MsgEvent =
+    MsgEvent(None, Option(msgType), Option(detail))
+  def apply(msgId: String, msgType: String): MsgEvent =
+    MsgEvent(optionId(msgId), Option(msgType), None)
+  def apply(msgId: String, msgType: String, detail: String): MsgEvent =
+    MsgEvent(optionId(msgId), Option(msgType), Option(detail))
+  def apply(msgId: String, msgType: String, detail: Option[String]): MsgEvent =
+    MsgEvent(optionId(msgId), Option(msgType), detail)
+
+  private def optionId(id: String): Option[String] = {
+    if (id.trim.isEmpty) None else Option(id)
+  }
+}
+case class RoutingEvent(id: Option[MsgId] = Option("routing"),
+                        detail: Option[String] = None,
+                        recordedAt: LocalDateTime = LocalDateTime.now(),
+                        childEvents: Option[List[ChildEvent]] = None)
+
+case class MsgEvent(msgId: Option[MsgId] = None,
+                    msgType: Option[String] = None,
+                    detail: Option[String] = None,
+                    recordedAt: LocalDateTime = LocalDateTime.now(),
+                    childEvents: Option[List[ChildEvent]] = None)
+
+case class RecordRoutingEvent(reqId: String, event: RoutingEvent) extends RecordReqData
+case class RecordInMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData
+case class RecordOutMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData
+
+case class RecordOutMsgDeliveryEvent(msgId: String, event: MsgEvent) extends RecordMsgDeliveryData
+
+case object GetState extends ProgressTrackerMsg
+
+case class RecordedStates(requestStates: List[RequestState],
+                          deliveryStates: List[DeliveryState]) extends ProgressTrackerMsg
 
 case class ConfigureTracking(trackForMinutes: Option[Int] = None,
                              stopNow: Boolean=false) extends ProgressTrackerMsg
@@ -170,5 +329,3 @@ case class ConfigureTracking(trackForMinutes: Option[Int] = None,
 case class TrackingConfigured(message: String) extends ProgressTrackerMsg
 
 case object CheckForPeriodicTask extends ProgressTrackerMsg
-
-case class EventParam(event: Any, atEpochMillis: Long = Instant.now().toEpochMilli)

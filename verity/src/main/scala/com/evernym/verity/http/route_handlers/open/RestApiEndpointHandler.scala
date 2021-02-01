@@ -139,7 +139,6 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
                 path(Segment/Segment/Segment/Segment.?) { (route, protocolFamily, version, threadId) =>
                   implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
                   MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)       //tracing related
-                  MsgProgressTracker.recordMsgReceivedByHttpEndpoint("/api")  //tracking related
                   parameterMap{ params =>
                     post {
                       handleRestMsgReq(route, ProtoRef(protocolFamily, version), auth, threadId)

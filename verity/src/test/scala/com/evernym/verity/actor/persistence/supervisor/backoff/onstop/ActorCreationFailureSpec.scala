@@ -3,10 +3,8 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.base.Ping
 import com.evernym.verity.actor.persistence.supervisor.MockActorCreationFailure
-import com.evernym.verity.actor.persistence.SupervisorUtil
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -17,12 +15,7 @@ class ActorCreationFailureSpec
     with BasicSpec
     with Eventually {
 
-  lazy val mockSupervised = system.actorOf(
-    SupervisorUtil.onStopBackoffSupervisorActorProps(
-      appConfig,
-      PERSISTENT_ACTOR_BASE,
-      "MockSupervisor",
-      MockActorCreationFailure.props(appConfig)).get)
+  lazy val mockSupervised = system.actorOf(MockActorCreationFailure.backOffOnStopProps(appConfig))
 
 
   "OnStop BackoffSupervised actor" - {

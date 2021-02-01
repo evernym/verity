@@ -35,7 +35,6 @@ class SdkFlowSpec
   with SetupFlow
   with AdminFlow
   with MetricsFlow
-  with MessageTrackingFlow
   with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)
@@ -92,10 +91,6 @@ class SdkFlowSpec
 
       "test metrics" - {
         testMetricsForVerityInstances(apps)
-      }
-
-      "test message tracking" - {
-        testMessageTrackingForVerityInstances(apps)
       }
 
       "sdk cleanup" - {
@@ -257,11 +252,6 @@ class SdkFlowSpec
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
     apps.forEachApplication(testMetrics)
-  }
-
-  def testMessageTrackingForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
-    apps.forEachApplication(testMessageTracking)
-    testMessageTrackingMetrics(apps.applications.head._2)
   }
 
 }

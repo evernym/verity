@@ -10,7 +10,7 @@ import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
+import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -68,7 +68,7 @@ trait ClientWalletAPISpecBase
   }
 
   //for file based wallet nothing needs to be set
-  def walletStorageConfig: Config = ConfigFactory.parseString("""""")
+  def walletStorageConfig: Config = ConfigFactory.empty()
 }
 
 //------------- helper classes/traits

@@ -135,6 +135,10 @@ trait ShardUtil {
   }
 }
 
+object UserActorUtil {
+  val USER_ACTOR_PATH_ELEMENT = "user"
+}
+
 trait HasShardRegionNames {
   def userAgentRegionName: String
   def userAgentPairwiseRegionName: String

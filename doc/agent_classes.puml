@@ -15,12 +15,14 @@ interface CoreActorExtended
 interface CoreActor
 abstract class Actor <<sys>>
 interface EntityIdentifier
+abstract class ActorLogging <<sys>>
 interface HasActorTimers
 abstract class Timers <<sys>>
 interface HasActorResponseTimeout
 interface DeleteMsgHandler
 interface HasTransformationRegistry
 interface LegacyTransformationRegistry
+interface PersistentEntityIdentifier
 abstract class Stash <<sys>>
 class DefaultPersistenceEncryption
 interface HasAppConfig
@@ -33,6 +35,7 @@ interface AgentIdentity
 interface HasAgentWallet
 interface HasWallet
 interface HasSetRoute
+interface HasMsgProgressTracker
 interface ResourceUsageCommon
 interface ProtocolEngineExceptionHandler
 interface AgentIncomingMsgHandler
@@ -42,10 +45,7 @@ interface HasAgentActivity
 interface ShardRegionCommon
 interface ShardRegionNames
 interface HasShardRegionNames
-interface MsgTraceProvider
 class MsgRespTimeTracker
-class MsgProgressTracker
-interface HasAsyncReqContext
 interface AgentStateCleanupHelper
 interface HasLogger
 interface ShardRegionFromActorContext
@@ -100,25 +100,29 @@ BasePersistentActor --* CoreActorExtended
 BasePersistentActor -* HasActorResponseTimeout
 BasePersistentActor -* DeleteMsgHandler
 BasePersistentActor --* HasTransformationRegistry
+BasePersistentActor -* PersistentEntityIdentifier
 BasePersistentActor -down-* Stash
 CoreActorExtended -up-|> CoreActor
 CoreActorExtended -* HasActorTimers
 CoreActor -up-|> Actor
 CoreActor -* EntityIdentifier
+CoreActor -down-* ActorLogging
 HasActorTimers -up-|> Timers
 HasTransformationRegistry -up-|> LegacyTransformationRegistry
+PersistentEntityIdentifier -up-|> EntityIdentifier
 UserAgentCommonStateUpdateImpl -up-|> AgentStateUpdateInterface
 AgentMsgHandler -up-|> AgentCommon
 AgentMsgHandler -down-* ProtocolEngineExceptionHandler
 AgentMsgHandler --* AgentIncomingMsgHandler
 AgentMsgHandler --* AgentOutgoingMsgHandler
-AgentMsgHandler -down-* MsgTraceProvider
+AgentMsgHandler -down-* MsgRespTimeTracker
 AgentMsgHandler -* AgentStateCleanupHelper
 AgentMsgHandler -down-* HasLogger
 AgentCommon -up-|> AgentStateUpdateInterface
 AgentCommon -* AgentIdentity
 AgentCommon --* HasAgentWallet
 AgentCommon -* HasSetRoute
+AgentCommon --* HasMsgProgressTracker
 AgentCommon --* ResourceUsageCommon
 HasAgentWallet -up-|> HasWallet
 AgentOutgoingMsgHandler -up-|> SendOutgoingMsg
@@ -127,9 +131,6 @@ AgentOutgoingMsgHandler -down-* HasAgentActivity
 HasAgentActivity -up-|> ShardRegionCommon
 ShardRegionCommon -up-|> ShardRegionNames
 ShardRegionNames -up-|> HasShardRegionNames
-MsgTraceProvider -up-|> MsgRespTimeTracker
-MsgTraceProvider --* MsgProgressTracker
-MsgTraceProvider -* HasAsyncReqContext
 ShardRegionFromActorContext -up-|> ShardRegionCommon
 UserAgentStateUpdateImpl -up-|> UserAgentCommonStateUpdateImpl
 MsgNotifierForUserAgent -up-|> MsgNotifierForUserAgentCommon

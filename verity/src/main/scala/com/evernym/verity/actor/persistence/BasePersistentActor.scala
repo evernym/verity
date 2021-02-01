@@ -226,16 +226,15 @@ trait BasePersistentActor
   def normalizedEntityCategoryName: String = {
     entityCategory.replace("$", "")
   }
-  def normalizedEntityName: String = {
-    //if entityName == "/", it is NON sharded actor
-    if (entityName == "/") getClass.getSimpleName.replace("$", "")
-    else entityName.replace("$", "")
+  def normalizedEntityType: String = {
+    if (entityType == "/") getClass.getSimpleName.replace("$", "")
+    else entityType.replace("$", "")
   }
   def normalizedEntityId: String = entityId.replace("$", "")
 
   def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
     appConfig, defaultReceiveTimeoutInSeconds,
-    normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   /**
    * configuration to decide if this persistent actor should use snapshot during recovery
@@ -243,7 +242,7 @@ trait BasePersistentActor
    */
   def recoverFromSnapshot: Boolean = PersistentActorConfigUtil.getRecoverFromSnapshot(
     appConfig, defaultValue = true,
-    normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   /**
    * use 'recoverFromSnapshot' configuration to decide if snapshot will be used during recovery or not
@@ -482,8 +481,8 @@ trait BasePersistentActor
   }
 
   private def handleBasePersistenceCmd: Receive = {
-    case GetActorDetail     =>
-      sender ! ActorDetail(persistenceId, totalPersistedEvents, totalRecoveredEvents)
+    case GetPersistentActorDetail     =>
+      sender ! PersistentActorDetail(actorDetail, persistenceId, totalPersistedEvents, totalRecoveredEvents)
   }
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =

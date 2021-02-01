@@ -90,7 +90,6 @@ trait PackedMsgEndpointHandler
     incrementAgentMsgCount
     implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
-    MsgProgressTracker.recordMsgReceivedByHttpEndpoint("/agency/msg")
     req.entity.contentType.mediaType match {
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
         handleAgentMsgReqForOctetStreamContentType

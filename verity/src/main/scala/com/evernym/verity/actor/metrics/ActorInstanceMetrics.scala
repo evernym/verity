@@ -19,7 +19,7 @@
 //     *
 //     * @return
 //     */
-//    def tags = Map(TAG_KEY_TYPE -> entityName, TAG_KEY_ID -> entityId)
+//    def tags = Map(TAG_KEY_TYPE -> entityType, TAG_KEY_ID -> entityId)
 //    val enabledMetricsConfigKeyPath = "verity.akka.actor.instance-metrics.enabled"
 //
 //    def updateGauge(name: String, value: Long, withTags: Map[String, String] = Map.empty): Unit = {

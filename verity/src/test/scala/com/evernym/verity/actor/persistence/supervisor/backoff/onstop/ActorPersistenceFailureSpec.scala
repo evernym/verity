@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
 import akka.testkit.EventFilter
-import com.evernym.verity.actor.persistence.supervisor.{MockActorPersistenceFailure, GeneratePersistenceFailure}
+import com.evernym.verity.actor.persistence.supervisor.{GeneratePersistenceFailure, MockActorPersistenceFailure}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.testkit.BasicSpec
@@ -14,16 +14,21 @@ class ActorPersistenceFailureSpec
     with BasicSpec
     with Eventually {
 
-  lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.props(appConfig))
+  lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.backOffOnStopProps(appConfig))
 
-  "Unsupervised actor" - {
+  "OnStop BackoffSupervised actor" - {
 
     "when throws an exception during persistence" - {
-      "should stop actor" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      //TODO: find out why this test fails if we remove below 'taggedAs UNSAFE_IgnoreAkkaEvents'
+      "should restart actor once" taggedAs UNSAFE_IgnoreAkkaEvents in {
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockUnsupervised ! GeneratePersistenceFailure
           expectNoMessage()
         }
+        //TODO: how to test that the actor is restarted?
+        // found some unexplained  behaviour for
+        // handling persistence failure (the default strategy seems to be Restart)
+        // but it doesn't seem to enter into 'preRestart' method in 'CoreActor'
       }
     }
   }
@@ -32,6 +37,14 @@ class ActorPersistenceFailureSpec
     ConfigFactory.parseString (
       s"""
         akka.test.filter-leeway = 15s   # to make the event filter run for little longer time
+        verity.persistent-actor.base.supervisor-strategy {
+          enabled = true
+          backoff {
+            min-seconds = 3
+            max-seconds = 20
+            random-factor = 0
+          }
+        }
       """
     ).withFallback(
       AkkaTestBasic.customJournal("com.evernym.verity.actor.persistence.supervisor.GeneratePersistenceFailureJournal")

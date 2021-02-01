@@ -99,6 +99,14 @@ case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext)
  */
 case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
 
+case class ProcessSignalMsg(smp: SignalMsgParam,
+                            protoRef: ProtoRef,
+                            pinstId: PinstId,
+                            threadContextDetail: ThreadContextDetail,
+                            requestMsgId: Option[MsgId]=None
+                           ) extends ActorMessage {
+  def threadId = threadContextDetail.threadId
+}
 /**
  * a wrapper message containing the 'signalMsg' which is sent from the protocol and intercepted by the driver
  * and then driver sending it to corresponding agent actor.
@@ -107,16 +115,8 @@ case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
  * pinst -> signal -> actor driver -> agent actor -> signal msg handler
  *
  * @param signalMsg
- * @param protoRef
- * @param pinstId
- * @param threadContextDetail
  */
-case class SignalMsgFromDriver(signalMsg: Any,
-                               protoRef: ProtoRef,
-                               pinstId: PinstId,
-                               threadContextDetail: ThreadContextDetail) extends ActorMessage {
-  def threadId: ThreadId = threadContextDetail.threadId
-}
+case class SignalMsgParam(signalMsg: Any, threadId: Option[ThreadId]=None)
 
 
 /*

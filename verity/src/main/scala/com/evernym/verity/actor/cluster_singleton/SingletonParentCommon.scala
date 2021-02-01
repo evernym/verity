@@ -96,9 +96,9 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   def receiveCommon: Receive = {
 
-    case forCmd: ForWatcherManager => forwardToChild(WATCHER_MANAGER, forCmd)
-
-    case forCmd: ForSingletonChild => forwardToChild(forCmd.getActorName, forCmd.cmd)
+    case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
+    case forCmd: ForWatcherManager      => forwardToChild(WATCHER_MANAGER, forCmd.cmd)
+    case forCmd: ForSingletonChild      => forwardToChild(forCmd.getActorName, forCmd.cmd)
 
     case me: MemberEvent =>
       me match {
@@ -216,10 +216,13 @@ case class ForActorStateCleanupManager(override val cmd: Any) extends ForSinglet
 }
 trait ForWatcherManager extends ForSingletonChild
 
-case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWatcherManager {
-  def getActorName: String = USER_AGENT_PAIRWISE_ACTOR_WATCHER
-}
 case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
+
+trait ForWatcherManagerChild extends ForSingletonChild
+
+case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWatcherManagerChild {
+  def getActorName: String = USER_AGENT_PAIRWISE_ACTOR_WATCHER
+}

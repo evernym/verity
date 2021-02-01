@@ -51,7 +51,7 @@ class UserAgentSnapshotSpec
         checkPersistentState(2, 2, 0)
 
         //restart actor
-        restartActor(ua)
+        restartPersistentActor(ua)
         checkPersistentState(2, 2, 0)
 
         //check metrics for state size

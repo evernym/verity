@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.persistence.recovery.agent
 
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.recovery.base.{AgencyAgentEventSetter, BaseRecoverySpec}
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 
@@ -17,9 +17,9 @@ class AgencyAgentRecoverySpec
   "KeyValueMapper actor" - {
     "when sent GetActorDetail" - {
       "should respond with proper actor detail" in {
-        platform.singletonParentProxy ! ForKeyValueMapper(GetActorDetail)
-        val ad = expectMsgType[ActorDetail]
-        assertActorDetail(ad, keyValueMapperPersistenceId, 1)
+        platform.singletonParentProxy ! ForKeyValueMapper(GetPersistentActorDetail)
+        val ad = expectMsgType[PersistentActorDetail]
+        assertPersistentActorDetail(ad, keyValueMapperPersistenceId, 1)
       }
     }
     "when sent GetValue for AGENCY_DID" - {
@@ -34,9 +34,9 @@ class AgencyAgentRecoverySpec
   "AgencyAgent actor" - {
     "when sent GetActorDetail" - {
       "should respond with correct detail" in {
-        aaRegion ! GetActorDetail
-        val ad = expectMsgType[ActorDetail]
-        assertActorDetail(ad, myAgencyAgentPersistenceId, basicAgencyAgentEvents.size)
+        aaRegion ! GetPersistentActorDetail
+        val ad = expectMsgType[PersistentActorDetail]
+        assertPersistentActorDetail(ad, myAgencyAgentPersistenceId, basicAgencyAgentEvents.size)
       }
     }
   }

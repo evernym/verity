@@ -10,7 +10,7 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
-import com.evernym.verity.msg_tracer.MsgTraceProvider
+import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault.KeyParam
 
@@ -26,7 +26,7 @@ trait AgentMsgHandler
     with ProtocolEngineExceptionHandler
     with AgentIncomingMsgHandler
     with AgentOutgoingMsgHandler
-    with MsgTraceProvider
+    with MsgRespTimeTracker
     with AgentStateCleanupHelper
     with HasLogger {
 
@@ -111,6 +111,7 @@ trait AgentMsgHandler
   def receiveAgentCmd: Receive
 
   def relationshipId: Option[RelationshipId] = state.myDid
+  def theirRelationshipId: Option[RelationshipId] = state.theirDid
 
   //NOTE: this tells if this actor is ready to handle incoming messages or not
   //this was only required so that agency agent doesn't start unpacking messages

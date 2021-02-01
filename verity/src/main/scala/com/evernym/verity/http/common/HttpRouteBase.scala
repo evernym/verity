@@ -83,7 +83,7 @@ trait HttpRouteBase
     }
   }
 
-  protected def entityAs[T: ClassTag]: Directive1[T] = {
+  def entityAs[T: ClassTag]: Directive1[T] = {
     optionalEntityAs[T].map(_.getOrElse(throw new RuntimeException("entity not found")))
   }
 

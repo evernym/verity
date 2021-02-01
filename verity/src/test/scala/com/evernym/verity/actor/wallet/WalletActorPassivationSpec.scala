@@ -3,12 +3,13 @@ package com.evernym.verity.actor.wallet
 import java.util.UUID
 
 import akka.testkit.{EventFilter, ImplicitSender}
+import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
-
 import org.scalatest.concurrent.Eventually
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -23,6 +24,8 @@ class WalletActorPassivationSpec
 
   val PASSIVATE_TIMEOUT_IN_SECONDS = 2
 
+  setLogLevel(Level.DEBUG)    //to assert event filter at debug levels
+
   "Wallet Actor" - {
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
@@ -34,18 +37,22 @@ class WalletActorPassivationSpec
     "when waited for more than passivate time" - {
       "should be stopped" in {
         val prevWalletActorRef = lastSender
-        Thread.sleep((PASSIVATE_TIMEOUT_IN_SECONDS * 1000) + 2000)
-        EventFilter.debug(start = "in post stop") assertDone(1 second)
+        EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
+          Thread.sleep((PASSIVATE_TIMEOUT_IN_SECONDS * 1000) + 2000)
+        }
 
         walletActor ! CreateNewKey()
-        expectMsgType[NewKeyCreated]
-        lastSender should not be prevWalletActorRef //this indirectly proves actor got restarted
+        expectMsgType[NewKeyCreated](5.seconds)
+        lastSender should not be prevWalletActorRef //this also indirectly proves actor got restarted
       }
     }
   }
 
   override def overrideConfig: Option[Config] = Option {
-    val confStr = s"verity.non-persistent-actor.base.WalletActor.passivate-time-in-seconds = 2"
-    ConfigFactory.parseString(confStr)
+    ConfigFactory.parseString {
+      """verity.non-persistent-actor.base.WalletActor.passivate-time-in-seconds = 2
+         akka.loglevel = DEBUG
+        """.stripMargin
+    }
   }
 }

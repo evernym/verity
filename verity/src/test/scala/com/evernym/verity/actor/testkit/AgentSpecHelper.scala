@@ -20,8 +20,8 @@ import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEd
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import org.scalatest.concurrent.Eventually
 
 trait AgentSpecHelper
@@ -134,11 +134,11 @@ trait AgentSpecHelper
     expectMsgType[EndpointSet]
   }
 
-  protected def restartActor(ar: agentRegion): Unit = {
+  protected def restartPersistentActor(ar: agentRegion): Unit = {
     ar ! PoisonPill
     expectNoMessage()
     Thread.sleep(1000)
-    ar ! GetActorDetail
-    expectMsgType[ActorDetail]
+    ar ! GetPersistentActorDetail
+    expectMsgType[PersistentActorDetail]
   }
 }

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.agent
 
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.recovery.base.{AgencyAgentEventSetter, BaseRecoverySpec, UserAgentEventSetter, UserAgentPairwiseEventSetter}
 
 class UserAgentPairwiseRecoverySpec
@@ -19,9 +19,9 @@ class UserAgentPairwiseRecoverySpec
   "UserAgentPairwise actor" - {
     "when sent GetActorDetail" - {
       "should respond with correct detail" in {
-        uapRegion ! GetActorDetail
-        val ad = expectMsgType[ActorDetail]
-        assertActorDetail(ad, myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents.size)
+        uapRegion ! GetPersistentActorDetail
+        val ad = expectMsgType[PersistentActorDetail]
+        assertPersistentActorDetail(ad, myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents.size)
       }
     }
   }

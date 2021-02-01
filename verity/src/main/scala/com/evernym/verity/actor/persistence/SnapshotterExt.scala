@@ -40,15 +40,15 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
    */
   lazy val snapshotAfterNEvents: Option[Int] =
     PersistentActorConfigUtil.getSnapshotAfterNEvents(appConfig,
-      normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+      normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   lazy val keepNSnapshots: Option[Int] =
     PersistentActorConfigUtil.getKeepNSnapshots(appConfig,
-      normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+      normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   lazy val deleteEventsOnSnapshots: Option[Boolean] =
     PersistentActorConfigUtil.getDeleteEventsOnSnapshots(appConfig,
-      normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+      normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   /**
    * configuration object to decide persistence behaviour (like shall it use snapshots etc)

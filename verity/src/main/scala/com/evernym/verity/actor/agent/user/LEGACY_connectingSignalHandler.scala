@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.{Evt, MsgAnswered}
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.{DID, MsgId}
@@ -17,9 +17,9 @@ import scala.concurrent.Future
  */
 trait LEGACY_connectingSignalHandler { this: UserAgentCommon =>
 
-  def handleLegacySignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
-    case SignalMsgFromDriver(am: AddMsg, _, _, tcd) =>
-      val thread = Option(Thread(Option(tcd.threadId)))
+  def handleLegacySignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
+    case SignalMsgParam(am: AddMsg, threadId) =>
+      val thread = Option(Thread(threadId))
       LEGACY_storeMsg(
         am.msgId,
         am.msgType,
@@ -32,12 +32,12 @@ trait LEGACY_connectingSignalHandler { this: UserAgentCommon =>
         useAsyncPersist = false)
       Future(None)
 
-    case SignalMsgFromDriver(um: UpdateMsg, _, _, _) =>
+    case SignalMsgParam(um: UpdateMsg, _) =>
       handleMsgAnswered(MsgAnswered(um.msgId, um.statusCode, Evt.getStringValueFromOption(um.refMsgId),
         getMillisForCurrentUTCZonedDateTime))
       Future(None)
 
-    case SignalMsgFromDriver(umds: UpdateDeliveryStatus, _, _, _) =>
+    case SignalMsgParam(umds: UpdateDeliveryStatus, _) =>
       updateMsgDeliveryStatus(UpdateMsgDeliveryStatus(umds.msgId, umds.to, umds.newStatusCode, umds.statusDetail))
       Future(None)
   }

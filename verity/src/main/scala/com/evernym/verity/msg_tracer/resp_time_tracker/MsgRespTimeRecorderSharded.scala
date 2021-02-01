@@ -1,18 +1,19 @@
 package com.evernym.verity.msg_tracer.resp_time_tracker
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.ActorNameConstants.MSG_TRACER_REGION_ACTOR_NAME
 import com.evernym.verity.ReqId
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.{CaptureMetrics, NoResp, ReqReceived, RespMode}
-import com.evernym.verity.msg_tracer.MsgTraceProvider
 
 /**
  * it uses akka cluster sharding to distribute in memory msg tracing state
  * to different actors sharded across the cluster
  */
-trait MsgRespTimeRecorderSharded { this : MsgTraceProvider =>
+trait MsgRespTimeRecorderSharded {
+
+  def system: ActorSystem
 
   def msgSender: Option[ActorRef] = None
 

@@ -27,7 +27,7 @@ class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
   }
 
   override def overrideConfig: Option[Config] = Option {
-      AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
+    AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
   }
 }
 

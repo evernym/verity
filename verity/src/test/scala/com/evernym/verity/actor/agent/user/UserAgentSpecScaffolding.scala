@@ -160,7 +160,7 @@ trait UserAgentSpecScaffolding
   protected def restartSpecs(): Unit = {
     "when tried to restart actor" - {
       "should be successful and respond" taggedAs UNSAFE_IgnoreAkkaEvents in {
-        restartActor(ua)
+        restartPersistentActor(ua)
       }
     }
   }

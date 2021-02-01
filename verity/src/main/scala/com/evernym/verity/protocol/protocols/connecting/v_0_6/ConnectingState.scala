@@ -6,12 +6,13 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{MY_PUBLIC_DID, MY_SELF_REL_DID}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnectingStateBase, HasPairwiseConnection}
+import com.evernym.verity.util.OptionUtil.blankOption
 
 //TODO This state is mutable, and state objects in protocols should be immutable.
 case class ConnectingState(appConfig: AppConfig, agentMsgTransformer: AgentMsgTransformer)
   extends ConnectingStateBase[ConnectingState] {
 
-  def myPublicDIDOpt: Option[DID] = parameters.paramValue(MY_PUBLIC_DID)
+  def myPublicDIDOpt: Option[DID] = parameters.paramValue(MY_PUBLIC_DID).flatMap(blankOption)
   def mySelfRelDIDOpt: Option[DID] = getOwnerDidOpt
   def myPairwiseDIDOpt: Option[DID] = agentDetail.map(_.forDID)
   def thisAgentVerKey: Option[VerKey] = thisAgentVerKeyOpt

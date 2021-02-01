@@ -147,6 +147,16 @@ trait UserAgentPairwiseSpecScaffolding
     handleComMethodUpdatedResp(pm).isInstanceOf[ComMethodUpdated_MFV_0_5]
   }
 
+  def setupPublicIdentity(): Unit = {
+    val (resp, receivedMsgOpt) = withExpectNewMsgAtRegisteredEndpoint {
+      val setupReq = mockEdgeAgent.v_0_6_req.prepareSetupIssuerCreateMethodMsgForAgent()
+      ua ! wrapAsPackedMsgParam(setupReq)
+      expectMsg(Done)
+    }
+    val pubIdCreated = mockEdgeAgent.v_0_6_resp.handlePublicIdentifierCreated(PackedMsg(receivedMsgOpt.map(_.msg).get))
+    mockEdgeAgent.publicIdentifier = Option(pubIdCreated.identifier)
+  }
+
   def prepareConnReqChangesOnRemoteEdgeAgent(connId: String): Unit = {
     mockRemoteEdgeAgent.setInviteData(connId, mockRemoteEdgeCloudAgent)
     inviteDetail = getLastSentInviteByRemoteEdgeAgentForConnId(connId)

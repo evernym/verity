@@ -150,6 +150,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
       state = state.withConnectionStatus(ConnectionStatus(answerStatusCode = csu.statusCode))
+    case pis: PublicIdentityStored =>
+      state = state.withPublicIdentity(DidPair(pis.DID, pis.verKey))
   }
 
   //this is for backward compatibility
@@ -286,6 +288,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case MY_PAIRWISE_DID                        => Parameter(MY_PAIRWISE_DID, state.myDid_!)
         case MY_PAIRWISE_DID_VER_KEY                => Parameter(MY_PAIRWISE_DID_VER_KEY, myPairwiseVerKey)
         case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
+        case MY_PUBLIC_DID                          => Parameter(MY_PUBLIC_DID, publicIdentityDID)
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
         case THIS_AGENT_WALLET_ID                   => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
@@ -295,12 +298,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
-
-        //this is legacy way of how public DID is being handled
-        //'ownerDIDReq' is basically a self relationship id
-        // (which may be wrong to be used as public DID, but thats how it is being used so far)
-        // we should do some long term backward/forward compatible fix may be
-        case MY_PUBLIC_DID                          => Parameter(MY_PUBLIC_DID, mySelfRelDIDReq)
       }
     }
   }
@@ -313,6 +310,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       state.myDid_!
     }
   }
+
+  def publicIdentityDID: DID =
+    if (!useLegacyPublicIdentityBehaviour) state.publicIdentity.map(_.DID).getOrElse("") else mySelfRelDIDReq
 
   def getEncParamBasedOnMsgSender(implicit reqMsgContext: ReqMsgContext): EncryptParam = {
     encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)
@@ -648,9 +648,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def handleCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
     val pidEvent = scke.pid.map(pd => ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
+    val pubIdEvent = scke.publicIdentity.map{ pi => PublicIdentityStored(pi.DID, pi.verKey) }
     val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDID.get)
     val cdsEvt = AgentDetailSet(scke.forDID, scke.newAgentKeyDID)
-    val eventsToPersist: List[Any] = (pidEvent ++ List(odsEvt, cdsEvt)).toList
+    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt)).toList
     writeAndApplyAll(eventsToPersist)
     val sndr = sender()
 

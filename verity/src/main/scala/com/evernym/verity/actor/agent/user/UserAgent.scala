@@ -352,7 +352,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildSetupCreateKeyEndpoint(forDID: DID, newAgentPairwiseVerKeyDID: DID): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(newAgentPairwiseVerKeyDID, forDID,
-      state.myDid_!, state.thisAgentKeyDID, agentWalletId)
+      state.myDid_!, state.thisAgentKeyDID, agentWalletId, None, state.publicIdentity)
   }
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -730,14 +730,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
       case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, agentActorEntityId)
       case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, createKeyEndpointSetupDetailJson)
       case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, state.myDid_!)
-
-      //if issuer identity initialized, we should use issuer DID as public DID (as this should be an edge agent (VAS))
-      //if issuer identity is NOT initialized, we should use ownerDID as public DID (as this should be a cloud agent (EAS))
-      //this is legacy way of how public DID is being handled
-      //'ownerDIDReq' is basically a self relationship id
-      // (which may be wrong to be used as public DID, but thats how it is being used so far)
-      // we should do some long term backward/forward compatible fix may be
-      case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).getOrElse(state.myDid_!))
+      case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, publicIdentityDID)
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
     }
@@ -754,6 +747,12 @@ class UserAgent(val agentActorContext: AgentActorContext)
       throw new RuntimeException("unsupported use case")
     }
   }
+
+  def publicIdentityDID: DID =
+    if (!useLegacyPublicIdentityBehaviour)
+      state.publicIdentity.map(_.DID).getOrElse("")
+    else
+      state.publicIdentity.map(_.DID).getOrElse(state.myDid_!)
 
   def encParamFromThisAgentToOwner: EncryptParam = {
     EncryptParam(

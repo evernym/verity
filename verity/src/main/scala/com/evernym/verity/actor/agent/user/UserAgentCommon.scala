@@ -264,6 +264,14 @@ trait UserAgentCommon
   lazy val periodicCleanupScheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(900)
 
+  /*
+  This is only temporary solution, so to have ability to switch to old (wrong) behaviour just for testing.
+  Do not enable this option without a good reason.
+  It should be removed after it is shown everything is working with a correct public identity behaviour.
+   */
+  def useLegacyPublicIdentityBehaviour: Boolean =
+    appConfig.getConfigBooleanOption(USER_AGENT_LEGACY_PUBLIC_IDENTITY_BEHAVIOUR).getOrElse(false)
+
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
 
   def getMsgs(gmr: GetMsgsReqMsg): List[MsgDetail] = {

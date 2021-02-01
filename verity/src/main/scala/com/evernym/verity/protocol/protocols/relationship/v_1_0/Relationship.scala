@@ -11,6 +11,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCodes._
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.OptionUtil.blankOption
 import com.evernym.verity.util.Util.isPhoneNumberInValidFormat
 import org.json.JSONObject
 
@@ -125,7 +126,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       ctx.serviceEndpoint,
       Vector(st.verKey),
       Option(Vector(st.agencyVerKey)),
-      stringToOption(st.profileUrl)
+      blankOption(st.profileUrl)
     )
   }
 
@@ -140,8 +141,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       st.did,
       st.verKey,
       st.agencyVerKey,
-      stringToOption(st.profileUrl),
-      stringToOption(st.publicDid)
+      blankOption(st.profileUrl),
+      blankOption(st.publicDid)
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -161,7 +162,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       st.verKey,
       st.agencyVerKey,
       st.invitation.profileUrl,
-      stringToOption(st.publicDid)
+      blankOption(st.publicDid)
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -184,8 +185,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
           st.did,
           st.verKey,
           st.agencyVerKey,
-          stringToOption(st.profileUrl),
-          stringToOption(st.publicDid)
+          blankOption(st.profileUrl),
+          blankOption(st.publicDid)
         )
 
         val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -207,7 +208,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
           st.verKey,
           st.agencyVerKey,
           st.invitation.profileUrl,
-          stringToOption(st.publicDid)
+          blankOption(st.publicDid)
         )
 
         val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -253,13 +254,6 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     noPhoneNumberDefined
   )
 
-  def stringToOption(str: String): Option[String] = {
-    if (!str.isEmpty)
-      Option(str)
-    else
-      None
-  }
-
   def getInvitationId(inviteURL: String): Option[String] = {
     val inviteQuery = Uri(inviteURL).query()
     try {
@@ -285,7 +279,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       (State.Initialized(agencyVerKey, name, logoUrl, publicDid), initialize(paramMap))
     case (st: State.Initialized            , _ , cpk: CreatingPairwiseKey  ) =>
       val roster = ctx.getRoster
-      (State.KeyCreationInProgress(cpk.label, st.agencyVerKey, cpk.profileUrl, st.publicDid, stringToOption(cpk.phoneNumber)),
+      (State.KeyCreationInProgress(cpk.label, st.agencyVerKey, cpk.profileUrl, st.publicDid, blankOption(cpk.phoneNumber)),
         roster
           .withAssignment(Role.Provisioner -> roster.selfIndex_!)
           .withAssignment(Role.Requester   -> roster.otherIndex())
@@ -295,7 +289,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     case ( st: State.Created , _ , e: InvitationCreated ) =>
       State.InvitationCreated(Invitation(e.label, e.serviceEndpoint, e.recipientKeys.toVector,
-        Option(e.routingKeys.toVector), stringToOption(st.profileUrl)),
+        Option(e.routingKeys.toVector), blankOption(st.profileUrl)),
         st.label, st.did, st.verKey, st.agencyVerKey, st.publicDid, st.phoneNumber)
   }
 

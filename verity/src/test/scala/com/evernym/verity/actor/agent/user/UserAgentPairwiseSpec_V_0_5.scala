@@ -47,6 +47,8 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
     setupAgency()
     createUserAgent()
     updateComMethod(COM_METHOD_TYPE_PUSH, testPushComMethod)
+    updateComMethod(COM_METHOD_TYPE_HTTP_ENDPOINT, "localhost:7000")
+    setupPublicIdentity()
   }
 
   def establishConnByAnsweringInvite(): Unit = {

@@ -352,7 +352,9 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def buildSetupCreateKeyEndpoint(forDID: DID, newAgentPairwiseVerKeyDID: DID): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(newAgentPairwiseVerKeyDID, forDID,
-      state.myDid_!, state.thisAgentKeyDID, agentWalletId, None, state.publicIdentity)
+      state.myDid_!, state.thisAgentKeyDID, agentWalletId, None,
+      state.publicIdentity.orElse(state.configs.get(PUBLIC_DID).map(c => DidPair(c.value, "")))
+    )
   }
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -750,7 +752,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def publicIdentityDID: DID =
     if (!useLegacyPublicIdentityBehaviour)
-      state.publicIdentity.map(_.DID).getOrElse("")
+      state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse("")
     else
       state.publicIdentity.map(_.DID).getOrElse(state.myDid_!)
 

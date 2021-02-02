@@ -53,6 +53,7 @@ object Constants {
   val TOKEN = "token"
   val BASE_URL = "baseUrl"
   val APP_URL_LINK = "appUrlLink"
+  val PUBLIC_DID = "publicDid"
 
   val PUSH_NOTIF_BODY_TEMPLATE = "pushNotifBodyTemplate"
   val TARGET_NAME = "targetName"

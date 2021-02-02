@@ -7,6 +7,7 @@ import akka.util.Timeout
 import akka.pattern.ask
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
+import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -31,7 +32,7 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
   timeoutsSpec()
 
   def timeoutsSpec(): Unit = {
-    val entityName = "user"
+    val entityType = DEFAULT_ENTITY_TYPE
 
     "ActorShutdownTests" - {
       "BasePersistentActor" - {
@@ -65,49 +66,49 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
           }
         }
 
-        "When configured category and entityName timeouts" - {
-          "should use entityName timeout" in {
+        "When configured category and entityType timeouts" - {
+          "should use entityType timeout" in {
             val entityId = s"BaseChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_ACTOR_BASE_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(3))
-              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityName.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityType.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(5))
 
             checkPersistentActor(5.seconds, WatchBaseActor(entityId), conf)
           }
         }
 
-        "When configured category and entityName timeouts, with entityName timeout set to 0" - {
+        "When configured category and entityType timeouts, with entityType timeout set to 0" - {
           "should not terminate actor (indefinite timeout)" in {
             val entityId = s"BaseChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_ACTOR_BASE_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(3))
-              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityName.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityType.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(0))
 
             checkPersistentActor(Duration.Undefined, WatchBaseActor(entityId), conf)
           }
         }
 
-        "When configured category, entityName and entityId timeouts" - {
+        "When configured category, entityType and entityId timeouts" - {
           "should use entityId timeout" in {
             val entityId = s"BaseChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_ACTOR_BASE_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(2))
-              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityName.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(7))
-              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityName.$entityId.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(5))
+              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityType.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(7))
+              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityType.$entityId.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(5))
 
             checkPersistentActor(5.seconds, WatchBaseActor(entityId), conf)
           }
         }
 
-        "When configured category, entityName and entityId timeouts, with entityId timeout set to 0" - {
+        "When configured category, entityType and entityId timeouts, with entityId timeout set to 0" - {
           "should not terminate actor (indefinite timeout)" in {
             val entityId = s"BaseChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_ACTOR_BASE_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(2))
-              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityName.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(7))
-              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityName.$entityId.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(0))
+              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityType.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(7))
+              .withValue(s"$PERSISTENT_ACTOR_BASE.$entityType.$entityId.$RECEIVE_TIMEOUT_SECONDS", ConfigValueFactory.fromAnyRef(0))
 
             checkPersistentActor(Duration.Undefined, WatchBaseActor(entityId), conf)
           }
@@ -143,52 +144,52 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
           }
         }
 
-        "When configured category and entityName timeouts" - {
-          "should use entityName timeout" in {
+        "When configured category and entityType timeouts" - {
+          "should use entityType timeout" in {
             val entityId = s"SingletonChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_SINGLETON_CHILDREN_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(3))
-              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityName.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityType.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(5))
 
             checkPersistentActor(5.seconds, WatchSingletonChildActor(entityId), conf)
           }
         }
 
-        "When configured category and entityName timeouts, with entityName timeout set to 0" - {
+        "When configured category and entityType timeouts, with entityType timeout set to 0" - {
           "should not terminate actor (indefinite timeout)" in {
             val entityId = s"SingletonChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_SINGLETON_CHILDREN_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(3))
-              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityName.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityType.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(0))
 
             checkPersistentActor(Duration.Undefined, WatchSingletonChildActor(entityId), conf)
           }
         }
 
-        "When configured category, entityName and entityId timeouts" - {
+        "When configured category, entityType and entityId timeouts" - {
           "should use entityId timeout" in {
             val entityId = s"SingletonChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_SINGLETON_CHILDREN_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(2))
-              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityName.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityType.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(7))
-              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityName.$entityId.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityType.$entityId.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(5))
 
             checkPersistentActor(5.seconds, WatchSingletonChildActor(entityId), conf)
           }
         }
 
-        "When configured category, entityName and entityId timeouts, with entityId timeout set to 0" - {
+        "When configured category, entityType and entityId timeouts, with entityId timeout set to 0" - {
           "should not terminate actor (indefinite timeout)" in {
             val entityId = s"SingletonChild-$nextActorId"
             val conf: Config = ConfigFactory.load()
               .withValue(PERSISTENT_SINGLETON_CHILDREN_RECEIVE_TIMEOUT_SECONDS, ConfigValueFactory.fromAnyRef(2))
-              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityName.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityType.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(7))
-              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityName.$entityId.$RECEIVE_TIMEOUT_SECONDS",
+              .withValue(s"$PERSISTENT_SINGLETON_CHILDREN.$entityType.$entityId.$RECEIVE_TIMEOUT_SECONDS",
                 ConfigValueFactory.fromAnyRef(0))
 
             checkPersistentActor(Duration.Undefined, WatchSingletonChildActor(entityId), conf)
@@ -279,7 +280,8 @@ class TestSingletonChildActor(val appConfig: AppConfig) extends SingletonChildre
   override val defaultReceiveTimeoutInSeconds: Int = DEFAULT_RECEIVE_TIMEOUT
 }
 
-class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration) extends Actor {
+class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration)
+  extends Actor {
   val logger: Logger = getLoggerByClass(classOf[WatcherActor])
   var testRef: ActorRef = _
   var persistStart: Long = _

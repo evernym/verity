@@ -311,7 +311,7 @@ class IssueCredentialSpec
 
       invitation.inviteURL should not be empty
       val base64 = invitation.inviteURL.split("oob=")(1)
-      val invite = new String(Base64Util.getBase64Decoded(base64))
+      val invite = new String(Base64Util.getBase64UrlDecoded(base64))
       val inviteObj = new JSONObject(invite)
 
       inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
@@ -330,6 +330,94 @@ class IssueCredentialSpec
       inviteObj.getString("profileUrl") shouldBe logoUrl
       inviteObj.getString("label") shouldBe orgName
       inviteObj.getString("public_did") should endWith(publicDid)
+
+      inviteObj.getJSONArray("service")
+        .getJSONObject(0)
+        .getJSONArray("routingKeys")
+        .getString(1) shouldBe agencyVerkey
+
+      val attachmentBase64 = inviteObj
+        .getJSONArray("request~attach")
+        .getJSONObject(0)
+        .getJSONObject("data")
+        .getString("base64")
+
+      val attachment = new String(Base64Util.getBase64Decoded(attachmentBase64))
+      val attachmentObj = new JSONObject(attachment)
+
+      attachmentObj.getString("@id") should not be empty
+      attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
+      attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
+
+      val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
+
+      issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+
+      holder ~ Ctl.AttachedOffer(attachedOffer)
+      holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
+        s.offer.credential_preview.attributes.size should not be 0
+        s.offer.credential_preview.attributes.head.value shouldBe "Joe"
+      }
+
+      holder.backstate.roster.selfRole_! shouldBe Role.Holder()
+
+      holder ~ buildSendRequest()
+      holder expect signal[SignalMsg.Sent]
+      issuer expect signal[SignalMsg.AcceptRequest]
+
+      issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
+      issuer expect signal[SignalMsg.Sent]
+      val issueCredSent = issuer expect state[State.IssueCredSent]
+      assertStatus[State.IssueCredSent](issuer)
+      assertIssueSent(issueCredSent)
+
+      holder expect signal[SignalMsg.Received]
+      val issueCredReceived = holder expect state[State.IssueCredReceived]
+      assertStatus[State.IssueCredReceived](holder)
+      assertIssueReceived(issueCredReceived)
+
+      issuer expect signal[SignalMsg.Ack]
+    }
+  }
+
+  "when Issuer offers credential via Out-Of-Band Invitation but doesn't have public did" - {
+    "it should work as expected" in { f =>
+      val (issuer, holder) = (f.alice, f.bob)
+
+      issuer.initParams(defaultInitParams.updated(MY_PUBLIC_DID, ""))
+
+      issuer walletAccess MockableWalletAccess()
+      holder walletAccess MockableWalletAccess()
+      holder ledgerAccess MockableLedgerAccess()
+
+      issuer urlShortening MockableUrlShorteningAccess.shortened
+      (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
+
+      // successful shortening
+      val invitation = issuer expect signal[SignalMsg.Invitation]
+      invitation.shortInviteURL shouldBe Some("http://short.url")
+
+      invitation.inviteURL should not be empty
+      val base64 = invitation.inviteURL.split("oob=")(1)
+      val invite = new String(Base64Util.getBase64UrlDecoded(base64))
+      val inviteObj = new JSONObject(invite)
+
+      inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+      inviteObj.has("@id") shouldBe true
+
+      inviteObj.has("@id") shouldBe true
+      InviteUtil.isThreadedInviteId(inviteObj.getString("@id"))
+      val threadedInviteId = InviteUtil.parseThreadedInviteId(
+        inviteObj.getString("@id")
+      ).get
+      threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+      threadedInviteId.relationshipId shouldBe issuer.did_!
+      threadedInviteId.threadId shouldBe issuer.currentInteraction.get.threadId.get
+
+
+      inviteObj.getString("profileUrl") shouldBe logoUrl
+      inviteObj.getString("label") shouldBe orgName
+      inviteObj.has("public_did") shouldBe false
 
       inviteObj.getJSONArray("service")
         .getJSONObject(0)

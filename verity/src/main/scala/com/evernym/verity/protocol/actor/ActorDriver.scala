@@ -1,19 +1,16 @@
 package com.evernym.verity.protocol.actor
 
-import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.ActorNameConstants.{AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME, AGENCY_AGENT_REGION_ACTOR_NAME}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.agency.AgencyIdUtil
-import com.evernym.verity.actor.agent.msghandler.incoming.SignalMsgFromDriver
+import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessSignalMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, ProtocolRegistry, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.HasAppConfig
@@ -28,8 +25,7 @@ abstract class ActorDriver(cp: ActorDriverGenParam)
     with ShardRegionNames
     with HasAppConfig
     with HasActorResponseTimeout
-    with AgencyIdUtil
-    with MsgTraceProvider {
+    with AgencyIdUtil {
 
   val system: ActorSystem = cp.system
   val appConfig: AppConfig = cp.config
@@ -70,9 +66,9 @@ abstract class ActorDriver(cp: ActorDriverGenParam)
    * @return
    */
   def processSignalMsg[A](se: SignalEnvelope[A]): Option[Control] = {
-    val result = sendToForwarder(SignalMsgFromDriver(se.signalMsg, se.protoRef, se.pinstId, se.threadContextDetail))
-    trackProgress(se)
-    result
+    sendToForwarder(ProcessSignalMsg(
+      SignalMsgParam(se.signalMsg, Option(se.threadContextDetail.threadId)),
+      se.protoRef, se.pinstId, se.threadContextDetail, se.requestMsgId))
   }
 
   /**
@@ -83,16 +79,9 @@ abstract class ActorDriver(cp: ActorDriverGenParam)
    */
   def sendSignalMsg[A](sig: SignalEnvelope[A]): Option[Control] = {
     val outMsg = SendSignalMsg(sig.signalMsg, sig.threadId, sig.protoRef, sig.pinstId, sig.threadContextDetail, sig.requestMsgId)
-    val result = sendToForwarder(outMsg)
-    trackProgress(sig)
-    result
+    sendToForwarder(outMsg)
   }
 
-  def trackProgress[A](sig: SignalEnvelope[A]): Unit = {
-    val protoDef = cp.protocolRegistry.find(sig.protoRef).map(_.protoDef).get
-    MsgProgressTracker.recordProtoMsgStatus(protoDef, sig.pinstId, "sent-to-agent-actor",
-      sig.requestMsgId.getOrElse(UUID.randomUUID().toString), outMsg = Option(sig.signalMsg))
-  }
 
   lazy val userRegion: ActorRef = ClusterSharding.get(cp.system).shardRegion(userAgentRegionName)
   lazy val agencyRegion: ActorRef = ClusterSharding.get(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)

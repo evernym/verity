@@ -8,8 +8,8 @@ import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
-import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, OutgoingMsgParam, SendStoredMsgToMyDomain}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
+import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam, SendStoredMsgToMyDomain}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, Msg, MsgAndDelivery, MsgAttribs, MsgDeliveryByDest, MsgDeliveryDetail, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -32,8 +32,8 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
 import com.evernym.verity.vault._
-
 import java.time.ZonedDateTime
+
 import scala.concurrent.Future
 
 /**
@@ -156,7 +156,7 @@ trait UserAgentCommon
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sendRespMsg(rp, sender)
+      sendRespMsg("ConfigUpdated", rp, sender)
     }
   }
 
@@ -182,7 +182,7 @@ trait UserAgentCommon
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sendRespMsg(rp, sender)
+      sendRespMsg("ConfigRemoved", rp, sender)
     }
   }
 
@@ -196,12 +196,12 @@ trait UserAgentCommon
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sendRespMsg(rp, sender)
+      sendRespMsg("Configs", rp, sender)
     }
   }
 
   def sendAgentMsgToRegisteredEndpoint(srm: SendMsgToRegisteredEndpoint): Future[Option[ControlMsg]] = {
-    sendMsgToRegisteredEndpoint(PayloadWrapper(srm.msg, srm.metadata), None)
+    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown"), PayloadWrapper(srm.msg, srm.metadata), None)
     Future.successful(None) // [DEVIN] WHY?? Seems like we are ignoring the real future sendMsgToRegisteredEndpoint
   }
 
@@ -221,7 +221,9 @@ trait UserAgentCommon
 
   override def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Future[Any] = {
     logger.debug("about to send un stored msg to my domain (edge): " + omp.givenMsg)
-    sendMsgToRegisteredEndpoint(PayloadWrapper(omp.msgToBeProcessed, omp.metadata), None)
+    sendMsgToRegisteredEndpoint(
+      NotifyMsgDetail.withTrackingId(omp.givenMsg.getClass.getSimpleName),
+      PayloadWrapper(omp.msgToBeProcessed, omp.metadata), None)
   }
 
   def agentName(configs: Set[ConfigDetail]): String = {
@@ -242,23 +244,31 @@ trait UserAgentCommon
           .getOrElse(DEFAULT_INVITE_SENDER_LOGO_URL))
   }
 
-  def handleCommonSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] =
+  def handleCommonSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] =
     handleCoreSignalMsgs orElse handleLegacySignalMsgs
 
-  def handleCoreSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
-    case SignalMsgFromDriver(uc: UpdateConfigs, _, _, _)    => handleUpdateConfig(uc)
-    case SignalMsgFromDriver(gc: GetConfigs, _, _, _)       =>
+  def handleCoreSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
+    case SignalMsgParam(uc: UpdateConfigs, _)    => handleUpdateConfig(uc)
+    case SignalMsgParam(gc: GetConfigs, _)       =>
       val cds = getFilteredConfigs(gc.names).map(cd => Config(cd.name, cd.value))
       Future.successful(Option(ControlMsg(SendConfig(cds))))
   }
 
-  def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = PartialFunction.empty
+  def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = PartialFunction.empty
 
-  override final def handleSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] =
+  override final def handleSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] =
     handleCommonSignalMsgs orElse handleSpecificSignalMsgs
 
   lazy val periodicCleanupScheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(900)
+
+  /*
+  This is only temporary solution, so to have ability to switch to old (wrong) behaviour just for testing.
+  Do not enable this option without a good reason.
+  It should be removed after it is shown everything is working with a correct public identity behaviour.
+   */
+  def useLegacyPublicIdentityBehaviour: Boolean =
+    appConfig.getConfigBooleanOption(USER_AGENT_LEGACY_PUBLIC_IDENTITY_BEHAVIOUR).getOrElse(false)
 
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
 

@@ -42,8 +42,8 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
 
   var data: List[PersistentData] = List.empty
 
-  //persistence id is calculated based on 'entityName' and 'entityId'
-  override lazy val entityName: String = actorParam.actorTypeName
+  //persistence id is calculated based on 'entityType' and 'entityId'
+  override lazy val entityType: String = actorParam.actorTypeName
 
   //if target actor is using 'DefaultPersistenceEncryption'
   // then this actor specifically needs to know 'entityId' which is used

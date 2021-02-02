@@ -25,7 +25,6 @@ class MultiTenantSpec
     with SetupFlow
     with AdminFlow
     with MetricsFlow
-    with MessageTrackingFlow
     with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)

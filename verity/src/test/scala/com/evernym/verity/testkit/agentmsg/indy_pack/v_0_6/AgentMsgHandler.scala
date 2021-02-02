@@ -7,7 +7,7 @@ import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.mock.HasCloudAgent
 import com.evernym.verity.testkit.mock.agent.MockAgent
-import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_6, ConnReqAccepted_MFV_0_6, KeyCreated_MFV_0_6, MsgsByConns_MFV_0_6}
+import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_6, ConnReqAccepted_MFV_0_6, KeyCreated_MFV_0_6, MsgsByConns_MFV_0_6, PublicIdentifierCreated_MFV_0_6}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
 
@@ -35,6 +35,10 @@ trait AgentMsgHandler {
 
     def handleComMethodUpdatedResp(rmw: PackedMsg): ComMethodUpdated_MFV_0_6 = {
       unpackComMethodUpdatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
+    }
+
+    def handlePublicIdentifierCreated(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): PublicIdentifierCreated_MFV_0_6 = {
+      unpackPublicIdentifierCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
     }
 
     def handlePairwiseKeyCreatedResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): KeyCreated_MFV_0_6 = {
@@ -116,6 +120,13 @@ trait AgentMsgHandler {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[ConnReqAccepted_MFV_0_6]
       logApiCallProgressMsg("connected: " + cm)
       cm
+    }
+
+    private def unpackPublicIdentifierCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    : PublicIdentifierCreated_MFV_0_6 = {
+      val pic = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[PublicIdentifierCreated_MFV_0_6]
+      logApiCallProgressMsg("public identifier created: " + pic)
+      pic
     }
 
   }

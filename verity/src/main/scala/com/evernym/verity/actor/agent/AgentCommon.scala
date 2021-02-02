@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent
 
 import java.time.ZonedDateTime
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -15,14 +15,13 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache._
-import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
-import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.HasMsgProgressTracker
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
@@ -43,6 +42,7 @@ trait AgentCommon
     with AgentIdentity
     with HasAgentWallet
     with HasSetRoute
+    with HasMsgProgressTracker
     with ResourceUsageCommon { this: AgentPersistentActor =>
 
   type StateType <: AgentStateInterface
@@ -88,6 +88,10 @@ trait AgentCommon
   def ownerAgentKeyDID: Option[DID]
   def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
 
+  //tracking ids
+  def selfRelTrackingId: String = domainId
+  def pairwiseRelTrackingIds: List[String] = (state.myDid ++ state.theirDid).toList
+
   lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (
     AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
   )
@@ -103,9 +107,6 @@ trait AgentCommon
    * general/global (per actor system) cache
    */
   lazy val generalCache: Cache = agentActorContext.generalCache
-
-  lazy val singletonParentProxyActor: ActorRef =
-    getActorRefFromSelection(SINGLETON_PARENT_PROXY, agentActorContext.system)(agentActorContext.appConfig)
 
   lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
@@ -209,7 +210,8 @@ case class SetupCreateKeyEndpoint(newAgentKeyDID: DID,
                                   mySelfRelDID: DID,
                                   ownerAgentKeyDID: Option[DID] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
-                                  pid: Option[ProtocolIdDetail]=None) extends ActorMessage
+                                  pid: Option[ProtocolIdDetail]=None,
+                                  publicIdentity: Option[DidPair]=None) extends ActorMessage
 
 trait SetupEndpoint extends ActorMessage {
   def ownerDID: DID

@@ -410,6 +410,21 @@ trait AgentMsgSenderHttpWrapper
     r
   }
 
+  def createPublicIdentifier(): Any = {
+    logApiStart(s"setup issuer method started...")
+    val r = sendPostRequestWithPackedMsg(
+      mockClientAgent.v_0_6_req.prepareSetupIssuerCreateMethodMsgForAgency(),
+      None)
+    logApiFinish(s"setup issuer method finished: " + r)
+    r
+  }
+
+  def storePublicIdentifier(bytes: Array[Byte]): Any = {
+    val c: PublicIdentifierCreated_MFV_0_6 = mockClientAgent.v_0_6_resp.handlePublicIdentifierCreated(PackedMsg(bytes))
+    mockClientAgent.publicIdentifier = Some(c.identifier)
+    c.identifier
+  }
+
   def getMsgsFromAgent_MPV_0_6(implicit msgPackagingContext: AgentMsgPackagingContext): Any = {
     logApiStart(s"send get msgs started...")
     val r = sendPostRequestWithPackedMsg(

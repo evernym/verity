@@ -5,7 +5,6 @@ import java.time.Instant
 import akka.actor.ActorSystem
 import com.evernym.verity.{ReqId, ReqMsgId, RespMsgId}
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
-import com.evernym.verity.msg_tracer.progress_tracker.MsgProgressTracker
 
 /**
  * main purpose of this MsgTraceProvider is to provide a clean interface
@@ -22,7 +21,6 @@ object MsgTraceProvider {
 
 trait MsgTraceProvider
   extends MsgRespTimeTracker
-    with MsgProgressTracker
     with HasAsyncReqContext {
 
   def system: ActorSystem
@@ -55,10 +53,10 @@ trait HasAsyncReqContext {
   /**
    * after how much time record stored in 'asyncReqContext' should be considered as not required
    */
-  protected val maxAliveMillis: Int = 5*60*1000 //5 min
+  protected val maxAliveMillis: Int = 2*60*1000 //2 min
 
   /**
-   * remove stale recorders (to handle unhappy paths where record doesn't gets cleaned up)
+   * remove stale state (to handle unhappy paths where record doesn't gets cleaned up)
    */
   protected def removeStale(): Unit = {
     val curEpochMillis = Instant.now().toEpochMilli
@@ -103,13 +101,13 @@ trait HasAsyncReqContext {
   }
 
   protected def withReqMsgId(reqMsgId: ReqMsgId, f: AsyncReqContext => Unit): Unit = {
-    asyncReqContextViaReqMsgId(reqMsgId, removeMatched = true).foreach { arc =>
+    asyncReqContextViaReqMsgId(reqMsgId).foreach { arc =>
       f(arc)
     }
   }
 
   protected def withRespMsgId(respMsgId: RespMsgId, f: AsyncReqContext => Unit): Unit = {
-    asyncReqContextViaRespMsgId(respMsgId, removeMatched = true).foreach { arc =>
+    asyncReqContextViaRespMsgId(respMsgId).foreach { arc =>
       f(arc)
     }
   }

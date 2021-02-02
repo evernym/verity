@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.engine.{DID, Ledgers, VerKey}
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util._
 import com.evernym.verity.Status
+import com.evernym.verity.actor.node_singleton.TrackingParam
 import scalapb.GeneratedMessage
 
 /**
@@ -98,7 +99,7 @@ case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMes
 
 case object ResetNodeMetrics extends ActorMessage
 case object ResetMetricsOfAllNodes extends ActorMessage
-case class StartProgressTracking(trackingId: String) extends ActorMessage
+case class StartProgressTracking(trackingId: TrackingParam) extends ActorMessage
 case class StopProgressTracking(trackingId: String) extends ActorMessage
 case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage

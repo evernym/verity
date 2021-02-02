@@ -10,7 +10,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, MsgDeliveryResult, SendMsgParam}
@@ -23,7 +23,7 @@ import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
-import com.evernym.verity.actor.msg_tracer.progress_tracker.TrackMsgParam
+import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.InternalReqHelperData
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -150,6 +150,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       handleAgentDetailSet(ads)
     case csu: ConnStatusUpdated   =>
       state = state.withConnectionStatus(ConnectionStatus(answerStatusCode = csu.statusCode))
+    case pis: PublicIdentityStored =>
+      state = state.withPublicIdentity(DidPair(pis.DID, pis.verKey))
   }
 
   //this is for backward compatibility
@@ -286,6 +288,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case MY_PAIRWISE_DID                        => Parameter(MY_PAIRWISE_DID, state.myDid_!)
         case MY_PAIRWISE_DID_VER_KEY                => Parameter(MY_PAIRWISE_DID_VER_KEY, myPairwiseVerKey)
         case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
+        case MY_PUBLIC_DID                          => Parameter(MY_PUBLIC_DID, publicIdentityDID)
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
         case THIS_AGENT_WALLET_ID                   => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
@@ -295,12 +298,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
-
-        //this is legacy way of how public DID is being handled
-        //'ownerDIDReq' is basically a self relationship id
-        // (which may be wrong to be used as public DID, but thats how it is being used so far)
-        // we should do some long term backward/forward compatible fix may be
-        case MY_PUBLIC_DID                          => Parameter(MY_PUBLIC_DID, mySelfRelDIDReq)
       }
     }
   }
@@ -313,6 +310,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       state.myDid_!
     }
   }
+
+  def publicIdentityDID: DID =
+    if (!useLegacyPublicIdentityBehaviour) state.publicIdentity.map(_.DID).getOrElse("") else mySelfRelDIDReq
 
   def getEncParamBasedOnMsgSender(implicit reqMsgContext: ReqMsgContext): EncryptParam = {
     encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)
@@ -352,10 +352,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   def handleSendRemoteMsg(sendRemoteMsg: SendRemoteMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleSendRemoteMsg", "UserAgentPairwise") {
-      //tracking related
-      MsgProgressTracker.recordInMsgProcessingStarted(
-      trackingParam = trackingParam.copy(threadId = sendRemoteMsg.threadOpt.flatMap(_.thid)),
-      inMsgParam = TrackMsgParam(msgId =  Option(sendRemoteMsg.id), msgName = Option(sendRemoteMsg.mtype)))
+      recordInMsgEvent(reqMsgContext.id, MsgEvent(sendRemoteMsg.id, sendRemoteMsg.mtype))
       validateAndProcessSendRemoteMsg(ValidateAndProcessSendRemoteMsg(sendRemoteMsg, getInternalReqHelperData))
     }
   }
@@ -378,8 +375,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   def processPersistedSendRemoteMsg(ppsrm: ProcessPersistedSendRemoteMsg): Unit = {
     runWithInternalSpan("processPersistedSendRemoteMsg", "UserAgentPairwise") {
-      MsgProgressTracker.recordLegacyRespMsgPackagingStarted(
-        respMsgId = Option(ppsrm.msgCreated.uid))(ppsrm.reqHelperData.reqMsgContext)
+      recordOutMsgEvent(ppsrm.reqHelperData.reqMsgContext.id, MsgEvent.withOnlyId(ppsrm.msgCreated.uid))
       implicit val reqMsgContext: ReqMsgContext = ppsrm.reqHelperData.reqMsgContext
       val msgCreatedResp = SendRemoteMsgHelper.buildRespMsg(ppsrm.msgCreated.uid)(reqMsgContext.agentMsgContext)
       val otherRespMsgs = if (ppsrm.sendRemoteMsg.sendMsg) sendMsgV1(List(ppsrm.msgCreated.uid)) else List.empty
@@ -388,7 +384,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(getEncParamBasedOnMsgSender, msgCreatedResp ++ otherRespMsgs, wrapInBundledMsg)
       logger.debug("param (during general proof/cred msgs): " + param)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sendRespMsg(rp, sender)
+      sendRespMsg("SendRemoteMsgResp", rp, sender)
     }
   }
 
@@ -437,7 +433,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-    sendRespMsg(rp, sender)
+    sendRespMsg("SendMsgResp", rp, sender)
   }
 
   def logErrorsIfFutureFails(f: Future[Any], op: String): Unit = {
@@ -463,7 +459,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     runWithInternalSpan("sendGeneralMsg", "UserAgentPairwise") {
       getMsgOpt(uid).foreach { msg =>
         val sentBySelf = msg.senderDID == state.myDid_!
-        val result = if (sentBySelf) {
+        if (sentBySelf) {
           self ! UpdateMsgDeliveryStatus(uid,
             theirRoutingTarget, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
           sendMsgToTheirAgent(uid, isItARetryAttempt = false, reqMsgContext.agentMsgContext.msgPackFormat)
@@ -471,14 +467,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           sendToUser(uid)
         }
         val replyToMsgId = getReplyToMsgId(uid)
-        MsgProgressTracker.recordLegacyRespMsgPackagingFinished(
-          outMsgParam = TrackMsgParam(msgId = Option(uid), msgName = Option(msg.getType), replyToMsgId = replyToMsgId))
+        recordOutMsgEvent(reqMsgContext.id, MsgEvent(uid, msg.getType, s"replyToMsgId: $replyToMsgId"))
         val nextHop = if (sentBySelf) NEXT_HOP_THEIR_ROUTING_SERVICE else NEXT_HOP_MY_EDGE_AGENT
         MsgRespTimeTracker.recordMetrics(reqMsgContext.id, msg.getType, nextHop)
-        result.onComplete {
-          case Success(_) => MsgProgressTracker.recordLegacyMsgSentToNextHop(nextHop)
-          case Failure(e) => MsgProgressTracker.recordLegacyMsgSendingFailed(nextHop, e.getMessage)
-        }
       }
     }
   }
@@ -528,10 +519,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     }
   }
 
-  def buildSendMsgParam(uid: MsgId, msgType: String, msg: Array[Byte], isItARetryAttempt: Boolean): SendMsgParam = {
+  private def buildSendMsgParam(uid: MsgId, msgType: String, msg: Array[Byte], isItARetryAttempt: Boolean): SendMsgParam = {
     SendMsgParam(uid, msgType, msg, agencyDIDReq, theirRoutingParam, isItARetryAttempt)
   }
 
+  //NOTE: this is called from FailedMsgRetrier
   def sendMsgToTheirAgent(uid: String, isItARetryAttempt: Boolean): Future[Any] = {
     val msgPackFormat = getMsgPayload(uid).flatMap(_.msgPackFormat).getOrElse(MPF_MSG_PACK)
     sendMsgToTheirAgent(uid, isItARetryAttempt, msgPackFormat)
@@ -553,7 +545,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           }
           buildAndSendMsgToTheirRoutingService(uid, msg.getType, agentMsgs, mpf)
         case (Some(Right(_: RoutingDetail)), Some(p)) =>
-          Future.successful(buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`))
+          buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`).map { pm =>
+            val smp = buildSendMsgParam(uid, msg.getType, pm.msg, isItARetryAttempt = false)
+            sendFinalPackedMsgToTheirRoutingService(pm, smp)
+          }
         case x => throw new RuntimeException("unsupported condition: " + x)
       }
     }.recover {
@@ -582,7 +577,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       buildRoutedPackedMsgForTheirRoutingService(MPF_INDY_PACK, smp.msg, smp.msgType)
     }
     packedMsgFut.map { pm =>
-      sendToTheirAgencyEndpoint(smp.copy(msg = pm.msg))
+      sendFinalPackedMsgToTheirRoutingService(pm, smp.copy(msg = pm.msg))
     }
   }
 
@@ -595,12 +590,23 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       val packedMsgFut = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, wrapInBundledMsgs = true, msgType)
       logger.debug("agency msg prepared", (LOG_KEY_UID, uid))
       packedMsgFut.map { pm =>
-        sendToTheirAgencyEndpoint(buildSendMsgParam(uid, msgType, pm.msg, isItARetryAttempt = false))
+        val smp = buildSendMsgParam(uid, msgType, pm.msg, isItARetryAttempt = false)
+        sendFinalPackedMsgToTheirRoutingService(pm, smp)
       }
     }
   }
 
-  def sendToUser(uid: MsgId): Future[Any] = {
+  private def sendFinalPackedMsgToTheirRoutingService(packedMsg: PackedMsg,
+                                                      smp: SendMsgParam): Future[Any] = {
+    sendToTheirAgencyEndpoint(smp.copy(msg = packedMsg.msg)).map { _ =>
+      recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, "SENT: outgoing message to their routing service"))
+    }.recover {
+      case e: Throwable =>
+        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, s"FAILED: outgoing message to their routing service (error: ${e.getLocalizedMessage})"))
+    }
+  }
+
+  private def sendToUser(uid: MsgId): Future[Any] = {
     if (! state.isConnectionStatusEqualTo(CONN_STATUS_DELETED.statusCode)) {
       val msg = getMsgReq(uid)
       notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType), updateDeliveryStatus = true)
@@ -622,7 +628,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     val connectionStatusUpdatedRespMsg = UpdateConnStatusMsgHelper.buildRespMsg(updateConnStatus.statusCode)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, connectionStatusUpdatedRespMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-    sendRespMsg(rp)
+    sendRespMsg("ConnStatusUpdated", rp)
   }
 
   val unAllowedLegacyConnectingMsgNames: Set[String] = Set(
@@ -640,9 +646,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def handleCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
     val pidEvent = scke.pid.map(pd => ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
+    val pubIdEvent = scke.publicIdentity.map{ pi => PublicIdentityStored(pi.DID, pi.verKey) }
     val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDID.get)
     val cdsEvt = AgentDetailSet(scke.forDID, scke.newAgentKeyDID)
-    val eventsToPersist: List[Any] = (pidEvent ++ List(odsEvt, cdsEvt)).toList
+    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt)).toList
     writeAndApplyAll(eventsToPersist)
     val sndr = sender()
 
@@ -703,22 +710,22 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   def futureNone: Future[None.type] = Future.successful(None)
 
-  override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
+  override def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
     //pinst (legacy connecting protocol) -> connecting actor driver -> this actor
-    case SignalMsgFromDriver(_: ConnReqReceived, _, _, _)                 => writeAndApply(ConnectionStatusUpdated(reqReceived = true)); futureNone
+    case SignalMsgParam(_: ConnReqReceived, _)                 => writeAndApply(ConnectionStatusUpdated(reqReceived = true)); futureNone
     //pinst (legacy connecting protocol) -> connecting actor driver -> this actor
-    case SignalMsgFromDriver(cc: ConnectionStatusUpdated, _, _, _)        => writeAndApply(cc); futureNone
+    case SignalMsgParam(cc: ConnectionStatusUpdated, _)        => writeAndApply(cc); futureNone
     //pinst (legacy connecting protocol) -> connecting actor driver -> this actor
-    case SignalMsgFromDriver(nu: NotifyUserViaPushNotif, _, _, _)         => notifyUser(nu); futureNone
+    case SignalMsgParam(nu: NotifyUserViaPushNotif, _)         => notifyUser(nu); futureNone
     //pinst (legacy connecting protocol) -> connecting actor driver -> this actor
-    case SignalMsgFromDriver(sm: SendMsgToRegisteredEndpoint, _, _, _)    => sendAgentMsgToRegisteredEndpoint(sm)
+    case SignalMsgParam(sm: SendMsgToRegisteredEndpoint, _)    => sendAgentMsgToRegisteredEndpoint(sm)
     //pinst (connections 1.0) -> connections actor driver -> this actor
-    case SignalMsgFromDriver(dc: SetupTheirDidDoc, _, _, _)               => handleUpdateTheirDidDoc(dc)
+    case SignalMsgParam(dc: SetupTheirDidDoc, _)               => handleUpdateTheirDidDoc(dc)
     //pinst (connections 1.0) -> connections actor driver -> this actor
-    case SignalMsgFromDriver(utd: UpdateTheirDid, _, _, _)                => handleUpdateTheirDid(utd)
+    case SignalMsgParam(utd: UpdateTheirDid, _)                => handleUpdateTheirDid(utd)
     //pinst (relationship 1.0) -> relationship actor driver -> this actor
-    case SignalMsgFromDriver(ssi: SendSMSInvite, _, _, _)                 => handleSendingSMSInvite(ssi)
-    case SignalMsgFromDriver(si: MoveProtocol, _, _, _)                   => handleMoveProtocol(si)
+    case SignalMsgParam(ssi: SendSMSInvite, _)                 => handleSendingSMSInvite(ssi)
+    case SignalMsgParam(si: MoveProtocol, _)                   => handleMoveProtocol(si)
   }
 
   def handleUpdateTheirDid(utd: UpdateTheirDid):Future[Option[ControlMsg]] = {

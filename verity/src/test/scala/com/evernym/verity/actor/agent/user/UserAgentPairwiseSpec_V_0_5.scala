@@ -8,7 +8,7 @@ import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
@@ -47,6 +47,8 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
     setupAgency()
     createUserAgent()
     updateComMethod(COM_METHOD_TYPE_PUSH, testPushComMethod)
+    updateComMethod(COM_METHOD_TYPE_HTTP_ENDPOINT, "localhost:7000")
+    setupPublicIdentity()
   }
 
   def establishConnByAnsweringInvite(): Unit = {
@@ -367,12 +369,12 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
       lazy val connectingActorId = ??? //TODO: if we want to make this test working, we should be able to compute pinstId here
       lazy val connectingRegion = ClusterSharding.get(system).shardRegion(cap.typeName)
 
-      var actorDetailBeforeRestart: ActorDetail = null
+      var actorDetailBeforeRestart: PersistentActorDetail = null
 
       "when sent GetTotalEvents message" - {
         "should respond with TotalEvents message" in {
-          connectingRegion ! ForIdentifier(connectingActorId, GetActorDetail)
-          val ad = expectMsgType[ActorDetail]
+          connectingRegion ! ForIdentifier(connectingActorId, GetPersistentActorDetail)
+          val ad = expectMsgType[PersistentActorDetail]
           actorDetailBeforeRestart = ad
         }
       }
@@ -397,8 +399,8 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
       "when sent GetTotalEvents message after first message post restart" - {
         "should respond with TotalEvents message" in {
-          connectingRegion ! ForIdentifier(connectingActorId, GetActorDetail)
-          val lad = expectMsgType[ActorDetail]
+          connectingRegion ! ForIdentifier(connectingActorId, GetPersistentActorDetail)
+          val lad = expectMsgType[PersistentActorDetail]
           lad.totalRecoveredEvents shouldBe actorDetailBeforeRestart.totalPersistedEvents
         }
       }

@@ -1,11 +1,9 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
-import akka.actor.Props
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.supervisor.MockActorRecoverySuccess
-import com.evernym.verity.actor.persistence.{ActorDetail, BasePersistentActor, DefaultPersistenceEncryption, GetActorDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -19,13 +17,13 @@ class ActorRecoverySuccessSpec
     with Eventually
     with ShardUtil {
 
-  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig))
+  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.backOffOnStopProps(appConfig))
 
   "OnStop BackoffSupervised actor" - {
     "when asked for actor detail" - {
       "should respond with expected detail" in {
-        mockSupervised ! ForIdentifier("1", GetActorDetail)
-        val ad = expectMsgType[ActorDetail]
+        mockSupervised ! ForIdentifier("1", GetPersistentActorDetail)
+        val ad = expectMsgType[PersistentActorDetail]
         //this confirms that introducing supervisor actor shouldn't change 'persistenceId'
         // else that won't be backward compatible
         ad.persistenceId shouldBe "MockActor-1"

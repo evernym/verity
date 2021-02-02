@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.actor
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.HandledErrorException
@@ -18,7 +18,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
-import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
@@ -78,7 +77,6 @@ class ActorProtocolContainer[
     with CreateKeyEndpointServiceProvider
     with AgentEndpointServiceProvider
     with ProtocolEngineExceptionHandler
-    with MsgTraceProvider
     with HasAgentWallet
     with HasAppConfig
     with AgentIdentity
@@ -114,8 +112,6 @@ class ActorProtocolContainer[
   // the receiver becomes inert.
   final def initialBehavior: Receive = {
     case ProtocolCmd(InitProtocol(domainId, parameters, sponsorRelOpt), None)=>
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-resp-received",
-        "init-msg-id", inMsg = Option("init-param-received"))
       submit(GivenDomainId(domainId))
       if(parameters.nonEmpty) {
         logger.debug(s"$protocolIdForLog about to send init msg")
@@ -136,7 +132,7 @@ class ActorProtocolContainer[
           context.system.actorOf(
             ExtractEventsActor.prop(
               appConfig,
-              entityName,
+              entityType,
               fromPinstId,
               self
             )
@@ -316,7 +312,6 @@ class ActorProtocolContainer[
       case m: MsgWithSegment =>
         (m.msgId, m, m)
     }
-    MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "in-msg-process-started", msgId, inMsg = Option(actualMsg))
     submit(msgToBeSent, Option(handleResponse(_, Some(msgId), senderActorRef)))
   }
 
@@ -351,7 +346,7 @@ class ActorProtocolContainer[
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
-    agentActorContext.tokenToActorItemMapperProvider.createToken(entityName, entityId, uid)
+    agentActorContext.tokenToActorItemMapperProvider.createToken(entityType, entityId, uid)
   }
 
   def addToMsgQueue(msg: Any): Unit = {
@@ -375,9 +370,6 @@ class ActorProtocolContainer[
     val forwarder = msgForwarder.forwarder.getOrElse(throw new RuntimeException("forwarder not set"))
 
     forwarder ! InitProtocolReq(definition.initParamNames)
-
-    MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-param-req-sent",
-      "init-msg-id", outMsg = Option("init-req-sent"))
   }
 
   @silent
@@ -566,7 +558,7 @@ class ActorProtocolContainer[
     override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit = {
       logger.debug("in url shortening callback")
       toProtocolAsyncBehavior(UrlShorteningProgress)
-      system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(inviteUrl) onComplete {
+      context.system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(inviteUrl) onComplete {
         case Success(m) =>
           m match {
             case UrlShortened(shortUrl) => handler(Success(InviteShortened(inviteUrl, shortUrl)))
@@ -598,8 +590,6 @@ class ActorProtocolContainer[
   override def serviceEndpoint: ServiceEndpoint = {
     Util.buildAgencyEndpoint(appConfig).url
   }
-
-  override def system: ActorSystem = agentActorContext.system
 
 }
 

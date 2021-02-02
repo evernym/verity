@@ -56,7 +56,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       logger.debug("get msgs response: " + getMsgsRespMsg)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.msgPackFormat == MPF_MSG_PACK)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-      sendRespMsg(rp, sndr)
+      sendRespMsg("GetMsgResp", rp, sndr)
     }
   }
 
@@ -84,7 +84,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
     )
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-    sendRespMsg(rp)
+    sendRespMsg("MsgStatusUpdatedResp", rp)
   }
 
   def checkIfMsgAlreadyNotExists(msgId: MsgId): Unit = {

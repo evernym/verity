@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.supervisor.MockActorRecoverySuccess
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
 import com.evernym.verity.testkit.BasicSpec
@@ -17,13 +17,13 @@ class ActorRecoverySuccessSpec
   with Eventually
   with ShardUtil {
 
-  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig))
+  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.backOffOnFailureProps(appConfig))
 
   "OnFailure BackoffSupervised actor" - {
     "when asked for actor detail" - {
       "should respond with expected detail" in {
-        mockSupervised ! ForIdentifier("1", GetActorDetail)
-        val ad = expectMsgType[ActorDetail]
+        mockSupervised ! ForIdentifier("1", GetPersistentActorDetail)
+        val ad = expectMsgType[PersistentActorDetail]
         //this confirms that introducing supervisor actor shouldn't change 'persistenceId'
         // else that won't be backward compatible
         ad.persistenceId shouldBe "MockActor-1"

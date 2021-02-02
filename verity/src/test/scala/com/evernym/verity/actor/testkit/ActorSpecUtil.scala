@@ -14,8 +14,10 @@ import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
-
 import java.util.concurrent.TimeUnit
+
+import ch.qos.logback.classic.Level
+
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
@@ -102,6 +104,17 @@ trait ActorSpec extends TestSuite with ActorSpecLike with OverrideConfig {
   )
   implicit lazy val system: classic.ActorSystem = as
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
+
+  /**
+   * this is to be able to change log level for ActorLogging
+   * mostly to be able to use EventFilter
+   * NOTE: this requires "akka.loglevel" to be set to "DEBUG" in the configuration
+   *
+   * @param level
+   */
+  def setLogLevel(level: Level): Unit = {
+    org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger].setLevel(level)
+  }
 }
 
 sealed trait ActorSpecLike

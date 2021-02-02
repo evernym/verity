@@ -2,7 +2,7 @@ package com.evernym.verity.actor.persistence.recovery
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoverySpec, PersistParam, PersistenceIdParam}
 import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.RecordingAgentActivityV0
@@ -22,9 +22,9 @@ class ActivityTrackerRecoverySpec
   "ActivityTracker actor" - {
     "when try to recover with legacy and new events" - {
       "should be able to successfully recover" in {
-        at ! GetActorDetail
-        val ad = expectMsgType[ActorDetail]
-        assertActorDetail(ad, persistenceId, 3)
+        at ! GetPersistentActorDetail
+        val ad = expectMsgType[PersistentActorDetail]
+        assertPersistentActorDetail(ad, persistenceId, 3)
       }
     }
   }

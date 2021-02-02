@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.agent
 
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.recovery.base.{AgencyAgentEventSetter, BaseRecoverySpec, UserAgentEventSetter}
 
 class UserAgentRecoverySpec
@@ -17,9 +17,9 @@ class UserAgentRecoverySpec
   "UserAgent actor" - {
     "when sent GetActorDetail" - {
       "should respond with correct detail" in {
-        uaRegion ! GetActorDetail
-        val ad = expectMsgType[ActorDetail]
-        assertActorDetail(ad, mySelfRelAgentPersistenceId, basicUserAgentEvents.size)
+        uaRegion ! GetPersistentActorDetail
+        val ad = expectMsgType[PersistentActorDetail]
+        assertPersistentActorDetail(ad, mySelfRelAgentPersistenceId, basicUserAgentEvents.size)
       }
     }
   }

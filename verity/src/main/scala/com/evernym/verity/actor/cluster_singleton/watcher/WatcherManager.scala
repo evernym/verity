@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.cluster_singleton.ForWatcherManager
+import com.evernym.verity.actor.cluster_singleton.ForWatcherManagerChild
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, ItemManagerEntityId, ItemType}
 import com.evernym.verity.actor.itemmanager._
@@ -56,7 +56,7 @@ class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[Watche
   }
 
   override def receiveCmd: Receive = {
-    case fwm: ForWatcherManager => forwardToChild(fwm.getActorName, fwm.cmd)
+    case fwmc: ForWatcherManagerChild => forwardToChild(fwmc.getActorName, fwmc.cmd)
   }
 }
 

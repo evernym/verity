@@ -2,10 +2,8 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.persistence.supervisor.{GenerateRecoveryFailure, MockActorRecoveryFailure}
-import com.evernym.verity.actor.persistence.SupervisorUtil
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -16,18 +14,15 @@ class ActorRecoveryFailureSpec
   with BasicSpec
   with Eventually {
 
-  lazy val mockSupervised = system.actorOf(
-    SupervisorUtil.onFailureBackoffSupervisorActorProps(
-      appConfig,
-      PERSISTENT_ACTOR_BASE,
-      "MockSupervisor",
-      MockActorRecoveryFailure.props(appConfig)).get)
+  lazy val mockSupervised = system.actorOf(MockActorRecoveryFailure.backOffOnFailureProps(appConfig))
 
 
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during recovery" - {
-      "should restart as per BACKOFF strategy" taggedAs UNSAFE_IgnoreAkkaEvents in {   //UNSAFE_IgnoreAkkaEvents is to ignore the unhandled Ping message error message
-        EventFilter.error(pattern = "purposefully throwing exception", occurrences = 4) intercept {
+      "should stop and start (not exactly a restart) as per BACKOFF strategy" taggedAs UNSAFE_IgnoreAkkaEvents in {   //UNSAFE_IgnoreAkkaEvents is to ignore the unhandled Ping message error message
+        //4 from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler)
+        val expectedLogEntries = 4
+        EventFilter.error(pattern = "purposefully throwing exception", occurrences = expectedLogEntries) intercept {
           mockSupervised ! GenerateRecoveryFailure
           expectNoMessage()
         }

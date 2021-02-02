@@ -6,8 +6,8 @@ import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATU
 import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, SendPushNotif, SendUnStoredMsgToMyDomain, StoreAndSendMsgToMyDomain, StoreAndSendMsgToTheirDomain}
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.vault.KeyParam
@@ -65,10 +65,12 @@ trait AgentOutgoingMsgHandler
    * @param sndr
    * @param reqMsgContext
    */
-  def sendRespMsg(respMsg: Any, sndr: ActorRef = sender())(implicit reqMsgContext: ReqMsgContext): Unit = {
+  def sendRespMsg(respMsgType: String,
+                  respMsg: Any,
+                  sndr: ActorRef = sender())(implicit reqMsgContext: ReqMsgContext): Unit = {
     def sendAndRecordMetrics(msg: Any, sndr: ActorRef): Unit = {
       sndr ! msg
-      MsgProgressTracker.recordLegacyMsgSentToNextHop(NEXT_HOP_MY_EDGE_AGENT_SYNC)
+      recordOutMsgEvent(reqMsgContext.id, MsgEvent.withTypeAndDetail(respMsgType, "SENT: http response"))
     }
     respMsg match {
       case fut: Future[Any] => fut.map { msg =>

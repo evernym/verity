@@ -2,6 +2,7 @@ package com.evernym.integrationtests.e2e.flow
 
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.testkit.BasicSpec
@@ -35,7 +36,7 @@ trait SetupFlow {
         }
 
         if (app.instance.messageTrackingEnabled.getOrElse(false)) {
-          app.setupStartMessageTracking(app.instance.messageTrackingById.getOrElse("global"))
+          app.setupStartMessageTracking(app.instance.messageTrackingById.getOrElse(MsgProgressTrackerCache.GLOBAL_TRACKING_ID))
         }
       }
     }

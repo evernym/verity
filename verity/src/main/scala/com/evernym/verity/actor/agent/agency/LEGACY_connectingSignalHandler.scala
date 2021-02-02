@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.protocol.protocols.connecting.common.LegacyConnectingSignal
 
 import scala.concurrent.Future
@@ -11,8 +11,8 @@ import scala.concurrent.Future
  */
 trait LEGACY_connectingSignalHandler { this: AgencyAgentCommon =>
 
-  def handleLegacySignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
+  def handleLegacySignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
     //agency agent doesn't store the msg state as of now
-    case SignalMsgFromDriver(_: LegacyConnectingSignal, _, _, _)                 => Future(None)
+    case SignalMsgParam(_: LegacyConnectingSignal, _)                 => Future(None)
   }
 }

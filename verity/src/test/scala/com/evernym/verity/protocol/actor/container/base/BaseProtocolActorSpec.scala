@@ -19,15 +19,21 @@ trait BaseProtocolActorSpec
     with BasicSpec
     with ShardUtil {
 
+  def overrideSpecificConfig: Option[Config] = None
+
   /**
    * this is temporary to make the mock controller flow working
    * we should refactor it and not required to override below config
    *
    * @return
    */
-  override def overrideConfig: Option[Config] = Option {
-    ConfigFactory parseString {
+  final override def overrideConfig: Option[Config] = Option {
+    val baseConfig = ConfigFactory parseString {
       s"akka.actor.serialize-messages = off"
+    }
+    overrideSpecificConfig match {
+      case Some(sc) => baseConfig.withFallback(sc)
+      case None     => baseConfig
     }
   }
 

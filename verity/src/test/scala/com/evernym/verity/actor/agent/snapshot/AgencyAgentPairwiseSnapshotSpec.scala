@@ -53,7 +53,7 @@ class AgencyAgentPairwiseSnapshotSpec
         checkPersistentState(0, 2, 1)
 
         //restart actor (so that snapshot gets applied)
-        restartActor(aap)
+        restartPersistentActor(aap)
         checkPersistentState(0, 2, 1)
 
         //check metrics

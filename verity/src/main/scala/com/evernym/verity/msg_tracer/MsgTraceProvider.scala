@@ -5,7 +5,6 @@ import java.time.Instant
 import akka.actor.ActorSystem
 import com.evernym.verity.{ReqId, ReqMsgId, RespMsgId}
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 
 /**
  * main purpose of this MsgTraceProvider is to provide a clean interface
@@ -60,11 +59,9 @@ trait HasAsyncReqContext {
    * remove stale state (to handle unhappy paths where record doesn't gets cleaned up)
    */
   protected def removeStale(): Unit = {
-    runWithInternalSpan("removeStale", "HasAsyncReqContext"){
-      val curEpochMillis = Instant.now().toEpochMilli
-      val (matched, _) = asyncReqContext.partition(r => (curEpochMillis - r._2.capturedAtEpochMillis) < maxAliveMillis)
-      asyncReqContext = matched
-    }
+    val curEpochMillis = Instant.now().toEpochMilli
+    val (matched, _) = asyncReqContext.partition(r => (curEpochMillis - r._2.capturedAtEpochMillis) < maxAliveMillis)
+    asyncReqContext = matched
   }
 
   protected def storeAsyncReqContext(reqMsgId: ReqMsgId, msgName: String, reqId: ReqId, clientIpAddress: Option[String]=None): Unit = {
@@ -73,23 +70,19 @@ trait HasAsyncReqContext {
   }
 
   protected def asyncReqContextViaReqMsgId(reqMsgId: ReqMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
-    runWithInternalSpan("asyncReqContextViaReqMsgId", "HasAsyncReqContext"){
-      val (matched, others) = asyncReqContext.partition(_._1 == reqMsgId)
-      if (removeMatched) {
-        asyncReqContext = others
-      }
-      matched.values.headOption
+    val (matched, others) = asyncReqContext.partition(_._1 == reqMsgId)
+    if (removeMatched) {
+      asyncReqContext = others
     }
+    matched.values.headOption
   }
 
   protected def asyncReqContextViaRespMsgId(respMsgId: RespMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
-    runWithInternalSpan("asyncReqContextViaRespMsgId", "HasAsyncReqContext"){
-      val (matched, others) = asyncReqContext.partition(r => r._2.respMsgId.contains(respMsgId))
-      if (removeMatched) {
-        asyncReqContext = others
-      }
-      matched.values.headOption
+    val (matched, others) = asyncReqContext.partition(r => r._2.respMsgId.contains(respMsgId))
+    if (removeMatched) {
+      asyncReqContext = others
     }
+    matched.values.headOption
   }
 
   /**
@@ -99,13 +92,11 @@ trait HasAsyncReqContext {
    * @param respMsgId response msg id
    */
   protected def updateAsyncReqContext(reqMsgId: ReqMsgId, respMsgId: RespMsgId, msgName: Option[String]=None): Unit = {
-    runWithInternalSpan("updateAsyncReqContext", "HasAsyncReqContext"){
-      val (matched, _) = asyncReqContext.partition(_._1 == reqMsgId)
-      matched.foreach { m =>
-        val newMsgName = m._2.msgName + msgName.map(mn => s":$mn").getOrElse("")
-        val updated = m._2.copy(respMsgId = Option(respMsgId), msgName = newMsgName)
-        asyncReqContext = asyncReqContext ++ Map(m._1 -> updated)
-      }
+    val (matched, _) = asyncReqContext.partition(_._1 == reqMsgId)
+    matched.foreach { m =>
+      val newMsgName = m._2.msgName + msgName.map(mn => s":$mn").getOrElse("")
+      val updated = m._2.copy(respMsgId = Option(respMsgId), msgName = newMsgName)
+      asyncReqContext = asyncReqContext ++ Map(m._1 -> updated)
     }
   }
 

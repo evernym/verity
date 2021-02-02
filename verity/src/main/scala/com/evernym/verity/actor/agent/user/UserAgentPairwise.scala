@@ -531,42 +531,40 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   //target msg needs to be prepared/packed
   def sendMsgToTheirAgent(uid: MsgId, isItARetryAttempt: Boolean, mpf: MsgPackFormat): Future[Any] = {
-    runWithInternalSpan("sendMsgToTheirAgent", "UserAgentPairwise") {
-      val msg = getMsgReq(uid)
-      val payload = getMsgPayload(uid)
-      logger.debug("msg building started", (LOG_KEY_UID, uid))
-      getAgentConfigs(Set(GetConfigDetail(NAME_KEY, req = false), GetConfigDetail(LOGO_URL_KEY, req = false))).flatMap { fc: AgentConfigs =>
-        logger.debug("got required configs", (LOG_KEY_UID, uid))
-        (theirRoutingDetail, payload) match {
-          case (Some(Left(_: LegacyRoutingDetail)), _) =>
-            val agentMsgs = mpf match {
-              case MPF_MSG_PACK   => buildLegacySendRemoteMsg_MFV_0_5(uid, fc)
-              case MPF_INDY_PACK  => buildSendRemoteMsg_MFV_0_6(uid)
-              case x              => throw new RuntimeException("unsupported msg pack format: " + x)
-            }
-            buildAndSendMsgToTheirRoutingService(uid, msg.getType, agentMsgs, mpf)
-          case (Some(Right(_: RoutingDetail)), Some(p)) =>
-            buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`).map { pm =>
-              val smp = buildSendMsgParam(uid, msg.getType, pm.msg, isItARetryAttempt = false)
-              sendFinalPackedMsgToTheirRoutingService(pm, smp)
-            }
-          case x => throw new RuntimeException("unsupported condition: " + x)
-        }
-      }.recover {
-        case e: InternalServerErrorException
-          if e.respCode == DATA_NOT_FOUND.statusCode && e.respMsg.contains("payload not found") =>
-          val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
-          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
-        case e: Exception =>
-          logger.error("send msg failed unexpectedly",
-            (LOG_KEY_UID, uid),
-            (LOG_KEY_MESSAGE_TYPE, msg.getType),
-            (LOG_KEY_MESSAGE_CREATION_DATE_TIME, msg.creationDateTime.toString),
-            (LOG_KEY_MESSAGE_LAST_UPDATED_DATE_TIME, msg.lastUpdatedDateTime.toString),
-            (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-          throw e
+    val msg = getMsgReq(uid)
+    val payload = getMsgPayload(uid)
+    logger.debug("msg building started", (LOG_KEY_UID, uid))
+    getAgentConfigs(Set(GetConfigDetail(NAME_KEY, req = false), GetConfigDetail(LOGO_URL_KEY, req = false))).flatMap { fc: AgentConfigs =>
+      logger.debug("got required configs", (LOG_KEY_UID, uid))
+      (theirRoutingDetail, payload) match {
+        case (Some(Left(_: LegacyRoutingDetail)), _) =>
+          val agentMsgs = mpf match {
+            case MPF_MSG_PACK   => buildLegacySendRemoteMsg_MFV_0_5(uid, fc)
+            case MPF_INDY_PACK  => buildSendRemoteMsg_MFV_0_6(uid)
+            case x              => throw new RuntimeException("unsupported msg pack format: " + x)
+          }
+          buildAndSendMsgToTheirRoutingService(uid, msg.getType, agentMsgs, mpf)
+        case (Some(Right(_: RoutingDetail)), Some(p)) =>
+          buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`).map { pm =>
+            val smp = buildSendMsgParam(uid, msg.getType, pm.msg, isItARetryAttempt = false)
+            sendFinalPackedMsgToTheirRoutingService(pm, smp)
+          }
+        case x => throw new RuntimeException("unsupported condition: " + x)
       }
-   }
+    }.recover {
+      case e: InternalServerErrorException
+        if e.respCode == DATA_NOT_FOUND.statusCode && e.respMsg.contains("payload not found") =>
+        val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
+        handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+      case e: Exception =>
+        logger.error("send msg failed unexpectedly",
+          (LOG_KEY_UID, uid),
+          (LOG_KEY_MESSAGE_TYPE, msg.getType),
+          (LOG_KEY_MESSAGE_CREATION_DATE_TIME, msg.creationDateTime.toString),
+          (LOG_KEY_MESSAGE_LAST_UPDATED_DATE_TIME, msg.lastUpdatedDateTime.toString),
+          (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+        throw e
+    }
   }
 
   //target msg is already packed and it needs to be packed inside general msg wrapper

@@ -171,22 +171,20 @@ trait MsgNotifierForStoredMsgs
   protected def sendMsgToRegisteredEndpointLegacy(notifDetail: NotifyMsgDetail,
                                                   pw: PayloadWrapper,
                                                   allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("sendMsgToRegisteredEndpointLegacy", "MsgNotifierForStoredMsgs") {
-      withComMethods(allComMethods).map { comMethods =>
-        val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
-        logger.debug("received registered http endpoints: " + httpComMethods)
-        httpComMethods.foreach { hcm =>
-         logger.debug(s"about to send message to endpoint: " + hcm)
-          val fut = pw.metadata.map(_.msgPackFormat) match {
-            case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
-              msgSendingSvc.sendBinaryMsg(pw.msg)(UrlParam(hcm.value))
-            case Some(MPF_PLAIN)  =>
-              msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
-            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
-          }
-          recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (legacy): ${hcm.value}", fut)
-          logger.debug("message sent to endpoint (legacy): " + hcm)
+    withComMethods(allComMethods).map { comMethods =>
+      val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
+      logger.debug("received registered http endpoints: " + httpComMethods)
+      httpComMethods.foreach { hcm =>
+       logger.debug(s"about to send message to endpoint: " + hcm)
+        val fut = pw.metadata.map(_.msgPackFormat) match {
+          case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
+            msgSendingSvc.sendBinaryMsg(pw.msg)(UrlParam(hcm.value))
+          case Some(MPF_PLAIN)  =>
+            msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
+          case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
+        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (legacy): ${hcm.value}", fut)
+        logger.debug("message sent to endpoint (legacy): " + hcm)
       }
     }
   }
@@ -194,54 +192,50 @@ trait MsgNotifierForStoredMsgs
   protected def sendMsgToRegisteredEndpointNew(notifDetail: NotifyMsgDetail,
                                                pw: PayloadWrapper,
                                                allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("sendMsgToRegisteredEndpointNew", "MsgNotifierForStoredMsgs") {
-      withComMethods(allComMethods).map { comMethods =>
-        val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
-        logger.debug("received registered http endpoints: " + httpComMethods)
-        httpComMethods.foreach { hcm =>
-          logger.debug(s"about to send message to endpoint: " + hcm)
-          val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
-          val fut = pkgType match {
-            case MPF_PLAIN =>
-              msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
-            case MPF_INDY_PACK | MPF_MSG_PACK =>
-              val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
-              // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
-              val recipKeys = endpointRecipKeys match {
-                case Some(keys) if keys.nonEmpty => keys
-                case _ => defaultSelfRecipKeys
-              }
-              msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).map { packedMsg =>
-                msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
-              }
-            case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
-          }
-          recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (new): ${hcm.value}", fut)
-          logger.debug("message sent to endpoint: " + hcm)
+    withComMethods(allComMethods).map { comMethods =>
+      val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
+      logger.debug("received registered http endpoints: " + httpComMethods)
+      httpComMethods.foreach { hcm =>
+        logger.debug(s"about to send message to endpoint: " + hcm)
+        val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
+        val fut = pkgType match {
+          case MPF_PLAIN =>
+            msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
+          case MPF_INDY_PACK | MPF_MSG_PACK =>
+            val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
+            // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
+            val recipKeys = endpointRecipKeys match {
+              case Some(keys) if keys.nonEmpty => keys
+              case _ => defaultSelfRecipKeys
+            }
+            msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).map { packedMsg =>
+              msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
+            }
+          case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
+        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (new): ${hcm.value}", fut)
+        logger.debug("message sent to endpoint: " + hcm)
       }
     }
   }
 
   private def sendMsgToRegisteredPushNotif(notifMsgDtl: NotifyMsgDetail, updateDeliveryStatus: Boolean, allComMethods: Option[CommunicationMethods]): Future[Any] = {
     try {
-      runWithInternalSpan("sendMsgDetailToRegisteredPushNotif", "MsgNotifierForStoredMsgs") {
-        val msg = getMsgReq(notifMsgDtl.uid)
-        val mds = getMsgDetails(notifMsgDtl.uid)
-        val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
-        val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
-        val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
-        val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
-        val extraData = title ++ detail ++ name ++ logoUrl
+      val msg = getMsgReq(notifMsgDtl.uid)
+      val mds = getMsgDetails(notifMsgDtl.uid)
+      val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
+      val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
+      val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
+      val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
+      val extraData = title ++ detail ++ name ++ logoUrl
 
-        val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType)
-        val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
+      val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType)
+      val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
 
-        logger.debug("new messages notification: " + notifMsgDtl)
-        getCommonPushNotifData(notifMsgDtl, newExtraData) match {
-          case Some(pnd) => sendPushNotif(pnd, updateDeliveryStatus = updateDeliveryStatus, allComMethods)
-          case None      => Future.successful("push notification not enabled")
-        }
+      logger.debug("new messages notification: " + notifMsgDtl)
+      getCommonPushNotifData(notifMsgDtl, newExtraData) match {
+        case Some(pnd) => sendPushNotif(pnd, updateDeliveryStatus = updateDeliveryStatus, allComMethods)
+        case None      => Future.successful("push notification not enabled")
       }
     } catch {
       case e: Exception =>
@@ -314,29 +308,27 @@ trait MsgNotifierForStoredMsgs
   }
 
   protected def fwdMsgToSponsor(notifMsgDtl: NotifyMsgDetail, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("fwdMsgToSponsor", "MsgNotifierForStoredMsgs") {
-      logger.debug("about to get com methods to forward notification")
-      withComMethods(allComMethods).map { comMethods =>
-        val cms = comMethods.filterByType(COM_METHOD_TYPE_FWD_PUSH)
-        logger.debug(s"fwdComMethods: $cms")
-        cms.map(_.value).foreach { sponseeDetails =>
-          getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
-            logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
+    logger.debug("about to get com methods to forward notification")
+    withComMethods(allComMethods).map { comMethods =>
+      val cms = comMethods.filterByType(COM_METHOD_TYPE_FWD_PUSH)
+      logger.debug(s"fwdComMethods: $cms")
+      cms.map(_.value).foreach { sponseeDetails =>
+        getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
+          logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
 
-            val mds = getMsgDetails(notifMsgDtl.uid)
-            val name = mds.getOrElse(NAME_KEY, "")
-            val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
-            val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
+          val mds = getMsgDetails(notifMsgDtl.uid)
+          val name = mds.getOrElse(NAME_KEY, "")
+          val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
+          val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
 
-            msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
-            .map { _ =>
-              recordOutMsgDeliveryEvent(notifMsgDtl.uid, MsgEvent.withOnlyDetail(s"forward msg to sponsor sent: " + url))
-            }
-            logger.debug("message sent to endpoint: " + url)
+          msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
+          .map { _ =>
+            recordOutMsgDeliveryEvent(notifMsgDtl.uid, MsgEvent.withOnlyDetail(s"forward msg to sponsor sent: " + url))
+          }
+          logger.debug("message sent to endpoint: " + url)
           })
         }
       }
-    }
   }
 
   def sendPushNotif(pnData: PushNotifData, updateDeliveryStatus: Boolean = true, allComMethods: Option[CommunicationMethods]): Future[Any] = {

@@ -69,9 +69,15 @@ trait PushNotifMsgBuilder extends HasAppConfig {
         MSG_TYPE -> PusherUtil.getPushMsgType(notifMsgDtl.msgType), UID -> notifMsgDtl.uid))
 
       val notifData = Map(BODY -> rcvdDetail.getOrElse(defaultDetail), BADGE_COUNT -> 1)
-      val extraData = Map(PUSH_NOTIF_MSG_TYPE -> notifMsgDtl.msgType, FOR_DID -> msgRecipientDID,
-        UID -> notifMsgDtl.uid, SENDER_LOGO_URL -> rcvdSenderLogoUrl.getOrElse(defaultLogoUrl),
-        PUSH_NOTIF_MSG_TITLE -> rcvdTitle.getOrElse(defaultTitle), PUSH_NOTIF_MSG_TEXT -> rcvdDetail.getOrElse(defaultDetail))
+      val extraData = Map(
+        TYPE -> (if (notifMsgDtl.msgType.contains('/')) "unknown" else notifMsgDtl.msgType), // legacy
+        PUSH_NOTIF_MSG_TYPE -> notifMsgDtl.msgType,
+        FOR_DID -> msgRecipientDID,
+        UID -> notifMsgDtl.uid,
+        SENDER_LOGO_URL -> rcvdSenderLogoUrl.getOrElse(defaultLogoUrl),
+        PUSH_NOTIF_MSG_TITLE -> rcvdTitle.getOrElse(defaultTitle),
+        PUSH_NOTIF_MSG_TEXT -> rcvdDetail.getOrElse(defaultDetail)
+      )
 
       val isAlertPushNotif = sendAsAlertPushNotif(notifMsgDtl.msgType)
       Option(PushNotifData(notifMsgDtl.uid, notifMsgDtl.msgType, isAlertPushNotif, notifData, extraData))

@@ -70,7 +70,7 @@ object Constants {
   val TEXT = "text"
 
   //push com method related
-  val PUSH_NOTIF_MSG_TYPE = TYPE
+  val PUSH_NOTIF_MSG_TYPE = MSG_TYPE
   val PUSH_NOTIF_MSG_TITLE = "pushNotifMsgTitle"
   val PUSH_NOTIF_MSG_TEXT = "pushNotifMsgText"
   val BADGE_COUNT = "badge"

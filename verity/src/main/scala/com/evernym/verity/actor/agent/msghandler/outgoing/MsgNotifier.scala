@@ -318,8 +318,9 @@ trait MsgNotifierForStoredMsgs
 
           val mds = getMsgDetails(notifMsgDtl.uid)
           val name = mds.getOrElse(NAME_KEY, "")
-          val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
-          val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
+          // metadata is deprecated, we should keep type in legacy state.
+          val fwdMeta = FwdMetaData(if (!notifMsgDtl.msgType.contains("/")) Some(notifMsgDtl.msgType) else Some("unknown"), Some(name))
+          val fwdMsg = FwdMsg(notifMsgDtl.uid, notifMsgDtl.msgType, sponseeDetails, msgRecipientDID, fwdMeta)
 
           msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
           .map { _ =>
@@ -432,7 +433,7 @@ trait MsgNotifierForUserAgent extends MsgNotifierForUserAgentCommon {
 }
 
 case class FwdMetaData(msgType: Option[String], msgSenderName: Option[String])
-case class FwdMsg(msgId: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
+case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
 object NotifyMsgDetail {
   def withTrackingId(msgType: String): NotifyMsgDetail =
     NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType)

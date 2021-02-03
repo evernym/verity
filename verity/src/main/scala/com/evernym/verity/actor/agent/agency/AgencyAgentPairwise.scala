@@ -6,7 +6,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.actor.agent.msghandler.ProcessUnpackedMsgV1
+import com.evernym.verity.actor.agent.msghandler.ProcessUnpackedMsg
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship, RelationshipUtil}
@@ -102,7 +102,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     val agentMsgs = List(AgentMsgParseUtil.agentMsg(msg))
     val amw = AgentMsgWrapper(MPF_INDY_PACK, AgentBundledMsg(agentMsgs,
       state.thisAgentVerKey, None, None))
-    sendToAgentMsgProcessor(ProcessUnpackedMsgV1(amw))
+    sendToAgentMsgProcessor(ProcessUnpackedMsg(amw))
   }
 
   def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys

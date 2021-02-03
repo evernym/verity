@@ -14,7 +14,6 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.{JsonMsg, OutgoingMsg,
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam, PackedMsgRouteParam}
 import com.evernym.verity.actor.agent.relationship.AuthorizedKeyLike
 import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.Status._
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
@@ -96,8 +95,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
     //self sent messages (mostly to use async api call)
     case har: HandleAuthedRestMsg     => handledAuthedRestMsg(har.prm)
-    case pum: ProcessUnpackedMsgV1    => handleUnpackedMsgV1(pum.amw, pum.msgThread, pum.rmc)
-    case pum: ProcessUnpackedMsgV2    => handleUnpackedMsgV2(pum.amw, pum.internalPayloadWrapper, pum.rmc)
+    case pum: ProcessUnpackedMsg      => handleUnpackedMsg(pum.amw, pum.msgThread, pum.rmc)
 
     //from/to protocol container actor
     case stp: SendToProtocolActor     => tellProtocolActor(stp.pinstIdPair, stp.msgEnvelope, stp.sndr)
@@ -129,7 +127,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     psm.requestMsgId.foreach { rmid =>
       withReqMsgId(rmid, { arc =>
         val msgType = msgTypeStr(psm.protoRef, psm.smp.signalMsg)
-        recordSignalMsgTrackingEvent(arc.reqId, "", msgType, Option("to-be-handled-locally"))
+        recordSignalMsgTrackingEvent(arc.reqId, msgType,"to-be-handled-locally")
       })
     }
   }
@@ -218,8 +216,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    *        (which is true for legacy 0.5 version of messages or any other expecting a synchronous response)
    *   else sends it to appropriate agent (edge agent or to edge/cloud agent of the given connection)
    * @param omp
-   * @param msgType
    * @param omc
+   * @param msgType
    * @param threadContext
    */
   private def sendToWaitingCallerOrSendToNextHop(omp: OutgoingMsgParam,
@@ -353,7 +351,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     sar ! msg
     MsgTracerProvider.recordMetricsForAsyncReqMsgId(reqMsgId, NEXT_HOP_MY_EDGE_AGENT_SYNC)   //tracing related
     withReqMsgId(reqMsgId, { arc =>
-      recordOutMsgChildEvent(arc.reqId, arc.respMsgId.getOrElse(""),
+      recordOutMsgChildEvent(arc.reqId, arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID),
         ChildEvent(s"SENT: outgoing message (${msg.getClass.getSimpleName})", detail = Option(NEXT_HOP_MY_EDGE_AGENT_SYNC)))
     })
   }
@@ -417,7 +415,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       recordRoutingChildEvent(ppm.reqMsgContext.id, childEventWithDetail(s"packed msg unpacked", sndr))
       logger.debug(s"incoming unpacked (mpf: ${amw.msgPackFormat}) msg: " + amw)
       preMsgProcessing(amw.msgType, amw.senderVerKey)(ppm.reqMsgContext)
-      self.tell(ProcessUnpackedMsgV1(amw, ppm.reqMsgContext, ppm.msgThread), sndr)
+      self.tell(ProcessUnpackedMsg(amw, ppm.msgThread, ppm.reqMsgContext), sndr)
     }.recover {
       case e: RuntimeException =>
         recordRoutingChildEvent(ppm.reqMsgContext.id,
@@ -541,40 +539,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     }
   }
 
-  def handleUnpackedMsgV1(amw: AgentMsgWrapper,
-                          msgThread: Option[Thread]=None,
-                          reqMsgContext: ReqMsgContext = ReqMsgContext()): Unit = {
-    handleUnpackedMsg(amw, msgThread, reqMsgContext)
-  }
-
-  def handleUnpackedMsgV2(outerAgentMsgWrapper: AgentMsgWrapper,
-                          internalPayloadWrapper: InternalPayloadWrapper,
-                          rmc: ReqMsgContext = ReqMsgContext()): Unit = {
-    //NOTE: this reqMsgContext is to pass some msg context information (like client's ip address, msg sender ver key etc)
-    //which was being used by existing agent message
-    val outerRMC: ReqMsgContext = buildReqMsgContext(outerAgentMsgWrapper, rmc)
-    internalPayloadWrapper.decryptedMsg match {
-      //NOTE: don't change the order of below 'case' clauses else things may not work properly
-      case Some(amw) =>
-        //given internal payload (in agent msg wrapper) got decrypted by this agent
-        //and hence asked to process that payload instead
-        implicit val internalRMC: ReqMsgContext = buildReqMsgContext(amw, outerRMC)
-        handleUnpackedMsg(amw, internalPayloadWrapper.payload.thread, internalRMC)
-      case None if routingMsgHandler(outerRMC).isDefinedAt(outerAgentMsgWrapper) =>
-        //given internal payload (in outerAgentMsgWrapper) didn't get decrypted by this agent
-        // mostly it should be destined for edge agent to be decrypted
-        // so check if it is a forward message and process it if it is
-        routingMsgHandler(outerRMC)(outerAgentMsgWrapper)
-      case _ =>
-        forwardToAgentActor(UnhandledMsg(outerAgentMsgWrapper, outerRMC,
-          new NotFoundErrorException(UNSUPPORTED_MSG_TYPE.statusCode)))
-        recordRoutingChildEvent(outerRMC.id,
-          childEventWithDetail(s"legacy message sent to agent actor: " +
-            s"${outerAgentMsgWrapper.headAgentMsg.msgFamilyDetail.toString}"))
-    }
-  }
-
-
   private def handleUnpackedMsg(amw: AgentMsgWrapper,
                                 msgThread: Option[Thread]=None,
                                 reqMsgContext: ReqMsgContext = ReqMsgContext()): Unit = {
@@ -582,18 +546,30 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     try {
       extractMsgAndSendToProtocol(IncomingMsgParam(amw, amw.headAgentMsgDetail.msgType), msgThread)
     } catch {
-      case e: NotFoundErrorException =>   //no protocol found for the inc
+      case e: NotFoundErrorException =>   //no protocol found for the incoming message
         val sndr = sender()
+        recordRoutingChildEvent(rmc.id, childEventWithDetail(s"${e.getMessage}", sndr))
         internalPayloadWrapper(amw).map {
           case Some(dp) =>
             recordRoutingChildEvent(rmc.id, childEventWithDetail(s"internal packed msg decrypted", sndr))
-            self.tell(ProcessUnpackedMsgV2(amw, dp, rmc, e), sndr)
-          case None     =>
-            forwardToAgentActor(UnhandledMsg(amw, rmc, e), sndr)
-            recordRoutingChildEvent(rmc.id,
-              childEventWithDetail(s"legacy message sent to agent actor: ${amw.headAgentMsg.msgFamilyDetail.toString}", sndr))
+            self.tell(ProcessUnpackedMsg(dp.amw, dp.msgThread, rmc), sndr)
+          case None if routingMsgHandler(rmc, sndr).isDefinedAt(amw) =>
+            //given internal payload (in outerAgentMsgWrapper) didn't get decrypted by this agent
+            // mostly it should be destined for edge agent to be decrypted
+            // so check if it is a forward message and process it if it is
+            routingMsgHandler(rmc, sndr)(amw)
+          case None     => processUnhandledMsg(amw, rmc, e, sndr)
         }
     }
+  }
+
+  def processUnhandledMsg(amw: AgentMsgWrapper,
+                          rmc: ReqMsgContext,
+                          ex: RuntimeException,
+                          sndr: ActorRef): Unit = {
+    forwardToAgentActor(UnhandledMsg(amw, rmc, ex), sndr)
+    recordRoutingChildEvent(rmc.id,
+      childEventWithDetail(s"message sent to agent actor: ${amw.headAgentMsg.msgFamilyDetail.toString}", sndr))
   }
 
   def extractMsgAndSendToProtocol(givenImp: IncomingMsgParam,
@@ -749,10 +725,11 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param reqMsgContext request message context
    * @return
    */
-  def routingMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Unit] = {
+  def routingMsgHandler(implicit reqMsgContext: ReqMsgContext, sndr: ActorRef): PartialFunction[Any, Unit] = {
     case amw: AgentMsgWrapper
       if amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD) ||
-          amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD) =>
+          amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD) ||
+          amw.isMatched(MFV_0_5, MSG_TYPE_FWD) =>
         val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
         if (isFwdForThisAgent(fwdMsg)) {
           val msgId = MsgUtil.newMsgId
@@ -760,12 +737,12 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           sendToAgentActor(StoreAndSendMsgToMyDomain(
             OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
             msgId, MSG_TYPE_UNKNOWN, ParticipantUtil.DID(param.selfParticipantId), None))
-          recordOutMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
+          recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
             s"packed msg sent to agent actor to be forwarded to edge agent"))
-          sender ! Done
+          sndr.tell(Done, self)
         } else {
           val efm = PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext)
-          agentMsgRouter.forward(efm, sender)
+          agentMsgRouter.forward(efm, sndr)
           recordRoutingChildEvent(reqMsgContext.id,
             ChildEvent(fwdMsg.msgFamilyDetail.toString, s"forwarded to ${fwdMsg.`@fwd`}"))
         }
@@ -786,8 +763,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     } else if (amw.isMatched(MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG)) {
       val srm = SendRemoteMsgHelper.buildReqMsg(amw)
       Option(InternalPayload(srm.`@msg`, srm.threadOpt))
-    } else if (amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD) ||
-      amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD)) {
+    } else if (
+      amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD) ||
+        amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD) ||
+        amw.isMatched(MFV_0_5, MSG_TYPE_FWD)) {
       val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
       if (isFwdForThisAgent(fwdMsg)) {
         Option(InternalPayload(fwdMsg.`@msg`, None))
@@ -795,15 +774,15 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     } else None
   }
 
-  private def internalPayloadWrapper(amw: AgentMsgWrapper): Future[Option[InternalPayloadWrapper]] =
+  private def internalPayloadWrapper(amw: AgentMsgWrapper): Future[Option[InternalDecryptedMsg]] =
     extractInternalPayload(amw) match {
       case Some(ip) =>
         msgExtractor.unpackAsync(PackedMsg(ip.payload))
           .map { internalAMW =>
-            Option(InternalPayloadWrapper(ip, Option(internalAMW)))
+            Option(InternalDecryptedMsg(internalAMW, ip.thread))
           }.recover {
           case _: Exception =>
-            Option(InternalPayloadWrapper(ip, None))
+            None
         }
       case None => Future.successful(None)
     }
@@ -916,15 +895,9 @@ case class StateParam(agentActorRef: ActorRef,
                       userIdForResourceUsageTracking: Option[VerKey] => Option[String],
                       pairwiseRelTrackingIds: List[String])
 
-case class ProcessUnpackedMsgV1(amw: AgentMsgWrapper,
-                                rmc: ReqMsgContext = ReqMsgContext(),
-                                msgThread: Option[Thread]=None) extends ActorMessage
-
-case class ProcessUnpackedMsgV2(amw: AgentMsgWrapper,
-                                internalPayloadWrapper: InternalPayloadWrapper,
-                                rmc: ReqMsgContext = ReqMsgContext(),
-                                unhandledCause: Throwable) extends ActorMessage
-
+case class ProcessUnpackedMsg(amw: AgentMsgWrapper,
+                              msgThread: Option[Thread]=None,
+                              rmc: ReqMsgContext = ReqMsgContext()) extends ActorMessage
 
 case class ProcessTypedMsg(tmsg: TypedMsgLike,
                            relationshipId: Option[RelationshipId],
@@ -998,10 +971,10 @@ case class InternalPayload(payload: Array[Byte], thread: Option[Thread])
 
 /**
  *
- * @param payload internal payload
- * @param decryptedMsg decrypted internal payload (if decrypted by this agent)
+ * @param amw internal payload decrypted
+ * @param msgThread msg thread
  */
-case class InternalPayloadWrapper(payload: InternalPayload, decryptedMsg: Option[AgentMsgWrapper])
+case class InternalDecryptedMsg(amw: AgentMsgWrapper, msgThread: Option[Thread])
 
 object AgentMsgProcessor {
   def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKey], msgSenderVerKey: VerKey): Unit = {

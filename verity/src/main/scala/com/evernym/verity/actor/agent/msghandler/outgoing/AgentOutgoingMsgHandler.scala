@@ -61,6 +61,7 @@ trait AgentOutgoingMsgHandler
 
   /**
    * this is mainly to track msg progress for legacy agent message handler
+   * @param respMsgType
    * @param respMsg
    * @param sndr
    * @param reqMsgContext
@@ -70,7 +71,9 @@ trait AgentOutgoingMsgHandler
                   sndr: ActorRef = sender())(implicit reqMsgContext: ReqMsgContext): Unit = {
     def sendAndRecordMetrics(msg: Any, sndr: ActorRef): Unit = {
       sndr ! msg
-      recordOutMsgEvent(reqMsgContext.id, MsgEvent.withTypeAndDetail(respMsgType, "SENT: http response"))
+      recordOutMsgEvent(reqMsgContext.id,
+        MsgEvent(s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
+        respMsgType, s"SENT: response to caller (to: ${sndr.path}, by: $self)"))
     }
     respMsg match {
       case fut: Future[Any] => fut.map { msg =>

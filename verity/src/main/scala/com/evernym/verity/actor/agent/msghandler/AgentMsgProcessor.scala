@@ -735,7 +735,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
           sendToAgentActor(StoreAndSendMsgToMyDomain(
             OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
-            msgId, MSG_TYPE_UNKNOWN, ParticipantUtil.DID(param.selfParticipantId), None))
+            msgId, fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN), ParticipantUtil.DID(param.selfParticipantId), None))
           recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
             s"packed msg sent to agent actor to be forwarded to edge agent"))
           sndr.tell(Done, self)

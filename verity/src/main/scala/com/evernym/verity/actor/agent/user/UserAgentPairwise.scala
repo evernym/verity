@@ -628,7 +628,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     val connectionStatusUpdatedRespMsg = UpdateConnStatusMsgHelper.buildRespMsg(updateConnStatus.statusCode)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, connectionStatusUpdatedRespMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
-    sendRespMsg("ConnStatusUpdated", rp)
+    sendRespMsg("ConnStatusUpdatedResp", rp)
   }
 
   val unAllowedLegacyConnectingMsgNames: Set[String] = Set(

@@ -20,7 +20,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
-import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
@@ -43,7 +42,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
-import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, MsgEvent}
 import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 
@@ -74,12 +73,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
    * @return
    */
   def agentMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Any] = {
-
-    case amw: AgentMsgWrapper
-      if amw.isMatched(MFV_0_5, MSG_TYPE_FWD) ||
-        amw.isMatched(MFV_1_0, MSG_TYPE_FWD) =>
-      // Extract the 'forward' message and sends it along to the UserAgentPairwise.
-      handleFwdMsg(FwdMsgHelper.buildReqMsg(amw))
 
     case amw: AgentMsgWrapper
       if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_COM_METHOD) ||
@@ -357,13 +350,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
     )
   }
 
-  def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val efm = PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext)
-    agentActorContext.agentMsgRouter.forward(efm, sender)
-    recordRoutingChildEvent(reqMsgContext.id,
-      ChildEvent(fwdMsg.msgFamilyDetail.toString, s"forwarded to ${fwdMsg.`@fwd`}"))
-  }
-
   def buildAndSendComMethodUpdatedRespMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val comMethodUpdatedRespMsg = UpdateComMethodMsgHelper.buildRespMsg(comMethod.id)(reqMsgContext.agentMsgContext)
     reqMsgContext.msgPackFormat match {
@@ -441,30 +427,41 @@ class UserAgent(val agentActorContext: AgentActorContext)
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, state.myDid)
-    val comMethod = ucm.comMethod.`type` match {
-      case COM_METHOD_TYPE_PUSH           =>
-        PusherUtil.checkIfValidPushComMethod(
-          ComMethodDetail(
-            COM_METHOD_TYPE_PUSH,
-            ucm.comMethod.value),
-          appConfig)
-        ucm.comMethod
-      case COM_METHOD_TYPE_HTTP_ENDPOINT  => UrlParam(ucm.comMethod.value); ucm.comMethod
-      case COM_METHOD_TYPE_FWD_PUSH       =>
-        if (state.sponsorRel.isEmpty){
-          throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("no sponsor registered - cannot register fwd method"))
-        } else {
-          ComMethod(ucm.comMethod.id, ucm.comMethod.`type`, ucm.comMethod.value, None)
-        }
-      case COM_METHOD_TYPE_SPR_PUSH       =>
-        if (state.sponsorRel.isEmpty){
-          throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("no sponsor registered - cannot register sponsor push method"))
-        } else {
-          ComMethod(ucm.comMethod.id, ucm.comMethod.`type`, ucm.comMethod.value, None)
-        }
-    }
+    val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
     buildAndSendComMethodUpdatedRespMsg(comMethod)
+  }
+
+  def validatedComMethod(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): ComMethod = {
+    try {
+      ucm.comMethod.`type` match {
+        case COM_METHOD_TYPE_PUSH =>
+          PusherUtil.checkIfValidPushComMethod(
+            ComMethodDetail(COM_METHOD_TYPE_PUSH, ucm.comMethod.value), appConfig)
+          ucm.comMethod
+        case COM_METHOD_TYPE_HTTP_ENDPOINT => UrlParam(ucm.comMethod.value); ucm.comMethod
+        case COM_METHOD_TYPE_FWD_PUSH =>
+          if (state.sponsorRel.isEmpty) {
+            throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+              Option("no sponsor registered - cannot register fwd method"))
+          } else {
+            ComMethod(ucm.comMethod.id, ucm.comMethod.`type`, ucm.comMethod.value, None)
+          }
+        case COM_METHOD_TYPE_SPR_PUSH =>
+          if (state.sponsorRel.isEmpty) {
+            throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+              Option("no sponsor registered - cannot register sponsor push method"))
+          } else {
+            ComMethod(ucm.comMethod.id, ucm.comMethod.`type`, ucm.comMethod.value, None)
+          }
+      }
+    } catch {
+      case e: RuntimeException =>
+        recordInMsgChildEvent(reqMsgContext.id,
+          s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
+          ChildEvent("validation-error", "error while validating com method: " + e.getMessage))
+        throw e
+    }
   }
 
   def validatePairwiseFromDIDs(givenPairwiseFromDIDs: List[DID]): Unit = {
@@ -569,12 +566,12 @@ class UserAgent(val agentActorContext: AgentActorContext)
     }
   }
 
-  def handleUpdateMsgStatusFutResp(futResp: Future[List[(String, Any)]], agentVerKey: VerKey, sndr: ActorRef)
-                                  (implicit reqMsgContext: ReqMsgContext): Unit = {
+  def handleUpdateMsgStatusByConnsFutResp(futResp: Future[List[(String, Any)]], agentVerKey: VerKey, sndr: ActorRef)
+                                         (implicit reqMsgContext: ReqMsgContext): Unit = {
     futResp.onComplete {
       case Success(respMsgs) =>
         try {
-          parseBuildAndSendResp("MsgStatusUpdatedResp", respMsgs, agentVerKey, sndr)
+          parseBuildAndSendResp("MsgStatusUpdatedByConnsResp", respMsgs, agentVerKey, sndr)
         } catch {
           case e: Exception =>
             handleException(e, sndr)
@@ -590,7 +587,7 @@ class UserAgent(val agentActorContext: AgentActorContext)
     val sndr = sender()
     val agentVerKey = state.thisAgentVerKeyReq
     val reqFut = buildUpdateMsgStatusReq(updateMsgStatusByConnsReq, agentVerKey)
-    handleUpdateMsgStatusFutResp(reqFut, agentVerKey, sndr)
+    handleUpdateMsgStatusByConnsFutResp(reqFut, agentVerKey, sndr)
   }
 
   def prepareAndSendGetMsgsReqMsgToPairwiseActor(getMsgsByConnsReq: GetMsgsByConnsReqMsg,

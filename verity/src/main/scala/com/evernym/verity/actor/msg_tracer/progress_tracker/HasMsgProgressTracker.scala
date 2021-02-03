@@ -37,6 +37,10 @@ trait HasMsgProgressTracker { this: Actor =>
     recordOutMsgEvent(reqId, MsgEvent(id, msgTypeStr + " [signal]", detail))
   }
 
+  def recordSignalMsgTrackingEvent(reqId: ReqId, msgTypeStr: String, detail:String): Unit = {
+    recordOutMsgEvent(reqId, MsgEvent.withTypeAndDetail(msgTypeStr + " [signal]", detail))
+  }
+
   def recordProtoMsgTrackingEvent(reqId: ReqId, id: String, typedMsg: MsgType, detail: Option[String]): Unit = {
     recordOutMsgEvent(reqId, MsgEvent(id, typedMsg.toString + " [proto]", detail))
   }
@@ -97,7 +101,7 @@ trait HasMsgProgressTracker { this: Actor =>
   }
 
   def childEventWithDetail(msg: String, sndr: ActorRef = sender()): ChildEvent = {
-    ChildEvent(msg, detail = Option(s"sender: $sndr, self: ${self.path}"))
+    ChildEvent(msg, detail = Option(s"sender: ${sndr.path}, self: ${self.path}"))
   }
 
   private def sendToMsgTracker(cmd: Any): Unit = {
@@ -105,8 +109,7 @@ trait HasMsgProgressTracker { this: Actor =>
       if (MsgProgressTrackerCache.isTracked(trackingId)) {
         val finalCmd = cmd match {
           case rre: RecordRoutingEvent if MsgProgressTracker.isGlobalOrIpAddress(trackingId) =>
-            rre.copy(event = rre.event.copy(detail =
-              Option(rre.event.detail.map(d => s"$d ").getOrElse("") + s"(trackingDetail => $extraDetail)")))
+            rre.withDetailAppended(s"(trackingDetail => $extraDetail)")
           case other                   => other
         }
         msgProgressTrackerRegion ! ForIdentifier(trackingId, finalCmd)

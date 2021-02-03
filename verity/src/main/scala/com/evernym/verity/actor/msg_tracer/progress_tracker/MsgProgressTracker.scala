@@ -202,19 +202,20 @@ case class RequestState(reqId: String,
 
   def updateRoutingEvents(event: RoutingEvent): RequestState = {
     val events = routingEvents.getOrElse(List.empty)
-    val updatedEvent = events.headOption.getOrElse(event)
-    copy(routingEvents = Option(List(updatedEvent)))
+    val (_, otherEvents) = events.partition(_.id == event.id)
+    val updatedEvents = otherEvents :+ event
+    copy(routingEvents = Option(updatedEvents))
   }
 
   def updateInMsgEvents(event: MsgEvent): RequestState = {
-    val events = inMsgEvents.getOrElse(List.empty)
-    val updatedEvents = events.filter(_.msgId.isDefined) :+ event
+    val curEvents = inMsgEvents.getOrElse(List.empty)
+    val updatedEvents = curEvents :+ event
     copy(inMsgEvents = Option(updatedEvents))
   }
 
   def updateOutMsgEvents(event: MsgEvent): RequestState = {
-    val events = outMsgEvents.getOrElse(List.empty)
-    val updatedEvents = events.filter(_.msgId.isDefined) :+ event
+    val curEvents = outMsgEvents.getOrElse(List.empty)
+    val updatedEvents = curEvents :+ event
     copy(outMsgEvents = Option(updatedEvents))
   }
 
@@ -283,36 +284,40 @@ case class RecordRoutingChildEvents(reqId: String, events: List[ChildEvent]) ext
 
 object MsgEvent {
   def withOnlyId(msgId: String): MsgEvent =
-    MsgEvent(optionId(msgId), None, None)
+    MsgEvent(Option(msgId), None, None)
   def withOnlyType(msgType: String): MsgEvent =
-    MsgEvent(None, Option(msgType), None)
+    MsgEvent(None, msgType = Option(msgType))
   def withOnlyDetail(detail: String): MsgEvent =
-    MsgEvent(None, None, Option(detail))
+    MsgEvent(None, detail = Option(detail))
   def withTypeAndDetail(msgType: String, detail: String): MsgEvent =
-    MsgEvent(None, Option(msgType), Option(detail))
-  def apply(msgId: String, msgType: String): MsgEvent =
-    MsgEvent(optionId(msgId), Option(msgType), None)
-  def apply(msgId: String, msgType: String, detail: String): MsgEvent =
-    MsgEvent(optionId(msgId), Option(msgType), Option(detail))
-  def apply(msgId: String, msgType: String, detail: Option[String]): MsgEvent =
-    MsgEvent(optionId(msgId), Option(msgType), detail)
+    MsgEvent(msgType = Option(msgType), detail = Option(detail))
 
-  private def optionId(id: String): Option[String] = {
-    if (id.trim.isEmpty) None else Option(id)
-  }
+  def apply(msgId: String, msgType: String): MsgEvent =
+    MsgEvent(Option(msgId), Option(msgType), None)
+  def apply(msgId: String, msgType: String, detail: String): MsgEvent =
+    MsgEvent(Option(msgId), Option(msgType), Option(detail))
+  def apply(msgId: String, msgType: String, detail: Option[String]): MsgEvent =
+    MsgEvent(Option(msgId), Option(msgType), detail)
+
+  //used in case there is no explicit system message id provided/available
+  val DEFAULT_TRACKING_MSG_ID = "tracking-msg-id"
 }
-case class RoutingEvent(id: Option[MsgId] = Option("routing"),
+case class RoutingEvent(id: MsgId = "routing",
                         detail: Option[String] = None,
                         recordedAt: LocalDateTime = LocalDateTime.now(),
                         childEvents: Option[List[ChildEvent]] = None)
 
-case class MsgEvent(msgId: Option[MsgId] = None,
+case class MsgEvent(msgId: Option[String] = None,
                     msgType: Option[String] = None,
                     detail: Option[String] = None,
                     recordedAt: LocalDateTime = LocalDateTime.now(),
                     childEvents: Option[List[ChildEvent]] = None)
 
-case class RecordRoutingEvent(reqId: String, event: RoutingEvent) extends RecordReqData
+case class RecordRoutingEvent(reqId: String, event: RoutingEvent) extends RecordReqData {
+  def withDetailAppended(detail: String): RecordRoutingEvent = {
+    copy(event = event.copy(detail = Option(event.detail.map(d => s"$d ").getOrElse("") + detail)))
+  }
+}
 case class RecordInMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData
 case class RecordOutMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData
 

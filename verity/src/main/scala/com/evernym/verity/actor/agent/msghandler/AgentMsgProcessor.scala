@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.Exceptions.{NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
@@ -34,7 +33,7 @@ import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
+import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgFamily, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
@@ -300,7 +299,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       packOutgoingMsg(omp, omc.to, msgPackFormat).map { outgoingMsg =>
         logger.debug(s"outgoing msg will be stored and sent ...")
         sendToAgentActor(StoreAndSendMsgToTheirDomain(
-          outgoingMsg, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
+          outgoingMsg, msgId, MsgFamily.typeStrFromMsgType(msgType), ParticipantUtil.DID(omc.from), thread))
       }
       NEXT_HOP_THEIR_ROUTING_SERVICE
     }
@@ -736,7 +735,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
           sendToAgentActor(StoreAndSendMsgToMyDomain(
             OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
-            msgId, MSG_TYPE_UNKNOWN, ParticipantUtil.DID(param.selfParticipantId), None))
+            msgId, fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN), ParticipantUtil.DID(param.selfParticipantId), None))
           recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
             s"packed msg sent to agent actor to be forwarded to edge agent"))
           sndr.tell(Done, self)

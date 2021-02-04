@@ -318,8 +318,9 @@ trait MsgNotifierForStoredMsgs
 
           val mds = getMsgDetails(notifMsgDtl.uid)
           val name = mds.getOrElse(NAME_KEY, "")
-          val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
-          val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
+          // metadata is deprecated, we should keep type in legacy state for backward compatibility.
+          val fwdMeta = FwdMetaData(Some(notifMsgDtl.deprecatedPushMsgType), Some(name))
+          val fwdMsg = FwdMsg(notifMsgDtl.uid, notifMsgDtl.msgType, sponseeDetails, msgRecipientDID, fwdMeta)
 
           msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
           .map { _ =>
@@ -432,9 +433,24 @@ trait MsgNotifierForUserAgent extends MsgNotifierForUserAgentCommon {
 }
 
 case class FwdMetaData(msgType: Option[String], msgSenderName: Option[String])
-case class FwdMsg(msgId: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
+case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
 object NotifyMsgDetail {
   def withTrackingId(msgType: String): NotifyMsgDetail =
     NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType)
 }
-case class NotifyMsgDetail(uid: MsgId, msgType: String)
+case class NotifyMsgDetail(uid: MsgId, msgType: String) {
+  // this is used for legacy reasons, for compatibility with old versions of mobile application.
+  // it will be removed after some time
+  def deprecatedPushMsgType: String = if (msgType.contains('/')) MSG_TYPE_UNKNOWN else msgType
+
+  def msgTypeWithoutFamilyQualifier: String = {
+    /*
+    msgType could be in following formats:
+      did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential -> issue-credential/1.0/offer-credential
+      https://didcomm.org/issue-credential/1.0/offer-credential -> issue-credential/1.0/offer-credential
+      proofReq -> proofReq
+     */
+    val segments = msgType.split('/')
+    segments.slice(segments.length - 3, segments.length).mkString("/")
+  }
+}

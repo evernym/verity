@@ -166,6 +166,13 @@ object AgentMsgPackagingUtil {
     }
   }
 
+  def buildRoutingKeys(recipKey: VerKey,
+                       givenRoutingKeys: Seq[VerKey]): Seq[VerKey] = {
+    if (givenRoutingKeys.contains(recipKey)) givenRoutingKeys
+    else if (givenRoutingKeys.nonEmpty) Seq(recipKey) ++ givenRoutingKeys
+    else givenRoutingKeys
+  }
+
   /** routing by keys should be used before did exchange only
     * assumption here is that the 'to' field of forward message will contain the given routing key
     * and recipient of this message know how to route based on 'to' being a ver key

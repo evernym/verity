@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.Exceptions
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
+import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
@@ -552,10 +552,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         case x => throw new RuntimeException("unsupported condition: " + x)
       }
     }.recover {
-      case e: InternalServerErrorException
-        if e.respCode == DATA_NOT_FOUND.statusCode && e.respMsg.contains("payload not found") =>
-        val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
-        handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
       case e: Exception =>
         logger.error("send msg failed unexpectedly",
           (LOG_KEY_UID, uid),
@@ -563,7 +559,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           (LOG_KEY_MESSAGE_CREATION_DATE_TIME, msg.creationDateTime.toString),
           (LOG_KEY_MESSAGE_LAST_UPDATED_DATE_TIME, msg.lastUpdatedDateTime.toString),
           (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-        throw e
+        val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
+        handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
     }
   }
 

@@ -198,9 +198,7 @@ trait PairwiseConnStateBase {
           List(fwdRouteForAgentPairwiseActor)
         )(agentMsgTransformer, wap)
       case Some(Right(rd: RoutingDetail)) =>
-        val routingKeys =
-          if (rd.routingKeys.contains(rd.verKey)) rd.routingKeys
-          else Vector(rd.verKey) ++ rd.routingKeys
+        val routingKeys = AgentMsgPackagingUtil.buildRoutingKeys(rd.verKey, rd.routingKeys)
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
           MPF_INDY_PACK,
           packedMsg,

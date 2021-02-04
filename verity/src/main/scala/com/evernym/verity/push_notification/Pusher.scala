@@ -184,6 +184,13 @@ object PusherUtil  {
     val msgTypeToBeUsed = msgType match {
       case CREATE_MSG_TYPE_PROOF_REQ => "proofRequest"
       case CREATE_MSG_TYPE_TOKEN_XFER_REQ => "tokenTransferRequest"
+      case MSG_TYPE_UNKNOWN => "message"
+      case "issue-credential/1.0/offer-credential" => "credentialOffer"
+      case "issue-credential/1.0/issue-credential" => "credential"
+      case "present-proof/1.0/request-presentation" => "proofRequest"
+      case "committedanswer/1.0/question" => "question"
+      case "questionanswer/1.0/question" => "question"
+      case x if x.contains("/") => "message"
       case x => x
     }
     val capitalizeMsg =

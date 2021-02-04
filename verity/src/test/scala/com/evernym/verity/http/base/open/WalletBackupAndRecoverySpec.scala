@@ -85,7 +85,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
 
         lastPayload.isDefined shouldBe true
         lastPayload.get.extraData("forDID") shouldBe mockEdgeAgent.myDIDDetail.did
-        lastPayload.get.extraData("type") shouldBe expected_type
+        lastPayload.get.extraData("type") shouldBe expected_type // legacy
+        lastPayload.get.extraData("msgType") shouldBe expected_type
 
         checkGetMsgsCount(mockEdgeAgent, 1, Option(expected_type))
       }
@@ -119,7 +120,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
 
         lastPayload.isDefined shouldBe true
         lastPayload.get.extraData("forDID") shouldBe mockEdgeAgent.myDIDDetail.did
-        lastPayload.get.extraData("type") shouldBe expected_type
+        lastPayload.get.extraData("type") shouldBe expected_type // legacy
+        lastPayload.get.extraData("msgType") shouldBe expected_type
 
         checkGetMsgsCount(mockEdgeAgent, 2, Option(expected_type))
       }
@@ -153,6 +155,7 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
         lastPayload.isDefined shouldBe true
         lastPayload.get.extraData("forDID") shouldBe mockEdgeAgent.myDIDDetail.did
         lastPayload.get.extraData("type") shouldBe expected_type
+        lastPayload.get.extraData("msgType") shouldBe expected_type
 
         checkGetMsgsCount(mockEdgeAgent, 3, Option(expected_type))
       }

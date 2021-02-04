@@ -31,7 +31,10 @@ trait PushNotifMsgBuilder extends HasAppConfig {
   def sendAsAlertPushNotif(msgType: String): Boolean = {
     msgTypesForAlertingPushNotificationOpt.getOrElse(
       Set( CREATE_MSG_TYPE_CRED_OFFER, CREATE_MSG_TYPE_PROOF_REQ,
-        CREATE_MSG_TYPE_TOKEN_XFER_OFFER, CREATE_MSG_TYPE_TOKEN_XFER_REQ, CREATE_MSG_TYPE_TOKEN_XFERRED)
+        CREATE_MSG_TYPE_TOKEN_XFER_OFFER, CREATE_MSG_TYPE_TOKEN_XFER_REQ, CREATE_MSG_TYPE_TOKEN_XFERRED,
+        MSG_TYPE_UNKNOWN, "issue-credential/1.0/offer-credential", "issue-credential/1.0/issue-credential",
+        "present-proof/1.0/request-presentation", "committedanswer/1.0/question", "questionanswer/1.0/question"
+      )
     ).contains(msgType)
   }
 
@@ -66,11 +69,11 @@ trait PushNotifMsgBuilder extends HasAppConfig {
       val defaultLogoUrl = appConfig.getConfigStringReq(PUSH_NOTIF_DEFAULT_LOGO_URL)
       val defaultTitle = replaceVariables(titleTemplate, Map(TARGET_NAME -> DEFAULT_INVITE_RECEIVER_USER_NAME))
       val defaultDetail = replaceVariables(bodyTemplate, Map(SENDER_NAME -> rcvdSenderName.getOrElse(defaultSenderName),
-        MSG_TYPE -> PusherUtil.getPushMsgType(notifMsgDtl.msgType), UID -> notifMsgDtl.uid))
+        MSG_TYPE -> PusherUtil.getPushMsgType(notifMsgDtl.msgTypeWithoutFamilyQualifier), UID -> notifMsgDtl.uid))
 
       val notifData = Map(BODY -> rcvdDetail.getOrElse(defaultDetail), BADGE_COUNT -> 1)
       val extraData = Map(
-        TYPE -> (if (notifMsgDtl.msgType.contains('/')) "unknown" else notifMsgDtl.msgType), // legacy
+        TYPE -> notifMsgDtl.deprecatedPushMsgType, // legacy, needed for backward compatibility with mobile app
         PUSH_NOTIF_MSG_TYPE -> notifMsgDtl.msgType,
         FOR_DID -> msgRecipientDID,
         UID -> notifMsgDtl.uid,
@@ -79,7 +82,7 @@ trait PushNotifMsgBuilder extends HasAppConfig {
         PUSH_NOTIF_MSG_TEXT -> rcvdDetail.getOrElse(defaultDetail)
       )
 
-      val isAlertPushNotif = sendAsAlertPushNotif(notifMsgDtl.msgType)
+      val isAlertPushNotif = sendAsAlertPushNotif(notifMsgDtl.msgTypeWithoutFamilyQualifier)
       Option(PushNotifData(notifMsgDtl.uid, notifMsgDtl.msgType, isAlertPushNotif, notifData, extraData))
     } else None
   }

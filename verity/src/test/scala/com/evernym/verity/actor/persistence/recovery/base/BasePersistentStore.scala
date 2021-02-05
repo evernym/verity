@@ -2,19 +2,20 @@ package com.evernym.verity.actor.persistence.recovery.base
 
 import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
@@ -37,6 +38,14 @@ trait BasePersistentStore
 
   def createNewKey(walletId: String, seed: Option[String]=None): NewKeyCreated = {
     walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))(WalletAPIParam(walletId))
+  }
+
+  def storeTheirKey(walletId: String, didPair: DidPair): TheirKeyStored = {
+    storeTheirKey(walletId, didPair.DID, didPair.verKey)
+  }
+
+  def storeTheirKey(walletId: String, theirDID: DID, theirDIDVerKey: VerKey): TheirKeyStored = {
+    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
   }
 
   def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)

@@ -58,6 +58,8 @@ trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore 
 
 trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersistentStore =>
 
+  val addTheirPairwiseKeyInWallet: Boolean = true
+
   def uapRegion: agentRegion = agentRegion(myPairwiseRelAgentEntityId, userAgentPairwiseRegionActor)
 
   def setupBasicUserAgentPairwise(): Unit = {
@@ -68,9 +70,10 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersiste
   private def setupBasicUserAgentPairwiseWalletData(): Unit = {
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelDIDKeySeed))
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
-    createNewKey(mySelfRelAgentEntityId, Option(theirPairwiseRelDIDKeySeed))
-    createNewKey(mySelfRelAgentEntityId, Option(theirPairwiseAgentDIDKeySeed))
-    createNewKey(mySelfRelAgentEntityId, Option(theirAgencyDIDKeySeed))
+    if (addTheirPairwiseKeyInWallet)
+      storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
+    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
+    storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
   }
 
   private def storeUserAgentPairwiseEvents(): Unit = {

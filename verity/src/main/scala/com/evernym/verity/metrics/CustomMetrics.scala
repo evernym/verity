@@ -115,6 +115,13 @@ object CustomMetrics {
 
   final val AS_START_TIME = s"$AS.start-time-in-millis"
 
+  final val AS_CACHE = s"$AS.cache"
+
+  final val AS_CACHE_TOTAL_SIZE = s"$AS_CACHE.total.size"
+  final val AS_CACHE_SIZE = s"$AS_CACHE.size"
+  final val AS_CACHE_HIT_COUNT = s"$AS_CACHE.hit.count"
+  final val AS_CACHE_MISS_COUNT = s"$AS_CACHE.miss.count"
+
   final val TAG_KEY_PATH = "path"
   final val TAG_KEY_TYPE = "type"
   final val TAG_KEY_ID = "id"

@@ -116,16 +116,25 @@ object RelationshipUtil {
     }
   }
 
+  /**
+   * it is assumed that there is only ver key associated with a DID
+   * (which would become wrong assumption sooner or later)
+   * @param did a DID
+   * @return
+   */
+  private def getDidVerKey(did: DID, walletVerKeyCacheHelper: WalletVerKeyCacheHelper): Option[VerKey] =
+    walletVerKeyCacheHelper.getVerKeyViaCache(did)
+
   private def prepareAuthorizedKey(agentKeyDID: DID, agentKeyTags: Set[Tags] = Set.empty)
-                          (implicit relationshipUtilParam: RelUtilParam): AuthorizedKey = {
+                                  (implicit relationshipUtilParam: RelUtilParam): AuthorizedKey = {
     relationshipUtilParam.walletVerKeyCacheHelperOpt match {
       case Some(wc) if Option(agentKeyDID).exists(_.nonEmpty) =>
         //if code execution is coming to this block, that means this function is being called
         // either during 'post recovery' or as part of 'some message handling code' and
         // wallet information is available by this time and so prepare the
         // 'AuthorizedKey' is along with its ver key
-        val verKey = getDidVerKey(agentKeyDID, wc)
-        AuthorizedKey(agentKeyDID, verKey, agentKeyTags)
+        val verKeyOpt = getDidVerKey(agentKeyDID, wc)
+        AuthorizedKey(agentKeyDID, verKeyOpt.getOrElse(""), agentKeyTags)
       case _     =>
         //if code execution is coming to this block, that means this function is being called
         // during recovery of the actor and few times (mostly in pairwise actors)
@@ -137,15 +146,6 @@ object RelationshipUtil {
   }
 
   /**
-   * it is assumed that there is only ver key associated with a DID
-   * (which would become wrong assumption sooner or later)
-   * @param did a DID
-   * @return
-   */
-  private def getDidVerKey(did: DID, walletVerKeyCacheHelper: WalletVerKeyCacheHelper): VerKey =
-    walletVerKeyCacheHelper.getVerKeyReqViaCache(did)
-
-  /**
    * maps one type of authorized key to different type of authorized key
    * currently, maps LegacyAuthorizedKey to AuthorizedKey
    *
@@ -154,8 +154,8 @@ object RelationshipUtil {
   private def authorizedKeyMapper(walletVerKeyCacheHelper: WalletVerKeyCacheHelper):
   PartialFunction[AuthorizedKey, AuthorizedKey] = {
     case key: AuthorizedKeyLike if Option(key.keyId).exists(_.nonEmpty) && key.verKeyOpt.isEmpty =>
-      val verKey = getDidVerKey(key.keyId, walletVerKeyCacheHelper)
-      AuthorizedKey(key.keyId, verKey, key.tags)
+      val verKeyOpt = getDidVerKey(key.keyId, walletVerKeyCacheHelper)
+      AuthorizedKey(key.keyId, verKeyOpt.getOrElse(""), key.tags)
     case other                    => other
   }
 }

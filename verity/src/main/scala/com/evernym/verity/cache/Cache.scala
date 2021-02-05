@@ -379,7 +379,7 @@ trait CacheValueFetcher {
   Map[String, Any] = result.flatten.map(e => e._1 -> e._2).toMap
 
   def throwRequiredKeysNotFoundException(reqKeysNotFound: Set[String]): HandledErrorException = {
-    new InternalServerErrorException(DATA_NOT_FOUND.statusCode, Option("required keys not found: " + reqKeysNotFound.mkString(", ")))
+    new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("required keys not found: " + reqKeysNotFound.mkString(", ")))
   }
 
   def buildUnexpectedResponse(r: Any): HandledErrorException = {

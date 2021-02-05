@@ -34,26 +34,13 @@ object MetricsReader {
 
   private def buildMetadata: MetaData = MetaData(hostName, getCurrentTimestamp, lastResetTimestamp)
 
-  def resetNodeMetrics(): Unit = {
-    metricsReporter match {
-      case Some(mp) =>
-        logger.debug("resetting metrics...")
-        lastResetTimestamp = getCurrentTimestamp
-        explicitlyReset = true
-        mp.resetMetrics()
-        logger.debug("resetting metrics done.")
-      case None => throw new FeatureNotEnabledException(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusCode,
-        Option(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusMsg))
-    }
-  }
-
   def getNodeMetrics(criteria: MetricsFilterCriteria = MetricsFilterCriteria()): NodeMetricsData = {
     metricsReporter.map { mp =>
       val metadata = if (criteria.includeMetaData) Some(buildMetadata) else None
       val fixedMetrics = mp.fixedMetrics
-      val resetMetrics = if (criteria.includeReset && explicitlyReset) mp.postResetMetrics else List.empty
-      val allMetrics = fixedMetrics ++ resetMetrics
-      val allFilteredMetrics = if (criteria.filtered) MetricsFilter.filterMetrics(allMetrics) else allMetrics
+      val allFilteredMetrics =
+        if (criteria.filtered) MetricsFilter.filterMetrics(fixedMetrics)
+        else fixedMetrics
       val allFinalMetrics = allFilteredMetrics.map { m =>
         if (criteria.includeTags) m
         else m.copy(tags = None)

@@ -11,10 +11,10 @@ import com.evernym.verity.actor.ExceptionHandler.handleException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
@@ -148,19 +148,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
         case Failure(e: Throwable) =>
           logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
           handleException(e, sndr, Option(self))
-      }
-
-    case ResetMetricsOfAllNodes =>
-      logger.debug(s"resetting metrics for nodes: $nodes")
-      val f = sendCmdToAllNodeSingletonsWithReducedFuture(ResetNodeMetrics)
-      val sndr = sender()
-
-      f.onComplete {
-        case Success(_) =>
-          sndr ! AllNodeMetricsResetDone
-        case Failure(e) =>
-          handleException(e, sndr, Option(self))
-          logger.error("could not reset metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
     case sc: SendCmdToAllNodes =>

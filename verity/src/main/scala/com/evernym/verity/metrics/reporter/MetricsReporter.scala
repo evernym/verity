@@ -9,17 +9,6 @@ trait MetricsReporter {
    * @return
    */
   def fixedMetrics: List[MetricDetail]
-
-  /**
-   * provides metrics recorded since last metrics reset
-   * @return
-   */
-  def postResetMetrics: List[MetricDetail]
-
-  /**
-   * reset the metrics
-   */
-  def resetMetrics(): Unit
 }
 
 case class MetricDetail(name: String,

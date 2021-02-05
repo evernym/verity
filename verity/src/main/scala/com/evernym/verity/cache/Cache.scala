@@ -231,8 +231,8 @@ trait CacheBase {
     val cacheTag = "cache_name" -> name
     val tags = Map(cacheTag)
     MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_TOTAL_SIZE, cachedObjects.size, tags)
-    MetricsWriter.gaugeApi.incrementWithTags(CustomMetrics.AS_CACHE_HIT_COUNT, hit, tags)
-    MetricsWriter.gaugeApi.incrementWithTags(CustomMetrics.AS_CACHE_MISS_COUNT, miss, tags)
+    MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_HIT_COUNT, hit, tags)
+    MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_MISS_COUNT, miss, tags)
     cachedObjects.foreach { r =>
       MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_SIZE, r._2.size, Map(cacheTag, "fetcher_id" -> r._1.toString))
     }

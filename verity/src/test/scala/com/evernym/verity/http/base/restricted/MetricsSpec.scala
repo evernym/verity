@@ -3,8 +3,8 @@ package com.evernym.verity.http.base.restricted
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
-import com.evernym.verity.metrics.{MetricsReader, NodeMetricsData}
 import com.evernym.verity.metrics.reporter.MetricDetail
+import com.evernym.verity.metrics.{MetricsReader, NodeMetricsData}
 import org.scalatest.time.{Seconds, Span}
 
 trait MetricsSpec { this : EndpointHandlerBaseSpec =>
@@ -24,14 +24,6 @@ trait MetricsSpec { this : EndpointHandlerBaseSpec =>
             nmd.metadata.get.lastResetTimestamp.nonEmpty shouldBe true
             checkExpectedMetrics(nmd.metrics)
           }
-        }
-      }
-    }
-
-    "when sent reset metrics api call" - {
-      "respond successfully" taggedAs (UNSAFE_IgnoreLog) in {
-        buildPutReq("/agency/internal/metrics/reset") ~> epRoutes ~> check {
-          status shouldBe OK
         }
       }
     }

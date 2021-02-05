@@ -2,11 +2,11 @@ package com.evernym.verity.protocol.actor.container
 
 import akka.actor.Props
 import akka.testkit.EventFilter
-import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.testkit.WithAdditionalLogs
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.actor.container.base.{BaseProtocolActorSpec, MockControllerActorBase, SendControlMsg, SendToProtocolActor}
@@ -19,12 +19,11 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class ExtractEventsActorSpec
-  extends BaseProtocolActorSpec {
+  extends BaseProtocolActorSpec
+    with WithAdditionalLogs {
 
     val credDefId = "1"
     val credValue = Map("name" -> "Alice")
-
-  setLogLevel(Level.DEBUG)    //to assert event filter at debug levels
 
   "ExtractEventsActor" - {
 

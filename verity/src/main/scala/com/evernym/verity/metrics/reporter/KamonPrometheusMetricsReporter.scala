@@ -14,21 +14,13 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
 
   val DEFAULT_TARGET = "unknown"
   val FIXED_REPORTER_NAME = "fixed-reporter"
-  val RESET_BASED_REPORTER_NAME = "reset-based-reporter"
 
   /**
    * this reporter keeps tracking metrics from the time agency starts
    */
   private val fixedReporter = createAndAddMetricsReporter(FIXED_REPORTER_NAME)
 
-  /**
-   * this reporter may get reset if corresponding internal api gets called
-   * and it will only tracks metrics post that reset
-   */
-  private var resetBasedReporter = createAndAddMetricsReporter(RESET_BASED_REPORTER_NAME)
-
   private def fixedMetricsData: String = fixedReporter.scrapeData()
-  private def resetBasedMetricsData: String = resetBasedReporter.scrapeData()
 
   lazy val resetMetricsNameSuffix: String =
     AppConfigWrapper.getConfigStringOption(RESET_METRICS_NAME_SUFFIX).getOrElse("_since_last_reset")
@@ -42,13 +34,6 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
 
   override def fixedMetrics: List[MetricDetail] = {
     buildMetrics(fixedMetricsData)
-  }
-
-  override def postResetMetrics: List[MetricDetail] =
-    buildMetrics(resetBasedMetricsData, isResetMetrics = true)
-
-  def resetMetrics(): Unit = {
-    resetBasedReporter = createAndAddMetricsReporter(RESET_BASED_REPORTER_NAME)
   }
 
   private def getCleanedInputStr(inputStr: String): String = inputStr.stripMargin.replaceAll("\n", " ")

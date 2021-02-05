@@ -26,6 +26,7 @@ import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.time.{Second, Span}
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
+import scala.language.postfixOps
 
 trait InteractiveSdkFlow extends MetricsFlow {
   this: BasicSpec with TempDir with Eventually =>
@@ -1312,20 +1314,22 @@ trait InteractiveSdkFlow extends MetricsFlow {
                               dumpToFile: Boolean=false): Unit = {
     s"${app.name} validating protocol metrics" - {
       s"[$protoRef] validation" in {
-        //Get metrics for specific app
-        val allNodeMetrics = app.getAllNodeMetrics()
-        allNodeMetrics.data.headOption.nonEmpty shouldBe true
-        val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
-        if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
-        val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
-        val baseMetric = currentNodeMetrics
-          .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
-          .find(_.tags.get == tag)
-          .get
+        eventually(timeout(30 seconds), Interval(Span(1, Second))) {
+          //Get metrics for specific app
+          val allNodeMetrics = app.getAllNodeMetrics()
+          allNodeMetrics.data.headOption.nonEmpty shouldBe true
+          val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
+          if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
+          val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
+          val baseMetric = currentNodeMetrics
+            .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
+            .find(_.tags.get == tag)
+            .get
 
-        //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
-        if (baseMetric.value != expectedMetricCount)
-          fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+          //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
+          if (baseMetric.value != expectedMetricCount)
+            fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+        }
       }
     }
   }

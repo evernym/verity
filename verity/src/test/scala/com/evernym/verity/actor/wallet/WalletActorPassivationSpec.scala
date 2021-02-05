@@ -1,15 +1,13 @@
 package com.evernym.verity.actor.wallet
 
-import java.util.UUID
-
 import akka.testkit.{EventFilter, ImplicitSender}
-import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.agentRegion
-import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.testkit.{ActorSpec, WithAdditionalLogs}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -17,14 +15,13 @@ class WalletActorPassivationSpec
   extends ActorSpec
     with BasicSpec
     with ImplicitSender
-    with Eventually {
+    with Eventually
+    with WithAdditionalLogs {
 
   lazy val walletActorEntityId: String = UUID.randomUUID().toString
   lazy val walletActor: agentRegion = agentRegion(walletActorEntityId, walletRegionActor)
 
   val PASSIVATE_TIMEOUT_IN_SECONDS = 2
-
-  setLogLevel(Level.DEBUG)    //to assert event filter at debug levels
 
   "Wallet Actor" - {
     "when sent CreateWallet command" - {

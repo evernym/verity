@@ -19,7 +19,7 @@ class QuestionAnswerActorSpec
 
   "A questioner" - {
 
-    "when sent question to a agent" - {
+    "when sent question to an agent" - {
       "should be able to route to proper pairwise connection" in {
         val myPairwiseDIDForConn1 = mockEdgeAgent.pairwiseConnDetail(connId1New)
         val agentMsg = mockEdgeAgent.prepareAskQuestionMsgForAgent(myPairwiseDIDForConn1.myPairwiseDidPair.DID)

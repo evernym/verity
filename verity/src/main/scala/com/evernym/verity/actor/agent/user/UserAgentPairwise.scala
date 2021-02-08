@@ -19,6 +19,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
+import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryEligibilityCriteria}
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
@@ -81,8 +82,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   type StateType = UserAgentPairwiseState
   var state = new UserAgentPairwiseState
 
-  override lazy val msgDeliveryState: Option[MsgDeliveryState] = Option(
-    new MsgDeliveryState(maxRetryCount, retryEligibilityCriteriaProvider)
+  override lazy val failedMsgTracker: Option[FailedMsgTracker] = Option(
+    new FailedMsgTracker(maxRetryCount, retryEligibilityCriteriaProvider)
   )
 
   override final def agentCmdReceiver: Receive = commonCmdReceiver orElse cmdReceiver
@@ -466,7 +467,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
         } else {
           sendToUser(uid)
         }
-        val replyToMsgId = getReplyToMsgId(uid)
+        val replyToMsgId = msgStore.getReplyToMsgId(uid)
         recordOutMsgEvent(reqMsgContext.id, MsgEvent(uid, msg.getType, s"replyToMsgId: $replyToMsgId"))
         val nextHop = if (sentBySelf) NEXT_HOP_THEIR_ROUTING_SERVICE else NEXT_HOP_MY_EDGE_AGENT
         MsgRespTimeTracker.recordMetrics(reqMsgContext.id, msg.getType, nextHop)
@@ -477,7 +478,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def buildLegacySendRemoteMsg_MFV_0_5(uid: MsgId, fc: AgentConfigs): List[Any] = {
     runWithInternalSpan("buildLegacySendRemoteMsg_MFV_0_5", "UserAgentPairwise") {
       val msg = getMsgReq(uid)
-      val replyToMsgId = getReplyToMsgId(uid)
+      val replyToMsgId = msgStore.getReplyToMsgId(uid)
       val mds = getMsgDetails(uid)
       val payloadWrapper = getMsgPayloadReq(uid)
       buildLegacySendRemoteMsg_MFV_0_5(uid, msg.getType, payloadWrapper.msg, replyToMsgId, mds, msg.thread, fc)
@@ -508,7 +509,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def buildSendRemoteMsg_MFV_0_6(uid: MsgId): List[Any] = {
     runWithInternalSpan("buildSendRemoteMsg_MFV_0_6", "UserAgentPairwise") {
       val msg = getMsgReq(uid)
-      val replyToMsgId = getReplyToMsgId(uid)
+      val replyToMsgId = msgStore.getReplyToMsgId(uid)
       val mds = getMsgDetails(uid)
       val title = mds.get(TITLE)
       val detail = mds.get(DETAIL)
@@ -693,7 +694,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   override def sendStoredMsgToTheirDomain(omp: OutgoingMsgParam,
                                           msgId: MsgId,
                                           msgName: MsgName,
-                                          thread: Option[Thread]=None): Future[Any] = {
+                                          thread: Option[Thread]=None): Unit = {
     logger.debug("about to send stored msg to other entity: " + msgId)
     omp.givenMsg match {
       case pm: PackedMsg =>

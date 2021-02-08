@@ -49,7 +49,8 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
   def postInitReceiver: Receive = {
     case CreateWallet =>
       val sndr = sender()
-      WalletMsgHandler.handleCreateWalletASync().map { resp =>
+      val fut = WalletMsgHandler.handleCreateWalletASync()
+      withErrorHandling(fut).map { resp =>
         sndr ! resp
         tryOpeningWalletIfExists()
       }
@@ -87,16 +88,20 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
       handleRespFut(sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
-  def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
+  private def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
+    withErrorHandling(fut).pipeTo(sndr)
+  }
+
+  private def withErrorHandling(fut: Future[Any]): Future[Any] = {
     fut.recover {
       case e: HandledErrorException =>
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
       case e: Exception =>
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
-    }.pipeTo(sndr)
+    }
   }
 
-  def tryOpeningWalletIfExists(): Unit = {
+  private def tryOpeningWalletIfExists(): Unit = {
     setNewReceiveBehaviour(openWalletCallbackReceiver)
     openWalletIfExists()
   }

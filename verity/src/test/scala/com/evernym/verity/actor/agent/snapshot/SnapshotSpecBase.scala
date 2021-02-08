@@ -7,7 +7,7 @@ import com.evernym.verity.actor.persistence.transformer_registry.HasTransformati
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
 import com.evernym.verity.transformations.transformers.v1.createPersistenceTransformerV1
 import com.evernym.verity.util.Util
 import org.scalatest.concurrent.Eventually
@@ -16,17 +16,16 @@ import org.scalatest.time.{Seconds, Span}
 trait SnapshotSpecBase
   extends AgentSpecHelper
     with HasTransformationRegistry
+    with AddMetricsReporter
     with Eventually { this: PersistentActorSpec with BasicSpec =>
-
-  MetricsReader   //this makes sure it starts/add prometheus reporter and adds it to Kamon
 
   def checkStateSizeMetrics(actorClass: String, expectSize: Double): Unit = {
     java.lang.Thread.sleep(5000)    //to make sure metrics are recorded and available to read by this time
-    val currentMetrics = MetricsReader.getNodeMetrics().metrics
-    val stateSizeMetrics = currentMetrics.filter { m =>
-      m.name.startsWith("as_akka_actor_agent_state") &&
-        m.tags.getOrElse(Map.empty)("actor_class") == actorClass
-    }
+    val stateSizeMetrics =
+      getFilteredMetrics(
+        "as.akka.actor.agent.state",
+        Map("actor_class" -> actorClass))
+
     stateSizeMetrics.size shouldBe 12   //histogram metrics
     stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
       checkStateSizeSum(v.value, expectSize)
@@ -74,8 +73,8 @@ trait SnapshotSpecBase
   def actorEntityId: String
 
   lazy val transformer = createPersistenceTransformerV1(encrKey)
-  def persId = stdPersistenceId(regionActorName, actorEntityId)
-  def encrKey = {
+  def persId: String = stdPersistenceId(regionActorName, actorEntityId)
+  def encrKey: String = {
     val secret = Util.saltedHashedName(actorEntityId + "actor-wallet", appConfig)
     Util.getEventEncKey(secret, appConfig)
   }

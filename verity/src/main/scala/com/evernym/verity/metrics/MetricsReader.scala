@@ -18,8 +18,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 object MetricsReader {
 
   private val logger: Logger = getLoggerByName("MetricsReader")
-  private var explicitlyReset: Boolean = false
-  private var lastResetTimestamp: String = getCurrentTimestamp
+  private val lastResetTimestamp: String = getCurrentTimestamp
   private val hostName: String = AppConfigWrapper.getConfigStringReq(KAMON_ENV_HOST)
 
   Kamon.loadModules()   //for system/jvm related metrics
@@ -35,9 +34,9 @@ object MetricsReader {
   private def buildMetadata: MetaData = MetaData(hostName, getCurrentTimestamp, lastResetTimestamp)
 
   def getNodeMetrics(criteria: MetricsFilterCriteria = MetricsFilterCriteria()): NodeMetricsData = {
-    metricsReporter.map { mp =>
+    metricsReporter.map { mr =>
       val metadata = if (criteria.includeMetaData) Some(buildMetadata) else None
-      val fixedMetrics = mp.fixedMetrics
+      val fixedMetrics = mr.fixedMetrics
       val allFilteredMetrics =
         if (criteria.filtered) MetricsFilter.filterMetrics(fixedMetrics)
         else fixedMetrics

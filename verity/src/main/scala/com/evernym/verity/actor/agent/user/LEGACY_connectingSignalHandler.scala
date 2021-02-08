@@ -25,7 +25,7 @@ trait LEGACY_connectingSignalHandler { this: UserAgentCommon =>
         am.msgType,
         am.senderDID,
         am.statusCode,
-        sendMsg = am.sendMsg,
+        am.sendMsg,
         thread,
         am.refMsgId,
         am.payload.map(StorePayloadParam(_, None)),

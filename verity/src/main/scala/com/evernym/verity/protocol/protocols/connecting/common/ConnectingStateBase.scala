@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.protocols._
 
 trait ConnectingStateBase[S]
   extends HasPairwiseConnectionState
-    with MsgAndDeliveryState
+    with ConnectionMsgAndDeliveryState
     with HasAppConfig { this: S =>
 
   var parameters: Parameters = _

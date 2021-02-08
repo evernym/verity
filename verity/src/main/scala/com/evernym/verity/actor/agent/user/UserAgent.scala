@@ -617,7 +617,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
           .map {
             case pm: PackedMsg => Option(pc.forDID, pm)
             case aer: ActorErrorResp =>
-              logger.error("error occurred while getting messages from connection: " + aer)
+              logger.error(s"error occurred while getting messages from connection " +
+                s"(connection did hash code ${pc.forDID.hashCode}): " + aer)
               None
           }
       }
@@ -795,7 +796,6 @@ class UserAgent(val agentActorContext: AgentActorContext)
    * @return
    */
   override def actorTypeId: Int = ACTOR_TYPE_USER_AGENT_ACTOR
-
 }
 
 case class PairwiseConnSetExt(agentDID: DID, reqMsgContext: ReqMsgContext)

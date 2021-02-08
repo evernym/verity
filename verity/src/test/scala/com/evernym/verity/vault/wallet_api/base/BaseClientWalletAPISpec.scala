@@ -8,7 +8,7 @@ import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -20,10 +20,8 @@ trait ClientWalletAPISpecBase
     with ProvidesMockPlatform
     with UserWalletSetupHelper
     with HasThreadStarvationDetector
+    with AddMetricsReporter
     with BasicSpec {
-
-  //to start metrics reporter
-  MetricsReader
 
   //execution context to be used to create futures in the test code
   // this execution context will also be checked for thread starvation

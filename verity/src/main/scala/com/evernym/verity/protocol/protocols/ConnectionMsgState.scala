@@ -13,7 +13,7 @@ import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName, RefMsgId}
 import com.evernym.verity.util.TimeZoneUtil._
 
 
-class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
+class ConnectionMsgState {
 
   type Payload = Array[Byte]
   type Seconds = Int
@@ -50,14 +50,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
    * and it's expiration time in seconds
    */
   private var msgExpirationTime: Map[MsgName, Seconds] = Map.empty
-
-  /**
-   * this is used to report message delivery status (successful, failed etc) to
-   * this 'msgDeliveryState' object which then has logic to decide which of those messages
-   * will be candidate for retry
-   * @return
-   */
-  def msgDeliveryState: Option[MsgDeliveryState] = _msgDeliveryState
 
   /**
    * imaging below collection of messages (each of the below line is a message record with different fields)
@@ -122,7 +114,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
         Evt.getOptionFromValue(mc.refMsgId), msgThread, mc.sendMsg)
       msgs += mc.uid -> msg
       updateMsgIndexes(mc.uid, msg)
-      updateMsgDeliveryState(mc.uid)
 
     case ma: MsgAnswered =>
       msgs.get(ma.uid).foreach { msg =>
@@ -147,7 +138,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
           msgs += mdsu.uid -> updated
         }
         msgDeliveryStatus -= mdsu.uid
-//        msgDetails -= mdsu.uid
       } else {
         val emds = msgDeliveryStatus.getOrElse(mdsu.uid, Map.empty)
         val newMds = MsgDeliveryDetail(mdsu.statusCode, Evt.getOptionFromValue(mdsu.statusDetail),
@@ -155,7 +145,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
         val nmds = emds ++ Map(mdsu.to -> newMds)
         msgDeliveryStatus += mdsu.uid -> nmds
       }
-      updateMsgDeliveryState(mdsu.uid, Option(mdsu))
 
     case mda: MsgDetailAdded =>
       val emd = msgDetails.getOrElse(mda.uid, Map.empty)
@@ -168,13 +157,6 @@ class MsgState(_msgDeliveryState: Option[MsgDeliveryState]=None) {
 
     case me: MsgExpirationTimeUpdated =>
       msgExpirationTime = msgExpirationTime ++ Map(me.msgType -> me.timeInSeconds)
-  }
-
-  def updateMsgDeliveryState(msgId: MsgId, mdsu: Option[MsgDeliveryStatusUpdated]=None): Unit = {
-    getMsgOpt(msgId).foreach { msg =>
-      val deliveryStatus = getMsgDeliveryStatus(msgId)
-      msgDeliveryState.foreach(_.updateDeliveryState(msgId, msg, deliveryStatus, mdsu))
-    }
   }
 
   def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId, sendMsg: Boolean,

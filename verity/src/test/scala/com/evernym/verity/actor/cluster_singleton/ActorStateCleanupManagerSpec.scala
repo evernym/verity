@@ -20,7 +20,11 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
 
-class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec with ShardUtil with Eventually {
+class ActorStateCleanupManagerSpec
+  extends PersistentActorSpec
+    with BasicSpec
+    with ShardUtil
+    with Eventually {
 
   //number of total route store actors
   val shardSize = 100         //total possible actors

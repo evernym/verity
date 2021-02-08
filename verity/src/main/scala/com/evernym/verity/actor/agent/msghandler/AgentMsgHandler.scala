@@ -131,17 +131,17 @@ trait AgentMsgHandler
     Future.successful("default implementation of storeOutgoingMsg")
   }
 
-  def sendStoredMsgToMyDomain(msgId:MsgId): Future[Any] = {
+  def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
     // flow diagram: fwd.edge, step 10 -- Queue msg for delivery to edge.
     Future.successful("default implementation of sendStoredMsgToMyDomain")
   }
 
   def sendStoredMsgToTheirDomain(omp: OutgoingMsgParam, msgId: MsgId,
-                                 msgName: MsgName, thread: Option[Thread]=None): Future[Any] = {
+                                 msgName: MsgName, thread: Option[Thread]=None): Unit = {
     Future.successful("default implementation of sendStoredMsgToTheirDomain")
   }
 
-  def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Future[Any] = {
+  def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Unit = {
     Future.successful("default implementation of sendUnStoredMsgToMyDomain")
   }
 }

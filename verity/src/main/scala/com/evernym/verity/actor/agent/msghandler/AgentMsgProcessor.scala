@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
+
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.Exceptions.{NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
@@ -285,6 +286,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           sendToAgentActor(SendUnStoredMsgToMyDomain(omp))
         // Other signals go regularly.
         case _ =>
+          recordOutMsgDeliveryEvent(msgId)
           sendToAgentActor(StoreAndSendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
       }
       NEXT_HOP_MY_EDGE_AGENT
@@ -298,6 +300,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       // pack the message
       packOutgoingMsg(omp, omc.to, msgPackFormat).map { outgoingMsg =>
         logger.debug(s"outgoing msg will be stored and sent ...")
+        recordOutMsgDeliveryEvent(msgId)
         sendToAgentActor(StoreAndSendMsgToTheirDomain(
           outgoingMsg, msgId, MsgFamily.typeStrFromMsgType(msgType), ParticipantUtil.DID(omc.from), thread))
       }
@@ -335,6 +338,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   def handleProtocolSyncRespMsg(psrm: ProtocolSyncRespMsg): Unit = {
     psrm.requestMsgId.foreach { requestMsgId =>
+      withReqMsgId(requestMsgId, { arc =>
+        recordOutMsgEvent(arc.reqId,
+          MsgEvent(arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID), "Synchronous Response Msg"))
+      })
       msgRespContext.get(requestMsgId).flatMap(_.senderActorRef).foreach { senderActorRef =>
         sendMsgToWaitingCaller(psrm.msg, requestMsgId, senderActorRef)
       }
@@ -405,7 +412,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def handleProcessPackedMsg(implicit ppm: ProcessPackedMsg): Unit = {
-    recordRoutingEvent(ppm.reqMsgContext.id, ppm.reqMsgContext.clientIpAddress.map(cip => s"fromIpAddress: $cip").getOrElse(""))
+    recordArrivedRoutingEvent(ppm.reqMsgContext.id, ppm.reqMsgContext.startTime,
+      ppm.reqMsgContext.clientIpAddress.map(cip => s"fromIpAddress: $cip").getOrElse(""))
     val sndr = sender()
     // flow diagram: fwd + ctl + proto + legacy, step 7 -- Receive and decrypt.
     logger.debug(s"incoming packed msg: " + ppm.packedMsg.msg)
@@ -428,7 +436,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param prm rest message param
    */
   def handleRestMsg(prm: ProcessRestMsg): Unit = {
-    recordRoutingEvent(prm.restMsgContext.reqMsgContext.id,
+    recordArrivedRoutingEvent(prm.restMsgContext.reqMsgContext.id,
+      prm.restMsgContext.reqMsgContext.startTime,
       prm.restMsgContext.reqMsgContext.clientIpAddress.map(cip => s"fromIpAddress: $cip").getOrElse(""))
     recordRoutingChildEvent(prm.restMsgContext.reqMsgContext.id,
       childEventWithDetail(s"rest msg received"))
@@ -730,6 +739,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD) ||
           amw.isMatched(MFV_0_5, MSG_TYPE_FWD) =>
         val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
+      recordRoutingChildEvent(reqMsgContext.id,
+        ChildEvent(fwdMsg.msgFamilyDetail.toString, s"will be routed/handled accordingly"))
         if (isFwdForThisAgent(fwdMsg)) {
           val msgId = MsgUtil.newMsgId
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.

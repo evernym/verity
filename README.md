@@ -17,7 +17,7 @@ All developers are expected to do the following:
    [RC Environments, Continuous Deploy Documentation](https://docs.google.com/document/d/1guYpEbn4sQ5gpzrs-hUfAjNoIWx7fNBRU2hxWA6tmpE/edit?usp=sharing)
    for details.
 7. Have at least one peer review merge requests (MR)
-8. Once a MR has been merged, and artifacts have been published, [upgrade the
+8. Once an MR has been merged, and artifacts have been published, [upgrade the
    team environment](https://docs.google.com/document/d/1guYpEbn4sQ5gpzrs-hUfAjNoIWx7fNBRU2hxWA6tmpE/edit#heading=h.6wk6io6m471b) and assign another team member to test the changes using the
    team environment
 
@@ -28,7 +28,7 @@ All developers are expected to do the following:
 ./devops/scripts/dev-env/setup-all.sh
 ```
 
-##### Install docker if you don't already have it installed
+##### Install a docker if you don't already have it installed
 ```
 ./devops/scripts/dev-env/install-docker.sh
 ```
@@ -99,7 +99,7 @@ The following command routes 5006 localhost traffic to port 5005 on team1's EAS
 ##### Set 'Debugger Mode' to 'Attach to remote JVM'
 ##### Set 'host' to localhost and 'port' to the local port you chose when setting up ssh forwarding (i.e. 5005, 5006 from the examples above)
 ##### Set breakpoints
-##### Click the debug symbol next to the run script and do what it takes for the remote service to hit your breakpoints. Integration tests, Verity UI, Verity SDK, and Connect.Me are typically used to do so.
+##### Click the "debug" symbol next to the run script and do what it takes for the remote service to hit your breakpoints. Integration tests, Verity UI, Verity SDK, and Connect.Me are typically used to do so.
 
 ## Coding Conventions
 ### Error Handling

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+source "$SCRIPT_DIR/../base.env"
 source "$SCRIPT_DIR/cluster.env"
 source "$SCRIPT_DIR/../cas/cluster.env"
 
@@ -8,7 +9,8 @@ CUR_NODE_NUMBER=${1:-1}
 TOTAL_NODES=${2:-1}
 
 # export environment variables
-export LIB_INDY_LEDGER_TAA_ENABLED=$VAS_LIB_INDY_LEDGER_TAA_ENABLED
+export GENESIS_TXN_FILE_LOCATION=$GENESIS_TXN_FILE_LOCATION
+export LIB_INDY_LEDGER_TAA_ENABLED=$LIB_INDY_LEDGER_TAA_ENABLED
 export VERITY_HTTP_PORT=$((VAS_LOAD_BALANCER_PORT+CUR_NODE_NUMBER))
 export VERITY_DOMAIN_URL_PREFIX="http://localhost:$VAS_LOAD_BALANCER_PORT"
 export VERITY_AKKA_REMOTE_PORT=$((VAS_AKKA_REMOTE_PORT_BASE+CUR_NODE_NUMBER))
@@ -17,7 +19,6 @@ export VERITY_KAMON_STATE_PAGE_PORT=$((VAS_KAMON_STATE_PAGE_PORT_BASE+CUR_NODE_N
 export VERITY_KAMON_ENVIRONMENT_SERVICE="VAS-$CUR_NODE_NUMBER"
 export VERITY_DYNAMODB_JOURNAL_TABLE="verity_akka_application"
 export VERITY_DYNAMODB_SNAPSHOT_TABLE="verity_akka_snapshot_application"
-export GENESIS_TXN_FILE_LOCATION="target/genesis.txt"
 
 for i in $(eval echo "{1..$TOTAL_NODES}")
 do

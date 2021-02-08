@@ -132,7 +132,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   protected def buildSendMsgResp(uid: MsgId)(implicit agentMsgContext: AgentMsgContext): List[Any] = {
     logger.debug(s"[$uid] message sending started")
-    val msg = ctx.getState.msgState.getMsgReq(uid)
+    val msg = ctx.getState.connectingMsgState.getMsgReq(uid)
     val msgsToBeSent = msg.getType match {
       case CREATE_MSG_TYPE_CONN_REQ =>
         //to send connection request asynchronously (to given sms if any)
@@ -164,7 +164,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   def getMsgDetails(uid: MsgId): Map[AttrName, AttrValue] = {
-    ctx.getState.msgState.getMsgDetails(uid)
+    ctx.getState.connectingMsgState.getMsgDetails(uid)
   }
 
   def getMsgDetail(uid: MsgId, key: AttrName): Option[AttrValue] = {
@@ -176,8 +176,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   private def buildConnReqAnswerMsgForRemoteCloudAgent(uid: MsgId): List[Any] = {
-    val answerMsg = ctx.getState.msgState.getMsgReq(uid)
-    val reqMsgIdOpt = ctx.getState.msgState.getReplyToMsgId(uid)
+    val answerMsg = ctx.getState.connectingMsgState.getMsgReq(uid)
+    val reqMsgIdOpt = ctx.getState.connectingMsgState.getReplyToMsgId(uid)
     logger.debug("reqMsgIdOpt when building conn request answer msg: " + reqMsgIdOpt)
     val senderDetail = SenderDetail(ctx.getState.myPairwiseDIDReq,
       myPairwiseVerKeyReq, ctx.getState.agentKeyDlgProof, None, None, None)
@@ -219,7 +219,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     if (definition.msgFamily.protoRef.msgFamilyVersion == MFV_0_5) MPF_MSG_PACK else MPF_INDY_PACK
 
   protected def sendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat): Unit = {
-    val answeredMsg = ctx.getState.msgState.getMsgReq(uid)
+    val answeredMsg = ctx.getState.connectingMsgState.getMsgReq(uid)
     try {
       val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
       val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
@@ -232,13 +232,13 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def sendMsgToEdgeAgent(uid: MsgId): Unit = {
-    ctx.getState.msgState.getMsgPayload(uid).foreach { pw =>
+    ctx.getState.connectingMsgState.getMsgPayload(uid).foreach { pw =>
       ctx.signal(SendMsgToRegisteredEndpoint(uid, pw.msg, pw.metadata))
     }
   }
 
   protected def buildInviteDetail(uid: MsgId, checkIfExpired: Boolean = true): InviteDetail = {
-    val msg = ctx.getState.msgState.getMsgReq(uid)
+    val msg = ctx.getState.connectingMsgState.getMsgReq(uid)
     if (checkIfExpired) checkIfMsgNotExpired(uid)
     val agencyVerKey = ctx.getState.parameters.paramValueRequired(AGENCY_DID_VER_KEY)
     val msgDetails = getMsgDetails(uid)
@@ -261,8 +261,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   def checkIfMsgNotExpired(uid: MsgId): Unit = {
-    val msg = ctx.getState.msgState.getMsgReq(uid)
-    val expired = ctx.getState.msgState.getMsgExpirationTime(msg.getType) match {
+    val msg = ctx.getState.connectingMsgState.getMsgReq(uid)
+    val expired = ctx.getState.connectingMsgState.getMsgExpirationTime(msg.getType) match {
       case Some(t) => isExpired(msg.creationDateTime, t)
       case None =>
         val configName = expiryTimeInSecondConfigNameForMsgType(msg.getType)
@@ -274,7 +274,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def handleGetInviteDetail(gid: GetInviteDetail): InviteDetail = {
-    if (ctx.getState.msgState.getMsgOpt(gid.uid).isEmpty) {
+    if (ctx.getState.connectingMsgState.getMsgOpt(gid.uid).isEmpty) {
       throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode)
     } else {
       buildInviteDetail(gid.uid)
@@ -288,7 +288,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def checkConnReqMsgIfExistsNotExpired(connReqMsgId: String): Unit = {
-    ctx.getState.msgState.getMsgOpt(connReqMsgId) match {
+    ctx.getState.connectingMsgState.getMsgOpt(connReqMsgId) match {
       case Some(_) => checkIfMsgNotExpired(connReqMsgId)
       case None => //
     }
@@ -360,7 +360,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     val msgStatus =
       if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode
       else MSG_STATUS_RECEIVED.statusCode
-    ctx.getState.msgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
+    ctx.getState.connectingMsgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
   }
 
   def initState(params: Seq[ParameterStored]): S
@@ -384,7 +384,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   //Duplicate code starts (same code exists in 'PairwiseConnState')
 
-  def pairwiseConnEventReceiver: Receive = ctx.getState.pairwiseConnReceiver orElse ctx.getState.msgState.msgEventReceiver
+  def pairwiseConnEventReceiver: Receive = ctx.getState.pairwiseConnReceiver orElse ctx.getState.connectingMsgState.msgEventReceiver
 
   def isUserPairwiseVerKey(verKey: VerKey): Boolean = {
     val userPairwiseVerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)

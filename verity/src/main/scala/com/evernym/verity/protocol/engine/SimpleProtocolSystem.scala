@@ -44,8 +44,6 @@ trait SegmentedStateStore {
     * @return a unique address to be used for store/lookup
     */
   def buildUniqueKey(segmentAddress: SegmentAddress, segmentKey: SegmentKey): String = {
-    //TODO: DeadDropSpec fails due to different protocol instance id
-    // used during store and retrieval, need to fix it
     segmentAddress + segmentKey
   }
 }
@@ -54,7 +52,7 @@ class SimpleProtocolSystem() extends HasContainers with HasDidRouter with Segmen
 
   var domains: Vector[Domain] = Vector.empty
 
-  def addDomain(d: Domain) = domains = domains :+ d
+  def addDomain(d: Domain): Unit = domains = domains :+ d
 
   var segmentedState: Map[String, Any] = Map.empty
 

@@ -1,4 +1,4 @@
-image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:7ba4aadf
+image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:ddc736c4
 
 variables:
   MASTER_PROJECT_ID: "327"

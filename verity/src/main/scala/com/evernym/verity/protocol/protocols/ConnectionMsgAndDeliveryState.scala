@@ -8,19 +8,13 @@ import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.agent.user.MsgHelper._
 
-trait MsgAndDeliveryState {
+//this is to store legacy connection related messages
+trait ConnectionMsgAndDeliveryState {
 
-  /**
-   * this is only needed if the implementing class wants to use message retry feature
-   * (in current use case, only UserAgentPairwise actor needs to override this)
-   * @return
-   */
-  def msgDeliveryState: Option[MsgDeliveryState] = None
-
-  val msgState: MsgState = new MsgState(msgDeliveryState)
+  val connectingMsgState: ConnectionMsgState = new ConnectionMsgState
 
   def checkIfMsgAlreadyNotInAnsweredState(msgId: MsgId): Unit = {
-    if (msgState.getMsgOpt(msgId).exists(m => validAnsweredMsgStatuses.contains(m.statusCode))){
+    if (connectingMsgState.getMsgOpt(msgId).exists(m => validAnsweredMsgStatuses.contains(m.statusCode))){
       throw new BadRequestErrorException(MSG_VALIDATION_ERROR_ALREADY_ANSWERED.statusCode,
         Option("msg is already answered (uid: " + msgId + ")"))
     }
@@ -44,7 +38,7 @@ trait MsgAndDeliveryState {
   def checkIfMsgStatusCanBeUpdatedToNewStatus(ums: UpdateMsgStatusReqMsg): Unit = {
     val uids = ums.uids.map(_.trim).toSet
     uids.foreach { uid =>
-      msgState.getMsgOpt(uid) match {
+      connectingMsgState.getMsgOpt(uid) match {
         case Some(msg) => validateNonConnectingMsgs(uid, msg, ums)
         case None => throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("not allowed"))
       }

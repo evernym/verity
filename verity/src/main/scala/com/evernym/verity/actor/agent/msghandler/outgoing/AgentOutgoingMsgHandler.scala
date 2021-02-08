@@ -5,7 +5,6 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, SendPushNotif, SendUnStoredMsgToMyDomain, StoreAndSendMsgToMyDomain, StoreAndSendMsgToTheirDomain}
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.protocol.engine._
@@ -52,10 +51,7 @@ trait AgentOutgoingMsgHandler
   }
 
   def handleSendStoredMsgToMyDomain(uid: MsgId): Unit = {
-    val sndr = sender()
-    sendStoredMsgToSelf(uid) map { _ =>
-      sndr ! Done
-    }
+    sendStoredMsgToSelf(uid)
   }
 
 

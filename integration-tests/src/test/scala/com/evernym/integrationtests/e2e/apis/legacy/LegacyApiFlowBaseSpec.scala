@@ -375,7 +375,7 @@ trait LegacyApiFlowBaseSpec
         "should be able to successfully create public identifier" in {
           createPublicIdentifier()
 
-          val response = eventually {
+          val response = eventually (timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
             val latestMsgOpt = edgeHttpEndpointForPackedMsg.getAndResetReceivedMsgs.headOption
             latestMsgOpt.isDefined shouldBe true
             latestMsgOpt.get

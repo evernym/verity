@@ -35,9 +35,12 @@ import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
-
 import java.net.InetAddress
 import java.util.UUID
+
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Seconds, Span}
+
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, Future}
 import scala.util.Left
@@ -47,7 +50,8 @@ import scala.util.Left
  */
 trait AgentMsgSenderHttpWrapper
   extends CommonSpecUtil
-    with LedgerClient {
+    with LedgerClient
+    with Eventually {
 
   val logger: Logger = getLoggerByName(getClass.getName)
 
@@ -712,25 +716,29 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def checkServiceMetric(metrics: String): Unit = {
-    require(metrics.contains("as_endpoint_http_agent_msg_count"))
-    require(metrics.contains("as_endpoint_http_agent_msg_succeed_count"))
-    require(metrics.contains("as_endpoint_http_agent_msg_failed_count"))
-    require(metrics.contains("as_service_twilio_duration"))
-    require(metrics.contains("as_service_twilio_succeed_count"))
-    require(metrics.contains("as_service_twilio_failed_count"))
-    require(metrics.contains("as_service_bandwidth_duration"))
-    require(metrics.contains("as_service_bandwidth_succeed_count"))
-    require(metrics.contains("as_service_bandwidth_failed_count"))
-    require(metrics.contains("as_service_firebase_duration"))
-    require(metrics.contains("as_service_firebase_succeed_count"))
-    require(metrics.contains("as_service_firebase_failed_count"))
-    require(metrics.contains("as_service_dynamodb_persist_succeed_count"))
-    require(metrics.contains("as_service_dynamodb_persist_failed_count"))
-    require(metrics.contains("as_service_dynamodb_persist_duration"))
-    require(metrics.contains("as_service_dynamodb_snapshot_succeed_count"))
-    require(metrics.contains("as_service_dynamodb_snapshot_failed_count"))
-    require(metrics.contains("as_service_libindy_wallet_duration"))
-    require(metrics.contains("as_service_libindy_wallet_succeed_count"))
+    checkMetricExists(metrics,"as_endpoint_http_agent_msg_count")
+    checkMetricExists(metrics,"as_endpoint_http_agent_msg_succeed_count")
+    checkMetricExists(metrics,"as_endpoint_http_agent_msg_failed_count")
+    checkMetricExists(metrics,"as_service_twilio_duration")
+    checkMetricExists(metrics,"as_service_twilio_succeed_count")
+    checkMetricExists(metrics,"as_service_twilio_failed_count")
+    checkMetricExists(metrics,"as_service_bandwidth_duration")
+    checkMetricExists(metrics,"as_service_bandwidth_succeed_count")
+    checkMetricExists(metrics,"as_service_bandwidth_failed_count")
+    checkMetricExists(metrics,"as_service_firebase_duration")
+    checkMetricExists(metrics,"as_service_firebase_succeed_count")
+    checkMetricExists(metrics,"as_service_firebase_failed_count")
+    checkMetricExists(metrics,"as_service_dynamodb_persist_succeed_count")
+    checkMetricExists(metrics,"as_service_dynamodb_persist_failed_count")
+    checkMetricExists(metrics,"as_service_dynamodb_persist_duration")
+    checkMetricExists(metrics,"as_service_dynamodb_snapshot_succeed_count")
+    checkMetricExists(metrics,"as_service_dynamodb_snapshot_failed_count")
+    checkMetricExists(metrics,"as_service_libindy_wallet_duration")
+    checkMetricExists(metrics,"as_service_libindy_wallet_succeed_count")
+  }
+
+  private def checkMetricExists(metrics: String, expectedMetricName: String): Unit = {
+    require(metrics.contains(expectedMetricName), "expected metrics not found: " + expectedMetricName)
   }
 
   def getAllNodeMetrics(): AllNodeMetricsData = {
@@ -741,8 +749,10 @@ trait AgentMsgSenderHttpWrapper
   def getMetrics(fetchFromAllNodes: Boolean): String = {
     val allNodes = if (fetchFromAllNodes) "Y" else "N"
     logApiStart(s"query metrics started...")
-    val r = sendGetRequest(Some(checkServiceMetric))(url,s"$agencyInternalPathPrefix/metrics?allNodes=$allNodes&includeTags=Y&filtered=N")
-    r.asInstanceOf[String]
+    eventually (timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+      val r = sendGetRequest(Some(checkServiceMetric))(url, s"$agencyInternalPathPrefix/metrics?allNodes=$allNodes&includeTags=Y&filtered=N")
+      r.asInstanceOf[String]
+    }
   }
 
   def checkMessageTrackingData(messageTrackingData: String): Unit = {

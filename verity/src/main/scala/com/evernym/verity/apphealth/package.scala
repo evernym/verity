@@ -38,6 +38,7 @@ package object apphealth {
     val CONTEXT_ACTOR_INIT = "actor-init"
     val CONTEXT_CONFIG_LOADING = "config-loading"
     val CONTEXT_LIB_INDY_INIT = "lib-indy-init"
+    val CONTEXT_LIB_MYSQLSTORAGE_INIT = "lib-mysqlstorage-init"
     val CONTEXT_LEDGER_OPERATION = "ledger-operation"
     val CONTEXT_SMS_OPERATION = "sms-operation"
     val CONTEXT_PUSH_NOTIF = "push-notif"

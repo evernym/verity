@@ -1,5 +1,7 @@
 package com.evernym.verity.actor.msg_tracer.progress_tracker
 
+import java.time.LocalDateTime
+
 import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.ReqId
@@ -8,6 +10,7 @@ import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, Trackin
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME, SINGLETON_PARENT_PROXY}
 import com.evernym.verity.protocol.actor.ActorDriverGenParam
+import com.evernym.verity.actor.msg_tracer.progress_tracker.RoutingEvent._
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache.GLOBAL_TRACKING_ID
 import com.evernym.verity.protocol.engine.{MsgId, MsgType, ProtoDef, ProtoRef, ProtocolRegistry, TypedMsgLike}
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc16
@@ -66,11 +69,13 @@ trait HasMsgProgressTracker { this: Actor =>
     }
   }
 
-  def recordRoutingChildEvent(reqId: ReqId, childEvent: ChildEvent): Unit = {
+  def recordRoutingChildEvent(reqId: ReqId,
+                              childEvent: ChildEvent): Unit = {
     recordRoutingChildEvents(reqId, List(childEvent))
   }
-  def recordRoutingChildEvents(reqId: ReqId, childEvents: List[ChildEvent]): Unit = {
-    sendToMsgTracker(RecordRoutingChildEvents(reqId, childEvents))
+  def recordRoutingChildEvents(reqId: ReqId,
+                               childEvents: List[ChildEvent]): Unit = {
+    sendToMsgTracker(RecordRoutingChildEvents(reqId, ROUTING_EVENT_ID_PROCESSING, childEvents))
   }
 
   def recordInMsgChildEvent(reqId: ReqId, inMsgId: MsgId, childEvent: ChildEvent): Unit = {
@@ -87,8 +92,9 @@ trait HasMsgProgressTracker { this: Actor =>
     sendToMsgTracker(RecordOutMsgChildEvents(reqId, outMsgId, childEvents))
   }
 
-  def recordRoutingEvent(reqId: ReqId, detail: String): Unit = {
-    sendToMsgTracker(RecordRoutingEvent(reqId, RoutingEvent(detail = Option(detail))))
+  def recordArrivedRoutingEvent(reqId: ReqId, startTime: LocalDateTime, detail: String): Unit = {
+    sendToMsgTracker(RecordRoutingEvent(reqId,
+      RoutingEvent(id = ROUTING_EVENT_ID_ARRIVED, detail = Option(detail), recordedAt = startTime)))
   }
   def recordInMsgEvent(reqId: ReqId, event: MsgEvent): Unit = {
     sendToMsgTracker(RecordInMsgEvent(reqId, event))
@@ -96,8 +102,14 @@ trait HasMsgProgressTracker { this: Actor =>
   def recordOutMsgEvent(reqId: ReqId, event: MsgEvent): Unit = {
     sendToMsgTracker(RecordOutMsgEvent(reqId, event))
   }
+  def recordOutMsgDeliveryEvent(msgId: MsgId): Unit = {
+    sendToMsgTracker(RecordOutMsgDeliveryEvents(msgId, List.empty))
+  }
   def recordOutMsgDeliveryEvent(msgId: MsgId, event: MsgEvent): Unit = {
-    sendToMsgTracker(RecordOutMsgDeliveryEvent(msgId, event))
+    sendToMsgTracker(RecordOutMsgDeliveryEvents(msgId, List(event)))
+  }
+  def recordOutMsgDeliveryEvents(msgId: MsgId, events: List[MsgEvent]): Unit = {
+    sendToMsgTracker(RecordOutMsgDeliveryEvents(msgId, events))
   }
 
   def childEventWithDetail(msg: String, sndr: ActorRef = sender()): ChildEvent = {
@@ -108,7 +120,8 @@ trait HasMsgProgressTracker { this: Actor =>
     candidateTrackingIds.foreach { trackingId =>
       if (MsgProgressTrackerCache.isTracked(trackingId)) {
         val finalCmd = cmd match {
-          case rre: RecordRoutingEvent if MsgProgressTracker.isGlobalOrIpAddress(trackingId) =>
+          case rre: RecordRoutingEvent
+            if MsgProgressTracker.isGlobalOrIpAddress(trackingId) =>
             rre.withDetailAppended(s"(trackingDetail => $extraDetail)")
           case other                   => other
         }

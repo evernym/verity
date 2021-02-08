@@ -9,6 +9,9 @@ import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgent
 
 class AgencyAgentSetupHelper {
 
+  def setupAgencyAgent(str: String): Unit = {
+    setupAgencyAgent(UrlParam(str))
+  }
   def setupAgencyAgent(up: UrlParam): Unit = {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up
@@ -16,6 +19,11 @@ class AgencyAgentSetupHelper {
     }
     agencyAgent.setupAgency()
   }
+
+  def bootstrapAgencyAgentToLedger(str: String): Unit = {
+    bootstrapAgencyAgentToLedger(UrlParam(str))
+  }
+
   def bootstrapAgencyAgentToLedger(up: UrlParam): Unit = {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up

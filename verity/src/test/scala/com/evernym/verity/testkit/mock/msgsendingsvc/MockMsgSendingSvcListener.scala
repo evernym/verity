@@ -41,6 +41,11 @@ trait MockMsgSendingSvcListener {
   }
 
   def withExpectNewMsgAtRegisteredEndpoint[T](f : => T): (T, Option[PackedMsg]) = {
+    //this sleep is introduced to reduce/remove intermittent failure
+    // around calculating 'currentReceivedMsgCount' correctly
+    // after sufficient sleep, there is a less chance that any new message will be available/received
+    // before executing supplied function 'f'
+    Thread.sleep(3000)
     val currentReceivedMsgCount = getTotalAgentMsgSentByCloudAgent
     val result = f
     val msg = checkForNewMsg(currentReceivedMsgCount)
@@ -48,6 +53,11 @@ trait MockMsgSendingSvcListener {
   }
 
   def withExpectNewRestMsgAtRegisteredEndpoint[T](f : => T): (T, Option[String]) = {
+    //this sleep is introduced to reduce/remove intermittent failure
+    // around calculating 'currentReceivedMsgCount' correctly
+    // after sufficient sleep, there is a less chance that any new message will be available/received
+    // before executing supplied function 'f'
+    Thread.sleep(3000)
     val currentReceivedMsgCount = getTotalRestAgentMsgSentByCloudAgent
     val result = f
     val msg = checkForNewRestMsg(currentReceivedMsgCount)

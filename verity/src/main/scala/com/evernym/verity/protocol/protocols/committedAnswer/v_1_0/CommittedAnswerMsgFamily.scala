@@ -47,7 +47,6 @@ object Msg {
                       external_links: Seq[Link] = Seq.empty
                      ) extends Msg
 
-
   case class Answer(`response.@sig`: Sig) extends Msg
 }
 

@@ -103,7 +103,8 @@ case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage
 
 case class MetricsFilterCriteria(includeMetaData: Boolean = true,
-                                 includeTags: Boolean = true, filtered: Boolean = true)
+                                 includeTags: Boolean = true,
+                                 filtered: Boolean = true)
 
 object MetricsFilterCriteria {
 

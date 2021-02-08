@@ -48,7 +48,7 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
      */
     def prepareInviteAnswerConnReqCreatedEventOpt: Option[MsgCreated] = {
       Option(rcrm.replyToMsgId).flatMap { replyToMsgId =>
-        if (ctx.getState.msgState.getMsgOpt(replyToMsgId).isEmpty) {
+        if (ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId).isEmpty) {
           Option (buildMsgCreatedEvt (CREATE_MSG_TYPE_CONN_REQ,
             rcrm.senderDetail.DID, rcrm.replyToMsgId,
             sendMsg=false, rcrm.threadOpt))

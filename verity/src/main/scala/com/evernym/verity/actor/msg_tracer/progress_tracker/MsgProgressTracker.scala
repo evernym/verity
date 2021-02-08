@@ -1,5 +1,7 @@
 package com.evernym.verity.actor.msg_tracer.progress_tracker
 
+import java.time.temporal.ChronoUnit
+
 import akka.pattern.ask
 import java.time.{Instant, LocalDateTime}
 
@@ -16,6 +18,9 @@ import com.evernym.verity.ReqId
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics}
 import com.evernym.verity.protocol.engine.MsgId
 import org.apache.http.conn.util.InetAddressUtils
+
+import scala.concurrent.Future
+
 
 
 //NOTE: This is NOT a feature code, its a utility code to see/troubleshoot msg progress in a system
@@ -42,15 +47,19 @@ class MsgProgressTracker(val appConfig: AppConfig)
     case ct: ConfigureTracking      => handleConfigureTracking(ct)
     case rd: RecordReqData          => handleRecordData(rd)
     case rd: RecordMsgDeliveryData  => handleRecordMsgDeliveryData(rd)
-    case GetState                   => handleGetState()
+    case gs: GetState               => handleGetState(gs)
     case CheckForPeriodicTask       => finishTrackingIfExceededTime()
   }
 
   def handleRecordMsgDeliveryData(rd: RecordMsgDeliveryData): Unit = {
     rd match {
-      case romd: RecordOutMsgDeliveryEvent =>
-        val deliveryState = DeliveryState(rd.msgId, deliveryEvents = Option(List(romd.event)))
-        msgDeliveryState = msgDeliveryState :+ deliveryState
+      case romd: RecordOutMsgDeliveryEvents =>
+        if (! msgDeliveryState.contains(romd.msgId)) {
+          orderedOutMsgIds = orderedOutMsgIds :+ romd.msgId
+        }
+        val currDeliveryState = msgDeliveryState.getOrElse(romd.msgId, DeliveryState(romd.msgId))
+        val updatedDeliveryState = currDeliveryState.updateEvents(romd.events)
+        msgDeliveryState = msgDeliveryState + (romd.msgId -> updatedDeliveryState)
     }
   }
 
@@ -92,7 +101,7 @@ class MsgProgressTracker(val appConfig: AppConfig)
 
   def handleRecordRoutingChildEvents(re: RecordRoutingChildEvents): Unit = {
     val trackingState = reqState.getOrElse(re.reqId, RequestState(re.reqId))
-    val updatedState = trackingState.updateRoutingChildEvents(re.events)
+    val updatedState = trackingState.updateRoutingChildEvents(re.id, re.events)
     reqState = reqState + (re.reqId -> updatedState)
   }
 
@@ -108,15 +117,21 @@ class MsgProgressTracker(val appConfig: AppConfig)
     reqState = reqState + (re.reqId -> updatedState)
   }
 
-  def handleGetState(): Unit = {
-    val orderedState = orderedReqIds.map { reqId  =>
-      val st = reqState(reqId)
-      st.copy(
-        inMsgEvents = st.inMsgEvents.map(_.sortBy(_.recordedAt.getNano)),
-        outMsgEvents = st.outMsgEvents.map(_.sortBy(_.recordedAt.getNano))
-      )
+  def handleGetState(gs: GetState): Unit = {
+    val sndr = sender()
+    Future {
+      val maxRequestStateSize = gs.requestStateSize.getOrElse(orderedReqIds.size)
+      val maxDeliveryStateSize = gs.deliveryStateSize.getOrElse(orderedOutMsgIds.size)
+      val orderedState =
+        orderedReqIds
+          .takeRight(maxRequestStateSize)
+          .flatMap(reqId => reqState.get(reqId).map(_.prepared()))
+      val deliveryState =
+        orderedOutMsgIds
+          .takeRight(maxDeliveryStateSize)
+          .flatMap(msgId => msgDeliveryState.get(msgId).map(_.prepared()))
+      sndr ! RecordedStates(orderedState, deliveryState)
     }
-    sender ! RecordedStates(orderedState, msgDeliveryState)
   }
 
   private def removeOldStateItemsIfMaxSizeExceeded(): Unit = {
@@ -171,8 +186,10 @@ class MsgProgressTracker(val appConfig: AppConfig)
   val maxStateItemsToRecord: Option[Int] = if (isGlobalOrIpAddress) Some(500) else Some(1000)
 
   var orderedReqIds = List.empty[ReqId]
+  var orderedOutMsgIds = List.empty[MsgId]
+
   var reqState = Map.empty[ReqId, RequestState]
-  var msgDeliveryState = List.empty[DeliveryState]
+  var msgDeliveryState = Map.empty[MsgId, DeliveryState]
 
   type ReqId = String
 
@@ -193,38 +210,78 @@ trait ProgressTrackerMsg extends ActorMessage
 //commands
 
 case class DeliveryState(msgId: String,
-                         deliveryEvents: Option[List[MsgEvent]] = None)
+                         recordedAt: LocalDateTime = LocalDateTime.now(),
+                         deliveryEvents: Option[List[MsgEvent]] = None,
+                         timeTakenInMillis: Option[Long]=None) {
+
+  def updateEvents(events: List[MsgEvent]): DeliveryState = {
+    val curDeliveryEvents = deliveryEvents.getOrElse(List.empty)
+    copy(deliveryEvents = Option(curDeliveryEvents ++ events))
+  }
+
+  def prepared(): DeliveryState = {
+    val timeTaken = deliveryEvents.getOrElse(List.empty).lastOption.map(lme =>
+      ChronoUnit.MILLIS.between(recordedAt, lme.recordedAt))
+    copy(timeTakenInMillis = timeTaken)
+  }
+}
 
 case class RequestState(reqId: String,
                         routingEvents: Option[List[RoutingEvent]] = None,
                         inMsgEvents: Option[List[MsgEvent]] = None,
-                        outMsgEvents: Option[List[MsgEvent]] = None) {
+                        outMsgEvents: Option[List[MsgEvent]] = None,
+                        timeTakenInMillis: Option[Long] = None) {
+
+  def routingEventsReq: List[RoutingEvent] = routingEvents.getOrElse(List.empty)
+  def inMsgEventsReq: List[MsgEvent] = inMsgEvents.getOrElse(List.empty)
+  def outMsgEventsReq: List[MsgEvent] = outMsgEvents.getOrElse(List.empty)
+
+  def prepared(): RequestState = {
+    val firstEventTime = routingEventsReq.headOption.map(_.recordedAt) orElse inMsgEventsReq.headOption.map(_.recordedAt)
+    val lastEventTime = {
+      val lastInMsgTime = inMsgEventsReq.lastOption.map { le =>
+        le.childEvents.getOrElse(List.empty).lastOption.map(_.recordedAt).getOrElse(le.recordedAt)
+      }
+      val lastOutMsgTime = outMsgEventsReq.lastOption.map { le =>
+        le.childEvents.getOrElse(List.empty).lastOption.map(_.recordedAt).getOrElse(le.recordedAt)
+      }
+      lastOutMsgTime orElse lastInMsgTime
+    }
+    val timeTaken = (firstEventTime, lastEventTime) match {
+      case (Some(fre), Some(lme)) => Option(ChronoUnit.MILLIS.between(fre, lme))
+      case _                      => None
+    }
+    copy(
+      timeTakenInMillis = timeTaken
+    )
+  }
 
   def updateRoutingEvents(event: RoutingEvent): RequestState = {
-    val events = routingEvents.getOrElse(List.empty)
+    val events = routingEventsReq
     val (_, otherEvents) = events.partition(_.id == event.id)
     val updatedEvents = otherEvents :+ event
     copy(routingEvents = Option(updatedEvents))
   }
 
   def updateInMsgEvents(event: MsgEvent): RequestState = {
-    val curEvents = inMsgEvents.getOrElse(List.empty)
+    val curEvents = inMsgEventsReq
     val updatedEvents = curEvents :+ event
     copy(inMsgEvents = Option(updatedEvents))
   }
 
   def updateOutMsgEvents(event: MsgEvent): RequestState = {
-    val curEvents = outMsgEvents.getOrElse(List.empty)
+    val curEvents = outMsgEventsReq
     val updatedEvents = curEvents :+ event
     copy(outMsgEvents = Option(updatedEvents))
   }
 
-  def updateRoutingChildEvents(events: List[ChildEvent]): RequestState = {
-    val currMsgEvents = routingEvents.getOrElse(List.empty)
-    val headRoutingEvent = currMsgEvents.headOption.getOrElse(RoutingEvent())
-    val updatedChildEvents = headRoutingEvent.childEvents.getOrElse(List.empty) ++ events
-    val updatedInEvent = headRoutingEvent.copy(childEvents =  Option(updatedChildEvents))
-    copy(routingEvents = Option(List(updatedInEvent)))
+  def updateRoutingChildEvents(id: String, events: List[ChildEvent]): RequestState = {
+    val currRoutingEvents = routingEvents.getOrElse(List.empty)
+    val (matchedEvents, otherEvents) = currRoutingEvents.partition(_.id.contains(id))
+    val routingEvent = matchedEvents.headOption.getOrElse(RoutingEvent())
+    val updatedChildEvents = routingEvent.childEvents.getOrElse(List.empty) ++ events
+    val updatedInEvent = routingEvent.copy(childEvents =  Option(updatedChildEvents))
+    copy(routingEvents = Option(otherEvents :+ updatedInEvent))
   }
 
   def updateInMsgChildEvents(msgId: MsgId, events: List[ChildEvent]): RequestState = {
@@ -277,9 +334,12 @@ object RecordOutMsgChildEvents {
 case class RecordOutMsgChildEvents(reqId: String, outMsgId: MsgId, events: List[ChildEvent]) extends RecordReqData
 
 object RecordRoutingChildEvents {
-  def apply(reqId: String, event: ChildEvent): RecordRoutingChildEvents = RecordRoutingChildEvents(reqId, List(event))
+  def apply(reqId: String, id: String, event: ChildEvent): RecordRoutingChildEvents =
+    RecordRoutingChildEvents(reqId, id, List(event))
 }
-case class RecordRoutingChildEvents(reqId: String, events: List[ChildEvent]) extends RecordReqData
+case class RecordRoutingChildEvents(reqId: String,
+                                    id: String,
+                                    events: List[ChildEvent]) extends RecordReqData
 
 
 object MsgEvent {
@@ -302,10 +362,17 @@ object MsgEvent {
   //used in case there is no explicit system message id provided/available
   val DEFAULT_TRACKING_MSG_ID = "tracking-msg-id"
 }
-case class RoutingEvent(id: MsgId = "routing",
+
+object RoutingEvent {
+  val ROUTING_EVENT_ID_ARRIVED = "arrived"
+  val ROUTING_EVENT_ID_PROCESSING = "processing"
+}
+
+case class RoutingEvent(id: String = RoutingEvent.ROUTING_EVENT_ID_PROCESSING,
                         detail: Option[String] = None,
                         recordedAt: LocalDateTime = LocalDateTime.now(),
-                        childEvents: Option[List[ChildEvent]] = None)
+                        childEvents: Option[List[ChildEvent]] = None) {
+}
 
 case class MsgEvent(msgId: Option[String] = None,
                     msgType: Option[String] = None,
@@ -321,9 +388,9 @@ case class RecordRoutingEvent(reqId: String, event: RoutingEvent) extends Record
 case class RecordInMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData
 case class RecordOutMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData
 
-case class RecordOutMsgDeliveryEvent(msgId: String, event: MsgEvent) extends RecordMsgDeliveryData
+case class RecordOutMsgDeliveryEvents(msgId: String, events: List[MsgEvent]) extends RecordMsgDeliveryData
 
-case object GetState extends ProgressTrackerMsg
+case class GetState(requestStateSize: Option[Int] = None, deliveryStateSize: Option[Int]=None) extends ProgressTrackerMsg
 
 case class RecordedStates(requestStates: List[RequestState],
                           deliveryStates: List[DeliveryState]) extends ProgressTrackerMsg

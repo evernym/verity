@@ -3,20 +3,20 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.MsgPayloadStoredEventBuilder
-import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgPayloadStored, MsgStatusUpdated}
 import com.evernym.verity.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, MSG_TYPE_UPDATE_MSG_STATUS}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
-import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.constants.Constants.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
 import com.evernym.verity.util.ReqMsgContext
-import com.evernym.verity.util.TimeZoneUtil._
+import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.util.Left
@@ -37,7 +37,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_GET_MSGS, ownerDID)
       val gmr = GetMsgsMsgHelper.buildReqMsg(amw)
       logger.debug("get msgs request: " + gmr)
-      val allMsgs = getMsgs(gmr)
+      val allMsgs = msgStore.getMsgs(gmr)
       buildAndSendGetMsgsResp(allMsgs, sender())
     }
   }

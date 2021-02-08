@@ -64,7 +64,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
 
     def prepareInviteAnswerConnReqCreatedEventOpt: Option[MsgCreated] = {
       Option(connReqAnswerMsg.replyToMsgId).flatMap { replyToMsgId =>
-        if (ctx.getState.msgState.getMsgOpt(replyToMsgId).isEmpty) {
+        if (ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId).isEmpty) {
           Option (buildMsgCreatedEvt (CREATE_MSG_TYPE_CONN_REQ,
             connReqAnswerMsg.senderDetail.DID, connReqAnswerMsg.replyToMsgId,
             sendMsg=false, connReqAnswerMsg.threadOpt))

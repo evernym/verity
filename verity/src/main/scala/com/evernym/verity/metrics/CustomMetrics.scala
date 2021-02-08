@@ -64,8 +64,9 @@ object CustomMetrics {
   final val AS_SERVICE_LIBINDY_WALLET_OPEN_FAILED_AFTER_ALL_RETRIES_COUNT = s"$AS_SERVICE_LIBINDY_WALLET.open.failed.after.all.retries.count"
 
   private final val AS_AKKA_ACTOR = s"$AS.akka.actor"
+  private final val AS_AKKA_ACTOR_AGENT = s"$AS_AKKA_ACTOR.agent"
 
-  final val AS_ACTOR_AGENT_STATE_SIZE = s"$AS_AKKA_ACTOR.agent.state.size"
+  final val AS_ACTOR_AGENT_STATE_SIZE = s"$AS_AKKA_ACTOR_AGENT.state.size"
 
   private final val AS_USER_AGENT = s"$AS_AKKA_ACTOR.user.agent"
   private final val AS_USER_AGENT_PAIRWISE = s"$AS_AKKA_ACTOR.user.agent.pairwise"
@@ -73,6 +74,7 @@ object CustomMetrics {
   final val AS_USER_AGENT_PAIRWISE_WATCHER_ACTIVE_CONTAINER_COUNT = s"$AS_USER_AGENT_PAIRWISE.watcher.container.active.count"
   final val AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT = s"$AS_USER_AGENT_PAIRWISE.watcher.container.total.count"
 
+  private final val AS_USER_AGENT_ACTOR = s"$AS_USER_AGENT.actor"
   private final val AS_USER_AGENT_MSG = s"$AS_USER_AGENT.msg"
   /**
    * this is overall undelivered messages (including past and current)
@@ -89,6 +91,9 @@ object CustomMetrics {
    */
   final val AS_USER_AGENT_MSG_FAILED_ATTEMPT_COUNT = s"$AS_USER_AGENT_MSG.failed.attempt.count"
 
+  final val AS_AKKA_ACTOR_AGENT_RETAINED_MSGS = s"$AS_AKKA_ACTOR_AGENT.msgs.retained"
+  final val AS_AKKA_ACTOR_AGENT_REMOVED_MSGS = s"$AS_AKKA_ACTOR_AGENT.msgs.removed"
+  final val AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED = s"$AS_AKKA_ACTOR_AGENT.with-msgs-removed"
   /**
    * this is the total number of active users (AU)
    */
@@ -153,7 +158,7 @@ object CustomMetrics {
       AS_USER_AGENT_MSG_UNDELIVERED_COUNT,
       AS_ACTIVE_USER_AGENT_COUNT,
       AS_USER_AGENT_ACTIVE_RELATIONSHIPS,
-      AS_NEW_PROTOCOL_COUNT,
+      AS_NEW_PROTOCOL_COUNT
     )
     metricsToBeInitialized.foreach(MetricsWriter.gaugeApi.updateWithTags(_, value = 0))
   }

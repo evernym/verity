@@ -101,7 +101,7 @@ trait MsgNotifierForStoredMsgs
     // one com method registered (either http endpoint or push notification)
     logger.debug("about to notify user for newly received message: " + notifMsgDtl.uid + s"(${notifMsgDtl.msgType})")
     getAllComMethods.map { allComMethods =>
-      val fut1 = getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(notifMsgDtl, pw, Option(allComMethods)))
+      val fut1 = msgStore.getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(notifMsgDtl, pw, Option(allComMethods)))
       val fut2 = Option(sendMsgToRegisteredPushNotif(notifMsgDtl, updateDeliveryStatus, Option(allComMethods)))
       val fut3 = Option(fwdMsgToSponsor(notifMsgDtl, Option(allComMethods)))
       val allFut = (fut1 ++ fut2 ++ fut3).toSet
@@ -221,8 +221,8 @@ trait MsgNotifierForStoredMsgs
 
   private def sendMsgToRegisteredPushNotif(notifMsgDtl: NotifyMsgDetail, updateDeliveryStatus: Boolean, allComMethods: Option[CommunicationMethods]): Future[Any] = {
     try {
-      val msg = getMsgReq(notifMsgDtl.uid)
-      val mds = getMsgDetails(notifMsgDtl.uid)
+      val msg = msgStore.getMsgReq(notifMsgDtl.uid)
+      val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
       val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
       val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
       val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
@@ -316,7 +316,7 @@ trait MsgNotifierForStoredMsgs
         getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
           logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
 
-          val mds = getMsgDetails(notifMsgDtl.uid)
+          val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
           val name = mds.getOrElse(NAME_KEY, "")
           // metadata is deprecated, we should keep type in legacy state for backward compatibility.
           val fwdMeta = FwdMetaData(Some(notifMsgDtl.deprecatedPushMsgType), Some(name))
@@ -395,7 +395,7 @@ trait MsgNotifierForUserAgentCommon
 
   override def sendStoredMsgToSelf(msgId:MsgId): Future[Any] = {
     logger.debug("about to send stored msg to self: " + msgId)
-    val msg = getMsgReq(msgId)
+    val msg = msgStore.getMsgReq(msgId)
     notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType), updateDeliveryStatus = true)
   }
 }

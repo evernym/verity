@@ -23,7 +23,6 @@ import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.aws_s3.{S3AlpakkaApi, StorageAPI}
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.Util
-import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
 import com.evernym.verity.vault.wallet_api.{LegacyWalletAPI, StandardWalletAPI, WalletAPI}

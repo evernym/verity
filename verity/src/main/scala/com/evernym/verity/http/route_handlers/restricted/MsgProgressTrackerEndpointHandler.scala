@@ -37,8 +37,8 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
     Future.successful(MsgProgressTrackerCache.allIdsBeingTracked)
   }
 
-  protected def getRecordedEvents(trackingId: String, inHtml: Option[String]=Some("Y")): Future[Any] = {
-    platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, GetState)
+  protected def getRecordedState(trackingId: String, topReqSize: Option[Int], topDelSize: Option[Int]): Future[Any] = {
+    platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, GetState(topReqSize, topDelSize))
   }
 
   protected def msgProgressBackendResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
@@ -72,9 +72,12 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
                       }
                     } ~
                     get {
-                      parameters('inHtml ? "Y") { inHtml =>
+                      parameters('topRequestsSize.?, 'topDeliverySize.?) {
+                        (topRequestsSize, topDeliverySize) =>
                           complete {
-                            getRecordedEvents(trackingId) map {
+                            val topReqSize = topRequestsSize.map(_.toInt)
+                            val topDelSize = topDeliverySize.map(_.toInt)
+                            getRecordedState(trackingId, topReqSize, topDelSize) map {
                               case rs: RecordedStates => handleExpectedResponse(rs)
                               case x => handleUnexpectedResponse(x)
                             }

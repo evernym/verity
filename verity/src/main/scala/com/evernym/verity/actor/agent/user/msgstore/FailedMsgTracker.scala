@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.actor.agent.user.msgstore
 
 import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.MsgDeliveryStatusUpdated
@@ -13,12 +13,20 @@ import com.evernym.verity.protocol.engine.{DID, MsgId}
  *                                         user agent pairwise may have different criteria than user agent
  *                                         thats why it is provided by the class which wants to use this.
  */
-class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: () => RetryEligibilityCriteria) {
+class FailedMsgTracker(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: () => RetryEligibilityCriteria) {
 
   type FailedAttemptCount = Int
 
   private var failedMsgs: Map[MsgId, FailedAttemptCount] = Map.empty
+
+  /**
+   * messages eligible for retries
+   */
   private var eligibleForRetries: Set[MsgId] = Set.empty
+
+  /**
+   * messages which crossed max delivery retry attempt
+   */
   private var undeliveredMsgs: Set[MsgId] = Set.empty
 
   def updateDeliveryState(msgId: MsgId,
@@ -36,30 +44,45 @@ class MsgDeliveryState(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
           if (isEligibleForRetries(criteria, msg, deliveryStatus)) {
             addAsEligibleForRetry(msgId)
           } else {
-            removeAsEligibleForRetry(msgId)
+            removeFromEligibleForRetries(Set(msgId))
           }
           if (isUndeliveredMsg(criteria, msg, deliveryStatus)) {
             undeliveredMsgs += msgId
           }
 
         case MSG_DELIVERY_STATUS_SENT.statusCode   =>
-          failedMsgs -= newDeliveryStatus.uid
-          eligibleForRetries -= newDeliveryStatus.uid
-          undeliveredMsgs -= newDeliveryStatus.uid
+          removeFromFailedMsgs(Set(newDeliveryStatus.uid))
+          removeFromEligibleForRetries(Set(newDeliveryStatus.uid))
+          removeFromUndeliveredMsgs(Set(newDeliveryStatus.uid))
 
         case _ => //nothing to do
       }
     }
   }
 
+  def removeMsgs(msgIds: Set[MsgId]): Unit = {
+    removeFromFailedMsgs(msgIds)
+    removeFromUndeliveredMsgs(msgIds)
+    removeFromEligibleForRetries(msgIds)
+  }
+
   private def addAsEligibleForRetry(msgId: MsgId): Unit = {
-    removeAsEligibleForRetry(msgId)    //this is so that it gets appended to the end when added in below line
+    removeFromEligibleForRetries(Set(msgId))    //this is so that it gets appended to the end when added in below line
     eligibleForRetries += msgId
   }
 
-  private def removeAsEligibleForRetry(msgId: MsgId): Unit = {
-    eligibleForRetries -= msgId
+  private def removeFromFailedMsgs(msgIds: Set[MsgId]): Unit = {
+    failedMsgs --= msgIds
   }
+
+  private def removeFromEligibleForRetries(msgIds: Set[MsgId]): Unit = {
+    eligibleForRetries --= msgIds
+  }
+
+  private def removeFromUndeliveredMsgs(msgIds: Set[MsgId]): Unit = {
+    undeliveredMsgs --= msgIds
+  }
+
 
   private def filterRetriableDeliveryStatus(criteria: RetryEligibilityCriteria,
                                             msg: Msg,

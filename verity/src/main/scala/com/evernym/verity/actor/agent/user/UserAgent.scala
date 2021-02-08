@@ -6,15 +6,18 @@ import akka.pattern.ask
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.{ActorErrorResp, UrlParam, actor}
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.relationship._
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, NotifyMsgDetail}
 import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
-import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship}
+import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
+import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship, _}
+import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, MsgEvent}
+import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -26,6 +29,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -39,12 +43,7 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
-import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, MsgEvent}
-import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.{ActorErrorResp, UrlParam, actor}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Left, Success}
@@ -415,6 +414,8 @@ class UserAgent(val agentActorContext: AgentActorContext)
             pkg.recipientKeys.getOrElse(Set.empty).toSeq
           )
         }))
+      logger.info(s"update com method updated - id=${comMethod.id} - type: ${comMethod.id} - " +
+        s"value: ${comMethod.value}")
       logger.debug(
         s"update com method => updated (userDID=<${state.myDid}>, id=${comMethod.id}, " +
           s"old=$existingEndpointOpt): new: $comMethod", (LOG_KEY_SRC_DID, state.myDid))

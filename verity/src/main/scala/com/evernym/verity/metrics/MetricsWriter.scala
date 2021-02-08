@@ -18,6 +18,7 @@ trait GaugeApi {
   def decrement(name: String): Unit
   def decrement(name: String, times: Long): Unit
   def incrementWithTags(name: String, tags: Map[String, String] = Map.empty)
+  def incrementWithTags(name: String, value: Long, tags: Map[String, String])
   def updateWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty)
   def update(name: String, value: Long)
 }
@@ -43,6 +44,10 @@ object GaugeApiImpl extends GaugeApi {
 
   def incrementWithTags(name: String, tags: Map[String, String] = Map.empty): Unit = {
     initializedGaugeMetric(name).withTags(TagSet.from(tags)).increment()
+  }
+
+  def incrementWithTags(name: String, value: Long, tags: Map[String, String]): Unit = {
+    initializedGaugeMetric(name).withTags(TagSet.from(tags)).increment(value)
   }
 
   def updateWithTags(name: String, value: Long, tags: Map[String, String] = Map.empty): Unit = {

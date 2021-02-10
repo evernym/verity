@@ -37,9 +37,10 @@ class ActorPersistenceFailureSpec
     ConfigFactory.parseString (
       s"""
         akka.test.filter-leeway = 15s   # to make the event filter run for little longer time
-        verity.persistent-actor.base.supervisor-strategy {
+        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = onStop
             min-seconds = 3
             max-seconds = 20
             random-factor = 0

@@ -31,9 +31,10 @@ class ActorCreationFailureSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervisor-strategy {
+       verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = onStop
             min-seconds = 3
             max-seconds = 20
             random-factor = 0

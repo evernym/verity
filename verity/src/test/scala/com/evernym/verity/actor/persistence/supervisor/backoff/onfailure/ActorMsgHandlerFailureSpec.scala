@@ -32,7 +32,7 @@ class ActorMsgHandlerFailureSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervisor-strategy {
+       verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
             min-seconds = 3

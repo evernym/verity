@@ -3,6 +3,7 @@ package com.evernym.verity.actor
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
+import com.evernym.verity.actor.persistence.SupervisorUtil.{logger, supervisorProps}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -85,7 +86,16 @@ trait ShardUtil {
     //NOTE: There will be few other non sharded persistent actors which
     // we'll have to take care of separately.
 
-    actorProps
+    supervisorProps(
+      appConfig,
+      entityCategory,
+      typeName,
+      actorProps
+    )
+    .getOrElse{
+      logger.debug(s"Supervisor was not defined for this props - entityCategory: $entityCategory - typeName: $typeName")
+      actorProps
+    }
   }
 
   def createPersistentRegion(typeName: String,

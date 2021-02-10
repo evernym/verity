@@ -23,7 +23,7 @@ class MockActorCreationFailure(val appConfig: AppConfig)
 
   override def receiveEvent: Receive = ???
 
-  throw new RuntimeException("purposefully throwing exception")
+  throw new RuntimeException("purposefully throwing exception d")
 
 }
 
@@ -50,7 +50,7 @@ class MockActorRecoveryFailure(val appConfig: AppConfig)
     //to control the exception throw flow to be able to accurately test occurrences of failures
     if (exceptionSleepTimeInMillis > 0)
       Thread.sleep(exceptionSleepTimeInMillis)
-    throw new RuntimeException("purposefully throwing exception")
+    throw new RuntimeException("purposefully throwing exception s")
   }
 }
 
@@ -86,7 +86,7 @@ class MockActorMsgHandlerFailure(val appConfig: AppConfig)
     with DefaultPersistenceEncryption {
 
   override def receiveCmd: Receive = {
-    case ThrowException => throw new RuntimeException("purposefully throwing exception")
+    case ThrowException => throw new RuntimeException("purposefully throwing exception a")
   }
 
   override def receiveEvent: Receive = ???
@@ -124,7 +124,7 @@ class GeneratePersistenceFailureJournal extends TestJournal {
 
   override def asyncWriteMessages(messages: _root_.scala.collection.immutable.Seq[_root_.akka.persistence.AtomicWrite]):
   _root_.scala.concurrent.Future[_root_.scala.collection.immutable.Seq[_root_.scala.util.Try[Unit]]] = {
-    Future.failed(new RuntimeException("purposefully throwing exception"))
+    Future.failed(new RuntimeException("purposefully throwing exception e"))
   }
 }
 
@@ -133,14 +133,14 @@ trait PropsProvider {
   def props(appConfig: AppConfig): Props
 
   def backOffOnStopProps(appConfig: AppConfig): Props =
-    SupervisorUtil.onStopBackoffSupervisorActorProps(
+    SupervisorUtil.onStopSupervisorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",
       props(appConfig)).get
 
   def backOffOnFailureProps(appConfig: AppConfig): Props =
-    SupervisorUtil.onFailureBackoffSupervisorActorProps(
+    SupervisorUtil.onFailureSupervisorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",

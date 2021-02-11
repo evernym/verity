@@ -1,18 +1,22 @@
 package com.evernym.verity.actor
 
 import akka.actor.{ActorRef, Props}
-import akka.persistence.PersistentRepr
+import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.SerializationExtension
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
-import com.evernym.verity.Status._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.walletBackup.BackupStored
 import com.evernym.verity.testkit.BasicSpec
 import com.google.protobuf.ByteString
 import com.typesafe.config.Config
+
+import scala.collection.immutable
+import scala.concurrent.Future
+import scala.util.Try
 
 class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
 
@@ -33,8 +37,7 @@ class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
 
 class FailsOnLargeEventTestJournal extends TestJournal {
 
-  override def asyncWriteMessages(messages: _root_.scala.collection.immutable.Seq[_root_.akka.persistence.AtomicWrite]):
-  _root_.scala.concurrent.Future[_root_.scala.collection.immutable.Seq[_root_.scala.util.Try[Unit]]] = {
+  override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]):  Future[immutable.Seq[Try[Unit]]] = {
 
     /**
      * This is dynamodb's event size restriction

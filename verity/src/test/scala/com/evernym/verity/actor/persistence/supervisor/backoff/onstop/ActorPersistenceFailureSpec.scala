@@ -2,7 +2,6 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.persistence.supervisor.{GeneratePersistenceFailure, MockActorPersistenceFailure}
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
@@ -16,11 +15,13 @@ class ActorPersistenceFailureSpec
 
   lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.backOffOnStopProps(appConfig))
 
+  override def expectDeadLetters: Boolean = true
+
+
   "OnStop BackoffSupervised actor" - {
 
     "when throws an exception during persistence" - {
-      //TODO: find out why this test fails if we remove below 'taggedAs UNSAFE_IgnoreAkkaEvents'
-      "should restart actor once" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      "should restart actor once" in {
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockUnsupervised ! GeneratePersistenceFailure
           expectNoMessage()

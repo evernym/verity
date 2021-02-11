@@ -3,7 +3,6 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -18,9 +17,7 @@ class ActorMsgHandlerFailureSpec
 
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
-      //TODO: if we remove 'UNSAFE_IgnoreAkkaEvents', then it fails intermittently
-      // need to find out why
-      "should stop and start (not exactly a restart) once" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      "should stop and start (not exactly a restart) once" in {
         //TODO: test it stops and starts once only
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockSupervised ! ThrowException

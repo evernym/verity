@@ -16,6 +16,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship, _}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.metrics.{RemoveUserAgentMetric, UpdateUserAgentMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, MsgEvent}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -51,7 +52,7 @@ import scala.util.{Failure, Left, Success}
 /**
  Represents user's agent
  */
-class UserAgent(val agentActorContext: AgentActorContext)
+class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: ActorRef)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
@@ -797,6 +798,16 @@ class UserAgent(val agentActorContext: AgentActorContext)
    * @return
    */
   override def actorTypeId: Int = ACTOR_TYPE_USER_AGENT_ACTOR
+
+  override def beforeStart(): Unit = {
+    super.beforeStart()
+    metricsActorRef ! UpdateUserAgentMetric(this.actorId, 0)
+  }
+
+  override def afterStop(): Unit = {
+    super.afterStop()
+    metricsActorRef ! RemoveUserAgentMetric(this.actorId)
+  }
 }
 
 case class PairwiseConnSetExt(agentDID: DID, reqMsgContext: ReqMsgContext)
@@ -880,6 +891,8 @@ trait UserAgentStateUpdateImpl
 
   def addRelationshipAgent(ad: AgentDetail): Unit = {
     state = state.withRelationshipAgents(state.relationshipAgents + (ad.forDID -> ad.agentKeyDID))
+    metricsActorRef ! UpdateUserAgentMetric(this.actorId, state.relationshipAgents.size)
+    //todo write metrics
   }
 
   def addConfig(name: String, ac: AgentConfig): Unit = {
@@ -892,6 +905,7 @@ trait UserAgentStateUpdateImpl
 
   def updateMsgAndDelivery(msgAndDelivery: MsgAndDelivery): Unit = {
     state = state.withMsgAndDelivery(msgAndDelivery)
+    // TODO write metrics
   }
 
 }

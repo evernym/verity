@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector}
+import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector, UserAgentMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -26,8 +26,8 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
-import java.time.ZoneId
 
+import java.time.ZoneId
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -71,7 +71,7 @@ class Platform(val aac: AgentActorContext)
   //agent actor
   val userAgentRegion: ActorRef = createPersistentRegion(
     USER_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+    buildProp(Props(new UserAgent(agentActorContext, userAgentMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
 
   //agent actor for pairwise connection
   val userAgentPairwiseRegion: ActorRef = createPersistentRegion(
@@ -191,6 +191,10 @@ class Platform(val aac: AgentActorContext)
   //Agent to collect metrics from Libindy
   val libIndyMetricsCollector: ActorRef =
     agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
+
+  //Agent to collect collections metrics from UserAgent
+  lazy val userAgentMetricsCollector: ActorRef =
+    agentActorContext.system.actorOf(Props(new UserAgentMetricsCollector()), name = USERAGENT_METRICS_COLLECTOR)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")

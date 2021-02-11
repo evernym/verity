@@ -4,14 +4,14 @@ import akka.event.LoggingReceive
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgFromDriver}
+import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
+import com.evernym.verity.actor.agent.msghandler.ProcessUnpackedMsg
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.{PairwiseRelationship, Relationship, RelationshipUtil}
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.{AgentStatePairwiseImplBase, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -22,8 +22,6 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey, _}
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CompleteAgentProvisioning
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
 import com.evernym.verity.util.ParticipantUtil
 
@@ -42,27 +40,14 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
 
-  override final def receiveAgentCmd: Receive = cmdReceiver
+  override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver
 
   val cmdReceiver: Receive = LoggingReceive.withLabel("cmdReceiver") {
-    case saw: SetAgentActorDetail      => setAgentActorDetail(saw)
-    case scke: SetupCreateKeyEndpoint  => handleSetupCreateKeyEndpoint(scke)
-    case apd: AgentProvisioningDone    =>
-      //dhh Why is this message untyped?
-      sendUntypedMsgToProtocol(
-        CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey),
-        AgentProvisioningDefinition,
-        apd.threadId
-      )
-    case GetSponsorRel => sender() ! SponsorRel.empty
+    case scke: SetupCreateKeyEndpoint   => handleSetupCreateKeyEndpoint(scke)
   }
 
-  override def handleSpecificSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = {
-    case SignalMsgFromDriver(crr: ConnReqReceived, _, _, _) => handleConnReqReceived(crr); Future.successful(None)
-  }
-
-  override val receiveActorInitSpecificCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
-    case saw: SetAgentActorDetail => setAgentActorDetail(saw)
+  override def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
+    case SignalMsgParam(crr: ConnReqReceived, _) => handleConnReqReceived(crr); Future.successful(None)
   }
 
   override final def receiveAgentEvent: Receive = eventReceiver orElse pairwiseConnReceiver
@@ -117,7 +102,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     val agentMsgs = List(AgentMsgParseUtil.agentMsg(msg))
     val amw = AgentMsgWrapper(MPF_INDY_PACK, AgentBundledMsg(agentMsgs,
       state.thisAgentVerKey, None, None))
-    handleAgentMsgWrapper(amw)
+    sendToAgentMsgProcessor(ProcessUnpackedMsg(amw))
   }
 
   def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys
@@ -138,7 +123,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
     }
     for (
-      agencyVerKey <- agencyVerKeyFut
+      agencyVerKey <- agencyVerKeyFut()
     ) yield  {
       paramMap(agencyVerKey) orElse super.stateDetailsWithAgencyVerKey(agencyVerKey)
     }
@@ -172,8 +157,6 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
   def ownerDID: Option[DID] = state.agencyDID
   def ownerAgentKeyDID: Option[DID] = state.agencyDID
 
-  override def userDIDForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[DID] = state.theirDid
-
   override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
     val didDocs = state.relationship.flatMap(_.myDidDoc) ++ state.relationship.flatMap(_.theirDidDoc)
     didDocs.find(_.authorizedKeys_!.keys.exists(ak => senderVerKey.exists(svk => ak.containsVerKey(svk)))) match {
@@ -193,7 +176,9 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
 
 }
 
-trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase
+trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase {
+  def domainId: DomainId = agencyDIDReq
+}
 
 trait AgencyAgentPairwiseStateUpdateImpl
   extends AgentStateUpdateInterface { this : AgencyAgentPairwise =>

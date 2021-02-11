@@ -3,7 +3,7 @@ package com.evernym.verity.testkit
 import java.util.UUID
 
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.ledger.{LedgerPoolConnManager, TransactionAuthorAgreement}
+import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.util.LedgerUtil
@@ -16,7 +16,7 @@ trait LedgerClient extends LibIndyCommon {
                        submitterKeySeed: Option[String]=None,
                        submitterRole: String = "STEWARD",
                        taa: Option[TransactionAuthorAgreement]=None): LedgerUtil = {
-    val confToUse = configOpt.getOrElse{appConfig}
+    val confToUse = configOpt.getOrElse(appConfig)
     buildLedgerUtil(confToUse, submitterDID, submitterKeySeed, submitterRole, taa)
   }
 }

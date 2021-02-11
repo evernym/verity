@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, G
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.msg_tracer.MsgTraceProvider
+import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
@@ -19,7 +19,7 @@ import scala.concurrent.Future
  */
 trait PlatformServiceProvider
   extends AgencyIdUtil
-  with MsgTraceProvider {
+    with MsgRespTimeTracker {
 
   def appConfig: AppConfig
   def platform: Platform
@@ -27,7 +27,7 @@ trait PlatformServiceProvider
 
   lazy val logger: Logger = getLoggerByClass(classOf[PlatformServiceProvider])
 
-  var agencyDIDPair: DidPair = _
+  protected var agencyDIDPair: DidPair = _
   implicit var wap: WalletAPIParam = _
 
   def getAgencyDidPairFut: Future[DidPair] = {

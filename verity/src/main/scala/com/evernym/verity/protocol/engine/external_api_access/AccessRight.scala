@@ -19,3 +19,5 @@ sealed trait LedgerAccessRight extends AccessRight
 
 case object LedgerWriteAccess extends LedgerAccessRight
 case object LedgerReadAccess extends LedgerAccessRight
+
+case object UrlShorteningAccess extends AccessRight

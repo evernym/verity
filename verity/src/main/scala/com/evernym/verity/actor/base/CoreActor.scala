@@ -2,11 +2,12 @@ package com.evernym.verity.actor.base
 
 import java.time.LocalDateTime
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.evernym.verity.Exceptions
+import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
+import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
 import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
@@ -16,7 +17,7 @@ import com.typesafe.scalalogging.Logger
  * generic incoming command validation (like if command extends 'ActorMessage' serializable interface or not etc)
  * and generic exception handling during command processing
  */
-trait CoreActor extends Actor {
+trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
 
   override def receive: Receive = coreCommandHandler(cmdHandler)
 
@@ -24,6 +25,8 @@ trait CoreActor extends Actor {
     handleCoreCommand(actualReceiver)
 
   private def handleCoreCommand(actualCmdReceiver: Receive): Receive = {
+    case GetActorDetail     => sender ! actorDetail
+
     case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
       try {
         actualCmdReceiver(cmd)
@@ -50,33 +53,42 @@ trait CoreActor extends Actor {
   // So we have this private logger for those needs but should not be sub-classes
   protected val genericLogger: Logger = LoggingUtil.getLoggerByName(getClass.getSimpleName)
 
-  lazy val isShardedActor: Boolean = self.path.toString.contains("sharding")
-  lazy val isClusterSingletonChild: Boolean = self.path.toString.contains("cluster-singleton-mngr")
+  log.debug(s"[$actorId]: actor creation started")
 
-  lazy val entityId: String = self.path.name
-  lazy val entityName: String =
-    if (isShardedActor || isClusterSingletonChild) self.path.parent.parent.name
-    else entityId
-  lazy val actorId: String = if (entityName != entityId) entityName + "-" + entityId else entityId
+  override def preStart(): Unit = {
+    if (recordStartCountMetrics)
+      MetricsWriter.gaugeApi.incrementWithTags(
+        s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX",
+        Map("entity-type"-> entityTypeTagName))
+    log.debug(s"[$actorId]: in pre start")
+    beforeStart()
+    super.preStart()
+  }
+
+  override def postStop(): Unit = {
+    if (recordStopCountMetrics)
+      MetricsWriter.gaugeApi.incrementWithTags(
+        s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX",
+        Map("entity-type"-> entityTypeTagName)
+      )
+    log.debug(s"[$actorId]: in post stop")
+    afterStop()
+    super.postStop()
+  }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    if (recordRestartCountMetrics)
+      MetricsWriter.gaugeApi.incrementWithTags(
+        s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX",
+        Map("entity-type"-> entityTypeTagName)
+      )
+    log.debug(s"[$actorId]: in pre restart")
     logCrashReason(reason, message)
     super.preRestart(reason, message)
   }
 
-  override def preStart(): Unit = {
-    MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX")
-    beforeStart()
-  }
-
-  override def postStop(): Unit = {
-    genericLogger.debug("in post stop: " + self.path)
-    afterStop()
-    MetricsWriter.gaugeApi.increment(s"$AS_AKKA_ACTOR_TYPE_PREFIX.$entityName.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX")
-  }
-
   private def logCrashReason(reason: Throwable, message: Option[Any]): Unit = {
-    genericLogger.error(s"[$actorId]: crashed and about to restart => " +
+    log.error(s"[$actorId]: crashed and about to restart => " +
       message.map(m => s"message being processed while error happened: $m, ").getOrElse("") +
       s"reason: ${Exceptions.getStackTraceAsSingleLineString(reason)}")
   }
@@ -108,5 +120,17 @@ trait CoreActor extends Actor {
   def setNewReceiveBehaviour(receiver: Receive): Unit = {
     context.become(coreCommandHandler(receiver))
   }
+
+  def actorDetail: ActorDetail = ActorDetail(entityType, entityId, actorId)
+
+  def entityTypeTagName: String = if (entityType == DEFAULT_ENTITY_TYPE) s"$entityType-$entityId" else entityType
+
+  val recordStartCountMetrics = true
+  val recordRestartCountMetrics = true
+  val recordStopCountMetrics = true
 }
 
+case object GetActorDetail extends ActorMessage
+case class ActorDetail(entityType: String,
+                       entityId: String,
+                       actorId: String) extends ActorMessage

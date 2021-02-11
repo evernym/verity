@@ -1,7 +1,7 @@
 package com.evernym.verity.transformations.transformers.v1
 
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.transformations.transformers.<=>
+import com.evernym.verity.transformations.transformers.{<=>, ObjectBuilder}
 import scalapb.GeneratedMessage
 
 /**
@@ -20,11 +20,10 @@ class ProtoBufTransformerV1(objectCodeMapper: ObjectCodeMapperBase)
 
   override val undo: Array[Byte] => Any = { msg =>
     val (typeCode, msgBytes) = CodeMsgExtractorV1.unpack(msg)
-    objectCodeMapper.objectFromCode(typeCode, msgBytes)
+    ObjectBuilder.create(typeCode, msgBytes, objectCodeMapper)
   }
 
 }
-
 
 /**
  * for 'DefaultProtoBufTransformer', to be able to persist any event/snapshot,

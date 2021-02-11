@@ -1,31 +1,21 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
-import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE}
-import com.evernym.verity.Exceptions.UnauthorisedErrorException
-import com.evernym.verity.actor.agent.msghandler.outgoing.OutgoingMsgParam
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, MsgRespConfig, MsgRespContext}
-import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgParam, ProtoParam, TrackingParam}
+import java.util.UUID
+
+import akka.actor.{ActorRef, Props}
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, AgentMsgProcessor, ProcessUntypedMsgV2, StateParam, UnhandledMsg}
+import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateMsgReqMsg_MFV_0_5, GeneralCreateMsgDetail_MFV_0_5, SendRemoteMsgHelper}
-import com.evernym.verity.agentmsg.msgfamily.routing.FwdMsgHelper
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AgentAuthKeyUtil
-import com.evernym.verity.protocol.actor.MsgEnvelope
-import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
+import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
-import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
+import com.evernym.verity.actor.agent.SponsorRel
+import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor =>
 
@@ -33,419 +23,118 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
     //edge agent -> agency routing service -> this actor
     case ppm: ProcessPackedMsg if isReadyToHandleIncomingMsg
-                                      => handlePackedMsg(ppm.packedMsg.msg, ppm.reqMsgContext)
+                                          => sendToAgentMsgProcessor(ppm)
 
     //edge agent -> agency routing service -> this actor
-    case prm: ProcessRestMsg          => handleRestMsg(prm)
+    case prm: ProcessRestMsg              => sendToAgentMsgProcessor(prm)
 
     //edge agent -> agency routing service -> self rel actor (user agent actor) -> this actor (pairwise agent actor)
-    case mfr: MsgForRelationship      => handleMsgForRel(mfr)
+    case mfr: MsgForRelationship          => sendToAgentMsgProcessor(mfr)
 
-    //pinst -> actor driver -> this actor
-    case mfd: SignalMsgFromDriver     => handleSignalMsgFromDriver(mfd)
-  }
+    //agent-msg-processor-actor -> this actor
+    case psm: ProcessSignalMsg         => handleSignalMsgFromDriver(psm)
 
-  /**
-   * handles incoming packed (indy or message packed)
-   * @param msg packed message
-   * @param reqMsgContext request message context
-   * @param msgThread this is only needed to handle legacy cred and proof messages (0.6 versioned)
-   */
-  def handlePackedMsg(msg: Array[Byte],
-                      reqMsgContext: ReqMsgContext,
-                      msgThread: Option[Thread]=None): Unit = {
-    // flow diagram: fwd + ctl + proto + legacy, step 7 -- Receive and decrypt.
-    try {
-      //msg progress tracking related
-      MsgProgressTracker.recordMsgReceivedByAgent(getClass.getSimpleName, trackingParam)(reqMsgContext)
-      logger.debug(s"[$persistenceId] incoming packed msg: " + msg)
-      val amw = msgExtractor.unpack(PackedMsg(msg), unpackParam = UnpackParam(ParseParam(useInsideMsgIfPresent = true)))
-      //msg progress tracking related
-      MsgProgressTracker.recordMsgUnpackedByAgent(getClass.getSimpleName,
-        inMsgParam = MsgParam(msgName = Option(amw.msgType.msgName)))(reqMsgContext)
-      logger.debug(s"incoming unpacked (mpf: ${amw.msgPackFormat}) msg: " + amw)
-      preMsgProcessing(amw.msgType, amw.senderVerKey)(reqMsgContext)
-      handleAgentMsgWrapper(amw, reqMsgContext, msgThread)
-    } catch protoExceptionHandler
-  }
-
-  /**
-   * handles incoming rest messages
-   * @param prm rest message param
-   */
-  def handleRestMsg(prm: ProcessRestMsg): Unit = {
-    try {
-      //msg progress tracking related
-      MsgProgressTracker.recordMsgReceivedByAgent(getClass.getSimpleName,
-        trackingParam,
-        inMsgParam = MsgParam(msgName = Option(prm.restMsgContext.msgType.msgName)))(prm.restMsgContext.reqMsgContext)
-      logger.debug(s"[$persistenceId] incoming rest msg: " + prm.msg)
-      veritySignature(prm.restMsgContext.auth)
-      preMsgProcessing(prm.restMsgContext.msgType, Option(prm.restMsgContext.auth.verKey))(prm.restMsgContext.reqMsgContext)
-      val imp = IncomingMsgParam(prm, prm.restMsgContext.msgType)
-      val amw = imp.msgToBeProcessed
-      implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, prm.restMsgContext.reqMsgContext)
-      if (incomingMsgHandler(reqMsgContext).isDefinedAt(amw)) {
-        incomingMsgHandler(reqMsgContext)(amw)
-      } else {
-        extractMsgAndSendToProtocol(imp, prm.restMsgContext.thread)(prm.restMsgContext.reqMsgContext)
+    //agent-msg-processor-actor -> this actor
+    case um: UnhandledMsg                 =>
+      runWithInternalSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler") {
+        try {
+          um.rmc.clientIpAddress.foreach(checkToStartIpAddressBasedTracking)
+          if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
+            recordInMsgEvent(um.rmc.id,
+              MsgEvent(
+                s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
+                um.amw.headAgentMsg.msgFamilyDetail.toString,
+                s"self: ${self.path}"
+              ))
+            incomingMsgHandler(um.rmc)(um.amw)
+          } else {
+            handleException(um.cause, sender())
+            recordInMsgEvent(um.rmc.id, MsgEvent.withTypeAndDetail(
+              um.amw.headAgentMsg.msgFamilyDetail.toString, s"FAILED: unhandled message (${um.cause.getMessage})"))
+          }
+        } catch protoExceptionHandler
       }
-    } catch protoExceptionHandler
   }
 
-  /**
-   * tracks/adds resource usages (before adding resource usage, it also checks if resource usages is blocked etc)
-   * and checks if message is sent by an authorized agent/key
-   * @param msgType message type
-   * @param senderVerKey message sender ver key
-   */
-  def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit rmc: ReqMsgContext): Unit = {
-    rmc.clientIpAddress.foreach { ipAddress =>
-      addUserResourceUsage(ipAddress, RESOURCE_TYPE_MESSAGE,
-        getResourceName(msgType.msgName), userDIDForResourceUsageTracking(senderVerKey))
-    }
-    senderVerKey.foreach { svk =>
-      if (!allowedUnauthedMsgTypes.contains(msgType)) {
-        checkIfMsgSentByAuthedMsgSenders(svk)
-      }
-    }
-  }
-
-  def handleSignalMsgFromDriver(smfd: SignalMsgFromDriver): Unit = {
+  def handleSignalMsgFromDriver(psm: ProcessSignalMsg): Unit = {
     // flow diagram: SIG, step 5
-    if (handleSignalMsgs.isDefinedAt(smfd)) {
-      handleSignalMsgs(smfd).foreach { dmOpt =>
+    val sndr = sender()
+    if (handleSignalMsgs.isDefinedAt(psm.smp)) {
+      handleSignalMsgs(psm.smp).foreach { dmOpt =>
         dmOpt.foreach { dm =>
           dm.forRel match {
             case Some(rel) =>
-              val tm = typedMsg(dm.msg)
-              val tc = smfd.threadContextDetail
-              val msgForRel = MsgForRelationship(tm, smfd.threadId, selfParticipantId,
+              val tc = psm.threadContextDetail
+              val msgForRel = MsgForRelationship(dm.msg, psm.threadId, selfParticipantId,
                 Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
               agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
             case None =>
-              agentActorContext.protocolRegistry.find(smfd.protoRef).foreach { pd =>
-                sendUntypedMsgToProtocol(dm.msg, pd.protoDef, smfd.threadId)
+              agentActorContext.protocolRegistry.find(psm.protoRef).foreach { pd =>
+                sendToAgentMsgProcessor(ProcessUntypedMsgV2(dm.msg, pd.protoDef, psm.threadId), sndr)
               }
           }
         }
       }
     } else {
-      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + smfd.signalMsg)
+      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + psm.smp.signalMsg)
     }
   }
 
-  def handleAgentMsgWrapper(amw: AgentMsgWrapper,
-                            rmc: ReqMsgContext = ReqMsgContext(),
-                            msgThread: Option[Thread]=None): Unit = {
-    //NOTE: this reqMsgContext is to pass some msg context information (like client's ip address, msg sender ver key etc)
-    //which was being used by existing agent message
-    implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, rmc)
-    internalDecryptedPayload(amw) match {
-      case Some(dp) if dp.decryptedMsg.isDefined  =>
-        //given internal payload (in agent msg wrapper) got decrypted by this agent
-        //and hence asked to process that payload instead
-        handlePackedMsg(dp.ep.payload, reqMsgContext, dp.ep.thread)
-      case Some(_) if handleOtherAgentMsgHandler.isDefinedAt(amw) =>
-        //given internal payload (in agent msg wrapper) didn't get decrypted by this agent
-        // mostly it should be destined for edge agent to be decrypted
-        // so check if it is a forward message and process it if it is
-        handleOtherAgentMsgHandler(reqMsgContext)(amw)
-      case _                                   =>
-        //the agent msg wrapper is the main message to be processed further
-        //either it is legacy native message processed by agent actor
-        // or it is protocol message to be processed by protocol actors
-        if (incomingMsgHandler(reqMsgContext).isDefinedAt(amw)) {
-          // flow diagram: legacy, step 8 -- Same as FWD till here. Now, handle MsgPacked format.
-          runWithInternalSpan(s"${amw.msgType}", "AgentIncomingMsgHandler") {
-            incomingMsgHandler(reqMsgContext)(amw)
-          }
-        } else {
-          // flow diagram: ctl + proto, step 8 -- Same as fwd till here. Now, begin protocol handling.
-          extractMsgAndSendToProtocol(IncomingMsgParam(amw, amw.headAgentMsgDetail.msgType), msgThread)
-        }
+  def stateDetailsFor: Future[PartialFunction[String, Parameter]]
+  def sponsorRel: Option[SponsorRel] = None
+
+  private def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[String] =
+    (state.relationship.map(_.relationshipType), senderVerKey) match {
+      case (Some(ANYWISE_RELATIONSHIP), _)            => senderVerKey
+      case (Some(SELF_RELATIONSHIP), _)               => Option(domainId)
+      case (Some(PAIRWISE_RELATIONSHIP), Some(svk))   =>
+        if (state.theirAuthVerKeys.contains(svk)) state.theirDid
+        else Option(domainId)
+      case _                                          => senderVerKey
     }
-  }
 
-  def handleOtherAgentMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Unit] = {
-    case amw: AgentMsgWrapper
-      if amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD) =>
-        val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
-        AgentMsgRouter.getDIDForRoute(fwdMsg.`@fwd`) match {
-          case Success(fwdToDID) =>
-            if (relationshipId.contains(fwdToDID) || domainId == fwdToDID) {
-              val msgId = MsgUtil.newMsgId
-              // flow diagram: fwd.edge, step 9 -- store outgoing msg.
-              storeOutgoingMsg(OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
-                msgId, MSG_TYPE_UNKNOWN, ParticipantUtil.DID(selfParticipantId), None)
-              sendStoredMsgToEdge(msgId)
-              sender ! Done
-            }
-          case Failure(e) => throw e
-        }
-  }
-
-  def extractMsgAndSendToProtocol(aimp: IncomingMsgParam, msgThread: Option[Thread]=None)
-                                 (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
-    import scala.language.existentials
-    // flow diagram: ctl + proto, step 9 -- add context to actor if sender expects sync response.
-
-    // THIS BELOW LINE IS STOPGAP WORKAROUND to support connect.me using vcx version 0.8.70229609
-    // THIS IS A STOPGAP AND SHOULD NOT BE EXPANDED
-    val imp = STOP_GAP_MsgTypeMapper.changedMsgParam(aimp)
-
-    val (msgToBeSent: TypedMsg, threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
-      (imp.msgType.familyName, imp.msgType.familyVersion, imp.msgType.msgName) match {
-
-        //this is special case where connecting protocols (0.5 & 0.6)
-        // still uses 'amw' as inputs and expects synchronous response
-        case (MSG_FAMILY_CONNECTING, MFV_0_5 | MFV_0_6, msgName)         =>
-          val msgRespConf = msgName match {
-            case MSG_TYPE_CONNECTING_GET_STATUS => if (imp.isSync(default = false)) Option(MsgRespConfig(isSyncReq = true)) else None
-            case _                              => if (imp.isSync(default = true)) Option(MsgRespConfig(isSyncReq = true)) else None
-          }
-          val (_, _, _, rd) = extract(imp, msgRespConf)
-            (TypedMsg(imp.msgToBeProcessed, imp.msgType), DEFAULT_THREAD_ID, None, rd)
-
-        case (MSG_FAMILY_AGENT_PROVISIONING, MFV_0_7, "create-edge-agent") =>
-            extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
-
-        case (MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, "get-token") =>
-          extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
-
-        //this is special case where agent provisioning protocols (0.5 & 0.6)
-        // uses native messages but expects synchronous response
-        case (MSG_FAMILY_AGENT_PROVISIONING, _, _) => extract(imp, Option(MsgRespConfig(isSyncReq = true)))
-
-        case (MSG_FAMILY_DEAD_DROP, MFV_0_1_0, MSG_TYPE_DEAD_DROP_RETRIEVE)
-                                                   => extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
-
-        case (MSG_FAMILY_WALLET_BACKUP, MFV_0_1_0, MSG_TYPE_WALLET_BACKUP_RESTORE)
-                                                   => extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
-
-
-        case (_, _, _)                             => extract(imp, if (imp.isSync(false)) Option(MsgRespConfig(isSyncReq = true)) else None, msgThread)
-
-        case _                                     => throw new UnsupportedMessageType(imp, List.empty)
-      }
-
-    val senderPartiId = senderParticipantId(imp.senderVerKey)
-
-    if (forRelationship.isDefined && forRelationship != relationshipId) {
-      forRelationship.foreach { relId =>
-        val msgForRel = MsgForRelationship(msgToBeSent, threadId, senderPartiId,
-          imp.msgPackFormat, imp.msgFormat, respDetail, Option(rmc))
-        logger.debug(s"msg for relationship sent by $persistenceId: " + msgForRel)
-        // flow diagram: ctl.pairwise + proto.pairwise, step 10 -- Handle msg for specific connection.
-        agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(relId, msgForRel), sender())
-      }
-    } else {
-      // flow diagram: ctl.self, step 10 -- Handle msg for self relationship.
-      sendTypedMsgToProtocol(msgToBeSent, relationshipId, threadId, senderPartiId,
-        respDetail, imp.msgPackFormat,
-        imp.msgFormat, imp.usesLegacyGenMsgWrapper, imp.usesLegacyBundledMsgWrapper
-      )
+  def sendToAgentMsgProcessor(cmd: Any): Unit = {
+    val sndr = sender()
+    stateDetailsFor.map { protoInitParams =>
+      val param = StateParam(
+        self,
+        state.domainId,
+        state.relationshipId,
+        state.thisAgentAuthKeyReq,
+        state.agentWalletIdReq,
+        state.protoInstances,
+        sponsorRel,
+        protoInitParams,
+        selfParticipantId,
+        senderParticipantId,
+        allowedUnauthedMsgTypes,
+        allAuthedKeys,
+        userIdForResourceUsageTracking,
+        pairwiseRelTrackingIds)
+      val msgProcessor =
+          context.actorOf(Props(new AgentMsgProcessor(
+            agentActorContext.appConfig,
+            agentActorContext.walletAPI,
+            agentActorContext.agentMsgRouter,
+            agentActorContext.protocolRegistry,
+            param
+          )), "amp-" + UUID.randomUUID().toString)
+      msgProcessor.tell(cmd, sndr)
     }
-  }
-
-  protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,
-                                       relationshipId: Option[RelationshipId],
-                                       threadId: ThreadId,
-                                       senderParticipantId: ParticipantId,
-                                       msgRespConfig: Option[MsgRespConfig],
-                                       msgPackFormat: Option[MsgPackFormat],
-                                       msgTypeDeclarationFormat: Option[TypeFormat],
-                                       usesLegacyGenMsgWrapper: Boolean=false,
-                                       usesLegacyBundledMsgWrapper: Boolean=false)
-                                       (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
-    // flow diagram: ctl + proto, step 14
-    val msgEnvelope = buildMsgEnvelope(tmsg, threadId, senderParticipantId)
-    val pair = pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipId, threadId)
-    logger.debug("incoming msg to be sent to protocol: " + tmsg)
-    logger.debug("incoming msg processing, msg type: " + tmsg.msgType)
-    logger.debug("incoming msg processing, threadId: " + threadId)
-    logger.debug("incoming msg processing, relationshipId: " + relationshipId)
-    logger.debug("incoming msg processing, senderParticipantId: " + senderParticipantId)
-    logger.debug("incoming msg processing, selfParticipantId: " + selfParticipantId)
-    logger.debug("incoming msg processing, msgRespConfig: " + msgRespConfig)
-    logger.debug("incoming msg processing, pair: " + pair)
-    logger.debug("incoming msg processing, msgPackVersionOpt: " + msgPackFormat)
-    logger.debug(s"[$persistenceId] incoming msg processing, summary : msg: ${tmsg.msgType}, threadId: $threadId")
-
-    sendGenericRespOrPrepareForAsyncResponse(msgEnvelope.msgId.get, senderParticipantId, msgRespConfig)
-
-    //tracing/tracking metrics related
-    msgEnvelope.msgId.foreach { rmId =>
-      storeAsyncReqContext(rmId, tmsg.msgType.msgName, rmc.id, rmc.clientIpAddress)
-      MsgProgressTracker.recordInMsgProcessingStarted(
-        trackingParam = trackingParam.copy(threadId = Option(threadId)),
-        inMsgParam = MsgParam(msgId = Option(rmId), msgName = Option(tmsg.msgType.msgName)),
-        protoParam = ProtoParam(pair.id, pair.protoDef.msgFamily.name, pair.protoDef.msgFamily.version))
-    }
-    val tc = state.threadContextDetail(pair.id).getOrElse(
-      ThreadContextDetail(threadId,
-        msgPackFormat.getOrElse(MPF_INDY_PACK),
-        msgTypeDeclarationFormat.getOrElse(STANDARD_TYPE_FORMAT),
-        usesLegacyGenMsgWrapper, usesLegacyBundledMsgWrapper))
-    tellProtocol(pair, tc, msgEnvelope, self)
   }
 
   /**
-   * if synchronous response is expected or a special ver key needs to be used to pack outgoing/signal message
-   * then, it stores msg response context to be used later.
+   * for those messages which is sent by controller/driver as a response to a signal message
+   * specially if original message has yet to be responded synchronously
+   * since we don't know which is the case, for now, sending these messages to original
+   * agent message processor (so there is an possibility to fix this in future)
    *
-   * if no synchronous response is expected, it sends a 'generic response' Done
-   * which is handled at http layer which turns it into a HTTP 200 (ideally it should have been 201)
-   *
-   * @param msgId
-   * @param senderPartiId
-   * @param msgRespConfigOpt
+   * @param cmd
+   * @param agentMsgProcessor
    */
-  def sendGenericRespOrPrepareForAsyncResponse(msgId: MsgId, senderPartiId: ParticipantId, msgRespConfigOpt: Option[MsgRespConfig]): Unit = {
-    // flow diagram: proto, step 11 -- send 200 OK
-    msgRespConfigOpt match {
-      case Some(mrc) =>
-        val respWaitingActorRef = if (mrc.isSyncReq) Some(sender()) else None
-        msgRespContext = msgRespContext + (msgId -> MsgRespContext(senderPartiId, mrc.packForVerKey, respWaitingActorRef))
-      case None =>
-        sender ! Done
-    }
+  def sendToAgentMsgProcessor(cmd: Any, agentMsgProcessor: ActorRef): Unit = {
+    agentMsgProcessor.tell(cmd, sender())
   }
-
-  protected def checkIfMsgSentByAuthedMsgSenders(msgSenderVerKey: VerKey): Unit = {
-    val authedVerKeys = allAuthedKeys
-    if (authedVerKeys.nonEmpty && ! authedVerKeys.contains(msgSenderVerKey)) {
-      throw new UnauthorisedErrorException
-    }
-  }
-
-  protected def veritySignature(senderAuth: RestAuthContext): Unit = {
-    Base58Util.decode(senderAuth.signature) match {
-      case Success(signature) =>
-        val toVerify = VerifySigByVerKey(senderAuth.verKey, senderAuth.verKey.getBytes, signature)
-        if (!agentWalletAPI.walletAPI.verifySigWithVerKey(toVerify).verified)
-          throw new UnauthorisedErrorException
-      case Failure(_) => throw new UnauthorisedErrorException
-    }
-  }
-
-  //dhh What does an "untyped message" mean?
-  //this overloaded method would be only used to send untyped msgs to protocol
-  protected def sendUntypedMsgToProtocol[A <: MsgBase](msg: A,
-                                                       protoDef: ProtoDef,
-                                                       threadId: ThreadId = DEFAULT_THREAD_ID,
-                                                       msgRespConfig: MsgRespConfig = MsgRespConfig(isSyncReq = false),
-                                                       msgPackFormat: Option[MsgPackFormat]=None,
-                                                       msgTypeDeclarationFormat: Option[TypeFormat]=None,
-                                                       usesLegacyGenMsgWrapper: Boolean=false,
-                                                       usesLegacyBundledMsgWrapper: Boolean=false): Unit = {
-    val typedMsg = protoDef.msgFamily.typedMsg(msg)
-    sendTypedMsgToProtocol(
-      typedMsg,
-      relationshipId,
-      threadId,
-      selfParticipantId,
-      Option(msgRespConfig),
-      msgPackFormat,
-      msgTypeDeclarationFormat,
-      usesLegacyGenMsgWrapper,
-      usesLegacyBundledMsgWrapper
-    )
-  }
-
-  def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = {
-    val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
-    val tmsg = TypedMsg(m.msg, imp.msgType)
-    val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
-    (tmsg, thId, m.meta.forRelationship, msgRespDetail)
-  }
-
-  private def getResourceName(msgName: String): String = {
-    msgName match {
-      case CREATE_MSG_TYPE_CONN_REQ | CREATE_MSG_TYPE_CONN_REQ_ANSWER => s"${MSG_TYPE_CREATE_MSG}_$msgName"
-      case x => x
-    }
-  }
-
-  private def buildReqMsgContext(amw: AgentMsgWrapper, rmc: ReqMsgContext): ReqMsgContext = {
-    rmc.append(buildReqContextData(amw))
-    rmc
-  }
-
-  def buildMsgEnvelope(typedMsg: TypedMsgLike, threadId: ThreadId, senderParticipantId: ParticipantId): MsgEnvelope = {
-    MsgEnvelope(typedMsg.msg, typedMsg.msgType, selfParticipantId,
-      senderParticipantId, Option(getNewMsgId), Option(threadId))
-  }
-
-  /**
-   * extracts message payload sent inside the given message
-   * @param amw agent message wrapper
-   * @return
-   */
-  def extractMsgPayload(amw: AgentMsgWrapper): Option[ExtractedPayload] = {
-    if (amw.isMatched(MFV_0_5, CREATE_MSG_TYPE_GENERAL)) {
-      val msg = amw.tailAgentMsgs.head
-      val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
-      val msgDetail = msg.convertTo[GeneralCreateMsgDetail_MFV_0_5]
-      Option(ExtractedPayload(msgDetail.`@msg`, createMsgReq.thread, None))
-    } else if (amw.isMatched(MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG)) {
-      val srm = SendRemoteMsgHelper.buildReqMsg(amw)
-      Option(ExtractedPayload(srm.`@msg`, srm.threadOpt, None))
-    } else if (amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD)) {
-      val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
-      Option(ExtractedPayload(fwdMsg.`@msg`, None, None))
-    } else None
-  }
-
-  def internalDecryptedPayload(amw: AgentMsgWrapper): Option[DecryptedPayload] =
-    extractMsgPayload(amw).map { ep =>
-      val amw = try {
-        Option(msgExtractor.unpack(PackedMsg(ep.payload)))
-      } catch {
-        case _: Exception =>
-          None
-      }
-      DecryptedPayload(amw, ep)
-    }
-
-  /**
-   * handles message for relationship handled by this actor (pairwise actor)
-   * which is sent from user/agency agent actor.
-   * @param mfr message for relationship
-   */
-  def handleMsgForRel(mfr: MsgForRelationship): Unit = {
-    // flow diagram: ctl + proto, step 13
-    logger.debug(s"msg for relationship received in $persistenceId: " + mfr)
-    mfr.reqMsgContext.foreach { rmc: ReqMsgContext =>
-      MsgProgressTracker.recordMsgReceivedByAgent(getClass.getSimpleName,
-        trackingParam = trackingParam,
-        inMsgParam = MsgParam(msgName = Option(mfr.msgToBeSent.msgType.msgName)))(rmc)
-    }
-    sendTypedMsgToProtocol(mfr.msgToBeSent, relationshipId, mfr.threadId, mfr.senderParticipantId,
-      mfr.msgRespConfig, mfr.msgPackFormat, mfr.msgTypeDeclarationFormat)(mfr.reqMsgContext.getOrElse(ReqMsgContext()))
-  }
-
-  /**
-   * builds request message context data for the incoming message
-   * @param amw agent message wrapper
-   * @return
-   */
-  def buildReqContextData(amw: AgentMsgWrapper): Map[String, Any] = {
-    import ReqMsgContext._
-
-    val map1 = amw.senderVerKey.map { sk =>
-      Map(LATEST_DECRYPTED_MSG_SENDER_VER_KEY -> sk)
-    }.getOrElse(Map.empty)
-
-    val map2 = Map(
-      MSG_PACK_VERSION -> amw.msgPackFormat,
-      MSG_TYPE_DETAIL -> amw.headAgentMsg.msgFamilyDetail)
-
-    map1 ++ map2
-  }
-
-  lazy val trackingParam = TrackingParam(domainTrackingId, relTrackingId)
 
   /**
    * all/some agent actors (agency agent, agency agent pairwise, user agent and user agent pairwise)
@@ -463,7 +152,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * to the protocol instance which sent the signal
    * @return
    */
-  def handleSignalMsgs: PartialFunction[SignalMsgFromDriver, Future[Option[ControlMsg]]] = PartialFunction.empty
+  def handleSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = PartialFunction.empty
 
 
   //TODO: there is opportunity to tight below authorization related code
@@ -497,6 +186,3 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    */
   def allAuthedKeys: Set[VerKey] = configuredAuthedKeys ++ authedMsgSenderVerKeys
 }
-
-case class ExtractedPayload(payload: Array[Byte], thread: Option[Thread], decryptedMsg: Option[AgentMsgWrapper])
-case class DecryptedPayload(decryptedMsg: Option[AgentMsgWrapper], ep: ExtractedPayload)

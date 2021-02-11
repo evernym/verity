@@ -1,7 +1,7 @@
 package com.evernym.verity.push_notification
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import com.evernym.verity.constants.Constants._
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidComMethodException, PushNotifSendingFailedException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
@@ -13,12 +13,12 @@ import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.util.StrUtil.camelToCapitalize
 import com.evernym.verity.util.Util.getOptionalField
-import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.Exceptions
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -33,12 +33,12 @@ class Pusher(config: AppConfig) extends Actor with ActorLogging {
       spn.comMethods.foreach { cm =>
         try {
           val (pusher, regId) = PusherUtil.extractServiceProviderAndRegId(cm, config, spn.sponsorId)
-          logger.debug(s"[sponsorId: ${spn.sponsorId}] about to send push notification", (LOG_KEY_REG_ID, regId))
+          logger.info(s"[sponsorId: ${spn.sponsorId}] about to send push notification", (LOG_KEY_REG_ID, regId))
           val notifParam = PushNotifParam(cm.value, regId, spn.sendAsAlertPushNotif, spn.notifData, spn.extraData)
           val pushFutureResp = pusher.push(notifParam)(context.system)
           val sndr = sender()
           pushFutureResp.map { r =>
-            logger.debug(s"[sponsorId: ${spn.sponsorId}] push notification send response: " + r,
+            logger.info(s"[sponsorId: ${spn.sponsorId}] push notification send response: " + r,
               (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
               (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
             if (r.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
@@ -184,6 +184,13 @@ object PusherUtil  {
     val msgTypeToBeUsed = msgType match {
       case CREATE_MSG_TYPE_PROOF_REQ => "proofRequest"
       case CREATE_MSG_TYPE_TOKEN_XFER_REQ => "tokenTransferRequest"
+      case MSG_TYPE_UNKNOWN => "message"
+      case "issue-credential/1.0/offer-credential" => "credentialOffer"
+      case "issue-credential/1.0/issue-credential" => "credential"
+      case "present-proof/1.0/request-presentation" => "proofRequest"
+      case "committedanswer/1.0/question" => "question"
+      case "questionanswer/1.0/question" => "question"
+      case x if x.contains("/") => "message"
       case x => x
     }
     val capitalizeMsg =

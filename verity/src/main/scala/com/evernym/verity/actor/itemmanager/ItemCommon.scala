@@ -10,7 +10,6 @@ import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.util.Util._
 
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
@@ -83,7 +82,7 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
   }
 
   def unhandledMsg(receivedMsg: Any, responseToBeSent: Any): Unit = {
-    logMsg(s"received '$receivedMsg' for non-configured/stale $entityName, won't be handled", DebugLevel)
+    logMsg(s"received '$receivedMsg' for non-configured/stale $entityType, won't be handled", DebugLevel)
     //this is to make sure it doesn't create loop if the incoming message was sent by self (due to scheduled job etc)
     if (sender != self) {
       sender ! responseToBeSent

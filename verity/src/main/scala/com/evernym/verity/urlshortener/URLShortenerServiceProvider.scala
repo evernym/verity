@@ -9,8 +9,9 @@ import com.evernym.verity.config.CommonConfig.URL_SHORTENER_SVC_SELECTED
 import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.util.Util.{getJsonStringFromMap, logger}
 
-case class UrlShortened(shortUrl: String) extends ActorMessage
-case class UrlShorteningFailed(errorCode: String, errorMsg: String) extends ActorMessage
+trait UrlShorteningResponse extends ActorMessage
+case class UrlShortened(shortUrl: String) extends UrlShorteningResponse
+case class UrlShorteningFailed(errorCode: String, errorMsg: String) extends UrlShorteningResponse
 
 case class UrlInfo(url: String) extends ActorMessage {
   def json: String = getJsonStringFromMap(Map(TYPE -> SHORTEN_URL, URL -> url))

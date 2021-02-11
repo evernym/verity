@@ -142,10 +142,6 @@ trait CommonConfig {
   val SALT_WALLET_ENCRYPTION = s"$SALT.wallet-encryption"
   val SALT_EVENT_ENCRYPTION = s"$SALT.event-encryption"
 
-  val PASSIVATE_TIME_IN_SECONDS = "passivate-time-in-seconds"
-  val SHARDED_ACTOR_PASSIVATE_TIME = s"$VERITY.sharded-actor-passivate-time"
-  val WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS = s"$SHARDED_ACTOR_PASSIVATE_TIME.WalletActor.$PASSIVATE_TIME_IN_SECONDS"
-
   private val SECRET = s"$VERITY.secret"
   val SECRET_ROUTING_AGENT = s"$SECRET.routing-agent"
   val SECRET_URL_STORE = s"$SECRET.url-mapper-actor"
@@ -286,9 +282,10 @@ trait CommonConfig {
 
   val AGENT_STATE_MESSAGES_CLEANUP = s"$VERITY_AGENT.state.messages.cleanup"
   val AGENT_STATE_MESSAGES_CLEANUP_ENABLED = s"$AGENT_STATE_MESSAGES_CLEANUP.enabled"
+  val AGENT_STATE_MESSAGES_CLEANUP_DAYS_TO_RETAIN_DELIVERED_MSGS = s"$AGENT_STATE_MESSAGES_CLEANUP.days-to-retain-delivered-msgs"
+  val AGENT_STATE_MESSAGES_CLEANUP_TOTAL_MSGS_TO_RETAIN = s"$AGENT_STATE_MESSAGES_CLEANUP.total-msgs-to-retain"
 
-  val USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB = s"$VERITY_AGENT.periodic-cleanup-scheduled-job"
-  val USER_AGENT_PERIODIC_CLEANUP_SCHEDULED_JOB_INTERVAL_IN_SECONDS = s"$USER_AGENT_PERIODIC_CLEANUP_SCHEDULE_JOB.interval-in-seconds"
+  val USER_AGENT_LEGACY_PUBLIC_IDENTITY_BEHAVIOUR = s"$VERITY_AGENT.legacy-public-identity-behaviour"
 
   val PROVISIONING = s"$VERITY.provisioning"
 
@@ -303,8 +300,22 @@ trait CommonConfig {
   val SNAPSHOT_AFTER_N_EVENTS = "snapshot.after-n-events"
   val KEEP_N_SNAPSHOTS = "snapshot.keep-n-snapshots"
   val DELETE_EVENTS_ON_SNAPSHOTS = "snapshot.delete-events-on-snapshots"
+  val PASSIVATE_TIME_IN_SECONDS = "passivate-time-in-seconds"
 
-  val PERSISTENT_ACTOR = s"$VERITY.persistent-actor"
+  val SUPERVISED_STRATEGY = "supervisor-strategy"
+  val SUPERVISED_STRATEGY_ENABLED = s"$SUPERVISED_STRATEGY.enabled"
+  val BACKOFF_SUPERVISED_STRATEGY = s"$SUPERVISED_STRATEGY.backoff"
+  val BACKOFF_SUPERVISED_STRATEGY_MIN_SECONDS = s"$BACKOFF_SUPERVISED_STRATEGY.min-seconds"
+  val BACKOFF_SUPERVISED_STRATEGY_MAX_SECONDS = s"$BACKOFF_SUPERVISED_STRATEGY.max-seconds"
+  val BACKOFF_SUPERVISED_STRATEGY_RANDOM_FACTOR = s"$BACKOFF_SUPERVISED_STRATEGY.random-factor"
+  val BACKOFF_SUPERVISED_STRATEGY_MAX_NR_OF_RETRIES = s"$BACKOFF_SUPERVISED_STRATEGY.max-nr-of-retries"
+
+  private val NON_PERSISTENT_ACTOR = s"$VERITY.non-persistent-actor"
+  val NON_PERSISTENT_ACTOR_BASE = s"$NON_PERSISTENT_ACTOR.base"
+  val NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS = s"$NON_PERSISTENT_ACTOR_BASE.WalletActor.$PASSIVATE_TIME_IN_SECONDS"
+
+
+  private val PERSISTENT_ACTOR = s"$VERITY.persistent-actor"
   val PERSISTENT_ACTOR_BASE = s"$PERSISTENT_ACTOR.base"
   val PERSISTENT_SINGLETON_CHILDREN = s"$PERSISTENT_ACTOR.singleton-children"
   val PERSISTENT_PROTOCOL_CONTAINER = s"$PERSISTENT_ACTOR.protocol-container"
@@ -356,6 +367,10 @@ trait CommonConfig {
 
   val LOGGING = s"$VERITY.logging"
   val LOGGING_IGNORE_FILTER_NAMES = s"$LOGGING.ignore-logger-filter.logger-name-contains"
+
+  val MSG_SENDING_SVC = s"$SERVICES.msg-sending-svc"
+  val AKKA_HTTP_MSG_SENDING_SVC = s"$MSG_SENDING_SVC.akka-http-svc"
+  val AKKA_HTTP_MSG_SENDING_SVC_API_TYPE = s"$AKKA_HTTP_MSG_SENDING_SVC.api-type"
 }
 
 object CommonConfig extends CommonConfig

@@ -5,7 +5,7 @@ import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD, MSG_STATUS_A
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.user.MsgHelper
-import com.evernym.verity.actor.wallet.{GetVerKeyOpt, PackedMsg, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{GetVerKeyOpt, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -13,7 +13,6 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgPara
 import com.evernym.verity.protocol.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam}
 
 
 /**
@@ -65,7 +64,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
 
     def prepareInviteAnswerConnReqCreatedEventOpt: Option[MsgCreated] = {
       Option(connReqAnswerMsg.replyToMsgId).flatMap { replyToMsgId =>
-        if (ctx.getState.msgState.getMsgOpt(replyToMsgId).isEmpty) {
+        if (ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId).isEmpty) {
           Option (buildMsgCreatedEvt (CREATE_MSG_TYPE_CONN_REQ,
             connReqAnswerMsg.senderDetail.DID, connReqAnswerMsg.replyToMsgId,
             sendMsg=false, connReqAnswerMsg.threadOpt))
@@ -128,17 +127,17 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, connReqAnswerMsg.answerStatusCode, theirDidDocDetailOpt))
 
     theirDidDocDetailOpt.foreach { _ =>
-      walletAPI.storeTheirKey(
+      walletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(connReqAnswerMsg.senderAgencyDetail.DID,
           connReqAnswerMsg.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
 
-      walletAPI.storeTheirKey(
+      walletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(connReqAnswerMsg.senderDetail.DID,
           connReqAnswerMsg.senderDetail.verKey, ignoreIfAlreadyExists = true))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
-      walletAPI.storeTheirKey(
+      walletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }
@@ -185,8 +184,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
-    walletAPI.getVerKeyOption(
-        GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(senderDID, getKeyFromPool = false))))) foreach { _ =>
+    walletAPI.executeSync[Option[VerKey]](GetVerKeyOpt(senderDID)) foreach { _ =>
       throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))
     }

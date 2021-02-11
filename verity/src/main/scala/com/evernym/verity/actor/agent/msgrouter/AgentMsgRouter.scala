@@ -22,7 +22,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.LogUtil.logDuration
 import com.evernym.verity.util.Util._
@@ -39,8 +38,7 @@ import scala.util.{Failure, Success, Try}
  */
 class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   extends ShardRegionNameFromActorSystem
-   with HasLegacyRegionNames
-   with MsgTraceProvider {
+   with HasLegacyRegionNames {
 
   //TODO: need to remove this actorSystem if we can just use the system parameter supplied in constructor
   override def actorSystem: ActorSystem = system
@@ -54,9 +52,6 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
     ROUTING_DETAIL_CACHE_FETCHER_ID -> new RoutingDetailCacheFetcher(system, appConfig)
   )
   lazy val routingCache: Cache = new Cache("RC", fetchers)
-
-  lazy val singletonParentProxyActor: ActorRef =
-    getActorRefFromSelection(SINGLETON_PARENT_PROXY, system)
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)
@@ -117,7 +112,6 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
 
   private def routePackedMsg(pmrp: PackedMsgRouteParam)(implicit senderOpt: Option[ActorRef]): Future[Any] = {
     // flow diagram: fwd + ctl + proto + legacy, step 6 -- Find route to relevant actor, send inner msg.
-    MsgProgressTracker.recordGetRouteStarted("packed-msg", pmrp.reqMsgContext)
     // As far as I can tell, what the next line does is look up the actor for a given toRoute
     // value. That value could be a verkey or an unqualified DID. I'm not sure why the concept
     // of sharding region enters into it; shouldn't this just be an actor ID that has the region
@@ -125,7 +119,6 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
     // like a mapping between actor type and regions, which doesn't seem to care about shards in
     // a cluster. ?
     getRouteRegionActor(pmrp.toRoute) flatMap { ri =>
-      MsgProgressTracker.recordGetRouteFinished("packed-msg", pmrp.reqMsgContext)
       logDuration(logger, "sending msg to target actor") {
         logger.debug("sending msg to target actor")
         senderOpt.map { implicit sndr =>
@@ -153,9 +146,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
 
   private def routeRestMsg(rmrp: RestMsgRouteParam)(implicit senderOpt: Option[ActorRef]): Future[Any] = {
     // flow diagram: rest, step 7
-    MsgProgressTracker.recordGetRouteStarted("rest-msg", rmrp.restMsgContext.reqMsgContext)
     getRouteRegionActor(rmrp.toRoute) flatMap { ri =>
-      MsgProgressTracker.recordGetRouteFinished("rest-msg", rmrp.restMsgContext.reqMsgContext)
       logDuration(logger, "sending rest msg to target actor") {
         logger.debug("sending rest msg to target actor")
         senderOpt.map { implicit sndr =>

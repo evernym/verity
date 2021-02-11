@@ -8,6 +8,7 @@ import com.evernym.integrationtests.e2e.flow._
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerMsgFamily
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
@@ -20,6 +21,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
+import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 
 import java.util.UUID
@@ -33,8 +35,9 @@ class SdkFlowSpec
   with SetupFlow
   with AdminFlow
   with MetricsFlow
-  with MessageTrackingFlow
   with Eventually {
+
+  override val logger: Logger = getLoggerByClass(getClass)
 
   override def environmentName: String = sys.env.getOrElse("ENVIRONMENT_NAME", StrUtil.classToKebab[SdkFlowSpec])
 
@@ -88,10 +91,6 @@ class SdkFlowSpec
 
       "test metrics" - {
         testMetricsForVerityInstances(apps)
-      }
-
-      "test message tracking" - {
-        testMessageTrackingForVerityInstances(apps)
       }
 
       "sdk cleanup" - {
@@ -253,11 +252,6 @@ class SdkFlowSpec
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
     apps.forEachApplication(testMetrics)
-  }
-
-  def testMessageTrackingForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
-    apps.forEachApplication(testMessageTracking)
-    testMessageTrackingMetrics(apps.applications.head._2)
   }
 
 }

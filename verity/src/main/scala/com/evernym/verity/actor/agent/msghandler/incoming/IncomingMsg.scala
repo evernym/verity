@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -67,23 +67,25 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
  * @param msgPackFormat
  * @param msgTypeDeclarationFormat
  */
-case class MsgForRelationship(msgToBeSent: TypedMsgLike,
-                                 threadId: ThreadId,
-                                 senderParticipantId: ParticipantId,
-                                 msgPackFormat: Option[MsgPackFormat],
-                                 msgTypeDeclarationFormat: Option[TypeFormat],
-                                 msgRespConfig: Option[MsgRespConfig],
-                                 reqMsgContext: Option[ReqMsgContext]=None
-                                ) extends ActorMessage
+case class MsgForRelationship(msgToBeSent: Any,
+                              threadId: ThreadId,
+                              senderParticipantId: ParticipantId,
+                              msgPackFormat: Option[MsgPackFormat],
+                              msgTypeDeclarationFormat: Option[TypeFormat],
+                              msgRespConfig: Option[MsgRespConfig],
+                              reqMsgContext: Option[ReqMsgContext]=None
+                             ) extends ActorMessage
 
 
-case class ProcessPackedMsg(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext) extends MsgBase with ActorMessage {
+case class ProcessPackedMsg(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext, msgThread: Option[Thread]=None)
+  extends MsgBase with ActorMessage {
   override def validate(): Unit = {
     checkRequired("packedMsg", packedMsg)
   }
 }
 
-case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext) extends MsgBase with ActorMessage {
+case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext)
+  extends MsgBase with ActorMessage {
   override def validate(): Unit = {
     checkRequired("msg", msg)
   }
@@ -97,6 +99,14 @@ case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext) extends M
  */
 case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
 
+case class ProcessSignalMsg(smp: SignalMsgParam,
+                            protoRef: ProtoRef,
+                            pinstId: PinstId,
+                            threadContextDetail: ThreadContextDetail,
+                            requestMsgId: Option[MsgId]=None
+                           ) extends ActorMessage {
+  def threadId = threadContextDetail.threadId
+}
 /**
  * a wrapper message containing the 'signalMsg' which is sent from the protocol and intercepted by the driver
  * and then driver sending it to corresponding agent actor.
@@ -105,16 +115,8 @@ case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
  * pinst -> signal -> actor driver -> agent actor -> signal msg handler
  *
  * @param signalMsg
- * @param protoRef
- * @param pinstId
- * @param threadContextDetail
  */
-case class SignalMsgFromDriver(signalMsg: Any,
-                               protoRef: ProtoRef,
-                               pinstId: PinstId,
-                               threadContextDetail: ThreadContextDetail) extends ActorMessage {
-  def threadId: ThreadId = threadContextDetail.threadId
-}
+case class SignalMsgParam(signalMsg: Any, threadId: Option[ThreadId]=None)
 
 
 /*

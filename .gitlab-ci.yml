@@ -1,9 +1,12 @@
-image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:ed5436e6
+image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:ddc736c4
 
 variables:
   MASTER_PROJECT_ID: "327"
   indyNodeVersion: "1.12.3"
   sovtokenVersion: "1.0.8"
+  TRIGGERAPI_URL_VERITY_RELEASE: "https://gitlab.corp.evernym.com/api/v4/projects/688/trigger/pipeline"
+  TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
+
 
 .on-master: # job always runs for 'master', otherwise it manual
   rules:
@@ -23,6 +26,7 @@ stages:
   - test
   - package
   - publish
+  - deploy
 
 license-data-check:
   stage: check
@@ -132,8 +136,8 @@ legacy:
       - tags
       - merge_requests
   variables:
-    TEST_SCENARIOS: "scenario1, scenario3"
     TEST_TYPE: "Legacy"
+    TEST_SCENARIOS: "scenario1, scenario2"
 
 legacy-with-restart:
   extends: .integration
@@ -143,8 +147,9 @@ legacy-with-restart:
       - tags
       - merge_requests
   variables:
-    TEST_SCENARIOS: "scenario2"
     TEST_TYPE: "Legacy"
+    TEST_SCENARIOS: "scenario1"
+    TEST_RESTART_VERITY_RANDOMLY: "true"
 
 integration:
   extends: .integration
@@ -261,3 +266,48 @@ publish-tests-manual:
       - tags
       - merge_requests
   when: manual
+
+.deploy-common:
+  stage: deploy
+  script:
+    - ls verity/target/verity-application*.deb
+    - export debianPackage=`ls verity/target/verity-application*.deb`
+    - >
+      if [ ! -z "${debianPackage}" ]; then
+        export VERITY_VERSION=`echo "$debianPackage" | cut -d'_' -f2`
+      else
+        /bin/false
+      fi
+    - curl
+      --insecure
+      --request POST
+      --form token=$CI_JOB_TOKEN
+      --form ref=$TRIGGERAPI_REF_VERITY_RELEASE
+      --form "variables[PACKAGE_VERSION]=$VERITY_VERSION"
+      --form "variables[TARGET_ENV]=$TARGET_ENVIRONMENT"
+      --form "variables[CI_PROJECT_ID_SOURCE]=$CI_PROJECT_ID"
+      --form "variables[UPSTREAM_BRANCH]=$CI_COMMIT_REF_NAME"
+      $TRIGGERAPI_URL_VERITY_RELEASE
+  tags:
+    - docker-machine
+  variables:
+    TARGET_ENVIRONMENT: 'dev-rc'
+
+deploy-manually-team1:
+  extends: .deploy-common
+  variables:
+    TARGET_ENVIRONMENT: 'team1'
+  when: manual
+
+.deploy-manually-team2:
+  extends: .deploy-common
+  variables:
+    TARGET_ENVIRONMENT: 'team2'
+  when: manual
+
+deploy-master:
+  extends:
+    - .deploy-common
+  only:
+    refs:
+      - master@dev/verity/verity

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.tictactoe;
+
+message InitParam {
+    string name = 1;
+    string value = 2;
+}
+
+message Initialized {
+    repeated InitParam params = 1;
+}
+
+message Offered {
+    int32 byIdx = 1;
+}
+
+message Accepted {
+}
+
+message Declined {
+}
+
+message Forfeited {
+}
+
+message Moved {
+    string value = 1;
+    string atPosition = 2;
+    int32  byPlayerIdx = 3;
+}
+
+message GameFinished {
+    string status = 1;
+    int32  winnerIdx = 2;
+}
+
+message Role {
+    option (scalapb.message).extends = "Role";
+    oneof sealed_value {
+        PlayerA left = 1;
+        PlayerB right = 2;
+    }
+}
+
+message PlayerA {
+}
+
+message PlayerB {
+}

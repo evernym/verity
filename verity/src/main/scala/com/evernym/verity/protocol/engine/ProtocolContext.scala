@@ -11,6 +11,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.Init
+import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
 import com.evernym.verity.protocol.engine.external_api_access.AccessRight
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
@@ -37,7 +38,9 @@ import scala.util.Try
 trait ProtocolContext[P,R,M,E,S,I]
   extends ProtocolContextApi[P,R,M,E,S,I]
     with SegmentedStateContext[P,R,M,E,S,I]
-    with JournalLogging with JournalProtocolSupport{
+    with JournalLogging
+    with JournalProtocolSupport
+    with AsyncProtocolProgress {
 
   def pinstId: PinstId
 
@@ -174,12 +177,9 @@ trait ProtocolContext[P,R,M,E,S,I]
   def setupInflightMsg[A](msgId: Option[MsgId], threadId: Option[ThreadId],
                           sender: SenderLike[R], segment: Option[Any] = None)(f: => A): A = {
     inFlight = inFlight.map(_.copy(msgId = msgId, threadId = threadId)).orElse(
-      Some(InFlight(msgId, threadId, sender, segment)))
-    try {
-      f
-    } finally {
-      inFlight = None
-    }
+    Some(InFlight(msgId, threadId, sender, segment)))
+
+    f
   }
 
   //TODO can we make this private?
@@ -260,6 +260,7 @@ trait ProtocolContext[P,R,M,E,S,I]
               } catch {
                 case me: MatchError =>
                   recordWarn(s"no protocol message handler for: ${me.getMessage}")
+                  abortTransaction()
                   throw new NoProtocolMsgHandler(
                     state.getClass.getSimpleName,
                     sender.role.map(_.toString).getOrElse("UNKNOWN"),
@@ -389,15 +390,28 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  /**
+  * Refer to def finalizeState() documentation for async finalizeState
+  */
   def withShadowAndRecord[A](f: => A): A = {
     try {
       constructShadow()
       val result = f
-      storeSegments()
-      recordEvents getOrElse finalizeState
+      handleAllAsyncServices()
       result
     } catch {
       case e: Exception => abortTransaction(); throw e
+    }
+  }
+
+  /**
+   * Internal Protocol Services need to complete before storing and event persistence - (url shortener, wallet, and ledger services)
+   * A flag is set in 'AsyncProtocolService' when a specific internal protocol service is in-progress.
+   */
+  def handleAllAsyncServices(): Unit = {
+    if (asyncProtocolServicesComplete()) {
+      storeSegments()
+      recordEvents getOrElse finalizeState
     }
   }
 
@@ -406,6 +420,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     pendingEvents = Vector()
     pendingSegments = None
     clearShadowState()
+    clearInternalAsyncServices()
     record("protocol context cleaned up")
   }
 
@@ -447,24 +462,37 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   /**
-    * There are two places that can call finalizeState
-    * 1) when event persistence is complete
+    * There are three places that can call finalizeState
+    * 1) Internal Protocol async services
     * 2) when storage/segment persistence is complete
-    * readyToFinalize ensures that both processes are complete
+    * 3) when event persistence is complete
+    * readyToFinalize ensures that processes are complete
     */
   def finalizeState(): Unit = {
     if (readyToFinalize) {
       state = shadowState.getOrElse(state)
       backstate = shadowBackState.getOrElse(backstate)
+      inFlight = None
       clearShadowState()
+      clearInternalAsyncServices()
 
       processOutputBoxes()
       processNextInboxMsg()
     }
   }
 
-  def readyToFinalize: Boolean = pendingEvents.isEmpty && pendingSegments.isEmpty
+  /**
+   * Finalization cannot happen until all protocol services are complete.
+   * This includes:
+   *  1. Protocol 'Internal Services' - url shortener, wallet, and ledger services
+   *  2. 'Segmented State' storage
+   *  3. 'Event Persistence'
+   */
+  def readyToFinalize: Boolean = pendingEvents.isEmpty && asyncProtocolServicesComplete() && pendingSegments.isEmpty
 
+  /**
+   * This is called when the base 'onPersistFailure' or 'onPersistRejected' from akka persistence is invoked
+   */
   def eventPersistenceFailure(cause: Throwable, event: Any): Unit = {
     logger.error(s"Protocol failed to persist event: ${event.getClass.getSimpleName} because: $cause")
     abortTransaction()
@@ -473,6 +501,11 @@ trait ProtocolContext[P,R,M,E,S,I]
     processOutputBoxes()
   }
 
+  /**
+   * Akka Persistence takes a callback when persisting an event. When the event is successful, the callback is called.
+   * This function is called within that callback.
+   * When the persistence fails, 'onPersistFailure' or 'onPersistRejected' is called.
+   */
   def eventPersistSuccess(event: Any): Unit = {
     logger.debug(s"successfully persisted event: $event")
     pendingEvents = Vector()
@@ -487,6 +520,11 @@ trait ProtocolContext[P,R,M,E,S,I]
     shadowBackState = None
   }
 
+  /**
+   * (If run in asynchronously on the ActorProtocolContainer) the actor will change its Receive behavior until
+   *    it knows the segment has been stored. The context will not finalize until the actor is informed of completed storage.
+   *    The actor will then change back to the base behavior.
+   */
   def storeSegments(): Unit = {
     pendingSegments foreach { msg =>
       logger.debug(s"storing segment: $msg")
@@ -494,6 +532,9 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
+  /**
+   * (If run in an actor) recordEvents blocks execution by inheriting akka persistence's event persistence blocking.
+   */
   def recordEvents(): Option[_ >: E with ProtoSystemEvent] = {
     val event = pendingEvents.size match {
       case 0 => None
@@ -675,6 +716,7 @@ case class DataRetrieved() extends ActorMessage
 case class DataNotFound() extends ActorMessage
 case class SegmentStorageComplete() extends ActorMessage
 case class SegmentStorageFailed() extends ActorMessage
+case class UrlShortenerServiceComplete() extends ActorMessage
 case class ExternalStorageComplete(externalId: SegmentKey)
 case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
 

@@ -52,14 +52,6 @@ class NodeSingletonSpec
           case _ : NodeMetricsData =>
         }
       }
-
-      "should be able to reset metrics" taggedAs UNSAFE_IgnoreLog in {
-        nodeSingleton ! ResetNodeMetrics
-
-        expectMsgPF() {
-          case NodeMetricsResetDone =>
-        }
-      }
     }
   }
 

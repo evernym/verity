@@ -90,6 +90,8 @@ package object engine {
       }
       MsgType(familyQualifier, normalized(familyName), familyVersion, normalized(msgName))
     }
+
+    override def toString = s"$msgName (${protoRef.toString})"
   }
 
   trait TypedMsgLike {

@@ -11,7 +11,7 @@ import com.evernym.verity.protocol.engine.{DebugProtocols, ServiceFormatted, Sig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{InteractionController, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
@@ -369,21 +369,21 @@ class RelationshipProtocolSpec
   }
 
   "Requester asking to prepare shortened invitation" - {
-    val shortUrl = "shortUrl"
+    val shortUrl = "http://short.url"
 
     "when shortening succeed" - {
       "invitation is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
+        requester urlShortening MockableUrlShorteningAccess.shortened
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
         requester ~ ConnectionInvitation(Some(true))
-        val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg.invitationId, shortenInviteMsg.inviteURL, shortUrl)
+
         val inviteMsg = requester expect signal[Signal.Invitation]
         checkInvitationData(inviteMsg)
         inviteMsg.shortInviteURL shouldBe Some(shortUrl)
@@ -392,8 +392,6 @@ class RelationshipProtocolSpec
 
         // could be sent again.
         requester ~ ConnectionInvitation(Some(true))
-        val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
         val inviteMsg2 = requester expect signal[Signal.Invitation]
         checkInvitationData(inviteMsg2)
         inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -407,22 +405,19 @@ class RelationshipProtocolSpec
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
+        requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
         requester ~ ConnectionInvitation(Some(true))
-        val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
         val problemReport = requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationState = requester expect state[State.InvitationCreated]
         checkInvitationState(invitationState.invitation)
 
         requester ~ ConnectionInvitation(Some(true))
-        val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed(shortenInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationStateAgain = requester expect state[State.InvitationCreated]
@@ -434,22 +429,20 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
+          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
           requester ~ ConnectionInvitation(Some(true))
-          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation)
 
+          requester urlShortening MockableUrlShorteningAccess.shortened
           requester ~ ConnectionInvitation(Some(true))
-          val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkInvitationData(inviteMsg2)
           inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -463,14 +456,13 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
+          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
           requester ~ ConnectionInvitation(Some(true))
-          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
@@ -629,22 +621,51 @@ class RelationshipProtocolSpec
     }
   }
 
+  "Requester asking to prepare OOB invitation, do not have public did" - {
+    implicit val system: TestSystem = new TestSystem()
+
+    val requester = setup("requester", odg = controllerProvider)
+    val provisioner = setup("provisioner")
+    requester.initParams(defaultInitParams.updated(MY_PUBLIC_DID, ""))
+    val specificProfileUrl = Option("some profile url")
+
+    "protocol transitioning to InvitationCreated state" in { _ =>
+      (requester engage provisioner) ~ Create(label, specificProfileUrl)
+      requester expect signal[Signal.Created]
+      requester.state shouldBe a[State.Created]
+
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
+      val inviteMsg = requester expect signal[Signal.Invitation]
+      checkOOBInvitationData(inviteMsg, profileUrl = specificProfileUrl, hasPublicDid = false)
+      inviteMsg.shortInviteURL shouldBe None
+      val invitation = requester expect state[State.InvitationCreated]
+      checkInvitationState(invitation.invitation, profileUrl = specificProfileUrl)
+
+      requester ~ OutOfBandInvitation(defGoalCode, defGoal, None)
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
+      checkOOBInvitationData(inviteMsg2, profileUrl = specificProfileUrl, hasPublicDid = false)
+      inviteMsg2.shortInviteURL shouldBe None
+      val invitationAgain = requester expect state[State.InvitationCreated]
+      invitationAgain shouldBe invitation
+      checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
+    }
+  }
+
   "Requester asking to prepare shortened OOB invitation" - {
-    val shortUrl = "shortUrl"
+    val shortUrl = "http://short.url"
 
     "when shortening succeed" - {
       "invitation is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
+        requester urlShortening MockableUrlShorteningAccess.shortened
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-        val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg.invitationId, shortenInviteMsg.inviteURL, shortUrl)
         val inviteMsg = requester expect signal[Signal.Invitation]
         checkOOBInvitationData(inviteMsg)
         inviteMsg.shortInviteURL shouldBe Some(shortUrl)
@@ -653,8 +674,6 @@ class RelationshipProtocolSpec
 
         // could be sent again.
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-        val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
         val inviteMsg2 = requester expect signal[Signal.Invitation]
         checkOOBInvitationData(inviteMsg2)
         inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -668,22 +687,19 @@ class RelationshipProtocolSpec
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
         val provisioner = setup("provisioner")
+        requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
         (requester engage provisioner) ~ Create(label, None)
         requester expect signal[Signal.Created]
         requester.state shouldBe a[State.Created]
 
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-        val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
         val problemReport = requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationState = requester expect state[State.InvitationCreated]
         checkInvitationState(invitationState.invitation)
 
         requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-        val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-        requester ~ InviteShorteningFailed(shortenInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe "shortening-failed"
         val invitationStateAgain = requester expect state[State.InvitationCreated]
@@ -695,22 +711,20 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
+          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
           checkInvitationState(invitationState.invitation)
 
+          requester urlShortening MockableUrlShorteningAccess.shortened
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-          val shortenInviteMsg2 = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShortened(shortenInviteMsg2.invitationId, shortenInviteMsg2.inviteURL, shortUrl)
           val inviteMsg2 = requester expect signal[Signal.Invitation]
           checkOOBInvitationData(inviteMsg2)
           inviteMsg2.shortInviteURL shouldBe Some(shortUrl)
@@ -724,14 +738,13 @@ class RelationshipProtocolSpec
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
           val provisioner = setup("provisioner")
+          requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
           (requester engage provisioner) ~ Create(label, None)
           requester expect signal[Signal.Created]
           requester.state shouldBe a[State.Created]
 
           requester ~ OutOfBandInvitation(defGoalCode, defGoal, Some(true))
-          val shortenInviteMsg = requester expect signal[Signal.ShortenInvite]
-          requester ~ InviteShorteningFailed(shortenInviteMsg.invitationId, "Failed")
           val problemReport = requester expect signal[Signal.ProblemReport]
           problemReport.description.code shouldBe "shortening-failed"
           val invitationState = requester expect state[State.InvitationCreated]
@@ -850,7 +863,7 @@ class RelationshipProtocolSpec
 
         requester ~ SMSConnectionInvitation()
         val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
-        requester ~ InviteShorteningFailed(smsInviteMsg2.invitationId, "Failed")
+        requester ~ Ctl.SMSSendingFailed(smsInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
         val invitationStateAgain = requester expect state[State.InvitationCreated]
@@ -963,7 +976,7 @@ class RelationshipProtocolSpec
 
         requester ~ SMSOutOfBandInvitation(defGoalCode, defGoal)
         val smsInviteMsg2 = requester expect signal[Signal.SendSMSInvite]
-        requester ~ InviteShorteningFailed(smsInviteMsg2.invitationId, "Failed")
+        requester ~ Ctl.SMSSendingFailed(smsInviteMsg2.invitationId, "Failed")
         requester expect signal[Signal.ProblemReport]
         problemReport.description.code shouldBe ProblemReportCodes.smsSendingFailed
         val invitationStateAgain = requester expect state[State.InvitationCreated]
@@ -1033,16 +1046,26 @@ class RelationshipProtocolSpec
                              label: String = labelStr,
                              profileUrl: Option[String] = Option(defLogo),
                              goal: String = defGoal,
-                             goalCode: String = defGoalCode
+                             goalCode: String = defGoalCode,
+                             hasPublicDid: Boolean = true
                             ): Unit =
-    checkOOBInvitationUrlData(invitation.inviteURL, invitation.invitationId, label, profileUrl, goal, goalCode)
+    checkOOBInvitationUrlData(
+      invitation.inviteURL,
+      invitation.invitationId,
+      label,
+      profileUrl,
+      goal,
+      goalCode,
+      hasPublicDid
+    )
 
   def checkOOBInvitationUrlData(inviteURL: String,
                                 invitationId: String,
                                 label: String = labelStr,
                                 profileUrl: Option[String] = Option(defLogo),
                                 goal: String = defGoal,
-                                goalCode: String = defGoalCode
+                                goalCode: String = defGoalCode,
+                                hasPublicDid: Boolean = true
                                ): Unit = {
     val json = getInvitationJsonFromUrl(inviteURL, "oob")
     json.getString("@id") shouldBe invitationId
@@ -1056,7 +1079,10 @@ class RelationshipProtocolSpec
     json.getString("goal_code") shouldBe goalCode
 
     // check public did
-    json.getString("public_did") shouldBe s"did:sov:$publicDID"
+    if (hasPublicDid)
+      json.getString("public_did") shouldBe s"did:sov:$publicDID"
+    else
+      json.has("public_did") shouldBe false
 
 
     val service = json.getJSONArray("service")

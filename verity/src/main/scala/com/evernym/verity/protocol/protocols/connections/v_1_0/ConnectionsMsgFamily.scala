@@ -79,7 +79,8 @@ object Msg {
     }
   }
   case class Relationship(myDid: DID, myVerKey: VerKey, myEndpoint: ServiceEndpoint,
-                          theirDid: String, theirVerKey: VerKey, theirEndpoint: ServiceEndpoint, theirRoutingKeys: Vector[VerKey]) extends Msg
+                          theirDid: String, theirVerKey: VerKey,
+                          theirEndpoint: ServiceEndpoint, theirRoutingKeys: Vector[VerKey]) extends Msg
 
   case class Connection(DID: DID, DIDDoc: DIDDocFormatted) extends Msg {
     def did: DID = DID

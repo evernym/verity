@@ -1,16 +1,13 @@
 package com.evernym.integrationtests.e2e.env
 
-import java.io.File
-import java.nio.file.{Files, Path}
-
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
-import com.evernym.verity.config.{AppConfig, ConfigReadHelper}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.CollectionUtil.containsDuplicates
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
@@ -19,6 +16,8 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.util.EntityUtils
 
+import java.io.File
+import java.nio.file.{Files, Path}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.util.Random
@@ -80,7 +79,7 @@ import com.evernym.integrationtests.e2e.env.Constants._
 trait IntegrationTestEnvBuilder {
   import IntegrationTestEnvBuilder._
 
-  lazy val logger: Logger = getLoggerByClass(classOf[IntegrationTestEnvBuilder])
+  val logger: Logger //= getLoggerByClass(classOf[IntegrationTestEnvBuilder])
 
   val suiteTempDir: Path
 
@@ -490,6 +489,7 @@ object SdkType {
   case object Node extends SdkType
   case object Manual extends SdkType
   case object Rest extends SdkType
+  case object DotNet extends SdkType
 
   def fromString(str: String): SdkType = {
     str.toLowerCase match {
@@ -499,6 +499,7 @@ object SdkType {
       case "node"   => Node
       case "manual" => Manual
       case "rest"   => Rest
+      case "dotnet" => DotNet
       case t => throw new RuntimeException(s"Unknown sdk-type '$t', must be a known type")
     }
   }

@@ -69,9 +69,9 @@ trait HasPairwiseConnectionState {
           LegacyRoutingDetail(tdd.agencyDID, tdd.agentKeyDID, tdd.agentVerKey, tdd.agentKeyDlgProofSignature)
         )
       )
-      val routingDetail = cc.theirProvisionalDidDocDetail.map( ptdd =>
-        ( Option(ptdd.did),
-          RoutingDetail(ptdd.verKey, ptdd.endpoint, ptdd.routingKeys.toVector)
+      val routingDetail = cc.theirProvisionalDidDocDetail.map(tpdd =>
+        ( Option(tpdd.did),
+          RoutingDetail(tpdd.verKey, tpdd.endpoint, tpdd.routingKeys.toVector)
         )
       )
       val theirDID = legacyRoutingDetail.flatMap(_._1).orElse(routingDetail.flatMap(_._1))
@@ -136,6 +136,12 @@ case class LegacyRoutingDetail(
                                 agentKeyDlgProofSignature: String)
   extends RoutingDetailProvider
 
+/**
+ *
+ * @param verKey recipient's ver key
+ * @param endpoint recipient's endpoint
+ * @param routingKeys recipient's routing keys
+ */
 case class RoutingDetail(verKey: VerKey,
                          endpoint: ServiceEndpoint,
                          routingKeys: Seq[VerKey])

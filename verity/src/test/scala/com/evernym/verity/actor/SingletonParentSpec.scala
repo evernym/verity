@@ -1,9 +1,8 @@
 package com.evernym.verity.actor
 
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper, GetValue}
-import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
+import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.metrics.AllNodeMetricsData
 import com.evernym.verity.testkit.BasicSpec
 
@@ -51,15 +50,6 @@ class SingletonParentSpec extends PersistentActorSpec with BasicSpec {
             singletonParentProxy ! GetMetricsOfAllNodes(MetricsFilterCriteria())
             expectMsgPF() {
               case _: AllNodeMetricsData =>
-            }
-          }
-        }
-
-        "when sent ResetMetricsOfAllNodes command" - {
-          "should respond with AllNodeMetricsResetDone" taggedAs (UNSAFE_IgnoreLog) in {
-            singletonParentProxy ! ResetMetricsOfAllNodes
-            expectMsgPF() {
-              case AllNodeMetricsResetDone =>
             }
           }
         }

@@ -1,14 +1,5 @@
 package com.evernym.integrationtests.e2e.apis
 
-import java.util.UUID
-import java.util.concurrent.ExecutionException
-
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.util.LedgerUtil
-import com.evernym.verity.util.StrUtil
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.IntegrationTestEnv
 import com.evernym.integrationtests.e2e.flow.{AdminFlow, InteractiveSdkFlow, SetupFlow}
@@ -18,12 +9,22 @@ import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
+import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
+import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.sdk.utils.ContextBuilder
+import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
+import com.evernym.verity.testkit.util.LedgerUtil
+import com.evernym.verity.util.StrUtil
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
+import java.util.UUID
+import java.util.concurrent.ExecutionException
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -39,6 +40,8 @@ class VcxOnlySpec
     with SetupFlow
     with AdminFlow
     with Eventually {
+
+  override val logger: Logger = getLoggerByClass(getClass)
 
   override def environmentName: String = StrUtil.classToKebab[VcxOnlySpec]
 

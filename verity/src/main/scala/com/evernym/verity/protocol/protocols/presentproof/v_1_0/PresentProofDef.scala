@@ -4,8 +4,9 @@ import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants.{NAME, _}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess}
+import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.util.OptionUtil.blankOption
 
 object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, Event, State, String] {
 
@@ -34,13 +35,13 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
     p.paramValue(NAME),
     p.paramValue(LOGO_URL),
     p.paramValue(AGENCY_DID_VER_KEY),
-    p.paramValue(MY_PUBLIC_DID),
+    p.paramValue(MY_PUBLIC_DID).flatMap(blankOption)
   )
 
 
   override def initialState: State = States.Uninitialized()
 
-  override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess, AccessVerKey)
+  override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess, AccessVerKey, UrlShorteningAccess)
 }
 
 object AttIds {

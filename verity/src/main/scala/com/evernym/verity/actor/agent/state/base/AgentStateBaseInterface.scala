@@ -62,8 +62,15 @@ trait AgentStateInterface extends State {
   def relationshipReq: Relationship = relationship.getOrElse(throw new RuntimeException("relationship not found"))
 
   def agentWalletId: Option[String]
+  def agentWalletIdReq: String = agentWalletId.getOrElse(
+    throw new RuntimeException("agent wallet id not yet set")
+  )
   def agencyDID: Option[DID]
   def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))
+
+  def domainId: DomainId
+  def relationshipId: Option[RelationshipId] = relationship.flatMap(_.myDid)
+  def contextualId: Option[String] = thisAgentKeyId
 
   /**
    * represents key id for the current/this agent
@@ -83,6 +90,8 @@ trait AgentStateInterface extends State {
   def myDidDoc_! : DidDoc = myDidDoc.getOrElse(throw new RuntimeException("myDidDoc is not set yet"))
   def myDid: Option[DID] = myDidDoc.map(_.did)
   def myDid_! : DID = myDid.getOrElse(throw new RuntimeException("myDid is not set yet"))
+  def myDidAuthKey: Option[AuthorizedKeyLike] = myDid.flatMap(keyId =>
+    relationship.flatMap(_.myDidDocAuthKeyById(keyId)))
 
   def theirDidDoc: Option[DidDoc] = relationship.flatMap(_.theirDidDoc)
   def theirDidDoc_! : DidDoc = theirDidDoc.getOrElse(throw new RuntimeException("theirDidDoc is not set yet"))
@@ -91,6 +100,9 @@ trait AgentStateInterface extends State {
 
   def thisAgentAuthKey: Option[AuthorizedKeyLike] = thisAgentKeyId.flatMap(keyId =>
     relationship.flatMap(_.myDidDocAuthKeyById(keyId)))
+  def thisAgentAuthKeyReq: AuthorizedKeyLike =
+    thisAgentAuthKey.getOrElse(throw new RuntimeException("this agent auth key not found"))
+
   def thisAgentKeyDID: Option[KeyId] = thisAgentAuthKey.map(_.keyId)
   def thisAgentKeyDIDReq: DID = thisAgentKeyDID.getOrElse(throw new RuntimeException("this agent key id not found"))
   def thisAgentVerKey: Option[VerKey] = thisAgentAuthKey.filter(_.verKeyOpt.isDefined).map(_.verKey)

@@ -55,6 +55,10 @@ class LedgerAccessControllerSpec extends BasicSpec {
 
     override def writeSchema(submitterDID: String, schemaJson: String): Try[Either[StatusDetail, TxnResp]] = ???
 
-    def writeCredDef(submitterDID: DID, credDefJson: String): Try[Either[StatusDetail, TxnResp]] = ???
+    override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Try[LedgerRequest] = ???
+
+    override def writeCredDef(submitterDID: DID, credDefJson: String): Try[Either[StatusDetail, TxnResp]] = ???
+
+    override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Try[LedgerRequest] = ???
   }
 }

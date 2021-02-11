@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.wallet.{PackedMsg, UnpackMsg, UnpackedMsg}
+import com.evernym.verity.actor.wallet.{PackMsg, PackedMsg, UnpackMsg, UnpackedMsg}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
@@ -23,21 +23,16 @@ class IndyPackTransformer
 
   val logger: Logger = getLoggerByClass(classOf[IndyPackTransformer])
 
-  override def pack(msg: String,
-                    recipVerKeyParams: Set[KeyParam],
-                    senderVerKeyParam: Option[KeyParam])
-                   (implicit wap: WalletAPIParam, walletAPI: WalletAPI): PackedMsg = {
-    walletAPI.packMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam)
+  override def packAsync(msg: String,
+                         recipVerKeyParams: Set[KeyParam],
+                         senderVerKeyParam: Option[KeyParam])
+                        (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg] = {
+    walletAPI.executeAsync[PackedMsg](PackMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam))
   }
 
-  override def unpack(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam],
-                      unpackParam: UnpackParam)(implicit wap: WalletAPIParam, walletAPI: WalletAPI)
-  : AgentBundledMsg = {
-    val um = walletAPI.unpackMsg(msg)
-    prepareAgentBundledMsg(um, unpackParam)
-  }
-
-  override def unpackAsync(msg: Array[Byte], fromVerKeyParamOpt: Option[KeyParam], unpackParam: UnpackParam)
+  override def unpackAsync(msg: Array[Byte],
+                           fromVerKeyParam: Option[KeyParam],
+                           unpackParam: UnpackParam)
                           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
     walletAPI.executeAsync[UnpackedMsg](UnpackMsg(msg)).map { um =>
       prepareAgentBundledMsg(um, unpackParam)

@@ -11,10 +11,10 @@ import com.evernym.verity.actor.ExceptionHandler.handleException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.apphealth.AppStateConstants._
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
@@ -96,9 +96,9 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   def receiveCommon: Receive = {
 
-    case forCmd: ForWatcherManager => forwardToChild(WATCHER_MANAGER, forCmd)
-
-    case forCmd: ForSingletonChild => forwardToChild(forCmd.getActorName, forCmd.cmd)
+    case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
+    case forCmd: ForWatcherManager      => forwardToChild(WATCHER_MANAGER, forCmd.cmd)
+    case forCmd: ForSingletonChild      => forwardToChild(forCmd.getActorName, forCmd.cmd)
 
     case me: MemberEvent =>
       me match {
@@ -148,19 +148,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
         case Failure(e: Throwable) =>
           logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
           handleException(e, sndr, Option(self))
-      }
-
-    case ResetMetricsOfAllNodes =>
-      logger.debug(s"resetting metrics for nodes: $nodes")
-      val f = sendCmdToAllNodeSingletonsWithReducedFuture(ResetNodeMetrics)
-      val sndr = sender()
-
-      f.onComplete {
-        case Success(_) =>
-          sndr ! AllNodeMetricsResetDone
-        case Failure(e) =>
-          handleException(e, sndr, Option(self))
-          logger.error("could not reset metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
     case sc: SendCmdToAllNodes =>
@@ -216,10 +203,13 @@ case class ForActorStateCleanupManager(override val cmd: Any) extends ForSinglet
 }
 trait ForWatcherManager extends ForSingletonChild
 
-case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWatcherManager {
-  def getActorName: String = USER_AGENT_PAIRWISE_ACTOR_WATCHER
-}
 case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
+
+trait ForWatcherManagerChild extends ForSingletonChild
+
+case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWatcherManagerChild {
+  def getActorName: String = USER_AGENT_PAIRWISE_ACTOR_WATCHER
+}

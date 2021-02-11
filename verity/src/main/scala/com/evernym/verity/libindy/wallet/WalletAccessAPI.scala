@@ -3,10 +3,12 @@ package com.evernym.verity.libindy.wallet
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
+import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.external_api_access.{InvalidSignType, SignatureResult, WalletAccess}
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.Await
@@ -18,7 +20,9 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
                       protected val walletApi: WalletAPI,
                       protected val selfParticipantId: ParticipantId)
                      (implicit val wap: WalletAPIParam)
-  extends WalletAccess with AnonCredRequestsAPI {
+  extends WalletAccess
+    with AnonCredRequestsAPI
+    with AsyncToSync {
 
   import com.evernym.verity.protocol.engine.external_api_access.WalletAccess._
 
@@ -26,16 +30,12 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
   override def newDid(keyType: KeyType): Try[(DID, VerKey)] = {
     Try{
-      val created = walletApi.createDID(keyType)
+      val created = walletApi.executeSync[NewKeyCreated](CreateDID(keyType))
       created.did -> created.verKey
     }
   }
 
-  def verKey(forDID: DID): Try[VerKey] = {
-    Try {
-      walletApi.getVerKey(GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(forDID, getKeyFromPool=false)))))
-    }
-  }
+  def verKey(forDID: DID): Try[VerKey] = Try(walletApi.executeSync[VerKey](GetVerKey(forDID)))
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Try[SignatureResult] = {
     // currently only one sign type is supported
@@ -44,8 +44,8 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
     Try {
       val verKey = getVerKeyFromParticipantId(selfParticipantId)
-      val toSign = SignMsg(KeyParam(Left(verKey)), msg)
-      val signed = walletApi.signMsg(toSign)
+      val signMsg = SignMsg(KeyParam.fromVerKey(verKey), msg)
+      val signed = walletApi.executeSync[Array[Byte]](signMsg)
 
       SignatureResult(signed, verKey)
     }
@@ -57,6 +57,16 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
 
     Try(Await.result(
       walletApi.executeAsync[LedgerRequest](SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq),
+      maxWaitTime
+    ))
+  }
+
+  override def multiSignRequest(submitterDID: DID, request: String): Try[LedgerRequest] = {
+    val ledgerRequest = LedgerRequest(request)
+    val submitter = Submitter(submitterDID, Some(wap))
+
+    Try(Await.result(
+      walletApi.executeAsync[LedgerRequest](MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq),
       maxWaitTime
     ))
   }
@@ -84,18 +94,17 @@ class WalletAccessAPI(protected val appConfig: AppConfig,
   // we check the VerKey used belongs to the party who signed the message.
     Try({
       val toVerify = VerifySigByVerKey(verKeyUsed, msg, sig)
-      walletApi.verifySigWithVerKey(toVerify).verified
+      convertToSyncReq(CryptoOpExecutor.verifySig(toVerify)).verified
     })
   }
 
   def getVerKeyFromParticipantId(participantId: ParticipantId): VerKey = {
     val did = ParticipantUtil.DID(participantId)
-    val key = GetVerKey(KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool=false))))
-    walletApi.getVerKey(key)
+    walletApi.executeSync[VerKey](GetVerKey(did))
   }
 
   override def storeTheirDid(did: DID, verKey: VerKey): Try[Unit] = {
-    Try(walletApi.storeTheirKey(StoreTheirKey(did, verKey)))
+    Try(walletApi.executeSync[TheirKeyStored](StoreTheirKey(did, verKey)))
   }
 
 }

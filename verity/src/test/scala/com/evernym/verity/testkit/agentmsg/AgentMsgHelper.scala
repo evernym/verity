@@ -5,7 +5,7 @@ import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.dead_drop.GetDeadDropMsg
 import com.evernym.verity.agentmsg.issuer_setup.{CreateDIDMsg, CurrentIdentifierMsg}
@@ -36,6 +36,7 @@ import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, _}
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.service.AsyncToSync
 import com.typesafe.scalalogging.Logger
 
 import scala.reflect.ClassTag
@@ -60,7 +61,8 @@ trait AgentMsgHelper
     with AgentMsgBuilder_v_0_5 with AgentMsgHandler_v_0_5
     with AgentMsgBuilder_v_0_6 with AgentMsgHandler_v_0_6
     with AgentMsgBuilder_v_0_7 with AgentMsgHandler_v_0_7
-    with AgentMsgBuilder_v_1_0 with AgentMsgHandler_v_1_0 {
+    with AgentMsgBuilder_v_1_0 with AgentMsgHandler_v_1_0
+    with AsyncToSync {
   this: MockAgent with HasCloudAgent with Matchers =>
 
   implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
@@ -97,8 +99,8 @@ trait AgentMsgHelper
    */
   protected def unsealResp_MPV_1_0(rmw: Array[Byte], unsealFromDID: DID)
   : AgentMsgWrapper = {
-    val fromKeyParam = KeyParam(Right(GetVerKeyByDIDParam(unsealFromDID, getKeyFromPool = false)))
-    agentMsgTransformer.unpack(rmw, fromKeyParam)
+    val fromKeyParam = KeyParam.fromDID(unsealFromDID)
+    convertToSyncReq(agentMsgTransformer.unpackAsync(rmw, fromKeyParam))
   }
 
   /**
@@ -121,7 +123,7 @@ trait AgentMsgHelper
   }
 
   def sealParamFromEdgeToAgency: SealParam =
-    SealParam(KeyParam(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false))))
+    SealParam(KeyParam.fromDID(agencyAgentDetailReq.DID))
 
   def invalidSealParamFromEdgeToAgency: SealParam = {
     val dd = generateNewAgentDIDDetail()
@@ -130,27 +132,27 @@ trait AgentMsgHelper
 
   def encryptParamFromEdgeToAgencyAgent: EncryptParam =
     EncryptParam(
-      Set(KeyParam(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false)))),
-      Option(KeyParam(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
+      Set(KeyParam.fromDID(agencyAgentDetailReq.DID)),
+      Option(KeyParam.fromDID(myDIDDetail.did))
     )
 
   def encryptParamFromEdgeToAgencyAgentPairwise: EncryptParam =
     EncryptParam(
-      Set(KeyParam(Right(GetVerKeyByDIDParam(agencyPairwiseAgentDetailReq.DID, getKeyFromPool = false)))),
-      Option(KeyParam(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
+      Set(KeyParam.fromDID(agencyPairwiseAgentDetailReq.DID)),
+      Option(KeyParam.fromDID(myDIDDetail.did))
     )
 
   def encryptParamFromEdgeToCloudAgent: EncryptParam =
     EncryptParam(
-      Set(KeyParam(Left(cloudAgentDetailReq.verKey))),
-      Option(KeyParam(Right(GetVerKeyByDIDParam(myDIDDetail.did, getKeyFromPool = false))))
+      Set(KeyParam.fromVerKey(cloudAgentDetailReq.verKey)),
+      Option(KeyParam.fromDID(myDIDDetail.did))
     )
 
   def encryptParamFromEdgeToCloudAgentPairwise(connId: String): EncryptParam = {
     val pcd = pairwiseConnDetail(connId)
     EncryptParam(
-      Set(KeyParam(Right(GetVerKeyByDIDParam(pcd.myCloudAgentPairwiseDidPair.DID, getKeyFromPool = false)))),
-      Option(KeyParam(Right(GetVerKeyByDIDParam(pcd.myPairwiseDidPair.DID, getKeyFromPool = false))))
+      Set(KeyParam.fromDID(pcd.myCloudAgentPairwiseDidPair.DID)),
+      Option(KeyParam.fromDID(pcd.myPairwiseDidPair.DID))
     )
   }
 
@@ -161,8 +163,8 @@ trait AgentMsgHelper
     } else { getVerKeyFromWallet(forDID) }
 
     EncryptParam(
-      Set(KeyParam(Left(receiveVk))),
-      Option(KeyParam(Right(GetVerKeyByDIDParam(fromDID, getKeyFromPool = false))))
+      Set(KeyParam.fromVerKey(receiveVk)),
+      Option(KeyParam.fromDID(fromDID))
     )
   }
 
@@ -197,7 +199,7 @@ trait AgentMsgHelper
 
   def handleSetAgencyPairwiseAgentKey(DID: String, verKey: String): Unit = {
     setAgencyPairwiseAgentDetail(DID, verKey)
-    walletAPI.storeTheirKey(StoreTheirKey(DID, verKey))
+    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(DID, verKey))
   }
 
   def handleAgentCreatedRespForAgent(pairwiseDID: DID, pairwiseDIDVerKey: VerKey): Unit = {
@@ -274,8 +276,8 @@ trait AgentMsgHelper
     val msg = GetDeadDropMsg(MSG_TYPE_DETAIL_DEAD_DROP_RETRIEVE,
       ddd.recoveryVerKey, ddd.address, ddd.locator, ddd.locatorSignature)
     val encParam = EncryptParam(
-      Set(KeyParam(Right(GetVerKeyByDIDParam(agencyAgentDetailReq.DID, getKeyFromPool = false)))),
-      Option(KeyParam(Left(ddd.recoveryVerKey)))
+      Set(KeyParam.fromDID(agencyAgentDetailReq.DID)),
+      Option(KeyParam.fromVerKey(ddd.recoveryVerKey))
     )
     AgentPackMsgUtil(msg, encParam)
   }
@@ -369,10 +371,10 @@ trait AgentMsgHelper
 
   def unpackMsg(msg: Array[Byte], fromVerKey: Option[VerKey]=None, unpackParam:UnpackParam = UnpackParam()): AgentMsgWrapper = {
     val fromKeyParam = fromVerKey match {
-      case Some(vk) => KeyParam(Left(vk))
-      case None     => KeyParam(Right(GetVerKeyByDIDParam(getDIDToUnsealAgentRespMsg, getKeyFromPool=false)))
+      case Some(vk) => KeyParam.fromVerKey(vk)
+      case None     => KeyParam.fromDID(getDIDToUnsealAgentRespMsg)
     }
-    agentMsgTransformer.unpack(msg, fromKeyParam, unpackParam)
+    convertToSyncReq(agentMsgTransformer.unpackAsync(msg, fromKeyParam, unpackParam))
   }
 }
 

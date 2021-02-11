@@ -18,7 +18,8 @@ import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.http.common.MsgSendingSvc
+import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.protocol.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -32,11 +33,14 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 import scala.util.Left
 
 sealed trait Role
@@ -60,12 +64,13 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqAnswerMsgHandler[S]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
-      with DEPRECATED_HasWallet
+    with DEPRECATED_HasWallet
+    with AsyncToSync
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
 
   val logger: Logger = ctx.logger
 
-  def encryptionParamBuilder: EncryptionParamBuilder = new EncryptionParamBuilder(walletVerKeyCacheHelper)
+  def encryptionParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
   def agencyDIDReq: DID = ctx.getState.agencyDIDOpt.getOrElse(
     throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("agency DID not found"))
@@ -116,8 +121,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
                                      isEdgeAgentsKeyDlgProof: Boolean): Unit = {
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
-    val verifResult = walletAPI.verifySigWithVerKey(
-      VerifySigByVerKey(signedByVerKey, challenge, sig))
+    val vs = VerifySigByVerKey(signedByVerKey, challenge, sig)
+    val verifResult = convertToSyncReq(CryptoOpExecutor.verifySig(vs))
     if (! verifResult.verified) {
       val errorMsgPrefix = if (isEdgeAgentsKeyDlgProof) "local" else "remote"
       val errorMsg = errorMsgPrefix + " agent key delegation proof verification failed"
@@ -127,7 +132,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   protected def buildSendMsgResp(uid: MsgId)(implicit agentMsgContext: AgentMsgContext): List[Any] = {
     logger.debug(s"[$uid] message sending started")
-    val msg = ctx.getState.msgState.getMsgReq(uid)
+    val msg = ctx.getState.connectingMsgState.getMsgReq(uid)
     val msgsToBeSent = msg.getType match {
       case CREATE_MSG_TYPE_CONN_REQ =>
         //to send connection request asynchronously (to given sms if any)
@@ -159,7 +164,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   def getMsgDetails(uid: MsgId): Map[AttrName, AttrValue] = {
-    ctx.getState.msgState.getMsgDetails(uid)
+    ctx.getState.connectingMsgState.getMsgDetails(uid)
   }
 
   def getMsgDetail(uid: MsgId, key: AttrName): Option[AttrValue] = {
@@ -171,8 +176,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   private def buildConnReqAnswerMsgForRemoteCloudAgent(uid: MsgId): List[Any] = {
-    val answerMsg = ctx.getState.msgState.getMsgReq(uid)
-    val reqMsgIdOpt = ctx.getState.msgState.getReplyToMsgId(uid)
+    val answerMsg = ctx.getState.connectingMsgState.getMsgReq(uid)
+    val reqMsgIdOpt = ctx.getState.connectingMsgState.getReplyToMsgId(uid)
     logger.debug("reqMsgIdOpt when building conn request answer msg: " + reqMsgIdOpt)
     val senderDetail = SenderDetail(ctx.getState.myPairwiseDIDReq,
       myPairwiseVerKeyReq, ctx.getState.agentKeyDlgProof, None, None, None)
@@ -214,7 +219,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     if (definition.msgFamily.protoRef.msgFamilyVersion == MFV_0_5) MPF_MSG_PACK else MPF_INDY_PACK
 
   protected def sendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat): Unit = {
-    val answeredMsg = ctx.getState.msgState.getMsgReq(uid)
+    val answeredMsg = ctx.getState.connectingMsgState.getMsgReq(uid)
     try {
       val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
       val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
@@ -227,13 +232,13 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def sendMsgToEdgeAgent(uid: MsgId): Unit = {
-    ctx.getState.msgState.getMsgPayload(uid).foreach { pw =>
+    ctx.getState.connectingMsgState.getMsgPayload(uid).foreach { pw =>
       ctx.signal(SendMsgToRegisteredEndpoint(uid, pw.msg, pw.metadata))
     }
   }
 
   protected def buildInviteDetail(uid: MsgId, checkIfExpired: Boolean = true): InviteDetail = {
-    val msg = ctx.getState.msgState.getMsgReq(uid)
+    val msg = ctx.getState.connectingMsgState.getMsgReq(uid)
     if (checkIfExpired) checkIfMsgNotExpired(uid)
     val agencyVerKey = ctx.getState.parameters.paramValueRequired(AGENCY_DID_VER_KEY)
     val msgDetails = getMsgDetails(uid)
@@ -256,8 +261,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   def checkIfMsgNotExpired(uid: MsgId): Unit = {
-    val msg = ctx.getState.msgState.getMsgReq(uid)
-    val expired = ctx.getState.msgState.getMsgExpirationTime(msg.getType) match {
+    val msg = ctx.getState.connectingMsgState.getMsgReq(uid)
+    val expired = ctx.getState.connectingMsgState.getMsgExpirationTime(msg.getType) match {
       case Some(t) => isExpired(msg.creationDateTime, t)
       case None =>
         val configName = expiryTimeInSecondConfigNameForMsgType(msg.getType)
@@ -269,7 +274,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def handleGetInviteDetail(gid: GetInviteDetail): InviteDetail = {
-    if (ctx.getState.msgState.getMsgOpt(gid.uid).isEmpty) {
+    if (ctx.getState.connectingMsgState.getMsgOpt(gid.uid).isEmpty) {
       throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode)
     } else {
       buildInviteDetail(gid.uid)
@@ -283,7 +288,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def checkConnReqMsgIfExistsNotExpired(connReqMsgId: String): Unit = {
-    ctx.getState.msgState.getMsgOpt(connReqMsgId) match {
+    ctx.getState.connectingMsgState.getMsgOpt(connReqMsgId) match {
       case Some(_) => checkIfMsgNotExpired(connReqMsgId)
       case None => //
     }
@@ -292,11 +297,11 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def prepareEdgePayloadStoredEvent(msgId: String, msgName: String, externalPayloadMsg: String): Option[MsgPayloadStored] = {
 
     def prepareEdgeMsg(): Array[Byte] = {
-      val fromKeyParam = KeyParam (Left(ctx.getState.thisAgentVerKeyReq))
-      val forKeyParam = KeyParam(Right(GetVerKeyByDIDParam(getEncryptForDID, getKeyFromPool = false)))
+      val fromKeyParam = KeyParam.fromVerKey(ctx.getState.thisAgentVerKeyReq)
+      val forKeyParam = KeyParam.fromDID(getEncryptForDID)
       val encryptParam = EncryptParam (Set(forKeyParam), Option(fromKeyParam))
-      val packedMsg = ctx.SERVICES_DEPRECATED.agentMsgTransformer.pack(
-        msgPackFormat, externalPayloadMsg, encryptParam)
+      val packedMsg = awaitResult(ctx.SERVICES_DEPRECATED.agentMsgTransformer.packAsync(
+        msgPackFormat, externalPayloadMsg, encryptParam))
       packedMsg.msg
     }
     val payload = prepareEdgeMsg()
@@ -355,7 +360,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     val msgStatus =
       if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode
       else MSG_STATUS_RECEIVED.statusCode
-    ctx.getState.msgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
+    ctx.getState.connectingMsgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
   }
 
   def initState(params: Seq[ParameterStored]): S
@@ -365,7 +370,12 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def getEncryptForDID: DID
 
   def buildAgentPackedMsg(msgPackFormat: MsgPackFormat, param: PackMsgParam): PackedMsg = {
-    AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)
+    val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)
+    awaitResult(fut)
+  }
+
+  def awaitResult(fut: Future[PackedMsg]): PackedMsg = {
+    Await.result(fut, 5.seconds)
   }
 
   def threadIdReq: ThreadId = ctx.getInFlight.threadId.getOrElse(
@@ -374,7 +384,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   //Duplicate code starts (same code exists in 'PairwiseConnState')
 
-  def pairwiseConnEventReceiver: Receive = ctx.getState.pairwiseConnReceiver orElse ctx.getState.msgState.msgEventReceiver
+  def pairwiseConnEventReceiver: Receive = ctx.getState.pairwiseConnReceiver orElse ctx.getState.connectingMsgState.msgEventReceiver
 
   def isUserPairwiseVerKey(verKey: VerKey): Boolean = {
     val userPairwiseVerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)
@@ -402,14 +412,15 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           encryptionParamBuilder.withRecipDID(ctx.getState.theirAgentKeyDIDReq)
             .withSenderVerKey(ctx.getState.thisAgentVerKeyReq).encryptParam,
           agentMsgs, wrapInBundledMsgs)
-        val packedMsg = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
+        val packedMsgFut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
+        val packedMsg = awaitResult(packedMsgFut)
         buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, packedMsg.msg, msgType)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
   }
 
   def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String): PackedMsg = {
-    (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
+    val result = (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(v1: LegacyRoutingDetail), None) =>
         val theirAgencySealParam = SealParam(KeyParam(Left(getVerKeyReqViaCache(
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
@@ -426,6 +437,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
         )(agentMsgTransformer, wap)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
+    awaitResult(result)
   }
   //Duplicate code ends (same code exists in 'PairwiseConnState')
 
@@ -441,7 +453,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   override def msgRecipientDID: DID = myPairwiseDIDReq
   override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
-  override lazy val remoteMsgSendingSvc: RemoteMsgSendingSvc = ctx.SERVICES_DEPRECATED.remoteMsgSendingSvc
+  override lazy val msgSendingSvc: MsgSendingSvc = ctx.SERVICES_DEPRECATED.msgSendingSvc
   override lazy val generalCache: Cache = ctx.SERVICES_DEPRECATED.generalCache
   override implicit lazy val agentMsgTransformer: AgentMsgTransformer = ctx.SERVICES_DEPRECATED.agentMsgTransformer
 

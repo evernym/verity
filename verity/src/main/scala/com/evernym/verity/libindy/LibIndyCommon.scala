@@ -28,11 +28,9 @@ trait LibIndyCommon {
     gptf
   }
 
-  if(LibIndy.api == null)
-  {
-    augmentJnaPath()
-
+  if (LibIndy.api == null) {
     try {
+      augmentJnaPath()
       LibIndy.init(libIndyDirPath)
     } catch {
       case e: Exception =>
@@ -42,10 +40,15 @@ trait LibIndyCommon {
   }
 
   if (appConfig.getConfigStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
-    augmentJnaPath()
-
-    if(MySqlStorageLib.api == null) {
-      MySqlStorageLib.init(libIndyDirPath)
+    try {
+      if (MySqlStorageLib.api == null) {
+        augmentJnaPath()
+        MySqlStorageLib.init(libIndyDirPath)
+      }
+    } catch {
+      case e: Exception =>
+        val errorMsg = s"unable to initialize lib-mysqlstorage library: ${Exceptions.getErrorMsg(e)}"
+        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_LIB_MYSQLSTORAGE_INIT, e, Option(errorMsg))
     }
   }
 }

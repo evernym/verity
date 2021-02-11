@@ -7,8 +7,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest}
 import akka.testkit.TestKit
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.app_launcher.PlatformLauncher
+import com.evernym.verity.app_launcher.{DefaultAgentActorContext, PlatformBuilder}
 import com.evernym.verity.apphealth.AppStateConstants.STATUS_LISTENING
 import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.AppConfigWrapper
@@ -47,13 +46,13 @@ object LocalVerity {
     TestKit.awaitCond(isListening, atMost)
   }
 
-  class Starter(initData: InitLedgerData) extends PlatformLauncher {
+  class Starter(initData: InitLedgerData) {
     class MockDefaultAgentActorContext(initData: InitLedgerData) extends DefaultAgentActorContext {
       implicit val executor: ExecutionContextExecutor = system.dispatcher
       override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(initData)
     }
 
-    override def agentActorContextProvider: AgentActorContext = new MockDefaultAgentActorContext(initData)
+    val platform: Platform = PlatformBuilder.build(Option(new MockDefaultAgentActorContext(initData)))
   }
 
   object Starter {
@@ -65,8 +64,6 @@ object LocalVerity {
     val s = Starter(initData)
 
     assert(s.platform != null)
-
-    s.start()
 
     s.platform
   }

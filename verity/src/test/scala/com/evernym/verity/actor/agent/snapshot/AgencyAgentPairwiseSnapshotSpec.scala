@@ -9,7 +9,6 @@ import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, agentRegion}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
-import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.DID
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -18,8 +17,6 @@ class AgencyAgentPairwiseSnapshotSpec
   extends AgencyAgentPairwiseSpecBase
     with SnapshotSpecBase
     with OverrideConfig {
-
-  MetricsReader   //this makes sure it starts/add prometheus reporter and adds it to Kamon
 
   override def overrideConfig: Option[Config] = Option(
     ConfigFactory.parseString(
@@ -53,7 +50,7 @@ class AgencyAgentPairwiseSnapshotSpec
         checkPersistentState(0, 2, 1)
 
         //restart actor (so that snapshot gets applied)
-        restartActor(aap)
+        restartPersistentActor(aap)
         checkPersistentState(0, 2, 1)
 
         //check metrics

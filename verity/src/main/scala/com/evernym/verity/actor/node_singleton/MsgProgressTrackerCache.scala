@@ -2,17 +2,21 @@ package com.evernym.verity.actor.node_singleton
 
 object MsgProgressTrackerCache {
 
-  private var trackingIds: Set[String] = Set.empty
+  val GLOBAL_TRACKING_ID = "global"
 
-  def startProgressTracking(trackingId: String): Unit =
-    trackingIds = trackingIds + trackingId
+  private var trackingIds: Set[TrackingParam] = Set.empty
+
+  def startProgressTracking(trackingParam: TrackingParam): Unit = {
+    trackingIds = trackingIds + trackingParam
+  }
 
   def stopProgressTracking(trackingId: String): Unit =
-    trackingIds = trackingIds.filterNot(_ == trackingId)
+    trackingIds = trackingIds.filterNot(tp => tp.trackingId == trackingId || tp.ipAddress.contains(trackingId))
 
-  def isTracked(id: String): Boolean = trackingIds.contains(id)
+  def isTracked(id: String): Boolean = trackingIds.exists(_.trackingId == id)
 
-  def allIdsBeingTracked: TrackingIds = TrackingIds(trackingIds)
+  def allIdsBeingTracked: TrackingStatus = TrackingStatus(trackingIds)
 }
 
-case class TrackingIds(ids: Set[String])
+case class TrackingParam(trackingId: String, ipAddress: Option[String]=None)
+case class TrackingStatus(trackedIds: Set[TrackingParam])

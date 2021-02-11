@@ -8,9 +8,9 @@ import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletAPIParam}
+import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,10 +20,8 @@ trait ClientWalletAPISpecBase
     with ProvidesMockPlatform
     with UserWalletSetupHelper
     with HasThreadStarvationDetector
+    with AddMetricsReporter
     with BasicSpec {
-
-  //to start metrics reporter
-  MetricsReader
 
   //execution context to be used to create futures in the test code
   // this execution context will also be checked for thread starvation
@@ -68,7 +66,7 @@ trait ClientWalletAPISpecBase
   }
 
   //for file based wallet nothing needs to be set
-  def walletStorageConfig: Config = ConfigFactory.parseString("""""")
+  def walletStorageConfig: Config = ConfigFactory.empty()
 }
 
 //------------- helper classes/traits
@@ -78,14 +76,14 @@ trait UserWalletSetupHelper {
   protected def _baseWalletSetupWithSyncAPI(userId: Int, walletAPI: WalletAPI): Unit = {
     implicit val wap: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
     println(s"[$userId] about to start executing wallet operations for an user")
-    val wc = walletAPI.createWallet(wap)
+    val wc = walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
     println(s"[$userId] wallet created")
-    val nkc = walletAPI.createNewKey(CreateNewKey())
+    val nkc = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
     println(s"[$userId] new key created")
     val theirDidPair = CommonSpecUtil.generateNewDid()
-    val stk = walletAPI.storeTheirKey(StoreTheirKey(theirDidPair.DID, theirDidPair.verKey))
+    val stk = walletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDidPair.DID, theirDidPair.verKey))
     println(s"[$userId] their key stored")
-    val gvk = walletAPI.getVerKeyOption(GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(nkc.did, getKeyFromPool = false)))))
+    val gvk = walletAPI.executeSync[Option[VerKey]](GetVerKeyOpt(nkc.did))
     println(s"[$userId] ver key retrieved")
   }
 
@@ -109,7 +107,7 @@ trait UserWalletSetupHelper {
       }
 
       val fut3 = walletAPI.executeAsync[Option[VerKey]](
-        GetVerKeyOpt(KeyParam(Right(GetVerKeyByDIDParam(theirDidPair.DID, getKeyFromPool = false))))).map { r =>
+        GetVerKeyOpt(theirDidPair.DID)).map { r =>
         println(s"[$userId] ver key retrieved")
         r
       }

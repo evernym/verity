@@ -18,8 +18,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 object MetricsReader {
 
   private val logger: Logger = getLoggerByName("MetricsReader")
-  private var explicitlyReset: Boolean = false
-  private var lastResetTimestamp: String = getCurrentTimestamp
+  private val lastResetTimestamp: String = getCurrentTimestamp
   private val hostName: String = AppConfigWrapper.getConfigStringReq(KAMON_ENV_HOST)
 
   Kamon.loadModules()   //for system/jvm related metrics
@@ -34,26 +33,13 @@ object MetricsReader {
 
   private def buildMetadata: MetaData = MetaData(hostName, getCurrentTimestamp, lastResetTimestamp)
 
-  def resetNodeMetrics(): Unit = {
-    metricsReporter match {
-      case Some(mp) =>
-        logger.debug("resetting metrics...")
-        lastResetTimestamp = getCurrentTimestamp
-        explicitlyReset = true
-        mp.resetMetrics()
-        logger.debug("resetting metrics done.")
-      case None => throw new FeatureNotEnabledException(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusCode,
-        Option(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusMsg))
-    }
-  }
-
   def getNodeMetrics(criteria: MetricsFilterCriteria = MetricsFilterCriteria()): NodeMetricsData = {
-    metricsReporter.map { mp =>
+    metricsReporter.map { mr =>
       val metadata = if (criteria.includeMetaData) Some(buildMetadata) else None
-      val fixedMetrics = mp.fixedMetrics
-      val resetMetrics = if (criteria.includeReset && explicitlyReset) mp.postResetMetrics else List.empty
-      val allMetrics = fixedMetrics ++ resetMetrics
-      val allFilteredMetrics = if (criteria.filtered) MetricsFilter.filterMetrics(allMetrics) else allMetrics
+      val fixedMetrics = mr.fixedMetrics
+      val allFilteredMetrics =
+        if (criteria.filtered) MetricsFilter.filterMetrics(fixedMetrics)
+        else fixedMetrics
       val allFinalMetrics = allFilteredMetrics.map { m =>
         if (criteria.includeTags) m
         else m.copy(tags = None)

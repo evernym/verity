@@ -13,14 +13,14 @@ import com.typesafe.config.ConfigUtil.{joinPath, splitPath}
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 
 object ConfigUtil {
-  val logger = LoggerFactory.getLogger(getClass)
+  val logger: Logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Finds the last segment of a fully qualified HOCON path.
@@ -176,69 +176,104 @@ object ConfigUtil {
    * @param appConfig
    * @param defaultReceiveTimeoutInSeconds
    * @param entityCategory
-   * @param entityName
+   * @param entityType
    * @param entityId
    * @return receive timeout
    */
   def getReceiveTimeout(appConfig: AppConfig,
                         defaultReceiveTimeoutInSeconds: Int,
                         entityCategory: String,
-                        entityName: String,
+                        entityType: String,
                         entityId: String): Duration = {
-
-    val confValue = getConfIntValue(appConfig, entityCategory, entityName, entityId, RECEIVE_TIMEOUT_SECONDS)
+    val confValue = getConfIntValue(appConfig, entityCategory, RECEIVE_TIMEOUT_SECONDS, Option(entityType), Option(entityId))
     val timeout = confValue.getOrElse(defaultReceiveTimeoutInSeconds)
     if (timeout > 0) timeout.seconds else Duration.Undefined
   }
 
-
-  //TODO: there are some code duplication, need to find a better way to fix it
-
   def getConfIntValue(appConfig: AppConfig,
-                              entityCategory: String,
-                              entityName: String,
-                              entityId: String,
-                              confName: String): Option[Int] = {
-    val entityIdReceiveTimeout: Option[Int] =
-      safeGetAppConfigIntOption(s"$entityCategory.$entityName.$entityId.$confName", appConfig)
-    val entityNameReceiveTimeout: Option[Int] =
-      safeGetAppConfigIntOption(s"$entityCategory.$entityName.$confName", appConfig)
-    val categoryReceiveTimeout: Option[Int] =
-      safeGetAppConfigIntOption(s"$entityCategory.$confName", appConfig)
+                      entityCategory: String,
+                      confName: String,
+                      entityTypeOpt: Option[String],
+                      entityIdOpt: Option[String]): Option[Int] = {
+    getConfValue(appConfig, entityCategory, confName, entityTypeOpt, entityIdOpt).map(_.toInt)
+  }
 
-    entityIdReceiveTimeout orElse entityNameReceiveTimeout orElse categoryReceiveTimeout
+  def getConfDoubleValue(appConfig: AppConfig,
+                         entityCategory: String,
+                         confName: String,
+                         entityTypeOpt: Option[String],
+                         entityIdOpt: Option[String]): Option[Double] = {
+    getConfValue(appConfig, entityCategory, confName, entityTypeOpt, entityIdOpt).map(_.toDouble)
   }
 
   def getConfBooleanValue(appConfig: AppConfig,
-                                  entityCategory: String,
-                                  entityName: String,
-                                  entityId: String,
-                                  confName: String): Option[Boolean] = {
-    val entityIdReceiveTimeout: Option[Boolean] =
-      safeGetAppConfigBooleanOption(s"$entityCategory.$entityName.$entityId.$confName", appConfig)
-    val entityNameReceiveTimeout: Option[Boolean] =
-      safeGetAppConfigBooleanOption(s"$entityCategory.$entityName.$confName", appConfig)
-    val categoryReceiveTimeout: Option[Boolean] =
+                          entityCategory: String,
+                          confName: String,
+                          entityTypeOpt: Option[String],
+                          entityIdOpt: Option[String]): Option[Boolean] = {
+    val entityIdConfValue: Option[Boolean] =
+      (entityTypeOpt, entityIdOpt) match {
+        case (Some(entityType), Some(entityId)) =>
+          safeGetAppConfigBooleanOption(s"$entityCategory.$entityType.$entityId.$confName", appConfig)
+        case _ => None
+      }
+    val entityTypeConfValue: Option[Boolean] =
+      entityTypeOpt match {
+        case Some(entityType) => safeGetAppConfigBooleanOption(s"$entityCategory.$entityType.$confName", appConfig)
+        case _ => None
+      }
+    val categoryConfValue: Option[Boolean] =
       safeGetAppConfigBooleanOption(s"$entityCategory.$confName", appConfig)
 
-    entityIdReceiveTimeout orElse entityNameReceiveTimeout orElse categoryReceiveTimeout
+    entityIdConfValue orElse entityTypeConfValue orElse categoryConfValue
   }
 
-  private def safeGetAppConfigIntOption(key: String, appConfig: AppConfig): Option[Int] =
+  private def getConfValue(appConfig: AppConfig,
+                           entityCategory: String,
+                           confName: String,
+                           entityTypeOpt: Option[String],
+                           entityIdOpt: Option[String]): Option[String] = {
+    val entityIdConfValue: Option[String] =
+      (entityTypeOpt, entityIdOpt) match {
+        case (Some(entityType), Some(entityId)) =>
+          safeGetAppConfigStringOption(s"$entityCategory.$entityType.$entityId.$confName", appConfig)
+        case _ => None
+      }
+    val entityTypeConfValue: Option[String] =
+      entityTypeOpt match {
+        case Some(entityType) => safeGetAppConfigStringOption(s"$entityCategory.$entityType.$confName", appConfig)
+        case _ => None
+      }
+    val categoryConfValue: Option[String] =
+      safeGetAppConfigStringOption(s"$entityCategory.$confName", appConfig)
+
+    entityIdConfValue orElse entityTypeConfValue orElse categoryConfValue
+  }
+
+  private def safeGetAppConfigStringOption(key: String, appConfig: AppConfig): Option[String] =
     try {
-      appConfig.getConfigIntOption(key)
+      appConfig.getConfigStringOption(safeKey(key))
     } catch {
       case e: ConfigException =>
         logger.warn(s"exception during getting key: $key from config: $e")
         None
     }
+
 
   private def safeGetAppConfigBooleanOption(key: String, appConfig: AppConfig): Option[Boolean] =
     try {
-      appConfig.getConfigBooleanOption(key)
+      appConfig.getConfigBooleanOption(safeKey(key))
     } catch {
       case e: ConfigException =>
         logger.warn(s"exception during getting key: $key from config: $e")
         None
     }
+
+  private def safeKey(key: String): String = {
+    val updateKey =
+      key
+      .replace("[", "\"[\"")
+        .replace("]", "\"]\"")
+    s"""$updateKey"""
+  }
 }

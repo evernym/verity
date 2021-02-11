@@ -14,7 +14,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.{EncryptParam, GetVerKeyByDIDParam, KeyParam}
+import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
 class ConsumerAgentPairwiseBaseSpec_V_0_7 extends UserAgentPairwiseSpec_V_0_7 {
@@ -150,8 +150,8 @@ trait UserAgentPairwiseSpec_V_0_7
           invite.connReqId)
 
         val theirAgentEncParam = EncryptParam(
-          Set(KeyParam(Right(GetVerKeyByDIDParam(invite.senderDetail.agentKeyDlgProof.get.agentDID, getKeyFromPool = false)))),
-          Option(KeyParam(Right(GetVerKeyByDIDParam(keyDlgProof.agentDID, getKeyFromPool = false))))
+          Set(KeyParam.fromDID(invite.senderDetail.agentKeyDlgProof.get.agentDID)),
+          Option(KeyParam.fromDID(keyDlgProof.agentDID))
         )
         val msg = buildReceivedReqMsg_1_0(AgentPackMsgUtil(agentMsg, theirAgentEncParam))
         uap ! wrapAsPackedMsgParam(msg)
@@ -173,6 +173,9 @@ trait UserAgentPairwiseSpec_V_0_7
         val msg = prepareAcceptInviteMsgForAgent(connId, includeSendMsg = true, inviteDetail)
         uap ! wrapAsPackedMsgParam(msg)
         expectMsgType[PackedMsg]
+        //TODO: had to add to make sure connection acceptance takes effect in user agent pairwise actor
+        // should come back and fix the actual issue
+        java.lang.Thread.sleep(3000)
       }
     }
   }

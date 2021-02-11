@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 
 object PresentProofMsgFamily
   extends MsgFamily {
@@ -29,8 +30,7 @@ object PresentProofMsgFamily
     "propose"                  -> classOf[Ctl.Propose],
     "reject"                   -> classOf[Ctl.Reject],
     "status"                   -> classOf[Ctl.Status],
-    "invite-shortened"         -> classOf[Ctl.InviteShortened],
-    "invite-shortening-failed" -> classOf[Ctl.InviteShorteningFailed],
+    "invite-shortened"         -> classOf[InviteShortened],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -40,7 +40,6 @@ object PresentProofMsgFamily
     classOf[Sig.ProblemReport]        -> "problem-report",
     classOf[Sig.StatusReport]         -> "status-report",
     classOf[Sig.Invitation]           -> "protocol-invitation",
-    classOf[Sig.ShortenInvite]        -> "shorten-invite",
   )
 }
 
@@ -126,8 +125,6 @@ package object Ctl {
                      comment: String) extends CtlMsg
   case class Reject(reason: Option[String]) extends CtlMsg
   case class Status() extends CtlMsg
-  case class InviteShortened(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends CtlMsg
-  case class InviteShorteningFailed(invitationId: String, reason: String) extends CtlMsg
 }
 
 // Signal Messages
@@ -140,7 +137,6 @@ package object Sig {
                             predicates: Seq[PresentationPreviewPredicate],
                             comment: String) extends SigMsg
   case class PresentationResult(verification_result: String, requested_presentation: AttributesPresented) extends SigMsg
-  case class ShortenInvite(invitationId: String, inviteURL: String) extends SigMsg
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
   case class StatusReport(status: String, results: Option[PresentationResult], error: Option[Problem])
 

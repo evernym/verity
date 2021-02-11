@@ -10,7 +10,7 @@ import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError}
 import com.evernym.verity.cache._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasGeneralCache
@@ -29,7 +29,7 @@ trait AgentMsgSender
   extends HasGeneralCache
     with HasLogger {
 
-  def remoteMsgSendingSvc: RemoteMsgSendingSvc
+  def msgSendingSvc: MsgSendingSvc
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit
 
   private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity): Future[CacheQueryResponse] = {
@@ -83,31 +83,29 @@ trait AgentMsgSender
   }
 
   def sendToTheirAgencyEndpoint(implicit sm: SendMsgParam): Future[Any] = {
-    runWithInternalSpan("sendToTheirAgencyEndpoint", "AgentMsgSender") {
-      logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
-      val epFut = getRemoteAgencyEndpoint
-      epFut.map { ep =>
-        val urlParam = parseUrlParam(ep)
-        logger.debug("remote agency detail received for msg to be sent to remote agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
-        logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlParam))
-        val respFut = remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(sm.msg)(urlParam)
-        respFut.map {
-          case Right(pm: PackedMsg) =>
-            logger.debug("msg successfully sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
-            handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_SENT.statusCode, responseMsg = Option(pm)))
-          case Left(e: HandledErrorException) =>
-            handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
-          case e: Any =>
-            handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString)))
-        }.recover {
-          case e: Exception =>
-            handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
-        }
+    logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
+    val epFut = getRemoteAgencyEndpoint
+    epFut.map { ep =>
+      val urlParam = parseUrlParam(ep)
+      logger.debug("remote agency detail received for msg to be sent to remote agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
+      logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlParam))
+      val respFut = msgSendingSvc.sendBinaryMsg(sm.msg)(urlParam)
+      respFut.map {
+        case Right(pm: PackedMsg) =>
+          logger.debug("msg successfully sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
+          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_SENT.statusCode, responseMsg = Option(pm)))
+        case Left(e: HandledErrorException) =>
+          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+        case e: Any =>
+          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString)))
       }.recover {
         case e: Exception =>
           handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
-          throw e
       }
+    }.recover {
+      case e: Exception =>
+        handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+        throw e
     }
   }
 }

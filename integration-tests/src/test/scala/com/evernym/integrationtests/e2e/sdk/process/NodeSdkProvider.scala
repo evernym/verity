@@ -1,11 +1,8 @@
 package com.evernym.integrationtests.e2e.sdk.process
 
-import java.lang
-import java.nio.file.Path
-
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.InterpreterEnv
+import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -24,6 +21,8 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryCon
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 
+import java.lang
+import java.nio.file.Path
 import scala.sys.process.Process
 
 class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
@@ -32,12 +31,14 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def sdkType: String = "NODE"
   override def sdkTypeAbbreviation: String = "js"
+  override def fileSuffix: String = ".js"
 
   override def booleanParam: Boolean => String = _.toString
   override def noneParam: String = "null"
   override def jsonParam: AsJsonObject => String = { j =>
     s"""JSON.parse(`${j.toJson.toString()}`)"""
   }
+  override def mapParam: Map[_, _] => String = {m => jsonParam(MapAsJsonObject(m))}
 
   override lazy val interpreter: InterpreterEnv = {
     Process(

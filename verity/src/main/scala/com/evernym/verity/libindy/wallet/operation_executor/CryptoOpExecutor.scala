@@ -1,12 +1,11 @@
 package com.evernym.verity.libindy.wallet.operation_executor
 
-
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
-import com.evernym.verity.actor.wallet.{GetVerKey, LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
+import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg, VerifySigByVerKey, VerifySigResult}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
@@ -93,7 +92,7 @@ object CryptoOpExecutor extends OpExecutorBase {
   }
 
   def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[Array[Byte]] = {
-    val verKeyFuture = handleGetVerKey(GetVerKey(smp.keyParam))
+    val verKeyFuture = handleGetVerKey(smp.keyParam)
     verKeyFuture.flatMap { verKey =>
       Crypto.cryptoSign(we.wallet, verKey, smp.msg)
     }
@@ -111,5 +110,9 @@ object CryptoOpExecutor extends OpExecutorBase {
             throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
               Option("unhandled error"), Option(detail))
       }
+  }
+
+  def verifySig(vs: VerifySigByVerKey): Future[VerifySigResult] = {
+    verifySig(vs.verKey, vs.challenge, vs.signature)
   }
 }

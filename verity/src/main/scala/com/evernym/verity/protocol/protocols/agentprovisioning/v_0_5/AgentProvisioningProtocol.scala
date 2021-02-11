@@ -5,7 +5,7 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueExce
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
-import com.evernym.verity.actor.wallet.StoreTheirKey
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
@@ -160,7 +160,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def processValidatedConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
-    val agentPairwiseKey = walletAPI.createNewKey()
+    val agentPairwiseKey = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
     storeTheirKey(crm.fromDID, crm.fromDIDVerKey)
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(crm.fromDID, None)))
     val provisionerPartiId = initParameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
@@ -181,7 +181,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def storeTheirKey(did: DID, verKey: VerKey): Unit = {
     try {
-      walletAPI.storeTheirKey(StoreTheirKey(did, verKey))
+      walletAPI.executeSync[TheirKeyStored](StoreTheirKey(did, verKey))
     } catch {
       case e: BadRequestErrorException if e.respCode == ALREADY_EXISTS.statusCode =>
         throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)

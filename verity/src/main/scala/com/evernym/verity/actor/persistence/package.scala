@@ -1,6 +1,7 @@
 package com.evernym.verity.actor
 
 import akka.persistence.SnapshotSelectionCriteria
+import com.evernym.verity.actor.base.ActorDetail
 import com.evernym.verity.util.ReqMsgContext
 
 package object persistence {
@@ -44,13 +45,16 @@ package object persistence {
     }
   }
 
-  case object GetActorDetail extends ActorMessage
-  case class ActorDetail(persistenceId: String, totalPersistedEvents: Int, totalRecoveredEvents: Int) extends ActorMessage
+  case object GetPersistentActorDetail extends ActorMessage
+  case class PersistentActorDetail(actorDetail: ActorDetail,
+                                   persistenceId: String,
+                                   totalPersistedEvents: Int,
+                                   totalRecoveredEvents: Int) extends ActorMessage
   case class PostRecoveryActorInitFailed(error: Throwable) extends ActorMessage
   case object PostRecoveryActorInitSucceeded extends ActorMessage
   case object ActorInitPostRecoveryFailed extends ActorMessage
 
   case class InternalReqHelperData(reqMsgContext: ReqMsgContext)
 
-  def stdPersistenceId(entityName: String, entityId: String) = s"$entityName-$entityId"
+  def stdPersistenceId(entityType: String, entityId: String) = s"$entityType-$entityId"
 }

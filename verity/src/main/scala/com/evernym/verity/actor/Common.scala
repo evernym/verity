@@ -1,10 +1,11 @@
 package com.evernym.verity.actor
 
+import com.evernym.verity.Status
 import com.evernym.verity.Status._
+import com.evernym.verity.actor.node_singleton.TrackingParam
 import com.evernym.verity.protocol.engine.{DID, Ledgers, VerKey}
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util._
-import com.evernym.verity.Status
 import scalapb.GeneratedMessage
 
 /**
@@ -96,21 +97,23 @@ case object NodeConfigOverridden extends ActorMessage
 case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessage
 case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessage
 
-case object ResetNodeMetrics extends ActorMessage
-case object ResetMetricsOfAllNodes extends ActorMessage
-case class StartProgressTracking(trackingId: String) extends ActorMessage
+case class StartProgressTracking(trackingId: TrackingParam) extends ActorMessage
 case class StopProgressTracking(trackingId: String) extends ActorMessage
 case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage
 
-case class MetricsFilterCriteria(includeMetaData: Boolean = true, includeReset: Boolean = true,
-                                 includeTags: Boolean = true, filtered: Boolean = true)
+case class MetricsFilterCriteria(includeMetaData: Boolean = true,
+                                 includeTags: Boolean = true,
+                                 filtered: Boolean = true)
 
 object MetricsFilterCriteria {
 
-  def apply(includeMetaData: String, includeReset: String, includeTags: String, filtered: String): MetricsFilterCriteria = {
-    MetricsFilterCriteria(strToBoolean(includeMetaData), strToBoolean(includeReset),
-      strToBoolean(includeTags), strToBoolean(filtered))
+  def apply(includeMetaData: String, includeTags: String, filtered: String): MetricsFilterCriteria = {
+    MetricsFilterCriteria(
+      strToBoolean(includeMetaData),
+      strToBoolean(includeTags),
+      strToBoolean(filtered)
+    )
   }
 }
 

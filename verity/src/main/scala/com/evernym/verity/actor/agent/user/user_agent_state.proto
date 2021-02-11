@@ -7,7 +7,6 @@ import "thread_context.proto";
 import "protocol_instances.proto";
 import "relationship.proto";
 import "config_value.proto";
-import "agent_detail.proto";
 import "msg_and_delivery.proto";
 import "did_pair.proto";
 import "sponsor_rel.proto";
@@ -18,7 +17,7 @@ message UserAgentState {
     option (scalapb.message).extends = "com.evernym.verity.actor.agent.user.UserAgentStateImpl";
     DidPair publicIdentity = 1;
     SponsorRel sponsorRel = 2;
-    repeated AgentDetail relationshipAgents = 3;
+    map <string, string> relationshipAgents = 3;
     map<string, ConfigValue> configs = 4;
     MsgAndDelivery msgAndDelivery = 5;
     google.protobuf.StringValue thisAgentKeyId = 6;

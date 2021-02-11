@@ -3,21 +3,24 @@ package com.evernym.verity.actor
 import akka.actor.Props
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.{ACTOR_DISPATCHER_NAME_USER_AGENT, ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE}
-import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AGENT, AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE}
+import com.evernym.verity.config.CommonConfig.{ACTOR_DISPATCHER_NAME_USER_AGENT, ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE, AKKA_SHARDING_REGION_NAME_USER_AGENT, AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE}
+import com.evernym.verity.constants.ActorNameConstants.{USER_AGENT_REGION_ACTOR_NAME, USER_AGENT_PAIRWISE_REGION_ACTOR_NAME}
 
 trait LegacyRegionActors extends LegacyRegionNames { this: Platform =>
 
   //region actor for legacy user agent actors
-  createRegion(
-    userAgentRegionName,            //this is the main change compared to corresponding standard region actors
-    buildProp(Props(new UserAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+  if (userAgentRegionName != USER_AGENT_REGION_ACTOR_NAME) {
+    createPersistentRegion(
+      userAgentRegionName, //this is the main change compared to corresponding standard region actors
+      buildProp(Props(new UserAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+  }
 
   //region actor for legacy user agent pairwise actors
-  createRegion(
-    userAgentPairwiseRegionName,    //this is the main change compared to corresponding standard region actors
-    buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
-
+  if (userAgentPairwiseRegionName != USER_AGENT_PAIRWISE_REGION_ACTOR_NAME) {
+    createPersistentRegion(
+      userAgentPairwiseRegionName, //this is the main change compared to corresponding standard region actors
+      buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+  }
 }
 
 trait HasLegacyRegionNames {

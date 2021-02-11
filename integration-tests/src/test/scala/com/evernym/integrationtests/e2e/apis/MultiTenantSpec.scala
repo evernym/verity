@@ -1,17 +1,19 @@
 package com.evernym.integrationtests.e2e.apis
 
-import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
-import com.evernym.verity.testkit.util.LedgerUtil
-import com.evernym.verity.util.StrUtil
 import com.evernym.integrationtests.e2e.env.AppInstance.Verity
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
 import com.evernym.integrationtests.e2e.flow._
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
+import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
+import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
+import com.evernym.verity.testkit.util.LedgerUtil
+import com.evernym.verity.util.StrUtil
+import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 
 
@@ -23,8 +25,9 @@ class MultiTenantSpec
     with SetupFlow
     with AdminFlow
     with MetricsFlow
-    with MessageTrackingFlow
     with Eventually {
+
+  override val logger: Logger = getLoggerByClass(getClass)
 
   override def environmentName: String = StrUtil.classToKebab[MultiTenantSpec]
 

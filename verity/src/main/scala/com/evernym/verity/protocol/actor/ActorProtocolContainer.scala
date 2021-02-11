@@ -1,16 +1,15 @@
 package com.evernym.verity.protocol.actor
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent._
+import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
-import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
@@ -18,14 +17,8 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.libindy.ledger.LedgerAccessApi
-import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
@@ -35,7 +28,16 @@ import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
-import com.evernym.verity.util.{ParticipantUtil, Util}
+import com.evernym.verity.util.Util
+import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.libindy.ledger.LedgerAccessApi
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
+import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
@@ -75,10 +77,10 @@ class ActorProtocolContainer[
     with CreateKeyEndpointServiceProvider
     with AgentEndpointServiceProvider
     with ProtocolEngineExceptionHandler
-    with MsgTraceProvider
     with HasAgentWallet
     with HasAppConfig
-    with AgentIdentity {
+    with AgentIdentity
+    with AsyncProtocolProgress {
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -109,9 +111,7 @@ class ActorProtocolContainer[
   // This function is only called when the actor is uninitialized; later,
   // the receiver becomes inert.
   final def initialBehavior: Receive = {
-    case ProtocolCmd(InitProtocol(domainId: DomainId, parameters: Set[Parameter]), None)=>
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-resp-received",
-        "init-msg-id", inMsg = Option("init-param-received"))
+    case ProtocolCmd(InitProtocol(domainId, parameters, sponsorRelOpt), None)=>
       submit(GivenDomainId(domainId))
       if(parameters.nonEmpty) {
         logger.debug(s"$protocolIdForLog about to send init msg")
@@ -120,7 +120,10 @@ class ActorProtocolContainer[
       }
       toBaseBehavior()
       // Ask for sponsor details from domain and record metric for initialized protocol
-      agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
+      sponsorRelOpt match {
+        case Some(sr) => handleSponsorRel(sr)
+        case None     => agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
+      }
     case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
       newRel.relationshipType match {
         case PAIRWISE_RELATIONSHIP =>
@@ -129,7 +132,7 @@ class ActorProtocolContainer[
           context.system.actorOf(
             ExtractEventsActor.prop(
               appConfig,
-              entityName,
+              entityType,
               fromPinstId,
               self
             )
@@ -154,33 +157,75 @@ class ActorProtocolContainer[
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
-  def toStoringBehavior(): Unit = {
-    logger.debug("becoming storingBehavior")
-    setNewReceiveBehaviour(storingBehavior)
+  /**
+   * Becomes asyncProtocolBehavior.
+   * Read asyncProtocolBehavior documentation.
+   */
+  def toProtocolAsyncBehavior(s: AsyncProtocolService): Unit = {
+    logger.debug("becoming toProtocolAsyncBehavior")
+    addsAsyncProtocolService(s)
+    setNewReceiveBehaviour(asyncProtocolBehavior)
   }
 
+  /**
+   * When a protocol needs some asynchronous behavior done and the finalization of the state needs to wait until completion,
+   * the 'Receive' method is transitioned to asyncProtocolBehavior.
+   * This behavior handles things like the url-shortener, segmented state storage, wallet and ledger access.
+   * The behavior is not transitioned back to the base behavior until all services have completed.
+   */
+  final def asyncProtocolBehavior: Receive = storingBehavior orElse asyncProtocolServiceBehavior orElse stashProtocolAsyncBehavior
+
+  /**
+   * This Receive is chained off asyncProtocolBehavior.
+   * handles url-shortener and eventually wallet and ledger access.
+   */
+  final def asyncProtocolServiceBehavior: Receive = {
+    //TODO: This is where WalletServiceComplete and LedgerServiceComplete will happen
+    case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
+      logger.debug(s"$protocolIdForLog received UrlShortenerServiceComplete")
+      removesAsyncProtocolService(UrlShorteningProgress)
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
+      handleAllAsyncServices()
+  }
+
+  /**
+   * This Receive is chained off asyncProtocolBehavior.
+   * When a protocol uses segmented state to store a segment or some type of storage, this happens asynchronously.
+   * Incoming messages and protocol finalization should not happen until the completion of storing.
+   */
   final def storingBehavior: Receive = {
     case ProtocolCmd(_: SegmentStorageComplete, _) =>
       logger.debug(s"$protocolIdForLog received StoreComplete")
-      toBaseBehavior()
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
     case ProtocolCmd(_: SegmentStorageFailed, _) =>
       logger.error(s"failed to store segment")
-      toBaseBehavior()
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
+  }
+
+  /**
+   * This Receive is chained off asyncProtocolBehavior.
+   * stashes any message received while a asyncProtocolBehavior type process is in progress.
+   */
+  final def stashProtocolAsyncBehavior: Receive = {
     case msg: Any => // we can't make a stronger assertion about type because erasure
-      logger.debug(s"$protocolIdForLog received msg: $msg while storing data")
+      logger.debug(s"$protocolIdForLog received msg: $msg while handling async behavior in protocol - (segmented state, url-shortener, ledger, wallet")
       stash()
   }
 
-  //TODO -> RTM: Add documentation for this
-  //dhh I'd like to understand the significance of changing receive behavior.
-  // Is this part of the issue Jason wrote about with futures, where we are
-  // going into different modes at different points in a sequence of actions
-  // that contains multiple waits?
+  /**
+   * Becomes retrievingBehavior.
+   * Read retrievingBehavior documentation.
+   */
   def toRetrievingBehavior(): Unit = {
     logger.debug("becoming retrievingBehavior")
     setNewReceiveBehaviour(retrievingBehavior)
   }
 
+  /**
+   * Behavior changes to handle messages regarding storage retrieval.
+   * When a protocol stores state using the segmented state infrastructure, this happens asynchronously.
+   * Incoming messages and protocol finalization should not happen until the completion of retrieving the storage.
+   */
   final def retrievingBehavior: Receive = {
     case ProtocolCmd(_: DataRetrieved, _) =>
       logger.debug(s"$protocolIdForLog received DataRetrieved")
@@ -267,7 +312,6 @@ class ActorProtocolContainer[
       case m: MsgWithSegment =>
         (m.msgId, m, m)
     }
-    MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "in-msg-process-started", msgId, inMsg = Option(actualMsg))
     submit(msgToBeSent, Option(handleResponse(_, Some(msgId), senderActorRef)))
   }
 
@@ -302,7 +346,7 @@ class ActorProtocolContainer[
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
-    agentActorContext.tokenToActorItemMapperProvider.createToken(entityName, entityId, uid)
+    agentActorContext.tokenToActorItemMapperProvider.createToken(entityType, entityId, uid)
   }
 
   def addToMsgQueue(msg: Any): Unit = {
@@ -326,9 +370,6 @@ class ActorProtocolContainer[
     val forwarder = msgForwarder.forwarder.getOrElse(throw new RuntimeException("forwarder not set"))
 
     forwarder ! InitProtocolReq(definition.initParamNames)
-
-    MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "init-param-req-sent",
-      "init-msg-id", outMsg = Option("init-req-sent"))
   }
 
   @silent
@@ -337,7 +378,7 @@ class ActorProtocolContainer[
     Some(new LegacyProtocolServicesImpl[M,E,I](
       eventRecorder, sendsMsgs, agentActorContext.appConfig,
       agentActorContext.walletAPI, agentActorContext.generalCache,
-      agentActorContext.remoteMsgSendingSvc, agentActorContext.agentMsgTransformer,
+      agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer,
       this, this, this))
   }
 
@@ -390,10 +431,11 @@ class ActorProtocolContainer[
   class MsgSender extends SendsMsgsForContainer[M](this) {
 
     def send(pom: ProtocolOutgoingMsg): Unit = {
-      val fromAgentId = ParticipantUtil.agentId(pom.from)
-      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(fromAgentId, pom))
-      MsgProgressTracker.recordProtoMsgStatus(definition, pinstId, "sent-to-agent-actor",
-        pom.requestMsgId, outMsg = Option(pom.msg))
+      //because the 'agent msg processor' actor contains the response context
+      // this message needs to go back to the same 'agent msg processor' actor
+      // from where it was came earlier to this actor
+      //TODO-amp: shall we find better solution
+      msgForwarder.forwarder.foreach(_ ! pom)
     }
 
     //dhh It surprises me to see this feature exposed here. I would have expected it
@@ -405,7 +447,7 @@ class ActorProtocolContainer[
       )(
         agentActorContext.appConfig,
         agentActorContext.smsSvc,
-        agentActorContext.remoteMsgSendingSvc)
+        agentActorContext.msgSendingSvc)
     }
   }
 
@@ -417,7 +459,6 @@ class ActorProtocolContainer[
     def write(id: ItemId, data: Array[Byte], cb: Try[Any] => Unit): Unit =
       agentActorContext.s3API upload(id, data) onComplete cb
   }
-
 
   def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = {
     def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any): Unit = {
@@ -435,7 +476,7 @@ class ActorProtocolContainer[
     }
 
     def saveStorageState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      toStoringBehavior()
+      toProtocolAsyncBehavior(SegmentStateStoreProgress)
       logger.debug(s"storing storage state: $data")
       storageService.write(segmentAddress + segmentKey, data.toByteArray, {
         case Success(storageInfo: StorageInfo) =>
@@ -455,7 +496,7 @@ class ActorProtocolContainer[
     }
 
     def saveSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey, data: GeneratedMessage): Unit = {
-      toStoringBehavior()
+      toProtocolAsyncBehavior(SegmentStateStoreProgress)
       data match {
         case segmentData if maxSegmentSize(segmentData) =>
           val cmd = SaveSegmentedState(segmentKey, segmentData)
@@ -508,6 +549,29 @@ class ActorProtocolContainer[
     LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
   )
 
+  override lazy val urlShortening = new UrlShorteningAccessController(
+    grantedAccessRights,
+    urlShortener
+  )
+
+  private val urlShortener: UrlShorteningAccess = new UrlShorteningAccess {
+    override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit = {
+      logger.debug("in url shortening callback")
+      toProtocolAsyncBehavior(UrlShorteningProgress)
+      context.system.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(inviteUrl) onComplete {
+        case Success(m) =>
+          m match {
+            case UrlShortened(shortUrl) => handler(Success(InviteShortened(inviteUrl, shortUrl)))
+            case UrlShorteningFailed(_, msg) => handler(Failure(new Exception(msg)))
+          }
+          addToMsgQueue(UrlShortenerServiceComplete())
+        case Failure(e) =>
+          handler(Failure(e))
+          addToMsgQueue(UrlShortenerServiceComplete())
+      }
+    }
+  }
+
   final override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     eventPersistenceFailure(cause, event)
     super.onPersistFailure(cause, event, seqNr)
@@ -526,8 +590,6 @@ class ActorProtocolContainer[
   override def serviceEndpoint: ServiceEndpoint = {
     Util.buildAgencyEndpoint(appConfig).url
   }
-
-  override def system: ActorSystem = agentActorContext.system
 
 }
 
@@ -571,7 +633,7 @@ trait MsgQueueServiceProvider {
  * @param domainId domain id
  * @param parameters protocol initialization parameters
  */
-case class InitProtocol(domainId: DomainId, parameters: Set[Parameter]) extends ActorMessage
+case class InitProtocol(domainId: DomainId, parameters: Set[Parameter], sponsorRel: Option[SponsorRel]) extends ActorMessage
 
 /**
  * This is used by this actor during protocol initialization process.
@@ -590,9 +652,9 @@ case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends Act
   which is then provided into driver and driver uses it to reach to the same agent (launcher)
   who originally forwarded the msg
  */
-case class ProtocolMetadata(threadContextDetail: ThreadContextDetail,
+case class ProtocolMetadata(forwarder: ActorRef,
                             walletId: String,
-                            forwarder: ActorRef)
+                            threadContextDetail: ThreadContextDetail)
 
 case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
 

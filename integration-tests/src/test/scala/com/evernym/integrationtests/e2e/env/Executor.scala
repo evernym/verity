@@ -7,9 +7,30 @@ import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgent
 
-class MockAgentService(val urlParam: UrlParam)
-  extends AgentMsgSenderHttpWrapper {
-  override val mockClientAgent = new MockCloudAgent(urlParam, appConfig)
+class AgencyAgentSetupHelper {
+
+  def setupAgencyAgent(str: String): Unit = {
+    setupAgencyAgent(UrlParam(str))
+  }
+  def setupAgencyAgent(up: UrlParam): Unit = {
+    val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
+      def urlParam: UrlParam = up
+      override val mockClientAgent = new MockCloudAgent(urlParam, appConfig)
+    }
+    agencyAgent.setupAgency()
+  }
+
+  def bootstrapAgencyAgentToLedger(str: String): Unit = {
+    bootstrapAgencyAgentToLedger(UrlParam(str))
+  }
+
+  def bootstrapAgencyAgentToLedger(up: UrlParam): Unit = {
+    val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
+      def urlParam: UrlParam = up
+      override val mockClientAgent = new MockCloudAgent(urlParam, appConfig)
+    }
+    agencyAgent.bootstrapAgencyAgentToLedger()
+  }
 }
 
 object Executor {

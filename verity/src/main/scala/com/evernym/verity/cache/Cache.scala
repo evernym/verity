@@ -1,10 +1,5 @@
 package com.evernym.verity.cache
 
-import java.time.{LocalDateTime, ZonedDateTime}
-import java.time.temporal.ChronoUnit
-import java.util.UUID
-
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{getUnhandledError, _}
@@ -12,10 +7,15 @@ import com.evernym.verity.actor.agent.agency.AgencyInfo
 import com.evernym.verity.actor.agent.msgrouter.ActorAddressDetail
 import com.evernym.verity.actor.agent.user.AgentConfigs
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.{getLoggerByClass, getLoggerByName}
+import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
 import com.evernym.verity.protocol.engine.DID
 import com.typesafe.scalalogging.Logger
 
+import java.time.temporal.ChronoUnit
+import java.time.{LocalDateTime, ZonedDateTime}
+import java.util.UUID
 import scala.collection.mutable
 import scala.concurrent.Future
 
@@ -212,6 +212,7 @@ trait CacheBase {
   private def prepareFinalResponse(finalResult: Map[String, Any])
                                   (implicit cpfr: CachePreFetchResult): CacheQueryResponse = {
     logHitRatio(cpfr.gcop.fetcherId, cpfr.reqId)
+    collectMetrics()
     val fetcher = getFetcherById(cpfr.gcop.fetcherId)
     val requiredKeyNames = cpfr.keyMappings.filter(_.kd.required).map(_.outputKey)
     val missingKeys = cpfr.keyMappings.map(_.outputKey).diff(finalResult.keySet)
@@ -223,6 +224,17 @@ trait CacheBase {
     } else {
       logMsg(cpfr.gcop.fetcherId, cpfr.reqId, "returning requested keys: " + finalResult.keySet.mkString(", "))
       CacheQueryResponse(finalResult)
+    }
+  }
+
+  private def collectMetrics(): Unit = {
+    val cacheTag = "cache_name" -> name
+    val tags = Map(cacheTag)
+    MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_TOTAL_SIZE, cachedObjects.size, tags)
+    MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_HIT_COUNT, hit, tags)
+    MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_MISS_COUNT, miss, tags)
+    cachedObjects.foreach { r =>
+      MetricsWriter.gaugeApi.updateWithTags(CustomMetrics.AS_CACHE_SIZE, r._2.size, Map(cacheTag, "fetcher_id" -> r._1.toString))
     }
   }
 
@@ -357,7 +369,10 @@ trait CacheResponseUtil {
  */
 case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
 
-class Cache(override val name: String, override val fetchers: Map[Int, CacheValueFetcher]) extends CacheBase
+class Cache(override val name: String, override val fetchers: Map[Int, CacheValueFetcher]) extends CacheBase {
+  logger.info(s"Cache '$name' initializing")
+  fetchers.foreach(f =>logger.info(s"Cache '$name' fetcher id = ${f._1}, max size = ${f._2.maxSize}"))
+}
 
 case class KeyDetail(key: Any, required: Boolean)
 
@@ -379,7 +394,7 @@ trait CacheValueFetcher {
   Map[String, Any] = result.flatten.map(e => e._1 -> e._2).toMap
 
   def throwRequiredKeysNotFoundException(reqKeysNotFound: Set[String]): HandledErrorException = {
-    new InternalServerErrorException(DATA_NOT_FOUND.statusCode, Option("required keys not found: " + reqKeysNotFound.mkString(", ")))
+    new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("required keys not found: " + reqKeysNotFound.mkString(", ")))
   }
 
   def buildUnexpectedResponse(r: Any): HandledErrorException = {

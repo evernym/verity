@@ -34,7 +34,6 @@ import scalapb.GeneratedMessage
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-
 /**
  * base class for almost all persistent actors used in this codebase
  */
@@ -46,12 +45,8 @@ trait BasePersistentActor
     with HasActorResponseTimeout
     with DeleteMsgHandler
     with HasTransformationRegistry
+    with PersistentEntityIdentifier
     with Stash {
-
-  //NOTE: don't remove/change below three vals else it won't be backward compatible
-  override lazy val entityName: String = self.path.parent.parent.name
-  override lazy val actorId: String = entityName + "-" + entityId
-  override lazy val persistenceId: String = actorId
 
   var totalPersistedEvents: Int = 0
   var totalRecoveredEvents: Int = 0
@@ -99,8 +94,8 @@ trait BasePersistentActor
   def transformedEvent(evt: Any): GeneratedMessage = {
     try {
       evt match {
-        case x: MultiEvent   => PersistentMultiEventMsg(x.evts.map(eventTransformer.execute))
-        case e               => eventTransformer.execute(e)
+        case me: MultiEvent   => PersistentMultiEventMsg(me.evts.map(eventTransformer.execute))
+        case e                => eventTransformer.execute(e)
       }
     } catch {
       case e: Exception =>
@@ -127,12 +122,9 @@ trait BasePersistentActor
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
-  final def persistEvent(event: Any, sync: Boolean)(handler: Any => Unit): Unit = {
+  final def persistEvent(events: List[Any], sync: Boolean)(handler: Any => Unit): Unit = {
     persistStart = System.currentTimeMillis()
     val successHandler = handler andThen { _ =>
-      val eventDetail = buildEventDetail(event)
-      logger.trace(eventDetail + " event persisted", ("event", event.getClass.getSimpleName),
-        (LOG_KEY_PERSISTENCE_ID, persistenceId))
       trackPersistenceSuccess()
       AppStateManager.recoverIfNeeded(CONTEXT_EVENT_PERSIST)
     }
@@ -140,39 +132,49 @@ trait BasePersistentActor
     incrementTotalPersistedEvents()
 
     try {
-      event match {
-        case evt: Any =>
-          val te = transformedEvent(evt)
-          PersistenceSerializerValidator.validate(te, appConfig)
-          if (sync) {
-            super.persist(te)(successHandler)
-          } else {
-            super.persistAsync(te)(successHandler)
-          }
+      val tes = events.map(transformedEvent)
+      tes.foreach(te => PersistenceSerializerValidator.validate(te, appConfig))
+      if (sync) {
+        super.persistAll(tes)(successHandler)
+      } else {
+        super.persistAllAsync(tes)(successHandler)
       }
     } catch {
       case e: Exception =>
-        val errorMsg = s"error during persisting actor event ${event.getClass.getSimpleName}: ${Exceptions.getErrorMsg(e)}"
+        val allEventNames = events.map(_.getClass.getSimpleName).mkString(", ")
+        val errorMsg = s"error during persisting actor event $allEventNames: ${Exceptions.getErrorMsg(e)}"
         trackPersistenceFailure()
         handlePersistenceFailure(e, errorMsg)
     }
   }
 
   final def persistExt(event: Any)(handler: Any => Unit): Unit = {
-    persistEvent(event, sync = true)(handler)
+    persistEvent(List(event), sync = true)(handler)
+  }
+
+  final def persistExtAll(events: List[Any])(handler: Any => Unit): Unit = {
+    persistEvent(events, sync = true)(handler)
   }
 
   final def persistAsyncExt(event: Any)(handler: Any => Unit): Unit = {
-    persistEvent(event, sync = false)(handler)
+    persistEvent(List(event), sync = false)(handler)
   }
 
-  def writeWithoutApply(evt: Any): Unit = persistExt(evt)(emptyEventHandler)
+  final def persistAsyncAllExt(events: List[Any])(handler: Any => Unit): Unit = {
+    persistEvent(events, sync = false)(handler)
+  }
 
-  def asyncWriteWithoutApply(evt: Any): Unit = persistAsyncExt(evt)(emptyEventHandler)
+  def writeWithoutApply(event: Any): Unit = persistExt(event)(emptyEventHandler)
 
-  def writeAndApply(evt: Any): Unit = {
-    runWithInternalSpan("writeAndApply", "BasePersistentActor") {
-      persistExt(evt)(receiveRecover)
+  def asyncWriteWithoutApply(event: Any): Unit = persistAsyncExt(event)(emptyEventHandler)
+
+  def asyncWriteWithoutApplyAll(events: List[Any]): Unit = persistAsyncAllExt(events)(emptyEventHandler)
+
+  def writeAndApply(evt: Any): Unit = persistExt(evt)(receiveRecover)
+
+  def writeAndApplyAll(events: List[Any]): Unit = {
+    runWithInternalSpan("writeAndApplyAll", "BasePersistentActor") {
+      persistExtAll(events)(receiveRecover)
     }
   }
 
@@ -180,6 +182,13 @@ trait BasePersistentActor
     runWithInternalSpan("asyncWriteAndApply", "BasePersistentActor") {
       asyncWriteWithoutApply(evt)
       applyEvent(evt)
+    }
+  }
+
+  def asyncWriteAndApplyAll(events: List[Any]): Unit= {
+    runWithInternalSpan("asyncWriteAndApplyAll", "BasePersistentActor") {
+      asyncWriteWithoutApplyAll(events)
+      events.map(applyEvent)
     }
   }
 
@@ -213,16 +222,15 @@ trait BasePersistentActor
   def normalizedEntityCategoryName: String = {
     entityCategory.replace("$", "")
   }
-  def normalizedEntityName: String = {
-    //if entityName == "/", it is NON sharded actor
-    if (entityName == "/") getClass.getSimpleName.replace("$", "")
-    else entityName.replace("$", "")
+  def normalizedEntityType: String = {
+    if (entityType == "/") getClass.getSimpleName.replace("$", "")
+    else entityType.replace("$", "")
   }
   def normalizedEntityId: String = entityId.replace("$", "")
 
   def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
     appConfig, defaultReceiveTimeoutInSeconds,
-    normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   /**
    * configuration to decide if this persistent actor should use snapshot during recovery
@@ -230,7 +238,7 @@ trait BasePersistentActor
    */
   def recoverFromSnapshot: Boolean = PersistentActorConfigUtil.getRecoverFromSnapshot(
     appConfig, defaultValue = true,
-    normalizedEntityCategoryName, normalizedEntityName, normalizedEntityId)
+    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
 
   /**
    * use 'recoverFromSnapshot' configuration to decide if snapshot will be used during recovery or not
@@ -469,8 +477,8 @@ trait BasePersistentActor
   }
 
   private def handleBasePersistenceCmd: Receive = {
-    case GetActorDetail     =>
-      sender ! ActorDetail(actorId, totalPersistedEvents, totalRecoveredEvents)
+    case GetPersistentActorDetail     =>
+      sender ! PersistentActorDetail(actorDetail, persistenceId, totalPersistedEvents, totalRecoveredEvents)
   }
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =
@@ -497,7 +505,7 @@ trait BasePersistentActor
 trait HasActorResponseTimeout {
   def appConfig: AppConfig
 
-  implicit lazy val duration: FiniteDuration =
+  protected implicit lazy val duration: FiniteDuration =
     buildDuration(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
   implicit lazy val akkActorResponseTimeout: Timeout = Timeout(duration)
 }

@@ -10,6 +10,7 @@ import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCreden
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, COMMUNITY_QUALIFIER}
@@ -22,9 +23,11 @@ import com.evernym.verity.sdk.utils.ContextBuilder
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.{Base64Util, OptionUtil}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.time.{Second, Span}
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -32,9 +35,12 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
+import scala.language.postfixOps
 
 trait InteractiveSdkFlow extends MetricsFlow {
   this: BasicSpec with TempDir with Eventually =>
+
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   import InteractiveSdkFlow._
 
@@ -243,7 +249,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
-      //FIXME: RTM -> Write test which uses an issuer did that doesn't have write privileges on Ledger
       s"[$issuerName] use write-schema protocol" in {
         val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
         schema.write(issuerSdk.context)
@@ -320,14 +325,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
         //        val resp:JSONObject = expectMsg(credDefTimeout.max(scenario.timeout))
         //        resp shouldBe an [JSONObject]
         //        val errorMessage = resp.get("message").asInstanceOf[String]
-        //        println(s"response error message: $errorMessage")
+        //        logger.error(s"response error message: $errorMessage")
       }
     }
   }
-
-
-
-
 
   def connect_1_0(inviter: ApplicationAdminExt,
                   invitee: ApplicationAdminExt,
@@ -363,7 +364,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           relProvisioning.create(inviterSdk.context)
           inviterMsgReceiverSdk.expectMsg("created") { msg =>
             createdRespMsg = msg
-            println("created response: " + msg)
+            logger.info("created response: " + msg)
             msg shouldBe an[JSONObject]
             msg.getString("@type") should (be (s"https://didcomm.evernym.com/relationship/1.0/created") or be ("did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"))
             threadId = msg.getJSONObject("~thread").getString("thid")
@@ -377,7 +378,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           relationship.connectionInvitation(inviterSdk.context, true)
           inviterMsgReceiverSdk.expectMsg("invitation") { msg =>
             invite = msg
-            println("prepare invite response: " + msg)
+            logger.info("prepare invite response: " + msg)
             inviteUrl = msg.getString("inviteURL")
 
             // check shortInviteURL.
@@ -397,14 +398,14 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$inviterName] receive a signal about 'request-received' msg" in {
         inviterMsgReceiverSdk.expectMsg("request-received") { msg =>
           connReq = msg
-          println("connReq: " + connReq)
+          logger.info("connReq: " + connReq)
         }
 
       }
 
       s"[$inviterName] receive a signal about 'response-sent' msg" in {
         inviterMsgReceiverSdk.expectMsg("response-sent") { connResp =>
-          println("connResp: " + connResp)
+          logger.info("connResp: " + connResp)
           val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
           val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
           val theirDID = connReq.getJSONObject("conn").getString("DID")
@@ -462,7 +463,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           relProvisioning.create(inviterSdk.context)
           inviterMsgReceiverSdk.expectMsg("created") { msg =>
             createdRespMsg = msg
-            println("created response: " + msg)
+            logger.info("created response: " + msg)
             msg shouldBe an[JSONObject]
             msg.getString("@type") should (be ("did:sov:123456789abcdefghi1234;spec/relationship/1.0/created") or be ("https://didcomm.evernym.com/relationship/1.0/created"))
             threadId = msg.getJSONObject("~thread").getString("thid")
@@ -476,7 +477,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           relationship.outOfBandInvitation(inviterSdk.context, true, goal)
           inviterMsgReceiverSdk.expectMsg("invitation") { msg =>
             invite = msg
-            println("prepare invite response: " + msg)
+            logger.info("prepare invite response: " + msg)
             inviteUrl = msg.getString("inviteURL")
 
             // check shortInviteURL.
@@ -510,14 +511,14 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$inviterName] receive a signal about 'request-received' msg" in {
         inviterMsgReceiverSdk.expectMsg("request-received") { msg =>
           connReq = msg
-          println("connReq: " + connReq)
+          logger.info("connReq: " + connReq)
         }
 
       }
 
       s"[$inviterName] receive a signal about 'response-sent' msg" in {
         inviterMsgReceiverSdk.expectMsg("response-sent") { connResp =>
-          println("connResp: " + connResp)
+          logger.info("connResp: " + connResp)
           val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
           val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
           val theirDID = connReq.getJSONObject("conn").getString("DID")
@@ -587,7 +588,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$holderName] send a credential request" taggedAs UNSAFE_IgnoreLog in {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
         holderMsgReceiver.expectMsg("ask-accept") {askAccept =>
-          println("askAccept: " + askAccept)
+          logger.info("askAccept: " + askAccept)
           tid = threadId(askAccept)
         }
         holderSdk.issueCredential_1_0(forRel, tid).requestCredential(holderSdk.context)
@@ -660,7 +661,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
     s"[$inviterName] receive a signal about 'response-sent' msg" in {
       inviterMsgReceiver.expectMsg("response-sent") { connResp =>
-        println("connResp: " + connResp)
+        logger.info("connResp: " + connResp)
         val sigData = connResp.getJSONObject("resp").getJSONObject("connection~sig").getString("sig_data")
         val connJson = new JSONObject(new String(Base64Util.getBase64UrlDecoded(sigData).drop(8), StandardCharsets.UTF_8))
         val theirDID = connReq.getJSONObject("conn").getString("DID")
@@ -1045,7 +1046,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         var presentation = new JSONObject()
 
         verifierMsgReceiver.expectMsg("presentation-result") { result =>
-          println(s"Presentation result: ${result.toString(2)}")
+          logger.info(s"Presentation result: ${result.toString(2)}")
           tid = threadId(result)
           result.getString("verification_result") shouldBe "ProofValidated"
 
@@ -1130,7 +1131,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         var tid = ""
         verifierMsgReceiver.expectMsg("review-proposal") { proposal =>
-          println(s"Proposal received: ${proposal.toString(2)}")
+          logger.info(s"Proposal received: ${proposal.toString(2)}")
           tid = threadId(proposal)
         }
 
@@ -1157,7 +1158,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         var presentation = new JSONObject()
 
         verifierMsgReceiver.expectMsg("presentation-result") { result =>
-          println(s"Presentation result: ${result.toString(2)}")
+          logger.info(s"Presentation result: ${result.toString(2)}")
           tid = threadId(result)
           result.getString("verification_result") shouldBe "ProofValidated"
 
@@ -1313,20 +1314,22 @@ trait InteractiveSdkFlow extends MetricsFlow {
                               dumpToFile: Boolean=false): Unit = {
     s"${app.name} validating protocol metrics" - {
       s"[$protoRef] validation" in {
-        //Get metrics for specific app
-        val allNodeMetrics = app.getAllNodeMetrics()
-        allNodeMetrics.data.headOption.nonEmpty shouldBe true
-        val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
-        if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
-        val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
-        val baseMetric = currentNodeMetrics
-          .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
-          .find(_.tags.get == tag)
-          .get
+        eventually(timeout(30 seconds), Interval(Span(1, Second))) {
+          //Get metrics for specific app
+          val allNodeMetrics = app.getAllNodeMetrics()
+          allNodeMetrics.data.headOption.nonEmpty shouldBe true
+          val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
+          if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
+          val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
+          val baseMetric = currentNodeMetrics
+            .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
+            .find(_.tags.get == tag)
+            .get
 
-        //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
-        if (baseMetric.value != expectedMetricCount)
-          fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+          //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
+          if (baseMetric.value != expectedMetricCount)
+            fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+        }
       }
     }
   }

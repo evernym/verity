@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine.external_api_access
 
 import com.evernym.verity.Status.StatusDetail
-import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, TxnResp}
+import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.protocol.engine.DID
 
 import scala.util.{Failure, Try}
@@ -25,9 +25,14 @@ class LedgerAccessController(accessRights: Set[AccessRight], ledgerRequestsImp: 
     runIfAllowed(LedgerReadAccess, {ledgerRequestsImp.getSchema(schemaId)})
 
   override def writeSchema(submitterDID: String, schemaJson: String): Try[Either[StatusDetail, TxnResp]] =
-
     runIfAllowed(LedgerWriteAccess, {ledgerRequestsImp.writeSchema(submitterDID, schemaJson)})
+
+  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Try[LedgerRequest] =
+    runIfAllowed(LedgerWriteAccess, {ledgerRequestsImp.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID)})
 
   override def writeCredDef(submitterDID: DID, credDefJson: String): Try[Either[StatusDetail, TxnResp]] =
     runIfAllowed(LedgerWriteAccess, {ledgerRequestsImp.writeCredDef(submitterDID, credDefJson)})
+
+  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Try[LedgerRequest] =
+    runIfAllowed(LedgerWriteAccess, {ledgerRequestsImp.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID)})
 }

@@ -8,15 +8,12 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, StoreTheirKey}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
-import com.evernym.verity.cache.Cache
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine._
@@ -40,11 +37,6 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       with AgentMsgSender
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
-
-  override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
-  override lazy val remoteMsgSendingSvc: RemoteMsgSendingSvc = ctx.SERVICES_DEPRECATED.remoteMsgSendingSvc
-  override lazy val generalCache: Cache = ctx.SERVICES_DEPRECATED.generalCache
-  override implicit lazy val agentMsgTransformer: AgentMsgTransformer = ctx.SERVICES_DEPRECATED.agentMsgTransformer
 
   lazy val myPairwiseDIDReq : DID = ctx.getState.myPairwiseDIDReq
   lazy val myPairwiseVerKeyReq : VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)
@@ -129,7 +121,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   private def handleCreateConnection(amw: AgentMsgWrapper): PackedMsg = {
     val cc = amw.headAgentMsg.convertTo[CreateConnectionReqMsg_MFV_0_6]
-    val edgePairwiseKey = walletAPI.createNewKey(CreateNewKey())
+    val edgePairwiseKey = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
     val edgePairwiseKeyCreated = KeyCreated(edgePairwiseKey.did)
     ctx.apply(edgePairwiseKeyCreated)
 
@@ -168,8 +160,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   }
 
   private def processKeyCreatedMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit agentMsgContext: AgentMsgContext): Future[PackedMsg] = {
-    val pairwiseKeyResult = walletAPI.createNewKey(CreateNewKey())
-    walletAPI.storeTheirKey(StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
+    val pairwiseKeyResult = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
+    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
@@ -188,7 +180,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       Option(KeyParam(Left(pairwiseKeyCreated.verKey)))
     )
     val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
-    buildAgentMsg(agentMsgContext.msgPackFormat, param)
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormat, param))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

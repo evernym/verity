@@ -90,15 +90,15 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
       }
     }
 
-    "when asked to build metrics with isResetMetrics flag as true" - {
+    "when asked to build metrics" - {
       "should be able to build metrics" in {
         val expectedMetrics = List(
-          MetricDetail("akka_system_processed_messages_total_since_last_reset", "actor_system", 289978.0,
+          MetricDetail("akka_system_processed_messages_total", "actor_system", 289978.0,
             Some(Map("system" -> "consumer-agency", "tracked" -> "false"))),
-          MetricDetail("akka_system_processed_messages_total_since_last_reset", "actor_system", 0.0,
+          MetricDetail("akka_system_processed_messages_total", "actor_system", 0.0,
             Some(Map("system" -> "consumer-agency", "tracked" -> "tr")))
         )
-        val actualMetrics = KamonPrometheusMetricsReporter.buildMetrics(inputMetrics, isResetMetrics = true)
+        val actualMetrics = KamonPrometheusMetricsReporter.buildMetrics(inputMetrics)
         expectedMetrics.forall(actualMetrics.contains) shouldBe true
       }
     }

@@ -33,7 +33,7 @@ trait HttpRouteBase
   def logger: Logger
   def appConfig: AppConfig
 
-  lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
+  protected lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
     var allowedIPs: List[String] = appConfig.getConfigListOfStringReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
     if (allowedIPs.isEmpty) {
       val interfaces: JavaEnumeration[NetworkInterface] = NetworkInterface.getNetworkInterfaces
@@ -66,11 +66,11 @@ trait HttpRouteBase
     allowedIPs.map(ip => new SubnetUtilsExt(ip))
   }
 
-  lazy val smsApiAllowedClientIpAddresses: List[SubnetUtilsExt] = {
+  protected lazy val smsApiAllowedClientIpAddresses: List[SubnetUtilsExt] = {
     appConfig.getConfigListOfStringReq(SMS_SVC_ALLOWED_CLIENT_IP_ADDRESSES).map(ip => new SubnetUtilsExt(ip))
   }
 
-  def optionalEntityAs[T: ClassTag]: Directive1[Option[T]] = {
+  protected def optionalEntityAs[T: ClassTag]: Directive1[Option[T]] = {
     extractRequest.flatMap { req =>
       if (req.entity.contentLengthOption.contains(0L)) {
         provide(Option.empty[T])
@@ -87,7 +87,7 @@ trait HttpRouteBase
     optionalEntityAs[T].map(_.getOrElse(throw new RuntimeException("entity not found")))
   }
 
-  def checkIfApiCalledFromAllowedIPAddresses(callerIpAddress: String, allowedIpAddresses: List[SubnetUtilsExt])
+  protected def checkIfApiCalledFromAllowedIPAddresses(callerIpAddress: String, allowedIpAddresses: List[SubnetUtilsExt])
                                             (implicit req: HttpRequest): Unit = {
     val allowedSubnetOpt = allowedIpAddresses.find { ipsn =>
       ipsn.getInfo.isInRange(callerIpAddress)

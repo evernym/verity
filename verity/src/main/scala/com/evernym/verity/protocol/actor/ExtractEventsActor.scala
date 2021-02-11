@@ -18,7 +18,7 @@ class ExtractEventsActor(override val appConfig: AppConfig,
   extends BasePersistentActor
   with DefaultPersistenceEncryption {
 
-  override lazy val entityName: String = actorTypeName
+  override lazy val entityType: String = actorTypeName
   override lazy val entityId: String = pinstId
 
   override def receiveCmd: Receive = {

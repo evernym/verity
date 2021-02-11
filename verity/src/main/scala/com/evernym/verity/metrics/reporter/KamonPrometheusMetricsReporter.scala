@@ -2,8 +2,8 @@ package com.evernym.verity.metrics.reporter
 
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.metrics.reporter.KamonPrometheusMetricsReporter.targetConnector
 import kamon.Kamon
+import kamon.module.Module.Registration
 import kamon.prometheus.PrometheusReporter
 
 
@@ -12,59 +12,39 @@ import kamon.prometheus.PrometheusReporter
 
 object KamonPrometheusMetricsReporter extends MetricsReporter {
 
-  val DEFAULT_TARGET = "unknown"
+  /**
+   * this reporter keeps tracking metrics from the time verity starts
+   */
   val FIXED_REPORTER_NAME = "fixed-reporter"
-  val RESET_BASED_REPORTER_NAME = "reset-based-reporter"
+  private var fixedReporter = createFixedMetricsReporter()
 
-  /**
-   * this reporter keeps tracking metrics from the time agency starts
-   */
-  private val fixedReporter = createAndAddMetricsReporter(FIXED_REPORTER_NAME)
+  private def fixedMetricsData: String = fixedReporter.reporter.scrapeData()
 
-  /**
-   * this reporter may get reset if corresponding internal api gets called
-   * and it will only tracks metrics post that reset
-   */
-  private var resetBasedReporter = createAndAddMetricsReporter(RESET_BASED_REPORTER_NAME)
-
-  private def fixedMetricsData: String = fixedReporter.scrapeData()
-  private def resetBasedMetricsData: String = resetBasedReporter.scrapeData()
-
-  lazy val resetMetricsNameSuffix: String =
-    AppConfigWrapper.getConfigStringOption(RESET_METRICS_NAME_SUFFIX).getOrElse("_since_last_reset")
-  lazy val targetConnector: String = AppConfigWrapper.getConfigStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")
-
-  def createAndAddMetricsReporter(name: String): PrometheusReporter = {
-    val rep = new PrometheusReporter()
-    Kamon.registerModule(name, rep)
-    rep
+  def createFixedMetricsReporter(): RegisteredReporter = {
+    Option(fixedReporter).foreach(_.registration.cancel())
+    val reporter = new PrometheusReporter()
+    val registration = Kamon.registerModule(FIXED_REPORTER_NAME, reporter)
+    RegisteredReporter(FIXED_REPORTER_NAME, reporter, registration)
   }
 
-  override def fixedMetrics: List[MetricDetail] = {
+  override def fixedMetrics: List[MetricDetail] =
     buildMetrics(fixedMetricsData)
-  }
 
-  override def postResetMetrics: List[MetricDetail] =
-    buildMetrics(resetBasedMetricsData, isResetMetrics = true)
+  private def getCleanedInputStr(inputStr: String): String =
+    inputStr.stripMargin.replaceAll("\n", " ")
 
-  def resetMetrics(): Unit = {
-    resetBasedReporter = createAndAddMetricsReporter(RESET_BASED_REPORTER_NAME)
-  }
-
-  private def getCleanedInputStr(inputStr: String): String = inputStr.stripMargin.replaceAll("\n", " ")
-
-  def buildMetrics(inputStr: String, isResetMetrics: Boolean = false): List[MetricDetail] = {
+  def buildMetrics(inputStr: String): List[MetricDetail] = {
     inputStr.split("\n").
       filter(l => l.nonEmpty).
       filterNot(_.startsWith("#")).
       toList.map { metricLine =>
-        buildMetric(metricLine, isResetMetrics)
+        buildMetric(metricLine)
     }
   }
 
-  def buildMetric(inputStr: String, isResetMetrics: Boolean = false): MetricDetail = {
+  def buildMetric(inputStr: String): MetricDetail = {
     val cleanedInputStr = getCleanedInputStr(inputStr)
-    val parsedMetricParam = parse(cleanedInputStr, isResetMetrics)
+    val parsedMetricParam = parse(cleanedInputStr)
 
     val name = parsedMetricParam.name
     val value = parsedMetricParam.value
@@ -73,12 +53,7 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
     MetricDetail(name, target, value, tags)
   }
 
-
-  private def buildName(actualName: String, isResetMetrics: Boolean): String = {
-    if(isResetMetrics) s"""$actualName$resetMetricsNameSuffix""" else actualName
-  }
-
-  private def parse(inputStr: String, isResetMetrics: Boolean): ParsedMetricParam = {
+  private def parse(inputStr: String): ParsedMetricParam = {
     val (head, value) = (
         inputStr.substring(0, inputStr.lastIndexOf(" ")),
         inputStr.substring(inputStr.lastIndexOf(" ")))
@@ -91,7 +66,7 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
       case _: StringIndexOutOfBoundsException =>
         (head, None)
     }
-    ParsedMetricParam(buildName(name, isResetMetrics), value.trim.toDouble, tagString.map(parseTags).getOrElse(Map.empty))
+    ParsedMetricParam(name, value.trim.toDouble, tagString.map(parseTags).getOrElse(Map.empty))
   }
 
   private def parseTags(tagString: String): Map[String, String] = {
@@ -113,9 +88,18 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
     }.getOrElse(DEFAULT_TARGET)
   }
 
+  val DEFAULT_TARGET = "unknown"
+  lazy val targetConnector: String = AppConfigWrapper.getConfigStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")
+
+  //only exists for tests purposes
+  // (may be we should find better way to handle a need to reset metrics reporter before each test)
+  def _resetFixedMetricsReporter(): Unit = {
+    fixedReporter = createFixedMetricsReporter()
+  }
 }
 
 trait TargetBuilder {
+  import com.evernym.verity.metrics.reporter.KamonPrometheusMetricsReporter.targetConnector
 
   def getConfiguredTagsByTargetType(typ: String): Option[Set[String]] = AppConfigWrapper.getConfigSetOfStringOption(typ)
 
@@ -179,3 +163,5 @@ object TargetBuilder extends TargetBuilder {
 }
 
 case class ParsedMetricParam(name: String, value: Double, tags: Map[String, String])
+
+case class RegisteredReporter(name: String, reporter: PrometheusReporter, registration: Registration)

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor.agent;
+
+enum MsgPackFormat {
+    option (scalapb.enum_options).extends = "MsgPackFormatLike";
+    option (scalapb.enum_options).companion_extends = "MsgPackFormatCompanion";
+    MPF_PLAIN = 0 [(scalapb.enum_value).extends = "Plain"];
+    MPF_MSG_PACK = 1 [(scalapb.enum_value).extends = "MsgPack"];
+    MPF_INDY_PACK = 2 [(scalapb.enum_value).extends = "IndyPack"];
+}

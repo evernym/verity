@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0;
+
+message Initialized {
+    option (scalapb.message).extends = "Event";
+    string selfIdValue = 1;
+    string otherIdValue = 2;
+}
+
+message MyRole {
+    option (scalapb.message).extends = "Event";
+    int32  roleNum = 1;
+}
+
+message QuestionUsed {
+    option (scalapb.message).extends = "Event";
+
+    string questionText            = 1;
+    string questionDetail          = 2;
+    string nonce                   = 3;
+    bool signatureRequired         = 4;
+    repeated string validResponses = 5;
+    string expiresTime             = 6;
+}
+
+message SignedAnswerUsed {
+    option (scalapb.message).extends = "Event";
+    string response         = 1;
+    string received         = 2;
+    string signature        = 3;
+    string signatureData    = 4;
+    repeated string signers = 5;
+}
+
+message AnswerUsed {
+    option (scalapb.message).extends = "Event";
+    string response = 1;
+    string received = 2;
+}
+
+message Validity {
+    option (scalapb.message).extends = "Event";
+    bool answerValidity    = 1;
+    bool signatureValidity = 2;
+    bool timingValidity    = 3;
+}
+
+message Error {
+    option (scalapb.message).extends = "Event";
+    int32 errorCode = 1;
+    string comment  = 2;
+}

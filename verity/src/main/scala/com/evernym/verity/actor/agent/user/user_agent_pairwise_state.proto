@@ -9,6 +9,7 @@ import "relationship.proto";
 import "config_value.proto";
 import "msg_and_delivery.proto";
 import "connection_status.proto";
+import "did_pair.proto";
 
 package com.evernym.verity.actor.agent.user;
 
@@ -23,6 +24,7 @@ message UserAgentPairwiseState {
     google.protobuf.StringValue agencyDID = 8;
     google.protobuf.StringValue agentWalletId = 9;
     ThreadContext threadContext = 10;
+    DidPair publicIdentity = 13;
     //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
     //the below mentioned 'protoInstances' will no longer be required.
     ProtocolRunningInstances protoInstances = 11;

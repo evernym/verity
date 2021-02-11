@@ -25,19 +25,19 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
 
   implicit val akkActorResponseTimeout: Timeout
 
-  def getBlockedResources(gblc: GetBlockedList): Future[Any] = {
+  protected def getBlockedResources(gblc: GetBlockedList): Future[Any] = {
     platform.singletonParentProxy ? ForResourceBlockingStatusMngr(gblc)
   }
 
-  def getWarnedResources(gwlc: GetWarnedList): Future[Any] = {
+  protected def getWarnedResources(gwlc: GetWarnedList): Future[Any] = {
     platform.singletonParentProxy ? ForResourceWarningStatusMngr(gwlc)
   }
 
-  def getResourceUsages(callerId: String): Future[Any] = {
+  protected def getResourceUsages(callerId: String): Future[Any] = {
     platform.resourceUsageTrackerRegion ? ForIdentifier(callerId, GetAllResourceUsages)
   }
 
-  def updateCallerDetail(id: String, uvd: UpdateViolationDetail): Future[Any] = {
+  protected def updateCallerDetail(id: String, uvd: UpdateViolationDetail): Future[Any] = {
     if (uvd.msgType == "block") {
       platform.singletonParentProxy ? ForResourceBlockingStatusMngr(
         BlockCaller(id, blockPeriod = uvd.period, allBlockedResources = uvd.allResources))
@@ -55,7 +55,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def updateResourceDetail(callerId: String, resource: String, urd: UpdateViolationDetail): Future[Any] = {
+  protected def updateResourceDetail(callerId: String, resource: String, urd: UpdateViolationDetail): Future[Any] = {
     if (urd.msgType == "block") {
       platform.singletonParentProxy ? ForResourceBlockingStatusMngr(
         BlockResourceForCaller(callerId, resource, blockPeriod = urd.period))
@@ -73,15 +73,15 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def updateResourceUsageLimits(callerId: String, url: UpdateResourcesUsageLimit): Future[Any] = {
+  protected def updateResourceUsageLimits(callerId: String, url: UpdateResourcesUsageLimit): Future[Any] = {
     platform.resourceUsageTrackerRegion ? ForIdentifier(callerId, url)
   }
 
-  def updateResourceUsageCounters(callerId: String, urc: UpdateResourcesUsageCounter): Future[Any] = {
+  protected def updateResourceUsageCounters(callerId: String, urc: UpdateResourcesUsageCounter): Future[Any] = {
     platform.resourceUsageTrackerRegion ? ForIdentifier(callerId, urc)
   }
 
-  def handleGetWarnedList(onlyWarned: String, onlyUnwarned: String, onlyActive: String,
+  protected def handleGetWarnedList(onlyWarned: String, onlyUnwarned: String, onlyActive: String,
                           ids: Option[String], resourceNames: Option[String]): Route = {
     complete {
       val gwlc = GetWarnedList(onlyWarned, onlyUnwarned, onlyActive, inChunks = false, ids, resourceNames)
@@ -92,7 +92,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def handleGetBlockedList(onlyBlocked: String, onlyUnblocked: String, onlyActive: String,
+  protected def handleGetBlockedList(onlyBlocked: String, onlyUnblocked: String, onlyActive: String,
                            ids: Option[String], resourceNames: Option[String]): Route = {
     complete {
       val gblc = GetBlockedList(onlyBlocked, onlyUnblocked, onlyActive, inChunks = false, ids, resourceNames)
@@ -103,7 +103,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def handleGetResourceUsages(callerId: String): Route = {
+  protected def handleGetResourceUsages(callerId: String): Route = {
     complete {
       getResourceUsages(callerId).map[ToResponseMarshallable] {
         case cru: ResourceUsages => handleExpectedResponse(cru)
@@ -112,7 +112,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def handleUpdateCallerDetail(callerId: String, uvd: UpdateViolationDetail): Route = {
+  protected def handleUpdateCallerDetail(callerId: String, uvd: UpdateViolationDetail): Route = {
     complete {
       updateCallerDetail(callerId, uvd).map[ToResponseMarshallable] {
         case _@(_: CallerBlocked
@@ -124,7 +124,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def handleUpdateResourceUsageCounterDetails(callerId: String, uuc: UpdateResourcesUsageCounter): Route = {
+  protected def handleUpdateResourceUsageCounterDetails(callerId: String, uuc: UpdateResourcesUsageCounter): Route = {
     complete {
       updateResourceUsageCounters(callerId, uuc).map[ToResponseMarshallable] {
         case Done => OK
@@ -133,7 +133,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def handleUpdateResourceDetail(callerId: String, resource: String, uvd: UpdateViolationDetail): Route = {
+  protected def handleUpdateResourceDetail(callerId: String, resource: String, uvd: UpdateViolationDetail): Route = {
     complete {
       updateResourceDetail(callerId, resource, uvd).map[ToResponseMarshallable] {
         case _@(_: CallerResourceBlocked

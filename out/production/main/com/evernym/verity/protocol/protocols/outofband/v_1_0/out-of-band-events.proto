@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.outofband.v_1_0;
+
+message InitParam {
+    string name = 1;
+    string value = 2;
+}
+
+message Initialized {
+    option (scalapb.message).extends = "OutOfBandEvent";
+    repeated InitParam params = 1;
+}
+
+
+message ConnectionReuseRequested {
+    option (scalapb.message).extends = "OutOfBandEvent";
+}
+
+
+message ConnectionReused {
+    option (scalapb.message).extends = "OutOfBandEvent";
+}
+

@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.node_singleton
 
-import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
-import com.evernym.verity.actor._
+import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
@@ -58,12 +58,6 @@ class NodeSingleton(val appConfig: AppConfig) extends CoreActorExtended with Has
       logger.debug(s"fetching metrics data...")
       sender ! MetricsReader.getNodeMetrics(getNodeMetrics.filters)
       logger.debug(s"metrics data fetched !!")
-
-    case ResetNodeMetrics =>
-      logger.info(s"start resetting metrics...")
-      MetricsReader.resetNodeMetrics()
-      sender ! NodeMetricsResetDone
-      logger.info(s"resetting metrics done !!")
 
     case uws: UpdateWarningStatus =>
       ResourceWarningStatusMngrCache.processEvent(uws)

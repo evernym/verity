@@ -1,6 +1,6 @@
 package com.evernym.verity.util
 
-import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 
 import com.evernym.verity.constants.Constants.{CLIENT_IP_ADDRESS, MSG_PACK_VERSION}
@@ -30,7 +30,7 @@ case object ReqMsgContext {
  */
 case class ReqMsgContext(id: String = UUID.randomUUID().toString, initData: Map[String, Any] = Map.empty) {
 
-  val startTimeEpochMillis: Long = Instant.now().toEpochMilli
+  val startTime: LocalDateTime = LocalDateTime.now()
 
   import ReqMsgContext._
 

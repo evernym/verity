@@ -1,21 +1,18 @@
 package com.evernym.verity.metrics
 
-import java.time.temporal.ChronoUnit
-import java.time.Instant
-
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.agent.SpanUtil._
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 import scala.concurrent.Future
 
-class SpanSpec extends BasicSpec with Eventually {
-
-  MetricsReader  //this makes sure it starts/add prometheus reporter and adds it to Kamon
+class SpanSpec extends BasicSpec with AddMetricsReporter with Eventually {
 
   "runWithInternalSpan" - {
     "when tested with synchronous code" - {
@@ -57,7 +54,6 @@ class SpanSpec extends BasicSpec with Eventually {
             tags.exists(t => t._1 == "operation" && t._2 == opName) &&
               tags.exists(t => t._1 == "component" && t._2 == componentName)
           }
-      println("filtered metrics: " + filteredMetric)
       filteredMetric.nonEmpty shouldBe true
       filteredMetric.get.value >= expectMinValue shouldBe true
     }

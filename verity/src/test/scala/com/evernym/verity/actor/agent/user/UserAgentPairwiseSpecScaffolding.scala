@@ -4,7 +4,6 @@ import akka.actor.PoisonPill
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, agentRegion}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -26,6 +25,7 @@ import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
@@ -147,6 +147,16 @@ trait UserAgentPairwiseSpecScaffolding
     handleComMethodUpdatedResp(pm).isInstanceOf[ComMethodUpdated_MFV_0_5]
   }
 
+  def setupPublicIdentity(): Unit = {
+    val (resp, receivedMsgOpt) = withExpectNewMsgAtRegisteredEndpoint {
+      val setupReq = mockEdgeAgent.v_0_6_req.prepareSetupIssuerCreateMethodMsgForAgent()
+      ua ! wrapAsPackedMsgParam(setupReq)
+      expectMsg(Done)
+    }
+    val pubIdCreated = mockEdgeAgent.v_0_6_resp.handlePublicIdentifierCreated(PackedMsg(receivedMsgOpt.map(_.msg).get))
+    mockEdgeAgent.publicIdentifier = Option(pubIdCreated.identifier)
+  }
+
   def prepareConnReqChangesOnRemoteEdgeAgent(connId: String): Unit = {
     mockRemoteEdgeAgent.setInviteData(connId, mockRemoteEdgeCloudAgent)
     inviteDetail = getLastSentInviteByRemoteEdgeAgentForConnId(connId)
@@ -230,7 +240,6 @@ trait UserAgentPairwiseSpecScaffolding
     }
   }
 
-
   def receivedGeneralMsg_V_0_5(connId: String, hint: String, msgType: String,
                                expectSilentPushNotif: Boolean = false,
                                expectAlertingPushNotif: Boolean = false,
@@ -258,8 +267,8 @@ trait UserAgentPairwiseSpecScaffolding
         uap ! PoisonPill
         expectNoMessage()
         Thread.sleep(1000)
-        uap ! GetActorDetail
-        expectMsgType[ActorDetail]
+        uap ! GetPersistentActorDetail
+        expectMsgType[PersistentActorDetail]
       }
     }
   }

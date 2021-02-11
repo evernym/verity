@@ -9,6 +9,7 @@ import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, _}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
@@ -18,6 +19,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyA
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
+import com.evernym.verity.util.OptionUtil.blankOption
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
 
@@ -42,11 +44,6 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
     case (st: State                                           , _, _: Ctl.Status         ) => handleStatus(st)
     case (st: State.PostInteractionStarted                    , _, m: Ctl.Reject         ) => handleReject(m, st)
-    case (_: State.OfferSent                                  , _, m: Ctl.InviteShortened) =>
-      ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
-    case (_: State.OfferSent                                  , _, _: Ctl.InviteShorteningFailed ) =>
-      ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
-      ctx.apply(ProblemReportReceived("Shortening failed"))
     case (st: State                                           , _, m: Ctl                ) =>
       ctx.signal(SignalMsg.buildProblemReport(
         s"Unexpected '${IssueCredMsgFamily.msgType(m.getClass).msgName}' message in current state '${st.status}",
@@ -86,6 +83,24 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.signal(SignalMsg.Sent(proposedCred))
   }
 
+  def sendInvite(offer: OfferCred, s: State.Initialized): Unit = {
+    buildOobInvite(offer, s) match {
+      case Success(invite) =>
+        ctx.urlShortening.shorten(invite.inviteURL) {
+          case Success(m) => ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
+          case Failure(_) =>
+            ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
+            ctx.apply(ProblemReportReceived("Shortening failed"))
+        }
+      case Failure(e) =>
+        ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
+        SignalMsg.buildProblemReport(
+          "unable to create out-of-band invitation",
+          credentialOfferCreation
+        )
+    }
+  }
+
   def handleInitialOffer(s: State.Initialized, m: Ctl.Offer): Unit = {
     buildOffer(m) match {
       case Success((event, offer)) =>
@@ -94,20 +109,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           ctx.send(offer)
           ctx.signal(SignalMsg.Sent(offer))
         }
-        else {
-          ctx.signal(
-            buildOobInvite(offer, s)
-              .recover{
-                case e: Exception =>
-                  ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
-                  SignalMsg.buildProblemReport(
-                    "unable to create out-of-band invitation",
-                    credentialOfferCreation
-                  )
-              }
-            .get
-          )
-        }
+        else sendInvite(offer, s)
       case Failure(_) =>
         ctx.signal(
           SignalMsg.buildProblemReport(
@@ -291,7 +293,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           paramMap.get(NAME),
           paramMap.get(LOGO_URL),
           paramMap.get(AGENCY_DID_VER_KEY),
-          paramMap.get(MY_PUBLIC_DID),
+          paramMap.get(MY_PUBLIC_DID).flatMap(OptionUtil.blankOption),
         ),
         initialize(params)
       )
@@ -440,7 +442,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     }
   }
 
-  def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[SignalMsg.ShortenInvite] = {
+  def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[ShortenInvite] = {
     val service = InviteUtil.buildServiced(s.agencyVerkey, ctx)
 
     val offerAttachment = Try(
@@ -467,7 +469,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       serviceEndpoint <- Try(ctx.serviceEndpoint);
       inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
       inviteId        <- Success(invite.`@id`)
-    ) yield SignalMsg.ShortenInvite(inviteId, inviteUrl)
+    ) yield ShortenInvite(inviteId, inviteUrl)
 
     signal
   }

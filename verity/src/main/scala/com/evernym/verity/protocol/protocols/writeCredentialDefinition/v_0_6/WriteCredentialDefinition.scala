@@ -10,7 +10,6 @@ import com.evernym.verity.protocol.engine.external_api_access.LedgerRejectExcept
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
-import org.hyperledger.indy.sdk.ledger.Ledger.appendRequestEndorser
 
 import scala.util.{Failure, Success, Try}
 
@@ -61,12 +60,11 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
         case Success(_) =>
           ctx.apply(CredDefWritten(credDefId))
           ctx.signal(StatusReport(credDefId))
-        case Failure(e: LedgerRejectException) if missingVkErr(submitterDID, e) =>
+        case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
           ctx.logger.warn(e.toString)
-          val endorserDid = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
-          if (endorserDid.nonEmpty) {
-            val credDefJsonWithEndorser = appendRequestEndorser(credDefJson, endorserDid).get
-            ctx.wallet.signRequest(submitterDID, credDefJsonWithEndorser) match {
+          val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+          if (endorserDID.nonEmpty) {
+            ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID) match {
               case Success(ledgerRequest) =>
                 ctx.signal(NeedsEndorsement(credDefId, ledgerRequest.req))
                 ctx.apply(AskedForEndorsement(credDefId, ledgerRequest.req))
@@ -104,8 +102,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     .map(_.value)
     .getOrElse(throw MissingIssuerDID)
 
-  def missingVkErr(did: DID, e: LedgerRejectException): Boolean =
-    e.msg.contains(s"verkey for $did cannot be found")
+  def missingVkOrEndorserErr(did: DID, e: LedgerRejectException): Boolean =
+    e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
 
   def initialize(params: Seq[ParameterStored]): Roster[Role] = {
     //TODO: this still feels like boiler plate, need to come back and fix it

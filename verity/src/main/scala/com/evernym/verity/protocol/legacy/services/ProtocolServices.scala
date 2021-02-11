@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.protocol.actor.MsgQueueServiceProvider
 import com.evernym.verity.protocol.engine.{DID, RecordsEvents, SERVICES_DEPRECATION_DATE, SendsMsgs, VerKey}
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -26,7 +26,7 @@ trait ProtocolServices[M,E,I] {
   def appConfig: AppConfig
   def walletAPI: WalletAPI
   def generalCache: Cache
-  def remoteMsgSendingSvc: RemoteMsgSendingSvc
+  def msgSendingSvc: MsgSendingSvc
   def agentMsgTransformer: AgentMsgTransformer
   def tokenToActorMappingProvider: TokenToActorMappingProvider
   def msgQueueServiceProvider: MsgQueueServiceProvider
@@ -40,7 +40,7 @@ class LegacyProtocolServicesImpl[M,E,I](val eventRecorder: RecordsEvents,
                                         val appConfig: AppConfig,
                                         val walletAPI: WalletAPI,
                                         val generalCache: Cache,
-                                        val remoteMsgSendingSvc: RemoteMsgSendingSvc,
+                                        val msgSendingSvc: MsgSendingSvc,
                                         val agentMsgTransformer: AgentMsgTransformer,
                                         val tokenToActorMappingProvider: TokenToActorMappingProvider,
                                         val msgQueueServiceProvider: MsgQueueServiceProvider,

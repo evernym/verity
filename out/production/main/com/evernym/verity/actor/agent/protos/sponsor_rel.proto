@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor.agent;
+
+message SponsorRel {
+    option (scalapb.message).companion_extends = "SponsorRelCompanion";
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string sponsorId = 1;
+    string sponseeId = 2;
+}
+

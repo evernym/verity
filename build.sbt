@@ -21,20 +21,20 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1607"
-val debPkgDepLibMySqlStorageMinVersion = "0.1.0+4.8"
+val debPkgDepLibIndyMinVersion = "1.15.0~1618"
+val debPkgDepLibMySqlStorageVersion = "0.1.11"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1607"
+val libIndyVer = "1.15.0~1618"
 val sharedLibDeps = Seq(
   LibPack("libindy", libIndyVer),
   LibPack("libnullpay", libIndyVer),
   LibPack("libmysqlstorage",  "0.1.11"),
-  LibPack("libvcx", "0.10.1-bionic~1124"), // For integration testing ONLY
+  LibPack("libvcx", "0.10.1-bionic~1131"), // For integration testing ONLY
 )
 
 //dependency versions
-val indyWrapperVer  = "1.15.0-dev-1607"
+val indyWrapperVer  = "1.15.0-dev-1618"
 
 val akkaVer         = "2.6.10"
 val akkaHttpVer     = "10.2.2"
@@ -50,7 +50,7 @@ val sdnotifyVer     = "1.3"
 val scalatestVer    = "3.2.0"
 val mockitoVer      = "1.14.8"
 val veritySdkVer    = "0.0.0-SNAPSHOT"
-val vcxWrapperVer   = "0.10.1.1124"
+val vcxWrapperVer   = "0.10.1.1131"
 
 // compiler plugin versions
 val silencerVersion = "1.7.1"
@@ -230,7 +230,7 @@ lazy val packageSettings = Seq (
     "default-jre",
     s"libindy(>= $debPkgDepLibIndyMinVersion)",
     s"libnullpay(>= $debPkgDepLibIndyMinVersion)",  // must be the same version as libindy
-    s"libmysqlstorage(>=$debPkgDepLibMySqlStorageMinVersion)"
+    s"libmysqlstorage(=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

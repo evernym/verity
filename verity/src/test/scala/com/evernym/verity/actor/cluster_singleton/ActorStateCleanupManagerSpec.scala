@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActo
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.actor.persistence.{ActorDetail, GetActorDetail}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
@@ -20,7 +20,11 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
 
-class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec with ShardUtil with Eventually {
+class ActorStateCleanupManagerSpec
+  extends PersistentActorSpec
+    with BasicSpec
+    with ShardUtil
+    with Eventually {
 
   //number of total route store actors
   val shardSize = 100         //total possible actors
@@ -89,8 +93,8 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
         expectMsgType[RouteSet]
       }
       //just to make sure previous persist events are successfully recorded
-      sendMsgToAgentRouteStore(entityId, GetActorDetail)
-      expectMsgType[ActorDetail].totalPersistedEvents shouldBe routeDIDs.size
+      sendMsgToAgentRouteStore(entityId, GetPersistentActorDetail)
+      expectMsgType[PersistentActorDetail].totalPersistedEvents shouldBe routeDIDs.size
 
       //stop the actor
       sendMsgToAgentRouteStore(entityId, PoisonPill)
@@ -107,7 +111,7 @@ class ActorStateCleanupManagerSpec extends PersistentActorSpec with BasicSpec wi
 
   override lazy val mockRouteStoreActorTypeToRegions = Map(
     ACTOR_TYPE_USER_AGENT_ACTOR -> {
-      createRegion("DummyActor", DummyAgentActor.props)
+      createPersistentRegion("DummyActor", DummyAgentActor.props)
       ClusterSharding(system).shardRegion("DummyActor")
     }
   )

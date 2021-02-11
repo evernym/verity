@@ -4,7 +4,7 @@ import ch.qos.logback.classic.turbo.TurboFilter
 import ch.qos.logback.classic.{Level, Logger}
 import ch.qos.logback.core.spi.FilterReply
 import com.evernym.verity.config.CommonConfig.LOGGING_IGNORE_FILTER_NAMES
-import com.evernym.verity.config.ConfigReadHelper
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.typesafe.config.ConfigFactory
 import org.slf4j.Marker
 

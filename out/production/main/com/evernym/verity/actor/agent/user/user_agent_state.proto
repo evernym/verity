@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+
+import "thread_context.proto";
+import "protocol_instances.proto";
+import "relationship.proto";
+import "config_value.proto";
+import "agent_detail.proto";
+import "msg_and_delivery.proto";
+import "did_pair.proto";
+import "sponsor_rel.proto";
+
+package com.evernym.verity.actor.agent.user;
+
+message UserAgentState {
+    option (scalapb.message).extends = "com.evernym.verity.actor.agent.user.UserAgentStateImpl";
+    DidPair publicIdentity = 1;
+    SponsorRel sponsorRel = 2;
+    repeated AgentDetail relationshipAgents = 3;
+    map<string, ConfigValue> configs = 4;
+    MsgAndDelivery msgAndDelivery = 5;
+    google.protobuf.StringValue thisAgentKeyId = 6;
+    google.protobuf.StringValue agencyDID = 7;
+    google.protobuf.StringValue agentWalletId = 8;
+    ThreadContext threadContext = 9;
+    //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol
+    //the below mentioned 'protoInstances' will no longer be required.
+    ProtocolRunningInstances protoInstances = 10;
+    relationship.Relationship relationship = 11;
+}

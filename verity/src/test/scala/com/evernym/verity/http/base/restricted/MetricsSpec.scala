@@ -3,13 +3,13 @@ package com.evernym.verity.http.base.restricted
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.metrics.{MetricsReader, NodeMetricsData}
 import com.evernym.verity.metrics.reporter.MetricDetail
+import com.evernym.verity.testkit.AddMetricsReporter
 import org.scalatest.time.{Seconds, Span}
 
-trait MetricsSpec { this : EndpointHandlerBaseSpec =>
-
-  MetricsReader  //this makes sure it starts/add prometheus reporter and adds it to Kamon
+trait MetricsSpec extends AddMetricsReporter { this : EndpointHandlerBaseSpec =>
 
   def testMetrics(): Unit = {
     "when sent get metrics api call" - {
@@ -27,14 +27,6 @@ trait MetricsSpec { this : EndpointHandlerBaseSpec =>
         }
       }
     }
-
-    "when sent reset metrics api call" - {
-      "respond successfully" taggedAs (UNSAFE_IgnoreLog) in {
-        buildPutReq("/agency/internal/metrics/reset") ~> epRoutes ~> check {
-          status shouldBe OK
-        }
-      }
-    }
   }
 
   def checkExpectedMetrics(metrics: List[MetricDetail]): Unit = {
@@ -44,7 +36,7 @@ trait MetricsSpec { this : EndpointHandlerBaseSpec =>
       "jvm_memory_pool_free_bytes_count",   "jvm_memory_pool_free_bytes_sum",   "jvm_memory_pool_free_bytes_bucket",
       "jvm_gc_seconds_count",               "jvm_gc_seconds_sum",               "jvm_gc_seconds_bucket",
       "jvm_memory_used_bytes_count",        "jvm_memory_used_bytes_sum",        "jvm_memory_used_bytes_bucket",
-      "libindy_threadpool_active_count"
+      "libindy_threadpool_threads_count"
     )
     expectedMetrics.foreach { emn =>
       val pmn = MetricsReader.convertToProviderName(emn)

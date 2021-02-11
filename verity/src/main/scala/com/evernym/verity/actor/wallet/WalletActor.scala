@@ -49,7 +49,8 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
   def postInitReceiver: Receive = {
     case CreateWallet =>
       val sndr = sender()
-      WalletMsgHandler.handleCreateWalletASync().map { resp =>
+      val fut = WalletMsgHandler.handleCreateWalletASync()
+      withErrorHandling(fut).map { resp =>
         sndr ! resp
         tryOpeningWalletIfExists()
       }
@@ -87,16 +88,20 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
       handleRespFut(sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
-  def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
+  private def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
+    withErrorHandling(fut).pipeTo(sndr)
+  }
+
+  private def withErrorHandling(fut: Future[Any]): Future[Any] = {
     fut.recover {
       case e: HandledErrorException =>
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
       case e: Exception =>
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
-    }.pipeTo(sndr)
+    }
   }
 
-  def tryOpeningWalletIfExists(): Unit = {
+  private def tryOpeningWalletIfExists(): Unit = {
     setNewReceiveBehaviour(openWalletCallbackReceiver)
     openWalletIfExists()
   }
@@ -169,9 +174,9 @@ case class CreateDID(keyType: String) extends WalletCommand
 case class StoreTheirKey(theirDID: DID, theirDIDVerKey: VerKey, ignoreIfAlreadyExists: Boolean=false)
   extends WalletCommand
 
-case class GetVerKeyOpt(keyParam: KeyParam) extends WalletCommand
+case class GetVerKeyOpt(did: DID, getKeyFromPool: Boolean = false) extends WalletCommand
 
-case class GetVerKey(keyParam: KeyParam) extends WalletCommand
+case class GetVerKey(did: DID, getKeyFromPool: Boolean = false) extends WalletCommand
 
 case class SignMsg(keyParam: KeyParam, msg: Array[Byte]) extends WalletCommand
 
@@ -223,6 +228,8 @@ case class CreateProof(proofRequest: String, requestedCredentials: String, schem
   extends WalletCommand
 
 case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
+
+case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage

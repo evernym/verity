@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor.agent;
+
+enum TypeFormat {
+    option (scalapb.enum_options).extends = "com.evernym.verity.agentmsg.msgcodec.TypeFormatLike";
+    option (scalapb.enum_options).companion_extends = "com.evernym.verity.agentmsg.msgcodec.TypeFormatCompanion";
+    NOOP_TYPE_FORMAT = 0 [(scalapb.enum_value).extends = "com.evernym.verity.agentmsg.msgcodec.NoopTypeFormat"];
+    LEGACY_TYPE_FORMAT = 1 [(scalapb.enum_value).extends = "com.evernym.verity.agentmsg.msgcodec.LegacyTypeFormat"];
+    STANDARD_TYPE_FORMAT = 2 [(scalapb.enum_value).extends = "com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat"];
+}

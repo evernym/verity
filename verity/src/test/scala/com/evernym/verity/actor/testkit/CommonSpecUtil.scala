@@ -3,6 +3,7 @@ package com.evernym.verity.actor.testkit
 import java.util.concurrent.TimeUnit
 
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
 import com.evernym.verity.testkit.util.TestUtil.getSigningKey
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault._
@@ -52,6 +53,10 @@ trait CommonSpecUtil {
     AgentDIDDetail(nameOpt.getOrElse(did), seed, did, verKey)
   }
 
+  def generateNewDid(seed: String): DidPair = {
+    generateNewDid(seedOpt = Option(seed))
+  }
+
   def generateNewDid(seedOpt: Option[String]=None): DidPair = {
     val dinfo = generateNewAgentDIDDetail(seedOpt=seedOpt)
     DidPair(dinfo.did, dinfo.verKey)
@@ -60,7 +65,7 @@ trait CommonSpecUtil {
   def createWallet(walletId: String, walletAPI: WalletAPI): WalletAPIParam = {
     val wap = WalletAPIParam(walletId)
     try {
-      walletAPI.createWallet(wap)
+      walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
     } catch {
       case _: WalletAlreadyExist =>
         //nothing to do

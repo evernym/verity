@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
+import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
 
@@ -46,6 +47,8 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   def wallet: WalletAccess
 
   def ledger: LedgerAccess
+
+  def urlShortening: UrlShorteningAccess
 
   // TODO as soon as all references to these are resolved, remove them
   /**

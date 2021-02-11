@@ -1,14 +1,13 @@
 package com.evernym.verity.actor.wallet
 
-import java.util.UUID
-
 import akka.testkit.{EventFilter, ImplicitSender}
 import com.evernym.verity.actor.agentRegion
-import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.testkit.{ActorSpec, WithAdditionalLogs}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
-
 import org.scalatest.concurrent.Eventually
+
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -16,7 +15,8 @@ class WalletActorPassivationSpec
   extends ActorSpec
     with BasicSpec
     with ImplicitSender
-    with Eventually {
+    with Eventually
+    with WithAdditionalLogs {
 
   lazy val walletActorEntityId: String = UUID.randomUUID().toString
   lazy val walletActor: agentRegion = agentRegion(walletActorEntityId, walletRegionActor)
@@ -34,18 +34,22 @@ class WalletActorPassivationSpec
     "when waited for more than passivate time" - {
       "should be stopped" in {
         val prevWalletActorRef = lastSender
-        Thread.sleep((PASSIVATE_TIMEOUT_IN_SECONDS * 1000) + 2000)
-        EventFilter.debug(start = "in post stop") assertDone(1 second)
+        EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
+          Thread.sleep((PASSIVATE_TIMEOUT_IN_SECONDS * 1000) + 2000)
+        }
 
         walletActor ! CreateNewKey()
-        expectMsgType[NewKeyCreated]
-        lastSender should not be prevWalletActorRef //this indirectly proves actor got restarted
+        expectMsgType[NewKeyCreated](5.seconds)
+        lastSender should not be prevWalletActorRef //this also indirectly proves actor got restarted
       }
     }
   }
 
   override def overrideConfig: Option[Config] = Option {
-    val confStr = s"verity.sharded-actor-passivate-time.WalletActor.passivate-time-in-seconds = 2"
-    ConfigFactory.parseString(confStr)
+    ConfigFactory.parseString {
+      """verity.non-persistent-actor.base.WalletActor.passivate-time-in-seconds = 2
+         akka.loglevel = DEBUG
+        """.stripMargin
+    }
   }
 }

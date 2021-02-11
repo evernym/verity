@@ -7,18 +7,19 @@ import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
-import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.msg_tracer.MsgTraceProvider
+import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import org.scalatest.concurrent.Eventually
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec, PlatformInitialized}
 
 
 class MsgRespTimeTrackerShardedSpec
   extends TestKitBase
     with ProvidesMockPlatform
+    with PlatformInitialized
     with BasicSpec
     with ImplicitSender
-    with MsgTraceProvider
+    with MsgRespTimeTracker
+    with AddMetricsReporter
     with Eventually {
 
   implicit lazy val system: ActorSystem = AkkaTestBasic.system()
@@ -26,9 +27,6 @@ class MsgRespTimeTrackerShardedSpec
   lazy val reqId: String = UUID.randomUUID().toString
 
   override def msgSender: Option[ActorRef] = Some(self)
-
-  MetricsReader    //this is to start kamon prometheus reporter
-  platform
 
   "Message Tracer Region" - {
 

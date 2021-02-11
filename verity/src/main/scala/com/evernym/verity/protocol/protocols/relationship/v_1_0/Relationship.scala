@@ -5,13 +5,17 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCodes._
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.OptionUtil.blankOption
 import com.evernym.verity.util.Util.isPhoneNumberInValidFormat
 import org.json.JSONObject
+
+import scala.util.{Failure, Success, Try}
 
 
 class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String])
@@ -38,13 +42,9 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     case (st: State.InvitationCreated       , m: Ctl.OutOfBandInvitation    ) => outOfBandInvitation(st, m)
     case (st: State.Created                 , m: Ctl.SMSOutOfBandInvitation ) => outOfBandInvitation(st, m)
     case (st: State.InvitationCreated       , m: Ctl.SMSOutOfBandInvitation ) => outOfBandInvitation(st, m)
-    case (_: State.InvitationCreated        , m: Ctl.InviteShortened        ) =>
-      ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
     case (_: State.InvitationCreated        , m: Ctl.SMSSent                ) =>
       ctx.signal(Signal.SMSInvitationSent(m.invitationId))
-    case (_: State.InvitationCreated        , _: Ctl.InviteShorteningFailed ) =>
-      ctx.signal(Signal.buildProblemReport("Shortening failed", shorteningFailed))
-    case (_: State.InvitationCreated        , _: Ctl.SMSSendingFailed ) =>
+    case (_: State.InvitationCreated        , _: Ctl.SMSSendingFailed       ) =>
       ctx.signal(Signal.buildProblemReport("SMS sending failed", smsSendingFailed))
     case (st: State                         , m: Ctl                        ) => // unexpected state
       ctx.signal(Signal.buildProblemReport(
@@ -81,26 +81,19 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   def connectionInvitation(st: State.Created, m: Ctl.ConnectionInvitation): Unit = {
     createInviteCreatedEvent(st)
-
-    val invitationMsg = Invitation(
-      st.label,
-      ctx.serviceEndpoint,
-      Vector(st.verKey),
-      Option(Vector(st.verKey, st.agencyVerKey)),
-      stringToOption(st.profileUrl)
-    )
-
+    val invitationMsg = prepareConnectionInvitation(st)
     val inviteURL = prepareInviteUrl(invitationMsg)
+
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(invitationMsg.`@id`, inviteURL))
-    else
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`))
+     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
 
   def connectionInvitation(st: State.InvitationCreated, m: Ctl.ConnectionInvitation): Unit = {
     val inviteURL = prepareInviteUrl(st.invitation)
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(st.invitation.`@id`, inviteURL))
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(st.invitation.`@id`))
     else
       ctx.signal(Signal.Invitation(inviteURL, None, st.invitation.`@id`))
   }
@@ -109,15 +102,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     st.phoneNumber match {
       case Some(phoneNo) =>
         createInviteCreatedEvent(st)
-
-        val invitationMsg = Invitation(
-          st.label,
-          ctx.serviceEndpoint,
-          Vector(st.verKey),
-          Option(Vector(st.verKey, st.agencyVerKey)),
-          stringToOption(st.profileUrl)
-        )
-
+        val invitationMsg = prepareConnectionInvitation(st)
         val inviteURL = prepareInviteUrl(invitationMsg)
         ctx.signal(Signal.SendSMSInvite(invitationMsg.`@id`, inviteURL, st.label, phoneNo))
       case None =>
@@ -135,6 +120,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     }
   }
 
+  def prepareConnectionInvitation(st:State.Created): Invitation = {
+    Invitation(
+      st.label,
+      ctx.serviceEndpoint,
+      Vector(st.verKey),
+      Option(Vector(st.agencyVerKey)),
+      blankOption(st.profileUrl)
+    )
+  }
+
   def outOfBandInvitation(st: State.Created, m: Ctl.OutOfBandInvitation): Unit = {
     createInviteCreatedEvent(st)
 
@@ -146,13 +141,13 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       st.did,
       st.verKey,
       st.agencyVerKey,
-      stringToOption(st.profileUrl),
-      stringToOption(st.publicDid)
+      blankOption(st.profileUrl),
+      blankOption(st.publicDid)
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(invitationMsg.`@id`, inviteURL))
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`))
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -167,12 +162,12 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       st.verKey,
       st.agencyVerKey,
       st.invitation.profileUrl,
-      stringToOption(st.publicDid)
+      blankOption(st.publicDid)
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
-      ctx.signal(Signal.ShortenInvite(invitationMsg.`@id`, inviteURL))
+      ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`))
     else
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
@@ -190,8 +185,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
           st.did,
           st.verKey,
           st.agencyVerKey,
-          stringToOption(st.profileUrl),
-          stringToOption(st.publicDid)
+          blankOption(st.profileUrl),
+          blankOption(st.publicDid)
         )
 
         val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -213,7 +208,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
           st.verKey,
           st.agencyVerKey,
           st.invitation.profileUrl,
-          stringToOption(st.publicDid)
+          blankOption(st.publicDid)
         )
 
         val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -259,13 +254,6 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     noPhoneNumberDefined
   )
 
-  def stringToOption(str: String): Option[String] = {
-    if (!str.isEmpty)
-      Option(str)
-    else
-      None
-  }
-
   def getInvitationId(inviteURL: String): Option[String] = {
     val inviteQuery = Uri(inviteURL).query()
     try {
@@ -291,7 +279,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       (State.Initialized(agencyVerKey, name, logoUrl, publicDid), initialize(paramMap))
     case (st: State.Initialized            , _ , cpk: CreatingPairwiseKey  ) =>
       val roster = ctx.getRoster
-      (State.KeyCreationInProgress(cpk.label, st.agencyVerKey, cpk.profileUrl, st.publicDid, stringToOption(cpk.phoneNumber)),
+      (State.KeyCreationInProgress(cpk.label, st.agencyVerKey, cpk.profileUrl, st.publicDid, blankOption(cpk.phoneNumber)),
         roster
           .withAssignment(Role.Provisioner -> roster.selfIndex_!)
           .withAssignment(Role.Requester   -> roster.otherIndex())
@@ -301,7 +289,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
     case ( st: State.Created , _ , e: InvitationCreated ) =>
       State.InvitationCreated(Invitation(e.label, e.serviceEndpoint, e.recipientKeys.toVector,
-        Option(e.routingKeys.toVector), stringToOption(st.profileUrl)),
+        Option(e.routingKeys.toVector), blankOption(st.profileUrl)),
         st.label, st.did, st.verKey, st.agencyVerKey, st.publicDid, st.phoneNumber)
   }
 
@@ -310,6 +298,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
   }
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = ???
+
+  def shortenerHandler(inviteId: String): Try[InviteShortened] => Unit = {
+    val handler = (msg: Try[InviteShortened]) => msg match {
+      case Success(m) =>
+        ctx.signal(Signal.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), inviteId))
+      case Failure(_) =>
+        ctx.signal(Signal.buildProblemReport("Shortening failed", shorteningFailed))
+    }
+    handler
+  }
 
 }
 

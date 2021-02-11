@@ -9,6 +9,7 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.MsgPackFormat._
 import com.evernym.verity.actor.agent.user._
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgEvent, HasMsgProgressTracker}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -17,7 +18,7 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.http.common.RemoteMsgSendingSvc
+import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.logging.ThrottledLogger
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
@@ -25,6 +26,7 @@ import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.push_notification._
+import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.{Exceptions, UrlParam}
@@ -33,7 +35,7 @@ import scala.concurrent.Future
 
 
 trait MsgNotifier {
-  this: AgentPersistentActor
+  this: AgentPersistentActor with HasMsgProgressTracker
     with HasLogger =>
 
   /**
@@ -57,10 +59,10 @@ trait MsgNotifierForStoredMsgs
   extends MsgNotifier
     with PushNotifMsgBuilder {
 
-  this: AgentPersistentActor with MsgAndDeliveryHandler with HasLogger =>
+  this: AgentPersistentActor with MsgAndDeliveryHandler with HasMsgProgressTracker with HasLogger =>
 
   def agentMsgRouter: AgentMsgRouter
-  def remoteMsgSendingSvc: RemoteMsgSendingSvc
+  def msgSendingSvc: MsgSendingSvc
   def defaultSelfRecipKeys: Set[KeyParam]
 
   def selfRelDID : DID
@@ -99,7 +101,7 @@ trait MsgNotifierForStoredMsgs
     // one com method registered (either http endpoint or push notification)
     logger.debug("about to notify user for newly received message: " + notifMsgDtl.uid + s"(${notifMsgDtl.msgType})")
     getAllComMethods.map { allComMethods =>
-      val fut1 = getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(pw, Option(allComMethods)))
+      val fut1 = msgStore.getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(notifMsgDtl, pw, Option(allComMethods)))
       val fut2 = Option(sendMsgToRegisteredPushNotif(notifMsgDtl, updateDeliveryStatus, Option(allComMethods)))
       val fut3 = Option(fwdMsgToSponsor(notifMsgDtl, Option(allComMethods)))
       val allFut = (fut1 ++ fut2 ++ fut3).toSet
@@ -154,90 +156,102 @@ trait MsgNotifierForStoredMsgs
 
   }
 
-  protected def sendMsgToRegisteredEndpoint(pw: PayloadWrapper, allComMethods: Option[CommunicationMethods]): Future[Any] = {
+  protected def sendMsgToRegisteredEndpoint(notifDetail: NotifyMsgDetail,
+                                            pw: PayloadWrapper,
+                                            allComMethods: Option[CommunicationMethods]): Future[Any] = {
     pw.metadata.map(_.msgPackFormat) match {
       case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
-        sendMsgToRegisteredEndpointLegacy(pw, allComMethods)
+        sendMsgToRegisteredEndpointLegacy(notifDetail, pw, allComMethods)
       case Some(MPF_PLAIN)  =>
-        sendMsgToRegisteredEndpointNew(pw, allComMethods)
+        sendMsgToRegisteredEndpointNew(notifDetail, pw, allComMethods)
       case Some(Unrecognized(_)) =>
         throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
     }
   }
 
-  protected def sendMsgToRegisteredEndpointLegacy(pw: PayloadWrapper, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("sendMsgToRegisteredEndpointLegacy", "MsgNotifierForStoredMsgs") {
-      withComMethods(allComMethods).map { comMethods =>
-        val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
-        logger.debug("received registered http endpoints: " + httpComMethods)
-        httpComMethods.foreach { hcm =>
-         logger.debug(s"about to send message to endpoint: " + hcm)
-          pw.metadata.map(_.msgPackFormat) match {
-            case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
-              remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(pw.msg)(UrlParam(hcm.value))
-            case Some(MPF_PLAIN)  =>
-              remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlParam(hcm.value))
-            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
-          }
-          logger.debug("message sent to endpoint (legacy): " + hcm)
+  protected def sendMsgToRegisteredEndpointLegacy(notifDetail: NotifyMsgDetail,
+                                                  pw: PayloadWrapper,
+                                                  allComMethods: Option[CommunicationMethods]): Future[Any] = {
+    withComMethods(allComMethods).map { comMethods =>
+      val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
+      logger.debug("received registered http endpoints: " + httpComMethods)
+      httpComMethods.foreach { hcm =>
+       logger.debug(s"about to send message to endpoint: " + hcm)
+        val fut = pw.metadata.map(_.msgPackFormat) match {
+          case None | Some(MPF_INDY_PACK|MPF_MSG_PACK) =>
+            msgSendingSvc.sendBinaryMsg(pw.msg)(UrlParam(hcm.value))
+          case Some(MPF_PLAIN)  =>
+            msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
+          case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
+        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (legacy): ${hcm.value}", fut)
+        logger.debug("message sent to endpoint (legacy): " + hcm)
       }
     }
   }
 
-  protected def sendMsgToRegisteredEndpointNew(pw: PayloadWrapper, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("sendMsgToRegisteredEndpointNew", "MsgNotifierForStoredMsgs") {
-      withComMethods(allComMethods).map { comMethods =>
-        val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
-        logger.debug("received registered http endpoints: " + httpComMethods)
-        httpComMethods.foreach { hcm =>
-          logger.debug(s"about to send message to endpoint: " + hcm)
-          val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
-          pkgType match {
-            case MPF_PLAIN =>
-              remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(pw.msg))(UrlParam(hcm.value))
-            case MPF_INDY_PACK | MPF_MSG_PACK =>
-              val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
-              // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
-              val recipKeys = endpointRecipKeys match {
-                case Some(keys) if keys.nonEmpty => keys
-                case _ => defaultSelfRecipKeys
-              }
-              val packedMsg = msgExtractor.pack(pkgType, new String(pw.msg), recipKeys)
-              remoteMsgSendingSvc.sendBinaryMsgToRemoteEndpoint(packedMsg.msg)(UrlParam(hcm.value))
-            case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
-          }
-          logger.debug("message sent to endpoint: " + hcm)
+  protected def sendMsgToRegisteredEndpointNew(notifDetail: NotifyMsgDetail,
+                                               pw: PayloadWrapper,
+                                               allComMethods: Option[CommunicationMethods]): Future[Any] = {
+    withComMethods(allComMethods).map { comMethods =>
+      val httpComMethods = comMethods.filterByType(COM_METHOD_TYPE_HTTP_ENDPOINT)
+      logger.debug("received registered http endpoints: " + httpComMethods)
+      httpComMethods.foreach { hcm =>
+        logger.debug(s"about to send message to endpoint: " + hcm)
+        val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
+        val fut = pkgType match {
+          case MPF_PLAIN =>
+            msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
+          case MPF_INDY_PACK | MPF_MSG_PACK =>
+            val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
+            // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
+            val recipKeys = endpointRecipKeys match {
+              case Some(keys) if keys.nonEmpty => keys
+              case _ => defaultSelfRecipKeys
+            }
+            msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).map { packedMsg =>
+              msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
+            }
+          case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
+        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (new): ${hcm.value}", fut)
+        logger.debug("message sent to endpoint: " + hcm)
       }
     }
   }
 
   private def sendMsgToRegisteredPushNotif(notifMsgDtl: NotifyMsgDetail, updateDeliveryStatus: Boolean, allComMethods: Option[CommunicationMethods]): Future[Any] = {
     try {
-      runWithInternalSpan("sendMsgDetailToRegisteredPushNotif", "MsgNotifierForStoredMsgs") {
-        val msg = getMsgReq(notifMsgDtl.uid)
-        val mds = getMsgDetails(notifMsgDtl.uid)
-        val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
-        val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
-        val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
-        val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
-        val extraData = title ++ detail ++ name ++ logoUrl
+      val msg = msgStore.getMsgReq(notifMsgDtl.uid)
+      val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
+      val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
+      val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
+      val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
+      val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
+      val extraData = title ++ detail ++ name ++ logoUrl
 
-        val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType)
-        val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
+      val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType)
+      val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
 
-        logger.debug("new messages notification: " + notifMsgDtl)
-        getCommonPushNotifData(notifMsgDtl, newExtraData) match {
-          case Some(pnd) => sendPushNotif(pnd, updateDeliveryStatus = updateDeliveryStatus, allComMethods)
-          case None      => Future.successful("push notification not enabled")
-        }
+      logger.debug("new messages notification: " + notifMsgDtl)
+      getCommonPushNotifData(notifMsgDtl, newExtraData) match {
+        case Some(pnd) => sendPushNotif(pnd, updateDeliveryStatus = updateDeliveryStatus, allComMethods)
+        case None      => Future.successful("push notification not enabled")
       }
     } catch {
       case e: Exception =>
         logger.error("could not send push notification", (LOG_KEY_UID, notifMsgDtl.uid),
           (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
         Future.failed(e)
+    }
+  }
+
+  def recordDeliveryState(msgId: MsgId, msgType: String, msg: String, fut: Future[Any]): Future[Any] = {
+    fut.map { _ =>
+      recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"SENT: outgoing message to my edge agent ($msg)"))
+    }.recover {
+      case e: Throwable =>
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to my edge agent ($msg) (error: ${e.getMessage})"))
     }
   }
 
@@ -295,26 +309,28 @@ trait MsgNotifierForStoredMsgs
   }
 
   protected def fwdMsgToSponsor(notifMsgDtl: NotifyMsgDetail, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("fwdMsgToSponsor", "MsgNotifierForStoredMsgs") {
-      logger.debug("about to get com methods to forward notification")
-      withComMethods(allComMethods).map { comMethods =>
-        val cms = comMethods.filterByType(COM_METHOD_TYPE_FWD_PUSH)
-        logger.debug(s"fwdComMethods: $cms")
-        cms.map(_.value).foreach { sponseeDetails =>
-          getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
-            logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
+    logger.debug("about to get com methods to forward notification")
+    withComMethods(allComMethods).map { comMethods =>
+      val cms = comMethods.filterByType(COM_METHOD_TYPE_FWD_PUSH)
+      logger.debug(s"fwdComMethods: $cms")
+      cms.map(_.value).foreach { sponseeDetails =>
+        getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
+          logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
 
-            val mds = getMsgDetails(notifMsgDtl.uid)
-            val name = mds.getOrElse(NAME_KEY, "")
-            val fwdMeta = FwdMetaData(Some(notifMsgDtl.msgType), Some(name))
-            val fwdMsg = FwdMsg(notifMsgDtl.uid, sponseeDetails, msgRecipientDID, fwdMeta)
+          val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
+          val name = mds.getOrElse(NAME_KEY, "")
+          // metadata is deprecated, we should keep type in legacy state for backward compatibility.
+          val fwdMeta = FwdMetaData(Some(notifMsgDtl.deprecatedPushMsgType), Some(name))
+          val fwdMsg = FwdMsg(notifMsgDtl.uid, notifMsgDtl.msgType, sponseeDetails, msgRecipientDID, fwdMeta)
 
-            remoteMsgSendingSvc.sendJsonMsgToRemoteEndpoint(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
-            logger.debug("message sent to endpoint: " + url)
+          msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
+          .map { _ =>
+            recordOutMsgDeliveryEvent(notifMsgDtl.uid, MsgEvent.withOnlyDetail(s"forward msg to sponsor sent: " + url))
+          }
+          logger.debug("message sent to endpoint: " + url)
           })
         }
       }
-    }
   }
 
   def sendPushNotif(pnData: PushNotifData, updateDeliveryStatus: Boolean = true, allComMethods: Option[CommunicationMethods]): Future[Any] = {
@@ -326,7 +342,7 @@ trait MsgNotifierForStoredMsgs
           self ! UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
           logger.debug("received push com methods: " + cms)
           val pushStart = System.currentTimeMillis()
-          sendPushNotif(cms, pnData, comMethods.sponsorId) map { r =>
+          val fut = sendPushNotif(cms, pnData, comMethods.sponsorId) map { r =>
             val duration = System.currentTimeMillis() - pushStart
             MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_DURATION, duration)
             r match {
@@ -345,6 +361,7 @@ trait MsgNotifierForStoredMsgs
             }
             handleErrorIfFailed(r)
           }
+          recordDeliveryState(pnData.uid, pnData.msgType, s"push notification", fut)
         } else {
           throttledLogger.warn(NoPushMethodWarning(ownerAgentKeyDIDReq), s"no push com method registered for the user $ownerAgentKeyDIDReq")
         }
@@ -370,15 +387,16 @@ trait MsgNotifierForUserAgentCommon
   this: AgentPersistentActor
     with PushNotifMsgBuilder
     with MsgAndDeliveryHandler
+    with HasMsgProgressTracker
     with SendOutgoingMsg
     with HasLogger =>
 
   def agentMsgRouter: AgentMsgRouter = agentActorContext.agentMsgRouter
-  def remoteMsgSendingSvc: RemoteMsgSendingSvc = agentActorContext.remoteMsgSendingSvc
+  def msgSendingSvc: MsgSendingSvc = agentActorContext.msgSendingSvc
 
   override def sendStoredMsgToSelf(msgId:MsgId): Future[Any] = {
     logger.debug("about to send stored msg to self: " + msgId)
-    val msg = getMsgReq(msgId)
+    val msg = msgStore.getMsgReq(msgId)
     notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType), updateDeliveryStatus = true)
   }
 }
@@ -416,5 +434,24 @@ trait MsgNotifierForUserAgent extends MsgNotifierForUserAgentCommon {
 }
 
 case class FwdMetaData(msgType: Option[String], msgSenderName: Option[String])
-case class FwdMsg(msgId: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
-case class NotifyMsgDetail(uid: MsgId, msgType: String)
+case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
+object NotifyMsgDetail {
+  def withTrackingId(msgType: String): NotifyMsgDetail =
+    NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType)
+}
+case class NotifyMsgDetail(uid: MsgId, msgType: String) {
+  // this is used for legacy reasons, for compatibility with old versions of mobile application.
+  // it will be removed after some time
+  def deprecatedPushMsgType: String = if (msgType.contains('/')) MSG_TYPE_UNKNOWN else msgType
+
+  def msgTypeWithoutFamilyQualifier: String = {
+    /*
+    msgType could be in following formats:
+      did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential -> issue-credential/1.0/offer-credential
+      https://didcomm.org/issue-credential/1.0/offer-credential -> issue-credential/1.0/offer-credential
+      proofReq -> proofReq
+     */
+    val segments = msgType.split('/')
+    segments.slice(segments.length - 3, segments.length).mkString("/")
+  }
+}

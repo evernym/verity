@@ -25,14 +25,14 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
   lazy val restApiEnabled: Boolean = appConfig.getConfigBooleanOption(REST_API_ENABLED).getOrElse(false)
 
-  def checkIfRestApiEnabled(): Unit = {
+  protected def checkIfRestApiEnabled(): Unit = {
     if (!restApiEnabled) {
       logger.warn("received request on disabled REST api")
       throw new FeatureNotEnabledException(Status.NOT_IMPLEMENTED.statusCode, Option(Status.NOT_IMPLEMENTED.statusMsg))
     }
   }
 
-  def handleRestMsgReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String])
+  protected def handleRestMsgReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String])
                       (implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgCount
 
@@ -47,7 +47,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def handleRestGetStatusReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String], params: Map[String, String])
+  protected def handleRestGetStatusReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String], params: Map[String, String])
                             (implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgCount
 
@@ -60,7 +60,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def responseHandler: PartialFunction[Any, HttpResponse] = {
+  protected def responseHandler: PartialFunction[Any, HttpResponse] = {
     case br: ActorErrorResp  =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
       RestExceptionHandler.handleUnexpectedResponse(br)
@@ -78,7 +78,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
       HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(native))))
   }
 
-  def extractMsgType(payload: String): MsgType = {
+  protected def extractMsgType(payload: String): MsgType = {
     try {
       DefaultMsgCodec.msgTypeFromDoc(DefaultMsgCodec.docFromStrUnchecked(payload))
     } catch {
@@ -88,7 +88,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  def buildGetStatusMsgType(protoRef: ProtoRef, params: Map[String, String]): MsgType = {
+  protected def buildGetStatusMsgType(protoRef: ProtoRef, params: Map[String, String]): MsgType = {
     MsgType(
       MsgFamily.msgQualifierFromQualifierStr(params.getOrElse("family", "123456789abcdefghi1234")),
       protoRef.msgFamilyName,
@@ -97,7 +97,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     )
   }
 
-  def buildGetStatusMsg(msgType: MsgType, params: Map[String, String]): String = {
+  protected def buildGetStatusMsg(msgType: MsgType, params: Map[String, String]): String = {
     val jsonMsg = new JSONObject
     msgType.normalizedMsgType
     jsonMsg.put("@type", MsgFamily.typeStrFromMsgType(msgType))
@@ -108,12 +108,12 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     jsonMsg.toString
   }
 
-  def checkMsgFamily(msgType: MsgType, protoRef: ProtoRef): Unit = {
+  protected def checkMsgFamily(msgType: MsgType, protoRef: ProtoRef): Unit = {
     if (msgType.protoRef != protoRef)
       throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid protocol family and/or version"))
   }
 
-  def extractAuthHeader: Directive1[RestAuthContext] = {
+  protected def extractAuthHeader: Directive1[RestAuthContext] = {
     val lowerCaseName = "X-API-key".toLowerCase
     extract(_.request.headers.collectFirst {
       case HttpHeader(`lowerCaseName`, value) => value
@@ -138,7 +138,6 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
                 path(Segment/Segment/Segment/Segment.?) { (route, protocolFamily, version, threadId) =>
                   implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
                   MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)       //tracing related
-                  MsgProgressTracker.recordMsgReceivedByHttpEndpoint("/api")  //tracking related
                   parameterMap{ params =>
                     post {
                       handleRestMsgReq(route, ProtoRef(protocolFamily, version), auth, threadId)

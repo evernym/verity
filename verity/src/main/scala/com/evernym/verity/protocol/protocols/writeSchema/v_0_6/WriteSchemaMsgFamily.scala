@@ -42,7 +42,13 @@ case class NeedsEndorsement(schemaId: String, schemaJson: String) extends Signal
  * Control Messages
  */
 trait SchemaControl extends Control with MsgBase
-case class Write(name: String, version: String, attrNames: Seq[String]) extends Msg with SchemaControl
+case class Write(name: String, version: String, attrNames: Seq[String]) extends Msg with SchemaControl {
+  override def validate(): Unit = {
+    checkRequired("name", name)
+    checkRequired("version", version)
+    checkRequired("attrNames", attrNames)
+  }
+}
 
 /**
  * Errors

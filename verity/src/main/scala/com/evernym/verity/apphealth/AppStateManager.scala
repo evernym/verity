@@ -3,7 +3,6 @@ package com.evernym.verity.apphealth
 import java.time.ZonedDateTime
 
 import akka.actor.ActorSystem
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -181,19 +180,17 @@ trait AppStateManagerBase {
   }
 
   def recoverIfNeeded(context: String): Unit = {
-    runWithInternalSpan("recoverIfNeeded", "AppStateManager") {
-      if (List(DegradedState, SickState).contains(currentState)) {
-        causesByContext.getOrElse(context, Set.empty).foreach { cd =>
-          val isRemoved = removeFromCausesByStateIfExists(cd)
-          if (isRemoved) {
-            val updatedCause = cd.copy(msg = s"recovered from cause (${cd.msg}) ${getCurrentStateCauses.size} causes remaining")
-            <<(SuccessEventParam(RecoveredFromCause, context, updatedCause))
-          }
+    if (List(DegradedState, SickState).contains(currentState)) {
+      causesByContext.getOrElse(context, Set.empty).foreach { cd =>
+        val isRemoved = removeFromCausesByStateIfExists(cd)
+        if (isRemoved) {
+          val updatedCause = cd.copy(msg = s"recovered from cause (${cd.msg}) ${getCurrentStateCauses.size} causes remaining")
+          <<(SuccessEventParam(RecoveredFromCause, context, updatedCause))
         }
-        if (getCurrentStateCauses.isEmpty) {
-          val cd = CauseDetail(AUTO_RECOVERED_CODE, "recovered from all causes")
-          <<(SuccessEventParam(Recovered, context, cd))
-        }
+      }
+      if (getCurrentStateCauses.isEmpty) {
+        val cd = CauseDetail(AUTO_RECOVERED_CODE, "recovered from all causes")
+        <<(SuccessEventParam(Recovered, context, cd))
       }
     }
   }

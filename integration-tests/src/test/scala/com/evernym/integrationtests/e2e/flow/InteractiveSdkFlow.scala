@@ -365,7 +365,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
             createdRespMsg = msg
             println("created response: " + msg)
             msg shouldBe an[JSONObject]
-            msg.getString("@type") should (be (s"https://${EVERNYM_QUALIFIER}/relationship/1.0/created") or be ("did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"))
+            msg.getString("@type") should (be (s"https://didcomm.evernym.com/relationship/1.0/created") or be ("did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"))
             threadId = msg.getJSONObject("~thread").getString("thid")
           }
 
@@ -464,7 +464,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
             createdRespMsg = msg
             println("created response: " + msg)
             msg shouldBe an[JSONObject]
-            msg.getString("@type") shouldBe "did:sov:123456789abcdefghi1234;spec/relationship/1.0/created"
+            msg.getString("@type") should (be ("did:sov:123456789abcdefghi1234;spec/relationship/1.0/created") or be ("https://didcomm.evernym.com/relationship/1.0/created"))
             threadId = msg.getJSONObject("~thread").getString("thid")
           }
 
@@ -624,9 +624,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
       def checkSignal(fromReceiver: VeritySdkProvider with MsgReceiver, expectedSignalMsgName: String): Unit = {
         fromReceiver.expectMsg(expectedSignalMsgName) { resp =>
           resp shouldBe an[JSONObject]
-          resp.getString("@type") shouldBe s"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/$expectedSignalMsgName"
+          resp.getString("@type") should (be (s"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/$expectedSignalMsgName") or be (s"https://didcomm.evernym.com/relationship/1.0/$expectedSignalMsgName"))
         }
-
       }
     }
   }

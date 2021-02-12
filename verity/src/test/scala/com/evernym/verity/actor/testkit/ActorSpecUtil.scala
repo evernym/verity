@@ -14,8 +14,10 @@ import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
-
 import java.util.concurrent.TimeUnit
+
+import com.evernym.verity.actor.agent.DidPair
+
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
@@ -35,6 +37,7 @@ object AkkaTestBasic extends ActorSystemConfig
  */
 case class AgentDIDDetail(name: String, DIDSeed: String, did: DID, verKey: VerKey) {
   def prepareAgencyIdentity: AgencyPublicDid = AgencyPublicDid(did, verKey)
+  def didPair = DidPair(did, verKey)
 }
 
 

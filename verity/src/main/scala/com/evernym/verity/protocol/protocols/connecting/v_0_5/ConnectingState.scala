@@ -1,14 +1,16 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_5
 
-import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnectingStateBase, HasPairwiseConnection}
 import com.evernym.verity.util.OptionUtil.blankOption
 
 
-case class ConnectingState(appConfig: AppConfig, agentMsgTransformer: AgentMsgTransformer)
+//NOTE: don't remove the 'isInitialized' field, it is used
+// to decide if the protocol state is initial state or something different.
+// this check is done in ActorProtocolContainer
+//TODO This state is mutable, and state objects in protocols should be immutable.
+case class ConnectingState(isInitialized: Boolean=false)
   extends ConnectingStateBase[ConnectingState] {
 
   def myPublicDIDOpt: Option[DID] = parameters.paramValue(MY_PUBLIC_DID).flatMap(blankOption)

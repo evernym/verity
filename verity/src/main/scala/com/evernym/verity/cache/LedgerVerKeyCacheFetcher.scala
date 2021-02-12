@@ -14,9 +14,9 @@ case class GetVerKeyParam(did: DID, submitterDetail: Submitter) {
   override def toString: String = s"DID: $did, SubmitterDetail: $Submitter"
 }
 
-class VerKeyCacheFetcher(val ledgerSvc: LedgerSvc, appConfig: AppConfig) extends AsyncCacheValueFetcher {
+class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, appConfig: AppConfig) extends AsyncCacheValueFetcher {
 
-  lazy val id: Int = VER_KEY_CACHE_FETCHER_ID
+  lazy val id: Int = LEDGER_VER_KEY_CACHE_FETCHER_ID
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
   lazy val ttls: Option[Int] = Option(appConfig.getConfigIntOption(VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))

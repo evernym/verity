@@ -22,7 +22,7 @@ trait AgentMsgHandler {
       logger.debug("Unpacking agent created response message (MFV 0.6)")
       val acm = unpackAgentCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
       logger.debug("Set cloud agent detail")
-      setCloudAgentDetail(acm.withPairwiseDID, acm.withPairwiseDIDVerKey)
+      setCloudAgentDetail(acm.didPair)
       acm
     }
 

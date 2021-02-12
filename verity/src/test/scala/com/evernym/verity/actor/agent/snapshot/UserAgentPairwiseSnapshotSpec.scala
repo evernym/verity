@@ -91,7 +91,7 @@ class UserAgentPairwiseSnapshotSpec
                                   protoInstancesSize: Int): Unit = {
     val myDIDDetail = mockEdgeAgent.pairwiseConnDetail(connId1).myPairwiseDidPair
 
-    state.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
+    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
     state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
     state.thisAgentKeyId.contains(myDIDDetail.DID) shouldBe false

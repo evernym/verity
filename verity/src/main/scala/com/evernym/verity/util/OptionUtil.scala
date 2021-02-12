@@ -2,8 +2,6 @@ package com.evernym.verity.util
 
 import java.util.{Map => JavaMap}
 
-import kanela.agent.libs.io.vavr.API.Success
-
 import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
 import scala.language.implicitConversions

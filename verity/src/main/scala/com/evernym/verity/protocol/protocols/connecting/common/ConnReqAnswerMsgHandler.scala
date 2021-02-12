@@ -64,10 +64,10 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
 
     def prepareInviteAnswerConnReqCreatedEventOpt: Option[MsgCreated] = {
       Option(connReqAnswerMsg.replyToMsgId).flatMap { replyToMsgId =>
-        if (ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId).isEmpty) {
-          Option (buildMsgCreatedEvt (CREATE_MSG_TYPE_CONN_REQ,
-            connReqAnswerMsg.senderDetail.DID, connReqAnswerMsg.replyToMsgId,
-            sendMsg=false, connReqAnswerMsg.threadOpt))
+        val reqMsg = ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId)
+        if (reqMsg.isEmpty) {
+          Option (buildMsgCreatedEvt (connReqAnswerMsg.replyToMsgId, CREATE_MSG_TYPE_CONN_REQ,
+            connReqAnswerMsg.senderDetail.DID, sendMsg=false, connReqAnswerMsg.threadOpt))
         } else None
       }
     }
@@ -75,9 +75,10 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     def prepareMsgCreatedEvent: MsgCreated = {
       val answerMsgSenderDID = if (connReqAnswerMsg.keyDlgProof.isDefined) ctx.getState.myPairwiseDIDReq
       else connReqAnswerMsg.senderDetail.DID
-      buildMsgCreatedEvt (connReqAnswerMsg.msgFamilyDetail.msgName, answerMsgSenderDID,
-        connReqAnswerMsg.id, connReqAnswerMsg.sendMsg, connReqAnswerMsg.threadOpt).
-        copy (statusCode = connReqAnswerMsg.answerStatusCode)
+      buildMsgCreatedEvt(connReqAnswerMsg.id,
+        connReqAnswerMsg.msgFamilyDetail.msgName, answerMsgSenderDID,
+        connReqAnswerMsg.sendMsg, connReqAnswerMsg.threadOpt
+      ).copy (statusCode = connReqAnswerMsg.answerStatusCode)
     }
 
     def prepareConnReqMsgAnsweredEvent(answerMsgUid: MsgId): Option[MsgAnswered] = {
@@ -97,19 +98,9 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     val answerMsgEdgePayloadStoredEventOpt = prepareEdgePayloadStoredEventOpt(answerMsgCreatedEvent.uid)
     val connReqMsgAnsweredEventOpt = prepareConnReqMsgAnsweredEvent(answerMsgCreatedEvent.uid)
     val agentKeyDlgProofSetEventOpt = prepareAgentKeyDlgProofSetEventOpt
-
-    connReqMsgCreatedEventOpt match {
-      case Some(event) =>
-        ctx.apply(event)
-        DEPRECATED_sendSpecialSignal(AddMsg(event.copy(refMsgId = answerMsgCreatedEvent.uid, statusCode = connReqAnswerMsg.answerStatusCode)))
-      case None =>
-        connReqMsgAnsweredEventOpt.foreach { ae =>
-          DEPRECATED_sendSpecialSignal(UpdateMsg(ae.uid, ae.statusCode, Evt.getOptionFromValue(ae.refMsgId)))
-        }
-    }
+    connReqMsgCreatedEventOpt.foreach(ctx.apply)
     ctx.apply(answerMsgCreatedEvent)
     answerMsgEdgePayloadStoredEventOpt.foreach (ctx.apply)
-    DEPRECATED_sendSpecialSignal(AddMsg(answerMsgCreatedEvent, answerMsgEdgePayloadStoredEventOpt.map(_.payload.toByteArray)))
     connReqMsgAnsweredEventOpt.foreach (ctx.apply)
 
     val connReqSenderAgentKeyDlgProof = connReqAnswerMsg.senderDetail.agentKeyDlgProof
@@ -121,7 +112,9 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
         connReqAnswerMsg.senderAgencyDetail.DID,
         rkdp.agentDID,
         rkdp.agentDelegatedKey,
-        rkdp.signature)
+        rkdp.signature,
+        connReqAnswerMsg.senderDetail.verKey
+      )
     }
 
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, connReqAnswerMsg.answerStatusCode, theirDidDocDetailOpt))
@@ -141,6 +134,18 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
         StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }
+
+    //NOTE: below are signal messages to be sent to agent actor to be stored/updated in agent's message store
+    // because get/download message API only queries agent's message store
+    connReqMsgCreatedEventOpt match {
+      case Some(event) =>
+        DEPRECATED_sendSpecialSignal(AddMsg(event.copy(refMsgId = answerMsgCreatedEvent.uid, statusCode = connReqAnswerMsg.answerStatusCode)))
+      case None =>
+        connReqMsgAnsweredEventOpt.foreach { ae =>
+          DEPRECATED_sendSpecialSignal(UpdateMsg(ae.uid, ae.statusCode, Evt.getOptionFromValue(ae.refMsgId)))
+        }
+    }
+    DEPRECATED_sendSpecialSignal(AddMsg(answerMsgCreatedEvent, answerMsgEdgePayloadStoredEventOpt.map(_.payload.toByteArray)))
 
   }
 

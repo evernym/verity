@@ -32,7 +32,8 @@ trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
         actualCmdReceiver(cmd)
         postCommandExecution(cmd)
       } catch {
-        case e: Exception => handleException(e, sender())
+        case e: Exception =>
+          handleException(e, sender())
       }
 
     case cmd if actualCmdReceiver.isDefinedAt(cmd) =>

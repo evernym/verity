@@ -55,7 +55,7 @@ trait AgentMsgHandler {
 
     def handleAgentCreatedResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): AgentCreated_MFV_0_5 = {
       val acm = unpackAgentCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
-      setCloudAgentDetail(acm.withPairwiseDID, acm.withPairwiseDIDVerKey)
+      setCloudAgentDetail(acm.didPair)
       acm
     }
 

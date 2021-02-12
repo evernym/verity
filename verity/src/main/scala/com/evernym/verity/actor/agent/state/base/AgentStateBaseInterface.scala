@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.state.base
 import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, KeyId, Relationship}
-import com.evernym.verity.actor.agent.{ConnectionStatus, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{ConnectionStatus, DidPair, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
 
 /**
@@ -15,7 +15,7 @@ trait AgentStateUpdateInterface {
   def state: StateType
 
   def setAgentWalletId(walletId: String): Unit
-  def setAgencyDID(did: DID): Unit
+  def setAgencyDIDPair(didPair: DidPair): Unit
   def addThreadContextDetail(threadContext: ThreadContext): Unit
   def removeThreadContext(pinstId: PinstId): Unit
 
@@ -65,8 +65,8 @@ trait AgentStateInterface extends State {
   def agentWalletIdReq: String = agentWalletId.getOrElse(
     throw new RuntimeException("agent wallet id not yet set")
   )
-  def agencyDID: Option[DID]
-  def agencyDIDReq: DID = agencyDID.getOrElse(throw new RuntimeException("agency DID not available"))
+  def agencyDIDPair: Option[DidPair]
+  def agencyDIDReq: DID = agencyDIDPair.map(_.DID).getOrElse(throw new RuntimeException("agency DID not available"))
 
   def domainId: DomainId
   def relationshipId: Option[RelationshipId] = relationship.flatMap(_.myDid)
@@ -92,14 +92,28 @@ trait AgentStateInterface extends State {
   def myDid_! : DID = myDid.getOrElse(throw new RuntimeException("myDid is not set yet"))
   def myDidAuthKey: Option[AuthorizedKeyLike] = myDid.flatMap(keyId =>
     relationship.flatMap(_.myDidDocAuthKeyById(keyId)))
+  def myDidAuthKeyReq: AuthorizedKeyLike = myDidAuthKey.getOrElse(
+    throw new RuntimeException("my DID auth key is not set yet")
+  )
 
   def theirDidDoc: Option[DidDoc] = relationship.flatMap(_.theirDidDoc)
   def theirDidDoc_! : DidDoc = theirDidDoc.getOrElse(throw new RuntimeException("theirDidDoc is not set yet"))
   def theirDid: Option[DID] = theirDidDoc.map(_.did)
   def theirDid_! : DID = theirDid.getOrElse(throw new RuntimeException("theirDid is not set yet"))
+  def theirDidAuthKey: Option[AuthorizedKeyLike] = theirDid.flatMap(keyId =>
+    relationship.flatMap(_.theirDidDocAuthKeyById(keyId)))
+  def theirDidAuthKeyReq: AuthorizedKeyLike = theirDidAuthKey.getOrElse(
+    throw new RuntimeException("their DID auth key is not set yet")
+  )
 
   def thisAgentAuthKey: Option[AuthorizedKeyLike] = thisAgentKeyId.flatMap(keyId =>
     relationship.flatMap(_.myDidDocAuthKeyById(keyId)))
+
+  def thisAgentAuthKeyDidPair: Option[DidPair] =
+    thisAgentAuthKey
+      .find(_.verKeyOpt.isDefined)
+      .map(ak => DidPair(ak.keyId, ak.verKey))
+
   def thisAgentAuthKeyReq: AuthorizedKeyLike =
     thisAgentAuthKey.getOrElse(throw new RuntimeException("this agent auth key not found"))
 

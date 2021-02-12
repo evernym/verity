@@ -44,9 +44,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   def initState(params: Seq[ParameterStored]): ConnectingState = {
     val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
     initWalletDetail(seed)
-    ConnectingState(
-      ctx.SERVICES_DEPRECATED.appConfig,
-      ctx.SERVICES_DEPRECATED.agentMsgTransformer)
+    ConnectingState(isInitialized=true)
   }
 
   override def applyEvent: ApplyEvent =
@@ -134,7 +132,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      edgePairwiseKey.did, edgePairwiseKey.did, endpointDetail)
+      edgePairwiseKey.didPair, edgePairwiseKey.didPair, endpointDetail)
     val kdp = getAgentKeyDlgProof(edgePairwiseKey.verKey, edgePairwiseKey.did,
       edgePairwiseKey.verKey)(walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
@@ -166,7 +164,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      createKeyReqMsg.forDID, pairwiseKeyResult.did, endpointDetail)
+      createKeyReqMsg.didPair, pairwiseKeyResult.didPair, endpointDetail)
     fut.map { _ =>
       processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
     }

@@ -411,7 +411,7 @@ trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon {
    * this should be main agent actor's (UserAgent) agent DID
    * @return
    */
-  override def ownerAgentKeyDIDReq: DID = state.ownerAgentKeyDID.getOrElse(
+  override def ownerAgentKeyDIDReq: DID = state.ownerAgentDidPair.map(_.DID).getOrElse(
     throw new RuntimeException("owner's cloud agent DID not yet set"))
 
   override def msgRecipientDID: DID = state.myDid_!

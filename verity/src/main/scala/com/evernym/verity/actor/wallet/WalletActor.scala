@@ -12,7 +12,7 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.StatusDetail
-import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
@@ -238,7 +238,9 @@ trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase
 case object WalletAlreadyCreated extends WalletCreatedBase
 
-case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
+case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 
 case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
 

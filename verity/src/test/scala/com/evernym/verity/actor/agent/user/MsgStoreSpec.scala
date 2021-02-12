@@ -169,19 +169,18 @@ class MsgStoreSpec
     eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
 
       val retainedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}_sum")
-      if (expectedRetainedMsgsSum > 0) {
+      val removedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}_sum")
+      val totalActorWithRemovedMsgMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}_sum")
+
+      if (expectedRemovedMsgsSum > 0) {
         retainedMsgsSumMetrics.size shouldBe 1
         retainedMsgsSumMetrics.head.value shouldBe expectedRetainedMsgsSum
-      }
 
-      val removedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}_sum")
-      if (expectedRemovedMsgsSum > 0) {
         removedMsgsSumMetrics.size shouldBe 1
         removedMsgsSumMetrics.head.value shouldBe expectedRemovedMsgsSum
-      }
 
-      val totalActorWithRemovedMsgMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}_sum")
-      totalActorWithRemovedMsgMetrics.size shouldBe 1
+        totalActorWithRemovedMsgMetrics.size shouldBe 1
+      }
     }
   }
 

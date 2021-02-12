@@ -20,11 +20,13 @@ trait MsgAndDeliveryHandler { this: AgentCommon =>
 
   def msgEventReceiver: Receive = {
     case mc: MsgCreated                   => msgStore.handleMsgCreated(mc)
-    case ma: MsgAnswered                  => msgStore.handleMsgAnswered(ma)
-    case msu: MsgStatusUpdated            => msgStore.handleMsgStatusUpdated(msu)
-    case mdsu: MsgDeliveryStatusUpdated   => msgStore.handleMsgDeliveryStatusUpdated(mdsu)
     case mda: MsgDetailAdded              => msgStore.handleMsgDetailAdded(mda)
     case mps: MsgPayloadStored            => msgStore.handleMsgPayloadStored(mps)
+
+    case ma: MsgAnswered                  => msgStore.handleMsgAnswered(ma)
+    case msu: MsgStatusUpdated            => msgStore.handleMsgStatusUpdated(msu)
+
+    case mdsu: MsgDeliveryStatusUpdated   => msgStore.handleMsgDeliveryStatusUpdated(mdsu)
     case metu: MsgExpirationTimeUpdated   => msgStore.handleMsgExpiryTimeUpdated(metu)
   }
 
@@ -89,8 +91,13 @@ object MsgHelper {
   val validExistingMsgStatusesAllowedToBeUpdated: Set[String] =
     Set(MSG_STATUS_RECEIVED, MSG_STATUS_ACCEPTED, MSG_STATUS_REJECTED).map(_.statusCode)
 
-  def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId, sendMsg: Boolean,
-                         msgStatus: String, threadOpt: Option[Thread], LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
+  def buildMsgCreatedEvt(msgId: MsgId,
+                         mType: String,
+                         senderDID: DID,
+                         sendMsg: Boolean,
+                         msgStatus: String,
+                         threadOpt: Option[Thread],
+                         LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfDIDLengthIsValid(senderDID)
     val msgReceivedOrderDetail: Seq[MsgReceivedOrdersDetail] =
       threadOpt.map(_.received_orders).getOrElse(Map.empty)

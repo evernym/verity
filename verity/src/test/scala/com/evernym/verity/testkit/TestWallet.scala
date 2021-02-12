@@ -2,11 +2,12 @@ package com.evernym.verity.testkit
 
 import java.util.UUID
 
-import com.evernym.verity.actor.agent.{WalletApiBuilder, WalletVerKeyCacheHelper}
+import com.evernym.verity.actor.agent.WalletApiBuilder
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.protocol.legacy.services.WalletVerKeyCacheHelper
 import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.util.TestWalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -21,7 +22,7 @@ trait HasTestWalletAPI extends HasAgentWallet with HasAppConfig {
 
   def createWallet: Boolean = false
 
-  override def agentWalletId: Option[String] = Option(UUID.randomUUID().toString)
+  override lazy val agentWalletId: Option[String] = Option(UUID.randomUUID().toString)
 
   def appConfig: AppConfig = new TestAppConfig
 

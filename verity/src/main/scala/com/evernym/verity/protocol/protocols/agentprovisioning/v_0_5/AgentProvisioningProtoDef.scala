@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
@@ -72,6 +73,8 @@ case class ConnectReqMsg_MFV_0_5(fromDID: DID, fromDIDVerKey: VerKey) extends Pr
     checkRequired("fromDID", fromDID)
     checkRequired("fromDIDVerKey", fromDIDVerKey)
   }
+
+  def didPair = DidPair(fromDID, fromDIDVerKey)
 }
 
 case class ConnectedRespMsg_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) extends ProtoMsg

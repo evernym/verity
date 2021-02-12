@@ -46,7 +46,7 @@ class MockActorRecoveryFailure(val appConfig: AppConfig)
 
   override def receiveEvent: Receive = ???
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+  override def postActorRecoveryCompleted(): Future[Any] = {
     //to control the exception throw flow to be able to accurately test occurrences of failures
     if (exceptionSleepTimeInMillis > 0)
       Thread.sleep(exceptionSleepTimeInMillis)

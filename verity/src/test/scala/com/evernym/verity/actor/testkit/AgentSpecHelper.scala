@@ -22,7 +22,9 @@ import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
+
 import org.scalatest.concurrent.Eventually
+
 
 trait AgentSpecHelper
   extends MockMsgSendingSvcListener
@@ -135,9 +137,10 @@ trait AgentSpecHelper
   }
 
   protected def restartPersistentActor(ar: agentRegion): Unit = {
+    Thread.sleep(2000)
     ar ! PoisonPill
     expectNoMessage()
-    Thread.sleep(1000)
+    Thread.sleep(2000)
     ar ! GetPersistentActorDetail
     expectMsgType[PersistentActorDetail]
   }

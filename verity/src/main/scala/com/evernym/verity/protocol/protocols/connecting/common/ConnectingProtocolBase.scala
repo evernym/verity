@@ -355,12 +355,15 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     ctx.SERVICES_DEPRECATED.msgQueueServiceProvider.addToMsgQueue(msf)
   }
 
-  def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId,
-                         sendMsg: Boolean, threadOpt: Option[Thread]=None): MsgCreated = {
+  def buildMsgCreatedEvt(msgId: MsgId,
+                         mType: String,
+                         senderDID: DID,
+                         sendMsg: Boolean,
+                         threadOpt: Option[Thread]=None): MsgCreated = {
     val msgStatus =
       if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode
       else MSG_STATUS_RECEIVED.statusCode
-    ctx.getState.connectingMsgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
+    ctx.getState.connectingMsgState.buildMsgCreatedEvt(msgId , mType, senderDID, sendMsg, msgStatus, threadOpt)
   }
 
   def initState(params: Seq[ParameterStored]): S

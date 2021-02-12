@@ -1,5 +1,6 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7
 
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.mock.HasCloudAgent
@@ -31,7 +32,7 @@ trait AgentMsgHandler{ this: AgentMsgHelper with MockAgent with HasCloudAgent =>
       logger.debug("Unpacking agent created response message (MFV 0.7)")
       val acm = unpackAgentCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
       logger.debug("Set cloud agent detail")
-      setCloudAgentDetail(acm.selfDID, acm.agentVerKey)
+      setCloudAgentDetail(DidPair(acm.selfDID, acm.agentVerKey))
       acm
     }
 

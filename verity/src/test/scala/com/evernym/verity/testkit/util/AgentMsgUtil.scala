@@ -1,13 +1,12 @@
 package com.evernym.verity.testkit.util
 
-import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer, FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.protocol.protocols.MsgDetail
@@ -123,11 +122,16 @@ case class Connected_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey
 
 case class SignedUp_MFV_0_5()
 
-case class AgentCreated_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey)
+case class AgentCreated_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) {
+  def didPair = DidPair(withPairwiseDID, withPairwiseDIDVerKey)
+}
 
-case class AgentCreated_MFV_0_6(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey)
+case class AgentCreated_MFV_0_6(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) {
+  def didPair = DidPair(withPairwiseDID, withPairwiseDIDVerKey)
+}
 
 case class AgentCreated_MFV_0_7(selfDID: DID, agentVerKey: VerKey)
+
 
 case class CreateAgentProblemReport_MFV_0_7(msg: String)
 

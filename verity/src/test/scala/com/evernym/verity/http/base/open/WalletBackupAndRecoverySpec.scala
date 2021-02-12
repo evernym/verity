@@ -187,7 +187,7 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
           rca shouldBe cloudAgentAddress
 
           recoveredCloudAddress = convertTo[CloudAgentDetail](rca)
-          mockNewEdgeAgent.setCloudAgentDetail(recoveredCloudAddress.did, recoveredCloudAddress.verKey)
+          mockNewEdgeAgent.setCloudAgentDetail(recoveredCloudAddress.didPair)
         }
       }
     }

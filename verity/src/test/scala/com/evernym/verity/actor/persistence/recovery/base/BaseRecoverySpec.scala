@@ -1,8 +1,22 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
+import com.evernym.verity.actor.agentRegion
+import com.evernym.verity.actor.base.{Ping, Stop}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
+import com.evernym.verity.testkit.AddMetricsReporter
 
-trait BaseRecoverySpec extends BasePersistentStore {
+trait BaseRecoverySpec
+  extends BasePersistentStore
+    with AddMetricsReporter {
+
+  def restartActor(ar: agentRegion): Unit = {
+    ar ! Stop(sendBackConfirmation = true)
+    expectMsgType[Done.type]
+    Thread.sleep(2000)
+    ar ! Ping(sendBackConfirmation = true)
+    expectMsgType[Done.type]
+  }
 
   def assertPersistentActorDetail(pad: PersistentActorDetail,
                                   expectedPersistenceId: PersistenceIdParam,

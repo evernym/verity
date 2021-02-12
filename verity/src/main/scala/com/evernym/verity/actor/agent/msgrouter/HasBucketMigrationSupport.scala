@@ -52,8 +52,9 @@ trait HasBucketMigrationSupport { this: AgentRouteStore =>
     }
   }
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
-    List(Future(schedulePeriodJobIfReq()))
+  override def postActorRecoveryCompleted(): Future[Any] = {
+    schedulePeriodJobIfReq()
+    Future.successful("Done")
   }
 
   def schedulePeriodJobIfReq(): Unit = {

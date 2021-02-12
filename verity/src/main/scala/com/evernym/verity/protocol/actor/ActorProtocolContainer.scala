@@ -258,11 +258,10 @@ class ActorProtocolContainer[
       stash()
   }
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+  override def postSuccessfulActorRecovery(): Unit = {
     if (!state.equals(definition.initialState)){
       toBaseBehavior()
     }
-    List.empty
   }
 
   def handleResponse(resp: Try[Any], msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
@@ -303,16 +302,16 @@ class ActorProtocolContainer[
       senderActorRef = Option(sender())
     }
 
-    val (msgId, actualMsg, msgToBeSent) = cmd.msg match {
+    val (msgId, msgToBeSent) = cmd.msg match {
       case c: Control =>
         val newMsgId = MsgFamilyUtil.getNewMsgUniqueId
-        (newMsgId, c, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
+        (newMsgId, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
       case MsgEnvelope(msg: Control, _, _, _, Some(msgId), Some(thId))  =>
-        (msgId, msg, CtlEnvelope(msg, msgId, thId))
+        (msgId, CtlEnvelope(msg, msgId, thId))
       case MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId))   =>
-        (msgId, msg, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
+        (msgId, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
       case m: MsgWithSegment =>
-        (m.msgId, m, m)
+        (m.msgId, m)
     }
     submit(msgToBeSent, Option(handleResponse(_, Some(msgId), senderActorRef)))
   }
@@ -378,7 +377,7 @@ class ActorProtocolContainer[
   override def createServices: Option[Services] = {
 
     Some(new LegacyProtocolServicesImpl[M,E,I](
-      eventRecorder, sendsMsgs, agentActorContext.appConfig,
+      agentActorContext.appConfig,
       agentActorContext.walletAPI, agentActorContext.generalCache,
       agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer,
       this, this, this))
@@ -397,17 +396,17 @@ class ActorProtocolContainer[
   and the pairwise actor as well. The pairwise actor is effectively an "endpoint", since
   it is where you will receive messages from the other side.
    */
-  def setupCreateKeyEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any] = {
+  def setupCreateKeyEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](endpointDetailJson)
-    val cmd = SetupCreateKeyEndpoint(agentKeyDID, forDID, endpointDetail.ownerDID,
-      endpointDetail.ownerAgentKeyDID, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
+    val cmd = SetupCreateKeyEndpoint(agentKeyDIDPair, forDIDPair, endpointDetail.ownerDID,
+      endpointDetail.ownerAgentKeyDidPair, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
     sendCmdToRegionActor(endpointDetail.regionTypeName, newEndpointActorEntityId, cmd)
   }
 
-  def setupNewAgentEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any] = {
+  def setupNewAgentEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](endpointDetailJson)
     sendCmdToRegionActor(endpointSetupDetail.regionTypeName, endpointSetupDetail.entityId,
-      SetupAgentEndpoint(forDID, agentKeyDID))
+      SetupAgentEndpoint(forDIDPair, agentKeyDIDPair))
   }
 
   //NOTE: this method is used to compute entity id of the new pairwise actor this protocol will use

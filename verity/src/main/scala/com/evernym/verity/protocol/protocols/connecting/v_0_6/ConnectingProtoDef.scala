@@ -131,5 +131,5 @@ object ConnectingProtoDef
       Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
     new ConnectingProtocol(context)
 
-  override def initialState: ConnectingState = ConnectingState(null, null)
+  override def initialState: ConnectingState = ConnectingState()
 }

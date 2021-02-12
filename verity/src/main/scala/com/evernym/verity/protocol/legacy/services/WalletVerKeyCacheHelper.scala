@@ -1,16 +1,16 @@
-package com.evernym.verity.actor.agent
+package com.evernym.verity.protocol.legacy.services
 
-import com.evernym.verity.constants.Constants.WALLET_VER_KEY_CACHE_FETCHER_ID
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.cache._
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.Constants.WALLET_VER_KEY_CACHE_FETCHER_ID
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
 /**
- * contains a wallet ver key cache
+ * used by protocol and tests
  */
 class WalletVerKeyCacheHelper(wap: WalletAPIParam, walletAPI: WalletAPI, appConfig: AppConfig) {
 

@@ -14,6 +14,7 @@ import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
@@ -30,7 +31,7 @@ trait PairwiseConnStateBase {
   type StateType <: AgentStatePairwiseInterface
   def state: StateType
 
-  implicit def relationshipUtilParam: RelUtilParam
+  implicit def didDocBuilderParam: DidDocBuilderParam
   def ownerDIDReq: DID
 
   def relationshipState: Relationship = state.relationshipReq
@@ -52,8 +53,15 @@ trait PairwiseConnStateBase {
    * @param relScopeDID
    * @param lrd
    */
-  def updateLegacyRelationshipState(relScopeDID: DID, lrd: LegacyRoutingDetail): Unit = {
-    val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, lrd.agentKeyDID, Option(Left(lrd)))
+  def updateLegacyRelationshipState(relScopeDID: DID,
+                                    relScopeDIDVerKey: VerKey,
+                                    lrd: LegacyRoutingDetail): Unit = {
+    val theirDidDoc =
+      DidDocBuilder()
+        .withDid(relScopeDID)
+        .withAuthKey(relScopeDID, relScopeDIDVerKey, Set(EDGE_AGENT_KEY))
+        .withAuthKeyAndEndpointDetail(lrd.agentKeyDID, lrd.agentVerKey, Set(AGENT_KEY_TAG), Left(lrd))
+        .didDoc
     updateRelAndConnection(theirDidDoc)
   }
 
@@ -61,11 +69,16 @@ trait PairwiseConnStateBase {
    * used to update the relationship object with their DID doc information (with standard routing details)
    * and also it updates connection status
    * @param relScopeDID
-   * @param agentKeyDID
    * @param rd
    */
-  def updateRelationshipState(relScopeDID: DID, agentKeyDID: DID, rd: RoutingDetail): Unit = {
-    val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(relScopeDID, agentKeyDID, Option(Right(rd)))
+  def updateRelationshipState(relScopeDID: DID,
+                              relScopeDIDVerKey: VerKey,
+                              rd: RoutingDetail): Unit = {
+    val theirDidDoc =
+      DidDocBuilder()
+        .withDid(relScopeDID)
+        .withAuthKeyAndEndpointDetail(relScopeDID, relScopeDIDVerKey, Set(AGENT_KEY_TAG), Right(rd))
+        .didDoc
     updateRelAndConnection(theirDidDoc)
   }
 
@@ -75,26 +88,27 @@ trait PairwiseConnStateBase {
     updateConnectionStatus(reqReceived = true, MSG_STATUS_ACCEPTED.statusCode)
   }
 
-  def pairwiseConnReceiver: Receive = {
+  def pairwiseConnEventReceiver: Receive = {
     case cc: ConnectionStatusUpdated =>
       (cc.theirDidDocDetail, cc.theirProvisionalDidDocDetail) match {
         case (Some(tdd: TheirDidDocDetail), None) =>
           val lrd = LegacyRoutingDetail(tdd.agencyDID, tdd.agentKeyDID, tdd.agentVerKey, tdd.agentKeyDlgProofSignature)
-          updateLegacyRelationshipState(tdd.pairwiseDID, lrd)
+          updateLegacyRelationshipState(tdd.pairwiseDID, tdd.pairwiseDIDVerKey, lrd)
         case (None, Some(pdd: TheirProvisionalDidDocDetail)) =>
           val rd = RoutingDetail(pdd.verKey, pdd.endpoint, pdd.routingKeys.toVector)
-          updateRelationshipState(pdd.did, pdd.did, rd)
+          updateRelationshipState(pdd.did, pdd.verKey, rd)
         case _ =>
           updateConnectionStatus(reqReceived = true)
       }
 
+      //legacy event
     case cc: ConnectionCompleted =>
       val lrd = LegacyRoutingDetail(
         cc.theirAgencyDID,
         cc.theirAgentDID,
         cc.theirAgentDIDVerKey,
         cc.theirAgentKeyDlgProofSignature)
-      updateLegacyRelationshipState(cc.theirEdgeDID, lrd)
+      updateLegacyRelationshipState(cc.theirEdgeDID, "", lrd)
   }
 
   def wap: WalletAPIParam

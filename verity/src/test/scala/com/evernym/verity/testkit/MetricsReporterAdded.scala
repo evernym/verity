@@ -8,6 +8,11 @@ import org.scalatest.{BeforeAndAfterEach, Suite}
 trait AddMetricsReporter {
   MetricsReader   //adds/initialized metrics reporter
 
+  def getFilteredMetric(nameStartsWith: String,
+                        tags: Map[String, String]=Map.empty): Option[MetricDetail] = {
+    getFilteredMetrics(nameStartsWith, tags).headOption
+  }
+
   def getFilteredMetrics(nameStartsWith: String,
                          tags: Map[String, String]=Map.empty): List[MetricDetail] = {
     val currentMetrics = MetricsReader.getNodeMetrics().metrics

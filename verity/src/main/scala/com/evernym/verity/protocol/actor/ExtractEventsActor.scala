@@ -30,11 +30,10 @@ class ExtractEventsActor(override val appConfig: AppConfig,
   }
 
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+  override def postActorRecoveryCompleted(): Future[Any] = {
     dest ! ProtocolCmd(ExtractionComplete(), None)
     self ! Stop()
-
-    List.empty
+    Future.successful("Done")
   }
 
   //We don't want this read only actor to write/persist any state/event

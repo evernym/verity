@@ -1,5 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
@@ -22,7 +23,9 @@ case class CreateKeyReqMsg_MFV_0_6(`@type`: String, forDID: DID, forDIDVerKey: V
   }
 }
 
-case class CreateKeyReqMsg(msgFamilyDetail: MsgFamilyDetail, forDID: DID, forDIDVerKey: VerKey)
+case class CreateKeyReqMsg(msgFamilyDetail: MsgFamilyDetail, forDID: DID, forDIDVerKey: VerKey) {
+  def didPair: DidPair = DidPair(forDID, forDIDVerKey)
+}
 
 case class KeyCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) extends MsgBase
 

@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
@@ -91,15 +92,16 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
     val fromDID = ca.fromDID
     val fromDIDVerKey = ca.fromDIDVerKey
+    val fromDIDPair = DidPair(fromDID, fromDIDVerKey)
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
-    val agentPairwiseKey = prepareNewAgentWalletData(fromDID, fromDIDVerKey, aws)
+    val agentPairwiseKey = prepareNewAgentWalletData(fromDIDPair, aws)
     walletAPI.executeSync[TheirKeyStored](StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true))
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(agentPairwiseKey.did, Option(fromDID)))) //TODO: confirm if this is correct
     val provisionerPartiId = oa.parameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
     ctx.apply(ProvisionerPartiSet(provisionerPartiId))
     ctx.apply(AgentPairwiseKeyCreated(agentPairwiseKey.did, agentPairwiseKey.verKey))
     val endpointDetail = oa.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
-    ctx.signal(AskUserAgentCreator(fromDID, agentPairwiseKey.did, endpointDetail))
+    ctx.signal(AskUserAgentCreator(fromDIDPair, agentPairwiseKey.didPair, endpointDetail))
   }
 
   private def handleAgentCreated(apkc: State.AgentPairwiseKeyCreated): Unit = {

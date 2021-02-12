@@ -112,31 +112,29 @@ trait UserAgentPairwiseSpecScaffolding
   }
 
   def createUserAgent(): Unit = {
-    val userDID = mockEdgeAgent.myDIDDetail.did
-    val userDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(userDID)
-    val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
+    val userDIDPair = mockEdgeAgent.myDIDDetail.didPair
+    val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
 
-    ua ! SetupAgentEndpoint(userDID, agentPairwiseKey.did)
+    ua ! SetupAgentEndpoint(userDIDPair, agentPairwiseKey.didPair)
     expectMsg(Done)
 
-    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
+    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }
 
   def createUserAgent_0_7(): Unit = {
-    val userDID = mockEdgeAgent.myDIDDetail.did
-    val userDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(userDID)
-    val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
+    val userDIDPair = mockEdgeAgent.myDIDDetail.didPair
+    val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
 
     ua ! SetupAgentEndpoint_V_0_7(
       DEFAULT_THREAD_ID,
-      userDID,
-      agentPairwiseKey.did,
+      userDIDPair,
+      agentPairwiseKey.didPair,
       mockEdgeAgent.myDIDDetail.verKey,
       Some(SponsorRel("evernym-test-sponsor", "sponsee-id"))
     )
 
     expectMsgType[AgentProvisioningDone]
-    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
+    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }
 
   def updateComMethod(comMethodType: Int, comMethod: String): Unit = {

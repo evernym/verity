@@ -14,7 +14,6 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, MsgDeliveryResult, SendMsgParam}
-import com.evernym.verity.actor.agent.relationship.RelationshipUtil._
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
@@ -113,11 +112,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_CONN_STATUS) ||
         amw.isMatched(MFV_0_6, MSG_TYPE_UPDATE_CONN_STATUS) =>
       handleUpdateConnStatusMsg(UpdateConnStatusMsgHelper.buildReqMsg(amw))
-
-    case amw: AgentMsgWrapper
-      if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_MSG_STATUS) ||
-        amw.isMatched(MFV_0_6, MSG_TYPE_UPDATE_MSG_STATUS) =>
-      handleUpdateMsgStatus(UpdateMsgStatusMsgHelper.buildReqMsg(amw))
   }
 
   /**
@@ -136,7 +130,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     //dhh I don't understand this orElse syntax
     commonEventReceiver orElse
       eventReceiver orElse
-      pairwiseConnReceiver orElse
+      pairwiseConnEventReceiver orElse
       msgEventReceiver orElse
       legacyEventReceiver orElse
       agentSpecificEventReceiver
@@ -145,7 +139,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     case os: OwnerSetForAgent     =>
       state = state
         .withMySelfRelDID(os.ownerDID)
-        .withOwnerAgentKeyDID(os.agentDID)
+        .withOwnerAgentDidPair(DidPair(os.agentDID, os.agentDIDVerKey))
       updateStateWithOwnerAgentKey()
     case ads: AgentDetailSet      =>
       handleAgentDetailSet(ads)
@@ -160,7 +154,12 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
     //includes details of 'their' edge pairwise DID and 'their' cloud agent DID
     case tads: TheirAgentDetailSet =>
-      val theirDidDoc = RelationshipUtil.prepareTheirDidDoc(tads.DID,tads.agentKeyDID, None)
+      val theirDidDoc =
+        DidDocBuilder()
+          .withDid(tads.DID)
+          .withAuthKey(tads.DID, "")
+          .withAuthKey(tads.agentKeyDID, "", Set(CLOUD_AGENT_KEY))
+          .didDoc
       state = state
         .relationship
         .map { r =>
@@ -173,7 +172,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     //includes details of 'their' cloud agent (cloud agent DID, cloud agent ver key key and delegation proof signature)
     case takdps: TheirAgentKeyDlgProofSet =>
       val lrd = LegacyRoutingDetail("", agentKeyDID = takdps.DID, agentVerKey = takdps.delegatedKey, takdps.signature)
-      updateLegacyRelationshipState(state.theirDid_!, lrd)
+      updateLegacyRelationshipState(state.theirDid_!, state.theirDidAuthKey.flatMap(_.verKeyOpt).getOrElse(""), lrd)
 
     //includes details of 'their' agency
     case tais: TheirAgencyIdentitySet =>
@@ -229,16 +228,21 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     state = state.withThisAgentKeyId(ad.agentKeyDID)
     val isThisAnEdgeAgent = ad.forDID == ad.agentKeyDID
     val agentKeyTags: Set[Tags] = if (isThisAnEdgeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
-    val myDidDoc = RelationshipUtil.prepareMyDidDoc(ad.forDID, ad.agentKeyDID, agentKeyTags)
+    val myDidDoc =
+      DidDocBuilder()
+        .withDid(ad.forDID)
+        .withAuthKey(ad.forDID, ad.forDIDVerKey, Set(EDGE_AGENT_KEY))
+        .withAuthKey(ad.agentKeyDID, ad.agentKeyDIDVerKey, agentKeyTags)
+        .didDoc
     state = state.withRelationship(PairwiseRelationship("pairwise", Option(myDidDoc)))
     updateStateWithOwnerAgentKey()
   }
 
   def updateStateWithOwnerAgentKey(): Unit = {
     if (agentWalletId.isDefined) {
-      state.ownerAgentKeyDID.foreach { ownerAgentDID =>
+      state.ownerAgentDidPair.foreach { didPair =>
         state = state.copy(relationship = state.relWithNewAuthKeyAddedInMyDidDoc(
-          ownerAgentDID, getVerKeyReqViaCache(ownerAgentDID), Set(OWNER_AGENT_KEY)))
+          didPair.DID, didPair.verKey, Set(OWNER_AGENT_KEY)))
       }
     }
   }
@@ -277,14 +281,14 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
       DefaultMsgCodec.toJson(msg)
     }
     for (
-      agencyVerKey    <- agencyVerKeyFut();
+      agencyDidPair   <- agencyDidPairFut();
       filteredConfigs <- getConfigs(Set(NAME_KEY, LOGO_URL_KEY))
     ) yield {
       {
         case SELF_ID                                => Parameter(SELF_ID, state.myDid_!)
         case OTHER_ID                               => Parameter(OTHER_ID, state.theirDid.getOrElse(UNKNOWN_OTHER_ID))
         case AGENCY_DID                             => Parameter(AGENCY_DID, agencyDIDReq)
-        case AGENCY_DID_VER_KEY                     => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
+        case AGENCY_DID_VER_KEY                     => Parameter(AGENCY_DID_VER_KEY, agencyDidPair.verKey)
         case MY_SELF_REL_DID                        => Parameter(MY_SELF_REL_DID, mySelfRelDIDReq)
         case MY_PAIRWISE_DID                        => Parameter(MY_PAIRWISE_DID, state.myDid_!)
         case MY_PAIRWISE_DID_VER_KEY                => Parameter(MY_PAIRWISE_DID_VER_KEY, myPairwiseVerKey)
@@ -644,16 +648,19 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def handleCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
     val pidEvent = scke.pid.map(pd => ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
-    val pubIdEvent = scke.publicIdentity.map{ pi => PublicIdentityStored(pi.DID, pi.verKey) }
-    val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDID.get)
-    val cdsEvt = AgentDetailSet(scke.forDID, scke.newAgentKeyDID)
+    val pubIdEvent = scke.publicIdentity.map{ pi => PublicIdentityStored(pi.DID, pi.verKey) }    
+    val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDIDReq, scke.ownerAgentKeyDIDVerKeyReq)
+    val cdsEvt = AgentDetailSet(
+      scke.forDIDPair.DID, scke.newAgentKeyDIDPair.DID,
+      scke.forDIDPair.verKey, scke.newAgentKeyDIDPair.verKey
+    )
     val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt)).toList
     writeAndApplyAll(eventsToPersist)
     val sndr = sender()
 
-    val setRouteFut = setRoute(scke.forDID, Option(scke.newAgentKeyDID))
-    val updateUserAgentFut = scke.ownerAgentKeyDID match {
-      case Some(ad) => agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(ad, cdsEvt))
+    val setRouteFut = setRoute(scke.forDIDPair.DID, Option(scke.newAgentKeyDIDPair.DID))
+    val updateUserAgentFut = scke.ownerAgentKeyDIDPair match {
+      case Some(dp) => agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(dp.DID, cdsEvt))
       case _        => Future.failed(new RuntimeException("ownerAgentKeyDID not provided"))
     }
 
@@ -669,8 +676,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   }
 
   override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
-    val edgeVerKey = state.myDid.map(did => getVerKeyReqViaCache(did))
-    val otherEntityEdgeVerKey = state.theirDid.map(d => getVerKeyReqViaCache(d))
+    val edgeVerKey = state.myDidAuthKey.flatMap(_.verKeyOpt)
+    val otherEntityEdgeVerKey = state.theirDidAuthKey.flatMap(_.verKeyOpt)
 
     val senderParticipantId = senderVerKey match {
       case Some(svk) if otherEntityEdgeVerKey.contains(svk) =>
@@ -824,9 +831,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     for {
       _   <- setRoute(stdd.myDID)
       ctlMsg  <-
-        agencyVerKeyFut().map { agencyVerKey =>
-          val myVerKey = getVerKeyReqViaCache(state.myDid_!)
-          val routingKeys = Vector(agencyVerKey)
+        agencyDidPairFut().map { agencyDidPair =>
+          val myVerKey = state.myDidAuthKeyReq.verKey
+          val routingKeys = Vector(agencyDidPair.verKey)
           Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
         }
     } yield ctlMsg
@@ -846,37 +853,15 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
   def msgPackFormat(msgId: MsgId): MsgPackFormat =
     getMsgPayload(msgId).flatMap(_.msgPackFormat).getOrElse(MPF_MSG_PACK)
 
-  /**
-   * this function gets executed post successful actor recovery (meaning all events are applied to state)
-   * the purpose of this function is to update any 'LegacyAuthorizedKey' to 'AuthorizedKey'
-   */
-  override def postSuccessfulActorRecovery(): Unit = {
-    super.postSuccessfulActorRecovery()
-    if (state.relationship.nonEmpty) {
-      val updatedMyDidDoc = updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
-      val updatedTheirDidDoc = updatedDidDocWithMigratedAuthKeys(state.theirDidDoc)
-      state = state
-        .relationship
-        .map { r =>
-          state.withRelationship(r
-            .update(_.myDidDoc.setIfDefined(updatedMyDidDoc))
-            .update(_.thoseDidDocs.setIfDefined(updatedTheirDidDoc.map(Seq(_))))
-          )
-        }
-        .getOrElse(state)
-      updateStateWithOwnerAgentKey()
-    }
-  }
-
   def agentConfigs: Map[String, AgentConfig] = state.agentConfigs
 
-  def agencyDIDOpt: Option[DID] = state.agencyDID
+  def agencyDIDOpt: Option[DID] = state.agencyDIDPair.map(_.DID)
 
   def ownerDID: Option[DID] = state.mySelfRelDID
-  def ownerAgentKeyDID: Option[DID] = state.ownerAgentKeyDID
+  def ownerAgentKeyDIDPair: Option[DidPair] = state.ownerAgentDidPair
 
   def mySelfRelDIDReq: DID = domainId
-  def myPairwiseVerKey: VerKey = getVerKeyReqViaCache(state.myDid_!)
+  def myPairwiseVerKey: VerKey = state.myDidAuthKeyReq.verKey
 
   lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
@@ -937,8 +922,8 @@ trait UserAgentPairwiseStateUpdateImpl
     state = state.withAgentWalletId(walletId)
   }
 
-  override def setAgencyDID(did: DID): Unit = {
-    state = state.withAgencyDID(did)
+  override def setAgencyDIDPair(didPair: DidPair): Unit = {
+    state = state.withAgencyDIDPair(didPair)
   }
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {
@@ -966,11 +951,12 @@ trait UserAgentPairwiseStateUpdateImpl
     state = state.withMsgAndDelivery(msgAndDelivery)
   }
 
-  def updateRelationship(rel: Relationship): Unit = {
-    state = state.withRelationship(rel)
-  }
-
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {
     state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
+  }
+
+  def updateRelationship(rel: Relationship): Unit = {
+    state = state.withRelationship(rel)
+    updateStateWithOwnerAgentKey()
   }
 }

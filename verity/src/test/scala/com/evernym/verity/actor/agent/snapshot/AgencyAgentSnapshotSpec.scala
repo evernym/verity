@@ -68,10 +68,10 @@ class AgencyAgentSnapshotSpec
   override def checkSnapshotState(snap: AgencyAgentState,
                                   protoInstancesSize: Int): Unit = {
     snap.isEndpointSet shouldBe true
-    snap.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
+    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
     snap.agentWalletId shouldBe Option(agencyAgentEntityId)
     snap.thisAgentKeyId shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
-    snap.agencyDID shouldBe snap.thisAgentKeyId
+    snap.agencyDIDPair.map(_.DID) shouldBe snap.thisAgentKeyId
 
     snap.relationshipReq.name shouldBe AnywiseRelationship.empty.name
     snap.relationshipReq.myDidDoc.isDefined shouldBe true

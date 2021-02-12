@@ -34,7 +34,7 @@ class LedgerUtil (override val appConfig: AppConfig,
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  override def agentWalletId: Option[String] = Option(submitterDID + "_" + LocalDateTime.now().toString)
+  override lazy val agentWalletId: Option[String] = Option(submitterDID + "_" + LocalDateTime.now().toString)
   override def createWallet: Boolean = true
 
   lazy val poolConnManager: LedgerPoolConnManager = {

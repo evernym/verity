@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.actor.agent
 
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.agentRegion
@@ -8,7 +9,7 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
+import com.evernym.verity.protocol.engine.MsgType
 import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 
@@ -26,7 +27,7 @@ class IssuerSetupActorSpec extends UserAgentSpecScaffolding  {
   userAgentBaseSpecs()
   updateComMethodSpecs()
 
-  def alltests(ua: agentRegion, userDID: DID, userDIDVerKey: VerKey): Unit = {
+  def alltests(ua: agentRegion, userDIDPair: DidPair): Unit = {
 
     val msgIdOpt = Option(getNewMsgUniqueId)
 

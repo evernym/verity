@@ -537,44 +537,46 @@ trait LegacyApiFlowBaseSpec
                                    (implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       s"when sent get msgs after user accepted invitation (for $connId)" - {
         "should be able to get two msgs" in withPreCheck {
-          val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
-          gmr.msgs.size shouldBe 2
-          val crMsg = getMsgReq(connId, CLIENT_MSG_UID_CONN_REQ_1)
-          val cam = gmr.msgs.find(_.`type` == expectedMsgType).get
-          addToMsgs(connId, CLIENT_MSG_UID_CONN_REQ_ANSWER_1,
-            MsgBasicDetail(cam.uid, expectedMsgType, Option(crMsg.uid)))
+          eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+            val gmr = expectMsgType[Msgs_MFV_0_5](getMsgsFromConn_MPV_0_5(connId))
+            gmr.msgs.size shouldBe 2
+            val crMsg = getMsgReq(connId, CLIENT_MSG_UID_CONN_REQ_1)
+            val cam = gmr.msgs.find(_.`type` == expectedMsgType).get
+            addToMsgs(connId, CLIENT_MSG_UID_CONN_REQ_ANSWER_1,
+              MsgBasicDetail(cam.uid, expectedMsgType, Option(crMsg.uid)))
 
-          val crm = gmr.msgs.find(_.uid == crMsg.uid).get
-          crm.refMsgId.contains(cam.uid) shouldBe true
-          crm.statusCode shouldBe expectedMsgStatus
+            val crm = gmr.msgs.find(_.uid == crMsg.uid).get
+            crm.refMsgId.contains(cam.uid) shouldBe true
+            crm.statusCode shouldBe expectedMsgStatus
 
-          cam.senderDID shouldBe getRemoteConnEdgeOwnerMsgSenderDID(connId)
-          cam.statusCode shouldBe expectedMsgStatus
+            cam.senderDID shouldBe getRemoteConnEdgeOwnerMsgSenderDID(connId)
+            cam.statusCode shouldBe expectedMsgStatus
 
-          val unsealKeyParam = KeyParam.fromDID(mockClientAgent.getDIDToUnsealAgentRespMsg)
-          val amw = convertToSyncReq(mockClientAgent.agentMsgTransformer.unpackAsync(cam.payload.get, unsealKeyParam)(mockClientAgent.wap))
+            val unsealKeyParam = KeyParam.fromDID(mockClientAgent.getDIDToUnsealAgentRespMsg)
+            val amw = convertToSyncReq(mockClientAgent.agentMsgTransformer.unpackAsync(cam.payload.get, unsealKeyParam)(mockClientAgent.wap))
 
-          val respJsonMsg = amw.msgPackFormat match {
-            case MPF_MSG_PACK =>
-              val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_5]
-              unpackedPayloadMsg.`@type` shouldBe TypeDetail(expectedMsgType, MTV_1_0, Option(PACKAGING_FORMAT_INDY_MSG_PACK))
-              val jsonMsg = MessagePackUtil.convertPackedMsgToJsonString(unpackedPayloadMsg.`@msg`)
-              expectedMsgType match {
-                case MSG_TYPE_CONN_REQ_ACCEPTED | CREATE_MSG_TYPE_CONN_REQ_ANSWER => DefaultMsgCodec.fromJson[InviteAnswerPayloadMsg](jsonMsg)
-                case CREATE_MSG_TYPE_CONN_REQ_REDIRECTED => DefaultMsgCodec.fromJson[RedirectPayloadMsg_0_5](jsonMsg)
-              }
-              jsonMsg
-            case MPF_INDY_PACK =>
-              val fullExpectedMsgType = expectedMsgType match {
-                case MSG_TYPE_CONN_REQ_ACCEPTED => MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED
-                case MSG_TYPE_CONN_REQ_REDIRECTED => MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED
-              }
-              val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_6]
-              unpackedPayloadMsg.`@type` shouldBe fullExpectedMsgType
-              unpackedPayloadMsg.`@msg`.toString()
-            case _ => throw new Exception(s"Unknown msgPackFormat -- ${amw.msgPackFormat}")
+            val respJsonMsg = amw.msgPackFormat match {
+              case MPF_MSG_PACK =>
+                val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_5]
+                unpackedPayloadMsg.`@type` shouldBe TypeDetail(expectedMsgType, MTV_1_0, Option(PACKAGING_FORMAT_INDY_MSG_PACK))
+                val jsonMsg = MessagePackUtil.convertPackedMsgToJsonString(unpackedPayloadMsg.`@msg`)
+                expectedMsgType match {
+                  case MSG_TYPE_CONN_REQ_ACCEPTED | CREATE_MSG_TYPE_CONN_REQ_ANSWER => DefaultMsgCodec.fromJson[InviteAnswerPayloadMsg](jsonMsg)
+                  case CREATE_MSG_TYPE_CONN_REQ_REDIRECTED => DefaultMsgCodec.fromJson[RedirectPayloadMsg_0_5](jsonMsg)
+                }
+                jsonMsg
+              case MPF_INDY_PACK =>
+                val fullExpectedMsgType = expectedMsgType match {
+                  case MSG_TYPE_CONN_REQ_ACCEPTED => MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED
+                  case MSG_TYPE_CONN_REQ_REDIRECTED => MSG_TYPE_DETAIL_CONN_REQ_REDIRECTED
+                }
+                val unpackedPayloadMsg = amw.headAgentMsg.convertTo[PayloadMsg_MFV_0_6]
+                unpackedPayloadMsg.`@type` shouldBe fullExpectedMsgType
+                unpackedPayloadMsg.`@msg`.toString()
+              case _ => throw new Exception(s"Unknown msgPackFormat -- ${amw.msgPackFormat}")
+            }
+            check(respJsonMsg)
           }
-          check(respJsonMsg)
         }
       }
     }

@@ -72,6 +72,16 @@ trait BasePersistentStore
     )(pp.copy(encryptionKey = Option(keyValueMapperEncKey)))
   }
 
+  def getEvents(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Seq[Any] = {
+    val events = persTestKit.persistedInStorage(pp.toString)
+    val encKey = encryptionKey.getOrElse(
+      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(pp.entityId, appConfig))
+    val transformer = getTransformer(encKey)
+    events.map { e =>
+      transformer.undo(e.asInstanceOf[PersistentMsg])
+    }
+  }
+
   /**
    * adds given events to persistent storage (in memory storage) for given persistence id
    * @param persistenceId persistence id
@@ -149,6 +159,8 @@ trait BasePersistentStore
       .withFallback(EventSourcedBehaviorTestKit.config)
       .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
+
+  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey)
 }
 
 /**

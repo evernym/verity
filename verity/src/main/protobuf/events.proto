@@ -7,6 +7,7 @@ package com.evernym.verity.actor;
 
 message KeyCreated {
     string forDID = 1;
+    string forDIDVerKey = 2;
 };
 
 message SignedUp {
@@ -16,6 +17,7 @@ message SignedUp {
 message OwnerSetForAgent {
     string ownerDID = 1;
     string agentDID = 2;
+    string agentDIDVerKey = 3;
 };
 
 message RecoveryKeyAdded {
@@ -28,12 +30,15 @@ message RequesterKeyAdded {
 
 message AgentKeyCreated {
     string forDID = 1;
+    string forDIDVerKey = 2;
 };
 
 message AgentDetailSet {
     option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string forDID = 1;
     string agentKeyDID = 2;
+    string forDIDVerKey = 3;
+    string agentKeyDIDVerKey = 4;
 };
 
 message AgentCreated {
@@ -177,6 +182,7 @@ message RouteSet {
 //UserAgentBase Events
 message OwnerDIDSet {
     string ownerDID = 1;
+    string ownerDIDVerKey = 2;
 }
 
 //UserAgentCommon Events
@@ -351,6 +357,7 @@ message TheirDidDocDetail {
     string agentKeyDID = 2;
     string agentVerKey = 3;
     string agentKeyDlgProofSignature = 4;
+    string pairwiseDIDVerKey = 6;
 }
 
 message TheirProvisionalDidDocDetail {
@@ -486,4 +493,9 @@ message ThreadContextMigrationStatusUpdated {
     string pinstId = 1;
     repeated string successResponseFromProtoActors = 2;
     repeated string nonSuccessResponseFromProtoActors = 3;
+}
+
+message AuthKeyAdded {
+    string keyId = 1;
+    string verKey = 2;
 }

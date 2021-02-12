@@ -2,9 +2,9 @@ package com.evernym.verity.vault.wallet_api.base
 
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
 import com.evernym.verity.actor.base.{CoreActor, Done}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.protocol.legacy.services.WalletVerKeyCacheHelper
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.concurrent.Eventually

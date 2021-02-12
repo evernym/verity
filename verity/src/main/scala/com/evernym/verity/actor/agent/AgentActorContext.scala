@@ -40,9 +40,8 @@ trait AgentActorContext extends ActorContext {
   lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = Map (
     KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID -> new KeyValueMapperFetcher(system, appConfig),
     AGENCY_DETAIL_CACHE_FETCHER_ID -> new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
-    WALLET_VER_KEY_CACHE_FETCHER_ID -> new WalletVerKeyCacheFetcher(walletAPI, appConfig),
     ENDPOINT_CACHE_FETCHER_ID -> new EndpointCacheFetcher(ledgerSvc, appConfig),
-    VER_KEY_CACHE_FETCHER_ID -> new VerKeyCacheFetcher(ledgerSvc, appConfig)
+    LEDGER_VER_KEY_CACHE_FETCHER_ID -> new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig)
   )
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
   lazy val actionExecutor: UsageViolationActionExecutor = new UsageViolationActionExecutor(system, appConfig)

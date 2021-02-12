@@ -18,12 +18,12 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
       coreCommandHandler(actualCmdReceiver)
 
   private def handleExtendedCmd: Receive = {
-    case s: Ping        =>
-      if (s.sendBackConfirmation) sender ! Done
+    case p: Ping        =>
+      if (p.sendBackConfirmation) sender ! Done
 
     case s: Stop        =>
-      if (s.sendBackConfirmation) sender ! Done
       stopActor()
+      if (s.sendBackConfirmation) sender ! Done
 
     case ReceiveTimeout => handleReceiveTimeout()
   }

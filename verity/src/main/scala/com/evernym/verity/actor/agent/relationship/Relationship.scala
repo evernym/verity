@@ -182,8 +182,15 @@ trait RelationshipLike { this: Updatable[Relationship] =>
   }
 
   def myDidDocAuthKeyById(keyId: KeyId): Option[AuthorizedKeyLike] = {
-    myDidDoc.flatMap(_.authorizedKeys_!.keys.find(_.keyId == keyId))
+    authKey(keyId, myDidDoc)
   }
+
+  def theirDidDocAuthKeyById(keyId: KeyId): Option[AuthorizedKeyLike] = {
+    authKey(keyId, theirDidDoc)
+  }
+
+  private def authKey(keyId: KeyId, didDoc: Option[DidDoc]): Option[AuthorizedKeyLike] =
+    didDoc.flatMap(_.authorizedKeys_!.keys.find(_.keyId == keyId))
 
   def initParams(initParamNames: Set[ParameterName]): Parameters = Parameters {
     initParamNames map {

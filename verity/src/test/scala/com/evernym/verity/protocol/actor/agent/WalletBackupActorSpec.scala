@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.actor.agent
 import java.util.UUID
 
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
@@ -49,7 +50,7 @@ class WalletBackupActorSpec
   userAgentBaseSpecs()
   updateComMethodSpecs()
 
-  def alltests(ua: agentRegion, userDID: DID, userDIDVerKey: VerKey): Unit = {
+  def alltests(ua: agentRegion, userDIDPair: DidPair): Unit = {
 
     "An exporter" - {
       initTests()
@@ -217,7 +218,9 @@ class WalletBackupActorSpec
 
 }
 
-case class CloudAgentDetail(did: DID, verKey: VerKey)
+case class CloudAgentDetail(did: DID, verKey: VerKey) {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 
 
 trait WalletBackupSpecUtil extends DeadDropSpecUtil {

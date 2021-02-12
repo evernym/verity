@@ -54,12 +54,16 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   private def processValidatedConnReqMsg(connReqMsg: ConnReqMsg,
                                          sourceId: Option[String]=None): Unit = {
-    val msgCreated = buildMsgCreatedEvt(CREATE_MSG_TYPE_CONN_REQ, ctx.getState.myPairwiseDIDReq,
-      connReqMsg.id, connReqMsg.sendMsg, connReqMsg.threadOpt)
+    val msgCreated = buildMsgCreatedEvt(
+      connReqMsg.id, CREATE_MSG_TYPE_CONN_REQ, ctx.getState.myPairwiseDIDReq,
+      connReqMsg.sendMsg, connReqMsg.threadOpt)
     ctx.apply(msgCreated)
-    DEPRECATED_sendSpecialSignal(AddMsg(msgCreated))
     writeConnReqMsgDetail(msgCreated.uid, connReqMsg, sourceId)
     connReqMsg.keyDlgProof.foreach(kdp => ctx.apply(AgentKeyDlgProofSet(kdp.agentDID, kdp.agentDelegatedKey, kdp.signature)))
+
+    //NOTE: below is a signal messages to be sent to agent actor to be stored/updated in agent's message store
+    // because get/download message API only queries agent's message store
+    DEPRECATED_sendSpecialSignal(AddMsg(msgCreated))
   }
 
   private def processPersistedConnReqMsg(connReqMsg: ConnReqMsg,
@@ -116,7 +120,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   protected def sendConnReqMsg(uid: MsgId): Unit = {
     getMsgDetail(uid, PHONE_NO).foreach { ph =>
-      updateMsgDeliveryStatus(uid, ph, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
+      updateMsgDeliveryStatus(uid, PHONE_NO, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
       buildAndSendInviteSms(ph, uid)
     }
   }

@@ -94,10 +94,15 @@ class MsgStore(appConfig: AppConfig,
       Evt.getOptionFromValue(th.parentId),
       Option(th.senderOrder),
       receivedOrders))
-    val msg = Msg(mc.typ, mc.senderDID, mc.statusCode,
+    val msg = Msg(
+      mc.typ,
+      mc.senderDID,
+      mc.statusCode,
       mc.creationTimeInMillis,
       mc.lastUpdatedTimeInMillis,
-      Evt.getOptionFromValue(mc.refMsgId), msgThread, mc.sendMsg)
+      Evt.getOptionFromValue(mc.refMsgId),
+      msgThread,
+      mc.sendMsg)
     msgStateAPIProvider.addToMsgs(mc.uid, msg)
     retainedUndeliveredMsgIds += mc.uid
     updateMsgIndexes(mc.uid, msg)
@@ -225,12 +230,10 @@ class MsgStore(appConfig: AppConfig,
   }
 
   def updateMsgStateMetrics(): Unit = {
-    MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_RETAINED_MSGS, MeasurementUnit.none, allMsgs.size)
-    MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_REMOVED_MSGS, MeasurementUnit.none, removedMsgsCount)
     if (removedMsgsCount > 0) {
+      MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_RETAINED_MSGS, MeasurementUnit.none, allMsgs.size)
+      MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_REMOVED_MSGS, MeasurementUnit.none, removedMsgsCount)
       MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED, MeasurementUnit.none, 1)
-    } else {
-      MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED, MeasurementUnit.none, 0)
     }
   }
 

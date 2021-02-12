@@ -277,7 +277,9 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     225 -> UserAgentState,
     226 -> UserAgentPairwiseState,
-    227 -> ChangePairwiseRelIds
+    227 -> ChangePairwiseRelIds,
+
+    228 -> AuthKeyAdded
   )
 
 }

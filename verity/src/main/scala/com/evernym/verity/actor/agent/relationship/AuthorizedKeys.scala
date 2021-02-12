@@ -69,7 +69,7 @@ trait AuthorizedKeyLike {
   protected def givenVerKey: VerKey
 
   /*
-  * It is possible that during event recovery the verkey is not known,
+  * It is possible that during event recovery the verKey is not known,
   * but by the time it is complete it will be known and it will be replaced with a copy with the verkey,
   * This is caused because the wallet information is not available (until full event recovery)
   */

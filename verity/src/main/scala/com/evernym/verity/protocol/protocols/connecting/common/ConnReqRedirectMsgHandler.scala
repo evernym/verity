@@ -48,10 +48,10 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
      */
     def prepareInviteAnswerConnReqCreatedEventOpt: Option[MsgCreated] = {
       Option(rcrm.replyToMsgId).flatMap { replyToMsgId =>
-        if (ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId).isEmpty) {
-          Option (buildMsgCreatedEvt (CREATE_MSG_TYPE_CONN_REQ,
-            rcrm.senderDetail.DID, rcrm.replyToMsgId,
-            sendMsg=false, rcrm.threadOpt))
+        val reqMsg = ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId)
+        if (reqMsg.isEmpty) {
+          Option (buildMsgCreatedEvt (rcrm.replyToMsgId, CREATE_MSG_TYPE_CONN_REQ,
+            rcrm.senderDetail.DID, sendMsg=false, rcrm.threadOpt))
         } else None
       }
     }
@@ -59,8 +59,8 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     def prepareMsgCreatedEvent: MsgCreated = {
       val answerMsgSenderDID = if (rcrm.keyDlgProof.isDefined) ctx.getState.myPairwiseDIDReq
       else rcrm.senderDetail.DID
-      buildMsgCreatedEvt (rcrm.msgFamilyDetail.msgName, answerMsgSenderDID,
-        rcrm.id, rcrm.sendMsg, rcrm.threadOpt).
+      buildMsgCreatedEvt (rcrm.id, rcrm.msgFamilyDetail.msgName, answerMsgSenderDID,
+         rcrm.sendMsg, rcrm.threadOpt).
         copy (statusCode = MSG_STATUS_REDIRECTED.statusCode)
     }
 
@@ -86,21 +86,12 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     val connReqMsgAnsweredEventOpt = prepareConnReqMsgAnsweredEvent(answerMsgCreatedEvent.uid)
     val agentKeyDlgProofSetEventOpt = prepareAgentKeyDlgProofSetEventOpt
 
-    connReqMsgCreatedEventOpt match {
-      case Some(event) =>
-        ctx.apply(event)
-        DEPRECATED_sendSpecialSignal(AddMsg(event.copy(refMsgId = answerMsgCreatedEvent.uid, statusCode = MSG_STATUS_REDIRECTED.statusCode)))
-      case None =>
-        connReqMsgAnsweredEventOpt.foreach { ae =>
-          DEPRECATED_sendSpecialSignal(UpdateMsg(ae.uid, ae.statusCode, Evt.getOptionFromValue(ae.refMsgId)))
-        }
-    }
+    connReqMsgCreatedEventOpt.foreach(ctx.apply)
     ctx.apply(answerMsgCreatedEvent)
     answerMsgEdgePayloadStoredEventOpt.foreach(ctx.apply)
-    DEPRECATED_sendSpecialSignal(AddMsg(answerMsgCreatedEvent, answerMsgEdgePayloadStoredEventOpt.map(_.payload.toByteArray)))
+
     writeConnReqAnswerMsgDetail (answerMsgCreatedEvent.uid, rcrm)
     connReqMsgAnsweredEventOpt.foreach(ctx.apply)
-
     val connReqSenderAgentKeyDlgProof = rcrm.senderDetail.agentKeyDlgProof
 
     agentKeyDlgProofSetEventOpt.foreach(ctx.apply)
@@ -131,6 +122,19 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
         StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
       )
     }
+
+    //NOTE: below are signal messages to be sent to agent actor to be stored/updated in agent's message store
+    // because get/download message API only queries agent's message store
+    connReqMsgCreatedEventOpt match {
+      case Some(event) =>
+        DEPRECATED_sendSpecialSignal(AddMsg(event.copy(refMsgId = answerMsgCreatedEvent.uid, statusCode = MSG_STATUS_REDIRECTED.statusCode)))
+      case None =>
+        connReqMsgAnsweredEventOpt.foreach { ae =>
+          DEPRECATED_sendSpecialSignal(UpdateMsg(ae.uid, ae.statusCode, Evt.getOptionFromValue(ae.refMsgId)))
+        }
+    }
+    DEPRECATED_sendSpecialSignal(AddMsg(answerMsgCreatedEvent, answerMsgEdgePayloadStoredEventOpt.map(_.payload.toByteArray)))
+
   }
 
   private def processPersistedConnReqRedirectMsg( rcrm: RedirectConnReqMsg)

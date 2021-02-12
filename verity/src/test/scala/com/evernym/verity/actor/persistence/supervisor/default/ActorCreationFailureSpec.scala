@@ -17,6 +17,8 @@ class ActorCreationFailureSpec
 
   lazy val mockUnsupervised = system.actorOf(MockActorCreationFailure.props(appConfig))
 
+  override def expectDeadLetters: Boolean = true
+
   "Unsupervised actor" - {
     "when throws an unhandled exception during actor creation" - {
       "should be stopped" in {

@@ -21,7 +21,7 @@ class ActorCreationFailureSpec
   "OnStop BackoffSupervised actor" - {
     "when throws an unhandled exception" - {
       "should be stopped and started as per back off strategy" in {
-        EventFilter.error(pattern = "purposefully throwing exception", occurrences = 4) intercept {
+        EventFilter.error(pattern = "purposefully throwing exception", occurrences = 3) intercept {
           mockSupervised ! Ping(sendBackConfirmation = true)
           expectNoMessage()
         }
@@ -35,9 +35,10 @@ class ActorCreationFailureSpec
           enabled = true
           backoff {
             strategy = onStop
-            min-seconds = 3
-            max-seconds = 20
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
+            max-nr-of-retries = 3
           }
       }
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds

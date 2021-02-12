@@ -26,7 +26,7 @@ class MockActorCreationFailure(val appConfig: AppConfig)
 
   override def receiveEvent: Receive = ???
 
-  throw new RuntimeException("purposefully throwing exception d")
+  throw new RuntimeException("purposefully throwing exception during construction of Actor")
 
 }
 
@@ -53,7 +53,7 @@ class MockActorRecoveryFailure(val appConfig: AppConfig)
     //to control the exception throw flow to be able to accurately test occurrences of failures
     if (exceptionSleepTimeInMillis > 0)
       Thread.sleep(exceptionSleepTimeInMillis)
-    throw new RuntimeException("purposefully throwing exception s")
+    throw new RuntimeException("purposefully throwing exception after persistent recovery")
   }
 }
 
@@ -89,7 +89,7 @@ class MockActorMsgHandlerFailure(val appConfig: AppConfig)
     with DefaultPersistenceEncryption {
 
   override def receiveCmd: Receive = {
-    case ThrowException => throw new RuntimeException("purposefully throwing exception a")
+    case ThrowException => throw new RuntimeException("purposefully throwing exception when processing message")
   }
 
   override def receiveEvent: Receive = ???
@@ -127,7 +127,7 @@ class GeneratePersistenceFailureJournal extends TestJournal {
 
   override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]):
   Future[immutable.Seq[Try[Unit]]] = {
-    Future.failed(new RuntimeException("purposefully throwing exception"))
+    Future.failed(new RuntimeException("purposefully throwing exception during persistence write"))
   }
 }
 

@@ -36,8 +36,8 @@ class ActorRecoverySuccessSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
-            min-seconds = 3
-            max-seconds = 20
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
           }
       }

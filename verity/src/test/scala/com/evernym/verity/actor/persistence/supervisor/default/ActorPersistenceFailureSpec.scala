@@ -15,6 +15,8 @@ class ActorPersistenceFailureSpec
 
   lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.props(appConfig))
 
+  override def expectDeadLetters: Boolean = true
+
   "Unsupervised actor" - {
 
     "when throws an exception during persistence" - {
@@ -23,10 +25,6 @@ class ActorPersistenceFailureSpec
           mockUnsupervised ! GeneratePersistenceFailure
           expectNoMessage()
         }
-        //TODO: how to test that the actor is restarted?
-        // found some unexplained  behaviour for
-        // handling persistence failure (the default strategy seems to be Restart)
-        // but it doesn't seem to enter into 'preRestart' method in 'CoreActor'
       }
     }
   }

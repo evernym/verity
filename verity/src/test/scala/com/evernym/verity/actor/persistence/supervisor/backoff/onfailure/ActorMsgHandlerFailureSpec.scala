@@ -1,11 +1,14 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
+import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild, GetRestartCount, RestartCount}
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 
 class ActorMsgHandlerFailureSpec
@@ -15,14 +18,30 @@ class ActorMsgHandlerFailureSpec
 
   lazy val mockSupervised = system.actorOf(MockActorMsgHandlerFailure.backOffOnFailureProps(appConfig))
 
+  val timeoutVal: PatienceConfiguration.Timeout = timeout(Span(10, Seconds))
+  val intervalVal: PatienceConfiguration.Interval = interval(Span(100, Milliseconds))
+
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
       "should stop and start (not exactly a restart) once" in {
-        //TODO: test it stops and starts once only
+        mockSupervised ! GetRestartCount
+        expectMsgType[RestartCount].count shouldBe 0
+
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockSupervised ! ThrowException
           expectNoMessage()
         }
+
+        eventually (timeoutVal, intervalVal) {
+          mockSupervised ! GetCurrentChild
+          expectMsgType[CurrentChild].ref.value
+        }
+
+        mockSupervised ! GetRestartCount
+        expectMsgType[RestartCount].count shouldBe 1
+
+        mockSupervised ! GetPersistentActorDetail
+        expectMsgType[PersistentActorDetail]
       }
     }
   }
@@ -32,8 +51,8 @@ class ActorMsgHandlerFailureSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
-            min-seconds = 3
-            max-seconds = 20
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
           }
       }

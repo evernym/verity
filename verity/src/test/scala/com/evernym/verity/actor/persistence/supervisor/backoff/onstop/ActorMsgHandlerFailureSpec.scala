@@ -18,8 +18,6 @@ class ActorMsgHandlerFailureSpec
   "OnStop BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
       "should restart actor once" in {
-        // 1 from 'handleException' in CoreActor and
-        // 1 from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler)
         val expectedLogEntries = 2
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = expectedLogEntries) intercept {
           mockSupervised ! ThrowException

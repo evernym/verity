@@ -1,12 +1,14 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
+import akka.pattern.BackoffSupervisor.GetCurrentChild
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.base.Ping
 import com.evernym.verity.actor.persistence.supervisor.{IgnoreSupervisorLogErrors, MockActorCreationFailure}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 
 class ActorCreationFailureSpec
@@ -19,6 +21,9 @@ class ActorCreationFailureSpec
 
   lazy val mockSupervised = system.actorOf(MockActorCreationFailure.backOffOnFailureProps(appConfig))
 
+  val timeoutVal: PatienceConfiguration.Timeout = timeout(Span(10, Seconds))
+  val intervalVal: PatienceConfiguration.Interval = interval(Span(100, Milliseconds))
+
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception" - {
       "should be stopped" in {
@@ -26,6 +31,10 @@ class ActorCreationFailureSpec
           mockSupervised ! Ping(sendBackConfirmation = true)
           expectNoMessage()
         }
+
+        // Supervisor should be stopped because the child was stopped
+        mockSupervised ! GetCurrentChild
+        expectNoMessage()
       }
     }
   }
@@ -35,8 +44,8 @@ class ActorCreationFailureSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
-            min-seconds = 3
-            max-seconds = 20
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
           }
       }

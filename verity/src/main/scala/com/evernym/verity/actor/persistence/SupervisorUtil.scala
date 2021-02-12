@@ -14,7 +14,7 @@ object SupervisorUtil {
 
   val logger: Logger = getLoggerByName("SupervisorUtil")
 
-  val SUPERVISED_ACTOR_NAME = "supervised"
+  val SUPERVISED_ACTOR_NAME: String = "supervised"
 
   class InvalidStrategy(msg: String) extends Exception(msg)
 
@@ -112,8 +112,6 @@ object SupervisorUtil {
             OnFailure
           }
       }
-
-
 
       val minBackoffSeconds = PersistentActorConfigUtil.getBackoffMinSeconds(
         appConfig,

@@ -838,8 +838,13 @@ trait UserAgentStateUpdateImpl
     state = state.withMsgAndDelivery(msgAndDelivery)
   }
 
-  override def updateRelationship(newRelationship: Relationship): Unit =
-    state = state.withRelationship(newRelationship)
+  override def updateAgencyDidPair(dp: DidPair): Unit = {
+    state = state.withAgencyDIDPair(dp)
+  }
+
+  override def updateRelationship(rel: Relationship): Unit = {
+    state = state.withRelationship(rel)
+  }
 
 }
 

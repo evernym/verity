@@ -2,6 +2,8 @@ package com.evernym.verity.actor.persistence.recovery.base
 
 import java.util.UUID
 
+import com.evernym.verity.actor.AuthKeyAdded
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil._
 
@@ -35,4 +37,13 @@ trait AgentIdentifiers {
 
   def randomUUID(): String = UUID.randomUUID().toString
   def randomSeed(): String = randomUUID().replace("-", "")
+
+  def getAuthKeyAddedEvents(dp: DidPair): List[AuthKeyAdded] =
+    getAuthKeyAddedEvents(List(dp))
+
+  def getAuthKeyAddedEvents(dps: List[DidPair]): List[AuthKeyAdded] = {
+    dps.map { dp =>
+      AuthKeyAdded(dp.DID, dp.verKey)
+    }
+  }
 }

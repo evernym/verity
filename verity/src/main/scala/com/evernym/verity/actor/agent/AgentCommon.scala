@@ -54,11 +54,12 @@ trait AgentCommon
   }
 
   def receiveAgentInitCmd: Receive = {
-    case ur: UpdateRelationship    =>
-      updateRelationship(ur.relationship)
-      val events = ur.persistAuthKeys.map(pk => AuthKeyAdded(pk.keyId, pk.verKey))
+    case us: UpdateState    =>
+      updateAgencyDidPair(us.agencyDidPair)
+      updateRelationship(us.relationship)
+      val events = us.persistAuthKeys.map(pk => AuthKeyAdded(pk.keyId, pk.verKey))
       if (events.nonEmpty) {
-        writeAllWithoutApply(events)
+        writeAllWithoutApply(events.toList)
       }
       sender ! Done
     case FixAgentState => fixAgentState()
@@ -110,13 +111,13 @@ trait AgentCommon
       addThreadContextDetail(pms.pinstId, updatedContext)
 
     case aka: AuthKeyAdded =>
-      _addedAuthKeys = _addedAuthKeys :+ AuthKey(aka.keyId, aka.verKey)
+      _addedAuthKeys = _addedAuthKeys + AuthKey(aka.keyId, aka.verKey)
   }
 
 
   //these would be auth keys added during actor recovery for
   // auth keys with empty ver key for which it has to call wallet api to get ver key
-  var _addedAuthKeys = List.empty[AuthKey]
+  var _addedAuthKeys = Set.empty[AuthKey]
 
   var isThreadContextMigrationFinished: Boolean = false
 
@@ -186,9 +187,13 @@ trait AgentCommon
   def agencyDidPairFut(): Future[DidPair] = agencyDidPairFutByCache()
 
   def agencyDidPairFutByCache(): Future[DidPair] = {
-    state.agencyDIDPair match {
-      case Some(adp) => agencyDidPairFutByCache(adp.DID)
-      case None =>
+    val agencyDidPair = state.agencyDIDPair
+    val agencyAuthKey = state.agencyDIDPair.flatMap(adp => _addedAuthKeys.find(_.keyId == adp.DID))
+    (agencyDidPair, agencyAuthKey) match {
+      case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.nonEmpty => Future.successful(adp)
+      case (Some(adp), Some(ak)) if adp.DID.nonEmpty => Future.successful(adp.copy(verKey = ak.verKey))
+      case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.isEmpty => agencyDidPairFutByCache(adp.DID)
+      case _ =>
         val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
         generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].flatMap { cqr =>
           agencyDidPairFutByCache(cqr.getAgencyDIDReq)
@@ -219,6 +224,7 @@ trait AgentCommon
   }
 
   def updateRelationship(newRelationship: Relationship): Unit
+  def updateAgencyDidPair(dp: DidPair): Unit
 
   override def postSuccessfulActorRecovery(): Unit = {
     logStateSizeMetrics()
@@ -258,20 +264,26 @@ trait AgentCommon
     runWithInternalSpan("fixAgentState", s"${getClass.getSimpleName}") {
       val sndr = sender()
       val preAddedAuthKeys = _addedAuthKeys
+      val preAgencyDidPair = state.agencyDIDPair
       state.relationship match {
         case Some(rel) =>
           val oldAuthKeys = getAllAuthKeys(rel)
           for (
             updatedMyDidDoc     <- updatedDidDoc(preAddedAuthKeys, rel.myDidDoc);
-            updatedThoseDidDocs <- updatedDidDocs(preAddedAuthKeys, rel.thoseDidDocs)
+            updatedThoseDidDocs <- updatedDidDocs(preAddedAuthKeys, rel.thoseDidDocs);
+            newAgencyDIDPair    <- agencyDidPairFut()
           ) yield {
             val updatedRel =
               rel
                 .update(_.myDidDoc.setIfDefined(updatedMyDidDoc))
                 .update(_.thoseDidDocs.setIfDefined(Option(updatedThoseDidDocs)))
             val newAuthKeys = getAllAuthKeys(updatedRel)
-            val authKeyToBePersisted = computeAuthKeyToBePersisted(preAddedAuthKeys, oldAuthKeys, newAuthKeys)
-            self ? UpdateRelationship(updatedRel, authKeyToBePersisted)
+
+            val authKeyToBePersisted =
+              computeAgencyAuthKeyToBePersisted(preAgencyDidPair, newAgencyDIDPair) ++
+                computeAuthKeyToBePersisted(preAddedAuthKeys, oldAuthKeys, newAuthKeys)
+
+            self ? UpdateState(newAgencyDIDPair, updatedRel, authKeyToBePersisted)
           }.map { _ =>
             sndr ! Done
           }
@@ -286,16 +298,23 @@ trait AgentCommon
     didDocs.flatMap(_.getAuthorizedKeys.keys).toList
   }
 
-  def computeAuthKeyToBePersisted(preAddedAuthKeys: List[AuthKey],
+  def computeAgencyAuthKeyToBePersisted(preAgencyDidPair: Option[DidPair],
+                                        postAgencyDidPair: DidPair): Set[AuthKey] = {
+    if (preAgencyDidPair.contains(postAgencyDidPair) ||
+      _addedAuthKeys.exists(_.keyId == postAgencyDidPair.DID)) Set.empty
+    else Set(AuthKey(postAgencyDidPair.DID, postAgencyDidPair.verKey))
+  }
+
+  def computeAuthKeyToBePersisted(explicitlyAddedAuthKeys: Set[AuthKey],
                                   authKeysBeforeDidDocUpdate: List[AuthorizedKey],
-                                  authKeysAfterDidDocUpdate: List[AuthorizedKey]): List[AuthKey] = {
+                                  authKeysAfterDidDocUpdate: List[AuthorizedKey]): Set[AuthKey] = {
     authKeysAfterDidDocUpdate.filter { nak =>
       nak.verKeyOpt.isDefined &&
         authKeysBeforeDidDocUpdate.exists(oak => oak.keyId == nak.keyId && oak.verKeyOpt.isEmpty) &&
-        ! preAddedAuthKeys.exists(_.keyId == nak.keyId)
+        ! explicitlyAddedAuthKeys.exists(_.keyId == nak.keyId)
     }.map { nak =>
       AuthKey(nak.keyId, nak.verKey)
-    }
+    }.toSet
   }
 
   def preAgentStateFix(): Future[Any] = {
@@ -306,21 +325,21 @@ trait AgentCommon
     Future.successful("post agent state fix")
   }
 
-  def updatedDidDoc(authKeys: List[AuthKey], didDocOpt: Option[DidDoc]): Future[Option[DidDoc]] =
+  def updatedDidDoc(explicitlyAddedAuthKeys: Set[AuthKey], didDocOpt: Option[DidDoc]): Future[Option[DidDoc]] =
     swap {
-      didDocOpt.map { dd => updatedDidDocs(authKeys, Seq(dd)).map(ld => ld.head) }
+      didDocOpt.map { dd => updatedDidDocs(explicitlyAddedAuthKeys, Seq(dd)).map(ld => ld.head) }
     }
 
-  def updatedDidDocs(authKeys: List[AuthKey], didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
+  def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey], didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
-      DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(authKeys, agentWalletAPI)
+      DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
   private def swap[M](x: Option[Future[M]]): Future[Option[M]] =
     Future.sequence(Option.option2Iterable(x)).map(_.headOption)
 }
 
-case class UpdateRelationship(relationship: Relationship, persistAuthKeys: List[AuthKey]) extends ActorMessage
+case class UpdateState(agencyDidPair: DidPair, relationship: Relationship, persistAuthKeys: Set[AuthKey]) extends ActorMessage
 
 case class AuthKey(keyId: KeyId, verKey: VerKey) {
   require(verKey.nonEmpty)

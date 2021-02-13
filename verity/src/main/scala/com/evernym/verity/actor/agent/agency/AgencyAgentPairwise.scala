@@ -199,7 +199,10 @@ trait AgencyAgentPairwiseStateUpdateImpl
     state = state.withConnectionStatus(ConnectionStatus(reqReceived, answerStatusCode))
   }
 
-  def updateRelationship(rel: Relationship): Unit = {
+  override def updateAgencyDidPair(dp: DidPair): Unit = {
+    state = state.withAgencyDIDPair(dp)
+  }
+  override def updateRelationship(rel: Relationship): Unit = {
     state = state.withRelationship(rel)
   }
 }

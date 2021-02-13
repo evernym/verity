@@ -97,12 +97,12 @@ case class DidDocBuilder(didDoc: DidDoc = DidDoc())(implicit didDocBuilderParam:
    * updates given did doc's authorized keys (LegacyAuthorizedKey to AuthorizedKey if there are any)
    * @return updated did doc
    */
-  def updatedDidDocWithMigratedAuthKeys(authKeys: List[AuthKey], agentWalletAPI: AgentWalletAPI): Future[DidDoc] = {
+  def updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys: Set[AuthKey], agentWalletAPI: AgentWalletAPI): Future[DidDoc] = {
     val currentAuthKeys = didDoc.authorizedKeys_!.keys
     val currentEndpoints = didDoc.endpoints_!
 
     Future.traverse(currentAuthKeys) { ak =>
-      authorizedKeyMapper(authKeys, agentWalletAPI)(ak)
+      authorizedKeyMapper(explicitlyAddedAuthKeys, agentWalletAPI)(ak)
     }.map { migratedAuthKeys =>
 
       //auth keys which MAY be duplicate of another auth keys
@@ -144,7 +144,7 @@ case class DidDocBuilder(didDoc: DidDoc = DidDoc())(implicit didDocBuilderParam:
    *
    * @return
    */
-  private def authorizedKeyMapper(authKeys: List[AuthKey], agentWalletAPI: AgentWalletAPI):
+  private def authorizedKeyMapper(authKeys: Set[AuthKey], agentWalletAPI: AgentWalletAPI):
   PartialFunction[AuthorizedKey, Future[AuthorizedKey]] = {
     case key: AuthorizedKeyLike if Option(key.keyId).exists(_.nonEmpty) && key.verKeyOpt.isEmpty =>
       authKeys.find(_.keyId == key.keyId).map { ak =>

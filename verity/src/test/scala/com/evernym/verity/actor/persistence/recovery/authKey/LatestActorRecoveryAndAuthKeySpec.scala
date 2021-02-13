@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.recovery.authKey
 
-import com.evernym.verity.actor.AuthKeyAdded
+import com.evernym.verity.actor.{AgencyPublicDid, AuthKeyAdded}
+import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyInfo, GetAgencyAgentDetail, GetAgencyIdentity, GetLocalAgencyIdentity}
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
 import com.evernym.verity.actor.persistence.recovery.base.eventSetter.latest.{AgencyAgentEventSetter, UserAgentEventSetter, UserAgentPairwiseEventSetter}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
@@ -28,8 +29,21 @@ class LatestActorRecoveryAndAuthKeySpec
       val uaEventsBeforeStart = getEvents(mySelfRelAgentPersistenceId)
       val uapEventsBeforeStart = getEvents(myPairwiseRelAgentPersistenceId)
 
-      aaRegion ! GetPersistentActorDetail
-      expectMsgType[PersistentActorDetail]
+      aaRegion ! GetAgencyAgentDetail
+      val adBeforeRestart = expectMsgType[AgencyAgentDetail]
+      aaRegion ! GetLocalAgencyIdentity()
+      val apdBeforeRestart = expectMsgType[AgencyPublicDid]
+      aaRegion ! GetAgencyIdentity(myAgencyAgentDIDPair.DID)
+      val aiBeforeRestart = expectMsgType[AgencyInfo]
+
+      adBeforeRestart.didPair.validate()
+      adBeforeRestart.did shouldBe myAgencyAgentDIDPair.DID
+      adBeforeRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
+      adBeforeRestart.walletId shouldBe myAgencyAgentEntityId
+      apdBeforeRestart.DID shouldBe myAgencyAgentDIDPair.DID
+      apdBeforeRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
+      aiBeforeRestart.verKeyReq shouldBe myAgencyAgentDIDPair.verKey
+
       uaRegion ! GetPersistentActorDetail
       expectMsgType[PersistentActorDetail]
       uapRegion ! GetPersistentActorDetail
@@ -56,6 +70,25 @@ class LatestActorRecoveryAndAuthKeySpec
       aaEventsAfterRestart shouldBe aaEventsBeforeRestart
       uaEventsAfterRestart shouldBe uaEventsBeforeRestart
       uapEventsAfterRestart shouldBe uapEventsBeforeRestart
+
+      aaRegion ! GetAgencyAgentDetail
+      val adPostRestart = expectMsgType[AgencyAgentDetail]
+      aaRegion ! GetLocalAgencyIdentity()
+      val apdPostRestart = expectMsgType[AgencyPublicDid]
+      aaRegion ! GetAgencyIdentity(myAgencyAgentDIDPair.DID)
+      val aiPostRestart = expectMsgType[AgencyInfo]
+
+      adPostRestart.didPair.validate()
+      adPostRestart.did shouldBe myAgencyAgentDIDPair.DID
+      adPostRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
+      adPostRestart.walletId shouldBe myAgencyAgentEntityId
+      apdPostRestart.DID shouldBe myAgencyAgentDIDPair.DID
+      apdPostRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
+      aiPostRestart.verKeyReq shouldBe myAgencyAgentDIDPair.verKey
+
+      adBeforeRestart shouldBe adPostRestart
+      apdBeforeRestart shouldBe apdPostRestart
+      aiBeforeRestart shouldBe aiPostRestart
     }
   }
 

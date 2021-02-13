@@ -81,7 +81,7 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersiste
 
   protected lazy val basicUserAgentPairwiseEvents = scala.collection.immutable.Seq(
     OwnerSetForAgent(mySelfRelDIDPair.DID, mySelfRelAgentDIDPair.DID),
-    AgentDetailSet(myPairwiseRelDIDPair.DID,myPairwiseRelAgentDIDPair.DID),
+    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID),
     AgentKeyDlgProofSet(myPairwiseRelAgentDIDPair.DID, myPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
     MsgCreated("001","connReq",myPairwiseRelDIDPair.DID,"MS-101",1548446192302L,1548446192302L,"",None),
     MsgCreated("002","connReqAnswer",theirPairwiseRelDIDPair.DID,"MS-104",1548446192302L,1548446192302L,"",None),

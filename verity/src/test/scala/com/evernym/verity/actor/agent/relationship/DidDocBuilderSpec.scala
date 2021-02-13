@@ -73,7 +73,7 @@ class DidDocBuilderSpec
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
           .withAuthKey(thisAgentKey.did, "", Set.empty)
-          .updatedDidDocWithMigratedAuthKeys(List.empty, agentWalletAPI)
+          .updatedDidDocWithMigratedAuthKeys(Set.empty, agentWalletAPI)
           .map { didDoc =>
             didDoc.did shouldBe relDidPair.did
             didDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(
@@ -92,7 +92,7 @@ class DidDocBuilderSpec
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
           .withAuthKey("", "", Set.empty)
-          .updatedDidDocWithMigratedAuthKeys(List.empty, agentWalletAPI)
+          .updatedDidDocWithMigratedAuthKeys(Set.empty, agentWalletAPI)
           .map { didDoc =>
             didDoc.did shouldBe relDidPair.did
             didDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(

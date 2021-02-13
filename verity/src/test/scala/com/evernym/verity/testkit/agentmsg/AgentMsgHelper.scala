@@ -186,6 +186,7 @@ trait AgentMsgHelper
   }
 
   def handleFetchAgencyKey(agencyKeyIdentity: AgencyPublicDid): Unit = {
+    agencyKeyIdentity.didPair.validate()
     setAgencyIdentity(agencyKeyIdentity)
   }
 

@@ -19,9 +19,21 @@ class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
 
     "when sent GetLocalAgencyDIDDetail command for mock edge agent 1" - {
       "should respond with agency DID detail" in {
+        aa ! GetAgencyAgentDetail
+        val ad = expectMsgType[AgencyAgentDetail]
+        ad.didPair.validate()
+        ad.walletId.nonEmpty shouldBe true
+
         aa ! GetLocalAgencyIdentity()
-        val dd = expectMsgType[AgencyPublicDid]
-        mockEdgeAgent1.handleFetchAgencyKey(dd)
+        val apd = expectMsgType[AgencyPublicDid]
+        apd.DID shouldBe ad.did
+        apd.verKey shouldBe ad.verKey
+
+        aa ! GetAgencyIdentity(apd.DID)
+        val ai = expectMsgType[AgencyInfo]
+        ai.verKeyReq shouldBe ad.verKey
+
+        mockEdgeAgent1.handleFetchAgencyKey(apd)
       }
     }
 

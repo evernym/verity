@@ -345,7 +345,9 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Op
 }
 
 case object GetAgencyAgentDetail extends ActorMessage
-case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage
+case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 
 //cmds
 case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessage
@@ -397,8 +399,12 @@ trait AgencyAgentStateUpdateImpl
     state = state.withProtoInstances(pri)
   }
 
-  override def updateRelationship(newRelationship: Relationship): Unit =
-    state = state.withRelationship(newRelationship)
+  override def updateAgencyDidPair(dp: DidPair): Unit = {
+    state = state.withAgencyDIDPair(dp)
+  }
+  override def updateRelationship(rel: Relationship): Unit = {
+    state = state.withRelationship(rel)
+  }
 }
 
 case class FinishCreateKey(createdKey: NewKeyCreated) extends ActorMessage

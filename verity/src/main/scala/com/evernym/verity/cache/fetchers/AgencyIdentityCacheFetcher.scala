@@ -1,29 +1,31 @@
-package com.evernym.verity.cache
+package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.msgrouter._
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.actor.agent.msgrouter._
+import com.evernym.verity.cache.base.{KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
 
 case class GetAgencyIdentityCacheParam(localAgencyDID: DID, gad: GetAgencyIdentity)
 
 
 //this cache saves an actor round trip
-class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, config: AppConfig) extends AsyncCacheValueFetcher {
+class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, appConfig: AppConfig) extends AsyncCacheValueFetcher {
 
   lazy val id: Int = AGENCY_DETAIL_CACHE_FETCHER_ID
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
-  lazy val ttls: Option[Int] = Option(config.getConfigIntOption(AGENCY_DETAIL_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))
+  lazy val expiryTimeInSeconds: Option[Int] = Option(appConfig.getConfigIntOption(AGENCY_DETAIL_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))
+  lazy val maxSize: Option[Int] = appConfig.getConfigIntOption(AGENCY_DETAIL_CACHE_MAX_SIZE)
 
-  override def getKeyDetailMapping(kds: Set[KeyDetail]): Set[KeyMapping] = {
-    kds.map { kd =>
+  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
+    keyDetails.map { kd =>
       val gadcp = kd.key.asInstanceOf[GetAgencyIdentityCacheParam]
       KeyMapping(kd, gadcp.gad.did, gadcp.gad.did)
     }

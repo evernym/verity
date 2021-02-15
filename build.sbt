@@ -288,6 +288,7 @@ lazy val commonLibraryDependencies = {
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
     //other dependencies
+    "com.github.blemale" %% "scaffeine" % "4.0.2",
     "commons-net" % "commons-net" % "3.7.2",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",

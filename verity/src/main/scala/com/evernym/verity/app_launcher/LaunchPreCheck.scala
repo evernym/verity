@@ -10,12 +10,12 @@ import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_AGENT_SERVICE_INIT
 import com.evernym.verity.apphealth.state.InitializingState
 import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
-import com.evernym.verity.cache.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.constants.Constants.{AGENCY_DID_KEY, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.{WalletDoesNotExist, WalletInvalidState}
 import com.evernym.verity.Exceptions
+import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration.Duration

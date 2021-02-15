@@ -26,6 +26,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.HasMsgProgressTracker
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
+import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter

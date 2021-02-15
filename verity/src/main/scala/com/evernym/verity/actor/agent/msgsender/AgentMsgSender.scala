@@ -16,6 +16,8 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
 import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future

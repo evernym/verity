@@ -118,28 +118,28 @@ object SupervisorUtil {
         3,
         entityCategory,
         typeName
-      ) //TODO: finalize number
+      )
 
       val maxBackoffSeconds = PersistentActorConfigUtil.getBackoffMaxSeconds(
         appConfig,
-        100,
+        360,
         entityCategory,
         typeName
-      ) //TODO: finalize number
+      )
 
       val randomFactor = PersistentActorConfigUtil.getBackoffRandomFactor(
         appConfig,
         0.2,
         entityCategory,
         typeName
-      ) //TODO: finalize number
+      )
 
       val maxNrOfRetries = PersistentActorConfigUtil.getBackoffMaxNrOfRetries(
         appConfig,
         10,
         entityCategory,
         typeName
-      ) //TODO: finalize number
+      )
 
       Some(
         BackoffConfig(

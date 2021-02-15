@@ -48,11 +48,17 @@ class CollectionsMetricCollectorSpec extends TestKitBase
       awaitForMetrics(max = 0, sum = 0, cnt = 0)
     }
 
-    "should calculate sum and max" in {
+    "should calculate sum and max on update" in {
       metricsCollector ! UpdateCollectionMetric(tag, key1, 10)
       metricsCollector ! UpdateCollectionMetric(tag, key2, 50)
 
       awaitForMetrics(max = 50, sum = 60, cnt = 2)
+    }
+
+    "should calculate sum and max on remove" in {
+      metricsCollector ! RemoveCollectionMetric(tag, key2)
+
+      awaitForMetrics(max = 10, sum = 10, cnt = 1)
     }
   }
 

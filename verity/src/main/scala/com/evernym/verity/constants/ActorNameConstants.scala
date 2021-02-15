@@ -24,7 +24,7 @@ object ActorNameConstants {
   val ACTOR_STATE_CLEANUP_EXECUTOR = "ActorStateCleanupExecutor"
   val RESOURCE_USAGE_TRACKER = "resource-usage-tracker"
   val LIBINDY_METRICS_TRACKER = "LibindyMetricsTracker"
-  val USERAGENT_METRICS_COLLECTOR = "UserAgentMetricsCollector"
+  val COLLECTIONS_METRICS_COLLECTOR = "CollectionsMetricsCollector"
 
   //cluster singleton actors
   val CLUSTER_SINGLETON_MANAGER = "cluster-singleton-mngr"

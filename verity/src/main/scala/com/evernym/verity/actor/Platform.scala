@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector, UserAgentMetricsCollector}
+import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector, CollectionsMetricCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -192,9 +192,9 @@ class Platform(val aac: AgentActorContext)
   val libIndyMetricsCollector: ActorRef =
     agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
 
-  //Agent to collect collections metrics from UserAgent
+  //Agent to collect collections metrics for collections
   lazy val userAgentMetricsCollector: ActorRef =
-    agentActorContext.system.actorOf(Props(new UserAgentMetricsCollector()), name = USERAGENT_METRICS_COLLECTOR)
+    agentActorContext.system.actorOf(Props(new CollectionsMetricCollector()), name = COLLECTIONS_METRICS_COLLECTOR)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")

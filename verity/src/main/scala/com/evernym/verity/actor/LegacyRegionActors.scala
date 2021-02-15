@@ -12,14 +12,14 @@ trait LegacyRegionActors extends LegacyRegionNames { this: Platform =>
   if (userAgentRegionName != USER_AGENT_REGION_ACTOR_NAME) {
     createPersistentRegion(
       userAgentRegionName, //this is the main change compared to corresponding standard region actors
-      buildProp(Props(new UserAgent(agentActorContext, userAgentMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+      buildProp(Props(new UserAgent(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
   }
 
   //region actor for legacy user agent pairwise actors
   if (userAgentPairwiseRegionName != USER_AGENT_PAIRWISE_REGION_ACTOR_NAME) {
     createPersistentRegion(
       userAgentPairwiseRegionName, //this is the main change compared to corresponding standard region actors
-      buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+      buildProp(Props(new UserAgentPairwise(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
   }
 }
 

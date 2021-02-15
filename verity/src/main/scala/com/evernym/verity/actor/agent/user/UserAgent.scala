@@ -15,7 +15,7 @@ import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, RelationshipUtil, SelfRelationship, _}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
-import com.evernym.verity.actor.agent.user.UserAgent.COLLECTION_METRIC_TAG
+import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, MsgEvent}
@@ -800,19 +800,22 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
    */
   override def actorTypeId: Int = ACTOR_TYPE_USER_AGENT_ACTOR
 
-  override def beforeStart(): Unit = {
-    super.beforeStart()
-    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_TAG, this.actorId, 0)
-  }
-
   override def afterStop(): Unit = {
     super.afterStop()
-    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_REL_AGENTS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
 }
 
 object UserAgent {
-  final val COLLECTION_METRIC_TAG = "user-agent.relatinship-agents"
+  final val COLLECTION_METRIC_REL_AGENTS_TAG = "user-agent.relationship-agents"
+  final val COLLECTION_METRIC_MND_MSGS_TAG = "user-agent.mnd.msgs"
+  final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent.mnd.msgs-payloads"
+  final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent.mnd.msgs-details"
+  final val COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG = "user-agent.mnd.msgs-delivery-status"
 }
 
 case class PairwiseConnSetExt(agentDID: DID, reqMsgContext: ReqMsgContext)
@@ -896,7 +899,7 @@ trait UserAgentStateUpdateImpl
 
   def addRelationshipAgent(ad: AgentDetail): Unit = {
     state = state.withRelationshipAgents(state.relationshipAgents + (ad.forDID -> ad.agentKeyDID))
-    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_TAG, this.actorId, state.relationshipAgents.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_REL_AGENTS_TAG, this.actorId, state.relationshipAgents.size)
   }
 
   def addConfig(name: String, ac: AgentConfig): Unit = {
@@ -909,7 +912,11 @@ trait UserAgentStateUpdateImpl
 
   def updateMsgAndDelivery(msgAndDelivery: MsgAndDelivery): Unit = {
     state = state.withMsgAndDelivery(msgAndDelivery)
-    // TODO write metrics
+    val m = state.msgAndDelivery.get
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_TAG, this.actorId, m.msgs.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, this.actorId, m.msgDeliveryStatus.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId, m.msgDetails.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId, m.msgPayloads.size)
   }
 
 }

@@ -18,7 +18,7 @@ class CollectionsMetricCollectorSpec extends TestKitBase
   with Eventually {
 
   implicit lazy val system: ActorSystem = AkkaTestBasic.system()
-  lazy val metricsCollector: ActorRef = platform.userAgentMetricsCollector
+  lazy val metricsCollector: ActorRef = platform.collectionsMetricsCollector
 
   val key1 = "KEY1"
   val key2 = "KEY2"

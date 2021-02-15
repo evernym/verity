@@ -71,12 +71,12 @@ class Platform(val aac: AgentActorContext)
   //agent actor
   val userAgentRegion: ActorRef = createPersistentRegion(
     USER_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgent(agentActorContext, userAgentMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+    buildProp(Props(new UserAgent(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
 
   //agent actor for pairwise connection
   val userAgentPairwiseRegion: ActorRef = createPersistentRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+    buildProp(Props(new UserAgentPairwise(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
 
   object agencyAgent extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
@@ -193,7 +193,7 @@ class Platform(val aac: AgentActorContext)
     agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
 
   //Agent to collect collections metrics for collections
-  lazy val userAgentMetricsCollector: ActorRef =
+  lazy val collectionsMetricsCollector: ActorRef =
     agentActorContext.system.actorOf(Props(new CollectionsMetricCollector()), name = COLLECTIONS_METRICS_COLLECTOR)
 
   val singletonParentProxy: ActorRef =

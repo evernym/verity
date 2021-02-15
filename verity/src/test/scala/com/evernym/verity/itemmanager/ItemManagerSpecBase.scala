@@ -128,7 +128,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |
         |  cache {
         |    agency-detail-cache-expiration-time-in-seconds = 0
-        |    endpoint-cache-expiration-time-in-seconds = 0
         |  }
         |}
         |""".stripMargin

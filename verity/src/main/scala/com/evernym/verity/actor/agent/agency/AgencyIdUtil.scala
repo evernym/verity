@@ -1,10 +1,10 @@
 package com.evernym.verity.actor.agent.agency
 
 import com.evernym.verity.constants.Constants.{AGENCY_DID_KEY, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID}
-import com.evernym.verity.cache.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 
 trait AgencyIdUtil {
 

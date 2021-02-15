@@ -18,6 +18,8 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache._
+import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{CacheValueFetcher, RoutingDetailCacheFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.LogKeyConstants._

@@ -3,6 +3,8 @@ package com.evernym.verity.protocol.legacy.services
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.cache._
+import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{CacheValueFetcher, GetWalletVerKeyParam, WalletVerKeyCacheFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.WALLET_VER_KEY_CACHE_FETCHER_ID
 import com.evernym.verity.protocol.engine.{DID, VerKey}

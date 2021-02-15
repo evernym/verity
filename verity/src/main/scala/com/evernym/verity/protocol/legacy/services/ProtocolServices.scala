@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.legacy.services
 
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache.Cache
+import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.protocol.actor.MsgQueueServiceProvider

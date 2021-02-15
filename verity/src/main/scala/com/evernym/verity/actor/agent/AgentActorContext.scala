@@ -10,6 +10,8 @@ import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationAct
 import com.evernym.verity.actor.{ActorContext, TokenToActorItemMapperProvider}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache._
+import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerVerKeyCacheFetcher}
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._

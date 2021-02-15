@@ -1,12 +1,13 @@
-package com.evernym.verity.cache
+package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.cache.base.{KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerSvc, Submitter}
 import com.evernym.verity.protocol.engine.DID
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import scala.concurrent.Future
 
 
@@ -19,10 +20,11 @@ class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, appConfig: AppConfig) e
   lazy val id: Int = LEDGER_VER_KEY_CACHE_FETCHER_ID
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
-  lazy val ttls: Option[Int] = Option(appConfig.getConfigIntOption(VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))
+  lazy val expiryTimeInSeconds: Option[Int] = Option(appConfig.getConfigIntOption(LEDGER_VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))
+  lazy val maxSize: Option[Int] = appConfig.getConfigIntOption(LEDGER_VER_KEY_CACHE_MAX_SIZE)
 
-  override def getKeyDetailMapping(kds: Set[KeyDetail]): Set[KeyMapping] = {
-    kds.map { kd =>
+  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
+    keyDetails.map { kd =>
       val gvp = kd.key.asInstanceOf[GetVerKeyParam]
       KeyMapping(kd, gvp.did, gvp.did)
     }

@@ -10,7 +10,7 @@ import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, StatusDetail, getUnhand
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint, UpdateEndpoint}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
-import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.DID

@@ -9,9 +9,8 @@ import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.{ActorContext, TokenToActorItemMapperProvider}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache._
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerVerKeyCacheFetcher}
+import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._
@@ -39,12 +38,15 @@ trait AgentActorContext extends ActorContext {
 
   type MsgSendingSvcType = MsgSendingSvc
 
-  lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = Map (
-    KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID -> new KeyValueMapperFetcher(system, appConfig),
-    AGENCY_DETAIL_CACHE_FETCHER_ID -> new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
-    ENDPOINT_CACHE_FETCHER_ID -> new EndpointCacheFetcher(ledgerSvc, appConfig),
-    LEDGER_VER_KEY_CACHE_FETCHER_ID -> new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig)
-  )
+  lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = List (
+    new KeyValueMapperFetcher(system, appConfig),
+    new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
+    new EndpointCacheFetcher(ledgerSvc, appConfig),
+    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig),
+    new LedgerGetSchemaCacheFetcher(ledgerSvc, appConfig),
+    new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig)
+  ).map(f => f.id -> f).toMap
+
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
   lazy val actionExecutor: UsageViolationActionExecutor = new UsageViolationActionExecutor(system, appConfig)
   lazy val tokenToActorItemMapperProvider: TokenToActorItemMapperProvider = new TokenToActorItemMapperProvider(system, appConfig)

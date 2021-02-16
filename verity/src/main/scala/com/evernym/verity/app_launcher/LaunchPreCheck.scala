@@ -69,7 +69,7 @@ object LaunchPreCheck {
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
       implicit val timeout: Timeout = Timeout(Duration.create(10, TimeUnit.SECONDS))
-      val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)),
+      val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false),
         KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
       val fut = aac.generalCache.getByParamAsync(gcop)
       Await.result(fut, timeout.duration)

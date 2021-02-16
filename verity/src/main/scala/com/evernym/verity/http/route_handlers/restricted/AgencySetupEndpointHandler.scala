@@ -41,8 +41,8 @@ trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def getAgencyDIDOptFut: Future[Option[String]] = {
-    val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
-    platform.agentActorContext.generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
+    val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
+    platform.agentActorContext.generalCache.getByParamAsync(gcop).map { cqr =>
       cqr.getAgencyDIDOpt
     }
   }

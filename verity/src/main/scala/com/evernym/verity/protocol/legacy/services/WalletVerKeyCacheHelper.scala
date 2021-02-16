@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.legacy.services
 
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.DATA_NOT_FOUND
-import com.evernym.verity.cache._
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{CacheValueFetcher, GetWalletVerKeyParam, WalletVerKeyCacheFetcher}
 import com.evernym.verity.config.AppConfig
@@ -23,9 +22,9 @@ class WalletVerKeyCacheHelper(wap: WalletAPIParam, walletAPI: WalletAPI, appConf
   private lazy val walletCache = new Cache("WC", walletCacheFetchers)
 
   def getVerKeyViaCache(did: DID, req: Boolean = false, getKeyFromPool: Boolean = false): Option[VerKey] = {
-    val gcop = GetCachedObjectParam(Set(KeyDetail(GetWalletVerKeyParam(did, getKeyFromPool, wap), required = req)),
+    val gcop = GetCachedObjectParam(KeyDetail(GetWalletVerKeyParam(did, getKeyFromPool, wap), required = req),
       WALLET_VER_KEY_CACHE_FETCHER_ID)
-    walletCache.getByParamSync(gcop).getStringOpt(did)
+    walletCache.getByParamSync(gcop).get[String](did)
   }
 
   def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): VerKey = {

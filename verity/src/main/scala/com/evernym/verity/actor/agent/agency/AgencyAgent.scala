@@ -15,7 +15,6 @@ import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentState
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
-import com.evernym.verity.cache._
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetEndpointParam, GetVerKeyParam}
 import com.evernym.verity.config.CommonConfig
@@ -207,19 +206,19 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   //dhh Same note about caching as above.
   def getCachedEndpointFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gep = GetEndpointParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(Set(KeyDetail(gep, required = req)), ENDPOINT_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER_ID)
     getCachedStringValue(did, gcop)
   }
 
   def getCachedVerKeyFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gvkp = GetVerKeyParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(Set(KeyDetail(gvkp, required = req)), LEDGER_VER_KEY_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER_ID)
     getCachedStringValue(did, gcop)
   }
 
   def getCachedStringValue(forDid: DID, gcop: GetCachedObjectParam): Future[Option[Either[StatusDetail, String]]] = {
-    generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
-      cqr.getStringOpt(forDid).map(v => Right(v))
+    generalCache.getByParamAsync(gcop).map { cqr =>
+      cqr.get[String](forDid).map(v => Right(v))
     }.recover {
       case e: Exception =>
         Option(Left(UNHANDLED.withMessage("error while getting value (error-msg: " +

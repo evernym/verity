@@ -14,7 +14,6 @@ import com.evernym.verity.actor.agent.relationship.{AuthorizedKey, DidDoc, DidDo
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
@@ -196,8 +195,8 @@ trait AgentCommon
       case (Some(adp), Some(ak)) if adp.DID.nonEmpty => Future.successful(adp.copy(verKey = ak.verKey))
       case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.isEmpty => agencyDidPairFutByCache(adp.DID)
       case _ =>
-        val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
-        generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].flatMap { cqr =>
+        val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
+        generalCache.getByParamAsync(gcop).flatMap { cqr =>
           agencyDidPairFutByCache(cqr.getAgencyDIDReq)
         }
     }
@@ -205,7 +204,7 @@ trait AgentCommon
 
   def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
     val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
-    val gadfcParam = GetCachedObjectParam(Set(KeyDetail(gadp, required = true)), AGENCY_DETAIL_CACHE_FETCHER_ID)
+    val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER_ID)
     generalCache.getByParamAsync(gadfcParam)
       .mapTo[CacheQueryResponse]
       .map(cqr => DidPair(agencyDID, cqr.getAgencyInfoReq(agencyDID).verKeyReq))

@@ -547,7 +547,7 @@ class ActorProtocolContainer[
 
   override lazy val ledger = new LedgerAccessController(
     grantedAccessRights,
-    LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
+    LedgerAccessApi(agentActorContext.generalCache, agentActorContext.ledgerSvc, wallet)
   )
 
   override lazy val urlShortening = new UrlShorteningAccessController(

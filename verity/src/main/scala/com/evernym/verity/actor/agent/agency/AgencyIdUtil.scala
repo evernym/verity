@@ -9,8 +9,8 @@ import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObject
 trait AgencyIdUtil {
 
   def getAgencyDID(implicit generalCache: Cache): Future[String] = {
-    val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
-    generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
+    val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
+    generalCache.getByParamAsync(gcop).map { cqr =>
       cqr.getAgencyDIDReq
     }
   }

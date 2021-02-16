@@ -17,23 +17,23 @@ case class GetEndpointParam(did: DID, submitterDetail: Submitter) {
   override def toString: String = s"DID: $did, SubmitterDetail: $Submitter"
 }
 
-class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, appConfig: AppConfig) extends AsyncCacheValueFetcher {
+class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
 
-  lazy val id: Int = ENDPOINT_CACHE_FETCHER_ID
+  lazy val id: Int = LEDGER_GET_ENDPOINT_CACHE_FETCHER_ID
+  lazy val cacheConfigPath: Option[String] = Option(LEDGER_GET_ENDPOINT_CACHE)
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
-  lazy val expiryTimeInSeconds: Option[Int] = Option(appConfig.getConfigIntOption(LEDGER_GET_ENDPOINT_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))
-  lazy val maxSize: Option[Int] = appConfig.getConfigIntOption(LEDGER_GET_ENDPOINT_CACHE_MAX_SIZE)
+  override lazy val defaultExpiryTimeInSeconds: Option[Int] = Option(1800)
 
   override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
     keyDetails.map { kd =>
-      val gvp = kd.key.asInstanceOf[GetEndpointParam]
+      val gvp = kd.keyAs[GetEndpointParam]
       KeyMapping(kd, gvp.did, gvp.did)
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
-    val gep = kd.key.asInstanceOf[GetEndpointParam]
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
+    val gep = kd.keyAs[GetEndpointParam]
     val gepFut = ledgerSvc.getAttribFut(gep.submitterDetail, gep.did, ledgerSvc.URL)
     gepFut.map {
       case ar: AttribResult if ar.value.isDefined => Map(gep.did -> ar.value.map(_.toString).orNull)

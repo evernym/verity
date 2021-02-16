@@ -43,7 +43,7 @@ class DidDocBuilderSpec
           AuthorizedKey(thisAgentKey.did, "", Set.empty),
         ))
         didDoc.endpoints.value shouldBe Endpoints.init(
-          List(RoutingServiceEndpoint("localhost:9000/agency/msg", List.empty, List(thisAgentKey.did))))
+          List(RoutingServiceEndpoint("http://localhost:9000/agency/msg", List.empty, List(thisAgentKey.did))))
       }
     }
 
@@ -81,7 +81,7 @@ class DidDocBuilderSpec
               AuthorizedKey(thisAgentKey.did, thisAgentKey.verKey, Set.empty),
             ))
             didDoc.endpoints.value shouldBe Endpoints.init(
-              List(RoutingServiceEndpoint("localhost:9000/agency/msg", List.empty, List(thisAgentKey.did))))
+              List(RoutingServiceEndpoint("http://localhost:9000/agency/msg", List.empty, List(thisAgentKey.did))))
           }
       }
     }

@@ -5,11 +5,12 @@ import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
+import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
@@ -17,27 +18,26 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.libindy.ledger.LedgerAccessApi
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.legacy.services._
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
-import com.evernym.verity.util.Util
-import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.libindy.ledger.LedgerAccessApi
-import com.evernym.verity.libindy.wallet.WalletAccessAPI
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
+import com.evernym.verity.util.Util
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
@@ -45,6 +45,7 @@ import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
+import java.util.UUID
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 /**
@@ -135,7 +136,8 @@ class ActorProtocolContainer[
               entityType,
               fromPinstId,
               self
-            )
+            ),
+            s"ExtractEventsActor-${UUID.randomUUID().toString}"
           )
         case _ =>
           logger.warn(s"Command to Move protocol (fromPinstId: $fromPinstId) to a NON-PAIRWISE relationship")

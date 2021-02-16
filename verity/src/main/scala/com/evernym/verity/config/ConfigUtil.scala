@@ -2,7 +2,7 @@ package com.evernym.verity.config
 
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, ActivityWindow, Behavior, CalendarMonth, VariableDuration}
+import com.evernym.verity.actor.metrics._
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
@@ -226,6 +226,14 @@ object ConfigUtil {
       safeGetAppConfigBooleanOption(s"$entityCategory.$confName", appConfig)
 
     entityIdConfValue orElse entityTypeConfValue orElse categoryConfValue
+  }
+
+  def getConfStringValue(appConfig: AppConfig,
+                         entityCategory: String,
+                         confName: String,
+                         entityTypeOpt: Option[String],
+                         entityIdOpt: Option[String]): Option[String] = {
+    getConfValue(appConfig, entityCategory, confName, entityTypeOpt, entityIdOpt)
   }
 
   private def getConfValue(appConfig: AppConfig,

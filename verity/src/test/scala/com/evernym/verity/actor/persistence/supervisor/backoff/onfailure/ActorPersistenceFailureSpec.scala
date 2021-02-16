@@ -1,29 +1,55 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
+import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild, GetRestartCount, RestartCount}
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.persistence.supervisor.{GeneratePersistenceFailure, MockActorPersistenceFailure}
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.concurrent.Eventually
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 
 
 class ActorPersistenceFailureSpec
   extends ActorSpec
   with BasicSpec
-  with Eventually {
+  with Eventually
+  with OptionValues {
 
-  lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.backOffOnFailureProps(appConfig))
+  lazy val mockSupervised = system.actorOf(
+    MockActorPersistenceFailure.backOffOnFailureProps(appConfig),
+    "mockactor"
+  )
 
-  "Unsupervised actor" - {
+  val timeoutVal: PatienceConfiguration.Timeout = timeout(Span(10, Seconds))
+  val intervalVal: PatienceConfiguration.Interval = interval(Span(100, Milliseconds))
+
+  "OnFailure BackoffSupervised actor" - {
 
     "when throws an exception during persistence" - {
-      "should stop and start (not exactly a restart) actor once" taggedAs UNSAFE_IgnoreAkkaEvents in {
+      "should stop and start actor once" in {
+        mockSupervised ! GetRestartCount
+        expectMsgType[RestartCount].count shouldBe 0
+
+        mockSupervised.path
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
-          mockUnsupervised ! GeneratePersistenceFailure
+          mockSupervised ! GeneratePersistenceFailure
           expectNoMessage()
         }
+
+        eventually (timeoutVal, intervalVal) {
+          mockSupervised ! GetCurrentChild
+          expectMsgType[CurrentChild].ref.value
+        }
+
+        mockSupervised ! GetRestartCount
+        expectMsgType[RestartCount].count shouldBe 1
+
+        mockSupervised ! GetPersistentActorDetail
+        expectMsgType[PersistentActorDetail]
+
       }
     }
   }
@@ -32,11 +58,11 @@ class ActorPersistenceFailureSpec
     ConfigFactory.parseString (
       s"""
         akka.test.filter-leeway = 15s   # to make the event filter run for little longer time
-        verity.persistent-actor.base.supervisor-strategy {
+        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
-            min-seconds = 3
-            max-seconds = 20
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
           }
         }

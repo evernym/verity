@@ -47,6 +47,10 @@ class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean =
   }
   setConfig(newConfig.getOrElse(getLoadedConfig))
 }
+object TestAppConfig {
+  def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =
+    new TestAppConfig(newConfig,clearValidators)
+}
 
 sealed trait CleansUpPersistence { this: CleansUpActorSystem =>
 

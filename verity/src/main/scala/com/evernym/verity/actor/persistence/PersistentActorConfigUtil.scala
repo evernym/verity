@@ -2,9 +2,29 @@ package com.evernym.verity.actor.persistence
 
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.ConfigUtil.{getConfBooleanValue, getConfIntValue, getConfDoubleValue}
+import com.evernym.verity.config.ConfigUtil.{getConfBooleanValue, getConfDoubleValue, getConfIntValue, getConfStringValue}
 
 object PersistentActorConfigUtil {
+  /**
+   *
+   * @param appConfig
+   * @param defaultValue
+   * @param entityCategory
+   * @param entityType
+   * @return
+   */
+  def getBackoffStrategy(appConfig: AppConfig,
+                         defaultValue: String,
+                         entityCategory: String,
+                         entityType: String): String = {
+    getConfStringValue(
+      appConfig,
+      entityCategory,
+      BACKOFF_SUPERVISOR_STRATEGY,
+      Option(entityType),
+      None
+    ).getOrElse(defaultValue)
+  }
 
   /**
    * reads 'supervised-enabled' configuration
@@ -19,7 +39,7 @@ object PersistentActorConfigUtil {
                            defaultValue: Boolean,
                            entityCategory: String,
                            entityType: String): Boolean = {
-    val confValue = getConfBooleanValue(appConfig, entityCategory, SUPERVISED_STRATEGY_ENABLED, Option(entityType), None)
+    val confValue = getConfBooleanValue(appConfig, entityCategory, SUPERVISOR_ENABLED, Option(entityType), None)
     confValue.getOrElse(defaultValue)
   }
 
@@ -36,7 +56,7 @@ object PersistentActorConfigUtil {
                            defaultValue: Int,
                            entityCategory: String,
                            entityType: String): Int = {
-    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISED_STRATEGY_MIN_SECONDS, Option(entityType), None)
+    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISOR_MIN_SECONDS, Option(entityType), None)
     confValue.getOrElse(defaultValue)
   }
 
@@ -53,7 +73,7 @@ object PersistentActorConfigUtil {
                            defaultValue: Int,
                            entityCategory: String,
                            entityType: String): Int = {
-    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISED_STRATEGY_MAX_SECONDS, Option(entityType), None)
+    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISOR_MAX_SECONDS, Option(entityType), None)
     confValue.getOrElse(defaultValue)
   }
 
@@ -70,7 +90,7 @@ object PersistentActorConfigUtil {
                              defaultValue: Double,
                              entityCategory: String,
                              entityType: String): Double = {
-    val confValue = getConfDoubleValue(appConfig, entityCategory, BACKOFF_SUPERVISED_STRATEGY_RANDOM_FACTOR, Option(entityType), None)
+    val confValue = getConfDoubleValue(appConfig, entityCategory, BACKOFF_SUPERVISOR_RANDOM_FACTOR, Option(entityType), None)
     confValue.getOrElse(defaultValue)
   }
 
@@ -87,7 +107,7 @@ object PersistentActorConfigUtil {
                                defaultValue: Int,
                                entityCategory: String,
                                entityType: String): Int = {
-    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISED_STRATEGY_MAX_NR_OF_RETRIES, Option(entityType), None)
+    val confValue = getConfIntValue(appConfig, entityCategory, BACKOFF_SUPERVISOR_MAX_NR_OF_RETRIES, Option(entityType), None)
     confValue.getOrElse(defaultValue)
   }
 

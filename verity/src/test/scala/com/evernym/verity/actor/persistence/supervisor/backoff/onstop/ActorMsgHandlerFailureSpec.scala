@@ -3,7 +3,6 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -18,10 +17,7 @@ class ActorMsgHandlerFailureSpec
 
   "OnStop BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
-      //TODO: find out why we need to use UNSAFE_IgnoreAkkaEvents
-      "should restart actor once" taggedAs UNSAFE_IgnoreAkkaEvents in {
-        // 1 from 'handleException' in CoreActor and
-        // 1 from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler)
+      "should restart actor once" in {
         val expectedLogEntries = 2
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = expectedLogEntries) intercept {
           mockSupervised ! ThrowException
@@ -37,9 +33,10 @@ class ActorMsgHandlerFailureSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervisor-strategy {
+       verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = onStop
             min-seconds = 3
             max-seconds = 20
             random-factor = 0

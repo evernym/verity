@@ -55,9 +55,13 @@ case class UrlParam(protocol: String, host: String, port: Int, private val pathO
   def isLocalhost: Boolean = host == "localhost"
 
   private def hostAndPort: String = host + ":" + port
-  def api: String = hostAndPort + pathOpt.filterNot(_.isEmpty).map("/" + _).getOrElse("")
+  private def api: String =
+    hostAndPort +
+      pathOpt.filterNot(_.isEmpty).map("/" + _).getOrElse("") +
+      query.map(q => s"?$q").getOrElse("")
+
   def url: String = s"$protocol://" + api
   def path : String = pathOpt.filterNot(_.isEmpty).getOrElse("")
 
-  override def toString: String = api
+  override def toString: String = url
 }

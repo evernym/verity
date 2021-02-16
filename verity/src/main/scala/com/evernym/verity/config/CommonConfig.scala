@@ -160,33 +160,15 @@ trait CommonConfig {
   val CONN_REQ_MSG_EXPIRATION_TIME_IN_SECONDS = s"$MESSAGES.conn-req-expiration-time-in-seconds"
 
   private val CACHE = s"$VERITY.cache"
-
-  private val KEY_VALUE_MAPPER_CACHE = s"$CACHE.key-value-mapper"
-  val KEY_VALUE_MAPPER_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$KEY_VALUE_MAPPER_CACHE.expiration-time-in-seconds"
-  val KEY_VALUE_MAPPER_CACHE_MAX_SIZE = s"$KEY_VALUE_MAPPER_CACHE.max-size"
-
-  private val AGENT_CONFIG_CACHE = s"$CACHE.agent-config"
-  val AGENT_CONFIG_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$AGENT_CONFIG_CACHE.expiration-time-in-seconds"
-  val AGENT_CONFIG_CACHE_MAX_SIZE = s"$AGENT_CONFIG_CACHE.max-size"
-
-  private val AGENCY_DETAIL_CACHE = s"$CACHE.agency-detail"
-  val AGENCY_DETAIL_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$AGENCY_DETAIL_CACHE.expiration-time-in-seconds"
-  val AGENCY_DETAIL_CACHE_MAX_SIZE = s"$AGENCY_DETAIL_CACHE.max-size"
-
-  private val LEDGER_GET_VER_KEY_CACHE = s"$CACHE.ledger-get-ver-key"
-  val LEDGER_VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$LEDGER_GET_VER_KEY_CACHE.expiration-time-in-seconds"
-  val LEDGER_VER_KEY_CACHE_MAX_SIZE = s"$LEDGER_GET_VER_KEY_CACHE.max-size"
-
-  private val LEDGER_GET_ENDPOINT_CACHE = s"$CACHE.ledger-get-endpoint"
-  val LEDGER_GET_ENDPOINT_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$LEDGER_GET_ENDPOINT_CACHE.expiration-time-in-seconds"
-  val LEDGER_GET_ENDPOINT_CACHE_MAX_SIZE = s"$LEDGER_GET_ENDPOINT_CACHE.max-size"
-
-  private val ROUTING_DETAIL_CACHE = s"$CACHE.routing-detail"
-  val ROUTING_DETAIL_CACHE_MAX_SIZE = s"$ROUTING_DETAIL_CACHE.max-size"
-
-  private val WALLET_GET_VER_KEY_CACHE = s"$CACHE.wallet-get-ver-key"
-  val WALLET_VER_KEY_CACHE_EXPIRATION_TIME_IN_SECONDS = s"$WALLET_GET_VER_KEY_CACHE.expiration-time-in-seconds"
-  val WALLET_VER_KEY_CACHE_MAX_SIZE = s"$WALLET_GET_VER_KEY_CACHE.max-size"
+  val KEY_VALUE_MAPPER_CACHE = s"$CACHE.key-value-mapper"
+  val AGENT_CONFIG_CACHE = s"$CACHE.agent-config"
+  val AGENCY_DETAIL_CACHE = s"$CACHE.agency-detail"
+  val LEDGER_GET_VER_KEY_CACHE = s"$CACHE.ledger-get-ver-key"
+  val LEDGER_GET_ENDPOINT_CACHE = s"$CACHE.ledger-get-endpoint"
+  val ROUTING_DETAIL_CACHE = s"$CACHE.routing-detail"
+  val WALLET_GET_VER_KEY_CACHE = s"$CACHE.wallet-get-ver-key"
+  val LEDGER_GET_SCHEMA_CACHE = s"$CACHE.ledger-get-schema"
+  val LEDGER_GET_CRED_DEF_CACHE = s"$CACHE.ledger-get-cred-def"
 
   val INTERNAL_API_URL_MAPPER_ENABLED = s"$VERITY.url-mapper-api.enabled"
 

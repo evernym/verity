@@ -565,7 +565,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           (LOG_KEY_MESSAGE_LAST_UPDATED_DATE_TIME, msg.lastUpdatedDateTime.toString),
           (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
         val sm = buildSendMsgParam(uid, msg.`type`, null, isItARetryAttempt = isItARetryAttempt)
-        handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+        handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
     }
   }
 
@@ -762,11 +762,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
           agentActorContext.smsSvc,
           agentActorContext.msgSendingSvc
         ) map { result =>
-          logger.info(s"Sent SMS invite to number: ${ssi.phoneNo} with content '${content}'. Result: $result")
+          logger.info(s"Sent SMS invite to number: ${ssi.phoneNo} with content '$content'. Result: $result")
           Option(ControlMsg(SMSSent(ssi.invitationId, ssi.inviteURL, shortUrl)))
         } recover {
           case he: HandledErrorException => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Exception: $he")))
-          case e: Exception => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Unknown error: ${e}")))
+          case e: Exception => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Unknown error: $e")))
         }
     }
   }

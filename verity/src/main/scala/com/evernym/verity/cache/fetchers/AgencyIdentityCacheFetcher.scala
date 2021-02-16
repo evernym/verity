@@ -11,28 +11,24 @@ import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
 
-
-case class GetAgencyIdentityCacheParam(localAgencyDID: DID, gad: GetAgencyIdentity)
-
-
 //this cache saves an actor round trip
-class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, appConfig: AppConfig) extends AsyncCacheValueFetcher {
+class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
 
-  lazy val id: Int = AGENCY_DETAIL_CACHE_FETCHER_ID
+  lazy val id: Int = AGENCY_IDENTITY_CACHE_FETCHER_ID
+  lazy val cacheConfigPath: Option[String] = Option(AGENCY_DETAIL_CACHE)
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
-  lazy val expiryTimeInSeconds: Option[Int] = Option(appConfig.getConfigIntOption(AGENCY_DETAIL_CACHE_EXPIRATION_TIME_IN_SECONDS).getOrElse(1800))
-  lazy val maxSize: Option[Int] = appConfig.getConfigIntOption(AGENCY_DETAIL_CACHE_MAX_SIZE)
+  override lazy val defaultExpiryTimeInSeconds: Option[Int] = Option(1800)
 
   override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
     keyDetails.map { kd =>
-      val gadcp = kd.key.asInstanceOf[GetAgencyIdentityCacheParam]
+      val gadcp = kd.keyAs[GetAgencyIdentityCacheParam]
       KeyMapping(kd, gadcp.gad.did, gadcp.gad.did)
     }
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, Any]] = {
-    val gadcp = kd.key.asInstanceOf[GetAgencyIdentityCacheParam]
+  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
+    val gadcp = kd.keyAs[GetAgencyIdentityCacheParam]
     val gadFutResp = agentMsgRouter.execute(InternalMsgRouteParam(gadcp.localAgencyDID, gadcp.gad))
     gadFutResp.map {
       case ai: AgencyInfo if ! ai.isErrorFetchingAnyData => Map(gadcp.gad.did -> ai)
@@ -44,3 +40,5 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, appConfig: 
     }
   }
 }
+
+case class GetAgencyIdentityCacheParam(localAgencyDID: DID, gad: GetAgencyIdentity)

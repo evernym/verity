@@ -13,13 +13,10 @@ trait CacheResponseUtil {
 
   def data: Map[String, Any]
 
-  def get(key: String): Option[Any] = data.get(key)
+  def get[T](key: String): Option[T] = data.get(key).map(_.asInstanceOf[T])
 
-  def getStringOpt(key: String): Option[String] = get(key).map(_.toString)
-
-  def getStringReq(key: String): String = getStringOpt(key).getOrElse (
-    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("value not found for given key" + key))
-  )
+  def getReq[T](key: String): T = get(key).getOrElse(
+    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("value not found for given key" + key)))
 
   def getConfigs: AgentConfigs = AgentConfigs(data.map(e => ConfigDetail(e._1, e._2.toString)).toSet)
 

@@ -8,8 +8,8 @@ trait CacheProvider {
   def hitCount: Long
   def missCount: Long
 
-  def put(key: String, value: Any): Unit
-  def get(key: String): Option[Any]
+  def put(key: String, value: AnyRef): Unit
+  def get(key: String): Option[AnyRef]
 
   def stats: CacheStats = CacheStats(size, hitCount, missCount)
 }
@@ -31,4 +31,4 @@ case class CacheStats(size: Int, hitCount: Long, missCount: Long) {
   override def toString: String = s"size: $size, hitRatio: $hitRatio"
 }
 
-case class MaxWeightParam(maxWeight: Int, weigher: (String, Any) => Int)
+case class MaxWeightParam(maxWeight: Long, weigher: (String, AnyRef) => Int)

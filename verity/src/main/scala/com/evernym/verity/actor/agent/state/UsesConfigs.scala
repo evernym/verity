@@ -66,7 +66,7 @@ trait UsesConfigs extends HasAppConfig {
     val nonReqsKds = buildKeyDetails(nonReqs, req = false)
     val allKeyDetails = reqsKds ++ nonReqsKds
     val gcp = GetCachedObjectParam(allKeyDetails, AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID)
-    agentCache.getByParamAsync(gcp).mapTo[CacheQueryResponse].map { cqr =>
+    agentCache.getByParamAsync(gcp).map { cqr =>
       cqr.getConfigs
     }
   }

@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 class CaffeineCacheProvider(cacheParam: CaffeineCacheParam)
   extends CacheProvider {
 
-  var cache: ScaffeineCache[String, Any] = {
+  var cache: ScaffeineCache[String, AnyRef] = {
     val builder = Scaffeine().recordStats()
 
     val builderWithInitialCapacity = cacheParam.initialCapacity match {
@@ -26,15 +26,16 @@ class CaffeineCacheProvider(cacheParam: CaffeineCacheParam)
         case _                  => builderWithExpiryTime
     }
 
-    builderWithMaxCapacity.build[String, Any]()
+    builderWithMaxCapacity.build[String, AnyRef]()
   }
 
-  override def cachedObjects: Map[String, Any] = cache.asMap().toMap
+  override def cachedObjects: Map[String, AnyRef] = cache.asMap().toMap
+  override def put(key: String, value: AnyRef): Unit = cache.put(key, value)
+  override def get(key: String): Option[AnyRef] = cache.getIfPresent(key)
+
   override def size: Int = cachedObjects.size
   override def hitCount: Long = cache.stats().hitCount()
   override def missCount: Long = cache.stats().missCount()
-  override def put(key: String, value: Any): Unit = cache.put(key, value)
-  override def get(key: String): Option[Any] = cache.getIfPresent(key)
 }
 
 case class CaffeineCacheParam(initialCapacity: Option[Int],
@@ -42,6 +43,7 @@ case class CaffeineCacheParam(initialCapacity: Option[Int],
                               maxSize: Option[Int],
                               maxWeightParam: Option[MaxWeightParam]) {
   require(initialCapacity.forall(_> 0), "cache initial capacity can't be 0")
-  require(maxSize.forall(_> 0), "cache max size can't be 0")
   require(maxSize.isEmpty || maxWeightParam.isEmpty, "cache max size and max weight both can't be set")
+  require(maxSize.forall(_> 0), "cache max size can't be 0")
+  require(maxWeightParam.map(_.maxWeight).forall(_ > 0), "cache max weight can't be 0")
 }

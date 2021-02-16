@@ -32,6 +32,14 @@ trait ConfigReaderHelper {
     }
   }
 
+  def getConfigBytesReq(key: String): Long = {
+    readReqConfig(config.getBytes, key)
+  }
+
+  def getConfigBytesOption(key: String): Option[Long] = {
+    readOptionalConfig(config.getBytes, key)
+  }
+
   def getConfigStringReq(key: String): String = {
     readReqConfig(config.getString, key)
   }

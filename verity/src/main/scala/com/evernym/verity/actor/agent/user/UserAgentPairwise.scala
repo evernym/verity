@@ -380,7 +380,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
 
   def processPersistedSendRemoteMsg(ppsrm: ProcessPersistedSendRemoteMsg): Unit = {
     runWithInternalSpan("processPersistedSendRemoteMsg", "UserAgentPairwise") {
-      recordOutMsgEvent(ppsrm.reqHelperData.reqMsgContext.id, MsgEvent.withOnlyId(ppsrm.msgCreated.uid))
+      recordOutMsgEvent(ppsrm.reqHelperData.reqMsgContext.id,
+        MsgEvent(ppsrm.msgCreated.uid, ppsrm.msgCreated.typ, s"refMsgId: ${ppsrm.msgCreated.refMsgId}"))
       implicit val reqMsgContext: ReqMsgContext = ppsrm.reqHelperData.reqMsgContext
       val msgCreatedResp = SendRemoteMsgHelper.buildRespMsg(ppsrm.msgCreated.uid)(reqMsgContext.agentMsgContext)
       val otherRespMsgs = if (ppsrm.sendRemoteMsg.sendMsg) sendMsgV1(List(ppsrm.msgCreated.uid)) else List.empty
@@ -469,11 +470,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
             theirRoutingTarget, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
           sendMsgToTheirAgent(uid, isItARetryAttempt = false, reqMsgContext.agentMsgContext.msgPackFormat)
         } else {
-          sendToUser(uid)
+          sendToMyRegisteredComMethods(uid)
         }
-        val replyToMsgId = msgStore.getReplyToMsgId(uid)
-        recordOutMsgEvent(reqMsgContext.id, MsgEvent(uid, msg.getType, s"replyToMsgId: $replyToMsgId"))
         val nextHop = if (sentBySelf) NEXT_HOP_THEIR_ROUTING_SERVICE else NEXT_HOP_MY_EDGE_AGENT
+        recordOutMsgDeliveryEvent(uid, MsgEvent.withOnlyDetail("outgoing message for next hop: " + nextHop))
         MsgRespTimeTracker.recordMetrics(reqMsgContext.id, msg.getType, nextHop)
       }
     }
@@ -608,7 +608,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
     }
   }
 
-  private def sendToUser(uid: MsgId): Future[Any] = {
+  private def sendToMyRegisteredComMethods(uid: MsgId): Future[Any] = {
     if (! state.isConnectionStatusEqualTo(CONN_STATUS_DELETED.statusCode)) {
       val msg = getMsgReq(uid)
       notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType), updateDeliveryStatus = true)

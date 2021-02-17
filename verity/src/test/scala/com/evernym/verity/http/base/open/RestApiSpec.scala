@@ -280,6 +280,55 @@ trait RestApiSpec { this : EndpointHandlerBaseSpec =>
       }
     }
 
+    "when sent connecting 0.6 CREATE_CONNECTION request with invalid message family detail" - {
+      "should respond with not found error" in {
+        overrideRestEnable = true
+        val invalidPayload = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/connecting/0.6/1?1%20and%203614%3d3623=1","@id":"${UUID.randomUUID.toString}","sourceId": 1,"includePublicDID": "FAAAAAAAAAAAAAAAAA"}""")
+        buildPostReq(s"/api/$routingDid/connecting/0.6/1%20and%202707%3d02707=1",
+          HttpEntity.Strict(ContentTypes.`application/json`, invalidPayload),
+          Seq(RawHeader("X-API-key", s"$verKey:$signature"))
+        ) ~> epRoutes ~> check {
+          status shouldBe NotFound
+        }
+      }
+    }
+
+    "when sent connecting 0.6 CREATE_CONNECTION request with malicious payload 1" - {
+      "should respond with not found error" in {
+        overrideRestEnable = true
+        buildPostReq(s"/api/$routingDid/connecting/0.6",
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString("null")),
+          Seq(RawHeader("X-API-key", s"$verKey:$signature"))
+        ) ~> epRoutes ~> check {
+          status shouldBe BadRequest
+        }
+      }
+    }
+
+    "when sent connecting 0.6 CREATE_CONNECTION request with malicious payload 2" - {
+      "should respond with not found error" in {
+        overrideRestEnable = true
+        buildPostReq(s"/api/$routingDid/connecting/0.6",
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString("")),
+          Seq(RawHeader("X-API-key", s"$verKey:$signature"))
+        ) ~> epRoutes ~> check {
+          status shouldBe BadRequest
+        }
+      }
+    }
+
+    "when sent connecting 0.6 CREATE_CONNECTION request with malicious payload 3" - {
+      "should respond with not found error" in {
+        overrideRestEnable = true
+        buildPostReq(s"/api/$routingDid/connecting/0.6",
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString("""{"test"}""")),
+          Seq(RawHeader("X-API-key", s"$verKey:$signature"))
+        ) ~> epRoutes ~> check {
+          status shouldBe BadRequest
+        }
+      }
+    }
+
     "when sent connecting 0.6 CREATE_CONNECTION request" - {
       "should respond with normal and truncated invite" taggedAs UNSAFE_IgnoreLog in {
         overrideRestEnable = true

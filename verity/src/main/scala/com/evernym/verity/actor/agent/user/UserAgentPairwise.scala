@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
+import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.Exceptions
@@ -18,11 +19,13 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
+import com.evernym.verity.actor.agent.user.UserAgentPairwise.{COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, COLLECTION_METRIC_MND_MSGS_TAG}
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryEligibilityCriteria}
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
+import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.InternalReqHelperData
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -67,7 +70,7 @@ import scala.util.{Failure, Left, Success, Try}
  Represents the part of a user agent that's dedicated to a single pairwise
  relationship.
  */
-class UserAgentPairwise(val agentActorContext: AgentActorContext)
+class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsActorRef: ActorRef)
   extends UserAgentCommon
     with UserAgentPairwiseStateUpdateImpl
     with AgentMsgSender
@@ -875,6 +878,19 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext)
    */
   override def actorTypeId: Int = ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR
 
+  override def afterStop(): Unit = {
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
+  }
+}
+
+object UserAgentPairwise {
+  final val COLLECTION_METRIC_MND_MSGS_TAG = "user-agent-pairwise.mnd.msgs"
+  final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent-pairwise.mnd.msgs-payloads"
+  final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent-pairwise.mnd.msgs-details"
+  final val COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG = "user-agent-pairwise.mnd.msgs-delivery-status"
 }
 
 case class GetConfigDetail(name: String, req: Boolean = true)
@@ -949,6 +965,11 @@ trait UserAgentPairwiseStateUpdateImpl
 
   def updateMsgAndDelivery(msgAndDelivery: MsgAndDelivery): Unit = {
     state = state.withMsgAndDelivery(msgAndDelivery)
+    val m = state.msgAndDelivery.get
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_TAG, this.actorId, m.msgs.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, this.actorId, m.msgDeliveryStatus.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId, m.msgDetails.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId, m.msgPayloads.size)
   }
 
   def updateConnectionStatus(reqReceived: Boolean, answerStatusCode: String): Unit = {

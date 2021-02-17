@@ -65,7 +65,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           USER_AGENT_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
+          Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
         )
         onFailureProps.isDefined shouldBe true
 
@@ -73,7 +73,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           USER_AGENT_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
+          Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
         )
         onStopProps.isDefined shouldBe true
       }
@@ -85,7 +85,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
+          Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
         )
         onFailureProps.isDefined shouldBe true
 
@@ -93,7 +93,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
+          Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
         )
         onStopProps.isDefined shouldBe true
       }

@@ -97,6 +97,14 @@ object CustomMetrics {
    */
   final val AS_USER_AGENT_MSG_FAILED_ATTEMPT_COUNT = s"$AS_USER_AGENT_MSG.failed.attempt.count"
 
+
+  private final val AS_COLLECTIONS = s"$AS.collections"
+
+  final val AS_COLLECTIONS_MAX = s"$AS_COLLECTIONS.max"
+  final val AS_COLLECTIONS_SUM = s"$AS_COLLECTIONS.sum"
+  final val AS_COLLECTIONS_COUNT = s"$AS_COLLECTIONS.count"
+
+
   final val AS_AKKA_ACTOR_AGENT_RETAINED_MSGS = s"$AS_AKKA_ACTOR_AGENT.msgs.retained"
   final val AS_AKKA_ACTOR_AGENT_REMOVED_MSGS = s"$AS_AKKA_ACTOR_AGENT.msgs.removed"
   final val AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED = s"$AS_AKKA_ACTOR_AGENT.with-msgs-removed"

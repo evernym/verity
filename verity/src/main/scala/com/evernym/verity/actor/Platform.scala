@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector}
+import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector, CollectionsMetricCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -26,8 +26,8 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
-import java.time.ZoneId
 
+import java.time.ZoneId
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -71,12 +71,12 @@ class Platform(val aac: AgentActorContext)
   //agent actor
   val userAgentRegion: ActorRef = createPersistentRegion(
     USER_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+    buildProp(Props(new UserAgent(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
 
   //agent actor for pairwise connection
   val userAgentPairwiseRegion: ActorRef = createPersistentRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+    buildProp(Props(new UserAgentPairwise(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
 
   object agencyAgent extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
@@ -191,6 +191,10 @@ class Platform(val aac: AgentActorContext)
   //Agent to collect metrics from Libindy
   val libIndyMetricsCollector: ActorRef =
     agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
+
+  //Agent to collect collections metrics for collections
+  lazy val collectionsMetricsCollector: ActorRef =
+    agentActorContext.system.actorOf(Props(new CollectionsMetricCollector()), name = COLLECTIONS_METRICS_COLLECTOR)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")

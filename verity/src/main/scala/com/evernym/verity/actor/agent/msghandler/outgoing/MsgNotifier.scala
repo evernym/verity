@@ -245,15 +245,6 @@ trait MsgNotifierForStoredMsgs
     }
   }
 
-  def recordDeliveryState(msgId: MsgId, msgType: String, msg: String, fut: Future[Any]): Future[Any] = {
-    fut.map { _ =>
-      recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"SENT: outgoing message to my edge agent ($msg)"))
-    }.recover {
-      case e: Throwable =>
-        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to my edge agent ($msg) (error: ${e.getMessage})"))
-    }
-  }
-
   private def notifyForErrorResponseFromRemoteAgent(notifMsgDtl: NotifyMsgDetail, updateDeliveryStatus: Boolean): Unit = {
     logger.debug("error response received from remote agent: " + notifMsgDtl, (LOG_KEY_ERR_MSG, notifMsgDtl))
     buildPushNotifDataForFailedMsgDelivery(notifMsgDtl).foreach { pnd =>
@@ -322,14 +313,12 @@ trait MsgNotifierForStoredMsgs
           val fwdMeta = FwdMetaData(Some(notifMsgDtl.deprecatedPushMsgType), Some(name))
           val fwdMsg = FwdMsg(notifMsgDtl.uid, notifMsgDtl.msgType, sponseeDetails, msgRecipientDID, fwdMeta)
 
-          msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
-          .map { _ =>
-            recordOutMsgDeliveryEvent(notifMsgDtl.uid, MsgEvent.withOnlyDetail(s"forward msg to sponsor sent: " + url))
-          }
+          val fut = msgSendingSvc.sendJsonMsg(new String(DefaultMsgCodec.toJson(fwdMsg)))(UrlParam(url))
+          recordDeliveryState(notifMsgDtl.uid, notifMsgDtl.msgType, s"forward message to sponsor: $url", fut)
           logger.debug("message sent to endpoint: " + url)
-          })
-        }
+        })
       }
+    }
   }
 
   def sendPushNotif(pnData: PushNotifData, updateDeliveryStatus: Boolean = true, allComMethods: Option[CommunicationMethods]): Future[Any] = {
@@ -369,6 +358,15 @@ trait MsgNotifierForStoredMsgs
           logger.error("could not send push notification", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
          throw e
       }
+    }
+  }
+
+  def recordDeliveryState(msgId: MsgId, msgType: String, msg: String, fut: Future[Any]): Future[Any] = {
+    fut.map { _ =>
+      recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"SENT: outgoing message to registered com method ($msg)"))
+    }.recover {
+      case e: Throwable =>
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to registered com method ($msg) (error: ${e.getMessage})"))
     }
   }
 

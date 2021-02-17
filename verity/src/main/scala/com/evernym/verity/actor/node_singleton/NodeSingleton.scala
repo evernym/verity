@@ -17,7 +17,9 @@ import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
 
 
-class NodeSingleton(val appConfig: AppConfig) extends CoreActorExtended with HasActorResponseTimeout {
+class NodeSingleton(val appConfig: AppConfig)
+  extends CoreActorExtended
+    with HasActorResponseTimeout {
 
   def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
     singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,

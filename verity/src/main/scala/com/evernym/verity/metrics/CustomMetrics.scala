@@ -74,7 +74,13 @@ object CustomMetrics {
   final val AS_USER_AGENT_PAIRWISE_WATCHER_ACTIVE_CONTAINER_COUNT = s"$AS_USER_AGENT_PAIRWISE.watcher.container.active.count"
   final val AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT = s"$AS_USER_AGENT_PAIRWISE.watcher.container.total.count"
 
-  private final val AS_USER_AGENT_ACTOR = s"$AS_USER_AGENT.actor"
+  final val AS_USER_AGENT_API = s"$AS_USER_AGENT.api"
+
+  //this is to track how many pairwise connections are supplied
+  // during GET_MSGS_BY_CONNS api call
+  final val AS_USER_AGENT_API_GET_MSGS_BY_CONNS_PCS_COUNT =
+    s"$AS_USER_AGENT_API.GET_MSGS_BY_CONNS.pairwise.connection.size.count"
+
   private final val AS_USER_AGENT_MSG = s"$AS_USER_AGENT.msg"
   /**
    * this is overall undelivered messages (including past and current)

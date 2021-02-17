@@ -69,7 +69,7 @@ trait AgentOutgoingMsgHandler
       sndr ! msg
       recordOutMsgEvent(reqMsgContext.id,
         MsgEvent(s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
-        respMsgType, s"SENT: response to caller (to: ${sndr.path}, by: $self)"))
+        respMsgType, s"SENT: synchronous response to caller"))
     }
     respMsg match {
       case fut: Future[Any] => fut.map { msg =>

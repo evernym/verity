@@ -1,12 +1,15 @@
 package com.evernym.verity.actor.persistence.supervisor
 
 import akka.actor.Props
+import akka.persistence.AtomicWrite
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SupervisorUtil}
 import com.evernym.verity.actor.{ActorMessage, KeyCreated, TestJournal}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
 
+import scala.collection.immutable
 import scala.concurrent.Future
+import scala.util.Try
 
 object MockActorCreationFailure extends PropsProvider {
   def props(appConfig: AppConfig): Props =
@@ -23,7 +26,7 @@ class MockActorCreationFailure(val appConfig: AppConfig)
 
   override def receiveEvent: Receive = ???
 
-  throw new RuntimeException("purposefully throwing exception")
+  throw new RuntimeException("purposefully throwing exception during construction of Actor")
 
 }
 
@@ -46,11 +49,11 @@ class MockActorRecoveryFailure(val appConfig: AppConfig)
 
   override def receiveEvent: Receive = ???
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+  override def postActorRecoveryCompleted(): Future[Any] = {
     //to control the exception throw flow to be able to accurately test occurrences of failures
     if (exceptionSleepTimeInMillis > 0)
       Thread.sleep(exceptionSleepTimeInMillis)
-    throw new RuntimeException("purposefully throwing exception")
+    throw new RuntimeException("purposefully throwing exception after persistent recovery")
   }
 }
 
@@ -86,7 +89,7 @@ class MockActorMsgHandlerFailure(val appConfig: AppConfig)
     with DefaultPersistenceEncryption {
 
   override def receiveCmd: Receive = {
-    case ThrowException => throw new RuntimeException("purposefully throwing exception")
+    case ThrowException => throw new RuntimeException("purposefully throwing exception when processing message")
   }
 
   override def receiveEvent: Receive = ???
@@ -122,9 +125,9 @@ case object GeneratePersistenceFailure extends ActorMessage
 
 class GeneratePersistenceFailureJournal extends TestJournal {
 
-  override def asyncWriteMessages(messages: _root_.scala.collection.immutable.Seq[_root_.akka.persistence.AtomicWrite]):
-  _root_.scala.concurrent.Future[_root_.scala.collection.immutable.Seq[_root_.scala.util.Try[Unit]]] = {
-    Future.failed(new RuntimeException("purposefully throwing exception"))
+  override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]):
+  Future[immutable.Seq[Try[Unit]]] = {
+    Future.failed(new RuntimeException("purposefully throwing exception during persistence write"))
   }
 }
 
@@ -133,14 +136,14 @@ trait PropsProvider {
   def props(appConfig: AppConfig): Props
 
   def backOffOnStopProps(appConfig: AppConfig): Props =
-    SupervisorUtil.onStopBackoffSupervisorActorProps(
+    SupervisorUtil.onStopSupervisorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",
       props(appConfig)).get
 
   def backOffOnFailureProps(appConfig: AppConfig): Props =
-    SupervisorUtil.onFailureBackoffSupervisorActorProps(
+    SupervisorUtil.onFailureSupervisorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",

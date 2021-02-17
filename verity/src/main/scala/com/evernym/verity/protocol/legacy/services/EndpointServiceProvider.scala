@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.legacy.services
 
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
@@ -12,7 +13,7 @@ import scala.concurrent.Future
   */
 
 trait CreateKeyEndpointServiceProvider {
-  def setupCreateKeyEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any]
+  def setupCreateKeyEndpoint(forDID: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any]
 }
 
 /**
@@ -24,13 +25,13 @@ trait CreateKeyEndpointServiceProvider {
 
 
 trait AgentEndpointServiceProvider {
-  def setupNewAgentEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any]
+  def setupNewAgentEndpoint(forDID: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any]
 }
 
 
 case class CreateKeyEndpointDetail(regionTypeName: String,
                                    ownerDID: DID,
-                                   ownerAgentKeyDID: Option[DID]=None,
+                                   ownerAgentKeyDidPair: Option[DidPair]=None,
                                    ownerAgentActorEntityId: Option[String]=None)
 
 case class CreateAgentEndpointDetail(regionTypeName: String, entityId: String)

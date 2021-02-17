@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK
 import com.evernym.verity.actor.agent.TypeFormat.{LEGACY_TYPE_FORMAT, STANDARD_TYPE_FORMAT}
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship._
-import com.evernym.verity.actor.agent.{MsgOrders, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.actor.agent.{DidPair, MsgOrders, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.ConnectingProtoDef
@@ -25,7 +25,7 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
         val deserializedState = transformer.undo(serializedState).asInstanceOf[AgencyAgentState]
 
         //asserts that original State and deserialized state are equals
-        originalState.agencyDID shouldBe deserializedState.agencyDID
+        originalState.agencyDIDPair shouldBe deserializedState.agencyDIDPair
         originalState.isEndpointSet shouldBe deserializedState.isEndpointSet
         originalState.agentWalletId shouldBe deserializedState.agentWalletId
         originalState.thisAgentKeyId shouldBe deserializedState.thisAgentKeyId
@@ -98,7 +98,7 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
     new AgencyAgentState()
       .withIsEndpointSet(true)
-      .withAgencyDID("agency-did")
+      .withAgencyDIDPair(DidPair("agency-did", "agency-did-verkey"))
       .withThisAgentKeyId("this-agent-key-1")
       .withAgentWalletId("wallet-id")
       .withThreadContext(threadContext)

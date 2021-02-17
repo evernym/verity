@@ -32,7 +32,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     case mfr: MsgForRelationship          => sendToAgentMsgProcessor(mfr)
 
     //agent-msg-processor-actor -> this actor
-    case psm: ProcessSignalMsg         => handleSignalMsgFromDriver(psm)
+    case psm: ProcessSignalMsg            => handleSignalMsgFromDriver(psm)
 
     //agent-msg-processor-actor -> this actor
     case um: UnhandledMsg                 =>
@@ -120,6 +120,9 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
             param
           )), "amp-" + UUID.randomUUID().toString)
       msgProcessor.tell(cmd, sndr)
+    }.recover {
+      case e: RuntimeException =>
+        handleException(e, sndr)
     }
   }
 

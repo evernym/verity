@@ -55,11 +55,11 @@ class AgentProvisioningDriver(cp: ActorDriverGenParam)
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](apc.endpointDetailJson)
     val newActorEntityId = getNewActorId
     val protocolDetail = ProtocolIdDetail(protoRef, pinstId)
-    val cmd = SetupCreateKeyEndpoint(apc.newAgentKeyDID, apc.theirPairwiseDID,
-      endpointDetail.ownerDID, endpointDetail.ownerAgentKeyDID,
+    val cmd = SetupCreateKeyEndpoint(apc.newAgentKeyDIDPair, apc.theirPairwiseDIDPair,
+      endpointDetail.ownerDID, endpointDetail.ownerAgentKeyDidPair,
       endpointDetail.ownerAgentActorEntityId, Option(protocolDetail))
     val respFut = agencyPairwiseRegion ? ForIdentifier(newActorEntityId, cmd)
-    sendPairwiseCreated(respFut, apc.newAgentKeyDID, protoRef, pinstId)
+    sendPairwiseCreated(respFut, apc.newAgentKeyDIDPair.DID, protoRef, pinstId)
     None
   }
 
@@ -77,7 +77,7 @@ class AgentProvisioningDriver(cp: ActorDriverGenParam)
 
     val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](apc.endpointDetailJson)
 
-    val cmd = SetupAgentEndpoint(apc.forDID, apc.agentKeyDID)
+    val cmd = SetupAgentEndpoint(apc.forDIDPair, apc.agentKeyDIDPair)
     val respFut = userRegion ? ForIdentifier(endpointSetupDetail.entityId, cmd)
     sendAgentCreated(respFut, protoRef, pinstId)
     None

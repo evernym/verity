@@ -52,7 +52,7 @@ case class GetMsgsReqMsg_MFV_0_6(`@type`: String,
 
 case class GetMsgsReqMsg(excludePayload: Option[String],
                          uids: Option[List[String]] = None,
-                         statusCodes: Option[List[String]] = None) extends ProtoMsg
+                         statusCodes: Option[List[String]] = None) extends ProtoMsg with ActorMessage
 
 case class GetMsgsRespMsg_MFV_0_5(`@type`: TypeDetail, msgs: List[MsgDetail]) extends MsgBase
 

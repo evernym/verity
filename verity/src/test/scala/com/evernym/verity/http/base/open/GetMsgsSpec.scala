@@ -80,8 +80,8 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
    */
   def testGetMsgsFromConnection(connId: String, emc: ExpectedMsgCriteria): Unit = {
     s"when sent GET_MSGS when there are ${emc.hint(connId)}" - {
-      "should respond with MSGS with empty msg list" taggedAs (UNSAFE_IgnoreLog) in {
-        eventually (timeout(Span(10, Seconds))){
+      "should respond with MSGS with empty msg list" taggedAs UNSAFE_IgnoreLog in {
+        eventually (timeout(Span(10, Seconds)), interval(Span(9, Seconds))){
           buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareGetMsgsFromConn(connId).msg) ~> epRoutes ~> check {
             status shouldBe OK
             val gmr = mockEdgeAgent.v_0_5_resp.handleGetMsgsRespFromConn(PackedMsg(responseAs[Array[Byte]]), buildConnIdMap(connId))

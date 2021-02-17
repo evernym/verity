@@ -5,11 +5,12 @@ import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
+import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
+import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
@@ -17,27 +18,26 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.libindy.ledger.LedgerAccessApi
+import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
+import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
+import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
+import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.legacy.services._
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
-import com.evernym.verity.util.Util
-import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.libindy.ledger.LedgerAccessApi
-import com.evernym.verity.libindy.wallet.WalletAccessAPI
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
+import com.evernym.verity.util.Util
 import com.evernym.verity.vault.WalletConfig
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
@@ -45,6 +45,7 @@ import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
+import java.util.UUID
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 /**
@@ -135,7 +136,8 @@ class ActorProtocolContainer[
               entityType,
               fromPinstId,
               self
-            )
+            ),
+            s"ExtractEventsActor-${UUID.randomUUID().toString}"
           )
         case _ =>
           logger.warn(s"Command to Move protocol (fromPinstId: $fromPinstId) to a NON-PAIRWISE relationship")
@@ -256,11 +258,10 @@ class ActorProtocolContainer[
       stash()
   }
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+  override def postSuccessfulActorRecovery(): Unit = {
     if (!state.equals(definition.initialState)){
       toBaseBehavior()
     }
-    List.empty
   }
 
   def handleResponse(resp: Try[Any], msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
@@ -301,16 +302,16 @@ class ActorProtocolContainer[
       senderActorRef = Option(sender())
     }
 
-    val (msgId, actualMsg, msgToBeSent) = cmd.msg match {
+    val (msgId, msgToBeSent) = cmd.msg match {
       case c: Control =>
         val newMsgId = MsgFamilyUtil.getNewMsgUniqueId
-        (newMsgId, c, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
+        (newMsgId, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
       case MsgEnvelope(msg: Control, _, _, _, Some(msgId), Some(thId))  =>
-        (msgId, msg, CtlEnvelope(msg, msgId, thId))
+        (msgId, CtlEnvelope(msg, msgId, thId))
       case MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId))   =>
-        (msgId, msg, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
+        (msgId, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
       case m: MsgWithSegment =>
-        (m.msgId, m, m)
+        (m.msgId, m)
     }
     submit(msgToBeSent, Option(handleResponse(_, Some(msgId), senderActorRef)))
   }
@@ -376,7 +377,7 @@ class ActorProtocolContainer[
   override def createServices: Option[Services] = {
 
     Some(new LegacyProtocolServicesImpl[M,E,I](
-      eventRecorder, sendsMsgs, agentActorContext.appConfig,
+      agentActorContext.appConfig,
       agentActorContext.walletAPI, agentActorContext.generalCache,
       agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer,
       this, this, this))
@@ -395,17 +396,17 @@ class ActorProtocolContainer[
   and the pairwise actor as well. The pairwise actor is effectively an "endpoint", since
   it is where you will receive messages from the other side.
    */
-  def setupCreateKeyEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any] = {
+  def setupCreateKeyEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](endpointDetailJson)
-    val cmd = SetupCreateKeyEndpoint(agentKeyDID, forDID, endpointDetail.ownerDID,
-      endpointDetail.ownerAgentKeyDID, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
+    val cmd = SetupCreateKeyEndpoint(agentKeyDIDPair, forDIDPair, endpointDetail.ownerDID,
+      endpointDetail.ownerAgentKeyDidPair, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
     sendCmdToRegionActor(endpointDetail.regionTypeName, newEndpointActorEntityId, cmd)
   }
 
-  def setupNewAgentEndpoint(forDID: DID, agentKeyDID: DID, endpointDetailJson: String): Future[Any] = {
+  def setupNewAgentEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](endpointDetailJson)
     sendCmdToRegionActor(endpointSetupDetail.regionTypeName, endpointSetupDetail.entityId,
-      SetupAgentEndpoint(forDID, agentKeyDID))
+      SetupAgentEndpoint(forDIDPair, agentKeyDIDPair))
   }
 
   //NOTE: this method is used to compute entity id of the new pairwise actor this protocol will use
@@ -546,7 +547,7 @@ class ActorProtocolContainer[
 
   override lazy val ledger = new LedgerAccessController(
     grantedAccessRights,
-    LedgerAccessApi(agentActorContext.ledgerSvc, wallet)
+    LedgerAccessApi(agentActorContext.generalCache, agentActorContext.ledgerSvc, wallet)
   )
 
   override lazy val urlShortening = new UrlShorteningAccessController(

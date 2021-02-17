@@ -35,7 +35,8 @@ case class SendRemoteMsgReq_MFV_0_6(`@type`: String,
   def threadOpt: Option[Thread] = `~thread`
 }
 
-case class CreateMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
+case class CreateMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
+                                   mtype: String,
                                    uid: Option[String] = None,
                                    replyToMsgId: Option[String] = None,
                                    thread: Option[Thread]=None,
@@ -48,7 +49,8 @@ case class CreateMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
   }
 }
 
-case class AnswerMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
+case class AnswerMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
+                                   mtype: String,
                                    uid: Option[String] = None,
                                    replyToMsgId: Option[String] = None,
                                    thread: Option[Thread]=None,
@@ -61,7 +63,8 @@ case class AnswerMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
   }
 }
 
-case class RedirectMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
+case class RedirectMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
+                                     mtype: String,
                                      uid: Option[String] = None,
                                      replyToMsgId: Option[String] = None,
                                      thread: Option[Thread]=None,
@@ -74,7 +77,8 @@ case class RedirectMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
   }
 }
 
-case class RedirectedMsgReqMsg_MFV_0_5(`@type`: TypeDetail, mtype: String,
+case class RedirectedMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
+                                       mtype: String,
                                        uid: Option[String] = None,
                                        replyToMsgId: Option[String] = None,
                                        thread: Option[Thread]=None,
@@ -106,7 +110,8 @@ case class GeneralCreateMsgDetail_MFV_0_5(`@type`: TypeDetail,
 }
 
 
-case class InviteCreateMsgDetail_MFV_0_5(`@type`: TypeDetail, keyDlgProof: AgentKeyDlgProof,
+case class InviteCreateMsgDetail_MFV_0_5(`@type`: TypeDetail,
+                                         keyDlgProof: AgentKeyDlgProof,
                                          phoneNo: Option[String] = None,
                                          targetName: Option[String] = None,
                                          includePublicDID: Option[Boolean] = Option(false)) extends MsgBase {
@@ -118,9 +123,11 @@ case class InviteCreateMsgDetail_MFV_0_5(`@type`: TypeDetail, keyDlgProof: Agent
   }
 }
 
-case class AnswerInviteMsgDetail_MFV_0_5(`@type`: TypeDetail, senderDetail: SenderDetail,
+case class AnswerInviteMsgDetail_MFV_0_5(`@type`: TypeDetail,
+                                         senderDetail: SenderDetail,
                                          senderAgencyDetail: SenderAgencyDetail,
-                                         answerStatusCode: String, keyDlgProof: Option[AgentKeyDlgProof]) extends MsgBase {
+                                         answerStatusCode: String,
+                                         keyDlgProof: Option[AgentKeyDlgProof]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("senderDetail", senderDetail)

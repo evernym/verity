@@ -4,7 +4,6 @@ import akka.testkit.EventFilter
 import com.evernym.verity.actor.base.Ping
 import com.evernym.verity.actor.persistence.supervisor.MockActorCreationFailure
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -17,11 +16,12 @@ class ActorCreationFailureSpec
 
   lazy val mockSupervised = system.actorOf(MockActorCreationFailure.backOffOnStopProps(appConfig))
 
+  override def expectDeadLetters: Boolean = true
 
   "OnStop BackoffSupervised actor" - {
     "when throws an unhandled exception" - {
-      "should be stopped and started as per back off strategy" taggedAs UNSAFE_IgnoreAkkaEvents in {   //UNSAFE_IgnoreAkkaEvents is to ignore the unhandled Ping message error message
-        EventFilter.error(pattern = "purposefully throwing exception", occurrences = 4) intercept {
+      "should be stopped and started as per back off strategy" in {
+        EventFilter.error(pattern = "purposefully throwing exception", occurrences = 3) intercept {
           mockSupervised ! Ping(sendBackConfirmation = true)
           expectNoMessage()
         }
@@ -31,12 +31,14 @@ class ActorCreationFailureSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervisor-strategy {
+       verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
-            min-seconds = 3
-            max-seconds = 20
+            strategy = onStop
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
+            max-nr-of-retries = 3
           }
       }
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds

@@ -7,14 +7,16 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, ForbiddenErrorEx
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, RelationshipUtil}
+import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, DidDocBuilder, Relationship}
 import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentStateUpdateInterface}
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
-import com.evernym.verity.cache._
+import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{GetEndpointParam, GetVerKeyParam}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
@@ -52,6 +54,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     case GetAgencyAgentDetail                   => sendAgencyAgentDetail()
     case glai: GetLocalAgencyIdentity           => sendLocalAgencyIdentity(glai.withDetail)
     case ck: CreateKey                          => createKey(ck)
+    case fck: FinishCreateKey                   => finishCreateKey(fck)
     case SetEndpoint                            => setEndpoint()
     case UpdateEndpoint                         => updateEndpoint()
     case pmw: PackedMsgWrapper                  => handlePackedMsg(pmw)
@@ -68,9 +71,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
 
   def handleKeyCreated(kg: KeyCreated): Unit = {
     state = state
-      .withAgencyDID(kg.forDID)
+      .withAgencyDIDPair(DidPair(kg.forDID, kg.forDIDVerKey))
       .withThisAgentKeyId(kg.forDID)
-    val myDidDoc = RelationshipUtil.prepareMyDidDoc(kg.forDID, kg.forDID, Set(EDGE_AGENT_KEY))
+    val myDidDoc =
+      DidDocBuilder()
+        .withDid(kg.forDID)
+        .withAuthKey(kg.forDID, kg.forDIDVerKey, Set(EDGE_AGENT_KEY))
+        .didDoc
     state = state.withRelationship(AnywiseRelationship(myDidDoc))
   }
 
@@ -82,8 +89,8 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   def agencyAgentDetail(): Option[AgencyAgentDetail] = {
-    state.agencyDID map { ad =>
-      AgencyAgentDetail(ad, getAgencyVerKey(ad, fromPool = GET_AGENCY_VER_KEY_FROM_POOL), entityId)
+    state.agencyDIDPair map { adp =>
+      AgencyAgentDetail(adp.DID, adp.verKey, entityId)
     }
   }
 
@@ -137,27 +144,32 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     if (state.relationship.isEmpty) {
       logger.debug("agency agent key setup starting...")
       setAgentWalletId(entityId)
-      agentActorContext.walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
-      val createdKey = agentActorContext.walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = ck.seed))
-      writeAndApply(KeyCreated(createdKey.did))
-      val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, createdKey.did))
       val sndr = sender()
-      maFut map {
-        case _: MappingAdded =>
-          setAgencyRouteInfo(sndr, createdKey)
-          self ! SetAgentActorDetail(createdKey.did, entityId)
-        case e =>
-          sndr ! e
-      }
-      logger.debug("agency agent key setup finished")
+      agentActorContext.walletAPI.executeAsync[WalletCreated.type](CreateWallet)(wap)
+        .map { _ =>
+          agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey(seed = ck.seed)).map { kc =>
+            self.tell(FinishCreateKey(kc), sndr)
+          }
+        }
     } else {
       logger.warn("agency agent key setup is already done, returning forbidden response")
       throw new ForbiddenErrorException()
     }
   }
 
-  def getAgencyVerKey(did: DID, fromPool: Boolean): VerKey = {
-    getVerKeyReqViaCache(did, fromPool)
+  def finishCreateKey(fck: FinishCreateKey): Unit = {
+    val events = List (KeyCreated(fck.createdKey.did, fck.createdKey.verKey))
+    writeAndApplyAll(events)
+    val maFut = singletonParentProxyActor ? ForKeyValueMapper(AddMapping(AGENCY_DID_KEY, fck.createdKey.did))
+    val sndr = sender()
+    maFut map {
+      case _: MappingAdded =>
+        setAgencyRouteInfo(sndr, fck.createdKey)
+        self ! SetAgentActorDetail(fck.createdKey.didPair, entityId)
+      case e =>
+        sndr ! e
+    }
+    logger.debug("agency agent key setup finished")
   }
 
   def agencyLedgerDetail(): Ledgers = {
@@ -191,28 +203,22 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     ledgers
   }
 
-  //dhh I feel a need to understand how caching works. How long before it's reevaluated?
-  // How is it invalidated?
-  def getCachedVerKeyFromWallet(did: DID): Future[Option[Either[StatusDetail, VerKey]]] = {
-    Future.successful(Option(Right(getAgencyVerKey(did, fromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
-  }
-
   //dhh Same note about caching as above.
   def getCachedEndpointFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gep = GetEndpointParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(Set(KeyDetail(gep, required = req)), ENDPOINT_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER_ID)
     getCachedStringValue(did, gcop)
   }
 
   def getCachedVerKeyFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gvkp = GetVerKeyParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(Set(KeyDetail(gvkp, required = req)), VER_KEY_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER_ID)
     getCachedStringValue(did, gcop)
   }
 
   def getCachedStringValue(forDid: DID, gcop: GetCachedObjectParam): Future[Option[Either[StatusDetail, String]]] = {
-    agentActorContext.generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
-      cqr.getStringOpt(forDid).map(v => Right(v))
+    generalCache.getByParamAsync(gcop).map { cqr =>
+      cqr.get[String](forDid).map(v => Right(v))
     }.recover {
       case e: Exception =>
         Option(Left(UNHANDLED.withMessage("error while getting value (error-msg: " +
@@ -222,7 +228,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
 
   def getAgencyInfo(gad: GetAgencyIdentity, isLocalAgency: Boolean): Future[AgencyInfo] = {
     val vkFut = if (gad.getVerKey)
-      if (isLocalAgency) getCachedVerKeyFromWallet(gad.did)
+      if (isLocalAgency) Future(state.myDidAuthKey.flatMap(_.verKeyOpt).map(vk => Right(vk)))
       else getCachedVerKeyFromLedger(gad.did)
     else Future.successful(None)
     val epFut = if (gad.getEndpoint) getCachedEndpointFromLedger(gad.did) else Future.successful(None)
@@ -268,7 +274,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def handlePackedMsg(pmw: PackedMsgWrapper): Unit = {
     val sndr = sender()
     agentMsgTransformer.unpackAsync(
-      pmw.msg, KeyParam(Left(agencyVerKey)), UnpackParam(isAnonCryptedMsg = true)
+      pmw.msg, KeyParam.fromVerKey(state.myDidAuthKeyReq.verKey), UnpackParam(isAnonCryptedMsg = true)
     ).flatMap { implicit amw =>
       handleUnpackedMsg(pmw)
     }.map { r =>
@@ -279,8 +285,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     }
   }
 
-  lazy val agencyVerKey: VerKey = getVerKeyReqViaCache(agencyDIDReq)
-
   def sendLocalAgencyIdentity(withDetail: Boolean = false): Unit = {
     agencyAgentDetail() match {
       case Some(aad)  =>
@@ -290,31 +294,14 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     }
   }
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
-    List {
-      getAgencyDIDFut().map { cqr =>
-        cqr.getAgencyDIDOpt.map { aDID =>
-          self ? SetAgentActorDetail(aDID, entityId)
-        }.getOrElse {
-          Future.successful("agency agent not yet created")
-        }
+  override def preAgentStateFix(): Future[Any] = {
+    runWithInternalSpan("preAgentStateFix", "AgencyAgent") {
+      state.myDidAuthKey.map { ak =>
+        self ? SetAgentActorDetail(DidPair(ak.keyId, ak.verKeyOpt.getOrElse("")), entityId)
+      }.getOrElse {
+        Future.successful("post agent actor recovery")
       }
     }
-  }
-
-  /**
-   * this function gets executed post successful actor recovery (meaning all events are applied to state)
-   * the purpose of this function is to update any 'LegacyAuthorizedKey' to 'AuthorizedKey'
-   */
-  override def postSuccessfulActorRecovery(): Unit = {
-    super.postSuccessfulActorRecovery()
-    state = state
-      .relationship
-      .map { r =>
-        val updatedMyDidDoc = RelationshipUtil.updatedDidDocWithMigratedAuthKeys(state.myDidDoc)
-        state.withRelationship(r.update(_.myDidDoc.setIfDefined(updatedMyDidDoc)))
-      }
-      .getOrElse(state)
   }
 
   override def isReadyToHandleIncomingMsg: Boolean = state.isEndpointSet
@@ -323,7 +310,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   lazy val authedMsgSenderVerKeys: Set[VerKey] = Set.empty
 
   def ownerDID: Option[DID] = state.myDid
-  def ownerAgentKeyDID: Option[DID] = state.myDid
+  def ownerAgentKeyDIDPair: Option[DidPair] = state.thisAgentAuthKeyDidPair
 
   //TODO: need to come back to this as in this context doesn't have any relationship information
   override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = UNKNOWN_SENDER_PARTICIPANT_ID
@@ -336,7 +323,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
-
 }
 
 //response
@@ -360,7 +346,9 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Op
 }
 
 case object GetAgencyAgentDetail extends ActorMessage
-case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage
+case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 
 //cmds
 case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMessage
@@ -395,8 +383,8 @@ trait AgencyAgentStateUpdateImpl
     state = state.withAgentWalletId(walletId)
   }
 
-  override def setAgencyDID(did: DID): Unit = {
-    state = state.withAgencyDID(did)
+  override def setAgencyDIDPair(didPair: DidPair): Unit = {
+    state = state.withAgencyDIDPair(didPair)
   }
 
   def addThreadContextDetail(threadContext: ThreadContext): Unit = {
@@ -411,4 +399,13 @@ trait AgencyAgentStateUpdateImpl
   def addPinst(pri: ProtocolRunningInstances): Unit = {
     state = state.withProtoInstances(pri)
   }
+
+  override def updateAgencyDidPair(dp: DidPair): Unit = {
+    state = state.withAgencyDIDPair(dp)
+  }
+  override def updateRelationship(rel: Relationship): Unit = {
+    state = state.withRelationship(rel)
+  }
 }
+
+case class FinishCreateKey(createdKey: NewKeyCreated) extends ActorMessage

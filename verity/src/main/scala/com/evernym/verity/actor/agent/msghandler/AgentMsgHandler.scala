@@ -5,10 +5,8 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
 import com.evernym.verity.actor.agent.msghandler.outgoing.{AgentOutgoingMsgHandler, OutgoingMsgParam}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.protocol.engine._
@@ -32,9 +30,10 @@ trait AgentMsgHandler
 
   this: AgentPersistentActor =>
 
-  def agentCommonCmdReceiver[A]: Receive = {
-    case _: AgentActorDetailSet       => //nothing to do
-  }
+  final override def receiveActorInitSpecificCmd: Receive =
+    receiveAgentInitCmd orElse receiveAgentSpecificInitCmd
+
+  def receiveAgentSpecificInitCmd: Receive
 
   override final def receiveCmd: Receive =
     agentCommonCmdReceiver orElse
@@ -52,49 +51,6 @@ trait AgentMsgHandler
 
         sendToAgentMsgProcessor(ProcessUntypedMsgV1(m, relationshipId, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID))
       } catch protoExceptionHandler
-  }
-
-  def agentCommonEventReceiver: Receive = {
-    //NOTE: ProtocolIdDetailSet is a proto buf event which stores mapping between protocol reference and corresponding protocol identifier
-    //There is a method 'getPinstId' below, which uses that stored state/mapping to know if a protocol actor (for given protocol reference),
-    // is already created in the given context(like agency agent pairwise or user agent pairwise actor etc),
-    // and if it is, then it uses that identifier to send incoming message to the protocol actor, or else creates a new protocol actor.
-    case ProtocolIdDetailSet(msgFamilyName, msgFamilyVersion, pinstId) =>
-      addPinst(ProtoRef(msgFamilyName, msgFamilyVersion) -> pinstId)
-
-    case tcs: ThreadContextStored =>
-      val msgTypeFormat = try {
-        TypeFormat.fromString(tcs.msgTypeDeclarationFormat)
-      } catch {
-        //This is for backward compatibility (for older events which doesn't have msgTypeFormatVersion stored)
-        case _: UnknownFormatType =>
-          TypeFormat.fromString(tcs.msgPackFormat)
-      }
-
-      val tcd = ThreadContextDetail(tcs.threadId, MsgPackFormat.fromString(tcs.msgPackFormat), msgTypeFormat,
-        tcs.usesGenMsgWrapper, tcs.usesBundledMsgWrapper)
-
-      addThreadContextDetail(tcs.pinstId, tcd)
-
-    case _: FirstProtoMsgSent => //nothing to do (deprecated, just kept it for backward compatibility)
-
-    case pms: ProtoMsgSenderOrderIncremented =>
-      val stc = state.threadContextDetailReq(pms.pinstId)
-      val protoMsgOrderDetail = stc.msgOrders.getOrElse(MsgOrders(senderOrder = -1))
-      val updatedProtoMsgOrderDetail =
-        protoMsgOrderDetail.copy(senderOrder = protoMsgOrderDetail.senderOrder + 1)
-      val updatedContext = stc.copy(msgOrders = Option(updatedProtoMsgOrderDetail))
-      addThreadContextDetail(pms.pinstId, updatedContext)
-
-    case pms: ProtoMsgReceivedOrderIncremented  =>
-      val stc = state.threadContextDetailReq(pms.pinstId)
-      val protoMsgOrderDetail = stc.msgOrders.getOrElse(MsgOrders(senderOrder = -1))
-      val curReceivedMsgOrder = protoMsgOrderDetail.receivedOrders.getOrElse(pms.fromPartiId, -1)
-      val updatedReceivedOrders = protoMsgOrderDetail.receivedOrders + (pms.fromPartiId -> (curReceivedMsgOrder + 1))
-      val updatedProtoMsgOrderDetail =
-        protoMsgOrderDetail.copy(receivedOrders = updatedReceivedOrders)
-      val updatedContext = stc.copy(msgOrders = Option(updatedProtoMsgOrderDetail))
-      addThreadContextDetail(pms.pinstId, updatedContext)
   }
 
   def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId

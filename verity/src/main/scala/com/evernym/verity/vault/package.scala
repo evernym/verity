@@ -30,7 +30,9 @@ package object vault {
    */
   case class WalletAPIParam(walletId: String)
 
-  case class AgentWalletAPI(walletAPI: WalletAPI, walletId: String)
+  case class AgentWalletAPI(walletAPI: WalletAPI, walletId: String) {
+    def walletAPIParam: WalletAPIParam = WalletAPIParam(walletId)
+  }
 
   case class GetVerKeyByDIDParam(did: DID, getKeyFromPool: Boolean)
 

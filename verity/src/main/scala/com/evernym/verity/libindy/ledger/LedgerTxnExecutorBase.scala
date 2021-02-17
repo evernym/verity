@@ -15,9 +15,9 @@ import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
 import com.evernym.verity.util.Util.getJsonStringFromMap
@@ -351,7 +351,6 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
     val schemaReq = LedgerRequest(buildSchemaRequest(submitterDID, schemaJson).get, needsSigning=false, taa=None)
     val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
     val signedRequest = reqWithOptTAA.prepared(walletAccess.signRequest(submitterDID, reqWithOptTAA.req).get.req)
-    //TODO -> This is where payments will be added
     submitWriteRequest(Submitter(submitterDID, None), signedRequest)
   }
 

@@ -81,10 +81,6 @@ trait AgentMsgHelper
 
   def createNewLocalPairwiseConnDetail(name: String): MockPairwiseConnDetail = addNewLocalPairwiseKey(name)
 
-  def setCloudAgentDetail(DID: String, verKey: VerKey): Unit = {
-    setCloudAgentDetail(DidPair(DID, verKey))
-  }
-
   def setLastSentInvite(pcd: MockPairwiseConnDetail, inviteDetail: InviteDetail): Unit = {
     pcd.lastSentInvite = inviteDetail
   }
@@ -190,6 +186,7 @@ trait AgentMsgHelper
   }
 
   def handleFetchAgencyKey(agencyKeyIdentity: AgencyPublicDid): Unit = {
+    agencyKeyIdentity.didPair.validate()
     setAgencyIdentity(agencyKeyIdentity)
   }
 
@@ -202,8 +199,8 @@ trait AgentMsgHelper
     walletAPI.executeSync[TheirKeyStored](StoreTheirKey(DID, verKey))
   }
 
-  def handleAgentCreatedRespForAgent(pairwiseDID: DID, pairwiseDIDVerKey: VerKey): Unit = {
-    setCloudAgentDetail(pairwiseDID, pairwiseDIDVerKey)
+  def handleAgentCreatedRespForAgent(pairwiseDIDPair: DidPair): Unit = {
+    setCloudAgentDetail(pairwiseDIDPair)
   }
 
   def handleReceivedAgentMsg(rmw: Array[Byte]): AgentMsgWrapper = {

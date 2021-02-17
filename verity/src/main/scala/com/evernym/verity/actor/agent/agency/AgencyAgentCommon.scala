@@ -7,16 +7,14 @@ import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
-import com.evernym.verity.actor.agent.{AgentActorDetailSet, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentActorDetailSet, DidPair, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.config.CommonConfig.PROVISIONING
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.protocol.engine._
@@ -52,19 +50,30 @@ trait AgencyAgentCommon
 //      ))
   }
 
-  override val receiveActorInitSpecificCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
+  override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
     case saw: SetAgentActorDetail               => setAgentActorDetail(saw)
   }
 
-  def setAgencyAndOwnerDetail(aDID: DID): Unit = {
-    setAgencyDID(aDID)
+  def setAgencyAndOwnerDetail(didPair: DidPair): Unit = {
+    setAgencyDIDPair(didPair)
   }
 
   def setAgentActorDetail(saw: SetAgentActorDetail): Unit = {
     logger.debug("'SetAgentActorDetail' received", (LOG_KEY_PERSISTENCE_ID, persistenceId))
-    setAgencyAndOwnerDetail(saw.did)
+    setAgencyAndOwnerDetail(saw.didPair)
     setAndOpenWalletIfExists(saw.actorEntityId)
-    sender ! AgentActorDetailSet(saw.did, saw.actorEntityId)
+    sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
+  }
+
+  override def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
+    state.agencyDIDPair match {
+      case Some(adp) if adp.DID.nonEmpty && adp.verKey.nonEmpty => Future(adp)
+      case _ if state.agentWalletId.isDefined =>
+        walletAPI.executeAsync[VerKey](GetVerKey(agencyDID)).map { vk =>
+          DidPair(agencyDID, vk)
+        }
+      case _ => super.agencyDidPairFutByCache(agencyDID)
+    }
   }
 
   def stateDetailsWithAgencyVerKey(agencyVerKey: VerKey): PartialFunction[String, Parameter] = {
@@ -97,7 +106,10 @@ trait AgencyAgentCommon
     lazy val newActorId = getNewActorId
 
     lazy val keyEndpointJson = DefaultMsgCodec.toJson(
-      CreateKeyEndpointDetail(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME, ownerDIDReq, ownerAgentKeyDID))
+      CreateKeyEndpointDetail(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
+        ownerDIDReq,
+        ownerAgentKeyDIDPair)
+    )
 
     lazy val agentEndpointJson = DefaultMsgCodec.toJson(
       CreateAgentEndpointDetail(userAgentRegionName, newActorId))
@@ -107,9 +119,9 @@ trait AgencyAgentCommon
 
   def stateDetailsFor: Future[PartialFunction[String, Parameter]] = {
     for (
-      agencyVerKey <- agencyVerKeyFut()
+      agencyDidPair <- agencyDidPairFut()
     ) yield  {
-      stateDetailsWithAgencyVerKey(agencyVerKey)
+      stateDetailsWithAgencyVerKey(agencyDidPair.verKey)
     }
   }
 
@@ -160,8 +172,8 @@ trait AgencyAgentCommon
       prepareNewAgentWalletData(pp.domainDID, pp.domainVerKey, newActorId).flatMap { agentPairwiseKey =>
         val setupEndpoint = SetupAgentEndpoint_V_0_7(
           threadId,
-          pp.domainDID,
-          agentPairwiseKey.did,
+          DidPair(pp.domainDID, pp.domainVerKey) ,
+          DidPair(agentPairwiseKey.did, agentPairwiseKey.verKey),
           pp.requestVerKey,
           requester.sponsorRel
         )
@@ -185,11 +197,6 @@ trait AgencyAgentCommon
         fut3Res <- fut3
       ) yield fut3Res
     }.flatten
-  }
-
-  def getAgencyDIDFut(req: Boolean = false): Future[CacheQueryResponse] = {
-    val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID, required = req)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
-    generalCache.getByParamAsync(gcop)
   }
 
   def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, None)

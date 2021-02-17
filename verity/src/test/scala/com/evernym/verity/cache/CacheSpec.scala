@@ -7,119 +7,172 @@ import akka.util.Timeout
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
+import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, DEFAULT_MAX_CACHE_SIZE, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, KeyValueMapperFetcher}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.testkit.{BasicAsyncSpec, CancelGloballyAfterFailure}
+import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 
-class CacheSpec extends PersistentActorSpec with BasicAsyncSpec with CancelGloballyAfterFailure {
+class CacheSpec
+  extends PersistentActorSpec
+    with BasicAsyncSpec
+    with CancelGloballyAfterFailure
+    with Eventually {
 
-  "Cache" - {
-    "when initialized" - {
-      "should have no cached config" in {
-        val _ = platform.singletonParentProxy   //to make sure singleton proxy actor gets created before use
-
-        cache = new Cache("TestCache", fetchers)
-        cache.size shouldBe 0
-      }
-    }
-    "when asked key value mapper object" - {
-      "should get empty map as there is no such value stored" in {
-        val cqr = getSingleFromCache("1", required=false)
-        cqr shouldBe CacheQueryResponse(Map.empty)
-      }
-    }
+  override def beforeAll(): Unit = {
+    val _ = platform.singletonParentProxy   //to make sure singleton proxy actor gets created before use
   }
 
-  "KeyValue Mapper actor" - {
-    "when sent AddMapping" - {
-      "should be able to add the mapping" in {
-        val ma = addKeyValueMapping(AddMapping("1", "one"))
-        ma.key shouldBe "1"
-        ma.value shouldBe "one"
-      }
-    }
-  }
+  lazy val cache: Cache = buildCache()
 
   "Cache" - {
-    "when asked key value mapper object with key '1'" - {
+    "without any items cached" - {
+      "should respond with size 0" in {
+        cache.allCacheSize shouldBe 0
+        cache.allCacheMissCount shouldBe 0
+        cache.allCacheHitCount shouldBe 0
+      }
+    }
+
+    "when asked for non existing key" - {
+      "should get empty map" in {
+        getFromCache(cache, "a", required = false).map { cqr =>
+          cqr shouldBe CacheQueryResponse(Map.empty)
+          cache.allCacheSize shouldBe 0
+          cache.allCacheMissCount shouldBe 1
+          cache.allCacheHitCount shouldBe 0
+        }
+      }
+    }
+
+    "when asked key value mapper object with key 'a'" - {
       "should get it from source and save it in cache" in {
-        val cqr = getSingleFromCache("1", required=false, ttls = 1)
-        cqr shouldBe CacheQueryResponse(Map("1" -> "one"))
-        cache.size shouldBe 1
+        addKeyValueMapping(AddMapping("a", "apple"))
+
+        getFromCache(cache, "a", required = true).map { cqr =>
+          cqr shouldBe CacheQueryResponse(Map("a" -> "apple"))
+          cache.allCacheSize shouldBe 1
+          cache.allCacheMissCount shouldBe 2
+          cache.allCacheHitCount shouldBe 0
+        }
       }
     }
 
-    "when asked again for key value mapper object with key '1'" - {
-      "should get it from cache only" in {
-        val cqr = getSingleFromCache("1", required=false)
-        cqr shouldBe CacheQueryResponse(Map("1" -> "one"))
+    "when asked key value mapper object with key 'a'" - {
+      "should get it from cache" in {
+        getFromCache(cache, "a", required = true).map { cqr =>
+          cqr shouldBe CacheQueryResponse(Map("a" -> "apple"))
+          cache.allCacheSize shouldBe 1
+          cache.allCacheMissCount shouldBe 2
+          cache.allCacheHitCount shouldBe 1
+        }
       }
     }
 
-    "when asked again for key value mapper object with key '1' after waiting for around a second" - {
+    "when asked again for key value mapper object with key 'a' after waiting for expiration time" - {
       "should get it from source as the cache would have been expired" in {
-        Thread.sleep(1100)
-        val cqr = getSingleFromCache("1", required=false)
-        cqr shouldBe CacheQueryResponse(Map("1" -> "one"))
-        cache.size shouldBe 1
+        Thread.sleep(1500)
+        getFromCache(cache, "a", required = true).map { cqr =>
+          cqr shouldBe CacheQueryResponse(Map("a" -> "apple"))
+          cache.allCacheSize shouldBe 1
+          cache.allCacheMissCount shouldBe 3
+          cache.allCacheHitCount shouldBe 1
+        }
       }
     }
 
-    "when asked for key value mapper object with key '2'" - {
-      "should get it from source" in {
-        val cqr = getSingleFromCache("2", required=false)
-        cqr shouldBe CacheQueryResponse(Map.empty)
-      }
-    }
-  }
-
-  "KeyValue Mapper actor" - {
-    "when sent new add mappings" - {
-      "should be able to add it successfully" in {
-        val ma = addKeyValueMapping(AddMapping("2", "two"))
-        ma.key shouldBe "2"
-        ma.value shouldBe "two"
+    "when asked for key value mapper object with key 'b'" - {
+      "should respond with empty map" in {
+        getFromCache(cache, "b", required = false).map { cqr =>
+          cqr shouldBe CacheQueryResponse(Map.empty)
+          cache.allCacheSize shouldBe 1
+          cache.allCacheMissCount shouldBe 4
+          cache.allCacheHitCount shouldBe 1
+        }
       }
     }
   }
 
   "when asked for multiple values from cache" - {
     "should get it from from cache" in {
-      val cqr = getFromCache(Set(KeyDetail("1", required=false), KeyDetail("2", required = false)), ttls = 3)
-      cqr shouldBe CacheQueryResponse(Map("1" -> "one", "2" -> "two"))
-
-      val ma = addKeyValueMapping(AddMapping("2", "updated"))
-      ma.key shouldBe "2"
-      ma.value shouldBe "updated"
-
-      Thread.sleep(4000)
-
-      val newCqr = getFromCache(Set(KeyDetail("1", required=false), KeyDetail("2", required = false)), ttls = 3)
-      newCqr shouldBe CacheQueryResponse(Map("1" -> "one", "2" -> "updated"))
+      addKeyValueMapping(AddMapping("b", "berry"))
+      getFromCache(cache, Set(KeyDetail("a", required = true), KeyDetail("b", required = true))).map { cqr =>
+        cqr shouldBe CacheQueryResponse(Map("a" -> "apple", "b" -> "berry"))
+        cache.allCacheSize shouldBe 2
+        cache.allCacheMissCount shouldBe 5
+        cache.allCacheHitCount shouldBe 2
+      }
     }
+  }
+
+  "when source is updated with new value" - {
+    "should respond with updated value after expiry time" in {
+      addKeyValueMapping(AddMapping("b", "blackberry"))
+      Thread.sleep(1100)
+      getFromCache(cache, Set(KeyDetail("a", required = true), KeyDetail("b", required = true))).map { cqr =>
+        cqr shouldBe CacheQueryResponse(Map("a" -> "apple", "b" -> "blackberry"))
+        cache.allCacheSize shouldBe 2
+        cache.allCacheMissCount shouldBe 7
+        cache.allCacheHitCount shouldBe 2
+      }
+    }
+  }
+
+  "when kept adding different values to the cache" - {
+    "should respect the maximum cache size" in {
+      val newEntries = 15
+      (1 to newEntries).foreach(i => addKeyValueMapping(AddMapping(i.toString, s"$i")))
+
+      (1 to newEntries).foreach { i =>
+        val fut = getFromCache(cache, Set(KeyDetail(i, required = true)))
+        val cqr = Await.result(fut, 2.second)
+        cqr shouldBe CacheQueryResponse(Map(s"$i" -> s"$i"))
+      }
+      Future {
+        cache.allCacheSize <= keyValueFetcher.maxSize.getOrElse(DEFAULT_MAX_CACHE_SIZE) shouldBe true
+      }
+    }
+  }
+
+  override def overrideConfig: Option[Config] = Option {
+    ConfigFactory.parseString {
+      """verity.cache.key-value-mapper {
+         expiration-time-in-seconds = 1
+         max-size = 10
+      }""".stripMargin
+    }
+  }
+
+  val keyValueMapperFetcherId: Int = KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID
+  val keyValueFetcher = new KeyValueMapperFetcher(system, appConfig)
+  val fetchers: Map[Int, AsyncCacheValueFetcher] = Map(
+    keyValueMapperFetcherId -> keyValueFetcher)
+
+  def buildCache(name: String = "TestCache", fetchers: Map[Int, CacheValueFetcher] = fetchers): Cache = {
+    new Cache(name, fetchers)
   }
 
   implicit val timeout: Timeout = Timeout(Duration.create(5, TimeUnit.SECONDS))
 
-  var cache: Cache = _
-  val keyValueMapperFetcherId: Int = KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID
-  val fetchers: Map[Int, AsyncCacheValueFetcher] = Map(
-    keyValueMapperFetcherId -> new KeyValueMapperFetcher(system, appConfig))
 
-  def addKeyValueMapping(am: AddMapping): MappingAdded = {
+  def addKeyValueMapping(am: AddMapping): Unit = {
     val fut = platform.singletonParentProxy ? ForKeyValueMapper(am)
-    Await.result(fut, Duration("5 sec")).asInstanceOf[MappingAdded]
+    val ma = Await.result(fut, Duration("5 sec")).asInstanceOf[MappingAdded]
+    ma.key shouldBe am.key
+    ma.value shouldBe am.value
   }
 
-  def getSingleFromCache(key: String, required: Boolean, ttls: Int = 0): CacheQueryResponse = {
-    getFromCache(Set(KeyDetail(key, required)), ttls)
+  def getFromCache(cache: Cache, key: String, required: Boolean): Future[CacheQueryResponse] = {
+    getFromCache(cache, Set(KeyDetail(key, required)))
   }
 
-  def getFromCache(keyDetails: Set[KeyDetail], ttls: Int = 0): CacheQueryResponse = {
-    val fut = cache.getByParamAsync(GetCachedObjectParam(keyDetails, keyValueMapperFetcherId, Option(ttls)))
-    Await.result(fut, Duration("5 sec"))
+  def getFromCache(cache: Cache, keyDetails: Set[KeyDetail]): Future[CacheQueryResponse] = {
+    cache.getByParamAsync(GetCachedObjectParam(keyDetails, keyValueMapperFetcherId))
   }
 }

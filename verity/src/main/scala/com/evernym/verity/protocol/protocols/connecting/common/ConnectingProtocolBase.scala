@@ -14,10 +14,10 @@ import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
 import com.evernym.verity.agentmsg.msgpacker._
-import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
+import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.protocol.actor._
@@ -355,12 +355,15 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     ctx.SERVICES_DEPRECATED.msgQueueServiceProvider.addToMsgQueue(msf)
   }
 
-  def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId,
-                         sendMsg: Boolean, threadOpt: Option[Thread]=None): MsgCreated = {
+  def buildMsgCreatedEvt(msgId: MsgId,
+                         mType: String,
+                         senderDID: DID,
+                         sendMsg: Boolean,
+                         threadOpt: Option[Thread]=None): MsgCreated = {
     val msgStatus =
       if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode
       else MSG_STATUS_RECEIVED.statusCode
-    ctx.getState.connectingMsgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
+    ctx.getState.connectingMsgState.buildMsgCreatedEvt(msgId , mType, senderDID, sendMsg, msgStatus, threadOpt)
   }
 
   def initState(params: Seq[ParameterStored]): S

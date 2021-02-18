@@ -13,7 +13,7 @@ import com.evernym.verity.http.rest.base.RestApiBaseSpec
 import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestErrorResponse, RestOKResponse}
 
 /**
- * Purpose of this spec to test the rest api infrastructure in general
+ * Purpose of this spec is to test the rest api infrastructure in general
  * with positive and negative scenarios etc
  */
 class BasicRestApiSpec

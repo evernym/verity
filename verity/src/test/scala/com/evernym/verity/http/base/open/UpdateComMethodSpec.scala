@@ -14,6 +14,11 @@ import com.evernym.verity.testkit.mock.agent.MockEnv
 trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>
 
   def testUpdateComMethod(mockEnv: MockEnv): Unit = {
+    testInvalidUpdateComMethod(mockEnv)
+    testValidUpdateComMethod(mockEnv)
+  }
+
+  def testInvalidUpdateComMethod(mockEnv: MockEnv): Unit = {
     val mockEdgeAgent = mockEnv.edgeAgent
 
     "when sent UPDATE_COM_METHOD msg with blank value" - {
@@ -49,26 +54,6 @@ trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>
       }
     }
 
-    "when sent UPDATE_COM_METHOD msg" - {
-      "should respond with success" in {
-        val cm = TestComMethod("1", COM_METHOD_TYPE_PUSH, Option(validTestPushNotifToken))
-        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(cm).msg) ~> epRoutes ~> check {
-          status shouldBe OK
-          mockEdgeAgent.v_0_5_resp.handleComMethodUpdatedResp(PackedMsg(responseAs[Array[Byte]]))
-        }
-      }
-    }
-
-    "when sent UPDATE_COM_METHOD msg (http) without specifying packaging options (legacy)" - {
-      "should respond with success" in {
-        val cm = TestComMethod("2", COM_METHOD_TYPE_HTTP_ENDPOINT, Option("http://example.com/123"), None)
-        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(cm).msg) ~> epRoutes ~> check {
-          status shouldBe OK
-          mockEdgeAgent.v_0_5_resp.handleComMethodUpdatedResp(PackedMsg(responseAs[Array[Byte]]))
-        }
-      }
-    }
-
     "when sent UPDATE_COM_METHOD msg (http) indy pack without recipientKeys" - {
       "should respond with error msg" in {
         val tp = ComMethodPackaging("1.0", None)
@@ -91,6 +76,30 @@ trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>
           responseTo[StatusDetailResp] shouldBe StatusDetailResp(MISSING_REQ_FIELD.withMessage(
             "required attribute not found (missing/empty/null): 'recipientKeys'")
           )
+        }
+      }
+    }
+  }
+
+  def testValidUpdateComMethod(mockEnv: MockEnv): Unit = {
+    val mockEdgeAgent = mockEnv.edgeAgent
+
+    "when sent UPDATE_COM_METHOD msg" - {
+      "should respond with success" in {
+        val cm = TestComMethod("1", COM_METHOD_TYPE_PUSH, Option(validTestPushNotifToken))
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(cm).msg) ~> epRoutes ~> check {
+          status shouldBe OK
+          mockEdgeAgent.v_0_5_resp.handleComMethodUpdatedResp(PackedMsg(responseAs[Array[Byte]]))
+        }
+      }
+    }
+
+    "when sent UPDATE_COM_METHOD msg (http) without specifying packaging options (legacy)" - {
+      "should respond with success" in {
+        val cm = TestComMethod("2", COM_METHOD_TYPE_HTTP_ENDPOINT, Option("http://example.com/123"), None)
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(cm).msg) ~> epRoutes ~> check {
+          status shouldBe OK
+          mockEdgeAgent.v_0_5_resp.handleComMethodUpdatedResp(PackedMsg(responseAs[Array[Byte]]))
         }
       }
     }

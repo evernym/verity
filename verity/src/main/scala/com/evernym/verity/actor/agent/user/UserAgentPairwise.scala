@@ -712,7 +712,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
         buildAndSendGeneralMsgToTheirRoutingService(sendMsgParam, thread)
       case _: JsonMsg =>
         //between cloud agents, we don't support sending json messages
-        ???
+        logger.error("sending json messages to other domain not supported")
     }
   }
 

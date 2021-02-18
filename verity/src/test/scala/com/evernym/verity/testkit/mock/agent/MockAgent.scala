@@ -82,7 +82,16 @@ trait MockAgent
       throw new RuntimeException(s"name '$connId' is already used, please provide unique name")
     }
     val cnkp = addNewKey()
-    val dd = DidPair(cnkp.did, cnkp.verKey)
+    addNewLocalPairwiseKey(connId, cnkp.didPair)
+  }
+
+  def addNewLocalPairwiseKey(connId: String, dp: DidPair, storeKey: Boolean = false): MockPairwiseConnDetail = {
+    if (pairwiseConnDetails.contains(connId)) {
+      throw new RuntimeException(s"name '$connId' is already used, please provide unique name")
+    }
+    if (storeKey)
+      storeTheirKey(dp)
+    val dd = DidPair(dp.DID, dp.verKey)
     val mpcd = new MockPairwiseConnDetail(dd)(walletAPI, wap)
     addNewPairwiseConnDetail(connId, mpcd)
     mpcd

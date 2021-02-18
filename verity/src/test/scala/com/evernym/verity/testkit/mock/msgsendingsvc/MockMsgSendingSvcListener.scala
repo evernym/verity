@@ -17,13 +17,13 @@ trait MockMsgSendingSvcListener {
   lazy val testMsgSendingSvc: MockMsgSendingSvc =
     agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc]
 
-  def getTotalAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalBinaryMsgsSent
-  def getTotalRestAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalRestAgentMsgsSent
+  def totalBinaryMsgSent: Int = testMsgSendingSvc.totalBinaryMsgsSent
+  def totalRestMsgSent: Int = testMsgSendingSvc.totalRestAgentMsgsSent
 
   def checkForNewMsg(currentMsgCount: Int): Option[PackedMsg] = {
     //this confirms that protocol does sent a message to registered endpoint
     eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
-      getTotalAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
+      totalBinaryMsgSent >= currentMsgCount + 1 shouldBe true
       val lastMsgOpt = testMsgSendingSvc.lastBinaryMsgSent
       lastMsgOpt.isDefined shouldBe true
       lastMsgOpt.map(PackedMsg(_))
@@ -32,8 +32,8 @@ trait MockMsgSendingSvcListener {
 
   def checkForNewRestMsg(currentMsgCount: Int): Option[String] = {
     //this confirms that protocol does sent a message to registered endpoint
-    eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
-      getTotalRestAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
+    eventually (timeout(Span(35, Seconds)), interval(Span(2, Seconds))) {
+      totalRestMsgSent >= currentMsgCount + 1 shouldBe true
       val lastMsgOpt = testMsgSendingSvc.lastRestMsgSent
       lastMsgOpt.isDefined shouldBe true
       lastMsgOpt
@@ -46,7 +46,7 @@ trait MockMsgSendingSvcListener {
     // after sufficient sleep, there is a less chance that any new message will be available/received
     // before executing supplied function 'f'
     Thread.sleep(3000)
-    val currentReceivedMsgCount = getTotalAgentMsgSentByCloudAgent
+    val currentReceivedMsgCount = totalBinaryMsgSent
     val result = f
     val msg = checkForNewMsg(currentReceivedMsgCount)
     (result, msg)
@@ -58,7 +58,7 @@ trait MockMsgSendingSvcListener {
     // after sufficient sleep, there is a less chance that any new message will be available/received
     // before executing supplied function 'f'
     Thread.sleep(3000)
-    val currentReceivedMsgCount = getTotalRestAgentMsgSentByCloudAgent
+    val currentReceivedMsgCount = totalRestMsgSent
     val result = f
     val msg = checkForNewRestMsg(currentReceivedMsgCount)
     (result, msg)

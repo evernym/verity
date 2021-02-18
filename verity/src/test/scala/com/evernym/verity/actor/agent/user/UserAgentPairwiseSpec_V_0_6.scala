@@ -150,7 +150,7 @@ trait UserAgentPairwiseSpec_V_0_6
     s"when received CONN_REQ_ACCEPTED" - {
       "should be able to respond with MSG_CREATED msg" taggedAs (UNSAFE_IgnoreLog) in {
 
-        val totalMsgsSentByCloudAgent = getTotalAgentMsgSentByCloudAgent
+        val totalMsgsSentByCloudAgent = totalBinaryMsgSent
 
         val keyDlgProof = mockRemoteEdgeAgent.buildAgentKeyDlgProofForConn(connId)
         val senderDetail = mockRemoteEdgeAgent.buildInviteSenderDetail(connId, Option(keyDlgProof))
@@ -176,7 +176,7 @@ trait UserAgentPairwiseSpec_V_0_6
         expectMsgType[PackedMsg]
 
         eventually (timeout(Span(5, Seconds))) {
-          getTotalAgentMsgSentByCloudAgent shouldBe totalMsgsSentByCloudAgent + 1
+          totalBinaryMsgSent shouldBe totalMsgsSentByCloudAgent + 1
         }
 
       }

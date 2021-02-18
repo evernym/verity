@@ -145,8 +145,8 @@ object CustomMetrics {
   final val TAG_KEY_TYPE = "type"
   final val TAG_KEY_ID = "id"
 
-  //**NOTE**: We should not a metrics in this below collection in general, there should
-  // be very specific reason to initialize it with 0 value
+  //**NOTE**: We should not add any metrics in this below collection in general,
+  // there should be very specific reason to add it to initialize it with value 0
   def initGaugeMetrics(): Unit = {
     val metricsToBeInitialized = Set(
       AS_ACTIVE_USER_AGENT_COUNT,

@@ -10,7 +10,8 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
                        |akka_system_processed_messages_total{system="consumer-agency",tracked="false"} 289978.0
                        |akka_system_processed_messages_total{system="consumer-agency",tracked="tr"} 0.0
                        |span_processing_time_seconds_bucket{operation="/agency/agency/agency/agency/agency/agency/agency/agency/agency/internal/msg-progress-tracker/{}",span_kind="server",http_status_code="200",error="false",le="0.005",component="akka.http.server",http_method="POST"} 0.0
-                       |span_processing_time_seconds_bucket{operation="msg-latency",msg_type="CREATE_AGENT:AGENT_CREATED",parentOperation="tell(MsgTracer, CaptureMetrics)",error="false",le="0.005",next_hop="my edge agent (synchronous)"} 0.0""".stripMargin
+                       |span_processing_time_seconds_bucket{operation="msg-latency",msg_type="CREATE_AGENT:AGENT_CREATED",parentOperation="tell(MsgTracer, CaptureMetrics)",error="false",le="0.005",next_hop="my edge agent (synchronous)"} 0.0
+                       |test_metrics{operation="msg-latency=123",msg_type=,parentOperation,error="false"}""".stripMargin
 
   "KamonPrometheusMetricsProvider" - {
 

@@ -10,19 +10,14 @@ import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet, agentRegion}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecBase
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.cloud_agent.{MockConsumerCloudAgent, MockEntCloudAgent}
-import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.util.ReqMsgContext
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
-
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import org.scalatest.concurrent.Eventually
 
 
@@ -40,7 +35,7 @@ trait AgentSpecHelper
 
   def walletName: String = UUID.randomUUID.toString
 
-  def mockAgencyAdmin: MockAgencyAdmin
+  def mockAgencyAdmin: MockEdgeAgent
   def mockEdgeAgent: MockEdgeAgent
 
   val agencyAgentEntityId: String = UUID.randomUUID().toString
@@ -54,31 +49,7 @@ trait AgentSpecHelper
   val connId2 = "2"
   val connId3 = "3"
 
-  def wrapAsPackedMsgParam(packedMsg: PackedMsg) = ProcessPackedMsg(packedMsg, reqMsgContext)
-
-  def buildMockConsumerEdgeAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockConsumerEdgeAgent = {
-    val mcea = new MockConsumerEdgeAgent(UrlParam("localhost:9001/agency/msg"), config)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
-
-  def buildMockConsumerCloudAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockConsumerCloudAgent = {
-    val mcea = new MockConsumerCloudAgent(system, config)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
-
-  def buildMockEntCloudAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockEntCloudAgent = {
-    val mcea = new MockEntCloudAgent(system, config)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
-
-  def buildMockEnterpriseEdgeAgent(config: AppConfig, mockAgencyAdmin: MockAgencyAdmin): MockEntEdgeAgent = {
-    val mcea = new MockEntEdgeAgent(UrlParam("localhost:9002/agency/msg"), config)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
+  def wrapAsPackedMsgParam(packedMsg: PackedMsg): ProcessPackedMsg = ProcessPackedMsg(packedMsg, reqMsgContext)
 
   def reqMsgContext: ReqMsgContext = {
     val rmi = ReqMsgContext()
@@ -101,7 +72,7 @@ trait AgentSpecHelper
   def expectUnsupportedVersion(typ: String,
                                supportedFromVersion: Option[String]=None,
                                supportedToVersion: Option[String]=None)
-                              (implicit unsupportedVersion: Version) = {
+                              (implicit unsupportedVersion: Version): Unit = {
     val expected = expectedUnsupportedVersionMsg(typ, unsupportedVersion, supportedFromVersion, supportedToVersion)
 
     expectMsgPF() {

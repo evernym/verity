@@ -14,13 +14,10 @@ import com.evernym.verity.protocol.engine.Constants.{MFV_1_0, MSG_TYPE_CONNECT, 
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
-import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
-import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, Connect_MFV_0_5, CreateAgent_MFV_0_5, CreateKey_MFV_0_5, CreateMsg_MFV_0_5, GetConfigs_MFV_0_5, GetMsg_MFV_0_5, GetMsgsByConns_MFV_0_5, RemoveConfigs_MFV_0_5, SendMsgs_MFV_0_5, SignUp_MFV_0_5, TestComMethod, TestConfigDetail, UpdateConfigs_MFV_0_5, UpdateConnStatus_MFV_0_5, UpdateMsgStatusByConns_MFV_0_5, UpdateMsgStatus_MFV_0_5}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent, MockCloudAgent, MockEdgeAgent}
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam}
 import org.json.JSONObject
 
@@ -537,8 +534,8 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
 
     def prepareInviteAnsweredMsgForAgency(msgTypeVersion: String,
                                           connId: String,
-                                          mockEntEdgeAgent: MockEntEdgeAgent,
-                                          mockConsumerEdgeAgent: MockConsumerEdgeAgent): PackedMsg = {
+                                          mockEntEdgeAgent: MockEdgeAgent,
+                                          mockConsumerEdgeAgent: MockEdgeAgent): PackedMsg = {
       val pcd = mockEntEdgeAgent.pairwiseConnDetail(connId)
 
       val reqSenderKeyDlgProof = mockConsumerEdgeAgent.buildAgentKeyDlgProofForConn(connId)
@@ -569,8 +566,8 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
     }
 
     def prepareInviteAnsweredMsgForAgency(connId: String,
-                                          mockEntEdgeAgent: MockEntEdgeAgent,
-                                          mockConsumerEdgeAgent: MockConsumerEdgeAgent): PackedMsg = {
+                                          mockEntEdgeAgent: MockEdgeAgent,
+                                          mockConsumerEdgeAgent: MockEdgeAgent): PackedMsg = {
       prepareInviteAnsweredMsgForAgency(MTV_1_0, connId, mockEntEdgeAgent, mockConsumerEdgeAgent)
     }
 
@@ -738,5 +735,5 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
     }
   }
 
-  lazy val asCloudAgent = this.asInstanceOf[MockCloudAgentBase]
+  lazy val asCloudAgent = this.asInstanceOf[MockCloudAgent]
 }

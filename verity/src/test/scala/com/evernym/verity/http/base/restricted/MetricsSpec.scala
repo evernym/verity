@@ -2,14 +2,14 @@ package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
-import com.evernym.verity.metrics.reporter.MetricDetail
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.metrics.{MetricsReader, NodeMetricsData}
 import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.testkit.AddMetricsReporter
 import org.scalatest.time.{Seconds, Span}
 
-trait MetricsSpec extends AddMetricsReporter { this : EndpointHandlerBaseSpec =>
+
+trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
 
   def testMetrics(): Unit = {
     "when sent get metrics api call" - {

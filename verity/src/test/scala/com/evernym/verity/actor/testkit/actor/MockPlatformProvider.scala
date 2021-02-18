@@ -3,8 +3,8 @@ package com.evernym.verity.actor.testkit.actor
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.verity.UrlParam
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.vault.service.WalletService
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
@@ -39,11 +39,11 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
   lazy val itemManagerRegionActor: ActorRef = platform.itemManagerRegion
   lazy val itemContainerRegionActor: ActorRef = platform.itemContainerRegion
 
-  lazy val mockAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlParam(localAgencyEndpoint), platform.agentActorContext.appConfig)
+  lazy val mockAgencyAdmin: MockEdgeAgent =
+    new MockEdgeAgent(UrlParam(localAgencyEndpoint), platform.agentActorContext.appConfig)
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
-    platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalAgentMsgsSent
+    platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalBinaryMsgsSent
   }
 
   lazy val mockRouteStoreActorTypeToRegions: Map[Int, ActorRef] = Map.empty

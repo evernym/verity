@@ -3,9 +3,10 @@ package com.evernym.verity.actor.agent.msghandler
 import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.evernym.verity.Exceptions.{NotFoundErrorException, UnauthorisedErrorException}
+import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, HasAgentActivity, MsgPackFormat, PayloadMetadata, ProtocolEngineExceptionHandler, ProtocolRunningInstances, SponsorRel, Thread, ThreadContextDetail, TypeFormat}
@@ -20,7 +21,7 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
+import com.evernym.verity.agentmsg.msgcodec.{AgentJsonMsg, MsgCodecException}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -474,6 +475,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     } catch  {
       case e @ (_: NotFoundErrorException) =>
         forwardToAgentActor(UnhandledMsg(amw, reqMsgContext, e))
+      case e: RuntimeException =>
+        handleException(e, sender)
     }
   }
 
@@ -571,6 +574,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
             routingMsgHandler(rmc, sndr)(amw)
           case None     => processUnhandledMsg(amw, rmc, e, sndr)
         }
+      case e: RuntimeException => handleException(e, sender)
     }
   }
 
@@ -605,8 +609,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
               case MSG_TYPE_CONNECTING_GET_STATUS => if (imp.isSync(default = false)) Option(MsgRespConfig(isSyncReq = true)) else None
               case _ => if (imp.isSync(default = true)) Option(MsgRespConfig(isSyncReq = true)) else None
             }
-            val (_, _, _, rd) = extract(imp, msgRespConf)
-            (TypedMsg(imp.msgToBeProcessed, imp.msgType), DEFAULT_THREAD_ID, None, rd)
+            val (_, _, fr, mrc) = extract(imp, msgRespConf)
+            (TypedMsg(imp.msgToBeProcessed, imp.msgType), DEFAULT_THREAD_ID, fr, mrc)
 
           case (MSG_FAMILY_AGENT_PROVISIONING, MFV_0_7, "create-edge-agent")         =>
             extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
@@ -653,11 +657,14 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = {
+  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = try {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
     (tmsg, thId, m.meta.forRelationship, msgRespDetail)
+  } catch {
+    case e: MsgCodecException =>
+      throw new BadRequestErrorException(Status.BAD_REQUEST.statusCode, Option(e.getMessage))
   }
 
   protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,

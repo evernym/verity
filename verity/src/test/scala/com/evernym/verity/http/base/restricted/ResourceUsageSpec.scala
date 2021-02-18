@@ -7,9 +7,9 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.util.ByteString
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.BlockingDetail
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsages
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 
-trait ResourceUsageSpec { this : EndpointHandlerBaseSpec =>
+trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
 
   def testResourceUsage(): Unit = {
     val resource = "CONNECT"

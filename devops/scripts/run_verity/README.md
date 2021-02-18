@@ -52,7 +52,7 @@ etc
 ```
 cd <project-folder>
 source devops/scripts/run_verity/base.env
-<ENV-VARIABLES from base.env> sbt "project integrationTests" test:console
+sbt "project integrationTests" test:console
 ```
 
 once you see sbt prompt, copy paste below code and press Enter

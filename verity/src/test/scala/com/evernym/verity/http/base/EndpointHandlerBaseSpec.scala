@@ -9,26 +9,23 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.base.open._
-import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
+import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.cloud_agent.{MockCloudAgentBase, MockConsumerCloudAgent, MockEntCloudAgent}
-import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util._
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
 import org.scalatest.concurrent.Eventually
 
 import scala.reflect.ClassTag
 
-trait EndpointHandlerBaseSpec
+trait EdgeEndpointBaseSpec
   extends ScalatestRouteTest
     with EndpointHandlerBase
     with BasicSpecWithIndyCleanup
@@ -37,79 +34,27 @@ trait EndpointHandlerBaseSpec
     with ApiClientSpecCommon
     with AgentReqBuilder
     with MockPushNotifListener
-    with AgencySetupSpec
-    with RestrictedRestApiSpec
-    with AgentProvisioningSpec
-    with AgentConfigsSpec
-    with UpdateComMethodSpec
-    with ProvisionRelationshipSpec
-    with GetMsgsSpec
-    with TokenTransferSpec
-    with RestApiSpec
-    with WalletBackupAndRecoverySpec
     with MockMsgSendingSvcListener
-    with AriesInvitationDecodingSpec {
+    with AriesInvitationDecodingSpec
+    with AppStatusHealthCheckSpec {
 
-  "Endpoint spec" - {
-
-    testSetAppStateAsListening()
-
-    testCheckAppStateIsListening()
-
-    testAgencySetup()
-
-    testAgentProvisioning()
-
-    testUpdateComMethod()
-
-    testGetMsgsByConnections(0)
-
-    //this should contain agent type (consumer/enterprise/verity etc) specific tests
-    testEdgeAgent()
-
-    testTokenTransferSpec()
-
-    testOpenRestApis()
-
-    testRestrictedRestApis()
+  lazy val (mockEntEdgeEnv, mockUserEdgeEnv) = {
+    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg")
+    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg")
+    (edge1.withOthersMockEnvSet(edge2), edge2.withOthersMockEnvSet(edge1))
   }
 
-  lazy val mockConsumerAgencyAdmin = new MockAgencyAdmin(system, UrlParam("localhost:9001/agency/msg"), appConfig)
-  lazy val mockConsumerCloudAgent: MockConsumerCloudAgent = buildMockConsumerCloudAgent(mockConsumerAgencyAdmin)
-  lazy val mockConsumerEdgeAgent1: MockConsumerEdgeAgent = buildMockConsumerEdgeAgent(mockConsumerAgencyAdmin)
-  lazy val mockConsumerEdgeAgent2: MockConsumerEdgeAgent = buildMockConsumerEdgeAgent(mockConsumerAgencyAdmin)
+  lazy val mockVerityEnv: MockEnvUtil = MockEnvUtil(system, appConfig)
+  mockVerityEnv.addNewEnv(mockEntEdgeEnv)
+  mockVerityEnv.addNewEnv(mockUserEdgeEnv)
 
-  lazy val mockEntAgencyAdmin = new MockAgencyAdmin(system, UrlParam("localhost:9002/agency/msg"), appConfig)
-  lazy val mockEntCloudAgent: MockEntCloudAgent = buildMockEntCloudAgent(mockEntAgencyAdmin)
-  lazy val mockEntEdgeAgent1: MockEntEdgeAgent = buildMockEnterpriseEdgeAgent(mockEntAgencyAdmin)
-  lazy val mockEntEdgeAgent2: MockEntEdgeAgent = buildMockEnterpriseEdgeAgent(mockEntAgencyAdmin)
-
-
-  def testEdgeAgent(): Unit
-
-  implicit def msgPackagingContext: AgentMsgPackagingContext
-
-  override protected def createActorSystem(): ActorSystem = AkkaTestBasic.system()
-
-  def epRoutes: Route = endpointRoutes
-
-  def appConfig: AppConfig
-
-  def responseTo[T: ClassTag]: T = DefaultMsgCodec.fromJson(responseAs[String])
+  def setupAgencyWithRemoteAgentAndAgencyIdentities(agencyMockEnv: MockCloudAgent,
+                                                    detail: RemoteAgentAndAgencyIdentity): Unit = {
+    agencyMockEnv.setupRemoteAgentAndAgencyIdentity(detail)
+  }
 
   lazy val inviteSenderName: String = edgeAgentName
   lazy val inviteSenderLogoUrl: String = edgeAgentLogoUrl
-  lazy val util: UtilBase = TestUtil
-
-  // Disable rest api by default, we will override it in the test, when needed,
-  // but this way we may check if it responds correctly when disabled.
-  lazy override val restApiEnabled: Boolean = false
-  var overrideRestEnable: Boolean = true
-
-  override def checkIfRestApiEnabled(): Unit = {
-    if (!overrideRestEnable)
-      super.checkIfRestApiEnabled()
-  }
 
   val AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME = "verity.test.http-route-timeout-in-seconds"
 
@@ -120,35 +65,9 @@ trait EndpointHandlerBaseSpec
     logger.debug("api request allowed from test case: " + req.uri, ("req_uri", req.uri))
   }
 
-  def buildMockConsumerEdgeAgent(mockAgencyAdmin: MockAgencyAdmin): MockConsumerEdgeAgent = {
-    val mcea = new MockConsumerEdgeAgent(UrlParam("localhost:9001/agency/msg"), appConfig)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
-
-  def buildMockConsumerCloudAgent(mockAgencyAdmin: MockAgencyAdmin): MockConsumerCloudAgent = {
-    val mcea = new MockConsumerCloudAgent(system, appConfig)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
-
-  def buildMockEntCloudAgent(mockAgencyAdmin: MockAgencyAdmin): MockEntCloudAgent = {
-    val mcea = new MockEntCloudAgent(system, appConfig)
-    mcea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    mcea
-  }
-
-  def buildMockEnterpriseEdgeAgent(mockAgencyAdmin: MockAgencyAdmin): MockEntEdgeAgent = {
-    val meea = new MockEntEdgeAgent(UrlParam("localhost:9002/agency/msg"), appConfig)
-    meea.agencyPublicDid = Option(mockAgencyAdmin.myDIDDetail.prepareAgencyIdentity)
-    meea
-  }
-
-  def getInviteUrl(edgeAgent: MockEntEdgeAgent): String = {
+  def getInviteUrl(edgeAgent: MockEdgeAgent): String = {
     edgeAgent.inviteUrl.split(":", 2).last.split("/", 2).last
   }
-
-  def emptyPackedMsgWrapper: PackedMsg = PackedMsg(Array[Byte]())
 
   def addAgencyEndpointToLedger(agencyDID: DID, endpoint: String): Unit = {
     platform.agentActorContext.ledgerSvc.addAttrib(null, agencyDID,
@@ -161,11 +80,58 @@ trait EndpointHandlerBaseSpec
     inviteDetail.copy(senderDetail = sd)
   }
 
-  def setupAgencyWithRemoteAgentAndAgencyIdentities(agencyMockEnv: MockCloudAgentBase, detail: RemoteAgentAndAgencyIdentity): Unit = {
-    agencyMockEnv.setupRemoteAgentAndAgencyIdentity(detail)
+  def emptyPackedMsgWrapper: PackedMsg = PackedMsg(Array[Byte]())
+  def responseTo[T: ClassTag]: T = DefaultMsgCodec.fromJson(responseAs[String])
+  lazy val util: UtilBase = TestUtil
+
+  override protected def createActorSystem(): ActorSystem = AkkaTestBasic.system()
+
+  def epRoutes: Route = endpointRoutes
+  def appConfig: AppConfig
+}
+
+trait EndpointHandlerBaseSpec
+  extends EdgeEndpointBaseSpec
+    with AgencySetupSpec
+    with RestrictedRestApiSpec
+    with AgentProvisioningSpec
+    with AgentConfigsSpec
+    with UpdateComMethodSpec
+    with ProvisionRelationshipSpec
+    with GetMsgsSpec
+    with WalletBackupAndRecoverySpec {
+
+  "Endpoint spec" - {
+
+    testSetAppStateAsListening()
+
+    testCheckAppStateIsListening()
+
+    testAgencySetup()
+
+    testAgentProvisioning(mockVerityEnv.getEnv("edge1"))
+
+    testUpdateComMethod(mockVerityEnv.getEnv("edge1"))
+
+    testGetMsgsByConnections(mockVerityEnv.getEnv("edge1"), 0)
+
+    //this should contain agent type (consumer/enterprise/verity etc) specific tests
+    testEdgeAgent()
+
+    testOpenRestApis()
+
+    testRestrictedRestApis()
   }
 
+  def testEdgeAgent(): Unit
+
+  implicit def msgPackagingContext: AgentMsgPackagingContext
+
 }
+
+case class RemoteAgentAndAgencyIdentity(agentDID: DID, agentVerKey: VerKey,
+                                        agencyDID: DID, agencyVerKey: VerKey)
+
 
 trait ApiClientSpecCommon {
   val connIda1 = "connIda1"
@@ -178,6 +144,3 @@ trait ApiClientSpecCommon {
 
   var inviteUrl: String = _
 }
-
-case class RemoteAgentAndAgencyIdentity(agentDID: DID, agentVerKey: VerKey,
-                                        agencyDID: DID, agencyVerKey: VerKey)

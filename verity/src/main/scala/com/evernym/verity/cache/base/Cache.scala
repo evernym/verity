@@ -37,6 +37,9 @@ trait CacheBase {
   //create cache provider object for given fetcher
   private def createCacheProvider(fetcher: CacheValueFetcher): CacheProvider = {
     //this is the only place where it knows about specific cache provider implementation
+    // we are not using Caffeine "Loading" cache as that will require little bit of more effort
+    // but we should keep doing some refactoring to move towards that direction
+
     val cacheParam =
       CaffeineCacheParam(
         fetcher.initialCapacity,

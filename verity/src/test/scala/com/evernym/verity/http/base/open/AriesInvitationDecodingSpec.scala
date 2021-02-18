@@ -6,11 +6,11 @@ import akka.http.scaladsl.model.ContentTypes.`application/json`
 import akka.http.scaladsl.model.RemoteAddress
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, OK}
 import akka.http.scaladsl.model.headers.{`Content-Type`, `X-Forwarded-For`}
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
-trait AriesInvitationDecodingSpec { this : EndpointHandlerBaseSpec =>
+trait AriesInvitationDecodingSpec { this : EdgeEndpointBaseSpec =>
 
   val invitationJsonStr = """{
                            |	"label": "Artem1",

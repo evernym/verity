@@ -1,4 +1,4 @@
-package com.evernym.verity.testkit.mock.edge_agent
+package com.evernym.verity.testkit.mock.agent
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}

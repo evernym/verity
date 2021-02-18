@@ -141,7 +141,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       case CREATE_MSG_TYPE_CONN_REQ_ANSWER | MSG_TYPE_ACCEPT_CONN_REQ |
            CREATE_MSG_TYPE_REDIRECT_CONN_REQ| MSG_TYPE_REDIRECT_CONN_REQ if msg.sendMsg =>
         //to send connection request answer asynchronously (to remote cloud agent)
-        List(SendMsgToRemoteCloudAgent(uid, agentMsgContext.msgPackFormat))
+        List(SendMsgToRemoteCloudAgent(uid, agentMsgContext.msgPackFormatToBeUsed))
 
       case CREATE_MSG_TYPE_CONN_REQ_ANSWER | MSG_TYPE_CONN_REQ_ACCEPTED |
            CREATE_MSG_TYPE_CONN_REQ_REDIRECTED | MSG_TYPE_CONN_REQ_REDIRECTED =>

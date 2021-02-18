@@ -13,20 +13,28 @@ import scala.util.{Success, Try}
 
 
 trait MockMsgSendingSvc extends MsgSendingSvc {
-  def totalAgentMsgsSent: Int
+  type JsonMsg = String
+  type GivenUrl = String
+  type ShortenedUrl = String
+
+  def totalBinaryMsgsSent: Int
   def totalRestAgentMsgsSent: Int
-  def lastAgentMsgOption: Option[Array[Byte]]
-  def lastAgentRestMsgOption: Option[String]
-  def mappedUrls: Map[String, String]
+
+  def lastBinaryMsgSent: Option[Array[Byte]]
+  def lastRestMsgSent: Option[JsonMsg]
+
+  def mappedUrls: Map[GivenUrl, ShortenedUrl]
 }
 
 object MockMsgSendingSvc extends MockMsgSendingSvc {
 
-  var totalAgentMsgsSent: Int = 0
+  var totalBinaryMsgsSent: Int = 0
   var totalRestAgentMsgsSent: Int = 0
-  var lastAgentMsgOption: Option[Array[Byte]] = None
-  var lastAgentRestMsgOption: Option[String] = None
-  var mappedUrls: Map[String, String] = Map()
+
+  var lastBinaryMsgSent: Option[Array[Byte]] = None
+  var lastRestMsgSent: Option[JsonMsg] = None
+
+  var mappedUrls: Map[GivenUrl, ShortenedUrl] = Map()
 
   case class MockUrlMapperMessage(url: String, hashedUrl: String)
 
@@ -41,13 +49,13 @@ object MockMsgSendingSvc extends MockMsgSendingSvc {
 
   def sendJsonMsg(payload: String)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     totalRestAgentMsgsSent = totalRestAgentMsgsSent + 1
-    lastAgentRestMsgOption = Option(payload)
+    lastRestMsgSent = Option(payload)
     Future(Right(payload))
   }
 
   def sendBinaryMsg(payload: Array[Byte])(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
-    totalAgentMsgsSent = totalAgentMsgsSent + 1
-    lastAgentMsgOption = Option(payload)
+    totalBinaryMsgsSent = totalBinaryMsgsSent + 1
+    lastBinaryMsgSent = Option(payload)
     Future(Right(PackedMsg(payload)))
   }
 }

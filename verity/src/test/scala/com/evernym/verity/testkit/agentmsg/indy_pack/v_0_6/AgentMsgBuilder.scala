@@ -17,11 +17,11 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
-import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentPackMsgUtil, ConnReq_MFV_0_6, Connect_MFV_0_6, CreateAgent_MFV_0_6, CreateConnection_MFV_0_6, CreateKey_MFV_0_6, GetMsgsByConns_MFV_0_6, IssuerSetupCreate_MFV_0_6, SendRemoteMsg_MFV_0_6, TestComMethod, UpdateComMethod_MFV_0_6, UpdateConnStatus_MFV_0_6}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.util.MsgIdProvider._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.json.JSONObject
 

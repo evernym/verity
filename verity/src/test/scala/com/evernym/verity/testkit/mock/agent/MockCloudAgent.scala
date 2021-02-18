@@ -1,14 +1,22 @@
-package com.evernym.verity.testkit.mock.cloud_agent
+package com.evernym.verity.testkit.mock.agent
 
+import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.base.RemoteAgentAndAgencyIdentity
 import com.evernym.verity.testkit.AgentWithMsgHelper
 
 /**
- * mock cloud agent base class (specific classes will extend this one)
+ * a mock cloud agent
+ * @param agencyEndpoint
+ * @param appConfig
+ * @param myDIDDetail
  */
-
-trait MockCloudAgentBase extends AgentWithMsgHelper {
+class MockCloudAgent(override val agencyEndpoint: UrlParam,
+                     override val appConfig: AppConfig,
+                     override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail())
+  extends AgentWithMsgHelper {
 
   override def initSpecific(): Unit = {}
   var remoteAgentAndAgencyIdentityOpt: Option[RemoteAgentAndAgencyIdentity] = None
@@ -18,5 +26,4 @@ trait MockCloudAgentBase extends AgentWithMsgHelper {
     walletAPI.executeSync[TheirKeyStored](StoreTheirKey(raaad.agencyDID, raaad.agencyVerKey, ignoreIfAlreadyExists=true))
     remoteAgentAndAgencyIdentityOpt = Option(raaad)
   }
-
 }

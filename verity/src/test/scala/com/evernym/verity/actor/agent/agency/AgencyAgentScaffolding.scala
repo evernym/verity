@@ -5,12 +5,12 @@ import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.{ActorErrorResp, UrlParam}
 import org.scalatest.concurrent.Eventually
 
@@ -22,14 +22,11 @@ trait AgencyAgentScaffolding
     with MockPushNotifListener
     with Eventually {
 
-  override lazy val mockAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
+  override lazy val mockAgencyAdmin: MockEdgeAgent =
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
-    platform.agentActorContext.appConfig, mockAgencyAdmin)
-
-  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockConsumerEdgeAgent(
-    platform.agentActorContext.appConfig, mockAgencyAdmin)
+  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
 
   protected def agencySetupSpecs(): Unit = {
     "when agency admin is interacting" - {

@@ -1,17 +1,14 @@
-package com.evernym.verity.testkit.mock
+package com.evernym.verity.testkit.mock.agent
 
-import com.evernym.verity.constants.Constants.DEFAULT_INVITE_RECEIVER_USER_NAME
 import com.evernym.verity.Status.MSG_STATUS_CREATED
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.constants.Constants.DEFAULT_INVITE_RECEIVER_USER_NAME
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail}
-import com.evernym.verity.testkit.mock.agent.MockAgent
-import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
-import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
-import com.evernym.verity.util.MsgIdProvider._
+import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.Util.logger
-import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.agent.DidPair
 
 trait HasCloudAgent { this: MockAgent =>
 
@@ -32,7 +29,7 @@ trait HasCloudAgent { this: MockAgent =>
 
   lazy val senderAgencyDetail: SenderAgencyDetail = SenderAgencyDetail(agencyPublicDid.get.DID, agencyPublicDid.get.verKey, agencyEndpoint.toString)
 
-  def setInviteData(connId: String, mockEdgeCloudAgent: MockCloudAgentBase): Unit = {
+  def setInviteData(connId: String, mockEdgeCloudAgent: MockCloudAgent): Unit = {
     val edgePcd = setPairwiseData(connId, mockEdgeCloudAgent)
     val keyDlgProof = buildAgentKeyDlgProofForConn(connId)
     val senderDetail = buildInviteSenderDetail(connId, Option(keyDlgProof))
@@ -40,7 +37,7 @@ trait HasCloudAgent { this: MockAgent =>
       senderDetail, MSG_STATUS_CREATED.statusCode, "msg-created", "1.0")
   }
 
-  private def setPairwiseData(connId: String, mockEdgeCloudAgent: MockCloudAgentBase): MockPairwiseConnDetail = {
+  private def setPairwiseData(connId: String, mockEdgeCloudAgent: MockCloudAgent): MockPairwiseConnDetail = {
     val edgePcd = addNewLocalPairwiseKey(connId)
     val edgeCloudPcd = mockEdgeCloudAgent.addNewLocalPairwiseKey(connId)
     edgeCloudPcd.setTheirPairwiseDidPair(edgePcd.myPairwiseDidPair.DID, edgePcd.myPairwiseDidPair.verKey)

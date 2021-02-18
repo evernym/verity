@@ -4,7 +4,7 @@ import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.AgentDIDDetail
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
-import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
+import com.evernym.verity.testkit.mock.agent.MockPairwiseConnDetail
 
 trait ApiClientCommon { this: AgentMsgSenderHttpWrapper =>
   val DIDInfo: AgentDIDDetail = generateNewAgentDIDDetail()

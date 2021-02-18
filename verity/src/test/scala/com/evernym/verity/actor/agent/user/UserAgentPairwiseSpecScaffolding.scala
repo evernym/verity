@@ -14,11 +14,9 @@ import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.push_notification.MockPusher
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.cloud_agent.MockEntCloudAgent
-import com.evernym.verity.testkit.mock.edge_agent.{MockEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
@@ -27,6 +25,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -40,17 +39,14 @@ trait UserAgentPairwiseSpecScaffolding
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
-  val mockEntAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlParam("localhost:9002"), platform.agentActorContext.appConfig)
+  val mockEntAgencyAdmin: MockEdgeAgent =
+    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig)
 
-  lazy val mockRemoteEdgeAgent: MockEntEdgeAgent =
-    buildMockEnterpriseEdgeAgent(platform.agentActorContext.appConfig, mockEntAgencyAdmin)
+  lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin)
 
-  lazy val mockRemoteEdgeCloudAgent: MockEntCloudAgent =
-    buildMockEntCloudAgent(platform.agentActorContext.appConfig, mockEntAgencyAdmin)
+  lazy val mockRemoteEdgeCloudAgent: MockCloudAgent = buildMockCloudAgent(mockEntAgencyAdmin)
 
-  lazy val mockEdgeAgent: MockEdgeAgent =
-    buildMockConsumerEdgeAgent(platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
 
   val testPushComMethod: String = s"${MockPusher.comMethodPrefix}:12345"
 

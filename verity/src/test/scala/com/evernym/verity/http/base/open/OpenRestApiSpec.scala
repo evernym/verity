@@ -1,15 +1,13 @@
 package com.evernym.verity.http.base.open
 
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 
 trait OpenRestApiSpec
-  extends AgencyIdentitySpec { this : EndpointHandlerBaseSpec =>
+  extends AgencyIdentitySpec { this : EdgeEndpointBaseSpec =>
 
   def testOpenRestApis(): Unit = {
 
     testAgencyIdentityAndDetails()
-
-    testAgentRestApiUsage()
 
     testAriesInvitationDecoding()
   }

@@ -9,21 +9,21 @@ import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.protocol.actor.agent.{CloudAgentDetail, WalletBackupSpecUtil}
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
 
-trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : EndpointHandlerBaseSpec =>
-
-  def mockEdgeAgent: MockEdgeAgent
+trait WalletBackupAndRecoverySpec { this : EndpointHandlerBaseSpec =>
 
   import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
 
   //NOTE: this test assumes that a valid test push notification com method (search for this val: validTestPushNotif)
   // is already added before this test runs.
-  def testWalletBackupAndRecovery(): Unit = {
+  def testWalletBackupAndRecovery(mockEdgeAgent: MockEdgeAgent, mockNewEdgeAgent: MockEdgeAgent): Unit = {
+
+    val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent)
 
     implicit val msgPackagingContext: AgentMsgPackagingContext =
       agentmsg.AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = true)
@@ -62,7 +62,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
     "when sent a GET_BACKUP without a previously performed recovery key registration" - {
       "should return a Unauthorized with 'unauthorized' status" in {
 
-        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(backupInitParams, mockEdgeAgent.cloudAgentDetailReq.verKey)
+        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(
+          walletBackupUtil.backupInitParams, mockEdgeAgent.cloudAgentDetailReq.verKey)
 
         buildAgentPostReq(wpm.msg) ~> epRoutes ~> check {
           status shouldBe Unauthorized
@@ -75,7 +76,7 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
       "should respond with WALLET_BACKUP_READY" in {
 
         val expected_type = "WALLET_BACKUP_READY"
-        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupInitMsgForAgency(backupInitParams)
+        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupInitMsgForAgency(walletBackupUtil.backupInitParams)
 
         val (r, lastPayload) = withExpectNewPushNotif(validTestPushNotifToken, {
           buildAgentPostReq(wpm.msg) ~> epRoutes ~> check {
@@ -95,7 +96,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
     "when sent a GET_BACKUP without previously storing one" - {
       "should return a BadRequest with a 'No Wallet Backup available to download' status" in {
 
-        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(backupInitParams, mockEdgeAgent.cloudAgentDetailReq.verKey)
+        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(
+          walletBackupUtil.backupInitParams, mockEdgeAgent.cloudAgentDetailReq.verKey)
 
         buildAgentPostReq(wpm.msg) ~> epRoutes ~> check {
           status shouldBe BadRequest
@@ -130,7 +132,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
     "when sent a GET_BACKUP with an existing edge agent" - {
       "should get the wallet we previously stored" in {
 
-        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(backupInitParams, mockEdgeAgent.cloudAgentDetailReq.verKey)
+        val wpm = mockEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(
+          walletBackupUtil.backupInitParams, mockEdgeAgent.cloudAgentDetailReq.verKey)
 
         buildAgentPostReq(wpm.msg) ~> epRoutes ~> check {
           status shouldBe OK
@@ -167,8 +170,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
         buildGetReq(s"/agency") ~> epRoutes ~> check {
           status shouldBe OK
           mockNewEdgeAgent.handleFetchAgencyKey(responseTo[AgencyPublicDid])
-          val nkc = mockNewEdgeAgent.addNewKey(Option(passphrase))
-          nkc.verKey shouldBe deadDropData.recoveryVerKey
+          val nkc = mockNewEdgeAgent.addNewKey(Option(walletBackupUtil.passphrase))
+          nkc.verKey shouldBe walletBackupUtil.deadDropData.recoveryVerKey
         }
       }
     }
@@ -176,18 +179,19 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
     "when restoring content from the dead-drop" - {
       "should get the right data" in {
 
-        val dpm = mockNewEdgeAgent.prepareGetPayloadMsgForAgency(deadDropData)
+        val dpm = mockNewEdgeAgent.prepareGetPayloadMsgForAgency(walletBackupUtil.deadDropData)
 
         buildAgentPostReq(dpm.msg) ~> epRoutes ~> check {
           status shouldBe OK
-          val ddlr = mockNewEdgeAgent.unpackDeadDropLookupResult(PackedMsg(responseAs[Array[Byte]]), backupInitParams.recoveryVk)
+          val ddlr = mockNewEdgeAgent.unpackDeadDropLookupResult(
+            PackedMsg(responseAs[Array[Byte]]), walletBackupUtil.backupInitParams.recoveryVk)
           ddlr.entry.isDefined shouldBe true
           val decoded = Base64Util.getBase64Decoded(ddlr.entry.get.data)
           val rca = new String(decoded)
-          rca shouldBe cloudAgentAddress
+          rca shouldBe walletBackupUtil.cloudAgentAddress
 
-          recoveredCloudAddress = convertTo[CloudAgentDetail](rca)
-          mockNewEdgeAgent.setCloudAgentDetail(recoveredCloudAddress.didPair)
+          walletBackupUtil.setRecoveredCloudAddress(convertTo[CloudAgentDetail](rca))
+          mockNewEdgeAgent.setCloudAgentDetail(walletBackupUtil.recoveredCloudAddress.didPair)
         }
       }
     }
@@ -195,7 +199,8 @@ trait WalletBackupAndRecoverySpec extends WalletBackupSpecUtil { this : Endpoint
     "when sent WALLET_BACKUP_RESTORE" - {
       "should respond with WALLET_BACKUP_RESTORED" in {
 
-        val wpm = mockNewEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(backupInitParams, recoveredCloudAddress.verKey)
+        val wpm = mockNewEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgency(
+          walletBackupUtil.backupInitParams, walletBackupUtil.recoveredCloudAddress.verKey)
 
         buildAgentPostReq(wpm.msg) ~> epRoutes ~> check {
           status shouldBe OK

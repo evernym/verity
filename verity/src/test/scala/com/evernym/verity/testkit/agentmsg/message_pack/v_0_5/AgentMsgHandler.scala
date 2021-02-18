@@ -5,8 +5,7 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV_0_5, GeneralMsgCreatedResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_5, ComMethodUpdated_MFV_0_5, ConfigsMsg_MFV_0_5, ConfigsRemoved_MFV_0_5, ConfigsUpdated_MFV_0_5, ConnStatusUpdated_MFV_0_5, Connected_MFV_0_5, InviteMsgDetail_MFV_0_5, KeyCreated_MFV_0_5, MsgCreated_MFV_0_5, MsgStatusUpdatedByConns_MFV_0_5, MsgStatusUpdated_MFV_0_5, MsgsByConns_MFV_0_5, MsgsSent_MFV_0_5, Msgs_MFV_0_5, SignedUp_MFV_0_5}
 import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.KeyParam

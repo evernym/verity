@@ -7,13 +7,13 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.apphealth.{AppStateDetailedResp, AppStateManager, CauseDetail, ListeningSuccessful, SuccessEventParam}
 import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.restricted.UpdateAppStatus
 import com.evernym.verity.{AppVersion, BuildInfo}
 import org.scalatest.time.{Seconds, Span}
 
 
-trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
+trait AppStatusHealthCheckSpec { this : EdgeEndpointBaseSpec =>
 
 
   def testSetAppStateAsListening(): Unit = {

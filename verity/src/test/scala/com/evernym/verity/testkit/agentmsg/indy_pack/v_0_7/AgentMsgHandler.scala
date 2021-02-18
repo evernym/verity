@@ -3,11 +3,10 @@ package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_7, CreateAgentProblemReport_MFV_0_7}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 /**
  * this will handle received/incoming/response agent messages

@@ -5,17 +5,17 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEnv
 
-trait UpdateComMethodSpec { this : EndpointHandlerBaseSpec =>
+trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>
 
-  def mockEdgeAgent: MockEdgeAgent
+  def testUpdateComMethod(mockEnv: MockEnv): Unit = {
+    val mockEdgeAgent = mockEnv.edgeAgent
 
-  def testUpdateComMethod(): Unit = {
     "when sent UPDATE_COM_METHOD msg with blank value" - {
       "should respond with error msg" in {
         buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(TestComMethod("1", COM_METHOD_TYPE_PUSH,
@@ -108,7 +108,8 @@ trait UpdateComMethodSpec { this : EndpointHandlerBaseSpec =>
 
     "when sent UPDATE_COM_METHOD msg (http) packed with multiple recipient keys" - {
       "should respond with success" taggedAs (UNSAFE_IgnoreLog) in {
-        val tp = ComMethodPackaging("1.0", Option(Set(mockEdgeAgent.myDIDDetail.verKey, mockConsumerEdgeAgent1.myDIDDetail.verKey)))
+        val tp = ComMethodPackaging("1.0", Option(Set(mockEdgeAgent.myDIDDetail.verKey,
+          mockEnv.cloudAgent.myDIDDetail.verKey)))
         val cm = TestComMethod("2", COM_METHOD_TYPE_HTTP_ENDPOINT, Option("http://example.com/123"), Option(tp))
         buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(cm).msg) ~> epRoutes ~> check {
           status shouldBe OK

@@ -165,9 +165,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
       createKeyReqMsg.didPair, pairwiseKeyResult.didPair, endpointDetail)
-    fut.map { _ =>
-      processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
-    }
+    val pm = processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
+    fut.map(_ => pm)
   }
 
   private def processCreateKeyAfterEndpointSetup(createKeyReqMsg: CreateKeyReqMsg, pairwiseKeyCreated: NewKeyCreated)
@@ -178,7 +177,11 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       Option(KeyParam(Left(pairwiseKeyCreated.verKey)))
     )
     val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
-    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormat, param))
+    if (agentMsgContext.msgPackFormat == MPF_PLAIN) {
+      keyCreatedRespMsg.foreach(m => ctx.signal(m))
+    }
+
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

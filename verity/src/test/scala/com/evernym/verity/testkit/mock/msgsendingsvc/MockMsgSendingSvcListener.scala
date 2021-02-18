@@ -17,14 +17,14 @@ trait MockMsgSendingSvcListener {
   lazy val testMsgSendingSvc: MockMsgSendingSvc =
     agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc]
 
-  def getTotalAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalAgentMsgsSent
+  def getTotalAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalBinaryMsgsSent
   def getTotalRestAgentMsgSentByCloudAgent: Int = testMsgSendingSvc.totalRestAgentMsgsSent
 
   def checkForNewMsg(currentMsgCount: Int): Option[PackedMsg] = {
     //this confirms that protocol does sent a message to registered endpoint
     eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
       getTotalAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
-      val lastMsgOpt = testMsgSendingSvc.lastAgentMsgOption
+      val lastMsgOpt = testMsgSendingSvc.lastBinaryMsgSent
       lastMsgOpt.isDefined shouldBe true
       lastMsgOpt.map(PackedMsg(_))
     }
@@ -34,7 +34,7 @@ trait MockMsgSendingSvcListener {
     //this confirms that protocol does sent a message to registered endpoint
     eventually (timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
       getTotalRestAgentMsgSentByCloudAgent shouldBe currentMsgCount + 1
-      val lastMsgOpt = testMsgSendingSvc.lastAgentRestMsgOption
+      val lastMsgOpt = testMsgSendingSvc.lastRestMsgSent
       lastMsgOpt.isDefined shouldBe true
       lastMsgOpt
     }

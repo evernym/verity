@@ -2,10 +2,9 @@ package com.evernym.integrationtests.e2e.env
 
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.testkit.agentmsg.{AgentMsgPackagingContext, AgentMsgSenderHttpWrapper, GeneralMsgCreatedResp_MFV_0_5}
-import com.evernym.verity.testkit.mock.edge_agent.{MockConsumerEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
-import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgent
+import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
 
 class AgencyAgentSetupHelper {
 
@@ -37,22 +36,22 @@ object Executor {
 
   class MockEnterpriseEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9002"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEntEdgeAgent(urlParam, appConfig)
+    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }
 
   class MockConsumerEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9001"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockConsumerEdgeAgent(urlParam, appConfig)
+    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }
 
   class MockVerityEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9003"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEntEdgeAgent(urlParam, appConfig)
+    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }
 
   class MockThirdPartyEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9004"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEntEdgeAgent(urlParam, appConfig)
+    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }
 
   def prepareVerity1Apps(): EdgeApps = {

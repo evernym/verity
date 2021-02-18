@@ -5,10 +5,10 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
 import com.evernym.verity.apphealth.state.{DegradedState, DrainingState}
 import com.evernym.verity.apphealth._
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import org.scalatest.time.{Seconds, Span}
 
-trait HeartbeatSpec { this : EndpointHandlerBaseSpec =>
+trait HeartbeatSpec { this : EdgeEndpointBaseSpec =>
 
   def testHeartbeat(): Unit = {
 

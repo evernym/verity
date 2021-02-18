@@ -4,7 +4,6 @@ import java.nio.file.Path
 
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.AdminClient
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
@@ -12,6 +11,7 @@ import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, Veri
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
 import com.evernym.verity.UrlParam
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
 import scala.concurrent.duration.Duration
 
@@ -23,7 +23,7 @@ class ApplicationAdminExt(val scenario: Scenario,
 
   override def urlParam: UrlParam = instance.endpoint
 
-  override val mockClientAgent = new MockAgencyAdmin(system, urlParam, appConfig)
+  override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
 
   val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario.testDir))
 
@@ -50,7 +50,7 @@ case class ScenarioAppEnvironment(scenario: Scenario, testEnv: IntegrationTestEn
     }.toMap
   }
 
-  def apply(appInstance: AppInstance) = applications(appInstance.instanceName)
+  def apply(appInstance: AppInstance): ApplicationAdminExt = applications(appInstance.instanceName)
 
   def forEachApplication(f: ApplicationAdminExt => Unit): Unit = {
     applications.values.foreach(f)

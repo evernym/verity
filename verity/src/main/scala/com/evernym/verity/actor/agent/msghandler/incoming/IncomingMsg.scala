@@ -26,7 +26,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
 
   def msgToBeProcessed: AgentMsgWrapper = givenMsg match {
     case amw: AgentMsgWrapper   => amw
-    case rmp: ProcessRestMsg    => AgentMessageWrapper(rmp.msg, MPF_PLAIN)
+    case rmp: ProcessRestMsg    => AgentMessageWrapper(rmp.msg, MPF_PLAIN, Option(rmp.restMsgContext.auth.verKey))
   }
 
   def msgPackFormat: Option[MsgPackFormat] = givenMsg match {

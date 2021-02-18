@@ -3,6 +3,7 @@ package com.evernym.verity.config
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._
+import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
@@ -211,6 +212,7 @@ object ConfigUtil {
                           confName: String,
                           entityTypeOpt: Option[String],
                           entityIdOpt: Option[String]): Option[Boolean] = {
+    val normalizedEntityTypeOpt = normalizedEntityTypeName(entityTypeOpt)
     val entityIdConfValue: Option[Boolean] =
       (entityTypeOpt, entityIdOpt) match {
         case (Some(entityType), Some(entityId)) =>
@@ -218,7 +220,7 @@ object ConfigUtil {
         case _ => None
       }
     val entityTypeConfValue: Option[Boolean] =
-      entityTypeOpt match {
+      normalizedEntityTypeOpt match {
         case Some(entityType) => safeGetAppConfigBooleanOption(s"$entityCategory.$entityType.$confName", appConfig)
         case _ => None
       }
@@ -241,6 +243,7 @@ object ConfigUtil {
                            confName: String,
                            entityTypeOpt: Option[String],
                            entityIdOpt: Option[String]): Option[String] = {
+    val normalizedEntityTypeOpt = normalizedEntityTypeName(entityTypeOpt)
     val entityIdConfValue: Option[String] =
       (entityTypeOpt, entityIdOpt) match {
         case (Some(entityType), Some(entityId)) =>
@@ -248,7 +251,7 @@ object ConfigUtil {
         case _ => None
       }
     val entityTypeConfValue: Option[String] =
-      entityTypeOpt match {
+      normalizedEntityTypeOpt match {
         case Some(entityType) => safeGetAppConfigStringOption(s"$entityCategory.$entityType.$confName", appConfig)
         case _ => None
       }
@@ -283,5 +286,21 @@ object ConfigUtil {
       .replace("[", "\"[\"")
         .replace("]", "\"]\"")
     s"""$updateKey"""
+  }
+
+  /**
+   * There are some legacy agent region actor names used for previously created actors
+   * but under the hood they use the same actor code and config.
+   * So this function normalized those legacy actor names to current ones
+   * and that way they will be able to use proper configuration for the entity type
+   * @param entityTypeOpt
+   * @return
+   */
+  def normalizedEntityTypeName(entityTypeOpt: Option[String]): Option[String] = entityTypeOpt match {
+    case Some("ConsumerAgent"|"EnterpriseAgent"|"VerityAgent")
+        => Some(USER_AGENT_REGION_ACTOR_NAME)
+    case Some("ConsumerAgentPairwise"|"EnterpriseAgentPairwise"|"VerityAgentPairwise")
+        => Some(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME)
+    case other => other
   }
 }

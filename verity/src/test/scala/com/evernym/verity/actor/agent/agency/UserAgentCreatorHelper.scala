@@ -8,11 +8,10 @@ import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairw
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.util.{Base64Util, TimeUtil}
 import com.evernym.verity.vault.KeyParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -141,9 +140,7 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
     Base64Util.getBase64Encoded(encrypted)
   }
 
-  def newEdgeAgent(appConfig: AppConfig=platform.agentActorContext.appConfig,
-                   admin: MockAgencyAdmin=mockAgencyAdmin): MockEdgeAgent =
-    buildMockConsumerEdgeAgent(appConfig, admin)
+  def newEdgeAgent(admin: MockEdgeAgent = mockAgencyAdmin): MockEdgeAgent = buildMockEdgeAgent(admin)
 
   def agencyAgentPairwiseSetup(edgeAgent: MockEdgeAgent): Unit = {
     var pairwiseDID: DID = null

@@ -2,8 +2,7 @@ package com.evernym.verity
 
 import ch.qos.logback.classic.Level
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 package object testkit {
 

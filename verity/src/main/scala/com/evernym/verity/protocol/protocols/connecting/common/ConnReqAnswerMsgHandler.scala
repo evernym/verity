@@ -174,7 +174,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     val param: PackMsgParam = AgentMsgPackagingUtil.buildPackMsgParam(
       encParamBasedOnMsgSender(agentMsgContext.senderVerKey),
       inviteAnsweredRespMsg ++ otherRespMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
-    buildAgentPackedMsg(agentMsgContext.msgPackFormat, param)
+    buildAgentPackedMsg(agentMsgContext.msgPackFormatToBeUsed, param)
   }
 
   private def updateParentStateAfterConnReqAnswerMsgHandled(): Unit = {

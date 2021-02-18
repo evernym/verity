@@ -29,9 +29,7 @@ import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6.{AgentMsgBuilder => A
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7.{AgentMsgBuilder => AgentMsgBuilder_v_0_7, AgentMsgHandler => AgentMsgHandler_v_0_7}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_1_0.{AgentMsgBuilder => AgentMsgBuilder_v_1_0, AgentMsgHandler => AgentMsgHandler_v_1_0}
 import com.evernym.verity.testkit.agentmsg.message_pack.v_0_5.{AgentMsgBuilder => AgentMsgBuilder_v_0_5, AgentMsgHandler => AgentMsgHandler_v_0_5}
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
-import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent, MockPairwiseConnDetail}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, _}
 import com.evernym.verity.util.MsgIdProvider

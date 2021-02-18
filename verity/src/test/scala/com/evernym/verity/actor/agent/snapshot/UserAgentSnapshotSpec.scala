@@ -7,13 +7,14 @@ import com.evernym.verity.actor.agent.SetupAgentEndpoint
 import com.evernym.verity.actor.agent.relationship.SelfRelationship
 import com.evernym.verity.actor.agent.user.UserAgentState
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.typesafe.config.{Config, ConfigFactory}
 
 class UserAgentSnapshotSpec
@@ -60,8 +61,7 @@ class UserAgentSnapshotSpec
     }
   }
 
-  lazy val mockEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
-    platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
 
   lazy val userDID = mockEdgeAgent.myDIDDetail
 

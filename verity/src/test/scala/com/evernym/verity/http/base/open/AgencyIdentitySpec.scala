@@ -2,10 +2,10 @@ package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 
-trait AgencyIdentitySpec { this : EndpointHandlerBaseSpec =>
+trait AgencyIdentitySpec { this : EdgeEndpointBaseSpec =>
 
   def testAgencyIdentityAndDetails(): Unit = {
 

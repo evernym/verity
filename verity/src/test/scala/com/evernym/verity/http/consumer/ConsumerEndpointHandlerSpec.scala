@@ -7,9 +7,7 @@ import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util._
@@ -24,48 +22,48 @@ class ConsumerEndpointHandlerSpec
     with UpdateConnectionStatusSpec
     with UrlMappingSpec {
 
+
   override def testEdgeAgent(): Unit = {
     "Consumer edge 1 (MFV 0.5)" - {
-      testAnswerFirstInvitation()
+      testAnswerFirstInvitation(mockEntEdgeEnv)
     }
 
     "Consumer cloud agent (for edge 1)" - {
-      testReceivedCredOffer()
+      testReceivedCredOffer(mockEntEdgeEnv)
     }
 
     "Consumer edge 1 (MFV 0.5)" - {
-      testSendCredRequest()
+      testSendCredRequest(mockEntEdgeEnv)
     }
 
     "Consumer cloud agent (for edge 1)" - {
-      testReceivedCred()
+      testReceivedCred(mockEntEdgeEnv)
     }
 
     "Consumer edge 1 (MFV 0.5)" - {
-      testAnswerSecondInvitation()
+      testAnswerSecondInvitation(mockEntEdgeEnv)
     }
 
     "Consumer edge 1 (MFV 0.5)" - {
-      testUpdateConnectionStatus()
-      testAcceptPreviousInvite()
+      testUpdateConnectionStatus(mockEntEdgeEnv)
+      testAcceptPreviousInvite(mockEntEdgeEnv)
 
       testUrlMapping()
-      testWalletBackupAndRecovery()
+      testWalletBackupAndRecovery(mockEntEdgeEnv.edgeAgent, mockNewEdgeAgent)
     }
   }
 
   override lazy val agentActorContext: AgentActorContext = platform.agentActorContext
-  override lazy val mockAgencyAdmin: MockAgencyAdmin = mockConsumerAgencyAdmin
-  override lazy val mockEdgeAgent: MockEdgeAgent = mockConsumerEdgeAgent1
-  override lazy val mockNewEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(mockConsumerAgencyAdmin)
-  override lazy val mockOthersCloudAgent: MockCloudAgentBase = mockEntCloudAgent
+  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockEntEdgeEnv.agencyEdgeAgent)
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
 
   lazy val actualLongUrl = "http://actual.long.url/invite?t=394i4i3"
   lazy val shortenedUrl: String = HashUtil.hash(SHA256_trunc4)(actualLongUrl).hex
 
-  def setInviteData(connId: String, mockEdgeAgent: MockEdgeAgent, mockEdgeCloudAgent: MockCloudAgentBase): Unit = {
+  def setInviteData(mockEdgeAgent: MockEdgeAgent,
+                    mockEdgeCloudAgent: MockCloudAgent,
+                    connId: String): Unit = {
     "setup invite data in others edge and cloud agent" in {
       mockEdgeAgent.setInviteData(connId, mockEdgeCloudAgent)
       val pcd = mockEdgeAgent.pairwiseConnDetail(connId)

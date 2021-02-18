@@ -88,10 +88,10 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
     val result = tagString
       .trim
       .split("\",")
-      .map { token =>
-        val splitted = token.split("=", 2)
-        splitted(0).trim -> splitted(1).trim.replace("\"", "")
-      }.toMap
+      .map( token => token.split("=", 2))
+      .map( splitted =>
+        splitted.head.trim -> splitted.tail.lastOption.getOrElse("n/a").trim.replace("\"", ""))
+      .toMap
     result
   }
 

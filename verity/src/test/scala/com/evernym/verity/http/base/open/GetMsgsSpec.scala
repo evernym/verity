@@ -8,20 +8,22 @@ import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, HasMsgStore}
 import com.evernym.verity.protocol.engine.Constants.MFV_1_0
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.MsgsByConns_MFV_0_6
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{MockEdgeAgent, MockEnv}
 import org.scalatest.time.{Seconds, Span}
 
 trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
-
-  def mockEdgeAgent: MockEdgeAgent
 
   type ConnId = String
   /**
    * this tests that there is no messages returned from GET_MSG_BY_CONNS api
    */
-  def testGetMsgsByConnections(totalConns: Int, emc: Map[ConnId, ExpectedMsgCriteria]=Map.empty): Unit = {
+  def testGetMsgsByConnections(mockEnv: MockEnv,
+                               totalConns: Int,
+                               emc: Map[ConnId, ExpectedMsgCriteria]=Map.empty): Unit = {
+
+    val mockEdgeAgent = mockEnv.edgeAgent
 
     s"when sent GET_MSGS_BY_CONNS 0.5 when there is no msgs ($totalConns:${emc.values.map(_.totalMsgs.toString)})" - {
       "should respond with MSGS_BY_CONNS" in {
@@ -30,7 +32,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
           val gm = mockEdgeAgent.v_0_5_resp.handleGetMsgsFromConnsResp(PackedMsg(responseAs[Array[Byte]]))
           gm.msgsByConns.size shouldBe totalConns
           emc.foreach { emc =>
-            val ams = gm.msgsByConns.find(_.pairwiseDID == pairwiseIdForConn(emc._1)).get
+            val ams = gm.msgsByConns.find(_.pairwiseDID == pairwiseIdForConn(mockEdgeAgent, emc._1)).get
             addToMsgStore(emc._1, ams.msgs)
             emc._2.totalMsgs.forall(_ == ams.msgs.size) shouldBe true
             checkMsgs(ams.msgs, emc._2.expectedMsgs)
@@ -47,7 +49,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
           val gm = mockEdgeAgent.v_0_6_resp.handleGetMsgsByConnsResp(PackedMsg(responseAs[Array[Byte]]))
           gm.msgsByConns.size shouldBe emc.size
           emc.foreach { emc =>
-            val ams = gm.msgsByConns.find(_.pairwiseDID == pairwiseIdForConn(emc._1)).get
+            val ams = gm.msgsByConns.find(_.pairwiseDID == pairwiseIdForConn(mockEdgeAgent, emc._1)).get
             addToMsgStore(emc._1, ams.msgs)
             emc._2.totalMsgs.forall(_ == ams.msgs.size) shouldBe true
             checkMsgs(ams.msgs, emc._2.expectedMsgs)
@@ -65,7 +67,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
           val gm: MsgsByConns_MFV_0_6 = mockEdgeAgent.v_0_6_resp.handleGetMsgsByConnsResp(PackedMsg(responseAs[Array[Byte]]))
           gm.msgsByConns.size shouldBe emc.size
           emc.foreach { emc =>
-            val ams = gm.msgsByConns.find(_.pairwiseDID == pairwiseIdForConn(emc._1)).get
+            val ams = gm.msgsByConns.find(_.pairwiseDID == pairwiseIdForConn(mockEdgeAgent, emc._1)).get
             ams.msgs.isEmpty shouldBe true
           }
         }
@@ -78,7 +80,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
    * @param connId connection id
    * @param emc expected message criteria
    */
-  def testGetMsgsFromConnection(connId: String, emc: ExpectedMsgCriteria): Unit = {
+  def testGetMsgsFromConnection(mockEdgeAgent: MockEdgeAgent, connId: String, emc: ExpectedMsgCriteria): Unit = {
     s"when sent GET_MSGS when there are ${emc.hint(connId)}" - {
       "should respond with MSGS with empty msg list" taggedAs UNSAFE_IgnoreLog in {
         eventually (timeout(Span(10, Seconds)), interval(Span(9, Seconds))){
@@ -100,7 +102,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
     } shouldBe true
   }
 
-  private def pairwiseIdForConn(connId: String): String =
+  private def pairwiseIdForConn(mockEdgeAgent: MockEdgeAgent, connId: String): String =
     mockEdgeAgent.pairwiseConnDetails(connId).myPairwiseDidPair.DID
 
 }

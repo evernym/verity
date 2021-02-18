@@ -1,5 +1,6 @@
 package com.evernym.verity.http.rest.base
 
+import java.time.LocalDateTime
 import java.util.UUID
 
 import akka.http.scaladsl.model.ContentTypes._
@@ -7,7 +8,7 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.util.ByteString
-import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.wallet.{PackedMsg, SignMsg}
 import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitationDecodingSpec, ProvisionRelationshipSpec, UpdateComMethodSpec}
@@ -21,6 +22,8 @@ import com.evernym.verity.testkit.mock.agent.MockEnv
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
+
+import scala.reflect.ClassTag
 
 trait RestApiBaseSpec
   extends BasicSpecWithIndyCleanup
@@ -118,8 +121,10 @@ trait RestApiBaseSpec
     val regSD = regInvite.getJSONObject("senderDetail")
     val abrSD = abrInvite.getJSONObject("s")
 
-    regSD.getString("DID") shouldBe abrSD.getString("d")
-    regSD.getString("verKey") shouldBe abrSD.getString("v")
+    val senderDID = regSD.getString("DID")
+    senderDID shouldBe abrSD.getString("d")
+    val senderDIDVerKey = regSD.getString("verKey")
+    senderDIDVerKey shouldBe abrSD.getString("v")
     regSD.getString("name") shouldBe abrSD.getString("n")
     regSD.getString("logoUrl") shouldBe abrSD.getString("l")
 
@@ -132,6 +137,7 @@ trait RestApiBaseSpec
     regDP.getString("signature") shouldBe abrDP.getString("s")
 
     mockRestEnv.mockEnv.edgeAgent.add(INVITE_JSON_OBJECT, regInvite)
+    mockRestEnv.mockEnv.edgeAgent.addNewLocalPairwiseKey(connId, DidPair(senderDID, senderDIDVerKey), storeKey = true)
   }
 
   def createKeyRequest(mockRestEnv: MockRestEnv, connId: String): Unit = {
@@ -236,11 +242,40 @@ trait RestApiBaseSpec
     }
   }
 
+  def sendBasicMessage(mockRestEnv: MockRestEnv, connId: String, threadId: String): Unit = {
+    val jsonObject = new JSONObject()
+    jsonObject.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
+    jsonObject.put("content", s"basic message")
+    jsonObject.put("sent_time", LocalDateTime.now().toString)
+    jsonObject.put("~for_relationship", s"${mockRestEnv.connRelRoutingDID(connId)}")
+
+    val payload = ByteString(jsonObject.toString())
+    buildPostReq(s"/api/${mockRestEnv.myDID}/basicmessage/1.0/$threadId",
+      HttpEntity.Strict(ContentTypes.`application/json`, payload),
+      Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
+    ) ~> epRoutes ~> check {
+      status shouldBe Accepted
+    }
+  }
+
   //this is mostly use where one agency sent a packed message to another agency
   def processReceivedPackedMsg(payload: PackedMsg): Unit = {
     buildAgentPostReq(payload.msg) ~> epRoutes ~> check {
       status shouldBe OK
     }
+  }
+
+  //this is mostly use where one agency sent a packed message to another agency
+  def processLastReceivedPackedMsg[T: ClassTag](mockRestEnv: MockRestEnv, connId: String): T = {
+    val (_, lastPayload) = withExpectNewMsgAtRegisteredEndpoint({
+      testMsgSendingSvc.lastBinaryMsgSent.foreach { pm =>
+        buildAgentPostReq(pm) ~> epRoutes ~> check {
+          status shouldBe OK
+        }
+      }
+    })
+    lastPayload.isDefined shouldBe true
+    mockRestEnv.mockEnv.edgeAgent.unpackAgentMsgFromConn[T](lastPayload.get.msg, connId)
   }
 }
 

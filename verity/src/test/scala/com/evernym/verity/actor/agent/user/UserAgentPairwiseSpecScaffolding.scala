@@ -207,7 +207,7 @@ trait UserAgentPairwiseSpecScaffolding
   def checkMsgsSentToEdgeAgentIfReq(check: Boolean, oldMsgsSentCount: Int): Unit = {
     if (check) {
       eventually(timeout(Span(5, Seconds))) {
-        getTotalAgentMsgSentByCloudAgent shouldBe oldMsgsSentCount + 1
+        totalBinaryMsgSent shouldBe oldMsgsSentCount + 1
       }
     }
   }
@@ -241,7 +241,7 @@ trait UserAgentPairwiseSpecScaffolding
     s"when received CREATE_MSG ($msgType) msg [$hint]" - {
       "should respond with MSG_CREATED msg" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
         eventually {
-          val currentMsgsSent = getTotalAgentMsgSentByCloudAgent
+          val currentMsgsSent = totalBinaryMsgSent
           val oldPushMsgCount = MockPusher.pushedMsg.size
           val coreMsg = buildCoreCreateGeneralMsg(includeSendMsg = true, msgType,
             PackedMsg("msg-data".getBytes), None, None)(mockRemoteEdgeCloudAgent.encryptParamForOthersPairwiseKey(connId))

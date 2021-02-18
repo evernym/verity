@@ -1,10 +1,9 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
-import com.evernym.verity.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor => Attachment}
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming, Localization => l10n}
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 
 object BasicMessageMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"

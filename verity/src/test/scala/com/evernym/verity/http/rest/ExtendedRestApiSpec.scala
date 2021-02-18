@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.util.ByteString
 import com.evernym.verity.http.rest.base.RestApiBaseSpec
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 
 /**
  * Purpose of this spec is to be able to establish connection between two users (mostly an enterprise and a consumer)
@@ -24,12 +25,12 @@ class ExtendedRestApiSpec
 
     "agent setup for edge1" - {
       testAgentProvisioning(mockEntEdgeEnv)
-      testUpdateComMethod(mockEntEdgeEnv)
+      testValidUpdateComMethod(mockEntEdgeEnv)
     }
 
     "agent setup for edge2" - {
       testAgentProvisioning(mockUserEdgeEnv)
-      testUpdateComMethod(mockUserEdgeEnv)
+      testValidUpdateComMethod(mockUserEdgeEnv)
     }
   }
 
@@ -75,6 +76,20 @@ class ExtendedRestApiSpec
     "tried to send malicious cred offer" - {
       "should respond with appropriate error" in {
         sendMaliciousCredOffer(mockEntRestEnv)
+      }
+    }
+  }
+
+  "when enterprise user" - {
+    "tried to send basic message" - {
+      "should be successful" in {
+        sendBasicMessage(mockEntRestEnv, connId1, UUID.randomUUID().toString)
+      }
+    }
+
+    "consumer user" - {
+      "should receive the sent message" in {
+        val basicMessage = processLastReceivedPackedMsg[Message](mockUserRestEnv, connId1)
       }
     }
   }

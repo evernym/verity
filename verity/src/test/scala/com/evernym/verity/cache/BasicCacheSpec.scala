@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, DEFAULT_MAX_CACHE_SIZE, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, KeyValueMapperFetcher}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.testkit.{BasicAsyncSpec, CancelGloballyAfterFailure}
@@ -16,10 +16,9 @@ import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
 
 
-class CacheSpec
+class BasicCacheSpec
   extends PersistentActorSpec
     with BasicAsyncSpec
     with CancelGloballyAfterFailure
@@ -120,22 +119,6 @@ class CacheSpec
         cache.allCacheSize shouldBe 2
         cache.allCacheMissCount shouldBe 7
         cache.allCacheHitCount shouldBe 2
-      }
-    }
-  }
-
-  "when kept adding different values to the cache" - {
-    "should respect the maximum cache size" in {
-      val newEntries = 15
-      (1 to newEntries).foreach(i => addKeyValueMapping(AddMapping(i.toString, s"$i")))
-
-      (1 to newEntries).foreach { i =>
-        val fut = getFromCache(cache, Set(KeyDetail(i, required = true)))
-        val cqr = Await.result(fut, 2.second)
-        cqr shouldBe CacheQueryResponse(Map(s"$i" -> s"$i"))
-      }
-      Future {
-        cache.allCacheSize <= keyValueFetcher.maxSize.getOrElse(DEFAULT_MAX_CACHE_SIZE) shouldBe true
       }
     }
   }

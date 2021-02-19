@@ -65,7 +65,7 @@ class ExtendedRestApiSpec
   }
 
   "when enterprise user" - {
-    "tried to send message with invalid for relationship" - {
+    "tried to send message with invalid '~for_relationship'" - {
       "should respond with appropriate error" in {
         sendMsgWithLargeMsgForRel(mockEntRestEnv)
       }

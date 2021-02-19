@@ -268,28 +268,44 @@ class BasicRestApiSpec
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe BadRequest
+        responseTo[RestErrorResponse] shouldBe RestErrorResponse("GNR-101", "Invalid payload")
       }
     }
   }
 
   "when sent connecting 0.6 CREATE_CONNECTION request with malicious payload 2" - {
-    "should respond with not found error" in {
+    "should respond with bad request" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/connecting/0.6",
         HttpEntity.Strict(ContentTypes.`application/json`, ByteString("")),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe BadRequest
+        responseTo[RestErrorResponse] shouldBe RestErrorResponse("GNR-101", "Invalid payload")
       }
     }
   }
 
   "when sent connecting 0.6 CREATE_CONNECTION request with malicious payload 3" - {
-    "should respond with not found error" in {
+    "should respond with bad request" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/connecting/0.6",
         HttpEntity.Strict(ContentTypes.`application/json`, ByteString("""{"test"}""")),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe BadRequest
+        responseTo[RestErrorResponse] shouldBe RestErrorResponse("GNR-101", "Invalid payload")
+      }
+    }
+  }
+
+  "when sent connecting 0.6 CREATE_CONNECTION request with malicious payload 4" - {
+    "should respond with bad request" in {
+      val payload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/connecting/0.6/CREATE_CONNECTION","@id":"${UUID.randomUUID.toString}","includePublicDID": false}""")
+      buildPostReq(s"/api/${mockEntRestEnv.myDID}/connecting/0.6",
+        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
+      ) ~> epRoutes ~> check {
+        status shouldBe BadRequest
+        responseTo[RestErrorResponse] shouldBe RestErrorResponse("GNR-117", "required attribute not found (missing/empty/null): 'sourceId'")
       }
     }
   }

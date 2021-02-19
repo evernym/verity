@@ -87,7 +87,7 @@ trait RestApiBaseSpec
 
   def createConnectionRequest(mockRestEnv: MockRestEnv, connId: String, payload: ByteString): Unit = {
     val (_, lastPayload) = withExpectNewRestMsgAtRegisteredEndpoint({
-      buildPostReq(s"/api/${mockRestEnv.myDID}/connecting/0.6/",
+      buildPostReq(s"/api/${mockRestEnv.myDID}/connecting/0.6/1?1%20and%203614%3d3623=1",
         HttpEntity.Strict(ContentTypes.`application/json`, payload),
         Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
@@ -205,11 +205,13 @@ trait RestApiBaseSpec
   }
 
   def sendMsgWithLargeMsgForRel(mockRestEnv: MockRestEnv): Unit = {
-    val largeForRelString = (1 to 100).foldLeft("")((prev, _) => prev + UUID.randomUUID().toString)
+    val largeInvalidForRelString = (1 to 100).foldLeft(""){ (prev, _) =>
+      prev + "~?<>!@#$%^&*(,)_+=:;}{'][." + UUID.randomUUID().toString
+    }
     val jsonObject = new JSONObject()
     jsonObject.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/ask-question")
     jsonObject.put("@id", s"${UUID.randomUUID.toString}")
-    jsonObject.put("~for_relationship", s"$largeForRelString")
+    jsonObject.put("~for_relationship", s"$largeInvalidForRelString")
 
     val payload = ByteString(jsonObject.toString())
     buildPostReq(s"/api/${mockRestEnv.myDID}/committedanswer/1.0/${UUID.randomUUID().toString}",

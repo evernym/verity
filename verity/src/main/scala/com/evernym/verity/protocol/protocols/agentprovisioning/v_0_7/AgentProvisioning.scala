@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
@@ -11,14 +12,18 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{CloudWaitingOnSponsor, EdgeCreationWaitingOnSponsor, FailedAgentCreation, Initialized, Provisioning, RequestedToProvision, Uninitialized, AgentCreated => AgentCreatedState}
 import com.evernym.verity.util.TimeUtil._
 import com.evernym.verity.util.Base64Util.getBase64Decoded
+import com.evernym.verity.vault.service.AsyncToSync
 
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 trait AgentProvisionEvt
 
 class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg, Any, AgentProvisioningState, String])
-  extends Protocol[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String](AgentProvisioningDefinition) {
+  extends Protocol[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String](AgentProvisioningDefinition)
+    with AsyncToSync {
 
   override def handleProtoMsg: (AgentProvisioningState, Option[Role], Msg) ?=> Any = {
     case (Initialized(_) | FailedAgentCreation(_), _,                m: CreateCloudAgent)   =>
@@ -56,8 +61,7 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
       ctx.send(c.asCreateAgent())
 
     case (s: AwaitsSponsor, Some(Provisioner), GiveSponsorDetails(d, cacheUsedTokens, window)) =>
-      if(hasValidSponsor(d, ProvisionToken(s.token.get), cacheUsedTokens, window))
-        askForProvisioning(provisioningSignal(s))
+      askForProvisioningIfValidSponsor(d, ProvisionToken(s.token.get), cacheUsedTokens, window, provisioningSignal(s))
 
     case (s: AwaitsSponsor, Some(Provisioner), NoSponsorNeeded())                       =>
       askForProvisioning(provisioningSignal(s))
@@ -151,18 +155,18 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     })
   }
 
-  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKey): Boolean = {
+  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKey)(handler: Try[Boolean] => Unit): Unit = {
     val msg = (token.nonce + token.timestamp + token.sponseeId + token.sponsorId).getBytes
-    ctx.wallet.verify(msg, getBase64Decoded(token.sig), sponsorVk, SIGN_ED25519_SHA512_SINGLE)
-      .recover {
-        case ex => ctx.logger.error(s"${InvalidSignature.err} - ${ex.getMessage}"); false
-      }.getOrElse(false)
+    ctx.wallet.verify(msg, getBase64Decoded(token.sig), sponsorVk, SIGN_ED25519_SHA512_SINGLE){handler(_)}
   }
 
-  private def hasValidSponsor(sponsorDetailsOpt: Option[SponsorDetails],
-                              token: ProvisionToken,
-                              cacheUsedTokens: Boolean,
-                              window: Duration): Boolean = {
+
+  private def askForProvisioningIfValidSponsor(sponsorDetailsOpt: Option[SponsorDetails],
+                                               token: ProvisionToken,
+                                               cacheUsedTokens: Boolean,
+                                               window: Duration,
+                                               sig: Signal
+                                              ): Unit = {
     try {
       val sponsorDetails = sponsorDetailsOpt.getOrElse(throw NoSponsor)
 
@@ -172,20 +176,23 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
 
       val sponsorVerKey = sponsorDetails.keys.find(_.verKey.equals(token.sponsorVerKey)).getOrElse(throw InvalidSponsorVerKey)
 
-      if(!isValidSignature(token, sponsorVerKey.verKey)) throw InvalidSignature
+      isValidSignature(token, sponsorVerKey.verKey) {
+        case Success(value) if value =>
+          if (cacheUsedTokens) {
+            if (ctx.getInFlight.segmentAs[AskedForProvisioning].isDefined) {
+              problemReport(DuplicateProvisionedApp)
+              return
+            } else
+              ctx.storeSegment(token.sig, AskedForProvisioning())
+          }
 
-      if (cacheUsedTokens) {
-        if (ctx.getInFlight.segmentAs[AskedForProvisioning].isDefined)
-          throw DuplicateProvisionedApp
-        else
-          ctx.storeSegment(token.sig, AskedForProvisioning())
+          ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))
+          askForProvisioning(sig)
+        case _ => problemReport(InvalidSignature)
       }
-
-      ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))
-      true
     } catch {
-      case e: ProvisioningException => problemReport(e.err, Option(e.err)); false
-      case NonFatal(e) => problemReport(e.getMessage); false
+      case e: ProvisioningException => problemReport(e.err, Option(e.err))
+      case NonFatal(e) => problemReport(e.getMessage)
     }
   }
 
@@ -225,6 +232,10 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     ctx.logger.info(logErr)
     ctx.apply(ProvisionFailed(logErr))
     ctx.send(ProblemReport(optMsg.getOrElse(DefaultProblem.err)))
+  }
+
+  def problemReport(ex: ProvisioningException): Unit = {
+    problemReport(ex.err, Option(ex.err))
   }
 
   def _isRequester(setter: SetRoster): Boolean = setter.requesterIdx == _selfIdx

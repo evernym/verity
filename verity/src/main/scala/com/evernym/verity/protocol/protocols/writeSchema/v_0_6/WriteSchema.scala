@@ -48,28 +48,29 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
     try {
       val submitterDID = _submitterDID(init)
-      val (schemaId, schemaJson) = ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)).get
-
-      ctx.ledger.writeSchema(submitterDID, schemaJson) match {
-        case Success(_) =>
-          ctx.apply(SchemaWritten(schemaId))
-          ctx.signal(StatusReport(schemaId))
-        case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
-          ctx.logger.warn(e.toString)
-          val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
-          if (endorserDID.nonEmpty) {
-            ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID) match {
-              case Success(ledgerRequest) =>
-                ctx.signal(NeedsEndorsement(schemaId, ledgerRequest.req))
-                ctx.apply(AskedForEndorsement(schemaId, ledgerRequest.req))
-              case Failure(e) => problemReport(e)
-            }
-          } else {
-            problemReport(new Exception("No default endorser defined"))
+      ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
+        case Success((schemaId, schemaJson)) =>
+          ctx.ledger.writeSchema(submitterDID, schemaJson) match {
+            case Success(_) =>
+              ctx.apply(SchemaWritten(schemaId))
+              ctx.signal(StatusReport(schemaId))
+            case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
+              ctx.logger.warn(e.toString)
+              val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+              if (endorserDID.nonEmpty) {
+                ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID) match {
+                  case Success(ledgerRequest) =>
+                    ctx.signal(NeedsEndorsement(schemaId, ledgerRequest.req))
+                    ctx.apply(AskedForEndorsement(schemaId, ledgerRequest.req))
+                  case Failure(e) => problemReport(e)
+                }
+              } else {
+                problemReport(new Exception("No default endorser defined"))
+              }
+            case Failure(e) => problemReport(e)
           }
         case Failure(e) => problemReport(e)
       }
-
     } catch {
       case e: Exception => problemReport(e)
     }

@@ -41,7 +41,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Uninitialized(), _, InitMsg(id)) => ctx.apply(RosterInitialized(id))
     case (State.Initialized(), _, Create()) =>
       ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
-      ctx.wallet.newDid() match {
+      ctx.wallet.newDid() {
         case Success((did, verkey)) =>
           ctx.apply(CreatePublicIdentifierCompleted(did, verkey))
           ctx.signal(PublicIdentifierCreated(PublicIdentifier(did, verkey)))

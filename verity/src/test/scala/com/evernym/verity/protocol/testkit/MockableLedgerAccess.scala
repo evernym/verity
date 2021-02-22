@@ -34,7 +34,9 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     new WalletAccessAPI(
       testWallet.appConfig,
       testWallet.walletAPI,
-      testWallet.agentWalletIdReq
+      testWallet.agentWalletIdReq,
+      {},
+      {}
     )
   )
 

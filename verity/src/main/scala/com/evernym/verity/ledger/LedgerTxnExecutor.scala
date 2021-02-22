@@ -37,7 +37,7 @@ trait LedgerTxnExecutor {
   def prepareSchemaForEndorsement(submitterDID: DID,
                                   schemaJson: String,
                                   endorserDID: DID,
-                                  walletAccess: WalletAccess): LedgerRequest
+                                  walletAccess: WalletAccess): Future[LedgerRequest]
 
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
@@ -46,7 +46,7 @@ trait LedgerTxnExecutor {
   def prepareCredDefForEndorsement(submitterDID: DID,
                                    credDefJson: String,
                                    endorserDID: DID,
-                                   walletAccess: WalletAccess): LedgerRequest
+                                   walletAccess: WalletAccess): Future[LedgerRequest]
 
   def getCredDef(submitter: Submitter, credDefId: String):
   Future[Either[StatusDetail, GetCredDefResp]]

@@ -5,9 +5,9 @@ package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 // community to change it.
 
 import java.util.{Base64, UUID}
-
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Base64Encoded
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
@@ -222,13 +222,13 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
       s.question.valid_responses.exists(_.text == m.response)
     }
 
-    val validSignature:Boolean = if (s.question.signature_required) {
+    if (s.question.signature_required) {
       m.`response~sig` match {
         case Some(x) =>
           val checkData = buildSignableHash(s.question.question_text, m.response, s.question.nonce)
           val receivedSigData = getBase64MultiDecoded(x.sig_data)
           if (!(receivedSigData sameElements checkData.bytes)) {
-            false
+            answerValidated(m.response, validResponse, validSignature = false, notExpired)
           }
           else {
             ctx.wallet.verify(
@@ -236,20 +236,25 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
               receivedSigData,
               getBase64MultiDecoded(x.signature),
               x.signers.headOption
-            ).recover {
-              case ex =>
+            ) {
+              case Success(validSignature) =>
+                answerValidated(m.response, validResponse, validSignature, notExpired)
+              case Failure(ex) =>
                 ctx.logger.warn(s"Unable to verify signature - ${ex.getMessage}")
-                false
-            }.get
+                answerValidated(m.response, validResponse, validSignature = false, notExpired)
+            }
           }
-        case None => false
+        case None =>
+          answerValidated(m.response, validResponse, validSignature = false, notExpired)
       }
     } else {
-      true
+      answerValidated(m.response, validResponse, validSignature = true, notExpired)
     }
+  }
 
+  def answerValidated(answer: String, validResponse: Boolean, validSignature: Boolean, notExpired: Boolean): Unit = {
     ctx.apply(Validity(validResponse, validSignature, notExpired))
-    ctx.signal(Signal.AnswerGiven(m.response, validResponse, validSignature, notExpired))
+    ctx.signal(Signal.AnswerGiven(answer, validResponse, validSignature, notExpired))
   }
 
   // Control Message Handlers
@@ -289,7 +294,7 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
   def answer(m: Ctl.AnswerQuestion): Unit = {
     ctx.getState match {
       case state: State.QuestionReceived =>
-        buildAnswer(m.response, state, ctx.wallet) match {
+        buildAnswer(m.response, state, ctx.wallet) {
           case Success(answer) =>
             ctx.apply(answerToEvt(answer))
             ctx.send(answer, Some(Questioner), Some(Responder))
@@ -377,22 +382,26 @@ object QuestionAnswerProtocol {
     )
   }
 
-  def buildAnswer(response: Option[String], state: State.QuestionReceived, wallet: WalletAccess): Try[Msg.Answer] = {
+  def buildAnswer(response: Option[String], state: State.QuestionReceived, wallet: WalletAccess)
+                 (handler: Try[Msg.Answer] => Unit): Unit = {
     response match {
       case None => ??? // Handle no answer case
       case Some(resp) if !state.question.signature_required =>
-        Try(Msg.Answer(resp, None, None))
+        handler(Success(Msg.Answer(resp, None, None)))
       case Some(resp) => // Sig required
         val signable = buildSignableHash(state.question.question_text, resp, state.question.nonce)
-        wallet.sign(signable.bytes)
-          .map{ sig =>
-            val sigBlock = SigBlock(
-              sig.toBase64UrlEncoded,
-              signable.encoded,
-              Seq(sig.verKey)
-            )
-            Msg.Answer(resp, Some(sigBlock), None)
-          }
+        wallet.sign(signable.bytes) { result =>
+          handler(
+            result.map { sig =>
+              val sigBlock = SigBlock(
+                sig.toBase64UrlEncoded,
+                signable.encoded,
+                Seq(sig.verKey)
+              )
+              Msg.Answer(resp, Some(sigBlock), None)
+            }
+          )
+        }
     }
   }
 

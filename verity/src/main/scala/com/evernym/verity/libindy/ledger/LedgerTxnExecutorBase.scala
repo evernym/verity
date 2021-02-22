@@ -30,7 +30,8 @@ import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.{LedgerNotFoundException, Pool}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.{Future, TimeoutException}
+import scala.concurrent.{Future, Promise, TimeoutException}
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
 class InvalidClientTaaAcceptanceError(msg: String) extends Exception(msg)
@@ -350,18 +351,27 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
                            walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
     val schemaReq = LedgerRequest(buildSchemaRequest(submitterDID, schemaJson).get, needsSigning=false, taa=None)
     val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
-    val signedRequest = reqWithOptTAA.prepared(walletAccess.signRequest(submitterDID, reqWithOptTAA.req).get.req)
-    submitWriteRequest(Submitter(submitterDID, None), signedRequest)
+    val promise = Promise[Either[StatusDetail, TxnResp]]()
+    walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
+      case Success(signedRequest) => promise.completeWith(
+        submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
+      )
+      case Failure(ex) => promise.failure(ex)
+    }
+    promise.future
   }
 
   override def prepareSchemaForEndorsement(submitterDID: DID,
                                            schemaJson: String,
                                            endorserDID: DID,
-                                           walletAccess: WalletAccess): LedgerRequest = {
+                                           walletAccess: WalletAccess): Future[LedgerRequest] = {
     val schemaReq = LedgerRequest(buildSchemaRequest(submitterDID, schemaJson).get, needsSigning=false, taa=None)
     val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
-    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID)
-    walletAccess.multiSignRequest(submitterDID, reqWithEndorser.get).get
+    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID).get
+
+    val promise = Promise[LedgerRequest]()
+    walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
+    promise.future
   }
 
   def writeCredDef(submitterDID: DID,
@@ -369,18 +379,28 @@ trait LedgerTxnExecutorBase extends LibIndyCommon with LedgerTxnExecutor  {
                    walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
     val credDefReq = LedgerRequest(buildCredDefRequest(submitterDID, credDefJson).get, needsSigning=false, taa=None)
     val reqWithOptTAA = appendTAAToRequest(credDefReq, currentTAA)
-    val signedRequest = reqWithOptTAA.prepared(walletAccess.signRequest(submitterDID, reqWithOptTAA.req).get.req)
-    submitWriteRequest(Submitter(submitterDID, None), signedRequest)
+    val promise = Promise[Either[StatusDetail, TxnResp]]()
+
+    walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
+      case Success(signedRequest) => promise.completeWith(
+        submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
+      )
+      case Failure(ex) => promise.failure(ex)
+    }
+    promise.future
   }
 
   override def prepareCredDefForEndorsement(submitterDID: DID,
                                             credDefJson: String,
                                             endorserDID: DID,
-                                            walletAccess: WalletAccess): LedgerRequest = {
+                                            walletAccess: WalletAccess): Future[LedgerRequest] = {
     val credDefReq = LedgerRequest(buildCredDefRequest(submitterDID, credDefJson).get, needsSigning=false, taa=None)
     val reqWithOptTAA = appendTAAToRequest(credDefReq, currentTAA)
-    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID)
-    walletAccess.multiSignRequest(submitterDID, reqWithEndorser.get).get
+    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID).get
+
+    val promise = Promise[LedgerRequest]()
+    walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
+    promise.future
   }
 
   override def getSchema(submitterDetail: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {

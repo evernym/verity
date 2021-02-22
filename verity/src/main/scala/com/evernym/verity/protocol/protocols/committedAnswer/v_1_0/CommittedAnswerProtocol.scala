@@ -10,7 +10,6 @@ import com.evernym.verity.Base64Encoded
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.ProblemReportCodes._
@@ -112,7 +111,9 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
         .find(_.nonce == responseNonce)
     }
 
-    ctx.apply(answerToEvt(m, givenResponse.map(_.text).getOrElse("")))
+    val answer = givenResponse.map(_.text).getOrElse("")
+
+    ctx.apply(answerToEvt(m, answer))
 
     val notExpired = isNotExpired(
       s.question.`@timing`.flatMap(t => t.expires_time)
@@ -120,7 +121,7 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
 
     val validResponse = givenResponse.isDefined
 
-    val validSignature: Boolean = givenResponse match {
+    givenResponse match {
       case Some(r) =>
         val checkData = buildSignable(r.nonce)
         val givenSig = m.`response.@sig`
@@ -130,22 +131,27 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
             givenSig.sig_data.getBytes, // Connect.me signs the base64 string
             getBase64Decoded(givenSig.signature),
             None
-          ).recover {
-            case ex =>
+          ) {
+            case Success(validSignature) =>
+              answerValidated(answer, validResponse, validSignature, notExpired = notExpired)
+            case Failure(ex) =>
               ctx.logger.warn(s"Unable to verify signature - ${ex.getMessage}")
-              false
-          }.getOrElse(false)
+              answerValidated(answer, validResponse, validSignature = false, notExpired = notExpired)
+          }
         }
         else {
-          false
+          answerValidated(answer, validResponse, validSignature = false, notExpired = notExpired)
         }
-      case None => false
+      case None =>
+        answerValidated(answer, validResponse, validSignature = false, notExpired = notExpired)
     }
+  }
 
+  def answerValidated(answer: String, validResponse: Boolean, validSignature: Boolean, notExpired: Boolean): Unit = {
     ctx.apply(Validity(validResponse, validSignature, notExpired))
     ctx.signal(
       Signal.AnswerGiven(
-        givenResponse.map(_.text).getOrElse(""),
+        answer,
         validResponse,
         validSignature,
         notExpired
@@ -196,19 +202,48 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
   def answer(m: Ctl.AnswerQuestion): Unit = {
     ctx.getState match {
       case state: State.QuestionReceived =>
-        buildAnswer(m.response, state, ctx.wallet) match {
-          case Success(answer) =>
-            ctx.apply(answerToEvt(answer, m.response.getOrElse("")))
-            ctx.send(answer, Some(Questioner), Some(Responder))
-          case Failure(ex) =>
-            val failureMsg = s"Unable build answer - ${ex.getMessage}"
-            ctx.logger.info(failureMsg)
-            ctx.apply(Error(1, failureMsg))
-            ctx.signal(buildProblemReport(failureMsg, invalidAnswer))
-        }
+        m.response match {
+          case None =>
+            failedAnswer(new Exception("No answer given")) // Handle no answer case
+          case Some(resp) => // Sig required
+            val nonce = state
+              .question
+              .valid_responses
+              .find(_.text == resp)
+              .map(_.nonce)
 
+            nonce match {
+              case Some(n) =>
+                val signable = buildSignable(n)
+                ctx.wallet.sign(signable.bytes) {
+                  case Success(sig) =>
+                    val sigBlock = Sig(
+                      sig.toBase64,
+                      signable.encoded,
+                      now.toString
+                    )
+                    successfulAnswer(Msg.Answer(sigBlock), resp)
+                  case Failure(ex) =>
+                    failedAnswer(ex)
+                }
+              case None =>
+                failedAnswer(new Exception("A valid answer was not selected")) // Handle invalid response given
+            }
+        }
       case _ => // Don't answer if there is no question
     }
+  }
+
+  def successfulAnswer(answer: Msg.Answer, response: String): Unit = {
+    ctx.apply(answerToEvt(answer, response))
+    ctx.send(answer, Some(Questioner), Some(Responder))
+  }
+
+  def failedAnswer(ex: Throwable): Unit = {
+    val failureMsg = s"Unable build answer - ${ex.getMessage}"
+    ctx.logger.info(failureMsg)
+    ctx.apply(Error(1, failureMsg))
+    ctx.signal(buildProblemReport(failureMsg, invalidAnswer))
   }
 
   // Helper Functions
@@ -271,36 +306,6 @@ object CommittedAnswerProtocol {
         .toVector,
       Some(BaseTiming(expires_time = Some(q.expiresTime)))
     )
-  }
-
-  def buildAnswer(response: Option[String],
-                  state: State.QuestionReceived,
-                  wallet: WalletAccess): Try[Msg.Answer] = {
-    response match {
-      case None => ??? // Handle no answer case
-      case Some(resp) => // Sig required
-        val nonce = state
-          .question
-          .valid_responses
-          .find(_.text == resp)
-          .map(_.nonce)
-
-        nonce match {
-          case Some(n) =>
-            val signable = buildSignable(n)
-            wallet.sign(signable.bytes)
-              .map { sig =>
-                val sigBlock = Sig(
-                  sig.toBase64,
-                  signable.encoded,
-                  now.toString
-                )
-                Msg.Answer(sigBlock)
-              }
-          case None => Failure(new Exception("A valid answer was not selected")) // Handle invalid response given
-        }
-
-    }
   }
 
   def evtToSigBlock(a: SignedAnswerUsed): Sig = {

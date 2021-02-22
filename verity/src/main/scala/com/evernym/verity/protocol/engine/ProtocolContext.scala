@@ -717,6 +717,7 @@ case class DataNotFound() extends ActorMessage
 case class SegmentStorageComplete() extends ActorMessage
 case class SegmentStorageFailed() extends ActorMessage
 case class UrlShortenerServiceComplete() extends ActorMessage
+case class WalletServiceComplete() extends ActorMessage
 case class ExternalStorageComplete(externalId: SegmentKey)
 case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
 

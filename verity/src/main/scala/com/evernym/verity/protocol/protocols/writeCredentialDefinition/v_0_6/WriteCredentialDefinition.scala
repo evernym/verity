@@ -51,27 +51,32 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       val revocationDetails = m.revocationDetails.map(_.toString).getOrElse("{}")
 
       val submitterDID = _submitterDID(init)
-      val (credDefId, credDefJson) = ctx
-          .wallet
-          .createCredDef(submitterDID, getSchema(m.schemaId).get, tag, sigType=None, revocationDetails=Some(revocationDetails))
-          .get
-
-      ctx.ledger.writeCredDef(submitterDID, credDefJson) match {
-        case Success(_) =>
-          ctx.apply(CredDefWritten(credDefId))
-          ctx.signal(StatusReport(credDefId))
-        case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
-          ctx.logger.warn(e.toString)
-          val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
-          if (endorserDID.nonEmpty) {
-            ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID) match {
-              case Success(ledgerRequest) =>
-                ctx.signal(NeedsEndorsement(credDefId, ledgerRequest.req))
-                ctx.apply(AskedForEndorsement(credDefId, ledgerRequest.req))
-              case Failure(e) => problemReport(e)
-            }
-          } else {
-            problemReport(new Exception("No default endorser defined"))
+      ctx.wallet.createCredDef(
+        submitterDID,
+        getSchema(m.schemaId).get,
+        tag,
+        sigType=None,
+        revocationDetails=Some(revocationDetails)
+      ) {
+        case Success((credDefId, credDefJson)) =>
+          ctx.ledger.writeCredDef(submitterDID, credDefJson) match {
+            case Success(_) =>
+              ctx.apply(CredDefWritten(credDefId))
+              ctx.signal(StatusReport(credDefId))
+            case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
+              ctx.logger.warn(e.toString)
+              val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+              if (endorserDID.nonEmpty) {
+                ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID) match {
+                  case Success(ledgerRequest) =>
+                    ctx.signal(NeedsEndorsement(credDefId, ledgerRequest.req))
+                    ctx.apply(AskedForEndorsement(credDefId, ledgerRequest.req))
+                  case Failure(e) => problemReport(e)
+                }
+              } else {
+                problemReport(new Exception("No default endorser defined"))
+              }
+            case Failure(e) => problemReport(e)
           }
         case Failure(e) => problemReport(e)
       }

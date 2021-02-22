@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.engine.external_api_access
 
+import com.evernym.verity.actor.wallet.TheirKeyStored
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.util.Base64Util
 
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
 trait WalletAccess
@@ -11,12 +13,12 @@ trait WalletAccess
 
   import WalletAccess._
 
-  def newDid(keyType: KeyType = KEY_ED25519): Try[(DID, VerKey)]
+  def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[(DID, VerKey)] => Unit): Unit
 
-  def verKey(forDID: DID): Try[VerKey]
+  def verKey(forDID: DID)(handler: Try[VerKey] => Unit): Unit
 
-  def sign(msg: Array[Byte],
-           signType: SignType = SIGN_ED25519_SHA512_SINGLE): Try[SignatureResult]
+  def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
+          (handler: Try[SignatureResult] => Unit): Unit
 
   /**
     * Protocols often do not know the verkey associated with another participants. A protocol should not have to
@@ -29,7 +31,7 @@ trait WalletAccess
              sig: Array[Byte],
              verKeyUsed: Option[VerKey],
              signType: SignType = SIGN_ED25519_SHA512_SINGLE
-            ): Try[Boolean]
+            )(handler: Try[Boolean] => Unit): Unit
 
   /**
     * This is only used when verifying a signature signed by someone who is not a participant of the protocol (i.e. no participantId).
@@ -40,14 +42,15 @@ trait WalletAccess
              sig: Array[Byte],
              verKeyUsed: VerKey,
              signType: SignType
-            ): Try[Boolean]
+            )(handler: Try[Boolean] => Unit): Unit
 
 
-  def storeTheirDid(did: DID, verKey: VerKey): Try[Unit]
 
-  def signRequest(submitterDID: DID, request: String): Try[LedgerRequest]
+  def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit
 
-  def multiSignRequest(submitterDID: DID, request: String): Try[LedgerRequest]
+  def signRequest(submitterDID: DID, request: String)(handler: Try[LedgerRequest] => Unit): Unit
+
+  def multiSignRequest(submitterDID: DID, request: String)(handler: Try[LedgerRequest] => Unit): Unit
 }
 
 object WalletAccess {

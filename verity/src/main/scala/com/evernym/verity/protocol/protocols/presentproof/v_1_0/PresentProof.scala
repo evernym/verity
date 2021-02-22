@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SpanUtil
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -9,7 +10,7 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi, ServiceFormatted}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
@@ -22,6 +23,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 
 import scala.collection.mutable
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /*
@@ -118,13 +120,12 @@ class PresentProof (implicit val ctx: PresentProofContext)
     extractRequest(request) match {
       case Success(request) =>
         apply(RequestGiven(request))
-        val requestedCredentials = ctx.wallet.credentialsForProofReq(request)
-        val canFulfill = requestedCredentials match {
+        ctx.wallet.credentialsForProofReq(request) {
           case Success(_) =>
-            true
-          case Failure(_) => false
+            signal(Sig.proofRequestToReviewRequest(request, canFulfill = true))
+          case Failure(_) =>
+            signal(Sig.proofRequestToReviewRequest(request, canFulfill = false))
         }
-        signal(Sig.proofRequestToReviewRequest(request, canFulfill))
       case Failure(e) => send(
         Msg.buildProblemReport(s"Invalid request -- ${e.getMessage}", invalidRequest)
       )
@@ -176,20 +177,20 @@ class PresentProof (implicit val ctx: PresentProofContext)
                 credDefJson,
                 "{}",
                 "{}",
-              )
+              ) { verified =>
+                val correct = checkEncodedAttributes(presentation)
 
-              val correct = checkEncodedAttributes(presentation)
+                val validity = verified
+                  .map(_ && correct)
+                  .map {
+                    case true => ProofValidated
+                    case _ => ProofInvalid
+                  }
+                  .getOrElse(ProofUndefined) // verifyProof throw an exception
 
-              val validity = verified
-                .map(_ && correct)
-                .map {
-                  case true => ProofValidated
-                  case _ => ProofInvalid
-                }
-                .getOrElse(ProofUndefined) // verifyProof throw an exception
-
-              apply(ResultsOfVerification(validity))
-              signal(Sig.PresentationResult(validity, simplifiedProof))
+                apply(ResultsOfVerification(validity))
+                signal(Sig.PresentationResult(validity, simplifiedProof))
+              }
             }
           case Failure(_) =>
             // Unable to get Ledger Assets
@@ -279,7 +280,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
-    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) match {
+    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
           case Success(m) =>
@@ -298,39 +299,38 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def handleCtlAcceptRequest(s: States.RequestReceived, msg: Ctl.AcceptRequest): Unit = {
-    val proofRequest = s.data.requests.head
-    val proofRequestJson: Try[String] = Try(proofRequest).map(DefaultMsgCodec.toJson)
+    val proofRequest: ProofRequest = s.data.requests.head
+    val proofRequestJson: String = DefaultMsgCodec.toJson(proofRequest)
 
-    val credentialsNeeded: Try[AvailableCredentials] = proofRequestJson
-      .flatMap ( ctx.wallet.credentialsForProofReq(_) )
-      .map (DefaultMsgCodec.fromJson[AvailableCredentials](_))
+    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[String] =>
+      val credentialsNeeded = credentialsNeededJson.map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
+      val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, msg.selfAttestedAttrs)
 
-    val (credentialsUsedJson, ids) =  credentialsToUse(credentialsNeeded, msg.selfAttestedAttrs)
-
-    doSchemaAndCredDefRetrieval(ids, proofRequest.allowsAllSelfAttested) match {
-      case Success((schemaJson, credDefJson)) =>
-        ctx.wallet.createProof(
-          proofRequestJson.get,
-          credentialsUsedJson.get,
-          schemaJson,
-          credDefJson,
-          "{}"
-        )
-        match {
-          case Success(presentation) =>
-            val payload = buildAttachment(Some(AttIds.presentation0), presentation)
-            send(Msg.Presentation("", Seq(payload)))
-            apply(PresentationUsed(presentation))
-          case Failure(e) => signal(
-            Sig.buildProblemReport(
-              s"Unable to crate proof presentation -- ${e.getMessage}",
-              "presentation-creation-failure"
+      doSchemaAndCredDefRetrieval(ids, proofRequest.allowsAllSelfAttested) match {
+        case Success((schemaJson, credDefJson)) =>
+          ctx.wallet.createProof(
+            proofRequestJson,
+            credentialsUsedJson.get, // This may throw error?
+            schemaJson,
+            credDefJson,
+            "{}"
+          ) {
+            case Success(presentation) =>
+              val payload = buildAttachment(Some(AttIds.presentation0), presentation)
+              send(Msg.Presentation("", Seq(payload)))
+              apply(PresentationUsed(presentation))
+            case Failure(e) => signal(
+              Sig.buildProblemReport(
+                s"Unable to crate proof presentation -- ${e.getMessage}",
+                "presentation-creation-failure"
+              )
             )
-          )
-        }
-      case Failure(e) => signal(
-        Sig.buildProblemReport(s"Ledger assets unavailable -- ${e.getMessage}", ledgerAssetsUnavailable)
-      )
+          }
+        case Failure(e) => signal(
+          Sig.buildProblemReport(s"Ledger assets unavailable -- ${e.getMessage}", ledgerAssetsUnavailable)
+        )
+
+      }
     }
   }
 
@@ -381,36 +381,34 @@ class PresentProof (implicit val ctx: PresentProofContext)
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
 
-  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)(implicit ctx: PresentProofContext): Try[ShortenInvite] = {
-    val service = InviteUtil.buildServiced(stateData.agencyVerkey, ctx)
+  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)
+                    (handler: Try[ShortenInvite] => Unit)
+                    (implicit ctx: PresentProofContext): Unit = {
+    InviteUtil.withServiced(stateData.agencyVerkey, ctx) {
+      case Success(service) =>
+        val attachement: AttachmentDescriptor = buildProtocolMsgAttachment(
+          MsgIdProvider.getNewMsgId,
+          ctx.threadId_!,
+          PresentProofDef.msgFamily,
+          request
+        )
+        val invite = InviteUtil.buildInviteWithThreadedId(
+          protoRef,
+          ctx.getRoster.selfId_!,
+          ctx.`threadId_!`,
+          stateData.agentName,
+          stateData.logoUrl,
+          stateData.publicDid,
+          service,
+          attachement
+        )
 
-    val attachement = Try(
-      buildProtocolMsgAttachment(
-        MsgIdProvider.getNewMsgId,
-        ctx.threadId_!,
-        PresentProofDef.msgFamily,
-        request)
-    )
-
-    val invite = InviteUtil.buildInviteWithThreadedId(
-      protoRef,
-      ctx.getRoster.selfId_!,
-      ctx.`threadId_!`,
-      stateData.agentName,
-      stateData.logoUrl,
-      stateData.publicDid,
-      service,
-      attachement
-    )
-
-    val signal = for(
-      invite          <- invite;
-      serviceEndpoint <- Try(ctx.serviceEndpoint);
-      inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
-      inviteId        <- Success(invite.`@id`)
-    ) yield ShortenInvite(inviteId, inviteUrl)
-
-    signal
+        handler(Success(
+          ShortenInvite(invite.`@id`, prepareInviteUrl(invite, ctx.serviceEndpoint))
+        ))
+      case Failure(ex) =>
+        handler(Failure(ex))
+    }
   }
 
   def extractPresentation(msg: Msg.Presentation):Try[(ProofPresentation, String)] = {

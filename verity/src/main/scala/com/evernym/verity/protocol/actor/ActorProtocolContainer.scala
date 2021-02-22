@@ -24,7 +24,7 @@ import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolProgress, AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress}
+import com.evernym.verity.protocol.engine.asyncProtocol.{AsyncProtocolService, SegmentStateStoreProgress, UrlShorteningProgress, WalletProgress}
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccessController, WalletAccessController}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
@@ -80,8 +80,7 @@ class ActorProtocolContainer[
     with ProtocolEngineExceptionHandler
     with HasAgentWallet
     with HasAppConfig
-    with AgentIdentity
-    with AsyncProtocolProgress {
+    with AgentIdentity {
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -186,6 +185,11 @@ class ActorProtocolContainer[
     case ProtocolCmd(_: UrlShortenerServiceComplete, _) =>
       logger.debug(s"$protocolIdForLog received UrlShortenerServiceComplete")
       removesAsyncProtocolService(UrlShorteningProgress)
+      if(asyncProtocolServicesComplete()) toBaseBehavior()
+      handleAllAsyncServices()
+    case ProtocolCmd(_: WalletServiceComplete, _) =>
+      logger.debug(s"$protocolIdForLog received WalletServiceComplete")
+      removesAsyncProtocolService(WalletProgress)
       if(asyncProtocolServicesComplete()) toBaseBehavior()
       handleAllAsyncServices()
   }
@@ -540,7 +544,9 @@ class ActorProtocolContainer[
   private lazy val walletAccessImpl = new WalletAccessAPI(
     agentActorContext.appConfig,
     agentActorContext.walletAPI,
-    getRoster.selfId_!
+    getRoster.selfId_!,
+    {toProtocolAsyncBehavior(WalletProgress)},
+    {addToMsgQueue(WalletServiceComplete())},
   )
 
   override lazy val wallet = new WalletAccessController(grantedAccessRights, walletAccessImpl)

@@ -14,9 +14,9 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
@@ -126,7 +126,7 @@ trait BasePersistentActor
     persistStart = System.currentTimeMillis()
     val successHandler = handler andThen { _ =>
       trackPersistenceSuccess()
-      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_PERSIST)
+      publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_PERSIST))
     }
 
     incrementTotalPersistedEvents()
@@ -307,7 +307,7 @@ trait BasePersistentActor
       if (millis > warnRecoveryTime) logger.warn(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
       else logger.debug(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
 
-      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_RECOVERY)
+      publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_RECOVERY))
       postRecoveryCompleted()
     }
   }
@@ -366,7 +366,7 @@ trait BasePersistentActor
         case pm: PersistentMsg        =>
           lookupTransformer(pm.transformationId).undo(pm)
       }
-      AppStateManager.recoverIfNeeded(CONTEXT_EVENT_TRANSFORMATION_UNDO)
+      publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_TRANSFORMATION_UNDO))
       event
     } catch {
       case e: Exception =>
@@ -405,21 +405,21 @@ trait BasePersistentActor
   def executeOnPostActorRecovery(): Unit = {}
   def executeOnStateChangePostRecovery(): Unit = {}
 
-  def handleErrorEventParam(errorEventParam: ErrorEventParam): Unit = {
-    AppStateManager << errorEventParam
+  def handleErrorEventParam(errorEventParam: ErrorEvent): Unit = {
+    publishAppStateEvent(errorEventParam)
     throw errorEventParam.cause
   }
 
   def handlePersistenceFailure(cause: Throwable, errorMsg: String): Unit = {
-    handleErrorEventParam(ErrorEventParam(SeriousSystemError, CONTEXT_EVENT_PERSIST, cause, Option(errorMsg)))
+    handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_PERSIST, cause, Option(errorMsg)))
   }
 
   def handleRecoveryFailure(cause: Throwable, errorMsg: String): Unit = {
-    handleErrorEventParam(ErrorEventParam(SeriousSystemError, CONTEXT_EVENT_RECOVERY, cause, Option(errorMsg)))
+    handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_RECOVERY, cause, Option(errorMsg)))
   }
 
   def handleUndoTransformFailure(cause: Throwable, errorMsg: String): Unit = {
-    handleErrorEventParam(ErrorEventParam(SeriousSystemError, CONTEXT_EVENT_TRANSFORMATION_UNDO, cause, Option(errorMsg)))
+    handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_TRANSFORMATION_UNDO, cause, Option(errorMsg)))
   }
 
   override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {

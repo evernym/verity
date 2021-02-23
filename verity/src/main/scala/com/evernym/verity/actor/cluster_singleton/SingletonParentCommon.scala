@@ -1,22 +1,21 @@
 package com.evernym.verity.actor.cluster_singleton
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Address, Props}
+import akka.actor.{ActorRef, ActorSystem, Address, Props}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.ExceptionHandler.handleException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
-import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -36,7 +35,8 @@ object SingletonParent {
 }
 
 class SingletonParent(val name: String)(implicit val agentActorContext: AgentActorContext)
-  extends Actor with ShardRegionFromActorContext {
+  extends CoreActorExtended
+    with ShardRegionFromActorContext {
 
   val logger: Logger = getLoggerByClass(classOf[SingletonParent])
   val cluster: Cluster = akka.cluster.Cluster(context.system)
@@ -66,7 +66,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     } catch {
       case e: Exception =>
         val errorMsg = s"unable to start cluster singleton child actors: ${Exceptions.getErrorMsg(e)}"
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_ACTOR_INIT, e, Option(errorMsg))
+        publishAppStateEvent(ErrorEvent(SeriousSystemError, CONTEXT_ACTOR_INIT, e, Option(errorMsg)))
     }
     createChildActors()
   }
@@ -94,12 +94,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     }
   }
 
-  def receiveCommon: Receive = {
-
-    case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
-    case forCmd: ForWatcherManager      => forwardToChild(WATCHER_MANAGER, forCmd.cmd)
-    case forCmd: ForSingletonChild      => forwardToChild(forCmd.getActorName, forCmd.cmd)
-
+  override def sysCmdHandler: Receive = {
     case me: MemberEvent =>
       me match {
         case me @ (_: MemberUp | _:MemberJoined | _:MemberWeaklyUp) =>
@@ -111,8 +106,15 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           nodes = nodes.filterNot(_ == me.member.address)
           logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
 
-        case _ =>
+        case _ => //nothing to do
       }
+  }
+
+  def receiveCommon: Receive = {
+
+    case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
+    case forCmd: ForWatcherManager      => forwardToChild(WATCHER_MANAGER, forCmd.cmd)
+    case forCmd: ForSingletonChild      => forwardToChild(forCmd.getActorName, forCmd.cmd)
 
     case RefreshConfigOnAllNodes =>
       logger.debug(s"refreshing config on nodes: $nodes")
@@ -147,7 +149,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           sndr ! AllNodeMetricsData(result.asInstanceOf[Set[NodeMetricsData]].toList)
         case Failure(e: Throwable) =>
           logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-          handleException(e, sndr, Option(self))
+          handleException(e, sndr)
       }
 
     case sc: SendCmdToAllNodes =>
@@ -157,7 +159,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       f.onComplete {
         case Success(_) => sndr ! Done
         case Failure(e) =>
-          handleException(e, sndr, Option(self))
+          handleException(e, sndr)
           logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
   }
@@ -166,7 +168,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     getActorRefFromSelection(s"$node$NODE_SINGLETON_PATH", context.system)
   }
 
-  override final def receive: Receive = receiveCommon
+  override final def receiveCmd: Receive = receiveCommon
 
   lazy val childActorDetails: Set[WatcherChildActorDetail] = {
     Set(

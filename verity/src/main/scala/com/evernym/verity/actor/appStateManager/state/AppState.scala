@@ -1,10 +1,11 @@
-package com.evernym.verity.apphealth.state
+package com.evernym.verity.actor.appStateManager.state
 
 import com.evernym.verity.Exceptions.TransitionHandlerNotProvidedException
-import com.evernym.verity.apphealth.AppStateConstants.STATUS_LISTENING
-import com.evernym.verity.apphealth.{ActionHandler, AppStateManagerBase, EventParam, ManualUpdate, Recovered}
+import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, EventParam, ManualUpdate, Recovered}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 
-trait AppState {
+trait AppState extends ActorMessage {
 
   /**
    * state name
@@ -27,11 +28,11 @@ trait AppState {
   protected def postTransition(param: EventParam)(implicit appStateManager: AppStateManagerBase): Unit
 
   private def commonEventHandler(implicit appStateManager: AppStateManagerBase): PartialFunction[EventParam, Unit] = {
-    case ep @ EventParam(ManualUpdate(STATUS_LISTENING), _, _, _, _)
-      if Set(SickState, DegradedState).contains(appStateManager.getCurrentState) =>
+    case ep @ EventParam(ManualUpdate(STATUS_LISTENING), _, _)
+      if Set(SickState, DegradedState).contains(appStateManager.getState) =>
       appStateManager.performTransition(ListeningState, ep)
 
-    case ep @ EventParam(Recovered, _, _, _, _) =>
+    case ep @ EventParam(Recovered, _, _) =>
       appStateManager.performTransition(ListeningState, ep)
   }
 
@@ -42,18 +43,12 @@ trait AppState {
     } else {
       handleEvent(param)
     }
-    appStateManager.getCurrentState.postTransition(param)
-  }
-
-  def performAction(actionHandler: Option[ActionHandler] = None): Any = {
-    actionHandler.foreach { ah =>
-      ah.actionCmdHandler.apply(ah.cmd)
-    }
+    appStateManager.getState.postTransition(param)
   }
 
   protected def performServiceShutdown()(implicit appStateManager: AppStateManagerBase): Unit = {
     import appStateManager._
-    util.performSystemExit()
+    shutdownService.performServiceShutdown()
   }
 
   def throwEventNotSupported(event: Any): Unit = {

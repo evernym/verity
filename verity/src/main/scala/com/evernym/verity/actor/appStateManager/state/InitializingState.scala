@@ -1,11 +1,11 @@
-package com.evernym.verity.apphealth.state
+package com.evernym.verity.actor.appStateManager.state
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 import com.evernym.verity.Exceptions.TransitionHandlerNotProvidedException
-import com.evernym.verity.apphealth.AppStateConstants.STATUS_INITIALIZING
-import com.evernym.verity.apphealth.{AppStateManagerBase, DrainingStarted, ErrorEvent, ErrorOccurrences, EventParam, ListeningSuccessful, MildSystemError, RecoveredFromCause, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, DrainingStarted, ErrorOccurrences, EventParam, ListeningSuccessful, MildSystemError, RecoveredFromCause, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
 import com.evernym.verity.config.AppConfigWrapper
 
@@ -30,7 +30,7 @@ object InitializingState extends AppState {
     param.event match {
       case ListeningSuccessful  => performTransition(ListeningState, param)
       case MildSystemError      => performTransition(DegradedState, param)
-      case SeriousSystemError   => trackErrorOccurrencesAndPerformTransitionIfNeeded(SeriousSystemError, ShutdownWithErrors, param)
+      case SeriousSystemError   => performTransitionIfNeeded(ShutdownWithErrors, param)
       case RecoveredFromCause   => removeRecoveredError(param.causeDetail.code)
       case DrainingStarted      => performTransition(DrainingState, param)
       case x                    => throw new TransitionHandlerNotProvidedException(Option(s"Initializing state not handling event: $x"))
@@ -48,12 +48,14 @@ object InitializingState extends AppState {
     //nothing to do
   }
 
-  def trackErrorOccurrencesAndPerformTransitionIfNeeded(errorEvent: ErrorEvent, newState: AppState, param: EventParam)
-                                                       (implicit appStateManager: AppStateManagerBase): Unit = {
+  //track error occurrences and perform transition if needed
+  def performTransitionIfNeeded(newState: AppState, param: EventParam)
+                               (implicit appStateManager: AppStateManagerBase): Unit = {
     import appStateManager._
     trackErrorOccurrences(param.causeDetail.code)
     newState match {
       case ShutdownWithErrors if retriesExhausted(param.causeDetail.code) => performTransition(newState, param)
+      case ShutdownWithErrors => //nothing to do
     }
   }
 

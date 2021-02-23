@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, LibindyMetricsCollector, CollectionsMetricCollector}
+import com.evernym.verity.actor.metrics.{ActivityTracker, CollectionsMetricCollector, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -26,12 +26,16 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
-
 import java.time.ZoneId
+
+import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
+import com.evernym.verity.libs.Libraries
+import com.evernym.verity.metrics.MetricsReader
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class Platform(val aac: AgentActorContext)
+class Platform(val aac: AgentActorContext, services: PlatformServices)
   extends MsgTracingRegionActors
     with LegacyRegionActors
     with MaintenanceRegionActors
@@ -43,8 +47,18 @@ class Platform(val aac: AgentActorContext)
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
-
   implicit val zoneId: ZoneId = UTCZoneId
+
+  //initialize required libraries (libindy/libmysqlstorage etc)
+  Libraries.initialize(appConfig)
+
+  //start prometheus reporter
+  // intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is validated as well
+  MetricsReader
+
+  //initialize app state manager
+  val appStateManager: ActorRef = agentActorContext.system.actorOf(
+    AppStateManager.props(services.sysServiceNotifier, services.sysShutdownService), name = "app-state-manager")
 
   val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig), name = "node-singleton")
 
@@ -231,4 +245,14 @@ class Platform(val aac: AgentActorContext)
       case None           => defaultDurationInSeconds
     }
   }
+}
+
+trait PlatformServices {
+  def sysServiceNotifier: SysServiceNotifier
+  def sysShutdownService: SysShutdownProvider
+}
+
+object PlatformServices extends PlatformServices {
+  override def sysServiceNotifier: SysServiceNotifier = SDNotifyService
+  override def sysShutdownService: SysShutdownProvider = SysShutdownService
 }

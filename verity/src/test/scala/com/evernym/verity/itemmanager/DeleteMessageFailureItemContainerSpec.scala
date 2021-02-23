@@ -1,15 +1,12 @@
 package com.evernym.verity.itemmanager
 
 
-import com.evernym.verity.Status.APP_STATUS_UPDATE_MANUAL
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager._
-import com.evernym.verity.actor.testkit.PersistentActorSpec
+import com.evernym.verity.actor.testkit.{AppStateManagerTestKit, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.{IgnoreLog, UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.apphealth.AppStateConstants.{CONTEXT_MANUAL_UPDATE, STATUS_LISTENING}
-import com.evernym.verity.apphealth._
-import com.evernym.verity.apphealth.state.{InitializingState, ListeningState, SickState}
+import com.evernym.verity.actor.appStateManager.state.SickState
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.config.Config
 import org.scalatest.time.{Seconds, Span}
@@ -22,6 +19,7 @@ class DeleteMessageFailureItemManagerSpec
     with ItemManagerSpecBase
     with SystemExitSpec {
 
+  val asmTestKit = new AppStateManagerTestKit(this)
 
   override def overrideConfig: Option[Config] = Option {
     watcherConfig
@@ -43,7 +41,7 @@ class DeleteMessageFailureItemManagerSpec
 
   "ItemManager" - {
     "when sent 'SetItemManagerConfig'" - {
-      "should respond 'ItemManagerStateDetail'" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond 'ItemManagerStateDetail'" taggedAs UNSAFE_IgnoreLog in {
         try {
           sendExternalCmdToItemManager(
             itemManagerEntityId1,
@@ -135,31 +133,20 @@ class DeleteMessageFailureItemManagerSpec
     "when sent 'GetItem' for id 1 during 'ListeningSuccessful' app state" - {
       "app state manager switches to sick state" taggedAs (IgnoreLog, UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
         exitSecurityManager.exitCallCount shouldBe 0
-        changeAppStateToListening()
-        //note: eventually, during item container cleanup, if delete events fail (which we are doing in test)
-        //it should call app state manager with SeriousSystemError event which ultimately change app status to Sick
-        eventually(timeout(Span(10, Seconds)), interval(Span(5, Seconds))) {
-          sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
-          AppStateManager.getCurrentState shouldBe SickState
-          exitSecurityManager.exitCallCount shouldBe 0
+        asmTestKit.withListeningAppState() {
+          //note: eventually, during item container cleanup, if delete events fail (which we are doing in test)
+          //it should call app state manager with SeriousSystemError event which ultimately change app status to Sick
+          eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+            sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
+            expectMsgType[ItemCmdResponse]
+            exitSecurityManager.exitCallCount shouldBe 0
+            asmTestKit.checkAppManagerState(SickState)
+          }
         }
-        changeAppStateToListening() //this is so that it doesn't impact any further tests (if any)
       }
     }
   }
 
-  def changeAppStateToListening(): Unit = {
-    if (AppStateManager.getCurrentState == InitializingState) {
-      AppStateManager << SuccessEventParam(ListeningSuccessful, "SERVICE_INIT",
-        CauseDetail("agent-service-started", "agent-service-started-listening-successfully"))
-    } else {
-      AppStateManager << SuccessEventParam(ManualUpdate(STATUS_LISTENING), CONTEXT_MANUAL_UPDATE,
-        CauseDetail(APP_STATUS_UPDATE_MANUAL.statusCode, "manual-update"))
-    }
-    eventually(timeout(Span(5, Seconds)), interval(Span(2, Seconds))) {
-      AppStateManager.getCurrentState shouldBe ListeningState
-    }
-  }
 }
 
 

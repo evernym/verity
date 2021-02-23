@@ -10,7 +10,6 @@ import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
 import com.evernym.verity.config.{CommonConfig, ConfigUtil}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.ledger.{LedgerPoolConnManager, OpenConnException, TransactionAuthorAgreement}
-import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
@@ -21,8 +20,10 @@ import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
-
 import java.util.UUID
+
+import akka.actor.ActorSystem
+
 import scala.collection.JavaConverters._
 
 @Integration
@@ -30,7 +31,6 @@ class LedgerFlowSpec extends BasicSpec
   with Eventually
   with TempDir
   with IntegrationEnv
-  with LibIndyCommon
   with CommonSpecUtil
   with ScalaFutures
   with BeforeAndAfterEach
@@ -55,6 +55,7 @@ class LedgerFlowSpec extends BasicSpec
 
   def newPoolConnManager(taaEnabled: Boolean): LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(
+      ActorSystem("test"),
       appConfig,
       genesisFile = Some(testEnv.ledgerConfig.genesisFilePath)
     )

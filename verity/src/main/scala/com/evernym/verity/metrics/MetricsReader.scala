@@ -6,9 +6,7 @@ import com.evernym.verity.actor.{ActorMessage, MetricsFilterCriteria}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.reporter.{KamonPrometheusMetricsReporter, MetricDetail, MetricsReporter}
-import com.typesafe.scalalogging.Logger
 import kamon.Kamon
 import org.joda.time.{DateTime, DateTimeZone}
 
@@ -17,7 +15,6 @@ import org.joda.time.{DateTime, DateTimeZone}
  */
 object MetricsReader {
 
-  private val logger: Logger = getLoggerByName("MetricsReader")
   private val lastResetTimestamp: String = getCurrentTimestamp
   private val hostName: String = AppConfigWrapper.getConfigStringReq(KAMON_ENV_HOST)
 

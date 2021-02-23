@@ -4,13 +4,13 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.util.Util._
@@ -87,7 +87,7 @@ class NodeSingleton(val appConfig: AppConfig)
 
     case DrainNode =>
       logger.info(s"draining started...")
-      AppStateManager.drain(context.system)
+      publishAppStateEvent(StartDraining)
       sender ! DrainInitiated
       logger.info(s"draining in progress !!")
 

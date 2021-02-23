@@ -125,7 +125,7 @@ trait AgentCommon
   type StateType <: AgentStateInterface
   def state: StateType
 
-  override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
+  override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)(context.system)
 
   def agentActorContext: AgentActorContext
   def system: ActorSystem = agentActorContext.system

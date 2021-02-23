@@ -16,6 +16,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
@@ -70,6 +71,9 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   val logger: Logger = ctx.logger
 
+  def publishAppStateEvent (event: AppStateEvent): Unit = {
+    ctx.SERVICES_DEPRECATED.publishAppStateEvent(event)
+  }
   def encryptionParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
   def agencyDIDReq: DID = ctx.getState.agencyDIDOpt.getOrElse(

@@ -15,9 +15,11 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
-
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+
+import akka.actor.ActorSystem
+
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -38,7 +40,7 @@ class LedgerUtil (override val appConfig: AppConfig,
   override def createWallet: Boolean = true
 
   lazy val poolConnManager: LedgerPoolConnManager = {
-    val pc = new IndyLedgerPoolConnManager(appConfig, poolConfigName, genesisTxnPath)
+    val pc = new IndyLedgerPoolConnManager(ActorSystem("ledger-pool"), appConfig, poolConfigName, genesisTxnPath)
     pc.open()
     pc
   }

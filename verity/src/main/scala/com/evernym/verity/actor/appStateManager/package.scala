@@ -1,11 +1,10 @@
-package com.evernym.verity
+package com.evernym.verity.actor
 
 import java.time.{LocalDateTime, ZonedDateTime}
 
-import akka.actor.ActorSystem
-import com.evernym.verity.apphealth.state.AppState
+import com.evernym.verity.actor.appStateManager.state.AppState
 
-package object apphealth {
+package object appStateManager {
 
   object AppStateConstants {
 
@@ -53,7 +52,7 @@ package object apphealth {
 
   trait Event
 
-  trait ErrorEvent extends Event
+  trait ErrorEventBase extends Event
 
   import AppStateConstants._
 
@@ -61,11 +60,11 @@ package object apphealth {
     override def toString: String = EVENT_LISTENING_STARTED
   }
 
-  object SeriousSystemError extends ErrorEvent {
+  object SeriousSystemError extends ErrorEventBase {
     override def toString: String = EVENT_SERIOUS_SYS_ERROR
   }
 
-  object MildSystemError extends ErrorEvent {
+  object MildSystemError extends ErrorEventBase {
     override def toString: String = EVENT_MILD_SYS_ERROR
   }
 
@@ -91,29 +90,38 @@ package object apphealth {
 
   case class CauseDetail(code: String, msg: String)
 
-  case class ErrorEventParam(event: Event,
-                             context: String,
-                             cause: Throwable,
-                             msg: Option[String] = None,
-                             actionHandler: Option[ActionHandler] = None,
-                             system: Option[ActorSystem] = None)
+  case class ErrorEvent(event: Event,
+                        context: String,
+                        cause: Throwable,
+                        msg: Option[String] = None) extends AppStateEvent
 
-  case class SuccessEventParam(event: Event,
-                               context: String,
-                               causeDetail: CauseDetail,
-                               msg: Option[String] = None,
-                               actionHandler: Option[ActionHandler] = None,
-                               system: Option[ActorSystem] = None)
+  case class SuccessEvent(event: Event,
+                          context: String,
+                          causeDetail: CauseDetail,
+                          msg: Option[String] = None) extends AppStateEvent
+
+  case class RecoverIfNeeded(context: String) extends AppStateEvent
+
+  case object StartDraining extends AppStateEvent
+
+
+  case object GetHeartbeat extends AppStateRequest
+
+  case object GetEvents extends AppStateRequest
+
+  case object GetCurrentState extends AppStateRequest
+
+  case object GetDetailedAppState extends AppStateRequest
 
   case class EventParam(event: Event,
                         context: String,
-                        causeDetail: CauseDetail,
-                        actionHandler: Option[ActionHandler] = None,
-                        system: Option[ActorSystem] = None) {
+                        causeDetail: CauseDetail) {
     def getCauseMsg: String = causeDetail.msg
   }
 
-  case class EventDetail(date: ZonedDateTime, state: AppState, cause: String)
+  case class EventDetail(date: ZonedDateTime, state: AppState, cause: String) {
+    def toEventDetailResp: EventDetailResp = EventDetailResp(date, state.toString, cause)
+  }
 
   case class ErrorOccurrences(firstObservedAt: LocalDateTime, lastObservedAt: LocalDateTime, total: Int)
 

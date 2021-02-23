@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.libs
 
 import java.nio.file.{Path, Paths}
 

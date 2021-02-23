@@ -28,12 +28,14 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
   val maxWaitTime: Duration = 5000.millis
   lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
-  lazy val poolConnManager: IndyLedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig) {
-    override def poolConn: Some[Pool] = Some(null)
-  }
-  lazy val ledgerTxnExecutor: LedgerTxnExecutorV2 = new LedgerTxnExecutorV2(appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None) {
-    override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
-  }
+  lazy val poolConnManager: IndyLedgerPoolConnManager =
+    new IndyLedgerPoolConnManager(system, appConfig) {
+      override def poolConn: Some[Pool] = Some(null)
+    }
+  lazy val ledgerTxnExecutor: LedgerTxnExecutorV2 =
+    new LedgerTxnExecutorV2(system, appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None) {
+      override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
+    }
 
   lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
   lazy val wap: WalletAPIParam = WalletAPIParam(submitterDID)
@@ -46,7 +48,7 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
 
     "when executed add nym operation" - {
       "and if ledger executes it successfully" - {
-        "should return success response" taggedAs (UNSAFE_IgnoreLog)  in {
+        "should return success response" taggedAs UNSAFE_IgnoreLog in {
           val validResponse =
             """{"result":{"ver":"1","txn":{"metadata":{"digest":"bf6ad32c57789d763cb989f6e1d14aa8a89949fc99a07aa94cc85f2acf7cd411","reqId":1532330281707005000,"from":"Th7MpTaRZVRYnPiabds81Y"},"protocolVersion":2,"type":"1","data":{"dest":"3pB1JfL2BHNjmaUj7bbJTn","verkey":"2XwCs4gdFMKmfy23iQoFTrfewAWjnrGYmxAE7kxGR5Mz"}},"rootHash":"JBgBjiiJpD6f7Vv6VSnenCPdDvB5QWNN8Esa8vRiczzj","reqSignature":{"type":"ED25519","values":[{"value":"42XcgJQQ8sP9ibds2eEcq2yLMjUMDmnzFHxzH5ARTBjTH1sqdstydzTfUHavhPHEhNjciv67LJEupYnUAdbFrS6T","from":"Th7MpTaRZVRYnPiabds81Y"}]},"txnMetadata":{"txnId":"b4680ea46a7975006627977d624f07c9bf3cbbb3ccf3ffa92b83d8304d0dcbfc","seqNo":448,"txnTime":1532330281},"auditPath":["GfsuEw7NyYvTWhB2fnaX9jd7xkBf2sxcbmXq4hWg6w6v","H9mCzs2g2DF2AxmfxLb3VUndQEYFoVe7366TEUoukGhb","CA3gxxWgRF4SU5E5dghdLpw87P3KkT4xBYX9E22tVxnx","65kcUqw29WDPeWEe3R8eQHUDrh1dzUV2sf8AYjxypMd6","DJN2rWacgFzhgsJReD5EgSJzEFeCuU7nsvX3SdJaZSmv","7Cd531U9orb3S6sSCtMFPCZhETRyP3DR1msnz3j9LLh9","37cJ9zbeoCmn8pYm4oWaDDQ9zsWLNp4aJhheKBATAfq6","SM4p1s81TX1hLr1EMbwxPxSo3mt5SGYJkC3zsmL8WJC"]},"op":"REPLY"}""".stripMargin
           doReturn(Future(validResponse))

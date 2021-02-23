@@ -44,8 +44,8 @@ import com.evernym.verity.{ActorResponse, ServiceEndpoint}
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
-
 import java.util.UUID
+
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 /**
@@ -90,7 +90,7 @@ class ActorProtocolContainer[
   override lazy val logger: Logger = getAgentIdentityLoggerByName(
     this,
     s"${definition.msgFamily.protoRef.toString}"
-  )
+  )(context.system)
 
   override val appConfig: AppConfig = agentActorContext.appConfig
   def walletAPI: WalletAPI = agentActorContext.walletAPI
@@ -383,7 +383,7 @@ class ActorProtocolContainer[
     Some(new LegacyProtocolServicesImpl[M,E,I](
       agentActorContext.appConfig,
       agentActorContext.walletAPI, agentActorContext.generalCache,
-      agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer,
+      agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer, publishAppStateEvent,
       this, this, this))
   }
 

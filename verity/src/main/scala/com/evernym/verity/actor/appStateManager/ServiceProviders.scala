@@ -1,4 +1,4 @@
-package com.evernym.verity.apphealth
+package com.evernym.verity.actor.appStateManager
 
 import info.faljse.SDNotify.SDNotify
 
@@ -8,7 +8,7 @@ trait SysServiceNotifier {
   def stop(): Unit
 }
 
-object SDNotifySysServiceNotifier extends SysServiceNotifier {
+object SDNotifyService extends SysServiceNotifier {
   private def shouldSend(): Boolean = sys.env
     .get("NOTIFY_SOCKET")
     .exists(!_.isEmpty)
@@ -29,5 +29,16 @@ object SDNotifySysServiceNotifier extends SysServiceNotifier {
     if(shouldSend()) {
       SDNotify.sendStopping()
     }
+  }
+}
+
+
+trait SysShutdownProvider {
+  def performServiceShutdown(): Unit
+}
+
+object SysShutdownService extends SysShutdownProvider {
+  override def performServiceShutdown(): Unit = {
+    sys.exit(1)
   }
 }

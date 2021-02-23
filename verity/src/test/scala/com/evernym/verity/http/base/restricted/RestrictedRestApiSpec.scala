@@ -25,11 +25,11 @@ trait RestrictedRestApiSpec
 
       testMetrics()
 
-      testHeartbeat()
-
       testAppStateHealthCheck()
 
       testAgentRouteFixStatus()
+
+      testHeartbeat()
     }
   }
 }

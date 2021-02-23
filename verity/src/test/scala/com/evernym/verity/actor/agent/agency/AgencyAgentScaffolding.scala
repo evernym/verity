@@ -48,7 +48,7 @@ trait AgencyAgentScaffolding
       }
 
       "when sent CreateKey command a second time" - {
-        "should respond with an error" taggedAs (UNSAFE_IgnoreLog) in {
+        "should respond with an error" taggedAs UNSAFE_IgnoreLog in {
           aa ! CreateKey(seed = Option("s" * 32))
           expectMsgType[ActorErrorResp].statusCode shouldBe FORBIDDEN.statusCode
         }

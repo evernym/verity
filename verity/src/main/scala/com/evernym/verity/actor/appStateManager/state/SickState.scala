@@ -1,7 +1,7 @@
-package com.evernym.verity.apphealth.state
+package com.evernym.verity.actor.appStateManager.state
 
-import com.evernym.verity.apphealth.AppStateConstants.STATUS_SICK
-import com.evernym.verity.apphealth.{AppStateManagerBase, DrainingStarted, EventParam, RecoveredFromCause, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, DrainingStarted, EventParam, RecoveredFromCause, SeriousSystemError}
 
 object SickState extends AppState {
 
@@ -33,7 +33,6 @@ object SickState extends AppState {
    */
   override def postTransition(param: EventParam)(implicit appStateManager: AppStateManagerBase): Unit = {
     import appStateManager._
-    performAction(param.actionHandler)
-    sysServiceNotifier.setStatus(name)
+    notifierService.setStatus(name)
   }
 }

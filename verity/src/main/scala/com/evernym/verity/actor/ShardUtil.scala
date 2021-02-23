@@ -78,7 +78,7 @@ trait ShardUtil {
   def finalActorProps(entityCategory: String, typeName: String, actorProps: Props): Props = {
     //NOTE: for any persistent shard region actors,
     // once we are ready (tested/finalized) to use backoff supervisor strategy
-    // we need to change only this function to return back off supervisor actor props
+    // we need to change only this function to return backoff supervisor actor props
     // instead of given 'actorProps'
 
     //NOTE: There will be few other non sharded persistent actors which

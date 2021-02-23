@@ -228,10 +228,6 @@ trait UtilBase {
 
   def getNewActorId: String = getNewEntityId
 
-  def performSystemExit(status: Int = 1): Unit = {
-    sys.exit(status)
-  }
-
   def buildUnsupportedVersion(typ:String, unsupportedVer: String, lowerSupportedVersion: String,
                                higherSupportedVer: String): String = {
     if(lowerSupportedVersion == higherSupportedVer)

@@ -2,11 +2,12 @@ package com.evernym.verity.config
 
 import com.evernym.verity.Exceptions.{BadRequestErrorException, ConfigLoadingFailedException}
 import com.evernym.verity.Status._
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.validator.DefaultConfigValidatorCreator
 import com.evernym.verity.config.validator.base.{ConfigReaderHelper, ConfigValidatorCreator, ConfigValidatorHelper}
 import com.typesafe.config._
@@ -51,17 +52,17 @@ trait AppConfig extends ConfigReaderHelper {
       case e: ConfigException =>
         val errorMsg = s"error while loading config (${Exceptions.getErrorMsg(e)})"
         val ex = new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(errorMsg))
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg))
+        handleError(ErrorEvent(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg)))
         throw ex
       case e: BadRequestErrorException =>
         val errorMsg = s"error while loading config (${e.respMsg.getOrElse(Exceptions.getErrorMsg(e))})"
         val ex = new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(errorMsg))
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg))
+        handleError(ErrorEvent(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg)))
         throw ex
       case e: Exception =>
         val errorMsg = s"error while loading config (${Exceptions.getErrorMsg(e)})"
         val ex = new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Option(errorMsg))
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg))
+        handleError(ErrorEvent(SeriousSystemError, CONTEXT_CONFIG_LOADING, ex, Option(errorMsg)))
         throw ex
     }
   }

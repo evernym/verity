@@ -1,15 +1,18 @@
 package com.evernym.verity.logging
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.AgentIdentity
-import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 object LoggingUtil {
 
-  def getAgentIdentityLoggerByClass[T](identityProvider: AgentIdentity, c: Class[T]): Logger = {
+  def getAgentIdentityLoggerByClass[T](identityProvider: AgentIdentity, c: Class[T])(implicit as: ActorSystem): Logger = {
     try {
       Logger(
         AgentIdentityLoggerWrapper(
@@ -20,12 +23,12 @@ object LoggingUtil {
     } catch {
       case e: Exception =>
         val errorMsg = s"unable to create logger for class '${c.getCanonicalName}': " + Exceptions.getErrorMsg(e)
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg))
+        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg)))
         throw e
     }
   }
 
-  def getAgentIdentityLoggerByName(identityProvider: AgentIdentity, n: String): Logger = {
+  def getAgentIdentityLoggerByName(identityProvider: AgentIdentity, n: String)(implicit as: ActorSystem): Logger = {
     try {
       Logger(
         AgentIdentityLoggerWrapper(
@@ -36,7 +39,7 @@ object LoggingUtil {
     } catch {
       case e: Exception =>
         val errorMsg = s"unable to create logger with name '$n': " + Exceptions.getErrorMsg(e)
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg))
+        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg)))
         throw e
     }
   }
@@ -47,7 +50,7 @@ object LoggingUtil {
     } catch {
       case e: Exception =>
         val errorMsg = s"unable to create logger for class '${c.getCanonicalName}': " + Exceptions.getErrorMsg(e)
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg))
+        handleError(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg)))
         throw e
     }
   }
@@ -58,7 +61,7 @@ object LoggingUtil {
     } catch {
       case e: Exception =>
         val errorMsg = s"unable to create logger with name '$n': " + Exceptions.getErrorMsg(e)
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg))
+        handleError(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(errorMsg)))
         throw e
     }
   }

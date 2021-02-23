@@ -8,6 +8,7 @@ import akka.pattern.AskTimeoutException
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_STATUS_CODE, LOG_KEY_STATUS_DETAIL}
 import com.evernym.verity.Exceptions.{FeatureNotEnabledException, _}
 import com.evernym.verity.Status.{StatusDetail, TIMEOUT, UNHANDLED}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.{ActorErrorResp, ActorResponse, DoNotLogError, Exceptions, Status}
@@ -90,7 +91,7 @@ trait ActorResponseHandler {
 
 //NOTE: DON'T rename any fields of this case class, it is sent in http response
 //and will break the api
-case class StatusDetailResp(statusCode: String, statusMsg: String, detail: Option[String])
+case class StatusDetailResp(statusCode: String, statusMsg: String, detail: Option[String]) extends ActorMessage
 
 case object StatusDetailResp {
   def apply(sd: StatusDetail, detail: Option[Any] = None): StatusDetailResp =

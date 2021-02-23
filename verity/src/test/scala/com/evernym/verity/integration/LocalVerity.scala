@@ -2,14 +2,16 @@ package com.evernym.verity.integration
 
 import java.nio.file.Path
 
-import akka.actor.ActorSystem
+import akka.pattern.ask
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest}
 import akka.testkit.TestKit
+import akka.util.Timeout
 import com.evernym.verity.actor.Platform
+import com.evernym.verity.actor.appStateManager.GetCurrentState
+import com.evernym.verity.actor.appStateManager.state.{AppState, ListeningState}
 import com.evernym.verity.app_launcher.{DefaultAgentActorContext, PlatformBuilder}
-import com.evernym.verity.apphealth.AppStateConstants.STATUS_LISTENING
-import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.testkit.mock.ledger.{InMemLedgerPoolConnManager, InitLedgerData}
@@ -31,19 +33,21 @@ object LocalVerity {
 
     val platform =  initializeApp(initData)
 
-    waitTillUp()
+    waitTillUp(platform.appStateManager)
 
     bootstrapApplication(port.http, atMost, appSeed)(platform.actorSystem)
 
     platform
   }
 
-  private def waitTillUp(): Unit = {
-    def isListening: Boolean = {
-      AppStateManager.getCurrentState.toString == STATUS_LISTENING
-    }
+  private def waitTillUp(appStateManager: ActorRef): Unit = {
+    TestKit.awaitCond(isListening(appStateManager), atMost)
+  }
 
-    TestKit.awaitCond(isListening, atMost)
+  def isListening(appStateManager: ActorRef): Boolean = {
+    implicit lazy val akkActorResponseTimeout: Timeout = Timeout(5.seconds)
+    val fut = appStateManager ? GetCurrentState
+    Await.result(fut, 3.seconds).asInstanceOf[AppState] == ListeningState
   }
 
   class Starter(initData: InitLedgerData) {

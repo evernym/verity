@@ -3,19 +3,22 @@ package com.evernym.verity.http.common
 import java.io.InputStream
 import java.security.{KeyStore, SecureRandom}
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.{ConnectionContext, HttpsConnectionContext}
-import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_AGENT_SERVICE_INIT
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.CommonConfig.{KEYSTORE_LOCATION, KEYSTORE_PASSWORD}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.typesafe.scalalogging.Logger
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 
+
 trait HttpsSupport {
 
+  implicit def system: ActorSystem
   def appConfig: AppConfig
-
   def logger: Logger
 
   def getHttpsConnectionContext: Option[HttpsConnectionContext] = {
@@ -39,7 +42,7 @@ trait HttpsSupport {
     } catch {
       case e: Exception =>
         val errMsg = s"error creating https connection context: ${Exceptions.getErrorMsg(e)}"
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errMsg))
+        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errMsg)))
         None
     }
   }

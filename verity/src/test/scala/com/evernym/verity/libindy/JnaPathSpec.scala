@@ -3,7 +3,7 @@ package com.evernym.verity.libindy
 import java.nio.file.Files
 
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.libindy.JnaPath._
+import com.evernym.verity.libs.JnaPath._
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers

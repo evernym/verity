@@ -1,13 +1,12 @@
 package com.evernym.verity.texter
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.Props
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.LogKeyConstants._
@@ -17,14 +16,16 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.util.{Success, Try}
 
-class DefaultSMSSender(val config: AppConfig) extends Actor with ActorLogging {
+class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
 
-  def receive: PartialFunction[Any, Unit] = {
+  def receiveCmd: Receive = {
     case smsInfo: SmsInfo => sendMessage(smsInfo)
   }
 
@@ -49,14 +50,14 @@ class DefaultSMSSender(val config: AppConfig) extends Actor with ActorLogging {
     }.collectFirst({
       case Success(Right(result)) =>
         sender ! result
-        AppStateManager.recoverIfNeeded(CONTEXT_SMS_OPERATION)
+        publishAppStateEvent(RecoverIfNeeded(CONTEXT_SMS_OPERATION))
       case Success(Left(e: SmsSendingFailedException)) =>
         sender ! SmsSendingFailed(e.respCode, e.respMsg.getOrElse(e.getErrorMsg))
-        AppStateManager.recoverIfNeeded(CONTEXT_SMS_OPERATION)
+        publishAppStateEvent(RecoverIfNeeded(CONTEXT_SMS_OPERATION))
     }).getOrElse {
       val err = "none of the providers could send sms to phone_number. For more details take a look at provider specific error messages"
       sender ! SmsSendingFailed(UNHANDLED.statusCode, err)
-      AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_SMS_OPERATION, new SmsSendingFailedException(Option(err)), None)
+      publishAppStateEvent(ErrorEvent(SeriousSystemError, CONTEXT_SMS_OPERATION, new SmsSendingFailedException(Option(err)), None))
       throw new InternalServerErrorException(SMS_SENDING_FAILED.statusCode, Option(SMS_SENDING_FAILED.statusMsg),
         errorDetail=Option(err))
     }

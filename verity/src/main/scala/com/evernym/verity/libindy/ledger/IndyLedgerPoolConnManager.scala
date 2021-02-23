@@ -2,17 +2,18 @@ package com.evernym.verity.libindy.ledger
 
 import java.util.concurrent.TimeUnit
 
+import akka.actor.ActorSystem
 import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
 import com.evernym.verity.config.{AppConfig, CommonConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants.{LEDGER_TXN_PROTOCOL_V1, LEDGER_TXN_PROTOCOL_V2}
 import com.evernym.verity.ledger._
-import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
@@ -29,11 +30,11 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 
-class IndyLedgerPoolConnManager(appConfig: AppConfig,
+class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
+                                appConfig: AppConfig,
                                 poolConfigName: Option[String] = None,
                                 genesisFile: Option[String] = None)
-  extends ConfigurableLedgerPoolConnManager(appConfig)
-    with LibIndyCommon {
+  extends ConfigurableLedgerPoolConnManager(appConfig) {
 
   val openTimeout: Duration = Duration.apply(
     appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT).getOrElse(60),
@@ -46,7 +47,8 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig,
   private def configName = poolConfigName
     .getOrElse(appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_NAME))
 
-  override val genesisTxnFilePath: String = genesisFile.getOrElse(super.genesisTxnFilePath)
+  val genesisTxnFilePath: String = genesisFile.getOrElse(
+    appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION))
 
   val logger: Logger = getLoggerByClass(classOf[IndyLedgerPoolConnManager])
 
@@ -67,7 +69,7 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig,
       case e: Exception =>
         val errorMsg = "error while creating ledger " +
           s"pool config file (detail => ${Exceptions.getErrorMsg(e)})"
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg))
+        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))(actorSystem)
     }
   }
 
@@ -192,8 +194,8 @@ class IndyLedgerPoolConnManager(appConfig: AppConfig,
                                 pool: Option[Pool],
                                 taa: Option[TransactionAuthorAgreement]): LedgerTxnExecutor = {
     Util.getLedgerTxnProtocolVersion(appConfig) match {
-      case LEDGER_TXN_PROTOCOL_V1 => new LedgerTxnExecutorV1(appConfig, walletAPI, pool, taa)
-      case LEDGER_TXN_PROTOCOL_V2 => new LedgerTxnExecutorV2(appConfig, walletAPI, pool, taa)
+      case LEDGER_TXN_PROTOCOL_V1 => new LedgerTxnExecutorV1(actorSystem, appConfig, walletAPI, pool, taa)
+      case LEDGER_TXN_PROTOCOL_V2 => new LedgerTxnExecutorV2(actorSystem, appConfig, walletAPI, pool, taa)
       case x => throw new RuntimeException(s"ledger txn protocol version $x not yet supported")
     }
   }

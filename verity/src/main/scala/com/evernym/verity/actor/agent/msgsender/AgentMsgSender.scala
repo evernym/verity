@@ -6,8 +6,8 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
-import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError}
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, AppStateEvent}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.ledger.LedgerSvcException
@@ -30,6 +30,7 @@ trait AgentMsgSender
   extends HasGeneralCache
     with HasLogger {
 
+  def publishAppStateEvent (event: AppStateEvent): Unit
   def msgSendingSvc: MsgSendingSvc
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit
 
@@ -51,8 +52,8 @@ trait AgentMsgSender
       "error while getting endpoint from ledger (" +
         "possible-causes: ledger pool not reachable/up/responding etc, " +
         s"target DID: $theirAgencyDID)"
-    AppStateManager << ErrorEventParam(MildSystemError, CONTEXT_GENERAL,
-      new RemoteEndpointNotFoundErrorException(Option(errorMsg)), Option(errorMsg))
+    publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
+      new RemoteEndpointNotFoundErrorException(Option(errorMsg)), Option(errorMsg)))
     LedgerSvcException(errorMsg)
   }
 
@@ -62,8 +63,8 @@ trait AgentMsgSender
     } catch {
       case e: Exception =>
         val errorMsg = s"error while parsing endpoint: ${Exceptions.getErrorMsg(e)}"
-        AppStateManager << ErrorEventParam(MildSystemError, CONTEXT_GENERAL,
-          new InvalidValueException(Option(errorMsg)), Option(errorMsg))
+        publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
+          new InvalidValueException(Option(errorMsg)), Option(errorMsg)))
         throw e
     }
   }

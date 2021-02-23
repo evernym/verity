@@ -270,7 +270,7 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
-    val response = createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
+    createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {

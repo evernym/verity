@@ -14,9 +14,10 @@ trait EntityIdentifier { this: Actor =>
   lazy val entityType: String = entityIdentity.entityType
 
   //a unique entity identifier including entity type as well
-  lazy val actorId: String =
+  lazy val actorId: String = {
     if (entityType != entityId && entityType != "/") entityType + "-" + entityId
     else entityId
+  }
 }
 
 object EntityIdentifier {
@@ -86,7 +87,7 @@ object EntityIdentifier {
       case Seq(SYSTEM_ACTOR_PATH_ELEMENT, SHARD_ACTOR_PATH_ELEMENT, entityType, shard, _ /*parentEntityId*/, entityId) =>
         EntityIdentity(
           entityId,
-          entityType + "Child",
+          childEntityType(entityType),
           Option(shard.toInt),
           isUserActor = false,
           isSupervised = isSupervised,
@@ -106,7 +107,7 @@ object EntityIdentifier {
       case Seq(USER_ACTOR_PATH_ELEMENT, CLUSTER_SINGLETON_MANAGER, "singleton", parentEntityId, entityId) =>
         EntityIdentity(
           entityId,
-          parentEntityId + "Child",
+          childEntityType(parentEntityId),
           None,
           isUserActor = false,
           isSupervised = isSupervised,
@@ -121,12 +122,23 @@ object EntityIdentifier {
           isSupervised = isSupervised,
           isClusterSingletonChild = true
         )
+      case Seq(USER_ACTOR_PATH_ELEMENT, CLUSTER_SINGLETON_MANAGER, "singleton") =>
+        EntityIdentity(
+          "singleton",
+          childEntityType(CLUSTER_SINGLETON_MANAGER),
+          None,
+          isUserActor = false,
+          isSupervised = isSupervised,
+          isClusterSingletonChild = false
+        )
       case _ =>
         throw new InvalidPath(
           s"Invalid actor path - has an unexpected pattern for cluster singleton` actor - ${elements.mkString("/")}"
         )
     }
   }
+
+  private def childEntityType(prefix: String): String = prefix + "Child"
 
   private def isUserActor(elements: Seq[String]): Boolean = elements.startsWith(userPattern)
 
@@ -136,6 +148,15 @@ object EntityIdentifier {
         EntityIdentity(
           entityId,
           DEFAULT_ENTITY_TYPE,
+          None,
+          isUserActor = true,
+          isSupervised = isSupervised,
+          isClusterSingletonChild = false
+        )
+      case Seq(USER_ACTOR_PATH_ELEMENT, parentEntityId, entityId) =>
+        EntityIdentity(
+          entityId,
+          parentEntityId + "Child",
           None,
           isUserActor = true,
           isSupervised = isSupervised,

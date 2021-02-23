@@ -4,6 +4,8 @@ import java.time.LocalDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.evernym.verity.Exceptions
+import com.evernym.verity.actor.appStateManager.AppStateEvent
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
@@ -17,7 +19,10 @@ import com.typesafe.scalalogging.Logger
  * generic incoming command validation (like if command extends 'ActorMessage' serializable interface or not etc)
  * and generic exception handling during command processing
  */
-trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
+trait CoreActor
+  extends Actor
+    with EntityIdentifier
+    with ActorLogging {
 
   override def receive: Receive = coreCommandHandler(cmdHandler)
 
@@ -36,6 +41,14 @@ trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
           handleException(e, sender())
       }
 
+    case cmd if sysCmdHandler.isDefinedAt(cmd) =>
+      try {
+        sysCmdHandler(cmd)
+      } catch {
+        case e: Exception =>
+          handleException(e, sender())
+      }
+
     case cmd if actualCmdReceiver.isDefinedAt(cmd) =>
       //any incoming command should extend from 'ActorMessage' interface
       //to be able to serialize/deserialize
@@ -48,7 +61,14 @@ trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
    */
   def receiveCmd: Receive
 
+  /**
+   * override this to handle any akka system messages/commands/signals
+   * @return
+   */
+  def sysCmdHandler: Receive = PartialFunction.empty
+
   final def cmdHandler: Receive = receiveCmd
+
 
   // We have need of a super generic logging. But this is too high level to define a generic logger
   // So we have this private logger for those needs but should not be sub-classes
@@ -129,6 +149,11 @@ trait CoreActor extends Actor with EntityIdentifier with ActorLogging {
   val recordStartCountMetrics = true
   val recordRestartCountMetrics = true
   val recordStopCountMetrics = true
+
+  def publishAppStateEvent (event: AppStateEvent): Unit = {
+    publishEvent(event)(context.system)
+  }
+
 }
 
 case object GetActorDetail extends ActorMessage

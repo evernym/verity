@@ -58,7 +58,7 @@ trait AgentActorContext extends ActorContext {
   lazy val smsSvc: SMSSender = _smsSender
 
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
-  lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
+  lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
   lazy val walletService: WalletService = new ActorWalletService(system)
   lazy val walletAPI: WalletAPI = buildWalletAPI(

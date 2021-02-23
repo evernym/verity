@@ -135,6 +135,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
 
   override def urlShortening: UrlShorteningAccess =
     pce.urlShorteningAccessProvider.map(_()).getOrElse(throw new RuntimeException("no url shortener access provided to container"))
+
 }
 
 trait Logs {

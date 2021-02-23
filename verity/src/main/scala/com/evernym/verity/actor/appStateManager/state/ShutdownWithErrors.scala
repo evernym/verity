@@ -1,7 +1,7 @@
-package com.evernym.verity.apphealth.state
+package com.evernym.verity.actor.appStateManager.state
 
-import com.evernym.verity.apphealth.AppStateConstants.STATUS_SHUTDOWN_WITH_ERRORS
-import com.evernym.verity.apphealth.{AppStateManagerBase, EventParam}
+import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, EventParam}
+import com.evernym.verity.actor.appStateManager.AppStateConstants.STATUS_SHUTDOWN_WITH_ERRORS
 
 object ShutdownWithErrors extends AppState {
 
@@ -30,10 +30,9 @@ object ShutdownWithErrors extends AppState {
    */
   override def postTransition(param: EventParam)(implicit appStateManager: AppStateManagerBase): Unit = {
     import appStateManager._
-    performAction(param.actionHandler)
-    sysServiceNotifier.setStatus(name)
+    notifierService.setStatus(name)
 
-    sysServiceNotifier.stop()
+    notifierService.stop()
     performServiceShutdown()
   }
 }

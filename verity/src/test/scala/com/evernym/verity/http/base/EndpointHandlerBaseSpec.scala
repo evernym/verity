@@ -1,5 +1,6 @@
 package com.evernym.verity.http.base
 
+import akka.pattern.ask
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
@@ -23,7 +24,9 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.Await
 import scala.reflect.ClassTag
+import scala.concurrent.duration._
 
 trait EdgeEndpointBaseSpec
   extends ScalatestRouteTest
@@ -88,6 +91,11 @@ trait EdgeEndpointBaseSpec
 
   def epRoutes: Route = endpointRoutes
   def appConfig: AppConfig
+
+  def sendToAppStateManager[T](cmd: Any): T = {
+    val fut = platform.appStateManager ? cmd
+    Await.result(fut, 5.seconds).asInstanceOf[T]
+  }
 }
 
 trait EndpointHandlerBaseSpec

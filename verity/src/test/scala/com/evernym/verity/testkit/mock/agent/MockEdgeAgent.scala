@@ -6,6 +6,10 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.AgentWithMsgHelper
 import org.json.JSONObject
 
+object MockEdgeAgent {
+  val INVITE_URL = "inviteUrl"
+  val INVITE_JSON_OBJECT = "inviteJsonObject"
+}
 /**
  * a mocked edge agent (which inherits properties of a mock agent with a message helper)
  */
@@ -25,9 +29,4 @@ class MockEdgeAgent(override val agencyEndpoint: UrlParam,
   def inviteUrl: String = get[String](INVITE_URL)
   def inviteJsonObject: JSONObject = get[JSONObject](INVITE_JSON_OBJECT)
 
-}
-
-object MockEdgeAgent {
-  val INVITE_URL = "inviteUrl"
-  val INVITE_JSON_OBJECT = "inviteJsonObject"
 }

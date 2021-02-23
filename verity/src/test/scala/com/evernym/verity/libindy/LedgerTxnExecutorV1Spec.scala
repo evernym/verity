@@ -31,12 +31,14 @@ class LedgerTxnExecutorV1Spec
   val maxWaitTime: Duration = 50000.millis
   lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
-  lazy val poolConnManager: IndyLedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig) {
-    override def poolConn: Some[Pool] = Some(null)
-  }
-  lazy val ledgerTxnExecutor: LedgerTxnExecutorV1 = new LedgerTxnExecutorV1(appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None) {
-    override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
-  }
+  lazy val poolConnManager: IndyLedgerPoolConnManager =
+    new IndyLedgerPoolConnManager(system, appConfig) {
+      override def poolConn: Some[Pool] = Some(null)
+    }
+  lazy val ledgerTxnExecutor: LedgerTxnExecutorV1 =
+    new LedgerTxnExecutorV1(system, appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None) {
+      override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
+    }
 
   lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
   implicit lazy val wap: WalletAPIParam =  WalletAPIParam(submitterDID)

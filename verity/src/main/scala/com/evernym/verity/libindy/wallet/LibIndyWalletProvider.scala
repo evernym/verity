@@ -2,7 +2,6 @@ package com.evernym.verity.libindy.wallet
 
 import com.evernym.verity.actor.wallet.WalletCreated
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.libindy.LibIndyCommon
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.libindy.wallet.operation_executor.FutureConverter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -18,8 +17,7 @@ import scala.concurrent.Future
 class LibIndyWalletExt (val wallet: Wallet) extends WalletExt
 
 class LibIndyWalletProvider(val appConfig: AppConfig)
-  extends LibIndyCommon
-    with WalletProvider
+  extends WalletProvider
     with FutureConverter {
   val logger: Logger = getLoggerByClass(classOf[LibIndyWalletProvider])
 
@@ -78,16 +76,16 @@ class LibIndyWalletProvider(val appConfig: AppConfig)
 
   def openExceptionHandler(id: String): Throwable ?=> RuntimeException = {
     case e: Exception if e.getCause.isInstanceOf[WalletAlreadyOpenedException] =>
-      WalletAlreadyOpened(s"wallet already opened: '$id''")
+      WalletAlreadyOpened(s"wallet already opened: '$id' (${e.getMessage})")
     case e: Exception if e.getCause.isInstanceOf[WalletNotFoundException] =>
-      WalletDoesNotExist(s"wallet does not exist: '$id'")
+      WalletDoesNotExist(s"wallet does not exist: '$id' (${e.getMessage})")
     case e: Exception if e.getCause.isInstanceOf[IOException] &&
       e.getCause.asInstanceOf[IOException].getSdkErrorCode == 114 =>
-      WalletDoesNotExist(s"wallet/table does not exist: '$id'")
+      WalletDoesNotExist(s"wallet/table does not exist: '$id' (${e.getMessage})")
     case e: Exception if e.getCause.isInstanceOf[InvalidStateException] =>
-      WalletInvalidState(s"error while opening wallet: '$id'")
+      WalletInvalidState(s"error while opening wallet: '$id' (${e.getMessage})")
     case e: Exception =>
-      WalletNotOpened(s"error while opening wallet '$id': ${e.toString}")
+      WalletNotOpened(s"error while opening wallet '$id' (${e.getMessage})")
   }
 
   def close(walletExt: WalletExt): Unit = {

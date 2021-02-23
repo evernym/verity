@@ -1,7 +1,7 @@
-package com.evernym.verity.apphealth.state
+package com.evernym.verity.actor.appStateManager.state
 
-import com.evernym.verity.apphealth.AppStateConstants.STATUS_LISTENING
-import com.evernym.verity.apphealth.{AppStateManagerBase, DrainingStarted, EventParam, MildSystemError, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, DrainingStarted, EventParam, MildSystemError, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 
 object ListeningState extends AppState {
 
@@ -33,8 +33,7 @@ object ListeningState extends AppState {
    */
   override def postTransition(param: EventParam)(implicit appStateManager: AppStateManagerBase): Unit = {
     import appStateManager._
-    performAction(param.actionHandler)
-    sysServiceNotifier.started()
-    sysServiceNotifier.setStatus(name)
+    notifierService.started()
+    notifierService.setStatus(name)
   }
 }

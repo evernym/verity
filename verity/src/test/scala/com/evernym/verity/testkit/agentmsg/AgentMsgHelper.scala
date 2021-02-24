@@ -23,7 +23,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.deaddrop.{DeadDropData, DeadDropRetrieveResult}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerVars.testQuestion
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.Restored
-import com.evernym.verity.testkit.Matchers
+import com.evernym.verity.testkit.{AwaitResult, Matchers}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_1.{AgentMsgBuilder => AgentMsgBuilder_v_0_1, AgentMsgHandler => AgentMsgHandler_v_0_1}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6.{AgentMsgBuilder => AgentMsgBuilder_v_0_6, AgentMsgHandler => AgentMsgHandler_v_0_6}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7.{AgentMsgBuilder => AgentMsgBuilder_v_0_7, AgentMsgHandler => AgentMsgHandler_v_0_7}
@@ -34,7 +34,6 @@ import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, _}
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.AsyncToSync
 import com.typesafe.scalalogging.Logger
 
 import scala.reflect.ClassTag
@@ -60,7 +59,7 @@ trait AgentMsgHelper
     with AgentMsgBuilder_v_0_6 with AgentMsgHandler_v_0_6
     with AgentMsgBuilder_v_0_7 with AgentMsgHandler_v_0_7
     with AgentMsgBuilder_v_1_0 with AgentMsgHandler_v_1_0
-    with AsyncToSync {
+    with AwaitResult {
   this: MockAgent with HasCloudAgent with Matchers =>
 
   implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI)

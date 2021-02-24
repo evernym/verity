@@ -11,7 +11,6 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{CloudWaitingOnSponsor, EdgeCreationWaitingOnSponsor, FailedAgentCreation, Initialized, Provisioning, RequestedToProvision, Uninitialized, AgentCreated => AgentCreatedState}
 import com.evernym.verity.util.TimeUtil._
 import com.evernym.verity.util.Base64Util.getBase64Decoded
-import com.evernym.verity.vault.service.AsyncToSync
 
 import scala.concurrent.duration.Duration
 import scala.util.{Success, Try}
@@ -20,8 +19,7 @@ import scala.util.control.NonFatal
 trait AgentProvisionEvt
 
 class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg, Any, AgentProvisioningState, String])
-  extends Protocol[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String](AgentProvisioningDefinition)
-    with AsyncToSync {
+  extends Protocol[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String](AgentProvisioningDefinition) {
 
   override def handleProtoMsg: (AgentProvisioningState, Option[Role], Msg) ?=> Any = {
     case (Initialized(_) | FailedAgentCreation(_), _,                m: CreateCloudAgent)   =>

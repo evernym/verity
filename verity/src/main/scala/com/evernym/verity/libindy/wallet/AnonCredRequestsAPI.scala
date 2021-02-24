@@ -27,7 +27,7 @@ trait AnonCredRequestsAPI
     val salt = appConfig.getConfigStringReq(SALT_WALLET_NAME)
     val msIdHex = HashUtil.hash(SHA256)(selfParticipantId + salt).hex
     //TODO: may want to optimize this (for now, every time a cred request is sent, it will do below check)
-    Try(convertToSyncReq(walletApi.executeAsync[String](CreateMasterSecret(msIdHex)))) match {
+    Try(DEPRECATED_convertToSyncReq(walletApi.executeAsync[String](CreateMasterSecret(msIdHex)))) match {
       case Success(msId) if msId == msIdHex => msIdHex
       case Failure(_: DuplicateMasterSecretNameException) => msIdHex    //already created
       case Failure(_: RuntimeException) => throw new RuntimeException("error during master secret creation")

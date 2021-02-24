@@ -2,13 +2,12 @@ package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.{DidPair, SetupAgentEndpoint}
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, DidPair, SetupAgentEndpoint}
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext

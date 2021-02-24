@@ -34,7 +34,6 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
@@ -66,7 +65,6 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
     with DEPRECATED_HasWallet
-    with AsyncToSync
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
 
   val logger: Logger = ctx.logger
@@ -126,7 +124,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
     val vs = VerifySigByVerKey(signedByVerKey, challenge, sig)
-    val verifResult = convertToSyncReq(CryptoOpExecutor.verifySig(vs))
+    val verifResult = ctx.DEPRECATED_convertAsyncToSync(CryptoOpExecutor.verifySig(vs))
     if (! verifResult.verified) {
       val errorMsgPrefix = if (isEdgeAgentsKeyDlgProof) "local" else "remote"
       val errorMsg = errorMsgPrefix + " agent key delegation proof verification failed"

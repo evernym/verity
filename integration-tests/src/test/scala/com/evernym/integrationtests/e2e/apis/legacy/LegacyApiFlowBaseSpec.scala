@@ -30,11 +30,10 @@ import com.evernym.verity.testkit.agentmsg._
 import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, PushNotifMsgHttpListener}
-import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
+import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.util._
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.vault.service.AsyncToSync
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
@@ -52,7 +51,7 @@ trait LegacyApiFlowBaseSpec
     with ScalaFutures
     with HttpListenerUtil
     with CancelGloballyAfterFailure
-    with AsyncToSync {
+    with AwaitResult {
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))

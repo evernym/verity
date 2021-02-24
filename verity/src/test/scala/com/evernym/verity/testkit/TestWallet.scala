@@ -1,6 +1,7 @@
 package com.evernym.verity.testkit
 
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.TestAppConfig
@@ -10,6 +11,9 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.vault.{AgentWalletAPI, WalletAPIParam}
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.StandardWalletAPI
+
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{Await, Future}
 
 /**
  * used to have a 'testWalletAPI' to be used in the 'test' code only
@@ -57,5 +61,11 @@ class TestWallet(override val createWallet: Boolean = false) extends HasDefaultT
 
   def executeSync[T](cmd: Any): T = {
     testWalletAPI.executeSync[T](cmd)(wap)
+  }
+}
+
+trait AwaitResult {
+  def convertToSyncReq[T](fut: Future[T]): T = {
+    Await.result(fut, FiniteDuration(20, TimeUnit.SECONDS))
   }
 }

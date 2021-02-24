@@ -6,10 +6,9 @@ import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
 import com.evernym.verity.protocol.engine.MsgFamilyVersion
-import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, HasTestWalletAPI}
+import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, HasTestWalletAPI}
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.vault.service.AsyncToSync
 
 trait AgentMsgSpecBase
   extends BasicSpecWithIndyCleanup
@@ -66,7 +65,7 @@ trait AgentMsgSpecBase
 trait AgentTransformerSpec
   extends BasicSpecWithIndyCleanup
     with AgentMsgSpecBase
-    with AsyncToSync {
+    with AwaitResult {
 
   def msgPackFormat: MsgPackFormat
   def msgFamilyVersion: MsgFamilyVersion

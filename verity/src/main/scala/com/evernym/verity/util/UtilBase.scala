@@ -307,7 +307,7 @@ trait UtilBase extends AsyncToSync {
   def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
                            (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
-    val sig = convertToSyncReq(walletAPI.executeAsync[Array[Byte]](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes)))
+    val sig = DEPRECATED_convertToSyncReq(walletAPI.executeAsync[Array[Byte]](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes)))
     keyDlgProof.copy(signature=Base64Util.getBase64Encoded(sig))
   }
 

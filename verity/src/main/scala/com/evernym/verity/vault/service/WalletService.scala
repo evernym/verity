@@ -71,8 +71,8 @@ trait WalletService {
 
 trait AsyncToSync {
 
-  def convertToSyncReq[T](fut: Future[T]): T = {
+  def DEPRECATED_convertToSyncReq[T](fut: Future[T]): T = {
     //TODO: finalize timeout
-    Await.result(fut, FiniteDuration(250, TimeUnit.SECONDS))
+    Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
   }
 }

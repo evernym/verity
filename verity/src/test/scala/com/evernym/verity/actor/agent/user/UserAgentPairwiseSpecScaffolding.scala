@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.PoisonPill
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, agentRegion}
@@ -11,7 +11,6 @@ import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, ThreadId}
 import com.evernym.verity.protocol.protocols.MsgDetail
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._

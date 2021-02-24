@@ -1,13 +1,19 @@
 package com.evernym.verity.protocol.engine
 
+import java.util.concurrent.TimeUnit
+
 import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
 import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
+import kamon.metric.MeasurementUnit
 
-import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{Await, Future}
 
 /**
   * A representation of the Container to the protocol it holds that embodies
@@ -69,4 +75,15 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   // noinspection ScalaDeprecation
   @silent
   def SERVICES_DEPRECATED: ProtocolServices[M,E,I] = _services.getOrElse(throw new RuntimeException("services are not available"))
+
+  @silent
+  def DEPRECATED_convertAsyncToSync[T](fut: Future[T]): T = {
+    MetricsWriter.histogramApi.recordWithTag(
+      AS_BLOCKING_WALLET_API_CALL_COUNT,
+      MeasurementUnit.none,
+      1,
+      "protocol" -> definition.msgFamily.protoRef.toString,
+    )
+    Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
+  }
 }

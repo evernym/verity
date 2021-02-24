@@ -12,7 +12,6 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.typesafe.config.{Config, ConfigFactory}
@@ -22,7 +21,6 @@ class UserAgentPairwiseSnapshotSpec
     with UserAgentPairwiseSpecScaffolding
     with PersistentActorSpec
     with SnapshotSpecBase
-    with AgentWalletSetupProvider
     with OverrideConfig {
 
   override def beforeAll(): Unit = {

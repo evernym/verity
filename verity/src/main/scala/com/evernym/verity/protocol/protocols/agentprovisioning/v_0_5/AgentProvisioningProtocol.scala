@@ -12,7 +12,7 @@ import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AgentWalletSetupProvider, AskUserAgentCreator}
+import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 import com.evernym.verity.util.{Base58Util, ParticipantUtil}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
@@ -29,7 +29,6 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     extends Protocol[AgentProvisioningProtocol,Role,ProtoMsg,Any,
       State, String](AgentProvisioningProtoDef)
       with HasLogger
-      with AgentWalletSetupProvider
       with DEPRECATED_HasWallet {
 
   val logger: Logger = ctx.logger
@@ -158,7 +157,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def processValidatedConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
-    val agentPairwiseKey = convertToSyncReq(walletAPI.executeAsync[NewKeyCreated](CreateNewKey()))
+    val agentPairwiseKey = ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey()))
     storeTheirKey(crm.fromDID, crm.fromDIDVerKey)
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(crm.fromDID, None)))
     val provisionerPartiId = initParameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
@@ -179,7 +178,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def storeTheirKey(did: DID, verKey: VerKey): Unit = {
     try {
-      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(did, verKey)))
+      ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(did, verKey)))
     } catch {
       case e: BadRequestErrorException if e.respCode == ALREADY_EXISTS.statusCode =>
         throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)

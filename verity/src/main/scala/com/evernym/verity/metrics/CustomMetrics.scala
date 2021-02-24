@@ -134,6 +134,7 @@ object CustomMetrics {
 
   final val AS_START_TIME = s"$AS.start-time-in-millis"
 
+  final val AS_BLOCKING_WALLET_API_CALL_COUNT = s"$AS.blocking-wallet-api-count"
   final val AS_CACHE = s"$AS.cache"
 
   final val AS_CACHE_TOTAL_SIZE = s"$AS_CACHE.total.size"

@@ -25,7 +25,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.HasMsgProgressTracker
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
-import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
@@ -160,22 +160,18 @@ trait AgentCommon
 
   lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
-  def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
-    try {
-      updateAgentWalletId(actorEntityId)
-      logger.debug(s"wallet successfully initialized and opened for actorEntityId: $actorEntityId")
-    } catch {
-      case e: Exception =>
-        logger.error(s"wallet failed to initialize, create, and open for actorEntityId: $actorEntityId")
-        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
-        throw e
-    }
-  }
-
   def updateAgentWalletId(actorEntityId: String): Unit = {
     if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
       throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet id already set to different value"))
-    setAgentWalletId(actorEntityId)
+    try {
+      setAgentWalletId(actorEntityId)
+      logger.debug(s"wallet id successfully initialized for actorEntityId: $actorEntityId")
+    } catch {
+      case e: Exception =>
+        logger.error(s"wallet id initialization failed for actorEntityId: $actorEntityId")
+        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
+        throw e
+    }
   }
 
   def setAgentActorDetail(didPair: DidPair): Future[Any] = {
@@ -206,7 +202,6 @@ trait AgentCommon
     val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
     val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER_ID)
     generalCache.getByParamAsync(gadfcParam)
-      .mapTo[CacheQueryResponse]
       .map(cqr => DidPair(agencyDID, cqr.getAgencyInfoReq(agencyDID).verKeyReq))
   }
 
@@ -279,11 +274,9 @@ trait AgentCommon
                 .update(_.myDidDoc.setIfDefined(updatedMyDidDoc))
                 .update(_.thoseDidDocs.setIfDefined(Option(updatedThoseDidDocs)))
             val newAuthKeys = getAllAuthKeys(updatedRel)
-
             val authKeyToBePersisted =
               computeAgencyAuthKeyToBePersisted(preAgencyDidPair, newAgencyDIDPair) ++
                 computeAuthKeyToBePersisted(preAddedAuthKeys, oldAuthKeys, newAuthKeys)
-
             self ? UpdateState(newAgencyDIDPair, updatedRel, authKeyToBePersisted)
           }.map { _ =>
             sndr ! Done

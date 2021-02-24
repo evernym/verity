@@ -5,8 +5,7 @@ import java.util.UUID
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignMsg}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.testkit.TestWallet
-import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.testkit.{LegacyWalletAPI, TestWallet}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.apache.commons.codec.digest.DigestUtils
 
@@ -14,7 +13,7 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
 
   def appConfig: AppConfig
 
-  def prepareDeadDropData(walletAPI: WalletAPI,
+  def prepareDeadDropData(walletAPI: LegacyWalletAPI,
                           passphraseOpt: Option[String]=None,
                           dataOpt: Option[Array[Byte]]=None)(implicit wap: WalletAPIParam): DeadDropData = {
     val passphrase = passphraseOpt.getOrElse(UUID.randomUUID().toString.replace("-", ""))
@@ -31,7 +30,7 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
 
   def generatePayload(): DeadDropData = {
     val testWallet = new TestWallet(createWallet = true)
-    prepareDeadDropData(testWallet.walletAPI)(testWallet.wap)
+    prepareDeadDropData(testWallet.testWalletAPI)(testWallet.wap)
   }
 
 }

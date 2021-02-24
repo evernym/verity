@@ -4,7 +4,7 @@ import com.evernym.verity.constants.Constants.{AGENCY_DID_KEY, KEY_VALUE_MAPPER_
 
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 
 trait AgencyIdUtil {
 

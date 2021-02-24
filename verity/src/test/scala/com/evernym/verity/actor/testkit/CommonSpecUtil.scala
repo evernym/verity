@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
+import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.testkit.util.TestUtil.getSigningKey
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault._
@@ -62,7 +63,7 @@ trait CommonSpecUtil {
     DidPair(dinfo.did, dinfo.verKey)
   }
 
-  def createWallet(walletId: String, walletAPI: WalletAPI): WalletAPIParam = {
+  def createWallet(walletId: String, walletAPI: LegacyWalletAPI): WalletAPIParam = {
     val wap = WalletAPIParam(walletId)
     try {
       walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)

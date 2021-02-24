@@ -1,7 +1,8 @@
-package com.evernym.verity.vault.wallet_api
+package com.evernym.verity.testkit
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
@@ -12,8 +13,8 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{AsyncToSync, WalletMsgHandler, WalletMsgParam, WalletParam}
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
-
 
 import scala.concurrent.Future
 
@@ -99,4 +100,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     resp.map(_.asInstanceOf[T])
   }
 
+  final def executeSync[T](cmd: Any)(implicit wap: WalletAPIParam): T = {
+    convertToSyncReq(executeAsync(cmd))
+  }
 }

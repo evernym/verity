@@ -2,7 +2,7 @@ package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.actor.StorageInfo
-import com.evernym.verity.actor.agent.{AgentActorContext, WalletApiBuilder}
+import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.config.AppConfig
@@ -17,9 +17,6 @@ import com.evernym.verity.texter.SMSSender
 
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.vault.WalletProvider
-import com.evernym.verity.vault.service.WalletService
-import com.evernym.verity.vault.wallet_api.WalletAPI
 
 /**
  *
@@ -54,14 +51,6 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =
     ProtocolRegistry(protocol.protocols.protocolRegistry.entries :+
       ProtocolRegistry.Entry(TicTacToeProtoDef, PinstIdResolution.V0_2): _*)
-
-  override def buildWalletAPI(appConfig: AppConfig,
-                              walletService: WalletService,
-                              walletProvider: WalletProvider,
-                              poolConnManager: Option[LedgerPoolConnManager]=None): WalletAPI = {
-    //this is for unit test to not depend on pool ledger
-    WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider, None)
-  }
 }
 
 case class MockAgentActorContextParam(actorTypeToRegions: Map[Int, ActorRef]=Map.empty)

@@ -158,7 +158,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   private def processValidatedConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
-    val agentPairwiseKey = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
+    val agentPairwiseKey = convertToSyncReq(walletAPI.executeAsync[NewKeyCreated](CreateNewKey()))
     storeTheirKey(crm.fromDID, crm.fromDIDVerKey)
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(crm.fromDID, None)))
     val provisionerPartiId = initParameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
@@ -179,7 +179,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def storeTheirKey(did: DID, verKey: VerKey): Unit = {
     try {
-      walletAPI.executeSync[TheirKeyStored](StoreTheirKey(did, verKey))
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(did, verKey)))
     } catch {
       case e: BadRequestErrorException if e.respCode == ALREADY_EXISTS.statusCode =>
         throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)

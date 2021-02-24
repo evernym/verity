@@ -233,7 +233,7 @@ class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent) extends DeadDropSpecUti
 
   lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.DID}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
 
-  lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.walletAPI, Option(passphrase))(mockEdgeAgent.wap)
+  lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.testWalletAPI, Option(passphrase))(mockEdgeAgent.wap)
 
   def backupInitParams = BackupInitParams(deadDropData.recoveryVerKey, deadDropData.address, cloudAgentAddress.getBytes())
 

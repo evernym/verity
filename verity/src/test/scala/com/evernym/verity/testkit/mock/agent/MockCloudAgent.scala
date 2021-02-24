@@ -22,8 +22,8 @@ class MockCloudAgent(override val agencyEndpoint: UrlParam,
   var remoteAgentAndAgencyIdentityOpt: Option[RemoteAgentAndAgencyIdentity] = None
 
   def setupRemoteAgentAndAgencyIdentity(raaad: RemoteAgentAndAgencyIdentity): Unit = {
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(raaad.agentDID, raaad.agentVerKey))
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(raaad.agencyDID, raaad.agencyVerKey, ignoreIfAlreadyExists=true))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(raaad.agentDID, raaad.agentVerKey))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(raaad.agencyDID, raaad.agencyVerKey, ignoreIfAlreadyExists=true))
     remoteAgentAndAgencyIdentityOpt = Option(raaad)
   }
 }

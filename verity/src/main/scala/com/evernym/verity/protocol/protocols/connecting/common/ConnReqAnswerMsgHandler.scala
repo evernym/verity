@@ -120,18 +120,18 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, connReqAnswerMsg.answerStatusCode, theirDidDocDetailOpt))
 
     theirDidDocDetailOpt.foreach { _ =>
-      walletAPI.executeSync[TheirKeyStored](
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](
         StoreTheirKey(connReqAnswerMsg.senderAgencyDetail.DID,
-          connReqAnswerMsg.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
+          connReqAnswerMsg.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true)))
 
-      walletAPI.executeSync[TheirKeyStored](
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](
         StoreTheirKey(connReqAnswerMsg.senderDetail.DID,
-          connReqAnswerMsg.senderDetail.verKey, ignoreIfAlreadyExists = true))
+          connReqAnswerMsg.senderDetail.verKey, ignoreIfAlreadyExists = true)))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
-      walletAPI.executeSync[TheirKeyStored](
-        StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](
+        StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true))
       )
     }
 
@@ -189,7 +189,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
-    walletAPI.executeSync[Option[VerKey]](GetVerKeyOpt(senderDID)) foreach { _ =>
+    convertToSyncReq(walletAPI.executeAsync[Option[VerKey]](GetVerKeyOpt(senderDID))) foreach { _ =>
       throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))
     }

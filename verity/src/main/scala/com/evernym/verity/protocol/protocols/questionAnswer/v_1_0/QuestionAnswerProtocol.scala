@@ -4,10 +4,9 @@ package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 // because that is what the community has decided to call it.  We may need to influence the
 // community to change it.
 
-import java.util.{Base64, UUID}
+import java.util.UUID
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Base64Encoded
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess

@@ -4,8 +4,8 @@ import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
+import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.wallet_api.WalletAPI
 
 /**
  *
@@ -14,7 +14,7 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
  * @param wap wallet access param
  */
 class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
-                            (implicit val wa: WalletAPI, val wap: WalletAPIParam) {
+                            (implicit val wa: LegacyWalletAPI, val wap: WalletAPIParam) {
 
   /**
    * their pairwise DID pair

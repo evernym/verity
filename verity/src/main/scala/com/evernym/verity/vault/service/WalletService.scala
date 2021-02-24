@@ -21,23 +21,9 @@ import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 
 
-trait WalletService extends AsyncToSync {
+trait WalletService {
 
   protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
-
-  /**
-   * synchronous/BLOCKING wallet service call
-   * soon to be DEPRECATED once all the wallet api caller code migrates to
-   * asynchronous wallet service call
-   *
-   * @param walletId
-   * @param cmd
-   * @tparam T
-   * @return
-   */
-  def executeSync[T: ClassTag](walletId: String, cmd: Any): T = {
-    convertToSyncReq(executeAsync(walletId, cmd))
-  }
 
   lazy val BAD_REQ_ERRORS = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
 

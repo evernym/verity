@@ -5,9 +5,10 @@ import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.vault._
+import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
-trait AgentWalletSetupProvider {
+trait AgentWalletSetupProvider extends AsyncToSync {
 
   def walletAPI: WalletAPI
 
@@ -15,9 +16,9 @@ trait AgentWalletSetupProvider {
   //when we change protocols to start using async api, we should change this too
   protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
     val agentWAP = WalletAPIParam(walletId)
-    walletAPI.executeSync[WalletCreated.type](CreateWallet)(agentWAP)
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP)
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey())(agentWAP)
+    convertToSyncReq(walletAPI.executeAsync[WalletCreated.type](CreateWallet)(agentWAP))
+    convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
+    convertToSyncReq(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
   }
 }
 

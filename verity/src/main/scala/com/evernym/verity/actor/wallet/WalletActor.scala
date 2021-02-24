@@ -17,7 +17,7 @@ import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
-import com.evernym.verity.vault.{KeyParam, WalletExt, WalletNotOpened, WalletProvider}
+import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -112,7 +112,11 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
         walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
         .map(w => SetWallet(Option(w)))
         .recover {
-          case _: WalletNotOpened => SetWallet(None)
+          case _ @ (_: WalletDoesNotExist)  =>
+            SetWallet(None)
+          case e =>
+            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage)
+            throw e
         }.pipeTo(self)
     }
   }
@@ -230,6 +234,8 @@ case class CreateProof(proofRequest: String, requestedCredentials: String, schem
 case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
 case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
+
+case object Close extends WalletCommand
 
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage

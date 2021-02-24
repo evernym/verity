@@ -16,23 +16,23 @@ trait AgentMsgSpecBase
     with HasTestWalletAPI
     with CommonSpecUtil {
 
-  lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
+  lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI)
 
   def typ: String
 
   lazy val aliceWap: WalletAPIParam =
-    createWallet(s"alice-$typ", walletAPI)
+    createWallet(s"alice-$typ", testWalletAPI)
   lazy val aliceCloudAgencyAgentWap: WalletAPIParam =
-    createWallet(s"alice-cloud-agency-$typ", walletAPI)
+    createWallet(s"alice-cloud-agency-$typ", testWalletAPI)
   lazy val aliceCloudAgentWap: WalletAPIParam =
-    createWallet(s"alice-cloud-agent-$typ", walletAPI)
+    createWallet(s"alice-cloud-agent-$typ", testWalletAPI)
 
   lazy val aliceCloudAgentKeyParam: KeyParam = KeyParam(Left(aliceCloudAgentKey.verKey))
   lazy val aliceKeyParam: KeyParam = KeyParam(Left(aliceKey.verKey))
 
-  lazy val aliceKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceWap)
-  lazy val aliceCloudAgencyKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceCloudAgencyAgentWap)
-  lazy val aliceCloudAgentKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceCloudAgentWap)
+  lazy val aliceKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceWap)
+  lazy val aliceCloudAgencyKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceCloudAgencyAgentWap)
+  lazy val aliceCloudAgentKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())(aliceCloudAgentWap)
 
   //TODO why does this need to be mutable? Tests need to be able to be run independently.
   var lastPackedMsg: PackedMsg = _

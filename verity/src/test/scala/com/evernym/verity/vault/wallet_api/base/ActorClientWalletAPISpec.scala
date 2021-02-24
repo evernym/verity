@@ -4,9 +4,8 @@ import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.{CoreActor, Done}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.legacy.services.WalletVerKeyCacheHelper
+import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.vault.WalletAPIParam
-import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Minutes, Seconds, Span}
 
@@ -14,7 +13,7 @@ trait ActorClientWalletAPISpecBase
   extends ClientWalletAPISpecBase
     with Eventually {
 
-  lazy val walletSetupManager: ActorRef = system.actorOf(Props(new WalletSetupManager(appConfig, walletAPI)))
+  lazy val walletSetupManager: ActorRef = system.actorOf(Props(new WalletSetupManager(appConfig, testWalletAPI)))
 
   override def startUserWalletSetupWithSyncAPI(): Unit = {
     walletSetupManager ! StartAgentCreation(totalUsers, useSyncWalletAPI = true)
@@ -44,7 +43,7 @@ trait ActorClientWalletAPISpecBase
 //this is little bit like a region actor which receives a request
 // and it creates actual mock agent actors
 // and sends a command to those actors which starts wallet activity
-class WalletSetupManager(appConfig: AppConfig, walletAPI: WalletAPI)
+class WalletSetupManager(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
   extends CoreActor {
 
   var successResponse = 0
@@ -74,7 +73,7 @@ case class Status(successResp: Int, failedResp: Int) extends ActorMessage {
 
 //this is mocking agent actor which when receive 'StartWalletSetup' command
 //it start exercises wallet sync apis
-class MockAgentActor(appConfig: AppConfig, walletAPI: WalletAPI)
+class MockAgentActor(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
   extends CoreActor
     with UserWalletSetupHelper {
 
@@ -85,7 +84,6 @@ class MockAgentActor(appConfig: AppConfig, walletAPI: WalletAPI)
   }
 
   implicit val wap: WalletAPIParam = WalletAPIParam(entityId)
-  val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, walletAPI, appConfig)
 
   /**
    * purpose of this method is to setup a new user wallet (and execute 3-4 wallet operations against it)

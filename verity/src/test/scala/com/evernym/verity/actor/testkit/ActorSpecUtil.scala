@@ -6,7 +6,7 @@ import akka.testkit.{ImplicitSender, TestEventListener, TestKit, TestKitBase}
 import akka.{actor => classic}
 import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, OverrideConfig, ProvidesMockPlatform}
+import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -98,17 +98,19 @@ trait HasTestActorSystem extends HasActorSystem {
   lazy val snapTestKit: SnapshotTestKit = SnapshotTestKit(system)
 }
 
-/**
-  * To help ensure actor-based tests are cleaned up properly, we should use ActorSpec and not TestKit directly
-  */
-trait ActorSpec extends TestSuite with ActorSpecLike with OverrideConfig {
-  this: BasicSpecBase =>
-
+trait HasBasicActorSystem extends OverrideConfig with MockAppConfig{
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
   implicit lazy val system: classic.ActorSystem = as
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
+}
+
+/**
+  * To help ensure actor-based tests are cleaned up properly, we should use ActorSpec and not TestKit directly
+  */
+trait ActorSpec extends TestSuite with ActorSpecLike with HasBasicActorSystem {
+  this: BasicSpecBase =>
 }
 
 sealed trait ActorSpecLike

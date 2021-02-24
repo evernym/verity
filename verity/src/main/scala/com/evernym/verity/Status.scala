@@ -1,12 +1,15 @@
 package com.evernym.verity
 
 import com.evernym.verity.config.CommonConfig
-import com.evernym.verity.util.Util._
 import com.evernym.verity.Exceptions.InternalServerErrorException
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.typesafe.scalalogging.Logger
 
 import scala.language.implicitConversions
 
 object Status extends Enumeration {
+
+  lazy val logger: Logger = getLoggerByClass(getClass)
 
   import StatusCodePrefix._
 

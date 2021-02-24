@@ -60,6 +60,7 @@ trait AgentMsgSenderHttpWrapper
   val respWaitTime: Duration = 15.seconds
 
   def mockClientAgent: AgentWithMsgHelper
+  implicit def walletAPIParam: WalletAPIParam = mockClientAgent.wap
 
   implicit val system: ActorSystem = AkkaTestBasic.system()
   def appConfig: AppConfig = new TestAppConfig()
@@ -507,15 +508,14 @@ trait AgentMsgSenderHttpWrapper
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
     logApiStart(s"get verkey from wallet finished...")
     logApiStart(s"create sponsor keys...")
-    implicit val wap: WalletAPIParam = mockClientAgent.wap
-    lazy val sponsorKeys: NewKeyCreated = mockClientAgent.walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed=Some("000000000000000000000000Trustee1")))
+    lazy val sponsorKeys: NewKeyCreated = mockClientAgent.testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed=Some("000000000000000000000000Trustee1")))
 
     val id = "my-id"
     val sponsorId = "evernym-test-sponsorabc123"
     val nonce = "12345678"
     val timestamp = TimeUtil.nowDateString
 
-    val encrypted = mockClientAgent.walletAPI.executeSync[Array[Byte]](
+    val encrypted = mockClientAgent.testWalletAPI.executeSync[Array[Byte]](
       SignMsg(KeyParam.fromVerKey(sponsorKeys.verKey),
         (nonce + timestamp + id + sponsorId).getBytes()
       )

@@ -1,6 +1,5 @@
 package com.evernym.verity.libindy.wallet
 
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
 import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
@@ -10,6 +9,7 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.service.AsyncToSync
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
 import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
 
@@ -17,7 +17,8 @@ import scala.util.{Failure, Success, Try}
 
 trait AnonCredRequestsAPI
   extends AnonCredRequests
-    with FutureConverter { this: WalletAccessAPI  =>
+    with FutureConverter
+    with AsyncToSync { this: WalletAccessAPI  =>
 
   implicit def wap: WalletAPIParam
 
@@ -26,7 +27,7 @@ trait AnonCredRequestsAPI
     val salt = appConfig.getConfigStringReq(SALT_WALLET_NAME)
     val msIdHex = HashUtil.hash(SHA256)(selfParticipantId + salt).hex
     //TODO: may want to optimize this (for now, every time a cred request is sent, it will do below check)
-    Try(walletApi.executeSync[String](CreateMasterSecret(msIdHex))) match {
+    Try(convertToSyncReq(walletApi.executeAsync[String](CreateMasterSecret(msIdHex)))) match {
       case Success(msId) if msId == msIdHex => msIdHex
       case Failure(_: DuplicateMasterSecretNameException) => msIdHex    //already created
       case Failure(_: RuntimeException) => throw new RuntimeException("error during master secret creation")

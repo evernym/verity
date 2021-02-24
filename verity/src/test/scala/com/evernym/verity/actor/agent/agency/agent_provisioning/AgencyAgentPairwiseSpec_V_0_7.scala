@@ -14,7 +14,7 @@ import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
 import scala.concurrent.duration.Duration
 
-trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase with UserAgentCreatorHelper {
+trait AgencyAgentPairwiseSpec_V_0_7 extends UserAgentCreatorHelper {
 
   def agencyAgentPairwiseSetup(edgeAgent: MockEdgeAgent=mockEdgeAgent, name: String="mockEdgeAgent"): Unit = {
     var pairwiseDID: DID = null

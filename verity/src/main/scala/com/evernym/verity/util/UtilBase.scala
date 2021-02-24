@@ -23,6 +23,7 @@ import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.SignMsg
+import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.Logger
@@ -43,7 +44,7 @@ import scala.util.{Failure, Left, Success}
 case class PackedMsgWrapper(msg: Array[Byte], reqMsgContext: ReqMsgContext) extends ActorMessage
 
 
-trait UtilBase {
+trait UtilBase extends AsyncToSync {
   val logger: Logger = getLoggerByClass(classOf[UtilBase])
 
   def replaceVariables(str: String, map: Map[String, String]): String ={
@@ -306,7 +307,7 @@ trait UtilBase {
   def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
                            (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
-    val sig = walletAPI.executeSync[Array[Byte]](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes))
+    val sig = convertToSyncReq(walletAPI.executeAsync[Array[Byte]](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes)))
     keyDlgProof.copy(signature=Base64Util.getBase64Encoded(sig))
   }
 

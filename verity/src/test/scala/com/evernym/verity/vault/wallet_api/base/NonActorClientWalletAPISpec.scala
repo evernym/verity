@@ -17,7 +17,7 @@ trait NonActorClientWalletAPISpec
     (1 to totalUsers).foreach { userId =>
       Future {
         try {
-          _baseWalletSetupWithSyncAPI(userId, walletAPI)
+          _baseWalletSetupWithSyncAPI(userId, testWalletAPI)
           successResp += 1
         } catch {
           case e: RuntimeException =>

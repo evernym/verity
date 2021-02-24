@@ -1,11 +1,12 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.external_api_access._
-import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
+import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
 
 import scala.util.Try
@@ -144,11 +145,11 @@ class WalletAccessControllerSpec extends BasicSpec {
   }
 }
 
-object WalletAccessTest extends HasTestWalletAPI {
-  agentWalletAPI.walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
-  val newKey: NewKeyCreated = agentWalletAPI.walletAPI.executeSync[NewKeyCreated](CreateNewKey())
+object WalletAccessTest extends HasDefaultTestWallet {
+  testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
+  val newKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =
-    new WalletAccessAPI(appConfig, agentWalletAPI.walletAPI, selfParticipantId, {}, {})
+    new WalletAccessAPI(new TestAppConfig, testWalletAPI, selfParticipantId, {}, {})
 }
 

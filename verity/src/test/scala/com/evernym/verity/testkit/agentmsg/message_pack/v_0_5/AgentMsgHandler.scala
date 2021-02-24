@@ -7,7 +7,6 @@ import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV_0_5, GeneralMsgCreatedResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_5, ComMethodUpdated_MFV_0_5, ConfigsMsg_MFV_0_5, ConfigsRemoved_MFV_0_5, ConfigsUpdated_MFV_0_5, ConnStatusUpdated_MFV_0_5, Connected_MFV_0_5, InviteMsgDetail_MFV_0_5, KeyCreated_MFV_0_5, MsgCreated_MFV_0_5, MsgStatusUpdatedByConns_MFV_0_5, MsgStatusUpdated_MFV_0_5, MsgsByConns_MFV_0_5, MsgsSent_MFV_0_5, Msgs_MFV_0_5, SignedUp_MFV_0_5}
-import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.KeyParam
 
 /**
@@ -17,11 +16,11 @@ trait AgentMsgHandler {
 
   this: AgentMsgHelper with MockAgent with HasCloudAgent with Matchers =>
 
-  object v_0_5_resp extends AsyncToSync {
+  object v_0_5_resp {
 
     def handleConnectedResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): Connected_MFV_0_5 = {
       val connectedMsg = unpackConnectedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
-      walletAPI.executeSync[TheirKeyStored](
+      testWalletAPI.executeSync[TheirKeyStored](
         StoreTheirKey(connectedMsg.withPairwiseDID, connectedMsg.withPairwiseDIDVerKey))
       setAgencyPairwiseAgentDetail(connectedMsg.withPairwiseDID, connectedMsg.withPairwiseDIDVerKey)
       connectedMsg

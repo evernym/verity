@@ -1,27 +1,45 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.testkit.{BasicAsyncSpec, CleansUpIndyClientFirst, HasTestWalletAPI}
+import java.util.UUID
+
+import akka.actor.{ActorRef, Props}
+import com.evernym.verity.actor.ShardUtil
+import com.evernym.verity.actor.testkit.{HasBasicActorSystem, TestAppConfig}
+import com.evernym.verity.testkit.{BasicAsyncSpec, CleansUpIndyClientFirst, HasTestAgentWalletAPI}
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
+import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletActor, WalletCreatedBase}
+import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
+import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.protocols.connecting.common.LegacyRoutingDetail
+import com.evernym.verity.vault.WalletAPIParam
 import org.scalatest.OptionValues
 
 class DidDocBuilderSpec
   extends BasicAsyncSpec
     with CleansUpIndyClientFirst
-    with HasTestWalletAPI
-    with OptionValues {
+    with HasTestAgentWalletAPI
+    with OptionValues
+    with HasBasicActorSystem
+    with ShardUtil {
 
-  override def createWallet = true
-  val relDidPair: NewKeyCreated = {
-    agentWalletId
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey())
+  val walletActorRegion: ActorRef = createNonPersistentRegion(
+      WALLET_REGION_ACTOR_NAME,
+      Props(new WalletActor(appConfig, new IndyLedgerPoolConnManager(system, appConfig)))
+  )
+
+  implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
+
+  lazy val (relDidPair, thisAgentKey, otherAgentKey, theirAgentKey) = {
+    testWalletAPI.executeSync[WalletCreatedBase](CreateWallet)
+
+    val relDIDPair = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())
+    val thisAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("0000000000000000000000000000TEST")))
+    val otherAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000OTHER")))
+    val theirAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
+    testWalletAPI.executeSync[Done.type](Close)
+    (relDIDPair, thisAgentKey, otherAgentKey, theirAgentKey)
   }
-  val thisAgentKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("0000000000000000000000000000TEST")))
-  val otherAgentKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000OTHER")))
-  val theirAgentKey: NewKeyCreated = walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
-
 
   implicit lazy val didDocBuilderParam: DidDocBuilderParam =
     DidDocBuilderParam(new TestAppConfig(), Option(thisAgentKey.did))

@@ -97,10 +97,9 @@ object LaunchPreCheck {
       aac.walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
     } catch {
       //TODO: this logic doesn't seem to be working, should come back to this and fix it
-      case e @ (_ : WalletInvalidState | _ : WalletDoesNotExist) =>
-      //NOTE: we are catching these exceptions which is thrown if invalid/wrong data (in our case non existent wallet name)
-      //is passed but at least they confirm that connection with wallet storage was successful.
-      //TODO: may wanna just catch a single exception which works for different wallet storage (file based or sql based etc)
+      case _ @ (_ : WalletDoesNotExist) =>
+        //NOTE: we are catching this exceptions which is thrown if invalid/wrong data (in our case non existent wallet name)
+        //is passed but at least it confirms that connection with wallet storage was successful.
       case e: Exception =>
         val errorMsg =
           "wallet storage connection check failed (" +

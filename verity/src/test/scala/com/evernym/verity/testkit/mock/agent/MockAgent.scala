@@ -9,10 +9,10 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
-import com.evernym.verity.testkit.HasTestWalletAPI
+import com.evernym.verity.testkit.{HasDefaultTestWallet, HasTestWalletAPI}
 import com.evernym.verity.testkit.util.PublicIdentifier
 import com.evernym.verity.util.Util.{getAgentKeyDlgProof, logger}
-import com.evernym.verity.vault.EncryptParam
+import com.evernym.verity.vault.{EncryptParam, WalletAPIParam}
 
 /**
  * a mock agent
@@ -20,7 +20,8 @@ import com.evernym.verity.vault.EncryptParam
 trait MockAgent
   extends HasTestWalletAPI
     with CommonSpecUtil
-    with HasAppConfig {
+    with HasAppConfig
+    with HasDefaultTestWallet {
 
   def myDIDDetail: AgentDIDDetail  //selfDID detail
   def appConfig: AppConfig
@@ -36,7 +37,7 @@ trait MockAgent
 
   def setupWallet(): Unit = {
     //creates public DID and ver key and store it into its wallet
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option(myDIDDetail.DIDSeed)))
+    testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option(myDIDDetail.DIDSeed)))
   }
 
   def init(): Unit = {
@@ -48,7 +49,7 @@ trait MockAgent
 
   init()
 
-  def getVerKeyFromWallet(did: DID): VerKey = walletAPI.executeSync[VerKey](GetVerKey(did))
+  def getVerKeyFromWallet(did: DID): VerKey = testWalletAPI.executeSync[VerKey](GetVerKey(did))
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)
@@ -74,7 +75,7 @@ trait MockAgent
 
   def addNewKey(seedOpt: Option[String]=None): NewKeyCreated = {
     val seed = seedOpt orElse Option(UUID.randomUUID().toString.replace("-", ""))
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))
+    testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))
   }
 
   def addNewLocalPairwiseKey(connId: String): MockPairwiseConnDetail = {
@@ -92,7 +93,7 @@ trait MockAgent
     if (storeKey)
       storeTheirKey(dp)
     val dd = DidPair(dp.DID, dp.verKey)
-    val mpcd = new MockPairwiseConnDetail(dd)(walletAPI, wap)
+    val mpcd = new MockPairwiseConnDetail(dd)(testWalletAPI, wap)
     addNewPairwiseConnDetail(connId, mpcd)
     mpcd
   }
@@ -100,7 +101,7 @@ trait MockAgent
   def storeTheirKey(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit = {
     logger.debug(s"Store their key for did: $did")
     val stk = StoreTheirKey(did, verKey, ignoreIfAlreadyExists)
-    walletAPI.executeSync[TheirKeyStored](stk)(wap)
+    testWalletAPI.executeSync[TheirKeyStored](stk)(wap)
   }
 
   def storeTheirKey(DIDDetail: DidPair): Unit = {
@@ -109,7 +110,7 @@ trait MockAgent
 
   private def buildAgentKeyDlgProof(pcd: MockPairwiseConnDetail): AgentKeyDlgProof = {
     getAgentKeyDlgProof(pcd.myPairwiseDidPair.verKey, pcd.myCloudAgentPairwiseDidPair.DID,
-      pcd.myCloudAgentPairwiseDidPair.verKey)(walletAPI, wap)
+      pcd.myCloudAgentPairwiseDidPair.verKey)(testWalletAPI, wap)
   }
 
   def buildAgentKeyDlgProofForConn(connId: String): AgentKeyDlgProof = {

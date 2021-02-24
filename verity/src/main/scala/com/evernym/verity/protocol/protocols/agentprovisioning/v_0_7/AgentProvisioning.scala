@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
@@ -14,7 +13,6 @@ import com.evernym.verity.util.TimeUtil._
 import com.evernym.verity.util.Base64Util.getBase64Decoded
 import com.evernym.verity.vault.service.AsyncToSync
 
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.{Success, Try}
 import scala.util.control.NonFatal

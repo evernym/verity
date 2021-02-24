@@ -6,9 +6,16 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
 import com.evernym.verity.testkit.AddMetricsReporter
 
+
 trait BaseRecoverySpec
   extends BasePersistentStore
     with AddMetricsReporter {
+
+  def closeClientWallets(walletIds: Set[String]): Unit = {
+    walletIds.foreach { walletId =>
+      closeWallet(walletId)
+    }
+  }
 
   def restartActor(ar: agentRegion): Unit = {
     ar ! Stop(sendBackConfirmation = true)

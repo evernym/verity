@@ -1,7 +1,5 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.SpanUtil
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
@@ -10,7 +8,7 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi, ServiceFormatted}
+import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
@@ -23,7 +21,6 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 
 import scala.collection.mutable
-import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /*

@@ -298,7 +298,7 @@ case class MockRestEnv(mockEnv: MockEnv) {
   }
 
   def computeSignature(verKey: VerKey): String = {
-    val signedVerKey = mockEnv.edgeAgent.walletAPI.executeSync[Array[Byte]](
+    val signedVerKey = mockEnv.edgeAgent.testWalletAPI.executeSync[Array[Byte]](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(mockEnv.edgeAgent.wap)
     Base58Util.encode(signedVerKey)
   }

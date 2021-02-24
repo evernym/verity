@@ -63,7 +63,7 @@ trait AgentMsgHelper
     with AsyncToSync {
   this: MockAgent with HasCloudAgent with Matchers =>
 
-  implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
+  implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI)
 
   def getDIDDetail(ddOpt: Option[DidPair]): DidPair =
     ddOpt.getOrElse(throw new RuntimeException("no DIDDetail found"))
@@ -194,7 +194,7 @@ trait AgentMsgHelper
 
   def handleSetAgencyPairwiseAgentKey(DID: String, verKey: String): Unit = {
     setAgencyPairwiseAgentDetail(DID, verKey)
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(DID, verKey))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(DID, verKey))
   }
 
   def handleAgentCreatedRespForAgent(pairwiseDIDPair: DidPair): Unit = {

@@ -8,7 +8,7 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitte
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.testkit.HasTestWalletAPI
+import com.evernym.verity.testkit.HasDefaultTestWallet
 import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
@@ -24,7 +24,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 
-class LedgerUtil (override val appConfig: AppConfig,
+class LedgerUtil (val appConfig: AppConfig,
                   val poolConfigName: Option[String],
                   val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y",
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
@@ -32,12 +32,15 @@ class LedgerUtil (override val appConfig: AppConfig,
                   val taa: Option[TransactionAuthorAgreement] = None,
                   val genesisTxnPath: Option[String] = None)
   extends CommonSpecUtil
-    with HasTestWalletAPI {
+    with HasDefaultTestWallet {
+
+  override def createWallet: Boolean = true
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  override lazy val agentWalletId: Option[String] = Option(submitterDID + "_" + LocalDateTime.now().toString)
-  override def createWallet: Boolean = true
+  lazy val agentWalletId: Option[String] = {
+    Option(submitterDID + "_" + LocalDateTime.now().toString)
+  }
 
   lazy val poolConnManager: LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(ActorSystem("ledger-pool"), appConfig, poolConfigName, genesisTxnPath)
@@ -70,7 +73,7 @@ class LedgerUtil (override val appConfig: AppConfig,
     poolConnManager.close()
     poolConnManager.open()
     val fut = poolConnManager
-      .txnExecutor(Some(walletAPI))
+      .txnExecutor(Some(testWalletAPI))
       .completeRequest(Submitter(submitterDID, Some(wap)), LedgerRequest(req, taa = poolConnManager.currentTAA))
     val status = Await.result(fut, respWaitTime)
     status match {
@@ -84,7 +87,7 @@ class LedgerUtil (override val appConfig: AppConfig,
   def getWalletName(did: DID): String = did + "local"
 
   def setupWallet(did: DID, seed: String): NewKeyCreated = {
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey(Option(did), Option(seed)))
+    testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(Option(did), Option(seed)))
   }
 
   def bootstrapNewDID(did: DID, verKey: VerKey, role: String = null): Unit = {

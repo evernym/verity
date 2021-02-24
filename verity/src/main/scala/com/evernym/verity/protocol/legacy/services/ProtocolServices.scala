@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.legacy.services
 
 import com.evernym.verity.actor.appStateManager.AppStateEvent
+import com.evernym.verity.actor.wallet.{GetVerKey, GetVerKeyOpt}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.config.AppConfig
@@ -9,6 +10,7 @@ import com.evernym.verity.protocol.actor.MsgQueueServiceProvider
 import com.evernym.verity.protocol.engine.{DID, SERVICES_DEPRECATION_DATE, VerKey}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.service.AsyncToSync
 
 /** General services provided to protocols.
   *
@@ -48,7 +50,7 @@ class LegacyProtocolServicesImpl[M,E,I](val appConfig: AppConfig,
 ) extends ProtocolServices[M,E,I]
 
 
-trait DEPRECATED_HasWallet {
+trait DEPRECATED_HasWallet extends AsyncToSync {
 
   def appConfig: AppConfig
   def walletAPI: WalletAPI
@@ -58,14 +60,10 @@ trait DEPRECATED_HasWallet {
 
   def initWalletDetail(seed: String): Unit = walletId = seed
 
-  lazy val walletVerKeyCacheHelper: WalletVerKeyCacheHelper = {
-    new WalletVerKeyCacheHelper(WalletAPIParam(walletId), walletAPI, appConfig)
-  }
-
   def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): VerKey =
-    walletVerKeyCacheHelper.getVerKeyReqViaCache(did, getKeyFromPool)
+    convertToSyncReq(walletAPI.executeAsync[VerKey](GetVerKey(did, getKeyFromPool)))
 
-  def getVerKeyViaCache(did: DID, req: Boolean = false, getKeyFromPool: Boolean = false): Option[VerKey] =
-    walletVerKeyCacheHelper.getVerKeyViaCache(did, req, getKeyFromPool)
+  def getVerKeyViaCache(did: DID, getKeyFromPool: Boolean = false): Option[VerKey] =
+    convertToSyncReq(walletAPI.executeAsync[Option[VerKey]](GetVerKeyOpt(did, getKeyFromPool)))
 
 }

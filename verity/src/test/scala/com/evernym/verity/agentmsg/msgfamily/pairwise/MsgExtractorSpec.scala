@@ -38,10 +38,10 @@ class MsgExtractorSpec
     CreateConnectionReqMsg_MFV_0_6(MSG_TYPE_DETAIL_CREATE_CONNECTION, sourceId = "test-id-1")
 
   lazy val aliceCloudMsgExtractor: MsgExtractor = {
-    new MsgExtractor(aliceCloudAgentKeyParam, walletAPI)(aliceCloudAgentWap)
+    new MsgExtractor(aliceCloudAgentKeyParam, testWalletAPI)(aliceCloudAgentWap)
   }
   lazy val aliceMsgExtractor: MsgExtractor = {
-    new MsgExtractor(aliceKeyParam, walletAPI)(aliceWap)
+    new MsgExtractor(aliceKeyParam, testWalletAPI)(aliceWap)
   }
 
   def packedMsg: PackedMsg = convertToSyncReq(aliceMsgExtractor.packAsync(

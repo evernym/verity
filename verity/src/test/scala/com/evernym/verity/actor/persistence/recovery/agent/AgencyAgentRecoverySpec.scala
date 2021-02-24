@@ -13,6 +13,7 @@ class AgencyAgentRecoverySpec
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupBasicAgencyAgent()
+    closeClientWallets(Set(myAgencyAgentEntityId))
   }
 
   "KeyValueMapper actor" - {

@@ -108,18 +108,18 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     ctx.apply(ConnectionStatusUpdated(reqReceived = true, MSG_STATUS_REDIRECTED.statusCode, theirDidDocDetailOpt))
 
     theirDidDocDetailOpt.foreach { _ =>
-      walletAPI.executeSync[TheirKeyStored](
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](
         StoreTheirKey(rcrm.senderAgencyDetail.DID,
-          rcrm.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true))
+          rcrm.senderAgencyDetail.verKey, ignoreIfAlreadyExists = true)))
 
-      walletAPI.executeSync[TheirKeyStored](
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](
         StoreTheirKey(rcrm.senderDetail.DID,
-          rcrm.senderDetail.verKey, ignoreIfAlreadyExists = true))
+          rcrm.senderDetail.verKey, ignoreIfAlreadyExists = true)))
     }
 
     connReqSenderAgentKeyDlgProof.foreach { rkdp =>
-      walletAPI.executeSync[TheirKeyStored](
-        StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true)
+      convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](
+        StoreTheirKey(rkdp.agentDID, rkdp.agentDelegatedKey, ignoreIfAlreadyExists = true))
       )
     }
 

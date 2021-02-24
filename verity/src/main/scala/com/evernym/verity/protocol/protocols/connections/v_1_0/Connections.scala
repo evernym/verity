@@ -1,7 +1,5 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-
 import java.nio.charset.StandardCharsets
 import java.nio.{ByteBuffer, ByteOrder}
 import java.time.Instant
@@ -21,7 +19,6 @@ import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.relationship.URL
 import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
 
-import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 

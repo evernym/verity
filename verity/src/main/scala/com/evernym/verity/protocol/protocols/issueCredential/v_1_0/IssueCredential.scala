@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
@@ -20,11 +19,9 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyA
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
-import com.evernym.verity.util.OptionUtil.blankOption
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
 
-import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 //protocol document:

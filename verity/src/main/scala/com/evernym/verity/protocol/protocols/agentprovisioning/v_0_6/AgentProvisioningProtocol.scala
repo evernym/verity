@@ -95,7 +95,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     val fromDIDPair = DidPair(fromDID, fromDIDVerKey)
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
     val agentPairwiseKey = prepareNewAgentWalletData(fromDIDPair, aws)
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true))
+    convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true)))
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(agentPairwiseKey.did, Option(fromDID)))) //TODO: confirm if this is correct
     val provisionerPartiId = oa.parameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
     ctx.apply(ProvisionerPartiSet(provisionerPartiId))

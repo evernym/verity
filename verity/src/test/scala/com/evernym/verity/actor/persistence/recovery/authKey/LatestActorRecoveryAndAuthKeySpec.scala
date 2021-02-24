@@ -20,6 +20,7 @@ class LatestActorRecoveryAndAuthKeySpec
     setupBasicAgencyAgent()
     setupBasicUserAgent()
     setupBasicUserAgentPairwise()
+    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
   "When actors started" - {

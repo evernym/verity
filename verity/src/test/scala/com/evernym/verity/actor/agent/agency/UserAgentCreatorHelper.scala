@@ -10,18 +10,29 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, 
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
+import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.util.{Base64Util, TimeUtil}
 import com.evernym.verity.vault.KeyParam
 import com.typesafe.config.{Config, ConfigFactory}
 
-trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
+trait UserAgentCreatorHelper
+  extends AgencyAgentPairwiseSpecBase {
 
   lazy val aap: agentRegion = agentRegion(agencyAgentPairwiseEntityId, agencyAgentPairwiseRegion)
 
+  val sponsorWallet = new TestWallet(createWallet = true)
+
   def sponsorKeys(seed: String="000000000000000000000000Trustee1"): NewKeyCreated =
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
+    sponsorWallet.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
+
+  def sponsorSig(nonce: String, id: String, sponsorId: String, vk: VerKey, timestamp: String): Base64Encoded = {
+    val encrypted = sponsorWallet.executeSync[Array[Byte]](
+      SignMsg(KeyParam.fromVerKey(vk), (nonce + timestamp + id + sponsorId).getBytes())
+    )
+    Base64Util.getBase64Encoded(encrypted)
+  }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -133,12 +144,8 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
   }
 
   def getNonce: String = UUID.randomUUID().toString
-  def sig(nonce: String, id: String, sponsorId: String, vk: VerKey, timestamp: String): Base64Encoded = {
-    val encrypted = walletAPI.executeSync[Array[Byte]](
-      SignMsg(KeyParam.fromVerKey(vk), (nonce + timestamp + id + sponsorId).getBytes())
-    )
-    Base64Util.getBase64Encoded(encrypted)
-  }
+
+
 
   def newEdgeAgent(admin: MockEdgeAgent = mockAgencyAdmin): MockEdgeAgent = buildMockEdgeAgent(admin)
 
@@ -172,7 +179,7 @@ trait UserAgentCreatorHelper extends AgencyAgentPairwiseSpecBase {
       sponsorRel.sponsorId,
       nonce,
       timestamp,
-      sig(nonce, id=sponsorRel.sponseeId, sponsorId=sponsorRel.sponsorId, vk=sponsorVk, timestamp),
+      sponsorSig(nonce, id=sponsorRel.sponseeId, sponsorId=sponsorRel.sponsorId, vk=sponsorVk, timestamp),
       sponsorVk
     ))
 

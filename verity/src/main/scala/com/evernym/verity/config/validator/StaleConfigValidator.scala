@@ -16,11 +16,18 @@ class StaleConfigValidator (val config: Config) extends StaleConfigValidatorBase
 trait StaleConfigValidatorBase extends ConfigValidator {
 
   def staleConfigs: Set[StaleConfig] = Set (
+
+    //removed configs
     StaleConfig("agency.config"),
     StaleConfig("agency.routing"),
     StaleConfig("agency.services.sms-service.external-services.twilio.endpoint"),
     StaleConfig("agency.lib-indy.library-file-location"),
     StaleConfig("agency.lib-indy.ledger.wallet-type"),
+
+    StaleConfig("verity.wallet-api"),
+    StaleConfig("kamon.instrumentation.akka.filters.group"),
+
+    //renamed configs
     StaleConfig("verity.cache.key-value-mapper-cache-expiration-time-in-seconds", "verity.cache.key-value-mapper.expiration-time-in-seconds"),
     StaleConfig("verity.cache.agent-config-cache-expiration-time-in-seconds", "verity.cache.agent-config.expiration-time-in-seconds"),
     StaleConfig("verity.cache.agency-detail-cache-expiration-time-in-seconds", "verity.cache.agency-detail.expiration-time-in-seconds"),

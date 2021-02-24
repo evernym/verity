@@ -135,7 +135,7 @@ trait UserAgentCommon
   def setAgentActorDetail(saw: SetAgentActorDetail): Unit = {
     logger.debug("'SetAgentActorDetail' received",
       (LOG_KEY_SRC_DID, saw.didPair.DID), (LOG_KEY_PERSISTENCE_ID, persistenceId))
-    setAndOpenWalletIfExists(saw.actorEntityId)
+    updateAgentWalletId(saw.actorEntityId)
     sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
   }
 

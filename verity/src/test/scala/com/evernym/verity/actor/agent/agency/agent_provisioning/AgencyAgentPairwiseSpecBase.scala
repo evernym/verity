@@ -6,7 +6,7 @@ import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.UrlParam
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
@@ -17,11 +17,12 @@ trait AgencyAgentPairwiseSpecBase
   extends BasicSpec
     with PersistentActorSpec
     with AgentSpecHelper
-    with Eventually {
+    with Eventually
+    with HasTestWalletAPI {
 
   val aac: AgentActorContext = platform.agentActorContext
 
-  implicit lazy val wap: WalletAPIParam = WalletAPIParam(agencyAgentEntityId)
+  lazy val agencyWalletParam: WalletAPIParam = WalletAPIParam(agencyAgentEntityId)
 
   var agencyAgentPairwiseDID:DID = _
 

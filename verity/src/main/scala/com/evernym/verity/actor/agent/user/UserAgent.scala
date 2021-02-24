@@ -727,7 +727,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     )
   }
 
-  setAndOpenWalletIfExists(entityId)
+  updateAgentWalletId(entityId)
 
   /**
    * this is in-memory state only

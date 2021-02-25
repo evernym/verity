@@ -10,7 +10,7 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, ProtoRef}
+import com.evernym.verity.protocol.engine.{DID, MsgFamily, ProtoRef}
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -120,7 +120,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     new UndefinedUpdateEndpoint_0_6 {
       override def update(context: Context): Unit = {
         val updateJson = new JSONObject
-        updateJson.put("@type", "did:sov:123456789abcdefghi1234;spec/configs/0.6/UPDATE_COM_METHOD")
+        updateJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "configs", "0.6", "UPDATE_COM_METHOD")) //"did:sov:123456789abcdefghi1234;spec/configs/0.6/UPDATE_COM_METHOD")
         updateJson.put("comMethod", {
           val json = new JSONObject
           json.put("id", "webhook")
@@ -151,7 +151,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def updateConfigs_0_6(name: String, logoUrl: String): UpdateConfigsV0_6 = {
     val updateConfigsJson = new JSONObject
-    updateConfigsJson.put("@type", "did:sov:123456789abcdefghi1234;spec/update-configs/0.6/update")
+    updateConfigsJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "update-configs", "00.6", "update")) // "did:sov:123456789abcdefghi1234;spec/update-configs/0.6/update")
     updateConfigsJson.put("@id", UUID.randomUUID.toString)
     val configs = new JSONArray
     val item1 = new JSONObject
@@ -187,7 +187,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
   }
   override def writeSchema_0_6(name: String, version: String, attrs: String*): WriteSchemaV0_6 = {
     val writeSchemaJson = new JSONObject
-    writeSchemaJson.put("@type", "did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write")
+    writeSchemaJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "write-schema", "0.6", "write")) // "did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write")
     writeSchemaJson.put("@id", UUID.randomUUID.toString)
     writeSchemaJson.put("name", name)
     writeSchemaJson.put("version", version)
@@ -207,7 +207,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 = {
 
     val writeCredDefJson = new JSONObject
-    writeCredDefJson.put("@type", "did:sov:123456789abcdefghi1234;spec/write-cred-def/0.6/write")
+    writeCredDefJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "write-cred-def", "0.6", "write")) // "did:sov:123456789abcdefghi1234;spec/write-cred-def/0.6/write")
     writeCredDefJson.put("@id", UUID.randomUUID.toString)
     writeCredDefJson.put("name", name)
     writeCredDefJson.put("schemaId", schemaId)
@@ -229,7 +229,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 = {
     val askJson = new JSONObject
-    askJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
+    askJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "basicmessage", "1.0", "send-message")) // "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
     askJson.put("@id", UUID.randomUUID.toString)
     askJson.put("~for_relationship", forRelationship)
     askJson.put("content", content)
@@ -251,7 +251,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                    requireSig: Boolean): CommittedAnswerV1_0 = {
 
     val askJson = new JSONObject
-    askJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/ask-question")
+    askJson.put("@type", MsgFamily.typeStrFromMsgType(
+      MsgFamily.msgQualifierFromQualifierStr(CommittedAnswerV1_0.QUALIFIER),
+      CommittedAnswerV1_0.FAMILY,
+      CommittedAnswerV1_0.VERSION,
+      "ask-question")
+    ) // "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/ask-question")
     askJson.put("@id", UUID.randomUUID.toString)
     askJson.put("~for_relationship", forRelationship)
     askJson.put("text", questionText)
@@ -269,7 +274,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def committedAnswer_1_0(forRelationship: DID, threadId: String, answer: String): CommittedAnswerV1_0 = {
     val answerJson = new JSONObject
-    answerJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/answer-question")
+    answerJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(CommittedAnswerV1_0.QUALIFIER), CommittedAnswerV1_0.FAMILY, CommittedAnswerV1_0.VERSION, "answer-question")) // "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/answer-question")
     answerJson.put("@id", UUID.randomUUID.toString)
     answerJson.put("~for_relationship", forRelationship)
     answerJson.put("response", answer)
@@ -285,7 +290,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
   override def committedAnswer_1_0(forRelationship: DID, threadId: String): CommittedAnswerV1_0 = {
     new UndefinedCommittedAnswer_1_0 {
       override def status(ctx: Context): Unit = {
-        sendHttpGetReq(context, ProtoRef("committedanswer", "1.0"), Option(threadId), Map("~for_relationship" -> forRelationship, "familyQualifier" -> "BzCbsNYhMrjHiqZDTUASHg"))
+        sendHttpGetReq(context, ProtoRef("committedanswer", "1.0"), Option(threadId), Map("~for_relationship" -> forRelationship, "familyQualifier" -> CommittedAnswerV1_0.QUALIFIER))
       }
     }
   }
@@ -347,7 +352,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def relationship_1_0(label: String): RelationshipV1_0 = {
     val createJson = new JSONObject
-    createJson.put("@type", "did:sov:123456789abcdefghi1234;spec/relationship/1.0/create")
+    createJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(RelationshipV1_0.QUALIFIER), RelationshipV1_0.FAMILY, RelationshipV1_0.VERSION, "create")) // "did:sov:123456789abcdefghi1234;spec/relationship/1.0/create")
     createJson.put("@id", UUID.randomUUID.toString)
     createJson.put("label", label)
 
@@ -364,7 +369,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     new UndefinedRelationship_1_0 {
       override def connectionInvitation(context: Context, shortInvite: lang.Boolean): Unit = {
         val connInvitation = new JSONObject
-        connInvitation.put("@type", "did:sov:123456789abcdefghi1234;spec/relationship/1.0/connection-invitation")
+        connInvitation.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(RelationshipV1_0.QUALIFIER), RelationshipV1_0.FAMILY, RelationshipV1_0.VERSION,"connection-invitation")) //"did:sov:123456789abcdefghi1234;spec/relationship/1.0/connection-invitation")
         connInvitation.put("@id", UUID.randomUUID.toString)
         connInvitation.put("~for_relationship", forRelationship)
         connInvitation.put("shortInvite", shortInvite)
@@ -374,7 +379,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
       }
       override def outOfBandInvitation(context: Context, shortInvite: lang.Boolean, goal: GoalCode): Unit = {
         val oobJsonMsg = new JSONObject
-        oobJsonMsg.put("@type", "did:sov:123456789abcdefghi1234;spec/relationship/1.0/out-of-band-invitation")
+        oobJsonMsg.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(RelationshipV1_0.QUALIFIER), RelationshipV1_0.FAMILY, RelationshipV1_0.VERSION,"out-of-band-invitation")) //"did:sov:123456789abcdefghi1234;spec/relationship/1.0/out-of-band-invitation")
           .put("@id", UUID.randomUUID.toString)
           .put("~for_relationship", forRelationship)
           .put("goalCode", goal.code())
@@ -410,7 +415,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
       credValues.put(key, value)
     }
     val credOfferJson = new JSONObject
-    credOfferJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer")
+    credOfferJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(IssueCredentialV1_0.QUALIFIER), IssueCredentialV1_0.FAMILY, IssueCredentialV1_0.VERSION, "offer")) // "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer")
     credOfferJson.put("@id", UUID.randomUUID.toString)
     credOfferJson.put("~for_relationship", forRelationship)
     credOfferJson.put("cred_def_id", credDefId)
@@ -427,12 +432,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 = {
     val issueCredJson = new JSONObject
-    issueCredJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/issue")
+    issueCredJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(IssueCredentialV1_0.QUALIFIER), IssueCredentialV1_0.FAMILY, IssueCredentialV1_0.VERSION, "issue")) //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/issue")
     issueCredJson.put("@id", UUID.randomUUID.toString)
     issueCredJson.put("~for_relationship", forRelationship)
 
     val credStatusJson = new JSONObject
-    credStatusJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/status")
+    credStatusJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(IssueCredentialV1_0.QUALIFIER), IssueCredentialV1_0.FAMILY, IssueCredentialV1_0.VERSION,"status"))//"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/status")
     credStatusJson.put("@id", UUID.randomUUID.toString)
     credStatusJson.put("~for_relationship", forRelationship)
 
@@ -446,7 +451,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
       override def status(ctx: Context): Unit = {
         logger.debug(s"issue credential status json: ${credStatusJson.toString}")
         sendHttpGetReq(context, ProtoRef("issue-credential", "1.0"), Option(threadId),
-          Map("~for_relationship" -> forRelationship, "familyQualifier" -> "BzCbsNYhMrjHiqZDTUASHg", "msgName" -> "status"))
+          Map("~for_relationship" -> forRelationship, "familyQualifier" -> IssueCredentialV1_0.QUALIFIER, "msgName" -> "status"))
       }
     }
   }
@@ -460,7 +465,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                 proofPredicate: Array[Predicate],
                                 byInvitation: Boolean = false): PresentProofV1_0 = {
     val proofReqJson = new JSONObject
-    proofReqJson.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request")
+    proofReqJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(PresentProofV1_0.QUALIFIER), PresentProofV1_0.FAMILY, PresentProofV1_0.VERSION, "request")) // "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request")
     proofReqJson.put("@id", UUID.randomUUID.toString)
     proofReqJson.put("~for_relationship", forRelationship)
     proofReqJson.put("name", name)
@@ -479,12 +484,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     new UndefinedPresentProof_1_0 {
       override def status(ctx: Context): Unit = {
         sendHttpGetReq(context, ProtoRef("present-proof", "1.0"), Option(threadId),
-          Map("~for_relationship" -> forRelationship, "familyQualifier" -> "BzCbsNYhMrjHiqZDTUASHg", "msgName" -> "status"))
+          Map("~for_relationship" -> forRelationship, "familyQualifier" -> PresentProofV1_0.QUALIFIER, "msgName" -> "status"))
       }
 
       override def acceptProposal(context: Context): Unit = {
         val json = new JSONObject
-        json.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/accept-proposal")
+        json.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(PresentProofV1_0.QUALIFIER), PresentProofV1_0.FAMILY, PresentProofV1_0.VERSION, "accept-proposal")) //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/accept-proposal")
         json.put("@id", UUID.randomUUID.toString)
         json.put("~for_relationship", forRelationship)
         json.put("name", "Accepted proposal")

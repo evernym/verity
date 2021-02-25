@@ -110,7 +110,7 @@ class TicTacToeSpec
 
         val aliceState = alice.state.asInstanceOf[State.Playing]
 
-        aliceState.lastMover(alice.backstate.roster).value shouldBe alice.participantId
+        aliceState.lastMover(alice.backState.roster).value shouldBe alice.participantId
 
         aliceState.game.board.draw shouldBe board("""
           +---+---+---+
@@ -127,7 +127,7 @@ class TicTacToeSpec
         bob.state shouldBe a[State.Playing]
         val bobState = bob.state.asInstanceOf[State.Playing]
 
-        bobState.lastMover(bob.backstate.roster).value shouldBe alice.participantId
+        bobState.lastMover(bob.backState.roster).value shouldBe alice.participantId
 
         bobState.game.board.a1 shouldBe X
 
@@ -148,7 +148,7 @@ class TicTacToeSpec
         alice ~ MakeMove(X, "a1")
 
         alice.state shouldBe a[State.Playing]
-        alice.state.asInstanceOf[State.Playing].lastMover(alice.backstate.roster).value shouldBe alice.participantId
+        alice.state.asInstanceOf[State.Playing].lastMover(alice.backState.roster).value shouldBe alice.participantId
 
         intercept[NotYourTurn] {
           alice ~ MakeMove(X, "a2")

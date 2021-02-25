@@ -34,7 +34,7 @@ trait ProtocolContextApi[P,R,M,E,S,I]
 
   def getState: S
 
-  def getBackstate: Backstate
+  def getBackState: BackState
 
   def getRoster: Roster[R]
 

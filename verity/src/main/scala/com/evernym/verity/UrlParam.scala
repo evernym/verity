@@ -36,15 +36,21 @@ object UrlParam {
       val query = buildOption(url.getQuery)
       UrlParam(url.getProtocol, url.getHost, port, path, query)
     } catch {
+      //only retry with 'http' if no protocol is given but it does include some port
       case e: MalformedURLException
-        if
-            //only retry with 'http' if no protocol is given but it does include some port
-            (e.getMessage.startsWith("no protocol: ") && urlStr.contains(":")) ||
-              (e.getMessage.startsWith("unknown protocol: ") && !urlStr.contains("://")) =>
+        if isNoProtocolWithPossiblePortGiven(urlStr, e) || isUnknownProtocol(urlStr, e) =>
           apply(HTTP_PROTOCOL + "://" + urlStr)
       case x @ (_: MalformedURLException | _: RuntimeException) =>
         throw new InvalidComMethodException(Option(s"invalid http endpoint: '$urlStr' reason: ${x.getMessage}"))
     }
+  }
+
+  private def isNoProtocolWithPossiblePortGiven(urlStr: String, e: MalformedURLException): Boolean = {
+    e.getMessage.startsWith("no protocol: ") && urlStr.contains(":")
+  }
+
+  private def isUnknownProtocol(urlStr: String, e: MalformedURLException): Boolean = {
+    e.getMessage.startsWith("unknown protocol: ") && !urlStr.contains("://") && ! urlStr.contains(":/")
   }
 }
 

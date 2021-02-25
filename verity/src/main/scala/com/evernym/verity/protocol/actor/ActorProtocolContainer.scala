@@ -3,9 +3,7 @@ package com.evernym.verity.protocol.actor
 import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -14,7 +12,6 @@ import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.actor.{StorageInfo, StorageReferenceStored, _}
-import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -30,18 +27,13 @@ import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
 import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess, UrlShorteningAccessController}
-import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
-import com.evernym.verity.protocol.legacy.services._
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
-import com.evernym.verity.protocol.protocols.{HasAgentWallet, HasAppConfig}
+import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.Util
-import com.evernym.verity.vault.WalletConfig
-import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.{ActorResponse, ServiceEndpoint}
-import com.github.ghik.silencer.silent
+import com.evernym.verity.ServiceEndpoint
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 import java.util.UUID
@@ -70,17 +62,13 @@ class ActorProtocolContainer[
   val segmentStoreStrategy: Option[SegmentStoreStrategy]
 )
   extends ProtocolContainer[P,R,M,E,S,I]
+    with HasLegacyProtocolContainerServices[M,E,I]
     with BasePersistentActor
     with DefaultPersistenceEncryption
-    with HasLogger
-    with TokenToActorMappingProvider
-    with MsgQueueServiceProvider
-    with CreateKeyEndpointServiceProvider
-    with AgentEndpointServiceProvider
     with ProtocolEngineExceptionHandler
-    with HasAgentWallet
-    with HasAppConfig
-    with AgentIdentity {
+    with AgentIdentity
+    with HasWallet
+    with HasLogger {
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -93,14 +81,13 @@ class ActorProtocolContainer[
   )(context.system)
 
   override val appConfig: AppConfig = agentActorContext.appConfig
-  def walletAPI: WalletAPI = agentActorContext.walletAPI
   lazy val pinstId: PinstId = entityId
-
   var senderActorRef: Option[ActorRef] = None
-
-  override def domainId: DomainId = backstate.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
   var agentWalletId: Option[String] = None
-  def sponsorRel: Option[SponsorRel] = backstate.sponsorRel
+  def sponsorRel: Option[SponsorRel] = backState.sponsorRel
+
+  //def walletAPI: WalletAPI = agentActorContext.walletAPI
+  override def domainId: DomainId = backState.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
 
   def toBaseBehavior(): Unit = {
     logger.debug("becoming baseBehavior")
@@ -268,32 +255,6 @@ class ActorProtocolContainer[
     }
   }
 
-  def handleResponse(resp: Try[Any], msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
-    resp match {
-      case Success(r)  =>
-        r match {
-          case ()               => //if unit then nothing to do
-          case fut: Future[Any] => handleFuture(fut, msgIdOpt)
-          case x                => sendRespToCaller(x, msgIdOpt, sndr)
-        }
-
-      case Failure(e) =>
-        val error = convertProtoEngineException(e)
-        sendRespToCaller(error, msgIdOpt, sndr)
-    }
-
-    def handleFuture(fut: Future[Any], msgIdOpt: Option[MsgId]): Unit = {
-      fut.map {
-        case Right(r) => sendRespToCaller(r, msgIdOpt, sndr)
-        case Left(l)  => sendRespToCaller(l, msgIdOpt, sndr)
-        case x        => sendRespToCaller(x, msgIdOpt, sndr)
-      }.recover {
-        case e: Exception =>
-          sendRespToCaller(e, msgIdOpt, sndr)
-      }
-    }
-  }
-
   def handleProtocolCmd(cmd: ProtocolCmd): Unit = {
     logger.debug(s"$protocolIdForLog handling ProtocolCmd: " + cmd)
 
@@ -339,26 +300,9 @@ class ActorProtocolContainer[
     }
   }
 
-  def sendRespToCaller(resp: Any, msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
-    sndr.filter(_ != self).foreach { ar =>
-      ar ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt)
-    }
-  }
-
   def setForwarderParams(_walletSeed: String, forwarder: ActorRef): Unit = {
     msgForwarder.setForwarder(forwarder)
     agentWalletId = Option(_walletSeed)
-  }
-
-  override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
-    agentActorContext.tokenToActorItemMapperProvider.createToken(entityType, entityId, uid)
-  }
-
-  def addToMsgQueue(msg: Any): Unit = {
-    self ! ProtocolCmd(
-      msg,
-      None
-    )
   }
 
   val eventRecorder: RecordsEvents = new RecordsEvents {
@@ -376,54 +320,6 @@ class ActorProtocolContainer[
 
     forwarder ! InitProtocolReq(definition.initParamNames)
   }
-
-  @silent
-  override def createServices: Option[Services] = {
-
-    Some(new LegacyProtocolServicesImpl[M,E,I](
-      agentActorContext.appConfig,
-      agentActorContext.walletAPI, agentActorContext.generalCache,
-      agentActorContext.msgSendingSvc, agentActorContext.agentMsgTransformer, publishAppStateEvent,
-      this, this, this))
-  }
-
-
-  // For each sharded actor, there will be one region actor per type per node. The region
-  // actor manages all the shard actors. See https://docs.google.com/drawings/d/1vyjsGYjEQtvQbwWVFditnTXP-JyhIIrMc2FATy4-GVs/edit
-  def sendCmdToRegionActor(regionTypeName: String, toEntityId: String, cmd: Any): Future[Any] = {
-    val regionActorRef = ClusterSharding.get(context.system).shardRegion(regionTypeName)
-    regionActorRef ? ForIdentifier(toEntityId, cmd)
-  }
-
-  /*
-  We call this function when we want to create a pairwise actor. It creates a key
-  and the pairwise actor as well. The pairwise actor is effectively an "endpoint", since
-  it is where you will receive messages from the other side.
-   */
-  def setupCreateKeyEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
-    val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](endpointDetailJson)
-    val cmd = SetupCreateKeyEndpoint(agentKeyDIDPair, forDIDPair, endpointDetail.ownerDID,
-      endpointDetail.ownerAgentKeyDidPair, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
-    sendCmdToRegionActor(endpointDetail.regionTypeName, newEndpointActorEntityId, cmd)
-  }
-
-  def setupNewAgentEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
-    val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](endpointDetailJson)
-    sendCmdToRegionActor(endpointSetupDetail.regionTypeName, endpointSetupDetail.entityId,
-      SetupAgentEndpoint(forDIDPair, agentKeyDIDPair))
-  }
-
-  //NOTE: this method is used to compute entity id of the new pairwise actor this protocol will use
-  // in 'setupCreateKeyEndpoint' method. The reason behind using 'entityId' of this protocol actor as a seed,
-  // so that, in later stage (once endpoint has created), if this protocol actor needs (like for agent provisioning etc)
-  // to reach out to same pairwise actor, then, it can use below function to compute same entity id which was
-  // created during 'setupCreateKeyEndpoint'.
-  //TODO: We may wanna come back to this and find better solution.
-  def newEndpointActorEntityId: String = {
-    getNewActorIdFromSeed(entityId)
-  }
-
-  def getProtocolIdDetail: ProtocolIdDetail = ProtocolIdDetail(protoRef, entityId)
 
   lazy val driver: Option[Driver] = {
     val parameter = ActorDriverGenParam(context.system, appConfig, agentActorContext.protocolRegistry,
@@ -612,24 +508,6 @@ case class Init(params: Parameters) extends Control {
 }
 
 /**
- * This is used to update delivery status of the message.
- * Currently it is used by Connecting protocol and UserAgentPairwise both
- * @param uid - unique message id
- * @param to - delivery destination (phone no, remote agent DID, edge DID etc)
- * @param statusCode - new status code
- * @param statusDetail - status detail
- */
-case class UpdateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String,
-                                   statusDetail: Option[String]) extends Control with ActorMessage
-
-/**
- * Purpose of this service is to provide a way for protocol to schedule a message for itself
- */
-trait MsgQueueServiceProvider {
-  def addToMsgQueue(msg: Any): Unit
-}
-
-/**
  * This is sent by LaunchesProtocol during protocol initialization process.
  * Protocol actor (via protocol state in it) knows if it has been already initialized or not.
  * If it is not initialized, then the protocol actor will stash incoming commands and
@@ -662,11 +540,6 @@ case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends Act
 case class ProtocolMetadata(forwarder: ActorRef,
                             walletId: String,
                             threadContextDetail: ThreadContextDetail)
-
-case class ProtocolIdDetail(protoRef: ProtoRef, pinstId: PinstId)
-
-case class WalletParam(walletAPI: WalletAPI, walletConfig: WalletConfig)
-
 /**
  * incoming msg envelope
  * @param msg

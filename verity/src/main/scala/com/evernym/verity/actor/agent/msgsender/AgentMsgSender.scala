@@ -57,18 +57,6 @@ trait AgentMsgSender
     LedgerSvcException(errorMsg)
   }
 
-  private def parseUrlParam(ep: String): UrlParam = {
-    try {
-      UrlParam(ep)
-    } catch {
-      case e: Exception =>
-        val errorMsg = s"error while parsing endpoint: ${Exceptions.getErrorMsg(e)}"
-        publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
-          new InvalidValueException(Option(errorMsg)), Option(errorMsg)))
-        throw e
-    }
-  }
-
   private def getRemoteAgencyEndpoint(implicit sm: SendMsgParam): Future[String] = {
     sm.theirRoutingParam.route match {
       case Left(theirAgencyDID) =>
@@ -88,7 +76,7 @@ trait AgentMsgSender
     logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
     val epFut = getRemoteAgencyEndpoint
     epFut.map { ep =>
-      val urlParam = parseUrlParam(ep)
+      val urlParam = UrlParam(ep)
       logger.debug("remote agency detail received for msg to be sent to remote agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
       logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlParam))
       val respFut = msgSendingSvc.sendBinaryMsg(sm.msg)(urlParam)

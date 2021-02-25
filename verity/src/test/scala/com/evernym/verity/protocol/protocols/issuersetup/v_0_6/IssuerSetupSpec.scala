@@ -37,7 +37,7 @@ class IssuerSetupSpec
 
       s.owner ~ Create()
 
-      s.owner.backstate.roster.selfRole.value shouldBe Role.Owner
+      s.owner.backState.roster.selfRole.value shouldBe Role.Owner
 
       s.owner.state shouldBe an [State.Created]
       s.owner.state.asInstanceOf[State.Created].data.createNonce shouldBe None

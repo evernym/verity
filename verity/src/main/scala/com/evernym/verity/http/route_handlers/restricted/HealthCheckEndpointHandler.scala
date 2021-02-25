@@ -7,8 +7,8 @@ import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status._
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, CauseDetail, ManualUpdate, SuccessEventParam}
+import com.evernym.verity.actor.appStateManager.{AllEvents, AppStateDetailed, CauseDetail, GetDetailedAppState, GetEvents, ManualUpdate, SuccessEvent}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.typesafe.config.ConfigException.{BadPath, Missing}
@@ -17,6 +17,7 @@ import com.typesafe.config.{Config, ConfigRenderOptions}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
+
 
 trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
 
@@ -65,7 +66,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
 
   protected def updateAppStatus(uas: UpdateAppStatus): Future[Any] = {
     val causeDetail = CauseDetail(APP_STATUS_UPDATE_MANUAL.statusCode, uas.reason.getOrElse("manual-update"))
-    AppStateManager << SuccessEventParam(ManualUpdate(uas.newStatus), uas.context.getOrElse(CONTEXT_MANUAL_UPDATE), causeDetail)
+    publishAppStateEvent(SuccessEvent(ManualUpdate(uas.newStatus), uas.context.getOrElse(CONTEXT_MANUAL_UPDATE), causeDetail))
     Future("Done")
   }
 
@@ -90,10 +91,17 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
                       (get & pathEnd) {
                         parameters('detail.?) { detailOpt =>
                           complete {
-                            if (detailOpt.map(_.toUpperCase).contains(YES)) {
-                              handleExpectedResponse(AppStateManager.getDetailedAppState)
+                            val fut = if (detailOpt.map(_.toUpperCase).contains(YES)) {
+                              askAppStateManager(GetDetailedAppState)
                             } else {
-                              handleExpectedResponse(AppStateManager.getEvents.map(x => s"${x.state.toString}"))
+                              askAppStateManager(GetEvents)
+                            }
+                            fut.map[ToResponseMarshallable] {
+                              case allEvents: AllEvents =>
+                                handleExpectedResponse(allEvents.events.map(x => s"${x.state.toString}"))
+                              case detailedState: AppStateDetailed =>
+                                handleExpectedResponse(detailedState.toResp)
+                              case e => handleUnexpectedResponse(e)
                             }
                           }
                         }

@@ -21,7 +21,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormalizedPhoneNumber, replaceVariables}
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_MSG_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.concurrent.Future
@@ -54,12 +54,16 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   private def processValidatedConnReqMsg(connReqMsg: ConnReqMsg,
                                          sourceId: Option[String]=None): Unit = {
-    val msgCreated = buildMsgCreatedEvt(CREATE_MSG_TYPE_CONN_REQ, ctx.getState.myPairwiseDIDReq,
-      connReqMsg.id, connReqMsg.sendMsg, connReqMsg.threadOpt)
+    val msgCreated = buildMsgCreatedEvt(
+      connReqMsg.id, CREATE_MSG_TYPE_CONN_REQ, ctx.getState.myPairwiseDIDReq,
+      connReqMsg.sendMsg, connReqMsg.threadOpt)
     ctx.apply(msgCreated)
-    DEPRECATED_sendSpecialSignal(AddMsg(msgCreated))
     writeConnReqMsgDetail(msgCreated.uid, connReqMsg, sourceId)
     connReqMsg.keyDlgProof.foreach(kdp => ctx.apply(AgentKeyDlgProofSet(kdp.agentDID, kdp.agentDelegatedKey, kdp.signature)))
+
+    //NOTE: below is a signal messages to be sent to agent actor to be stored/updated in agent's message store
+    // because get/download message API only queries agent's message store
+    DEPRECATED_sendSpecialSignal(AddMsg(msgCreated))
   }
 
   private def processPersistedConnReqMsg(connReqMsg: ConnReqMsg,
@@ -79,15 +83,13 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
     val createInviteRespMsg = ConnReqMsgHelper.buildRespMsg(connReqUid, threadIdReq,
       inviteDetail, inviteUrl, encodedUrl(inviteUrl), sourceId)(agentMsgContext)
 
-    // if MPF_PLAIN default to INDY_PACK
-    val msgPackFormat = if (agentMsgContext.msgPackFormat == MPF_PLAIN) {
+    if (agentMsgContext.msgPackFormat == MPF_PLAIN) {
       (createInviteRespMsg ++ otherRespMsgs).foreach{ msg => ctx.signal(msg) }
-      MPF_INDY_PACK
-    } else agentMsgContext.msgPackFormat
+    }
 
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
       createInviteRespMsg ++ otherRespMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
-    buildAgentPackedMsg(msgPackFormat, param)
+    buildAgentPackedMsg(agentMsgContext.msgPackFormatToBeUsed, param)
   }
 
   private def getInviteUrl(uid: MsgId): String = {
@@ -116,7 +118,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   protected def sendConnReqMsg(uid: MsgId): Unit = {
     getMsgDetail(uid, PHONE_NO).foreach { ph =>
-      updateMsgDeliveryStatus(uid, ph, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
+      updateMsgDeliveryStatus(uid, PHONE_NO, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
       buildAndSendInviteSms(ph, uid)
     }
   }
@@ -128,7 +130,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
     val urlMapperPathPrefix = Option(appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
     val urlMapperEndpoint = UrlParam(urlMapperSvcHost, urlMapperSvcPort, urlMapperPathPrefix)
     implicit val param: CreateAndSendTinyUrlParam = CreateAndSendTinyUrlParam(uid, phoneNo, urlMapperEndpoint)
-    val domainId = ctx.getBackstate.domainId
+    val domainId = ctx.getBackState.domainId
     createAndSendTinyUrl(`userName_!`, domainId, tryCount = 1)
   }
 

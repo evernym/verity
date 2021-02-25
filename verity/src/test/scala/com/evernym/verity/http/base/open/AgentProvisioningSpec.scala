@@ -5,19 +5,20 @@ import com.evernym.verity.constants.Constants.LOGO_URL_KEY
 import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, AGENT_NOT_YET_CREATED, ALREADY_REGISTERED, CONN_STATUS_ALREADY_CONNECTED, INVALID_VALUE, MISSING_REQ_FIELD, NOT_REGISTERED, UNSUPPORTED_MSG_TYPE}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestConfigDetail
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEnv
 
-trait AgentProvisioningSpec { this : EndpointHandlerBaseSpec =>
 
-  def mockEdgeAgent: MockEdgeAgent
+trait AgentProvisioningSpec { this : EdgeEndpointBaseSpec =>
 
-  def testAgentProvisioning(): Unit = {
-    s"when sent get agency key api)" - {
-      "should respond with agency did/key detail" taggedAs (UNSAFE_IgnoreLog) in {
+  def testAgentProvisioning(mockEnv: MockEnv): Unit = {
+    lazy val mockEdgeAgent = mockEnv.edgeAgent
+
+    s"when sent get agency key api" - {
+      "should respond with agency did/key detail" taggedAs UNSAFE_IgnoreLog in {
         buildGetReq(s"/agency") ~> epRoutes ~> check {
           status shouldBe OK
           mockEdgeAgent.handleFetchAgencyKey(responseTo[AgencyPublicDid])

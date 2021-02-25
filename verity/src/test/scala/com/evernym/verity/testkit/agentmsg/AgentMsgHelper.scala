@@ -23,20 +23,17 @@ import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.deaddrop.{DeadDropData, DeadDropRetrieveResult}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerVars.testQuestion
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.Restored
-import com.evernym.verity.testkit.Matchers
+import com.evernym.verity.testkit.{AwaitResult, Matchers}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_1.{AgentMsgBuilder => AgentMsgBuilder_v_0_1, AgentMsgHandler => AgentMsgHandler_v_0_1}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6.{AgentMsgBuilder => AgentMsgBuilder_v_0_6, AgentMsgHandler => AgentMsgHandler_v_0_6}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7.{AgentMsgBuilder => AgentMsgBuilder_v_0_7, AgentMsgHandler => AgentMsgHandler_v_0_7}
 import com.evernym.verity.testkit.agentmsg.indy_pack.v_1_0.{AgentMsgBuilder => AgentMsgBuilder_v_1_0, AgentMsgHandler => AgentMsgHandler_v_1_0}
 import com.evernym.verity.testkit.agentmsg.message_pack.v_0_5.{AgentMsgBuilder => AgentMsgBuilder_v_0_5, AgentMsgHandler => AgentMsgHandler_v_0_5}
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
-import com.evernym.verity.testkit.mock.edge_agent.MockPairwiseConnDetail
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent, MockPairwiseConnDetail}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, _}
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.AsyncToSync
 import com.typesafe.scalalogging.Logger
 
 import scala.reflect.ClassTag
@@ -62,10 +59,10 @@ trait AgentMsgHelper
     with AgentMsgBuilder_v_0_6 with AgentMsgHandler_v_0_6
     with AgentMsgBuilder_v_0_7 with AgentMsgHandler_v_0_7
     with AgentMsgBuilder_v_1_0 with AgentMsgHandler_v_1_0
-    with AsyncToSync {
+    with AwaitResult {
   this: MockAgent with HasCloudAgent with Matchers =>
 
-  implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
+  implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI)
 
   def getDIDDetail(ddOpt: Option[DidPair]): DidPair =
     ddOpt.getOrElse(throw new RuntimeException("no DIDDetail found"))
@@ -80,10 +77,6 @@ trait AgentMsgHelper
   def cloudAgentDetailReq: DidPair = getAgentDIDDetail(cloudAgentDetail)
 
   def createNewLocalPairwiseConnDetail(name: String): MockPairwiseConnDetail = addNewLocalPairwiseKey(name)
-
-  def setCloudAgentDetail(DID: String, verKey: VerKey): Unit = {
-    setCloudAgentDetail(DidPair(DID, verKey))
-  }
 
   def setLastSentInvite(pcd: MockPairwiseConnDetail, inviteDetail: InviteDetail): Unit = {
     pcd.lastSentInvite = inviteDetail
@@ -190,6 +183,7 @@ trait AgentMsgHelper
   }
 
   def handleFetchAgencyKey(agencyKeyIdentity: AgencyPublicDid): Unit = {
+    agencyKeyIdentity.didPair.validate()
     setAgencyIdentity(agencyKeyIdentity)
   }
 
@@ -199,11 +193,11 @@ trait AgentMsgHelper
 
   def handleSetAgencyPairwiseAgentKey(DID: String, verKey: String): Unit = {
     setAgencyPairwiseAgentDetail(DID, verKey)
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(DID, verKey))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(DID, verKey))
   }
 
-  def handleAgentCreatedRespForAgent(pairwiseDID: DID, pairwiseDIDVerKey: VerKey): Unit = {
-    setCloudAgentDetail(pairwiseDID, pairwiseDIDVerKey)
+  def handleAgentCreatedRespForAgent(pairwiseDIDPair: DidPair): Unit = {
+    setCloudAgentDetail(pairwiseDIDPair)
   }
 
   def handleReceivedAgentMsg(rmw: Array[Byte]): AgentMsgWrapper = {

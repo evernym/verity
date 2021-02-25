@@ -19,7 +19,6 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyA
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
-import com.evernym.verity.util.OptionUtil.blankOption
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
 
@@ -84,7 +83,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def sendInvite(offer: OfferCred, s: State.Initialized): Unit = {
-    buildOobInvite(offer, s) match {
+    buildOobInvite(offer, s) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
           case Success(m) => ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
@@ -102,7 +101,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def handleInitialOffer(s: State.Initialized, m: Ctl.Offer): Unit = {
-    buildOffer(m) match {
+    buildOffer(m) {
       case Success((event, offer)) =>
         ctx.apply(event)
         if(!m.by_invitation.getOrElse(false)) {
@@ -121,7 +120,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def handleOffer(m: Ctl.Offer): Unit = {
-    buildOffer(m) match {
+    buildOffer(m) {
       case Success((event, offer)) =>
         ctx.apply(event)
         ctx.send(offer)
@@ -159,7 +158,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   def sendCredRequest(m: Ctl.Request, st: State.OfferReceived, credDefJson: String): Unit = {
     val credOfferJson = extractCredOfferJson(st.credOffer)
-    ctx.wallet.createCredReq(m.cred_def_id, st.myPwDid, credDefJson, credOfferJson) match {
+    ctx.wallet.createCredReq(m.cred_def_id, st.myPwDid, credDefJson, credOfferJson) {
       case Success(credRequest) =>
         val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
         val attachmentEventObject = toEvent(attachment)
@@ -198,8 +197,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val credOfferJson = extractCredOfferJson(credOffer)
     val credReqJson = extractCredReqJson(credRequest)
     val credValuesJson = IssueCredential.buildCredValueJson(credOffer.credential_preview)
-    ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson,
-      revRegistryId.orNull, -1) match {
+    ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId.orNull, -1) {
       case Success(cred) =>
         val attachment = buildAttachment(Some("libindy-cred-0"), payload=cred)
         val attachmentEventObject = toEvent(attachment)
@@ -356,8 +354,8 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     jsonObject.toString()
   }
 
-  def buildOffer(m: Ctl.Offer): Try[(OfferSent, OfferCred)] = {
-    ctx.wallet.createCredOffer(m.cred_def_id) match {
+  def buildOffer(m: Ctl.Offer)(handler: Try[(OfferSent, OfferCred)] => Unit): Unit = {
+    ctx.wallet.createCredOffer(m.cred_def_id) {
       case Success(credOffer) =>
         val credPreview = buildCredPreview(m.credential_values)
         val credPreviewEventObject = credPreview.toOption.map(buildEventCredPreview)
@@ -381,8 +379,8 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           Option(credOffered.comment),
           m.price
         )
-        Try(eventOffer -> offerCred)
-      case Failure(e) => Failure(e)
+        handler(Try(eventOffer -> offerCred))
+      case Failure(e) => handler(Failure(e))
     }
   }
 
@@ -442,36 +440,34 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     }
   }
 
-  def buildOobInvite(offer: OfferCred, s: State.Initialized): Try[ShortenInvite] = {
-    val service = InviteUtil.buildServiced(s.agencyVerkey, ctx)
+  def buildOobInvite(offer: OfferCred, s: State.Initialized)
+                    (handler: Try[ShortenInvite] => Unit): Unit = {
+    InviteUtil.withServiced(s.agencyVerkey, ctx) {
+      case Success(service) =>
+        val offerAttachment = buildProtocolMsgAttachment(
+          MsgIdProvider.getNewMsgId,
+          ctx.threadId_!,
+          IssueCredentialProtoDef.msgFamily,
+          offer
+        )
 
-    val offerAttachment = Try(
-      buildProtocolMsgAttachment(
-        MsgIdProvider.getNewMsgId,
-        ctx.threadId_!,
-        IssueCredentialProtoDef.msgFamily,
-        offer)
-    )
+        val invite = InviteUtil.buildInviteWithThreadedId(
+          definition.msgFamily.protoRef,
+          ctx.getRoster.selfId_!,
+          ctx.`threadId_!`,
+          s.agentName,
+          s.logoUrl,
+          s.publicDid,
+          service,
+          offerAttachment
+        )
 
-    val invite = InviteUtil.buildInviteWithThreadedId(
-      definition.msgFamily.protoRef,
-      ctx.getRoster.selfId_!,
-      ctx.`threadId_!`,
-      s.agentName,
-      s.logoUrl,
-      s.publicDid,
-      service,
-      offerAttachment
-    )
-
-    val signal = for(
-      invite          <- invite;
-      serviceEndpoint <- Try(ctx.serviceEndpoint);
-      inviteUrl       <- Try(prepareInviteUrl(invite, serviceEndpoint));
-      inviteId        <- Success(invite.`@id`)
-    ) yield ShortenInvite(inviteId, inviteUrl)
-
-    signal
+        handler(Success(
+          ShortenInvite(invite.`@id`, prepareInviteUrl(invite, ctx.serviceEndpoint))
+        ))
+      case Failure(ex) =>
+        handler(Failure(ex))
+    }
   }
 
   def commentReq(comment: Option[String]): String = {

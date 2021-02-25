@@ -120,17 +120,19 @@ class MsgProgressTracker(val appConfig: AppConfig)
   def handleGetState(gs: GetState): Unit = {
     val sndr = sender()
     Future {
-      val maxRequestStateSize = gs.requestStateSize.getOrElse(orderedReqIds.size)
-      val maxDeliveryStateSize = gs.deliveryStateSize.getOrElse(orderedOutMsgIds.size)
-      val orderedState =
-        orderedReqIds
-          .takeRight(maxRequestStateSize)
-          .flatMap(reqId => reqState.get(reqId).map(_.prepared()))
-      val deliveryState =
-        orderedOutMsgIds
-          .takeRight(maxDeliveryStateSize)
-          .flatMap(msgId => msgDeliveryState.get(msgId).map(_.prepared()))
-      sndr ! RecordedStates(orderedState, deliveryState)
+      val candidateReqIds = {
+        val reqIds = orderedReqIds.takeRight(gs.requestStateSize.getOrElse(orderedReqIds.size))
+        if (gs.latestFirst) reqIds.reverse else reqIds
+      }
+      val candidateMsgIds = {
+        val msgIds = orderedOutMsgIds.takeRight(gs.deliveryStateSize.getOrElse(orderedOutMsgIds.size))
+        if (gs.latestFirst) msgIds.reverse else msgIds
+      }
+
+      val orderedState = candidateReqIds.flatMap(reqId => reqState.get(reqId).map(_.prepared()))
+      val orderedDeliveryState = candidateMsgIds.flatMap(msgId => msgDeliveryState.get(msgId).map(_.prepared()))
+
+      sndr ! RecordedStates(orderedState, orderedDeliveryState)
     }
   }
 
@@ -150,6 +152,9 @@ class MsgProgressTracker(val appConfig: AppConfig)
       sender ! TrackingConfigured("tracking stopped")
       stopTracking()
     } else {
+      if (ct.startOver) {
+        cleanupState()
+      }
       ct.trackForMinutes.foreach(setTrackingExpiryTime)
       sender ! TrackingConfigured(s"tracking will be finished at: $finishTrackingAt")
       finishTrackingIfExceededTime()
@@ -194,6 +199,13 @@ class MsgProgressTracker(val appConfig: AppConfig)
   type ReqId = String
 
   lazy val region: ActorRef = ClusterSharding(context.system).shardRegion(MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME)
+
+  def cleanupState(): Unit = {
+    orderedReqIds = List.empty
+    orderedOutMsgIds = List.empty
+    reqState = Map.empty
+    msgDeliveryState = Map.empty
+  }
 
   setTrackingExpiryTime(defaultTrackingExpiryTimeInMinutes)
 
@@ -307,7 +319,7 @@ object ChildEvent {
   def apply(typ: String, detail: String): ChildEvent =
     ChildEvent(typ, Option(detail))
 }
-case class ChildEvent(`type`: String,
+case class ChildEvent(msg: String,
                       detail: Option[String]=None,
                       recordedAt: LocalDateTime = LocalDateTime.now())
 
@@ -390,13 +402,16 @@ case class RecordOutMsgEvent(reqId: String, event: MsgEvent) extends RecordReqDa
 
 case class RecordOutMsgDeliveryEvents(msgId: String, events: List[MsgEvent]) extends RecordMsgDeliveryData
 
-case class GetState(requestStateSize: Option[Int] = None, deliveryStateSize: Option[Int]=None) extends ProgressTrackerMsg
+case class GetState(requestStateSize: Option[Int] = None,
+                    deliveryStateSize: Option[Int]=None,
+                    latestFirst: Boolean = true) extends ProgressTrackerMsg
 
 case class RecordedStates(requestStates: List[RequestState],
                           deliveryStates: List[DeliveryState]) extends ProgressTrackerMsg
 
 case class ConfigureTracking(trackForMinutes: Option[Int] = None,
-                             stopNow: Boolean=false) extends ProgressTrackerMsg
+                             stopNow: Boolean=false,
+                             startOver: Boolean=false) extends ProgressTrackerMsg
 
 case class TrackingConfigured(message: String) extends ProgressTrackerMsg
 

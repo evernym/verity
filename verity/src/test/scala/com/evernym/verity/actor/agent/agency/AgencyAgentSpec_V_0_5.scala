@@ -31,8 +31,20 @@ class AgencyAgentSpec_V_0_5 extends AgencyAgentScaffolding {
 
         "when sent GetLocalAgencyDIDDetail command" - {
           "should respond with agency DID detail" in {
+            aa ! GetAgencyAgentDetail
+            val ad = expectMsgType[AgencyAgentDetail]
+            ad.didPair.validate()
+            ad.walletId.nonEmpty shouldBe true
+
             aa ! GetLocalAgencyIdentity()
-            expectMsgType[AgencyPublicDid]
+            val apd = expectMsgType[AgencyPublicDid]
+            apd.DID shouldBe ad.did
+            apd.verKey shouldBe ad.verKey
+
+            aa ! GetAgencyIdentity(apd.DID)
+            val ai = expectMsgType[AgencyInfo]
+            ai.verKeyReq shouldBe ad.verKey
+
           }
         }
 

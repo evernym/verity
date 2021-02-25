@@ -4,25 +4,33 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
-import com.evernym.verity.util.OptionUtil.toTry
 
 import scala.util.{Failure, Success, Try}
 
 object InviteUtil {
-  def buildServiced(agencyVerKey: Option[VerKey], ctx: ProtocolContextApi[_, _, _, _, _, _]): Try[Vector[ServiceFormatted]] = {
-    for(
-      agencyVerkey    <- toTry(agencyVerKey);
-      did             <- toTry(ctx.getRoster.selfId);
-      verkey          <- ctx.wallet.verKey(did);
-      serviceEndpoint <- Try(ctx.serviceEndpoint);
-      routingKeys <- Try(Vector(verkey, agencyVerkey))
-    ) yield DIDDoc(
-      did,
-      verkey,
-      serviceEndpoint,
-      routingKeys)
-      .toDIDDocFormatted
-      .service
+  def withServiced(agencyVerKey: Option[VerKey], ctx: ProtocolContextApi[_, _, _, _, _, _])
+                  (handler: Try[Vector[ServiceFormatted]] =>Unit): Unit = {
+    (agencyVerKey, ctx.getRoster.selfId) match {
+      case (Some(agencyVerKey), Some(did)) =>
+        ctx.wallet.verKey(did) {
+          case Success(verKey: VerKey) =>
+            handler(Success(
+              DIDDoc(
+                did,
+                verKey,
+                ctx.serviceEndpoint,
+                Vector(verKey, agencyVerKey)
+              ).toDIDDocFormatted
+                .service
+            ))
+          case Failure(ex) =>
+            handler(Failure(ex))
+        }
+      case (None, _) =>
+        handler(Failure(new Exception("no agency verKey")))
+      case _ =>
+        handler(Failure(new Exception("no self id")))
+    }
   }
 
   def buildInvite(agentName: Option[String],
@@ -50,24 +58,19 @@ object InviteUtil {
                                 agentName: Option[String],
                                 logoUrl: Option[String],
                                 publicDid: Option[DID],
-                                service: Try[Vector[ServiceFormatted]],
-                                attachment: Try[AttachmentDescriptor]): Try[OutOfBandInvitation] = {
-    for(
-      service         <- service;
-      offerAttachment <- attachment
-    ) yield {
-      val id = buildThreadedInviteId(protoRef, relationshipId, threadId)
-      OutOfBandInvitation(
-        agentName.getOrElse(""),
-        "issue-vc",
-        "To issue a credential",
-        Vector(offerAttachment),
-        service,
-        logoUrl,
-        publicDid.map("did:sov:"+_),
-        id
-      )
-    }
+                                service: Vector[ServiceFormatted],
+                                attachment: AttachmentDescriptor): OutOfBandInvitation = {
+    val id = buildThreadedInviteId(protoRef, relationshipId, threadId)
+    OutOfBandInvitation(
+      agentName.getOrElse(""),
+      "issue-vc",
+      "To issue a credential",
+      Vector(attachment),
+      service,
+      logoUrl,
+      publicDid.map("did:sov:"+_),
+      id
+    )
   }
 
 

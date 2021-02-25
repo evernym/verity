@@ -2,7 +2,7 @@ package com.evernym.verity.actor.persistence.supervisor
 
 import akka.actor.Props
 import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}
-import com.evernym.verity.actor.agent.user.UserAgent
+import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.persistence.SupervisorUtil
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
@@ -21,7 +21,7 @@ class SupervisorUtilSpec
   "SupervisorUtil" - {
     "when asked to generate backoff supervisor for AgencyAgent" - {
       "should be able to generate one" in {
-        val onFailureProps = SupervisorUtil.onFailureBackoffSupervisorActorProps(
+        val onFailureProps = SupervisorUtil.onFailureSupervisorProps(
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_REGION_ACTOR_NAME,
@@ -29,7 +29,7 @@ class SupervisorUtilSpec
         )
         onFailureProps.isDefined shouldBe true
 
-        val onStopProps = SupervisorUtil.onStopBackoffSupervisorActorProps(
+        val onStopProps = SupervisorUtil.onStopSupervisorProps(
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_REGION_ACTOR_NAME,
@@ -41,7 +41,7 @@ class SupervisorUtilSpec
 
     "when asked to generate backoff supervisor for AgencyAgentPairwise" - {
       "should be able to generate one" in {
-        val onFailureProps = SupervisorUtil.onFailureBackoffSupervisorActorProps(
+        val onFailureProps = SupervisorUtil.onFailureSupervisorProps(
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
@@ -49,7 +49,7 @@ class SupervisorUtilSpec
         )
         onFailureProps.isDefined shouldBe true
 
-        val onStopProps = SupervisorUtil.onStopBackoffSupervisorActorProps(
+        val onStopProps = SupervisorUtil.onStopSupervisorProps(
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
@@ -61,47 +61,54 @@ class SupervisorUtilSpec
 
     "when asked to generate backoff supervisor for UserAgent" - {
       "should be able to generate one" in {
-        val onFailureProps = SupervisorUtil.onFailureBackoffSupervisorActorProps(
-          appConfig,
-          PERSISTENT_ACTOR_BASE,
-          USER_AGENT_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
-        )
-        onFailureProps.isDefined shouldBe true
 
-        val onStopProps = SupervisorUtil.onStopBackoffSupervisorActorProps(
-          appConfig,
-          PERSISTENT_ACTOR_BASE,
-          USER_AGENT_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
-        )
-        onStopProps.isDefined shouldBe true
+        val actorRegionNames = Set(USER_AGENT_REGION_ACTOR_NAME, "ConsumerAgent", "EnterpriseAgent", "VerityAgent")
+        actorRegionNames.foreach { agentRegionName =>
+          val onFailureProps = SupervisorUtil.onFailureSupervisorProps(
+            appConfig,
+            PERSISTENT_ACTOR_BASE,
+            agentRegionName,
+            Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
+          )
+          onFailureProps.isDefined shouldBe true
+
+          val onStopProps = SupervisorUtil.onStopSupervisorProps(
+            appConfig,
+            PERSISTENT_ACTOR_BASE,
+            agentRegionName,
+            Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
+          )
+          onStopProps.isDefined shouldBe true
+        }
       }
     }
 
     "when asked to generate backoff supervisor for UserAgentPairwise" - {
       "should be able to generate one" in {
-        val onFailureProps = SupervisorUtil.onFailureBackoffSupervisorActorProps(
-          appConfig,
-          PERSISTENT_ACTOR_BASE,
-          USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
-        )
-        onFailureProps.isDefined shouldBe true
+        val actorRegionNames = Set(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME, "ConsumerAgentPairwise", "EnterpriseAgentPairwise", "VerityAgentPairwise")
+        actorRegionNames.foreach { agentRegionName =>
+          val onFailureProps = SupervisorUtil.onFailureSupervisorProps(
+            appConfig,
+            PERSISTENT_ACTOR_BASE,
+            agentRegionName,
+            Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector))
+          )
+          onFailureProps.isDefined shouldBe true
 
-        val onStopProps = SupervisorUtil.onStopBackoffSupervisorActorProps(
-          appConfig,
-          PERSISTENT_ACTOR_BASE,
-          USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-          Props(new UserAgent(agentActorContext))
-        )
-        onStopProps.isDefined shouldBe true
+          val onStopProps = SupervisorUtil.onStopSupervisorProps(
+            appConfig,
+            PERSISTENT_ACTOR_BASE,
+            agentRegionName,
+            Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector))
+          )
+          onStopProps.isDefined shouldBe true
+        }
       }
     }
 
     "when asked to generate backoff supervisor for NonPersistent actor" - {
       "should NOT generate backoff supervisor props" in {
-        val onFailureProps = SupervisorUtil.onFailureBackoffSupervisorActorProps(
+        val onFailureProps = SupervisorUtil.onFailureSupervisorProps(
           appConfig,
           NON_PERSISTENT_ACTOR_BASE,
           WALLET_REGION_ACTOR_NAME,
@@ -109,7 +116,7 @@ class SupervisorUtilSpec
         )
         onFailureProps.isDefined shouldBe false
 
-        val onStopProps = SupervisorUtil.onStopBackoffSupervisorActorProps(
+        val onStopProps = SupervisorUtil.onStopSupervisorProps(
           appConfig,
           NON_PERSISTENT_ACTOR_BASE,
           WALLET_REGION_ACTOR_NAME,
@@ -122,7 +129,7 @@ class SupervisorUtilSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervisor-strategy {
+       verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
             min-seconds = 3
@@ -131,7 +138,7 @@ class SupervisorUtilSpec
           }
       }
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds
-      """
+    """
   )}
 
 }

@@ -8,7 +8,7 @@ import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec, HasTestWalletAPI, LegacyWalletAPI}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -21,6 +21,7 @@ trait ClientWalletAPISpecBase
     with UserWalletSetupHelper
     with HasThreadStarvationDetector
     with AddMetricsReporter
+    with HasTestWalletAPI
     with BasicSpec {
 
   //execution context to be used to create futures in the test code
@@ -73,7 +74,7 @@ trait ClientWalletAPISpecBase
 
 trait UserWalletSetupHelper {
 
-  protected def _baseWalletSetupWithSyncAPI(userId: Int, walletAPI: WalletAPI): Unit = {
+  protected def _baseWalletSetupWithSyncAPI(userId: Int, walletAPI: LegacyWalletAPI): Unit = {
     implicit val wap: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
     println(s"[$userId] about to start executing wallet operations for an user")
     val wc = walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)

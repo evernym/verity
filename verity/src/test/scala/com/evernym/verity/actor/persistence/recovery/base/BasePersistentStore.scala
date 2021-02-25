@@ -4,11 +4,12 @@ import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
+import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
@@ -16,7 +17,7 @@ import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -26,18 +27,19 @@ import com.typesafe.config.{Config, ConfigFactory}
  */
 trait BasePersistentStore
   extends ActorSpec
-    with BasicSpec {
+    with BasicSpec
+    with HasTestWalletAPI {
 
   lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)
   lazy val keyValueMapperEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_KEY_VALUE_MAPPER)
   lazy val agentRouteStoreEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
-    walletAPI.executeSync[WalletCreated.type](CreateWallet)(WalletAPIParam(walletId))
+    testWalletAPI.executeSync[WalletCreated.type](CreateWallet)(WalletAPIParam(walletId))
   }
 
   def createNewKey(walletId: String, seed: Option[String]=None): NewKeyCreated = {
-    walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))(WalletAPIParam(walletId))
+    testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed))(WalletAPIParam(walletId))
   }
 
   def storeTheirKey(walletId: String, didPair: DidPair): TheirKeyStored = {
@@ -45,7 +47,11 @@ trait BasePersistentStore
   }
 
   def storeTheirKey(walletId: String, theirDID: DID, theirDIDVerKey: VerKey): TheirKeyStored = {
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
+  }
+
+  def closeWallet(walletId: String): Done.type = {
+    testWalletAPI.executeSync[Done.type](Close)(WalletAPIParam(walletId))
   }
 
   def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
@@ -70,6 +76,16 @@ trait BasePersistentStore
         MappingAdded(AGENCY_DID_KEY, agencyDID)
       )
     )(pp.copy(encryptionKey = Option(keyValueMapperEncKey)))
+  }
+
+  def getEvents(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Seq[Any] = {
+    val events = persTestKit.persistedInStorage(pp.toString)
+    val encKey = encryptionKey.getOrElse(
+      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(pp.entityId, appConfig))
+    val transformer = getTransformer(encKey)
+    events.map { e =>
+      transformer.undo(e.asInstanceOf[PersistentMsg])
+    }
   }
 
   /**
@@ -149,6 +165,8 @@ trait BasePersistentStore
       .withFallback(EventSourcedBehaviorTestKit.config)
       .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
+
+  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey)
 }
 
 /**

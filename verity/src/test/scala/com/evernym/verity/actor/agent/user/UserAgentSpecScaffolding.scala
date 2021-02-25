@@ -2,21 +2,19 @@ package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.SetupAgentEndpoint
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, DidPair, SetupAgentEndpoint}
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import org.scalatest.concurrent.Eventually
 
 
@@ -29,19 +27,18 @@ trait UserAgentSpecScaffolding
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
-  override lazy val mockAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
+  override lazy val mockAgencyAdmin: MockEdgeAgent =
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
-    platform.agentActorContext.appConfig, mockAgencyAdmin)
+  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
 
   import mockEdgeAgent._
   import mockEdgeAgent.v_0_5_req._
   import mockEdgeAgent.v_0_5_resp._
 
-  def alltests(ua: agentRegion, userDID: DID, userDIDVerKey: VerKey)
+  def alltests(ua: agentRegion, userDIDPair: DidPair)
 
-  def setupUserAgentSpecs(ua: agentRegion, userDID: DID, userDIDVerKey: VerKey): Unit = {
+  def setupUserAgentSpecs(ua: agentRegion, userDIDPair: DidPair): Unit = {
     "when sent GetConfigs msg" - {
       "should respond with Configs msg with empty list" in {
         ua ! GetConfigs(Set(""))
@@ -51,10 +48,10 @@ trait UserAgentSpecScaffolding
 
     "when sent InitReq command" - {
       "should create/initialize agent actor" in {
-        val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
-        ua ! SetupAgentEndpoint(userDID, agentPairwiseKey.did)
+        val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
+        ua ! SetupAgentEndpoint(userDIDPair, agentPairwiseKey.didPair)
         expectMsg(Done)
-        mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
+        mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
       }
     }
   }
@@ -65,12 +62,10 @@ trait UserAgentSpecScaffolding
       //fixture for common user agent used across tests in this scope
       lazy val ua: agentRegion = agentRegion(userAgentEntityId, userAgentRegionActor)
 
-      lazy val userDID: DID = mockEdgeAgent.myDIDDetail.did
-      lazy val userDIDVerKey: VerKey = mockEdgeAgent.getVerKeyFromWallet(userDID)
-
-      setupUserAgentSpecs(ua, userDID, userDIDVerKey)
+      lazy val userDIDPair: DidPair = mockEdgeAgent.myDIDDetail.didPair
+      setupUserAgentSpecs(ua, userDIDPair)
       updateComMethodSpecs()
-      alltests(ua, userDID, userDIDVerKey)
+      alltests(ua, userDIDPair)
       restartSpecs()
     }
   }

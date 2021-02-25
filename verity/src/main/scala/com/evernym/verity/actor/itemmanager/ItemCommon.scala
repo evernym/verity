@@ -5,9 +5,9 @@ import java.time.ZonedDateTime
 import akka.actor.{ActorLogging, Props}
 import akka.event.Logging._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.appStateManager.ErrorEvent
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId, ItemType, VersionId}
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.VerKey
 
@@ -77,8 +77,8 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
     throw new RuntimeException(message)
   }
 
-  def notifyAppStateManager(eventParam: ErrorEventParam): Unit = {
-    AppStateManager << eventParam
+  def notifyAppStateManager(eventParam: ErrorEvent): Unit = {
+    publishAppStateEvent(eventParam)
   }
 
   def unhandledMsg(receivedMsg: Any, responseToBeSent: Any): Unit = {

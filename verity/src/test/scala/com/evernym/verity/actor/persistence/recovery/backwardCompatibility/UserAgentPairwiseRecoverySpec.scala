@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.recovery.backwardCompatibility
 
-import com.evernym.verity.actor.persistence.recovery.base.{AgencyAgentEventSetter, BaseRecoverySpec, UserAgentEventSetter, UserAgentPairwiseEventSetter}
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.eventSetter.legacy.{AgencyAgentEventSetter, UserAgentEventSetter, UserAgentPairwiseEventSetter}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 
 
@@ -24,6 +25,7 @@ class UserAgentPairwiseRecoverySpec
     setupBasicAgencyAgent()
     setupBasicUserAgent()
     setupBasicUserAgentPairwise()
+    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
   "UserAgentPairwise actor" - {

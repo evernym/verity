@@ -159,10 +159,15 @@ class ConnectionMsgState {
       msgExpirationTime = msgExpirationTime ++ Map(me.msgType -> me.timeInSeconds)
   }
 
-  def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId, sendMsg: Boolean,
-                         msgStatus: String, threadOpt: Option[Thread], LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
+  def buildMsgCreatedEvt(msgId: MsgId,
+                         mType: String,
+                         senderDID: DID,
+                         sendMsg: Boolean,
+                         msgStatus: String,
+                         threadOpt: Option[Thread],
+                         LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfMsgAlreadyNotExists(msgId)
-    MsgHelper.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg,
+    MsgHelper.buildMsgCreatedEvt(msgId, mType, senderDID, sendMsg,
       msgStatus, threadOpt, LEGACY_refMsgId)
   }
 

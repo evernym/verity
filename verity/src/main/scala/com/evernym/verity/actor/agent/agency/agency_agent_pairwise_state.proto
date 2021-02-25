@@ -7,6 +7,7 @@ import "thread_context.proto";
 import "protocol_instances.proto";
 import "relationship.proto";
 import "connection_status.proto";
+import "did_pair.proto";
 
 package com.evernym.verity.actor.agent.agency;
 
@@ -14,7 +15,7 @@ message AgencyAgentPairwiseState {
     option (scalapb.message).extends = "com.evernym.verity.actor.agent.agency.AgencyAgentPairwiseStateImpl";
     ConnectionStatus connectionStatus = 1;
     google.protobuf.StringValue thisAgentKeyId = 2;
-    google.protobuf.StringValue agencyDID = 3;
+    DidPair agencyDIDPair = 3;
     google.protobuf.StringValue agentWalletId = 4;
     ThreadContext threadContext = 5;
     //once we stop using agent-provisioning:0.5 and connecting:0.6 protocol

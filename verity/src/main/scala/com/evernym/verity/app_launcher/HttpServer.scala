@@ -7,13 +7,14 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.apphealth.AppStateConstants.{CONTEXT_AGENT_SERVICE_INIT, CONTEXT_GENERAL}
-import com.evernym.verity.apphealth.{AppStateManager, CauseDetail, ErrorEventParam, ListeningSuccessful, SeriousSystemError, SuccessEventParam}
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.{CauseDetail, StartDraining, ErrorEvent, ListeningSuccessful, SeriousSystemError, SuccessEvent}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
-import com.evernym.verity.metrics.{MetricsReader, MetricsWriter}
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.typesafe.scalalogging.Logger
 import sun.misc.{Signal, SignalHandler}
@@ -34,28 +35,27 @@ class HttpServer(val platform: Platform, routes: Route)
     startService(init _)
   }
 
-  private def init(): (ActorSystem, Future[Seq[HttpServerBindResult]]) = {
-    val bindResult = startNewServer(routes, appConfig)
-    (platform.actorSystem, bindResult)
+  private def init(): (Future[Seq[HttpServerBindResult]]) = {
+    startNewServer(routes, appConfig)
   }
 
-  private def startService(f:() => (ActorSystem, Future[Seq[HttpServerBindResult]])): Unit = {
+  private def startService(f:() => Future[Seq[HttpServerBindResult]]): Unit = {
     try {
       val serviceStartTime = LocalDateTime.now
-      val (actorSystem, bindResultFut) = f()
+      val bindResultFut = f()
       bindResultFut.onComplete {
         case Success(bindResults) =>
           // Drain the Akka node on a SIGTERM - systemd sends the JVM a SIGTERM on a 'systemctl stop'
           Signal.handle(new Signal("TERM"), new SignalHandler() {
             def handle(sig: Signal): Unit = {
               logger.info("Trapping SIGTERM and begin draining Akka node...")
-              AppStateManager.drain(actorSystem)
+              publishEvent(StartDraining)
             }
           })
           bindResults.foreach { br =>
-            AppStateManager << SuccessEventParam(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
+            publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
               causeDetail = CauseDetail("agent-service-started", "agent-service-started-listening-successfully"),
-              msg = Option(br.msg))
+              msg = Option(br.msg)))
           }
           val serviceStartFinishTime = LocalDateTime.now
           val millis = ChronoUnit.MILLIS.between(serviceStartTime, serviceStartFinishTime)
@@ -66,12 +66,12 @@ class HttpServer(val platform: Platform, routes: Route)
       }
     } catch {
       case e: UnableToCreateLogger =>
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_GENERAL, e, Option(e.msg))
+        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(e.msg)))
         System.err.println(e.msg)
         System.exit(1)
       case e: Exception =>
         val errorMsg = s"Unable to start agent service: ${Exceptions.getErrorMsg(e)}"
-        AppStateManager << ErrorEventParam(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg))
+        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
         System.err.println(errorMsg)
         System.exit(1)
     }

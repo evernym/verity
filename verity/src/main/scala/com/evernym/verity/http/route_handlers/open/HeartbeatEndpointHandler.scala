@@ -1,18 +1,21 @@
 package com.evernym.verity.http.route_handlers.open
 
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, get, path}
 import com.evernym.verity.Status.ACCEPTING_TRAFFIC
+import com.evernym.verity.actor.appStateManager.GetHeartbeat
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.apphealth.AppStateManager
 import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.common.{HttpRouteBase, StatusDetailResp}
+import com.evernym.verity.http.common.StatusDetailResp
+import com.evernym.verity.http.route_handlers.PlatformServiceProvider
 
 trait HeartbeatEndpointHandler
-  extends ResourceUsageCommon { this: HttpRouteBase =>
+  extends ResourceUsageCommon { this: PlatformServiceProvider =>
 
   protected val heartbeatRoute: Route =
     handleExceptions(exceptionHandler) {
@@ -20,12 +23,15 @@ trait HeartbeatEndpointHandler
         path("agency" / "heartbeat") {
           (get & pathEnd) {
             complete {
-              val heartbeat: StatusDetailResp = AppStateManager.getHeartbeat
-              heartbeat.statusCode match {
-                case ACCEPTING_TRAFFIC.statusCode =>
-                  HttpResponse(status=StatusCodes.OK, entity=DefaultMsgCodec.toJson(heartbeat))
-                case _ =>
-                  HttpResponse(status=StatusCodes.ServiceUnavailable, entity=DefaultMsgCodec.toJson(heartbeat))
+              askAppStateManager(GetHeartbeat).map[ToResponseMarshallable] {
+                case heartbeat: StatusDetailResp =>
+                  heartbeat.statusCode match {
+                    case ACCEPTING_TRAFFIC.statusCode =>
+                      HttpResponse(status = StatusCodes.OK, entity = DefaultMsgCodec.toJson(heartbeat))
+                    case _ =>
+                      HttpResponse(status = StatusCodes.ServiceUnavailable, entity = DefaultMsgCodec.toJson(heartbeat))
+                  }
+                case e => handleUnexpectedResponse(e)
               }
             }
           }

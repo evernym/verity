@@ -8,11 +8,11 @@ import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrF
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
-import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateAgent_MFV_0_7, CreateEdgeAgent_MFV_0_7}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockAgent
 
 import scala.util.Left
 

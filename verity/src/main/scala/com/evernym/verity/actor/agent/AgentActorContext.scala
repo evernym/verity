@@ -9,7 +9,8 @@ import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.{ActorContext, TokenToActorItemMapperProvider}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache._
+import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._
@@ -23,9 +24,8 @@ import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.aws_s3.{S3AlpakkaApi, StorageAPI}
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.Util
-import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
-import com.evernym.verity.vault.wallet_api.{LegacyWalletAPI, StandardWalletAPI, WalletAPI}
+import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -37,13 +37,15 @@ trait AgentActorContext extends ActorContext {
 
   type MsgSendingSvcType = MsgSendingSvc
 
-  lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = Map (
-    KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID -> new KeyValueMapperFetcher(system, appConfig),
-    AGENCY_DETAIL_CACHE_FETCHER_ID -> new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
-    WALLET_VER_KEY_CACHE_FETCHER_ID -> new WalletVerKeyCacheFetcher(walletAPI, appConfig),
-    ENDPOINT_CACHE_FETCHER_ID -> new EndpointCacheFetcher(ledgerSvc, appConfig),
-    VER_KEY_CACHE_FETCHER_ID -> new VerKeyCacheFetcher(ledgerSvc, appConfig)
-  )
+  lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = List (
+    new KeyValueMapperFetcher(system, appConfig),
+    new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
+    new EndpointCacheFetcher(ledgerSvc, appConfig),
+    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig),
+    new LedgerGetSchemaCacheFetcher(ledgerSvc, appConfig),
+    new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig)
+  ).map(f => f.id -> f).toMap
+
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
   lazy val actionExecutor: UsageViolationActionExecutor = new UsageViolationActionExecutor(system, appConfig)
   lazy val tokenToActorItemMapperProvider: TokenToActorItemMapperProvider = new TokenToActorItemMapperProvider(system, appConfig)
@@ -55,11 +57,10 @@ trait AgentActorContext extends ActorContext {
   lazy val smsSvc: SMSSender = _smsSender
 
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
-  lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(appConfig)
+  lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig)
   lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
   lazy val walletService: WalletService = new ActorWalletService(system)
-  lazy val walletAPI: WalletAPI = buildWalletAPI(
-    appConfig, walletService, walletProvider, Option(poolConnManager))
+  lazy val walletAPI: WalletAPI = new StandardWalletAPI(walletService)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val s3API: StorageAPI = new S3AlpakkaApi(appConfig.config)
@@ -83,12 +84,6 @@ trait AgentActorContext extends ActorContext {
       }
     }
   }
-
-  def buildWalletAPI(appConfig: AppConfig,
-                     walletService: WalletService,
-                     walletProvider: WalletProvider,
-                     poolConnManager: Option[LedgerPoolConnManager]=None): WalletAPI =
-    WalletApiBuilder.createWalletAPI(appConfig, walletService, walletProvider, poolConnManager)
 }
 
 
@@ -99,20 +94,5 @@ class DefaultLedgerSvc(val system: ActorSystem,
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))
-  }
-}
-
-object WalletApiBuilder {
-
-  def createWalletAPI(appConfig: AppConfig,
-                      walletService: WalletService,
-                      walletProvider: WalletProvider,
-                      poolConnManager: Option[LedgerPoolConnManager]=None): WalletAPI = {
-    val walletApiConfigPath = "verity.wallet-api"
-    appConfig.getConfigStringOption(walletApiConfigPath) match {
-      case Some("legacy")     => new LegacyWalletAPI(appConfig, walletProvider, poolConnManager)
-      case Some("standard")   => new StandardWalletAPI(walletService)
-      case _                  => throw new RuntimeException(s"invalid value for configuration: '$walletApiConfigPath'")
-    }
   }
 }

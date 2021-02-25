@@ -8,15 +8,14 @@ import com.evernym.verity.protocol.engine
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{AwaitResult, BasicSpec}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.vault.service.AsyncToSync
 
 
 class MsgExtractorSpec
   extends BasicSpec
     with AgentMsgSpecBase
-    with AsyncToSync {
+    with AwaitResult {
 
   //TODO GENERAL CONVERSION from PackedMsg to native (case class) and visa versa
 
@@ -38,10 +37,10 @@ class MsgExtractorSpec
     CreateConnectionReqMsg_MFV_0_6(MSG_TYPE_DETAIL_CREATE_CONNECTION, sourceId = "test-id-1")
 
   lazy val aliceCloudMsgExtractor: MsgExtractor = {
-    new MsgExtractor(aliceCloudAgentKeyParam, walletAPI)(aliceCloudAgentWap)
+    new MsgExtractor(aliceCloudAgentKeyParam, testWalletAPI)(aliceCloudAgentWap)
   }
   lazy val aliceMsgExtractor: MsgExtractor = {
-    new MsgExtractor(aliceKeyParam, walletAPI)(aliceWap)
+    new MsgExtractor(aliceKeyParam, testWalletAPI)(aliceWap)
   }
 
   def packedMsg: PackedMsg = convertToSyncReq(aliceMsgExtractor.packAsync(

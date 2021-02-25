@@ -83,10 +83,10 @@ class TicTacToe(val ctx: ProtocolContextApi[TicTacToe, Role, Any, Any, State, St
   def mainHandleControl: (State, Control) ?=> Unit = {
     case (_: State.Uninitialized, Init(params)        ) => ctx.apply(Initialized(params.initParams.map(p => InitParam(p.name, p.value)).toSeq))
     case (_: State.Initialized  , _: MakeOffer        ) => ctx.apply(Offered(ctx.getRoster.selfIndex_!)); ctx.send(Offer()); ctx.signal(OfferSent())
-    case (_: State.Offered      , _: AcceptOffer      ) => ctx.apply(Accepted()); ctx.send(OfferAccept()); ctx.signal(OfferAccepted(ctx.getBackstate.roster.selfIndex_!))
-    case (_: State.Offered      , _: DeclineOffer     ) => ctx.apply(Declined()); ctx.send(OfferDecline()); ctx.signal(OfferDeclined(ctx.getBackstate.roster.selfIndex_!))
-    case (_: State.Accepted     , c: MakeMove         ) => handleMakeMove(c, GameState(), ctx.getBackstate.roster.selfIndex_!)
-    case (s: State.Playing      , c: MakeMove         ) => handleMakeMove(c, s.game, ctx.getBackstate.roster.selfIndex_!)
+    case (_: State.Offered      , _: AcceptOffer      ) => ctx.apply(Accepted()); ctx.send(OfferAccept()); ctx.signal(OfferAccepted(ctx.getBackState.roster.selfIndex_!))
+    case (_: State.Offered      , _: DeclineOffer     ) => ctx.apply(Declined()); ctx.send(OfferDecline()); ctx.signal(OfferDeclined(ctx.getBackState.roster.selfIndex_!))
+    case (_: State.Accepted     , c: MakeMove         ) => handleMakeMove(c, GameState(), ctx.getBackState.roster.selfIndex_!)
+    case (s: State.Playing      , c: MakeMove         ) => handleMakeMove(c, s.game, ctx.getBackState.roster.selfIndex_!)
     case (_: State.Finished     , _                   ) => throw new GameAlreadyFinished
   }
 

@@ -74,7 +74,13 @@ object CustomMetrics {
   final val AS_USER_AGENT_PAIRWISE_WATCHER_ACTIVE_CONTAINER_COUNT = s"$AS_USER_AGENT_PAIRWISE.watcher.container.active.count"
   final val AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT = s"$AS_USER_AGENT_PAIRWISE.watcher.container.total.count"
 
-  private final val AS_USER_AGENT_ACTOR = s"$AS_USER_AGENT.actor"
+  final val AS_USER_AGENT_API = s"$AS_USER_AGENT.api"
+
+  //this is to track how many pairwise connections are supplied
+  // during GET_MSGS_BY_CONNS api call
+  final val AS_USER_AGENT_API_GET_MSGS_BY_CONNS_PCS_COUNT =
+    s"$AS_USER_AGENT_API.GET_MSGS_BY_CONNS.pairwise.connection.size.count"
+
   private final val AS_USER_AGENT_MSG = s"$AS_USER_AGENT.msg"
   /**
    * this is overall undelivered messages (including past and current)
@@ -90,6 +96,14 @@ object CustomMetrics {
    * this is total failed attempts counts since agent service started
    */
   final val AS_USER_AGENT_MSG_FAILED_ATTEMPT_COUNT = s"$AS_USER_AGENT_MSG.failed.attempt.count"
+
+
+  private final val AS_COLLECTIONS = s"$AS.collections"
+
+  final val AS_COLLECTIONS_MAX = s"$AS_COLLECTIONS.max"
+  final val AS_COLLECTIONS_SUM = s"$AS_COLLECTIONS.sum"
+  final val AS_COLLECTIONS_COUNT = s"$AS_COLLECTIONS.count"
+
 
   final val AS_AKKA_ACTOR_AGENT_RETAINED_MSGS = s"$AS_AKKA_ACTOR_AGENT.msgs.retained"
   final val AS_AKKA_ACTOR_AGENT_REMOVED_MSGS = s"$AS_AKKA_ACTOR_AGENT.msgs.removed"
@@ -120,6 +134,7 @@ object CustomMetrics {
 
   final val AS_START_TIME = s"$AS.start-time-in-millis"
 
+  final val AS_BLOCKING_WALLET_API_CALL_COUNT = s"$AS.blocking-wallet-api-count"
   final val AS_CACHE = s"$AS.cache"
 
   final val AS_CACHE_TOTAL_SIZE = s"$AS_CACHE.total.size"
@@ -131,38 +146,10 @@ object CustomMetrics {
   final val TAG_KEY_TYPE = "type"
   final val TAG_KEY_ID = "id"
 
+  //**NOTE**: We should not add any metrics in this below collection in general,
+  // there should be very specific reason to add it to initialize it with value 0
   def initGaugeMetrics(): Unit = {
     val metricsToBeInitialized = Set(
-      AS_ENDPOINT_HTTP_AGENT_MSG_COUNT,
-      AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT,
-      AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT,
-      AS_SERVICE_TWILIO_DURATION,
-      AS_SERVICE_TWILIO_SUCCEED_COUNT,
-      AS_SERVICE_TWILIO_FAILED_COUNT,
-      AS_SERVICE_BANDWIDTH_DURATION,
-      AS_SERVICE_BANDWIDTH_SUCCEED_COUNT,
-      AS_SERVICE_BANDWIDTH_FAILED_COUNT,
-      AS_SERVICE_FIREBASE_DURATION,
-      AS_SERVICE_FIREBASE_SUCCEED_COUNT,
-      AS_SERVICE_FIREBASE_FAILED_COUNT,
-      AS_SERVICE_DYNAMODB_PERSIST_SUCCEED_COUNT,
-      AS_SERVICE_DYNAMODB_PERSIST_FAILED_COUNT,
-      AS_SERVICE_DYNAMODB_PERSIST_DURATION,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_ATTEMPT_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_MAX_SIZE_EXCEEDED_CURRENT_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_ATTEMPT_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT,
-      AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT,
-      AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT,
-      AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT,
-      AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT,
-      AS_SERVICE_LIBINDY_WALLET_DURATION,
-      AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT,
-      AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT,
-      AS_USER_AGENT_MSG_UNDELIVERED_COUNT,
       AS_ACTIVE_USER_AGENT_COUNT,
       AS_USER_AGENT_ACTIVE_RELATIONSHIPS,
       AS_NEW_PROTOCOL_COUNT

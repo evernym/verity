@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
-import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.supervisor.MockActorRecoverySuccess
+import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
 import com.evernym.verity.testkit.BasicSpec
@@ -17,7 +17,7 @@ class ActorRecoverySuccessSpec
   with Eventually
   with ShardUtil {
 
-  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.backOffOnFailureProps(appConfig))
+  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig))
 
   "OnFailure BackoffSupervised actor" - {
     "when asked for actor detail" - {
@@ -33,11 +33,11 @@ class ActorRecoverySuccessSpec
 
   override def overrideConfig: Option[Config] = Option { ConfigFactory.parseString (
     """
-       verity.persistent-actor.base.supervisor-strategy {
+       verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
-            min-seconds = 3
-            max-seconds = 20
+            min-seconds = 1
+            max-seconds = 2
             random-factor = 0
           }
       }

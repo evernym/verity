@@ -1,12 +1,14 @@
 package com.evernym.verity.protocol.legacy.services
 
-import com.evernym.verity.actor.agent.WalletVerKeyCacheHelper
+import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.appStateManager.AppStateEvent
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyOpt, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache.Cache
+import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.protocol.actor.MsgQueueServiceProvider
-import com.evernym.verity.protocol.engine.{DID, RecordsEvents, SERVICES_DEPRECATION_DATE, SendsMsgs, VerKey}
+import com.evernym.verity.protocol.engine.{DID, ProtocolContextApi, SERVICES_DEPRECATION_DATE, VerKey}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 
@@ -31,24 +33,25 @@ trait ProtocolServices[M,E,I] {
   def tokenToActorMappingProvider: TokenToActorMappingProvider
   def msgQueueServiceProvider: MsgQueueServiceProvider
   def connectEndpointServiceProvider: CreateKeyEndpointServiceProvider
+  def publishAppStateEvent: AppStateEvent => Unit
 }
 
 @deprecated("We are no longer using services. Most of these services shouldn't " +
   "be available to protocols anyway. Use ProtocolContextApi.", SERVICES_DEPRECATION_DATE)
-class LegacyProtocolServicesImpl[M,E,I](val eventRecorder: RecordsEvents,
-                                        val sendsMsgs: SendsMsgs,
-                                        val appConfig: AppConfig,
-                                        val walletAPI: WalletAPI,
-                                        val generalCache: Cache,
-                                        val msgSendingSvc: MsgSendingSvc,
-                                        val agentMsgTransformer: AgentMsgTransformer,
-                                        val tokenToActorMappingProvider: TokenToActorMappingProvider,
-                                        val msgQueueServiceProvider: MsgQueueServiceProvider,
-                                        val connectEndpointServiceProvider: CreateKeyEndpointServiceProvider
-                                     ) extends ProtocolServices[M,E,I]
+class LegacyProtocolServicesImpl[M,E,I](val appConfig: AppConfig,
+                                        val walletAPI: WalletAPI, // used by connecting (0.5 and 0.6) and agent provisioning (0.5 and 0.6)
+                                        val generalCache: Cache, //only used in legacy connecting (0.5 and 0.6) protocols
+                                        val msgSendingSvc: MsgSendingSvc, //only used in legacy connecting (0.5 and 0.6) protocols
+                                        val agentMsgTransformer: AgentMsgTransformer, //only used in legacy connecting (0.5 and 0.6) protocols
+                                        val publishAppStateEvent: AppStateEvent => Unit,
+                                        val tokenToActorMappingProvider: TokenToActorMappingProvider, //only used in legacy connecting (0.5 and 0.6) protocols
+                                        val msgQueueServiceProvider: MsgQueueServiceProvider, //only used in legacy connecting (0.5 and 0.6) protocols
+                                        val connectEndpointServiceProvider: CreateKeyEndpointServiceProvider //only used in legacy connecting (0.5 and 0.6) protocols
+) extends ProtocolServices[M,E,I]
 
 
 trait DEPRECATED_HasWallet {
+  def ctx: ProtocolContextApi[_,_,_,_,_,_]
 
   def appConfig: AppConfig
   def walletAPI: WalletAPI
@@ -58,14 +61,17 @@ trait DEPRECATED_HasWallet {
 
   def initWalletDetail(seed: String): Unit = walletId = seed
 
-  lazy val walletVerKeyCacheHelper: WalletVerKeyCacheHelper = {
-    new WalletVerKeyCacheHelper(WalletAPIParam(walletId), walletAPI, appConfig)
+  protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
+    val agentWAP = WalletAPIParam(walletId)
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[WalletCreated.type](CreateWallet)(agentWAP))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
   }
 
   def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): VerKey =
-    walletVerKeyCacheHelper.getVerKeyReqViaCache(did, getKeyFromPool)
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[VerKey](GetVerKey(did, getKeyFromPool)))
 
-  def getVerKeyViaCache(did: DID, req: Boolean = false, getKeyFromPool: Boolean = false): Option[VerKey] =
-    walletVerKeyCacheHelper.getVerKeyViaCache(did, req, getKeyFromPool)
+  def getVerKeyViaCache(did: DID, getKeyFromPool: Boolean = false): Option[VerKey] =
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[Option[VerKey]](GetVerKeyOpt(did, getKeyFromPool)))
 
 }

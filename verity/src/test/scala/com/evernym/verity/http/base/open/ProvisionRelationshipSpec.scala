@@ -4,17 +4,15 @@ import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, RemoteAgentAndAgencyIdentity}
-import com.evernym.verity.testkit.mock.cloud_agent.MockCloudAgentBase
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.http.base.{EdgeEndpointBaseSpec, RemoteAgentAndAgencyIdentity}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEnv
 
-trait ProvisionRelationshipSpec { this : EndpointHandlerBaseSpec =>
+trait ProvisionRelationshipSpec { this : EdgeEndpointBaseSpec =>
 
-  def mockEdgeAgent: MockEdgeAgent
-  def mockOthersCloudAgent: MockCloudAgentBase
+  def createNewRelationship(mockEnv: MockEnv, connId: String): Unit = {
 
-  def createNewRelationship(connId: String): Unit = {
+    val mockEdgeAgent = mockEnv.edgeAgent
 
     var ckpm = emptyPackedMsgWrapper
     s"when sent CREATE_KEY msg ($connId)" - {
@@ -30,7 +28,7 @@ trait ProvisionRelationshipSpec { this : EndpointHandlerBaseSpec =>
             mockEdgeAgent.senderAgencyDetail.DID,
             mockEdgeAgent.senderAgencyDetail.verKey
           )
-          setupAgencyWithRemoteAgentAndAgencyIdentities(mockOthersCloudAgent, remoteDetail)
+          setupAgencyWithRemoteAgentAndAgencyIdentities(mockEnv.othersMockEnv.cloudAgent, remoteDetail)
         }
       }
     }

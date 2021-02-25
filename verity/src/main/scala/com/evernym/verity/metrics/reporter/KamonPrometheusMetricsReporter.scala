@@ -2,6 +2,8 @@ package com.evernym.verity.metrics.reporter
 
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.typesafe.scalalogging.Logger
 import kamon.Kamon
 import kamon.module.Module.Registration
 import kamon.prometheus.PrometheusReporter
@@ -11,6 +13,8 @@ import kamon.prometheus.PrometheusReporter
 // https://docs.google.com/document/d/1SAZNg8pMse9tIEfYE00PiLaJTUgC6c1uVBsLMfj-qxA/edit#
 
 object KamonPrometheusMetricsReporter extends MetricsReporter {
+
+  val logger: Logger = getLoggerByClass(getClass)
 
   /**
    * this reporter keeps tracking metrics from the time verity starts
@@ -30,27 +34,38 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
   override def fixedMetrics: List[MetricDetail] =
     buildMetrics(fixedMetricsData)
 
-  private def getCleanedInputStr(inputStr: String): String =
-    inputStr.stripMargin.replaceAll("\n", " ")
+  private def getCleanedInputStr(metricLine: String): String =
+    metricLine.stripMargin.replaceAll("\n", " ")
 
   def buildMetrics(inputStr: String): List[MetricDetail] = {
-    inputStr.split("\n").
-      filter(l => l.nonEmpty).
-      filterNot(_.startsWith("#")).
-      toList.map { metricLine =>
-        buildMetric(metricLine)
+    try {
+      inputStr.split("\n").
+        filter(l => l.nonEmpty).
+        filterNot(_.startsWith("#")).
+        toList.flatMap { metricLine =>
+          buildMetric(metricLine)
+        }
+    } catch {
+      case _: Throwable =>
+        logger.error("error while parsing metrics from input: " + inputStr)
+        List.empty
     }
   }
 
-  def buildMetric(inputStr: String): MetricDetail = {
-    val cleanedInputStr = getCleanedInputStr(inputStr)
-    val parsedMetricParam = parse(cleanedInputStr)
-
-    val name = parsedMetricParam.name
-    val value = parsedMetricParam.value
-    val target = buildTarget(parsedMetricParam)
-    val tags = Option(parsedMetricParam.tags)
-    MetricDetail(name, target, value, tags)
+  def buildMetric(metricLine: String): Option[MetricDetail] = {
+    try {
+      val cleanedInputStr = getCleanedInputStr(metricLine)
+      val parsedMetricParam = parse(cleanedInputStr)
+      val name = parsedMetricParam.name
+      val value = parsedMetricParam.value
+      val target = buildTarget(parsedMetricParam)
+      val tags = Option(parsedMetricParam.tags)
+      Option(MetricDetail(name, target, value, tags))
+    } catch {
+      case _: Throwable =>
+        logger.error("error while parsing metrics from input: " + metricLine)
+        None
+    }
   }
 
   private def parse(inputStr: String): ParsedMetricParam = {
@@ -73,11 +88,10 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
     val result = tagString
       .trim
       .split("\",")
-      .map { token =>
-        val splitted = token.split("=")
-        assert(splitted.size == 2, "unsupported token: " + token + s" (tagString: $tagString)")
-        splitted(0).trim -> splitted(1).trim.replace("\"", "")
-      }.toMap
+      .map( token => token.split("=", 2))
+      .map( splitted =>
+        splitted.head.trim -> splitted.tail.lastOption.getOrElse("n/a").trim.replace("\"", ""))
+      .toMap
     result
   }
 

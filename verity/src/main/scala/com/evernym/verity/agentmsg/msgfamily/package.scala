@@ -1,6 +1,7 @@
 package com.evernym.verity.agentmsg
 
 import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_MSGS_SENT, MSG_TYPE_MSG_CREATED, MSG_TYPE_MSG_DETAIL}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgCreatedRespMsg_MFV_0_5, MsgsSentRespMsg_MFV_0_5}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
@@ -33,7 +34,18 @@ package object msgfamily {
     }
   }
 
-  case class AgentMsgContext(msgPackFormat: MsgPackFormat, familyVersion: String, senderVerKey: Option[VerKey])
+  case class AgentMsgContext(msgPackFormat: MsgPackFormat, familyVersion: String, senderVerKey: Option[VerKey]) {
+
+    /**
+     * for rest api (MPF_PLAIN), when messages are exchanged between agencies
+     * we want to use INDY PACK by default
+     * @return
+     */
+    def msgPackFormatToBeUsed: MsgPackFormat = msgPackFormat match {
+      case MPF_PLAIN => MPF_INDY_PACK
+      case x         => x
+    }
+  }
 
   def buildMsgCreatedTypeDetail(ver: String): TypeDetail = TypeDetail(MSG_TYPE_MSG_CREATED, ver)
 

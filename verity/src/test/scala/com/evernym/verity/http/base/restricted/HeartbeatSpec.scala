@@ -1,14 +1,14 @@
 package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes._
+import com.evernym.verity.actor.appStateManager.{StartDraining, DrainingStarted, ErrorEvent, MildSystemError}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
-import com.evernym.verity.apphealth.state.{DegradedState, DrainingState}
-import com.evernym.verity.apphealth._
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import org.scalatest.time.{Seconds, Span}
 
-trait HeartbeatSpec { this : EndpointHandlerBaseSpec =>
+
+trait HeartbeatSpec  { this : EdgeEndpointBaseSpec =>
 
   def testHeartbeat(): Unit = {
 
@@ -28,28 +28,21 @@ trait HeartbeatSpec { this : EndpointHandlerBaseSpec =>
       }
 
       "should respond with status code GNR-130 when Draining" taggedAs UNSAFE_IgnoreLog in {
-        // Set app state to Draining
-        AppStateManager.performTransition(DrainingState, EventParam(
-          DrainingStarted, CONTEXT_GENERAL,
-          causeDetail=CauseDetail("test", "test"),
-          system = Option(system)
-        ))
-
-        buildGetReq("/agency/heartbeat") ~> epRoutes ~> check {
-          status shouldBe ServiceUnavailable
-          responseAs[String] should include ("GNR-130")
-        }
-
-        // Set app state back to Degraded
-        AppStateManager.performTransition(DegradedState, EventParam(
-          MildSystemError, CONTEXT_GENERAL,
-          causeDetail=CauseDetail("test", "test"),
-          system = Option(system)
-        ))
+        // Set app state to Degraded
+        publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL, new RuntimeException("test"), Option("test")))
 
         buildGetReq("/agency/heartbeat") ~> epRoutes ~> check {
           status shouldBe OK
           responseAs[String] should include ("GNR-129")
+        }
+
+        // Set app state to Draining
+        publishAppStateEvent(StartDraining)
+        publishAppStateEvent(ErrorEvent(DrainingStarted, CONTEXT_GENERAL, new RuntimeException("test"), Option("test")))
+
+        buildGetReq("/agency/heartbeat") ~> epRoutes ~> check {
+          status shouldBe ServiceUnavailable
+          responseAs[String] should include ("GNR-130")
         }
       }
     }

@@ -82,7 +82,7 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
   private def generateToken(m: GetToken): Unit = {
     val nonce = getNewEntityId
     val timestamp = TimeUtil.nowDateString
-    ctx.wallet.sign((nonce + timestamp + m.sponseeId + m.sponsorId).getBytes) match {
+    ctx.wallet.sign((nonce + timestamp + m.sponseeId + m.sponsorId).getBytes) {
       case Success(sig) =>
         val token = TokenMsg(m.sponseeId, m.sponsorId, nonce, timestamp, sig.toBase64, sig.verKey)
         ctx.apply(CreatedToken(

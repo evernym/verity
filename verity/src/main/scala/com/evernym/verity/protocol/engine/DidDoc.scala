@@ -18,7 +18,9 @@ case class ServiceFormatted(id: String, `type`: String, recipientKeys: Vector[Ve
 
 case class DIDDocFormatted(`@context`: String = DidDocConstants.DID_CONTEXT, id: DID, publicKey: Vector[PublicKeyFormatted], service: Vector[ServiceFormatted]) {
   def toDIDDoc: DIDDoc = {
-    assert(publicKey.nonEmpty)
+    if (publicKey.isEmpty) {
+      throw new RuntimeException("publicKey should not be empty")
+    }
     val serviceEntry = service.headOption.getOrElse(throw new RuntimeException("at least one service is required"))
     val endpoint = serviceEntry.serviceEndpoint
     val routingKeys = serviceEntry.routingKeys_!.map { rk =>

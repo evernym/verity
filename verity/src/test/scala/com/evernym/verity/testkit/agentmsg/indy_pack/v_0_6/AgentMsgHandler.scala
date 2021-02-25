@@ -5,11 +5,10 @@ import com.evernym.verity.agentmsg.msgpacker.{ParseParam, UnpackParam}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_6, ConnReqAccepted_MFV_0_6, KeyCreated_MFV_0_6, MsgsByConns_MFV_0_6, PublicIdentifierCreated_MFV_0_6}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 /**
  * this will handle received/incoming/response agent messages
@@ -22,7 +21,7 @@ trait AgentMsgHandler {
       logger.debug("Unpacking agent created response message (MFV 0.6)")
       val acm = unpackAgentCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
       logger.debug("Set cloud agent detail")
-      setCloudAgentDetail(acm.withPairwiseDID, acm.withPairwiseDIDVerKey)
+      setCloudAgentDetail(acm.didPair)
       acm
     }
 

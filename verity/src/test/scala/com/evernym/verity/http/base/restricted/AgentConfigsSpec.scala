@@ -4,19 +4,18 @@ import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
 import com.evernym.verity.testkit.util.TestConfigDetail
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
-trait AgentConfigsSpec { this : EndpointHandlerBaseSpec =>
+trait AgentConfigsSpec { this : EdgeEndpointBaseSpec =>
 
-  def mockEdgeAgent: MockEdgeAgent
   def inviteSenderName: String
   def inviteSenderLogoUrl: String
 
-  def testEnterpriseUpdateConfigs(connId: String): Unit = {
+  def testEnterpriseUpdateConfigs(mockEdgeAgent: MockEdgeAgent, connId: String): Unit = {
 
     "when sent UPDATE_CONFIGS msg with unsupported version of FWD msg" - {
       "should respond with unsupported version error msg" in {
@@ -53,7 +52,7 @@ trait AgentConfigsSpec { this : EndpointHandlerBaseSpec =>
     }
   }
 
-  def testSetInviteExpirationTime(connId: String, expireInSeconds: Int): Unit = {
+  def testSetInviteExpirationTime(mockEdgeAgent: MockEdgeAgent, connId: String, expireInSeconds: Int): Unit = {
     s"when sent UPDATE_CONFIGS msg to $connId invite msg expiry time to $expireInSeconds seconds" - {
       "should respond with CONFIGS_UPDATED msg" in {
         val configs = Set(TestConfigDetail("verity.msgs.conn-req-expiration-time-in-seconds", Option(expireInSeconds.toString)))
@@ -65,7 +64,7 @@ trait AgentConfigsSpec { this : EndpointHandlerBaseSpec =>
     }
   }
 
-  def testRemoveConfigForConn(connId: String, configs: Set[String]): Unit = {
+  def testRemoveConfigForConn(mockEdgeAgent: MockEdgeAgent, connId: String, configs: Set[String]): Unit = {
     "when sent REMOVE_CONFIGS msg" - {
       "should response with CONFIGS_REMOVED msg" in {
         buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareRemoveConfigsMsgForConnForAgency(connId, configs).msg) ~> epRoutes ~> check {

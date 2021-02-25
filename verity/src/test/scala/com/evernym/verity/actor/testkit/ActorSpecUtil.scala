@@ -6,7 +6,7 @@ import akka.testkit.{ImplicitSender, TestEventListener, TestKit, TestKitBase}
 import akka.{actor => classic}
 import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, OverrideConfig, ProvidesMockPlatform}
+import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -14,8 +14,10 @@ import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
-
 import java.util.concurrent.TimeUnit
+
+import com.evernym.verity.actor.agent.DidPair
+
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
@@ -35,6 +37,7 @@ object AkkaTestBasic extends ActorSystemConfig
  */
 case class AgentDIDDetail(name: String, DIDSeed: String, did: DID, verKey: VerKey) {
   def prepareAgencyIdentity: AgencyPublicDid = AgencyPublicDid(did, verKey)
+  def didPair = DidPair(did, verKey)
 }
 
 
@@ -43,6 +46,10 @@ class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean =
     validatorCreators = List.empty
   }
   setConfig(newConfig.getOrElse(getLoadedConfig))
+}
+object TestAppConfig {
+  def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =
+    new TestAppConfig(newConfig,clearValidators)
 }
 
 sealed trait CleansUpPersistence { this: CleansUpActorSystem =>
@@ -91,17 +98,19 @@ trait HasTestActorSystem extends HasActorSystem {
   lazy val snapTestKit: SnapshotTestKit = SnapshotTestKit(system)
 }
 
-/**
-  * To help ensure actor-based tests are cleaned up properly, we should use ActorSpec and not TestKit directly
-  */
-trait ActorSpec extends TestSuite with ActorSpecLike with OverrideConfig {
-  this: BasicSpecBase =>
-
+trait HasBasicActorSystem extends OverrideConfig with MockAppConfig{
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
   implicit lazy val system: classic.ActorSystem = as
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
+}
+
+/**
+  * To help ensure actor-based tests are cleaned up properly, we should use ActorSpec and not TestKit directly
+  */
+trait ActorSpec extends TestSuite with ActorSpecLike with HasBasicActorSystem {
+  this: BasicSpecBase =>
 }
 
 sealed trait ActorSpecLike

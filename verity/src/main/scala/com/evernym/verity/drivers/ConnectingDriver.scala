@@ -1,7 +1,7 @@
 package com.evernym.verity.drivers
 
 import com.evernym.verity.actor.ConnectionStatusUpdated
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{AcceptedInviteAnswerMsg_0_6, ConnReqRespMsg_MFV_0_6, RedirectedInviteAnswerMsg_0_6}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{AcceptedInviteAnswerMsg_0_6, ConnReqRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, RedirectedInviteAnswerMsg_0_6}
 import com.evernym.verity.protocol.actor.{ActorDriver, ActorDriverGenParam}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
@@ -34,6 +34,7 @@ class ConnectingDriver (cp: ActorDriverGenParam) extends ActorDriver(cp) {
     //these signals will be sent to edge agent
     case sig @ SignalEnvelope(
       _: ConnReqRespMsg_MFV_0_6 |
+      _: KeyCreatedRespMsg_MFV_0_6 |
       _: AcceptedInviteAnswerMsg_0_6 |
       _: RedirectedInviteAnswerMsg_0_6 |
       _: StatusReport,

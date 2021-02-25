@@ -55,7 +55,7 @@ trait SegmentedStateContext[P,R,M,E,S,I] extends SegmentedStateContextApi { this
       logger.error("error retrieving data from storage" + e.toString)
   }
 
-  def getDomainId: DomainId = getBackstate.domainId.getOrElse(ParticipantUtil.DID(getRoster.selfId_!))
+  def getDomainId: DomainId = getBackState.domainId.getOrElse(ParticipantUtil.DID(getRoster.selfId_!))
 
   /** retrieves segmented state needed for the incoming message
     *

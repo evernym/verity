@@ -1,8 +1,9 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 
@@ -22,7 +23,7 @@ case class UpdateMsgStatusReqMsg_MFV_0_6(`@type`: String, statusCode: String, ui
   }
 }
 
-case class UpdateMsgStatusReqMsg(msgFamilyDetail: MsgFamilyDetail, statusCode: String, uids: List[String])
+case class UpdateMsgStatusReqMsg(statusCode: String, uids: List[String]) extends ActorMessage
 
 case class MsgStatusUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String], statusCode: String) extends MsgBase
 
@@ -33,14 +34,12 @@ object UpdateMsgStatusMsgHelper {
 
   private def buildReqMsgFrom_MFV_0_5(implicit amw: AgentMsgWrapper): UpdateMsgStatusReqMsg = {
     val msg = amw.headAgentMsg.convertTo[UpdateMsgStatusReqMsg_MFV_0_5]
-    UpdateMsgStatusReqMsg(amw.headAgentMsgDetail,
-      msg.statusCode, msg.uids)
+    UpdateMsgStatusReqMsg(msg.statusCode, msg.uids)
   }
 
   private def buildReqMsgFrom_MFV_0_6(implicit amw: AgentMsgWrapper): UpdateMsgStatusReqMsg = {
     val msg = amw.headAgentMsg.convertTo[UpdateMsgStatusReqMsg_MFV_0_6]
-    UpdateMsgStatusReqMsg(amw.headAgentMsgDetail,
-      msg.statusCode, msg.uids)
+    UpdateMsgStatusReqMsg(msg.statusCode, msg.uids)
   }
 
   def buildReqMsg(implicit amw: AgentMsgWrapper): UpdateMsgStatusReqMsg = {

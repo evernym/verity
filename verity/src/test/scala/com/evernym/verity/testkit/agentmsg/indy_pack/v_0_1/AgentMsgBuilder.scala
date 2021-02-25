@@ -8,11 +8,11 @@ import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.agentmsg.tokenizer.GetToken
 import com.evernym.verity.protocol.engine.Constants.MFV_1_0
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
-import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.{preparePackedRequestForAgent, preparePackedRequestForRoutes}
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, TestComMethod}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockAgent
 
 trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
 

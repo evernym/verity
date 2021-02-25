@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.actor.agent
 import java.util.UUID
 
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
@@ -11,26 +12,27 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.{MockEdgeAgent, MockEnvUtil}
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
 import com.evernym.verity.util.Base64Util
 import com.typesafe.config.Config
 
 class WalletBackupActorSpec
-  extends UserAgentSpecScaffolding
-    with WalletBackupSpecUtil {
+  extends UserAgentSpecScaffolding {
 
-  lazy val mockNewEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
-    platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin)
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
+
+  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent)
 
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
@@ -49,7 +51,7 @@ class WalletBackupActorSpec
   userAgentBaseSpecs()
   updateComMethodSpecs()
 
-  def alltests(ua: agentRegion, userDID: DID, userDIDVerKey: VerKey): Unit = {
+  def alltests(ua: agentRegion, userDIDPair: DidPair): Unit = {
 
     "An exporter" - {
       initTests()
@@ -67,7 +69,7 @@ class WalletBackupActorSpec
     "when sent init wallet backup message" - {
       "should respond with Done" taggedAs (UNSAFE_IgnoreLog) in {
         val (resp, httpMsgOpt) = withExpectNewMsgAtRegisteredEndpoint {
-          val wpm = mockEdgeAgent.v_0_6_req.prepareWalletInitBackupMsgForAgent(backupInitParams, wrapIntoSendMsg = true)
+          val wpm = mockEdgeAgent.v_0_6_req.prepareWalletInitBackupMsgForAgent(walletBackupUtil.backupInitParams, wrapIntoSendMsg = true)
           ua ! wrapAsPackedMsgParam(wpm)
           expectMsg(Done)
         }
@@ -90,7 +92,7 @@ class WalletBackupActorSpec
     "when sent upload wallet with small wallet" - {
       "should respond with Done" in {
         val (_, httpMsgOpt) = withExpectNewMsgAtRegisteredEndpoint {
-          val wpm = mockEdgeAgent.prepareWalletBackupMsg(deadDropData.data)
+          val wpm = mockEdgeAgent.prepareWalletBackupMsg(walletBackupUtil.deadDropData.data)
           ua ! wrapAsPackedMsgParam(wpm)
           expectMsg(Done)
         }
@@ -103,7 +105,7 @@ class WalletBackupActorSpec
     "when sent upload wallet a second time with small wallet" - {
       "should respond with Done" in {
         val (_, httpMsgOpt) = withExpectNewMsgAtRegisteredEndpoint {
-          val wpm = mockEdgeAgent.prepareWalletBackupMsg(deadDropData.data)
+          val wpm = mockEdgeAgent.prepareWalletBackupMsg(walletBackupUtil.deadDropData.data)
           ua ! wrapAsPackedMsgParam(wpm)
           expectMsg(Done)
         }
@@ -154,8 +156,8 @@ class WalletBackupActorSpec
   def setupNewEdgeAgent(): Unit = {
     "when new edge agent is setup" - {
       "should be able to create same key from passphrase" in {
-        val nkc = mockNewEdgeAgent.addNewKey(Option(passphrase))
-        nkc.verKey shouldBe deadDropData.recoveryVerKey
+        val nkc = mockNewEdgeAgent.addNewKey(Option(walletBackupUtil.passphrase))
+        nkc.verKey shouldBe walletBackupUtil.deadDropData.recoveryVerKey
       }
     }
   }
@@ -165,19 +167,19 @@ class WalletBackupActorSpec
     //this request is auth crypted by using the recovery key (it can be any other new key as well probably)
     s"when sent RETRIEVE_DEAD_DROP msg" - {
       "should response with the payload" in {
-        val msg = mockNewEdgeAgent.prepareGetPayloadMsgForAgent(deadDropData)
+        val msg = mockNewEdgeAgent.prepareGetPayloadMsgForAgent(walletBackupUtil.deadDropData)
         aa ! wrapAsPackedMsgParam(msg)
 
         //NOTE: edge still doesn't have any way to receive async response messages, so expecting a packed message in synchronous response
         val pm = expectMsgType[PackedMsg]
 
         //NOTE: the response is unpacked by the same recovery key only (as there is no other key available yet)
-        val ddlr = mockNewEdgeAgent.unpackDeadDropLookupResult(pm, backupInitParams.recoveryVk)
+        val ddlr = mockNewEdgeAgent.unpackDeadDropLookupResult(pm, walletBackupUtil.backupInitParams.recoveryVk)
         ddlr.entry.isDefined shouldBe true
         val rca = new String(Base64Util.getBase64Decoded(ddlr.entry.get.data))
-        rca shouldBe cloudAgentAddress
+        rca shouldBe walletBackupUtil.cloudAgentAddress
 
-        recoveredCloudAddress = DefaultMsgCodec.fromJson[CloudAgentDetail](rca)
+        walletBackupUtil.setRecoveredCloudAddress(DefaultMsgCodec.fromJson[CloudAgentDetail](rca))
       }
     }
   }
@@ -187,14 +189,15 @@ class WalletBackupActorSpec
     //TODO: this request should use the cloud address received from previous
     "when sent WALLET_BACKUP_RESTORE msg" - {
       "should respond with Done" in {
-        val wpm = mockNewEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgent(backupInitParams, recoveredCloudAddress.verKey)
+        val wpm = mockNewEdgeAgent.v_0_6_req.prepareWalletBackupRestoreMsgForAgent(
+          walletBackupUtil.backupInitParams, walletBackupUtil.recoveredCloudAddress.verKey)
         ua ! wrapAsPackedMsgParam(wpm)
 
         //NOTE: client still doesn't have any way to receive async response, so expecting a packed message in synchronous response
         val pm = expectMsgType[PackedMsg]
 
         //NOTE: the response is unpacked by the same recovery key only (as there is no other key available yet)
-        val agentMsg = mockNewEdgeAgent.unpackMsg(pm.msg, Option(backupInitParams.recoveryVk))
+        val agentMsg = mockNewEdgeAgent.unpackMsg(pm.msg, Option(walletBackupUtil.backupInitParams.recoveryVk))
         agentMsg.headAgentMsgType shouldBe MsgType(EVERNYM_QUALIFIER, MSG_FAMILY_WALLET_BACKUP, MFV_0_1_0, "WALLET_BACKUP_RESTORED")
       }
     }
@@ -217,24 +220,26 @@ class WalletBackupActorSpec
 
 }
 
-case class CloudAgentDetail(did: DID, verKey: VerKey)
+case class CloudAgentDetail(did: DID, verKey: VerKey) {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 
 
-trait WalletBackupSpecUtil extends DeadDropSpecUtil {
+class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent) extends DeadDropSpecUtil {
 
-  def mockEdgeAgent: MockEdgeAgent
-
-  def mockNewEdgeAgent: MockEdgeAgent
+  override def appConfig: AppConfig = mockEdgeAgent.appConfig
 
   lazy val passphrase = UUID.randomUUID().toString.replace("-", "")
 
   lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.DID}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
 
-  lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.walletAPI, Option(passphrase))(mockEdgeAgent.wap)
+  lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.testWalletAPI, Option(passphrase))(mockEdgeAgent.wap)
 
   def backupInitParams = BackupInitParams(deadDropData.recoveryVerKey, deadDropData.address, cloudAgentAddress.getBytes())
 
   var recoveredCloudAddress: CloudAgentDetail = _
+
+  def setRecoveredCloudAddress(cad: CloudAgentDetail) = recoveredCloudAddress = cad
 
 }
 

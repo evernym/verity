@@ -1,6 +1,6 @@
 package com.evernym.verity.http.base.restricted
 
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.base.open.OpenRestApiSpec
 
 trait RestrictedRestApiSpec
@@ -11,7 +11,7 @@ trait RestrictedRestApiSpec
     with ActorStateCleanupHealthCheckSpec
     with ReloadConfigSpec
     with ResourceUsageSpec
-    with MetricsSpec { this : EndpointHandlerBaseSpec =>
+    with MetricsSpec { this : EdgeEndpointBaseSpec =>
 
   def testRestrictedRestApis(): Unit = {
 
@@ -25,11 +25,11 @@ trait RestrictedRestApiSpec
 
       testMetrics()
 
-      testHeartbeat()
-
       testAppStateHealthCheck()
 
       testAgentRouteFixStatus()
+
+      testHeartbeat()
     }
   }
 }

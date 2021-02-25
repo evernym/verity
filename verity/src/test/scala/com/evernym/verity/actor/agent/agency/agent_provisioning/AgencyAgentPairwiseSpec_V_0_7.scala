@@ -6,14 +6,15 @@ import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.util.TimeUtil.IsoDateTime
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
 import scala.concurrent.duration.Duration
 
-trait AgencyAgentPairwiseSpec_V_0_7 extends AgencyAgentPairwiseSpecBase with UserAgentCreatorHelper {
+trait AgencyAgentPairwiseSpec_V_0_7 extends UserAgentCreatorHelper {
 
   def agencyAgentPairwiseSetup(edgeAgent: MockEdgeAgent=mockEdgeAgent, name: String="mockEdgeAgent"): Unit = {
     var pairwiseDID: DID = null
@@ -51,7 +52,7 @@ class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
 
   def createAgentFailures(): Unit = {
     "when sent create agent msg where sponsor is inactive" - {
-      "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
+      "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel("inactive", "whatever"),
           sponsorKeys().verKey,
@@ -64,7 +65,7 @@ class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
     }
 
     "when sent create agent msg before connecting where token is needed" - {
-      "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
+      "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel.empty,
           sponsorKeys().verKey,
@@ -77,7 +78,7 @@ class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
     }
 
     "when sent create agent msg before connecting where sponsor is not found" - {
-      "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
+      "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel("not found", "whatever"),
           sponsorKeys().verKey,
@@ -90,7 +91,7 @@ class AgencyAgentCreateNewAgentFailure extends AgencyAgentPairwiseSpec_V_0_7 {
     }
 
     "when sent create agent msg with timeout" - {
-      "should send problem report" taggedAs (UNSAFE_IgnoreLog) in {
+      "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel("inactive", "whatever"),
           sponsorKeys().verKey,
@@ -118,7 +119,7 @@ class AgencyAgentCreateNewCloudAgent extends AgencyAgentPairwiseSpec_V_0_7 {
     }
 
     "when sent create agent msg after connecting" - {
-      "should respond with error agent already created" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond with error agent already created" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel("sponsor1", "id"),
           sponsorKeys().verKey,
@@ -132,7 +133,7 @@ class AgencyAgentCreateNewCloudAgent extends AgencyAgentPairwiseSpec_V_0_7 {
   }
   createCloudAgentTest()
   "when tried to restart actor" - {
-    "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
+    "should be successful and respond" taggedAs UNSAFE_IgnoreAkkaEvents in {
       restartPersistentActor(aap)
     }
   }
@@ -144,7 +145,7 @@ class AgencyAgentCreateNewEdgeAgent extends AgencyAgentPairwiseSpec_V_0_7 {
 
   def createEdgeAgentTest(): Unit = {
     "when sent first create agent (edge) msg 0.7" - {
-      "should respond with AGENT_CREATED msg with new domainId" taggedAs (UNSAFE_IgnoreLog)  in {
+      "should respond with AGENT_CREATED msg with new domainId" taggedAs UNSAFE_IgnoreLog  in {
         val agent = newEdgeAgent()
         val agentDid = createCloudAgent(
           SponsorRel("sponsor1", "id"),
@@ -159,7 +160,7 @@ class AgencyAgentCreateNewEdgeAgent extends AgencyAgentPairwiseSpec_V_0_7 {
     }
 
     "when sent create agent msg after connecting" - {
-      "should respond with error agent already created" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond with error agent already created" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel("sponsor1", "id"),
           sponsorKeys().verKey,
@@ -178,8 +179,8 @@ class AgencyAgentCreateNewEdgeAgent extends AgencyAgentPairwiseSpec_V_0_7 {
 class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwiseSpec_V_0_7 {
   import mockEdgeAgent.v_0_7_resp._
 
-  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockConsumerEdgeAgent(platform.agentActorContext.appConfig, mockAgencyAdmin)
-  lazy val mockEdgeAgent2: MockEdgeAgent = buildMockConsumerEdgeAgent(platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val mockEdgeAgent2: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
   lazy val nonce: String = getNonce
   lazy val commonTime: IsoDateTime = TimeUtil.nowDateString
 
@@ -200,7 +201,7 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgencyAgentPairwise
 
   def createSecondAgent(): Unit = {
     "when sent second create agent (cloud) msg" - {
-      "should fail with problem report msg" taggedAs (UNSAFE_IgnoreLog) in {
+      "should fail with problem report msg" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateAgent(
           SponsorRel("sponsor1", "id"),
           sponsorKeys().verKey,

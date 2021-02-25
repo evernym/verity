@@ -74,27 +74,13 @@ trait ProtocolContext[P,R,M,E,S,I]
   def _services: Option[ProtocolServices[M,E,I]]
 
   var state: S = definition.initialState
-
-  private val partiMsg = new PartiMsg
-
-  case class Backstate(roster: Roster[R]=Roster(),
-                       stateVersion: Int=0,
-                       domainId: Option[DomainId]=None,
-                       packagingContext: Option[PackagingContext] = None,
-                       msgOrders: Option[MsgOrders] = None,
-                       sponsorRel: Option[SponsorRel]=None) {
-    def advanceVersion: Backstate = {
-      this.copy(stateVersion = this.stateVersion + 1)
-    }
-  }
-
-  var backstate: Backstate = Backstate()
+  var backState: BackState = BackState()
 
   /**
     * shadow state objects used to ensure atomicity of message handling
     */
   private var shadowState: Option[S] = None
-  private var shadowBackState: Option[Backstate] = None
+  private var shadowBackState: Option[BackState] = None
 
   private def readyToProcessInbox: Boolean = shadowState.isEmpty && inbox.nonEmpty
 
@@ -107,47 +93,18 @@ trait ProtocolContext[P,R,M,E,S,I]
   var pendingEvents: Vector[_ >: E with ProtoSystemEvent] = Vector()
 
   /**
-    * stored event used to help with finalization
-    * segment storage and event storage are happening asynchronously at the same time.
-    * Each tries to finalize but can't until both have complete.
-    */
-  var storedEvent: Option[_ >: E with ProtoSystemEvent] = None
-
-  /**
     * accessors for shadow state
     */
-  def getState: S = {
-    shadowState.getOrElse(throw new IllegalStateAccess("state"))
-  }
-
-  def getBackstate: Backstate = {
-    shadowBackState.getOrElse(throw new IllegalStateAccess("backstate"))
-  }
-
-  def getRoster: Roster[R] = {
-    getBackstate.roster
-  }
+  def getRoster: Roster[R] = getBackState.roster
+  def getState: S = shadowState.getOrElse(throw new IllegalStateAccess("state"))
+  def getBackState: BackState = shadowBackState.getOrElse(throw new IllegalStateAccess("backState"))
 
   /**
-    * any in-flight, ephemeral (non-persisted) state
-    */
-  case class InFlight(msgId: Option[MsgId], threadId: Option[ThreadId],
-                      sender: SenderLike[R], segment: Option[Any]=None) {
-
-    def segmentAs[T]: Option[T] = try {
-      segment.map(_.asInstanceOf[T])
-    } catch {
-      case _: ClassCastException => throw new SegmentTypeNotMatched()
-    }
-
-    def segmentAs_![T]: T = segmentAs.getOrElse(throw new SegmentNotFound())
-  }
-
+   * any in-flight, ephemeral (non-persisted) state
+   */
+  private val partiMsg = new PartiMsg
   private var inFlight: Option[InFlight] = None
-
-  def getInFlight: InFlight = {
-    inFlight.getOrElse(throw new IllegalStateAccess("in-flight"))
-  }
+  def getInFlight: InFlight = inFlight.getOrElse(throw new IllegalStateAccess("in-flight"))
 
   def apply[A >: E with ProtoSystemEvent](event: A): Unit = {
     record("applying event", event)
@@ -155,10 +112,10 @@ trait ProtocolContext[P,R,M,E,S,I]
     pendingEvents = pendingEvents :+ event
   }
 
-  @silent // TODO we should fix this the typing, erasure make the type checking ineffective
+  @silent // TODO we should fix this typing, erasure make the type checking ineffective
   def applyToShadow[A >: E with ProtoSystemEvent](event: A): Unit = {
     event match {
-      case me: MultiEvent => me.evts.foreach(applyToShadow)   //TODO: confirm about if this is correct way to handle MultiEvent
+      case me: MultiEvent => me.evts.foreach(applyToShadow)
       case pse: ProtoSystemEvent => shadowBackState = Option(applySystemEvent(pse))
       case e: E =>
         val result = try {
@@ -170,7 +127,7 @@ trait ProtocolContext[P,R,M,E,S,I]
         }
         val sct = Option(result).getOrElse(throw new InvalidState("applyEvent"))
         sct._1.foreach { newState => shadowState = Option(newState) }
-        sct._2.foreach { newRoster => shadowBackState = Some(getBackstate.copy(roster = newRoster)) }
+        sct._2.foreach { newRoster => shadowBackState = Some(getBackState.copy(roster = newRoster)) }
     }
   }
 
@@ -178,7 +135,6 @@ trait ProtocolContext[P,R,M,E,S,I]
                           sender: SenderLike[R], segment: Option[Any] = None)(f: => A): A = {
     inFlight = inFlight.map(_.copy(msgId = msgId, threadId = threadId)).orElse(
     Some(InFlight(msgId, threadId, sender, segment)))
-
     f
   }
 
@@ -240,7 +196,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     case m => handleMsgBase(m)
   }
 
-  @silent // TODO we should fix this the typing, erasure make the type checking ineffective
+  @silent // TODO we should fix this typing, erasure make the type checking ineffective
   private def handleMsgBase: Any ?=> Any = {
 
     case Envelope1(msg: M, to, frm, msgId, tid) =>
@@ -322,49 +278,49 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
-  protected def applySystemEvent: ProtoSystemEvent ?=> Backstate = {
-    case SetPinstId(_) => shadowBackState.getOrElse(Backstate()) // kept it for backward compatibility
+  protected def applySystemEvent: ProtoSystemEvent ?=> BackState = {
+    case SetPinstId(_) => shadowBackState.getOrElse(BackState()) // kept it for backward compatibility
 
     case SetDomainId(id) =>
-      shadowBackState.getOrElse(Backstate()).copy(domainId = Option(id))
+      shadowBackState.getOrElse(BackState()).copy(domainId = Option(id))
 
     case ChangePairwiseRelIds(self, other) =>
-      val s = shadowBackState.getOrElse(Backstate())
+      val s = shadowBackState.getOrElse(BackState())
       val newRoster = s.roster.changeSelfId(self).changeOtherId(other)
       s.copy(roster = newRoster)
 
-    case s: SponsorRel => Backstate()
-      shadowBackState.getOrElse(Backstate()).copy(sponsorRel = Option(s))
+    case s: SponsorRel => BackState()
+      shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(s))
 
     case pcs: PackagingContextSet =>
       val pc = PackagingContext.init(pcs)
-      shadowBackState.getOrElse(Backstate()).copy(packagingContext = Option(pc))
+      shadowBackState.getOrElse(BackState()).copy(packagingContext = Option(pc))
 
     case lpcs: LegacyPackagingContextSet =>
-      val pc = shadowBackState.getOrElse(Backstate()).packagingContext
+      val pc = shadowBackState.getOrElse(BackState()).packagingContext
       val updatedPc = pc.map(_.updateLegacyPackagingContext(lpcs))
-      shadowBackState.getOrElse(Backstate()).copy(packagingContext = updatedPc)
+      shadowBackState.getOrElse(BackState()).copy(packagingContext = updatedPc)
 
     case ros: ReceivedOrdersSet =>
-      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val mrod = shadowBackState.getOrElse(BackState()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val updated = mrod.copy(receivedOrders = ros.receivedOrders)
-      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+      shadowBackState.getOrElse(BackState()).copy(msgOrders = Option(updated))
 
     case sos: SenderOrderSet =>
-      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val mrod = shadowBackState.getOrElse(BackState()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val updated = mrod.copy(senderOrder = sos.order)
-      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+      shadowBackState.getOrElse(BackState()).copy(msgOrders = Option(updated))
 
     case mroi: ReceivedOrderIncremented =>
-      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val mrod = shadowBackState.getOrElse(BackState()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val curValue = mrod.receivedOrders.getOrElse(mroi.fromPartiId, -1)
       val updated = mrod.copy(receivedOrders = mrod.receivedOrders ++ Map(mroi.fromPartiId -> (curValue + 1)))
-      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+      shadowBackState.getOrElse(BackState()).copy(msgOrders = Option(updated))
 
     case _: SenderOrderIncremented =>
-      val mrod = shadowBackState.getOrElse(Backstate()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val mrod = shadowBackState.getOrElse(BackState()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val updated = mrod.copy(senderOrder = mrod.senderOrder + 1)
-      shadowBackState.getOrElse(Backstate()).copy(msgOrders = Option(updated))
+      shadowBackState.getOrElse(BackState()).copy(msgOrders = Option(updated))
   }
 
   def handleInternalSystemMsg(sysMsg: InternalSystemMsg): Any = {
@@ -372,7 +328,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       case GivenDomainId(id)           => apply(SetDomainId(id))
       case GivenSponsorRel(s)          => apply(s)
       case stc: StoreThreadContext     =>
-        val curPackagingContext = backstate.packagingContext
+        val curPackagingContext = backState.packagingContext
         if (curPackagingContext.isEmpty) {
           apply(PackagingContextSet(stc.pd.msgPackFormat.value))
           apply(LegacyPackagingContextSet(stc.pd.msgTypeDeclarationFormat.value, stc.pd.usesLegacyGenMsgWrapper, stc.pd.usesLegacyBundledMsgWrapper))
@@ -434,10 +390,9 @@ trait ProtocolContext[P,R,M,E,S,I]
     constructShadow()
     applyToShadow(event)
 
-    //TODO-rk: why do we need this
-    // why doesn't finalization or abortTransaction handle this
     state = getState
-    backstate = getBackstate
+    backState = getBackState
+
     clearShadowState()
   }
 
@@ -453,12 +408,12 @@ trait ProtocolContext[P,R,M,E,S,I]
       throw new InvalidState("shadowBackState should be undefined when starting to handle a message")
 
     shadowState = Some(state)
-    shadowBackState = Some(backstate)
+    shadowBackState = Some(backState)
     record("updated shadow state", state)
   }
 
   private def advanceStateVersion(): Unit = {
-    shadowBackState = Some(getBackstate.advanceVersion)
+    shadowBackState = Some(getBackState.advanceVersion)
   }
 
   /**
@@ -471,8 +426,9 @@ trait ProtocolContext[P,R,M,E,S,I]
   def finalizeState(): Unit = {
     if (readyToFinalize) {
       state = shadowState.getOrElse(state)
-      backstate = shadowBackState.getOrElse(backstate)
+      backState = shadowBackState.getOrElse(backState)
       inFlight = None
+
       clearShadowState()
       clearInternalAsyncServices()
 
@@ -588,8 +544,8 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   def threadContextDetailReq: ThreadContextDetail = {
-    val packagingContext = getBackstate.packagingContext.getOrElse(PackagingContext())
-    val msgOrders = getBackstate.msgOrders
+    val packagingContext = getBackState.packagingContext.getOrElse(PackagingContext())
+    val msgOrders = getBackState.msgOrders
     ThreadContextDetail(
       _threadId_!,
       packagingContext.msgPackFormat,
@@ -652,7 +608,7 @@ trait ProtocolContext[P,R,M,E,S,I]
    * @param tc
    */
   def storePackagingDetail(tc: ThreadContextDetail): Unit = {
-    if (backstate.packagingContext.isEmpty) {
+    if (backState.packagingContext.isEmpty) {
       val pc = PackagingContext(
         tc.msgPackFormat,
         tc.msgTypeFormat,
@@ -674,12 +630,34 @@ trait ProtocolContext[P,R,M,E,S,I]
     apply(SenderOrderIncremented())
   }
 
+  case class BackState(roster: Roster[R]=Roster(),
+                       stateVersion: Int=0,
+                       domainId: Option[DomainId]=None,
+                       packagingContext: Option[PackagingContext] = None,
+                       msgOrders: Option[MsgOrders] = None,
+                       sponsorRel: Option[SponsorRel]=None) {
+    def advanceVersion: BackState = {
+      this.copy(stateVersion = this.stateVersion + 1)
+    }
+  }
+
+  case class InFlight(msgId: Option[MsgId], threadId: Option[ThreadId],
+                      sender: SenderLike[R], segment: Option[Any]=None) {
+
+    def segmentAs[T]: Option[T] = try {
+      segment.map(_.asInstanceOf[T])
+    } catch {
+      case _: ClassCastException => throw new SegmentTypeNotMatched()
+    }
+
+    def segmentAs_![T]: T = segmentAs.getOrElse(throw new SegmentNotFound())
+  }
+
   /**
    * protocol exceptions
    */
   class IllegalStateAccess(item: Any) extends RuntimeException(s"invalid $item access; are you referencing state outside of a message handler?")
   class InvalidState(msg: String) extends RuntimeException(msg)
-
 }
 
 
@@ -717,6 +695,7 @@ case class DataNotFound() extends ActorMessage
 case class SegmentStorageComplete() extends ActorMessage
 case class SegmentStorageFailed() extends ActorMessage
 case class UrlShortenerServiceComplete() extends ActorMessage
+case class WalletServiceComplete() extends ActorMessage
 case class ExternalStorageComplete(externalId: SegmentKey)
 case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
 

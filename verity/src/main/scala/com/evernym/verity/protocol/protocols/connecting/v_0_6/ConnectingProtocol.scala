@@ -8,7 +8,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -44,9 +44,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   def initState(params: Seq[ParameterStored]): ConnectingState = {
     val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
     initWalletDetail(seed)
-    ConnectingState(
-      ctx.SERVICES_DEPRECATED.appConfig,
-      ctx.SERVICES_DEPRECATED.agentMsgTransformer)
+    ConnectingState(isInitialized=true)
   }
 
   override def applyEvent: ApplyEvent =
@@ -55,7 +53,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   def applyLocalEvent: ApplyEvent = {
     case (s, _, ads: AgentDetailSet) =>
-      s.thisAgentVerKeyOpt = Option(walletVerKeyCacheHelper.getVerKeyReqViaCache(ads.agentKeyDID))
+      s.thisAgentVerKeyOpt = Option(ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[VerKey](GetVerKey(ads.agentKeyDID))))
       s.agentDetail = Option(AgentDetail(ads.forDID, ads.agentKeyDID))
       s
 
@@ -121,7 +119,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   private def handleCreateConnection(amw: AgentMsgWrapper): PackedMsg = {
     val cc = amw.headAgentMsg.convertTo[CreateConnectionReqMsg_MFV_0_6]
-    val edgePairwiseKey = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
+    val edgePairwiseKey = ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey()))
     val edgePairwiseKeyCreated = KeyCreated(edgePairwiseKey.did)
     ctx.apply(edgePairwiseKeyCreated)
 
@@ -134,7 +132,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      edgePairwiseKey.did, edgePairwiseKey.did, endpointDetail)
+      edgePairwiseKey.didPair, edgePairwiseKey.didPair, endpointDetail)
     val kdp = getAgentKeyDlgProof(edgePairwiseKey.verKey, edgePairwiseKey.did,
       edgePairwiseKey.verKey)(walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
@@ -160,16 +158,15 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
   }
 
   private def processKeyCreatedMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit agentMsgContext: AgentMsgContext): Future[PackedMsg] = {
-    val pairwiseKeyResult = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey))
+    val pairwiseKeyResult = ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey()))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey)))
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      createKeyReqMsg.forDID, pairwiseKeyResult.did, endpointDetail)
-    fut.map { _ =>
-      processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
-    }
+      createKeyReqMsg.didPair, pairwiseKeyResult.didPair, endpointDetail)
+    val pm = processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
+    fut.map(_ => pm)
   }
 
   private def processCreateKeyAfterEndpointSetup(createKeyReqMsg: CreateKeyReqMsg, pairwiseKeyCreated: NewKeyCreated)
@@ -180,7 +177,11 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       Option(KeyParam(Left(pairwiseKeyCreated.verKey)))
     )
     val param = buildPackMsgParam(encryptInfo, keyCreatedRespMsg, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
-    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormat, param))
+    if (agentMsgContext.msgPackFormat == MPF_PLAIN) {
+      keyCreatedRespMsg.foreach(m => ctx.signal(m))
+    }
+
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

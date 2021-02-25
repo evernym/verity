@@ -13,8 +13,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{ErrorEventParam, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.engine.VerKey
@@ -627,7 +627,7 @@ trait ItemContainerBase
 
   override def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
     logMsg("delete message failure received: " + dmf, DebugLevel)
-    notifyAppStateManager(ErrorEventParam(SeriousSystemError, CONTEXT_EVENT_DELETION, dmf.cause, Option(dmf.cause.getMessage)))
+    notifyAppStateManager(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_DELETION, dmf.cause, Option(dmf.cause.getMessage)))
   }
 
   /**

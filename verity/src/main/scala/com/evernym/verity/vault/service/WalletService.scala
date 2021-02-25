@@ -21,23 +21,9 @@ import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 
 
-trait WalletService extends AsyncToSync {
+trait WalletService {
 
   protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
-
-  /**
-   * synchronous/BLOCKING wallet service call
-   * soon to be DEPRECATED once all the wallet api caller code migrates to
-   * asynchronous wallet service call
-   *
-   * @param walletId
-   * @param cmd
-   * @tparam T
-   * @return
-   */
-  def executeSync[T: ClassTag](walletId: String, cmd: Any): T = {
-    convertToSyncReq(executeAsync(walletId, cmd))
-  }
 
   lazy val BAD_REQ_ERRORS = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
 
@@ -85,8 +71,8 @@ trait WalletService extends AsyncToSync {
 
 trait AsyncToSync {
 
-  def convertToSyncReq[T](fut: Future[T]): T = {
+  def DEPRECATED_convertToSyncReq[T](fut: Future[T]): T = {
     //TODO: finalize timeout
-    Await.result(fut, FiniteDuration(250, TimeUnit.SECONDS))
+    Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
   }
 }

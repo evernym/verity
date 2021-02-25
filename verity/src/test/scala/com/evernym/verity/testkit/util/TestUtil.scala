@@ -24,10 +24,6 @@ object TestUtil extends UtilBase {
     }
   }
 
-  override def performSystemExit(status: Int = -1): Unit = {
-    logger.info("performing mock system exit (as this must be running in test case environment)")
-  }
-
   def getSigningKey(seed: String): SigningKey = {
     val seedBytes = seed.getBytes.take(32)
     new SigningKey(seedBytes)

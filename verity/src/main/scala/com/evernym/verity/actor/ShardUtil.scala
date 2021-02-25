@@ -3,6 +3,7 @@ package com.evernym.verity.actor
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
+import com.evernym.verity.actor.persistence.SupervisorUtil.{logger, supervisorProps}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -10,8 +11,6 @@ import com.evernym.verity.constants.ActorNameConstants._
 import scala.concurrent.duration.FiniteDuration
 
 object ShardUtil {
-
-  val SHARD_ACTOR_PATH_ELEMENT = "sharding"
 
   val forIdentifierEntityIdExtractor: ExtractEntityId  = {
     case ForIdentifier(id, cmd)     => (id, cmd)
@@ -79,13 +78,22 @@ trait ShardUtil {
   def finalActorProps(entityCategory: String, typeName: String, actorProps: Props): Props = {
     //NOTE: for any persistent shard region actors,
     // once we are ready (tested/finalized) to use backoff supervisor strategy
-    // we need to change only this function to return back off supervisor actor props
+    // we need to change only this function to return backoff supervisor actor props
     // instead of given 'actorProps'
 
     //NOTE: There will be few other non sharded persistent actors which
     // we'll have to take care of separately.
 
-    actorProps
+    supervisorProps(
+      appConfig,
+      entityCategory,
+      typeName,
+      actorProps
+    )
+    .getOrElse{
+      logger.debug(s"Supervisor was not defined for this props - entityCategory: $entityCategory - typeName: $typeName")
+      actorProps
+    }
   }
 
   def createPersistentRegion(typeName: String,
@@ -136,7 +144,7 @@ trait ShardUtil {
 }
 
 object UserActorUtil {
-  val USER_ACTOR_PATH_ELEMENT = "user"
+
 }
 
 trait HasShardRegionNames {

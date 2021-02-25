@@ -1,16 +1,17 @@
 package com.evernym.verity.push_notification
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
+import akka.actor.{ActorSystem, Props}
 import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidComMethodException, PushNotifSendingFailedException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.user.ComMethodDetail
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, RecoverIfNeeded}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants._
@@ -25,10 +26,10 @@ import scala.concurrent.Future
 import scala.util.matching.Regex
 
 
-class Pusher(config: AppConfig) extends Actor with ActorLogging {
+class Pusher(config: AppConfig) extends CoreActorExtended {
   val logger: Logger = getLoggerByClass(classOf[Pusher])
 
-  def receive: PartialFunction[Any, Unit] = {
+  def receiveCmd: Receive = {
     case spn: SendPushNotif =>
       spn.comMethods.foreach { cm =>
         try {
@@ -42,7 +43,7 @@ class Pusher(config: AppConfig) extends Actor with ActorLogging {
               (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
               (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
             if (r.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
-              AppStateManager.recoverIfNeeded(CONTEXT_PUSH_NOTIF)
+              publishAppStateEvent(RecoverIfNeeded(CONTEXT_PUSH_NOTIF))
             } else {
               val pushNotifWarnOnErrorList: Set[String] =
                 config.getConfigSetOfStringOption(PUSH_NOTIF_WARN_ON_ERROR_LIST).
@@ -53,8 +54,8 @@ class Pusher(config: AppConfig) extends Actor with ActorLogging {
                   (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
                   (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
               } else {
-                AppStateManager << ErrorEventParam(MildSystemError, CONTEXT_PUSH_NOTIF,
-                  new PushNotifSendingFailedException(r.statusDetail), r.statusDetail)
+                publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_PUSH_NOTIF,
+                  new PushNotifSendingFailedException(r.statusDetail), r.statusDetail))
               }
             }
             sndr ! r

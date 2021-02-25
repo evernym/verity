@@ -3,9 +3,10 @@ package com.evernym.verity.actor.agent.msghandler
 import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.evernym.verity.Exceptions.{NotFoundErrorException, UnauthorisedErrorException}
+import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, HasAgentActivity, MsgPackFormat, PayloadMetadata, ProtocolEngineExceptionHandler, ProtocolRunningInstances, SponsorRel, Thread, ThreadContextDetail, TypeFormat}
@@ -20,7 +21,7 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
+import com.evernym.verity.agentmsg.msgcodec.{AgentJsonMsg, MsgCodecException}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -340,7 +341,11 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     psrm.requestMsgId.foreach { requestMsgId =>
       withReqMsgId(requestMsgId, { arc =>
         recordOutMsgEvent(arc.reqId,
-          MsgEvent(arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID), "Synchronous Response Msg"))
+          MsgEvent(
+            arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID),
+            psrm.msg.getClass.getSimpleName,
+            "Synchronous Response Msg (must be from legacy protocol)")
+        )
       })
       msgRespContext.get(requestMsgId).flatMap(_.senderActorRef).foreach { senderActorRef =>
         sendMsgToWaitingCaller(psrm.msg, requestMsgId, senderActorRef)
@@ -358,7 +363,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     MsgTracerProvider.recordMetricsForAsyncReqMsgId(reqMsgId, NEXT_HOP_MY_EDGE_AGENT_SYNC)   //tracing related
     withReqMsgId(reqMsgId, { arc =>
       recordOutMsgChildEvent(arc.reqId, arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID),
-        ChildEvent(s"SENT: outgoing message (${msg.getClass.getSimpleName})", detail = Option(NEXT_HOP_MY_EDGE_AGENT_SYNC)))
+        ChildEvent(msg.getClass.getSimpleName, detail = Option(s"SENT: outgoing message to $NEXT_HOP_MY_EDGE_AGENT_SYNC")))
     })
   }
 
@@ -470,6 +475,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     } catch  {
       case e @ (_: NotFoundErrorException) =>
         forwardToAgentActor(UnhandledMsg(amw, reqMsgContext, e))
+      case e: RuntimeException =>
+        handleException(e, sender)
     }
   }
 
@@ -556,7 +563,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     } catch {
       case e: NotFoundErrorException =>   //no protocol found for the incoming message
         val sndr = sender()
-        recordRoutingChildEvent(rmc.id, childEventWithDetail(s"${e.getMessage}", sndr))
         internalPayloadWrapper(amw).map {
           case Some(dp) =>
             recordRoutingChildEvent(rmc.id, childEventWithDetail(s"internal packed msg decrypted", sndr))
@@ -568,6 +574,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
             routingMsgHandler(rmc, sndr)(amw)
           case None     => processUnhandledMsg(amw, rmc, e, sndr)
         }
+      case e: RuntimeException => handleException(e, sender)
     }
   }
 
@@ -577,7 +584,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                           sndr: ActorRef): Unit = {
     forwardToAgentActor(UnhandledMsg(amw, rmc, ex), sndr)
     recordRoutingChildEvent(rmc.id,
-      childEventWithDetail(s"message sent to agent actor: ${amw.headAgentMsg.msgFamilyDetail.toString}", sndr))
+      childEventWithDetail(s"message not supported by registered protocols, " +
+        s"sent to agent actor: ${amw.headAgentMsg.msgFamilyDetail.toString}", sndr))
   }
 
   def extractMsgAndSendToProtocol(givenImp: IncomingMsgParam,
@@ -601,8 +609,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
               case MSG_TYPE_CONNECTING_GET_STATUS => if (imp.isSync(default = false)) Option(MsgRespConfig(isSyncReq = true)) else None
               case _ => if (imp.isSync(default = true)) Option(MsgRespConfig(isSyncReq = true)) else None
             }
-            val (_, _, _, rd) = extract(imp, msgRespConf)
-            (TypedMsg(imp.msgToBeProcessed, imp.msgType), DEFAULT_THREAD_ID, None, rd)
+            val (_, _, fr, mrc) = extract(imp, msgRespConf)
+            (TypedMsg(imp.msgToBeProcessed, imp.msgType), DEFAULT_THREAD_ID, fr, mrc)
 
           case (MSG_FAMILY_AGENT_PROVISIONING, MFV_0_7, "create-edge-agent")         =>
             extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
@@ -649,11 +657,14 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = {
+  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = try {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
     (tmsg, thId, m.meta.forRelationship, msgRespDetail)
+  } catch {
+    case e: MsgCodecException =>
+      throw new BadRequestErrorException(Status.BAD_REQUEST.statusCode, Option(e.getMessage))
   }
 
   protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,
@@ -740,7 +751,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           amw.isMatched(MFV_0_5, MSG_TYPE_FWD) =>
         val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
       recordRoutingChildEvent(reqMsgContext.id,
-        ChildEvent(fwdMsg.msgFamilyDetail.toString, s"will be routed/handled accordingly"))
+        ChildEvent(fwdMsg.msgFamilyDetail.toString, "received forward message"))
         if (isFwdForThisAgent(fwdMsg)) {
           val msgId = MsgUtil.newMsgId
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
@@ -754,7 +765,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           val efm = PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext)
           agentMsgRouter.forward(efm, sndr)
           recordRoutingChildEvent(reqMsgContext.id,
-            ChildEvent(fwdMsg.msgFamilyDetail.toString, s"forwarded to ${fwdMsg.`@fwd`}"))
+            ChildEvent(fwdMsg.msgFamilyDetail.toString, s"forwarded to DID: '${fwdMsg.`@fwd`}'"))
         }
   }
 

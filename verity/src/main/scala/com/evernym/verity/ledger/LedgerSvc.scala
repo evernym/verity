@@ -266,8 +266,7 @@ trait LedgerSvc {
                                         endorserDID: DID,
                                         walletAccess: WalletAccess): Future[LedgerRequest] = {
     try {
-      val r = ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
-      Future.successful(r)
+      ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
     } catch {
       case e: Throwable =>
         Future.failed(e)
@@ -294,8 +293,7 @@ trait LedgerSvc {
                                          endorserDID: DID,
                                          walletAccess: WalletAccess): Future[LedgerRequest] = {
     try {
-      val r = ledgerTxnExecutor.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
-      Future.successful(r)
+      ledgerTxnExecutor.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
     } catch {
       case e: Throwable =>
         Future.failed(e)

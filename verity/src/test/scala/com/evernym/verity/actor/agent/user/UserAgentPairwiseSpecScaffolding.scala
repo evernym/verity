@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.PoisonPill
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, agentRegion}
@@ -11,14 +11,11 @@ import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, ThreadId}
 import com.evernym.verity.protocol.protocols.MsgDetail
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.push_notification.MockPusher
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.mock.agency_admin.MockAgencyAdmin
-import com.evernym.verity.testkit.mock.cloud_agent.MockEntCloudAgent
-import com.evernym.verity.testkit.mock.edge_agent.{MockEdgeAgent, MockEntEdgeAgent}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
@@ -27,6 +24,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -40,17 +38,14 @@ trait UserAgentPairwiseSpecScaffolding
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
-  val mockEntAgencyAdmin: MockAgencyAdmin =
-    new MockAgencyAdmin(system, UrlParam("localhost:9002"), platform.agentActorContext.appConfig)
+  val mockEntAgencyAdmin: MockEdgeAgent =
+    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig)
 
-  lazy val mockRemoteEdgeAgent: MockEntEdgeAgent =
-    buildMockEnterpriseEdgeAgent(platform.agentActorContext.appConfig, mockEntAgencyAdmin)
+  lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin)
 
-  lazy val mockRemoteEdgeCloudAgent: MockEntCloudAgent =
-    buildMockEntCloudAgent(platform.agentActorContext.appConfig, mockEntAgencyAdmin)
+  lazy val mockRemoteEdgeCloudAgent: MockCloudAgent = buildMockCloudAgent(mockEntAgencyAdmin)
 
-  lazy val mockEdgeAgent: MockEdgeAgent =
-    buildMockConsumerEdgeAgent(platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
 
   val testPushComMethod: String = s"${MockPusher.comMethodPrefix}:12345"
 
@@ -112,31 +107,29 @@ trait UserAgentPairwiseSpecScaffolding
   }
 
   def createUserAgent(): Unit = {
-    val userDID = mockEdgeAgent.myDIDDetail.did
-    val userDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(userDID)
-    val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
+    val userDIDPair = mockEdgeAgent.myDIDDetail.didPair
+    val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
 
-    ua ! SetupAgentEndpoint(userDID, agentPairwiseKey.did)
+    ua ! SetupAgentEndpoint(userDIDPair, agentPairwiseKey.didPair)
     expectMsg(Done)
 
-    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
+    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }
 
   def createUserAgent_0_7(): Unit = {
-    val userDID = mockEdgeAgent.myDIDDetail.did
-    val userDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(userDID)
-    val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
+    val userDIDPair = mockEdgeAgent.myDIDDetail.didPair
+    val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
 
     ua ! SetupAgentEndpoint_V_0_7(
       DEFAULT_THREAD_ID,
-      userDID,
-      agentPairwiseKey.did,
+      userDIDPair,
+      agentPairwiseKey.didPair,
       mockEdgeAgent.myDIDDetail.verKey,
       Some(SponsorRel("evernym-test-sponsor", "sponsee-id"))
     )
 
     expectMsgType[AgentProvisioningDone]
-    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
+    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }
 
   def updateComMethod(comMethodType: Int, comMethod: String): Unit = {
@@ -213,7 +206,7 @@ trait UserAgentPairwiseSpecScaffolding
   def checkMsgsSentToEdgeAgentIfReq(check: Boolean, oldMsgsSentCount: Int): Unit = {
     if (check) {
       eventually(timeout(Span(5, Seconds))) {
-        getTotalAgentMsgSentByCloudAgent shouldBe oldMsgsSentCount + 1
+        totalBinaryMsgSent shouldBe oldMsgsSentCount + 1
       }
     }
   }
@@ -247,7 +240,7 @@ trait UserAgentPairwiseSpecScaffolding
     s"when received CREATE_MSG ($msgType) msg [$hint]" - {
       "should respond with MSG_CREATED msg" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
         eventually {
-          val currentMsgsSent = getTotalAgentMsgSentByCloudAgent
+          val currentMsgsSent = totalBinaryMsgSent
           val oldPushMsgCount = MockPusher.pushedMsg.size
           val coreMsg = buildCoreCreateGeneralMsg(includeSendMsg = true, msgType,
             PackedMsg("msg-data".getBytes), None, None)(mockRemoteEdgeCloudAgent.encryptParamForOthersPairwiseKey(connId))

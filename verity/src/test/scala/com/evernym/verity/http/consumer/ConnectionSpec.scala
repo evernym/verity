@@ -7,48 +7,58 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.http.base.open.{ExpectedMsgCriteria, ExpectedMsgDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.testkit.mock.agent.MockEnv
 import org.scalatest.time.{Seconds, Span}
 
 trait ConnectionSpec { this : ConsumerEndpointHandlerSpec =>
 
-  def testAnswerFirstInvitation(): Unit = {
+  def testAnswerFirstInvitation(mockEnv: MockEnv): Unit = {
+    lazy val mockEdgeAgent = mockEnv.edgeAgent
+    lazy val othersMockEdgeAgent = mockEnv.othersMockEnv.edgeAgent
 
     "provisions new relationship" - {
-      createNewRelationship(connIda1)
-      setInviteData(connIda1, mockEntEdgeAgent1, mockEntCloudAgent)
-      testGetMsgsFromConnection(connIda1, ExpectedMsgCriteria(totalMsgs = 0))
+      createNewRelationship(mockEnv, connIda1)
+      setInviteData(mockEnv.othersMockEnv.edgeAgent, mockEnv.othersMockEnv.cloudAgent, connIda1)
+      testGetMsgsFromConnection(mockEdgeAgent, connIda1, ExpectedMsgCriteria(totalMsgs = 0))
     }
 
-    testInvalidInviteAnswers()
+    testInvalidInviteAnswers(mockEnv)
 
     "when sent CREATE_MSG (conn req answer)" - {
       "should respond with success for create invite answer msg" in {
         val totalAgentMsgsSentSoFar = getTotalAgentMsgsSentByCloudAgentToRemoteAgent
-        buildAgentPostReq(mockConsumerEdgeAgent1.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connIda1, includeSendMsg = true,
-          mockEntEdgeAgent1.pairwiseConnDetail(connIda1).lastSentInvite).msg) ~> epRoutes ~> check {
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connIda1, includeSendMsg = true,
+          othersMockEdgeAgent.pairwiseConnDetail(connIda1).lastSentInvite).msg) ~> epRoutes ~> check {
           status shouldBe OK
           eventually (timeout(Span(5, Seconds))) {
             getTotalAgentMsgsSentByCloudAgentToRemoteAgent shouldBe totalAgentMsgsSentSoFar + 1
           }
-          val resp = mockConsumerEdgeAgent1.v_0_5_resp.handleInviteAnswerCreatedResp(PackedMsg(responseAs[Array[Byte]]))
+          val resp = mockEdgeAgent.v_0_5_resp.handleInviteAnswerCreatedResp(PackedMsg(responseAs[Array[Byte]]))
         }
       }
     }
 
-    testGetMsgsFromConnection(connIda1, ExpectedMsgCriteria(totalMsgs = 2, List(
-      ExpectedMsgDetail(CREATE_MSG_TYPE_CONN_REQ, MSG_STATUS_ACCEPTED),
-      ExpectedMsgDetail(CREATE_MSG_TYPE_CONN_REQ_ANSWER, MSG_STATUS_ACCEPTED))
-    ))
+    testGetMsgsFromConnection(
+      mockEdgeAgent,
+      connIda1,
+      ExpectedMsgCriteria(totalMsgs = 2, List(
+        ExpectedMsgDetail(CREATE_MSG_TYPE_CONN_REQ, MSG_STATUS_ACCEPTED),
+        ExpectedMsgDetail(CREATE_MSG_TYPE_CONN_REQ_ANSWER, MSG_STATUS_ACCEPTED))
+      )
+    )
 
-    testGetMsgsByConnections(1, Map(connIda1 -> ExpectedMsgCriteria(2)))
+    testGetMsgsByConnections(mockEnv, 1, Map(connIda1 -> ExpectedMsgCriteria(2)))
 
   }
 
-  private def testInvalidInviteAnswers(): Unit = {
+  private def testInvalidInviteAnswers(mockEnv: MockEnv): Unit = {
+    lazy val mockEdgeAgent = mockEnv.edgeAgent
+    lazy val othersMockEdgeAgent = mockEnv.othersMockEnv.edgeAgent
+
     "when sent CREATE_MSG (conn req answer) with wrong agent key dlg proof provided" - {
       "should respond with bad request error msg" in {
-        val msg = mockConsumerEdgeAgent1.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connIda1, includeSendMsg = false,
-          buildInvalidRemoteAgentKeyDlgProof(mockEntEdgeAgent1.pairwiseConnDetail(connIda1).lastSentInvite)).msg
+        val msg = mockEdgeAgent.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connIda1, includeSendMsg = false,
+          buildInvalidRemoteAgentKeyDlgProof(othersMockEdgeAgent.pairwiseConnDetail(connIda1).lastSentInvite)).msg
         buildAgentPostReq(msg) ~> epRoutes ~> check {
           status shouldBe BadRequest
           responseTo[StatusDetailResp] shouldBe StatusDetailResp(SIGNATURE_VERIF_FAILED.withMessage(
@@ -59,8 +69,8 @@ trait ConnectionSpec { this : ConsumerEndpointHandlerSpec =>
 
     "when sent CREATE_MSG (conn req answer) with no key dlg proof" - {
       "should respond with bad request error msg" in {
-        buildAgentPostReq(mockConsumerEdgeAgent1.v_0_5_req.prepareCreateAnswerInviteMsgWithoutKeyDlgProofForAgency(connIda1,
-          includeSendMsg = false, mockEntEdgeAgent1.pairwiseConnDetail(connIda1).lastSentInvite).msg) ~> epRoutes ~> check {
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareCreateAnswerInviteMsgWithoutKeyDlgProofForAgency(connIda1,
+          includeSendMsg = false, othersMockEdgeAgent.pairwiseConnDetail(connIda1).lastSentInvite).msg) ~> epRoutes ~> check {
           status shouldBe BadRequest
           responseTo[StatusDetailResp] shouldBe StatusDetailResp(MISSING_REQ_FIELD.withMessage(
             "missing required attribute: 'keyDlgProof'"))
@@ -70,8 +80,8 @@ trait ConnectionSpec { this : ConsumerEndpointHandlerSpec =>
 
     "when sent CREATE_MSG (conn req answer) without replyToMsgId attribute" - {
       "should respond with bad request error msg" in {
-        buildAgentPostReq(mockConsumerEdgeAgent1.v_0_5_req.prepareCreateAnswerInviteMsgWithoutReplyToMsgIdForAgency(connIda1,
-          includeSendMsg = false, mockEntEdgeAgent1.pairwiseConnDetail(connIda1).lastSentInvite).msg) ~> epRoutes ~> check {
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareCreateAnswerInviteMsgWithoutReplyToMsgIdForAgency(connIda1,
+          includeSendMsg = false, othersMockEdgeAgent.pairwiseConnDetail(connIda1).lastSentInvite).msg) ~> epRoutes ~> check {
           status shouldBe BadRequest
           responseTo[StatusDetailResp] shouldBe StatusDetailResp(MISSING_REQ_FIELD.withMessage(
             "required attribute not found (missing/empty/null): 'replyToMsgId'"))
@@ -80,36 +90,43 @@ trait ConnectionSpec { this : ConsumerEndpointHandlerSpec =>
     }
   }
 
-  def testAnswerSecondInvitation(): Unit = {
-    createNewRelationship(connIda2)
-    setInviteData(connIda2, mockEntEdgeAgent1, mockEntCloudAgent)
+  def testAnswerSecondInvitation(mockEnv: MockEnv): Unit = {
+    lazy val mockEdgeAgent = mockEnv.edgeAgent
+    lazy val othersMockEdgeAgent = mockEnv.othersMockEnv.edgeAgent
+    lazy val othersCloudAgent = mockEnv.othersMockEnv.cloudAgent
+
+    createNewRelationship(mockEnv, connIda2)
+    setInviteData(othersMockEdgeAgent, othersCloudAgent, connIda2)
 
     "when sent CREATE_MSG (conn request answer) for second invite" - {
       "should respond with MSG_CREATED" in {
         val totalAgentMsgsSentSoFar = getTotalAgentMsgsSentByCloudAgentToRemoteAgent
-        buildAgentPostReq(mockConsumerEdgeAgent1.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connIda2,
-          includeSendMsg = true, mockEntEdgeAgent1.pairwiseConnDetail(connIda2).lastSentInvite).msg) ~> epRoutes ~> check {
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(connIda2,
+          includeSendMsg = true, othersMockEdgeAgent.pairwiseConnDetail(connIda2).lastSentInvite).msg) ~> epRoutes ~> check {
           status shouldBe OK
           eventually (timeout(Span(5, Seconds))) {
             getTotalAgentMsgsSentByCloudAgentToRemoteAgent shouldBe totalAgentMsgsSentSoFar + 1
           }
-          mockConsumerEdgeAgent1.v_0_5_resp.handleInviteAnswerCreatedResp(PackedMsg(responseAs[Array[Byte]]))
+          mockEdgeAgent.v_0_5_resp.handleInviteAnswerCreatedResp(PackedMsg(responseAs[Array[Byte]]))
         }
       }
     }
 
-    testRemoveConfigForConn(connIda1, Set(PUSH_COM_METHOD))
+    testRemoveConfigForConn(mockEdgeAgent, connIda1, Set(PUSH_COM_METHOD))
 
   }
 
-  def testAcceptPreviousInvite(): Unit = {
+  def testAcceptPreviousInvite(mockEnv: MockEnv): Unit = {
 
-    createNewRelationship(connIda3)
+    lazy val mockEdgeAgent = mockEnv.edgeAgent
+    lazy val othersMockEdgeAgent = mockEnv.othersMockEnv.edgeAgent
+
+    createNewRelationship(mockEnv, connIda3)
 
     "when sent CREATE_MSG (conn req answer) to accept same invite again" - {
       "should respond with error msg" in {
-        val lastSentInvite = mockEntEdgeAgent1.pairwiseConnDetail(connIda2).lastSentInvite
-        buildAgentPostReq(mockConsumerEdgeAgent1.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(
+        val lastSentInvite = othersMockEdgeAgent.pairwiseConnDetail(connIda2).lastSentInvite
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareCreateAnswerInviteMsgForAgency(
           connIda3, includeSendMsg = true, lastSentInvite).msg) ~> epRoutes ~> check {
           status shouldBe BadRequest
           responseTo[StatusDetailResp] shouldBe StatusDetailResp(PAIRWISE_KEYS_ALREADY_IN_WALLET.withMessage(

@@ -25,6 +25,7 @@ import org.scalatest.time.{Seconds, Span}
 
 import java.util.UUID
 import java.util.concurrent.ExecutionException
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
 

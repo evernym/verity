@@ -9,12 +9,12 @@ import com.evernym.verity.actor.agent.agency.AgencyIdUtil
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessSignalMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, ProtocolRegistry, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.cache.base.Cache
 
 /**
   * A base Driver for Drivers in an Akka actor system

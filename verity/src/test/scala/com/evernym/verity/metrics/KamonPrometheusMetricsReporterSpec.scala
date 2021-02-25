@@ -10,7 +10,8 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
                        |akka_system_processed_messages_total{system="consumer-agency",tracked="false"} 289978.0
                        |akka_system_processed_messages_total{system="consumer-agency",tracked="tr"} 0.0
                        |span_processing_time_seconds_bucket{operation="/agency/agency/agency/agency/agency/agency/agency/agency/agency/internal/msg-progress-tracker/{}",span_kind="server",http_status_code="200",error="false",le="0.005",component="akka.http.server",http_method="POST"} 0.0
-                       |span_processing_time_seconds_bucket{operation="msg-latency",msg_type="CREATE_AGENT:AGENT_CREATED",parentOperation="tell(MsgTracer, CaptureMetrics)",error="false",le="0.005",next_hop="my edge agent (synchronous)"} 0.0""".stripMargin
+                       |span_processing_time_seconds_bucket{operation="msg-latency",msg_type="CREATE_AGENT:AGENT_CREATED",parentOperation="tell(MsgTracer, CaptureMetrics)",error="false",le="0.005",next_hop="my edge agent (synchronous)"} 0.0
+                       |test_metrics{operation="msg-latency=123",msg_type=,parentOperation,error="false"}""".stripMargin
 
   "KamonPrometheusMetricsProvider" - {
 
@@ -20,10 +21,10 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
           """akka_actor_errors_total{path="consumer-agency/user/singleton-parent-proxy",
             |system="consumer-agency",dispatcher="akka.actor.default-dispatcher",
             |class="akka.cluster.singleton.ClusterSingletonProxy"} 0.0""".stripMargin
-        KamonPrometheusMetricsReporter.buildMetric(inputStr).name shouldBe "akka_actor_errors_total"
+        KamonPrometheusMetricsReporter.buildMetric(inputStr).map(_.name) shouldBe Some("akka_actor_errors_total")
 
         val inputStr1 = """tracer_spans_created_total 215870.0"""
-        KamonPrometheusMetricsReporter.buildMetric(inputStr1).name shouldBe "tracer_spans_created_total"
+        KamonPrometheusMetricsReporter.buildMetric(inputStr1).map(_.name) shouldBe Some("tracer_spans_created_total")
       }
     }
 
@@ -33,10 +34,10 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
           """akka_actor_errors_total{path="consumer-agency/user/singleton-parent-proxy",
             |system="consumer-agency",dispatcher="akka.actor.default-dispatcher",
             |class="akka.cluster.singleton.ClusterSingletonProxy"} 0.0"""
-        KamonPrometheusMetricsReporter.buildMetric(inputStr).value shouldBe 0.0
+        KamonPrometheusMetricsReporter.buildMetric(inputStr).map(_.value) shouldBe Option(0.0)
 
         val inputStr1 = """tracer_spans_created_total 215870.0"""
-        KamonPrometheusMetricsReporter.buildMetric(inputStr1).value shouldBe 215870.0
+        KamonPrometheusMetricsReporter.buildMetric(inputStr1).map(_.value) shouldBe Option(215870.0)
       }
     }
 
@@ -46,16 +47,17 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
           """akka_actor_errors_total{path="consumer-agency/user/singleton-parent-proxy",system="consumer-agency",
             |dispatcher="akka.actor.default-dispatcher",class="akka.cluster.singleton.ClusterSingletonProxy"} 0.0"""
         val expectedVal = "consumer-agency/user/singleton-parent-proxy"
-        KamonPrometheusMetricsReporter.buildMetric(inputStr).target shouldBe expectedVal
+        KamonPrometheusMetricsReporter.buildMetric(inputStr).map(_.target) shouldBe Some(expectedVal)
 
         val inputStr1 = """tracer_spans_created_total 215870.0"""
-        KamonPrometheusMetricsReporter.buildMetric(inputStr1).target shouldBe "unknown"
+        KamonPrometheusMetricsReporter.buildMetric(inputStr1).map(_.target) shouldBe Some("unknown")
 
         val inputStr2 =
           """executor_pool{actor_system="consumer-agency", type="fjp",
             |name="akka.remote.default-remote-dispatcher", setting="parallelism"} 4.0""".stripMargin
 
-        KamonPrometheusMetricsReporter.buildMetric(inputStr2).target shouldBe "akka.remote.default-remote-dispatcher-fjp-parallelism"
+        KamonPrometheusMetricsReporter.buildMetric(inputStr2).map(_.target) shouldBe
+          Some("akka.remote.default-remote-dispatcher-fjp-parallelism")
       }
     }
 
@@ -70,10 +72,10 @@ class KamonPrometheusMetricsReporterSpec extends BasicSpec {
           "dispatcher" -> "akka.actor.default-dispatcher",
           "class" -> "akka.cluster.singleton.ClusterSingletonProxy"
         )
-        KamonPrometheusMetricsReporter.buildMetric(inputStr).tags shouldBe Option(expectedVal)
+        KamonPrometheusMetricsReporter.buildMetric(inputStr).flatMap(_.tags) shouldBe Option(expectedVal)
 
         val inputStr1 = """tracer_spans_created_total 215870.0"""
-        KamonPrometheusMetricsReporter.buildMetric(inputStr1).tags shouldBe Option(Map.empty)
+        KamonPrometheusMetricsReporter.buildMetric(inputStr1).flatMap(_.tags) shouldBe Option(Map.empty)
       }
     }
 

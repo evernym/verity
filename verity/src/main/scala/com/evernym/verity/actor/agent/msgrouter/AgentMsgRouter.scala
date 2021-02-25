@@ -17,7 +17,8 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.cache._
+import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{CacheValueFetcher, RoutingDetailCacheFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.LogKeyConstants._
@@ -63,8 +64,8 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   }
 
   private def getRouteInfoViaCache(gr: GetRoute): Future[Option[ActorAddressDetail]] = {
-    val gcop = GetCachedObjectParam(Set(KeyDetail(gr, required = false)), ROUTING_DETAIL_CACHE_FETCHER_ID)
-    routingCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
+    val gcop = GetCachedObjectParam(KeyDetail(gr, required = false), ROUTING_DETAIL_CACHE_FETCHER_ID)
+    routingCache.getByParamAsync(gcop).map { cqr =>
       cqr.getActorAddressDetailOpt(gr.forDID)
     }
   }

@@ -14,10 +14,11 @@ import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
 import com.evernym.verity.agentmsg.msgpacker._
-import com.evernym.verity.cache.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
+import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.protocol.actor._
@@ -33,7 +34,6 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
-import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
@@ -65,11 +65,13 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
     with DEPRECATED_HasWallet
-    with AsyncToSync
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
 
   val logger: Logger = ctx.logger
 
+  def publishAppStateEvent (event: AppStateEvent): Unit = {
+    ctx.SERVICES_DEPRECATED.publishAppStateEvent(event)
+  }
   def encryptionParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
   def agencyDIDReq: DID = ctx.getState.agencyDIDOpt.getOrElse(
@@ -122,7 +124,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
     val vs = VerifySigByVerKey(signedByVerKey, challenge, sig)
-    val verifResult = convertToSyncReq(CryptoOpExecutor.verifySig(vs))
+    val verifResult = ctx.DEPRECATED_convertAsyncToSync(CryptoOpExecutor.verifySig(vs))
     if (! verifResult.verified) {
       val errorMsgPrefix = if (isEdgeAgentsKeyDlgProof) "local" else "remote"
       val errorMsg = errorMsgPrefix + " agent key delegation proof verification failed"
@@ -141,7 +143,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       case CREATE_MSG_TYPE_CONN_REQ_ANSWER | MSG_TYPE_ACCEPT_CONN_REQ |
            CREATE_MSG_TYPE_REDIRECT_CONN_REQ| MSG_TYPE_REDIRECT_CONN_REQ if msg.sendMsg =>
         //to send connection request answer asynchronously (to remote cloud agent)
-        List(SendMsgToRemoteCloudAgent(uid, agentMsgContext.msgPackFormat))
+        List(SendMsgToRemoteCloudAgent(uid, agentMsgContext.msgPackFormatToBeUsed))
 
       case CREATE_MSG_TYPE_CONN_REQ_ANSWER | MSG_TYPE_CONN_REQ_ACCEPTED |
            CREATE_MSG_TYPE_CONN_REQ_REDIRECTED | MSG_TYPE_CONN_REQ_REDIRECTED =>
@@ -355,12 +357,15 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     ctx.SERVICES_DEPRECATED.msgQueueServiceProvider.addToMsgQueue(msf)
   }
 
-  def buildMsgCreatedEvt(mType: String, senderDID: DID, msgId: MsgId,
-                         sendMsg: Boolean, threadOpt: Option[Thread]=None): MsgCreated = {
+  def buildMsgCreatedEvt(msgId: MsgId,
+                         mType: String,
+                         senderDID: DID,
+                         sendMsg: Boolean,
+                         threadOpt: Option[Thread]=None): MsgCreated = {
     val msgStatus =
       if (senderDID == ctx.getState.myPairwiseDIDReq) MSG_STATUS_CREATED.statusCode
       else MSG_STATUS_RECEIVED.statusCode
-    ctx.getState.connectingMsgState.buildMsgCreatedEvt(mType, senderDID, msgId, sendMsg, msgStatus, threadOpt)
+    ctx.getState.connectingMsgState.buildMsgCreatedEvt(msgId , mType, senderDID, sendMsg, msgStatus, threadOpt)
   }
 
   def initState(params: Seq[ParameterStored]): S

@@ -7,8 +7,7 @@ import com.evernym.verity.actor.itemmanager.ItemCommonConstants.ENTITY_ID_MAPPER
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
 import com.evernym.verity.actor.itemmanager.{ExternalCmdWrapper, ItemConfigManager, ItemContainerMapper}
 import com.evernym.verity.actor.persistence.SnapshotConfig
-import com.evernym.verity.actor.testkit.AkkaTestBasic.{getNextAvailablePort, systemNameForPort, tmpdir}
-import com.evernym.verity.actor.testkit.PersistentActorSpec
+import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -84,21 +83,8 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
   lazy val LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION = ENTITY_ID_MAPPER_VERSION_V1
   lazy val LATEST_CONFIGURED_ITEM_ACTOR_ENTITY_ID_VERSION_PREFIX = ItemConfigManager.entityIdVersionPrefix(appConfig)
 
-  def configForDeleteEventFailure: Config = ConfigFactory parseString {
-    s"""
-      akka {
-        persistence {
-          journal {
-            plugin = "akka.persistence.journal.FailsOnDeleteEventsTestJournal"
-            FailsOnDeleteEventsTestJournal {
-              class = "com.evernym.verity.itemmanager.FailsOnDeleteEventsTestJournal"
-              dir = ${tmpdir(systemNameForPort(getNextAvailablePort))}
-              native = false
-            }
-          }
-        }
-      }
-    """
+  def configForDeleteEventFailure: Config =  {
+    AkkaTestBasic.customJournal("com.evernym.verity.itemmanager.FailsOnDeleteEventsTestJournal")
   }
 
   def watcherConfig: Config =
@@ -128,7 +114,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |
         |  cache {
         |    agency-detail-cache-expiration-time-in-seconds = 0
-        |    endpoint-cache-expiration-time-in-seconds = 0
         |  }
         |}
         |""".stripMargin

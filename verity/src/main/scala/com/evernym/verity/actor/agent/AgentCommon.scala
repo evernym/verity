@@ -4,25 +4,29 @@ import java.time.ZonedDateTime
 
 import akka.actor.ActorSystem
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.Exceptions.InternalServerErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.{ActorMessage, AuthKeyAdded, FirstProtoMsgSent, ProtoMsgReceivedOrderIncremented, ProtoMsgSenderOrderIncremented, ProtocolIdDetailSet, ThreadContextStored}
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
-import com.evernym.verity.actor.agent.relationship.RelUtilParam
+import com.evernym.verity.actor.agent.relationship.{AuthorizedKey, DidDoc, DidDocBuilder, DidDocBuilderParam, KeyId, Relationship}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache._
 import com.evernym.verity.constants.Constants._
+import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.HasMsgProgressTracker
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
+import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
+import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
@@ -45,12 +49,184 @@ trait AgentCommon
     with HasMsgProgressTracker
     with ResourceUsageCommon { this: AgentPersistentActor =>
 
-  type StateType <: AgentStateInterface
-  def state: StateType
+
+  def agentCommonCmdReceiver[A]: Receive = {
+    case _: AgentActorDetailSet    => //nothing to do
+  }
+
+  def receiveAgentInitCmd: Receive = {
+    case us: UpdateState    =>
+      updateAgencyDidPair(us.agencyDidPair)
+      updateRelationship(us.relationship)
+      val events = us.persistAuthKeys.map(pk => AuthKeyAdded(pk.keyId, pk.verKey))
+      if (events.nonEmpty) {
+        writeAllWithoutApply(events.toList)
+      }
+      sender ! Done
+    case FixAgentState => fixAgentState()
+  }
+
+  def agentCommonEventReceiver: Receive = {
+    //NOTE: ProtocolIdDetailSet is a proto buf event which stores mapping between protocol reference
+    // and corresponding protocol identifier
+    //There is a method 'getPinstId' below, which uses that stored state/mapping to know if a
+    // protocol actor (for given protocol reference),
+    // is already created in the given context(like agency agent pairwise or user agent pairwise actor etc),
+    // and if it is, then it uses that identifier to send incoming message to the protocol actor,
+    // or else creates a new protocol actor.
+    case ProtocolIdDetailSet(msgFamilyName, msgFamilyVersion, pinstId) =>
+      addPinst(ProtoRef(msgFamilyName, msgFamilyVersion) -> pinstId)
+
+    case tcs: ThreadContextStored =>
+      val msgTypeFormat = try {
+        TypeFormat.fromString(tcs.msgTypeDeclarationFormat)
+      } catch {
+        //This is for backward compatibility (for older events which doesn't have msgTypeFormatVersion stored)
+        case _: UnknownFormatType =>
+          TypeFormat.fromString(tcs.msgPackFormat)
+      }
+
+      val tcd = ThreadContextDetail(tcs.threadId, MsgPackFormat.fromString(tcs.msgPackFormat), msgTypeFormat,
+        tcs.usesGenMsgWrapper, tcs.usesBundledMsgWrapper)
+
+      addThreadContextDetail(tcs.pinstId, tcd)
+
+    case _: FirstProtoMsgSent => //nothing to do (deprecated, just kept it for backward compatibility)
+
+    case pms: ProtoMsgSenderOrderIncremented =>
+      val stc = state.threadContextDetailReq(pms.pinstId)
+      val protoMsgOrderDetail = stc.msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val updatedProtoMsgOrderDetail =
+        protoMsgOrderDetail.copy(senderOrder = protoMsgOrderDetail.senderOrder + 1)
+      val updatedContext = stc.copy(msgOrders = Option(updatedProtoMsgOrderDetail))
+      addThreadContextDetail(pms.pinstId, updatedContext)
+
+    case pms: ProtoMsgReceivedOrderIncremented  =>
+      val stc = state.threadContextDetailReq(pms.pinstId)
+      val protoMsgOrderDetail = stc.msgOrders.getOrElse(MsgOrders(senderOrder = -1))
+      val curReceivedMsgOrder = protoMsgOrderDetail.receivedOrders.getOrElse(pms.fromPartiId, -1)
+      val updatedReceivedOrders = protoMsgOrderDetail.receivedOrders + (pms.fromPartiId -> (curReceivedMsgOrder + 1))
+      val updatedProtoMsgOrderDetail =
+        protoMsgOrderDetail.copy(receivedOrders = updatedReceivedOrders)
+      val updatedContext = stc.copy(msgOrders = Option(updatedProtoMsgOrderDetail))
+      addThreadContextDetail(pms.pinstId, updatedContext)
+
+    case aka: AuthKeyAdded =>
+      _addedAuthKeys = _addedAuthKeys + AuthKey(aka.keyId, aka.verKey)
+  }
+
+
+  //these would be auth keys added during actor recovery for
+  // auth keys with empty ver key for which it has to call wallet api to get ver key
+  var _addedAuthKeys = Set.empty[AuthKey]
 
   var isThreadContextMigrationFinished: Boolean = false
 
+  type StateType <: AgentStateInterface
+  def state: StateType
+
+  override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)(context.system)
+
+  def agentActorContext: AgentActorContext
+  def system: ActorSystem = agentActorContext.system
+  def walletAPI: WalletAPI = agentActorContext.walletAPI
+  def agentWalletId: Option[String] = state.agentWalletId
+  def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
+
+  def agencyDIDReq: DID = state.agencyDIDReq
+
+  def ownerDID: Option[DID]
+  def ownerDIDReq: DID = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
+  def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
+
+  def ownerAgentKeyDIDPair: Option[DidPair]
+
+  //tracking ids
+  def selfRelTrackingId: String = domainId
+  def pairwiseRelTrackingIds: List[String] = (state.myDid ++ state.theirDid).toList
+
+  lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (
+    AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
+  )
+  /**
+   * per agent actor cache
+   */
+  lazy val agentCache = new Cache("AC", cacheFetchers)
+
+  /**
+   * general/global (per actor system) cache
+   */
+  lazy val generalCache: Cache = agentActorContext.generalCache
+
+  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
+
+  def updateAgentWalletId(actorEntityId: String): Unit = {
+    if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
+      throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet id already set to different value"))
+    try {
+      setAgentWalletId(actorEntityId)
+      logger.debug(s"wallet id successfully initialized for actorEntityId: $actorEntityId")
+    } catch {
+      case e: Exception =>
+        logger.error(s"wallet id initialization failed for actorEntityId: $actorEntityId")
+        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
+        throw e
+    }
+  }
+
+  def setAgentActorDetail(didPair: DidPair): Future[Any] = {
+    agentActorContext.agentMsgRouter.execute(GetRoute(didPair.DID)) flatMap {
+      case Some(aa: ActorAddressDetail) => self ? SetAgentActorDetail(didPair, aa.address)
+      case None => Future.successful("agent not yet created")
+    }
+  }
+
+  def agencyDidPairFut(): Future[DidPair] = agencyDidPairFutByCache()
+
+  def agencyDidPairFutByCache(): Future[DidPair] = {
+    val agencyDidPair = state.agencyDIDPair
+    val agencyAuthKey = state.agencyDIDPair.flatMap(adp => _addedAuthKeys.find(_.keyId == adp.DID))
+    (agencyDidPair, agencyAuthKey) match {
+      case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.nonEmpty => Future.successful(adp)
+      case (Some(adp), Some(ak)) if adp.DID.nonEmpty => Future.successful(adp.copy(verKey = ak.verKey))
+      case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.isEmpty => agencyDidPairFutByCache(adp.DID)
+      case _ =>
+        val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
+        generalCache.getByParamAsync(gcop).flatMap { cqr =>
+          agencyDidPairFutByCache(cqr.getAgencyDIDReq)
+        }
+    }
+  }
+
+  def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
+    val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
+    val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER_ID)
+    generalCache.getByParamAsync(gadfcParam)
+      .map(cqr => DidPair(agencyDID, cqr.getAgencyInfoReq(agencyDID).verKeyReq))
+  }
+
+  implicit def didDocBuilderParam: DidDocBuilderParam = DidDocBuilderParam(appConfig, state.thisAgentKeyDID)
+
+  def resolvePinstId(protoDef: ProtoDef, resolver: PinstIdResolver, relationshipId: Option[RelationshipId],
+                     threadId: ThreadId, msg: Option[TypedMsgLike]=None): PinstId = {
+    resolver.resolve(
+      protoDef,
+      domainId,
+      relationshipId,
+      Option(threadId),
+      msg.flatMap(protoDef.protocolIdSuffix),
+      state.contextualId
+    )
+  }
+
+  def updateRelationship(newRelationship: Relationship): Unit
+  def updateAgencyDidPair(dp: DidPair): Unit
+
   override def postSuccessfulActorRecovery(): Unit = {
+    logStateSizeMetrics()
+  }
+
+  def logStateSizeMetrics(): Unit = {
     Option(state).foreach { s =>
       isThreadContextMigrationFinished = state.currentThreadContextSize == 0
       try {
@@ -72,122 +248,108 @@ trait AgentCommon
     }
   }
 
-  override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)
-
-  def agentActorContext: AgentActorContext
-  def system: ActorSystem = agentActorContext.system
-  def walletAPI: WalletAPI = agentActorContext.walletAPI
-  def agentWalletId: Option[String] = state.agentWalletId
-  def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
-
-  def agencyDIDReq: DID = state.agencyDID.getOrElse(
-    throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, Option("agent not yet created")))
-
-  def ownerDID: Option[DID]
-  def ownerDIDReq: DID = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
-  def ownerAgentKeyDID: Option[DID]
-  def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
-
-  //tracking ids
-  def selfRelTrackingId: String = domainId
-  def pairwiseRelTrackingIds: List[String] = (state.myDid ++ state.theirDid).toList
-
-  lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (
-    AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
-  )
-  lazy val walletVerKeyCacheHelper = new WalletVerKeyCacheHelper(wap, walletAPI, appConfig)
-  def getVerKeyReqViaCache(did: DID, getFromPool: Boolean = false): VerKey = walletVerKeyCacheHelper.getVerKeyReqViaCache(did, getFromPool)
-
-  /**
-   * per agent actor cache
-   */
-  lazy val agentCache = new Cache("AC", cacheFetchers)
-
-  /**
-   * general/global (per actor system) cache
-   */
-  lazy val generalCache: Cache = agentActorContext.generalCache
-
-  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
-
-  def setAndOpenWalletIfExists(actorEntityId: String): Unit = {
-    try {
-      updateAgentWalletId(actorEntityId)
-      logger.debug(s"wallet successfully initialized and opened for actorEntityId: $actorEntityId")
-    } catch {
-      case e: Exception =>
-        logger.error(s"wallet failed to initialize, create, and open for actorEntityId: $actorEntityId")
-        logger.error(Exceptions.getStackTraceAsSingleLineString(e))
-        throw e
+  override def postActorRecoveryCompleted(): Future[Any] = {
+    preAgentStateFix().flatMap { _ =>
+      self ? FixAgentState
+    }.flatMap { _ =>
+      postAgentStateFix()
     }
   }
 
-  def updateAgentWalletId(actorEntityId: String): Unit = {
-    if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
-      throw new InternalServerErrorException(ALREADY_EXISTS.statusCode, Option("agent wallet id already set to different value"))
-    setAgentWalletId(actorEntityId)
-  }
-
-  def setAgentActorDetail(forDID: DID): Future[Any] = {
-    agentActorContext.agentMsgRouter.execute(GetRoute(forDID)) flatMap {
-      case Some(aa: ActorAddressDetail) => self ? SetAgentActorDetail(forDID, aa.address)
-      case None => Future.successful("agent not yet created")
+  def fixAgentState(): Unit = {
+    runWithInternalSpan("fixAgentState", s"${getClass.getSimpleName}") {
+      val sndr = sender()
+      val preAddedAuthKeys = _addedAuthKeys
+      val preAgencyDidPair = state.agencyDIDPair
+      state.relationship match {
+        case Some(rel) =>
+          val oldAuthKeys = getAllAuthKeys(rel)
+          for (
+            updatedMyDidDoc     <- updatedDidDoc(preAddedAuthKeys, rel.myDidDoc);
+            updatedThoseDidDocs <- updatedDidDocs(preAddedAuthKeys, rel.thoseDidDocs);
+            newAgencyDIDPair    <- agencyDidPairFut()
+          ) yield {
+            val updatedRel =
+              rel
+                .update(_.myDidDoc.setIfDefined(updatedMyDidDoc))
+                .update(_.thoseDidDocs.setIfDefined(Option(updatedThoseDidDocs)))
+            val newAuthKeys = getAllAuthKeys(updatedRel)
+            val authKeyToBePersisted =
+              computeAgencyAuthKeyToBePersisted(preAgencyDidPair, newAgencyDIDPair) ++
+                computeAuthKeyToBePersisted(preAddedAuthKeys, oldAuthKeys, newAuthKeys)
+            self ? UpdateState(newAgencyDIDPair, updatedRel, authKeyToBePersisted)
+          }.map { _ =>
+            sndr ! Done
+          }
+        case None =>
+          sndr ! Done
+      }
     }
   }
 
-  def agencyVerKeyFut(): Future[VerKey] = agencyVerKeyFutByCache()
-
-  def agencyVerKeyFutByCache(): Future[VerKey] = {
-    val gadp = GetAgencyIdentityCacheParam(state.agencyDIDReq, GetAgencyIdentity(state.agencyDIDReq, getEndpoint = false))
-    val gadfcParam = GetCachedObjectParam(Set(KeyDetail(gadp, required = true)), AGENCY_DETAIL_CACHE_FETCHER_ID)
-    generalCache.getByParamAsync(gadfcParam)
-      .mapTo[CacheQueryResponse]
-      .map(cqr => cqr.getAgencyInfoReq(state.agencyDIDReq).verKeyReq)
+  def getAllAuthKeys(rel: Relationship): List[AuthorizedKey] = {
+    val didDocs = rel.myDidDoc ++ rel.thoseDidDocs
+    didDocs.flatMap(_.getAuthorizedKeys.keys).toList
   }
 
-  /**
-   * relationship util param, used in 'postSuccessfulActorRecovery' function call
-   * to convert any LegacyAuthorizedKey to AuthorizedKey (by fetching ver key from the wallet)
-   * @return
-   */
-  implicit def relationshipUtilParam: RelUtilParam = {
-    if (isSuccessfullyRecovered) {
-      //if actor is successfully recovered (meaning all events are applied) then,
-      // a 'walletVerKeyCacheHelper' is provided in 'RelUtilParam',
-      // which then further used to extract ver key from the wallet and prepare AuthorizedKey
-      RelUtilParam(appConfig, state.thisAgentKeyDID, Option(walletVerKeyCacheHelper))
-    } else {
-      //if actor is NOT yet recovered, then, 'walletVerKeyCacheHelper' is not provided in 'RelUtilParam',
-      // in which case a 'LegacyAuthorizedKey' gets created and then as part of 'postSuccessfulActorRecovery'
-      // it gets converted to 'AuthorizedKey'
-      RelUtilParam(appConfig, state.thisAgentKeyDID, None)
+  def computeAgencyAuthKeyToBePersisted(preAgencyDidPair: Option[DidPair],
+                                        postAgencyDidPair: DidPair): Set[AuthKey] = {
+    if (preAgencyDidPair.contains(postAgencyDidPair) ||
+      _addedAuthKeys.exists(_.keyId == postAgencyDidPair.DID)) Set.empty
+    else Set(AuthKey(postAgencyDidPair.DID, postAgencyDidPair.verKey))
+  }
+
+  def computeAuthKeyToBePersisted(explicitlyAddedAuthKeys: Set[AuthKey],
+                                  authKeysBeforeDidDocUpdate: List[AuthorizedKey],
+                                  authKeysAfterDidDocUpdate: List[AuthorizedKey]): Set[AuthKey] = {
+    authKeysAfterDidDocUpdate.filter { nak =>
+      nak.verKeyOpt.isDefined &&
+        authKeysBeforeDidDocUpdate.exists(oak => oak.keyId == nak.keyId && oak.verKeyOpt.isEmpty) &&
+        ! explicitlyAddedAuthKeys.exists(_.keyId == nak.keyId)
+    }.map { nak =>
+      AuthKey(nak.keyId, nak.verKey)
+    }.toSet
+  }
+
+  def preAgentStateFix(): Future[Any] = {
+    Future.successful("pre agent state fix")
+  }
+
+  def postAgentStateFix(): Future[Any] = {
+    Future.successful("post agent state fix")
+  }
+
+  def updatedDidDoc(explicitlyAddedAuthKeys: Set[AuthKey], didDocOpt: Option[DidDoc]): Future[Option[DidDoc]] =
+    swap {
+      didDocOpt.map { dd => updatedDidDocs(explicitlyAddedAuthKeys, Seq(dd)).map(ld => ld.head) }
     }
-  }
 
-  def resolvePinstId(protoDef: ProtoDef, resolver: PinstIdResolver, relationshipId: Option[RelationshipId],
-                     threadId: ThreadId, msg: Option[TypedMsgLike]=None): PinstId = {
-    resolver.resolve(
-      protoDef,
-      domainId,
-      relationshipId,
-      Option(threadId),
-      msg.flatMap(protoDef.protocolIdSuffix),
-      state.contextualId
-    )
-  }
+  def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey], didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
+    Future.traverse(didDocs) { dd =>
+      DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
+    }
+
+  private def swap[M](x: Option[Future[M]]): Future[Option[M]] =
+    Future.sequence(Option.option2Iterable(x)).map(_.headOption)
+}
+
+case class UpdateState(agencyDidPair: DidPair, relationship: Relationship, persistAuthKeys: Set[AuthKey]) extends ActorMessage
+
+case class AuthKey(keyId: KeyId, verKey: VerKey) {
+  require(verKey.nonEmpty)
 }
 
 /**
  * This is information about "self rel" agent actor (either AgencyAgent or UserAgent)
  *
- * @param did domain DID
+ * @param didPair
  * @param actorEntityId entity id of the actor which belongs to the self relationship actor
  */
-case class SetAgentActorDetail(did: DID, actorEntityId: String) extends ActorMessage
-case class AgentActorDetailSet(did: DID, actorEntityId: String) extends ActorMessage
+case class SetAgentActorDetail(didPair: DidPair, actorEntityId: String) extends ActorMessage
+case class AgentActorDetailSet(didPair: DidPair, actorEntityId: String) extends ActorMessage
 
-case class SetAgencyIdentity(did: DID) extends ActorMessage
-case class AgencyIdentitySet(did: DID) extends ActorMessage
+case class SetAgencyIdentity(didPair: DidPair) extends ActorMessage
+case class AgencyIdentitySet(didPair: DidPair) extends ActorMessage
 
 trait SponsorRelCompanion {
   def apply(sponsorId: Option[String], sponseeId: Option[String]): SponsorRel =
@@ -198,32 +360,44 @@ trait SponsorRelCompanion {
 
 /**
  *
- * @param newAgentKeyDID DID belonging to the new agent ver key
- * @param forDID pairwise DID for which new pairwise actor needs to be setup
+ * @param newAgentKeyDIDPair DID belonging to the new agent ver key
+ * @param forDIDPair pairwise DID for which new pairwise actor needs to be setup
  * @param mySelfRelDID my self relationship DID
- * @param ownerAgentKeyDID DID belonging to owner's agent's ver key
+ * @param ownerAgentKeyDIDPair owner's agent's DID Pair
  * @param ownerAgentActorEntityId entity id of owner's agent actor
  * @param pid
  */
-case class SetupCreateKeyEndpoint(newAgentKeyDID: DID,
-                                  forDID: DID,
-                                  mySelfRelDID: DID,
-                                  ownerAgentKeyDID: Option[DID] = None,
+case class SetupCreateKeyEndpoint(newAgentKeyDIDPair: DidPair,
+                                  forDIDPair: DidPair,
+                                  mySelfRelDID: DID,    //domain id
+                                  ownerAgentKeyDIDPair: Option[DidPair] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
                                   pid: Option[ProtocolIdDetail]=None,
-                                  publicIdentity: Option[DidPair]=None) extends ActorMessage
+				                          publicIdentity: Option[DidPair]=None) extends ActorMessage {
 
-trait SetupEndpoint extends ActorMessage {
-  def ownerDID: DID
-  def agentKeyDID: DID
+  def ownerAgentKeyDIDPairReq: DidPair = ownerAgentKeyDIDPair.getOrElse(
+    throw new RuntimeException("ownerAgentKeyDIDPair not supplied")
+  )
+  def ownerAgentKeyDIDReq: DID = ownerAgentKeyDIDPairReq.DID
+  def ownerAgentKeyDIDVerKeyReq: VerKey = ownerAgentKeyDIDPairReq.verKey
 }
 
-case class SetupAgentEndpoint(ownerDID: DID,
-                              agentKeyDID: DID) extends SetupEndpoint
+trait SetupEndpoint extends ActorMessage {
+  def ownerDIDPair: DidPair
+  def agentKeyDIDPair: DidPair
+
+  def ownerDID: DID = ownerDIDPair.DID
+  def ownerDIDVerKey: VerKey = ownerDIDPair.verKey
+  def agentKeyDID: DID = agentKeyDIDPair.DID
+  def agentKeyDIDVerKey: VerKey = agentKeyDIDPair.verKey
+}
+
+case class SetupAgentEndpoint(ownerDIDPair: DidPair,
+                              agentKeyDIDPair: DidPair) extends SetupEndpoint
 
 case class SetupAgentEndpoint_V_0_7 (threadId: ThreadId,
-                                     ownerDID: DID,
-                                     agentKeyDID: DID,
+                                     ownerDIDPair: DidPair,
+                                     agentKeyDIDPair: DidPair,
                                      requesterVerKey: VerKey,
                                      sponsorRel: Option[SponsorRel]=None) extends SetupEndpoint
 
@@ -286,3 +460,5 @@ trait PayloadMetadataBase {
   def msgPackFormatStr: String
   def msgPackFormat: MsgPackFormat = MsgPackFormat.fromString(msgPackFormatStr)
 }
+
+object FixAgentState extends ActorMessage

@@ -36,15 +36,21 @@ object UrlParam {
       val query = buildOption(url.getQuery)
       UrlParam(url.getProtocol, url.getHost, port, path, query)
     } catch {
+      //only retry with 'http' if no protocol is given but it does include some port
       case e: MalformedURLException
-        if
-            //only retry with 'http' if no protocol is given but it does include some port
-            (e.getMessage.startsWith("no protocol: ") && urlStr.contains(":")) ||
-              (e.getMessage.startsWith("unknown protocol: ") && !urlStr.contains("://")) =>
+        if isNoProtocolWithPossiblePortGiven(urlStr, e) || isUnknownProtocol(urlStr, e) =>
           apply(HTTP_PROTOCOL + "://" + urlStr)
       case x @ (_: MalformedURLException | _: RuntimeException) =>
         throw new InvalidComMethodException(Option(s"invalid http endpoint: '$urlStr' reason: ${x.getMessage}"))
     }
+  }
+
+  private def isNoProtocolWithPossiblePortGiven(urlStr: String, e: MalformedURLException): Boolean = {
+    e.getMessage.startsWith("no protocol: ") && urlStr.contains(":")
+  }
+
+  private def isUnknownProtocol(urlStr: String, e: MalformedURLException): Boolean = {
+    e.getMessage.startsWith("unknown protocol: ") && !urlStr.contains("://") && ! urlStr.contains(":/")
   }
 }
 
@@ -55,9 +61,13 @@ case class UrlParam(protocol: String, host: String, port: Int, private val pathO
   def isLocalhost: Boolean = host == "localhost"
 
   private def hostAndPort: String = host + ":" + port
-  def api: String = hostAndPort + pathOpt.filterNot(_.isEmpty).map("/" + _).getOrElse("")
+  private def api: String =
+    hostAndPort +
+      pathOpt.filterNot(_.isEmpty).map("/" + _).getOrElse("") +
+      query.map(q => s"?$q").getOrElse("")
+
   def url: String = s"$protocol://" + api
   def path : String = pathOpt.filterNot(_.isEmpty).getOrElse("")
 
-  override def toString: String = api
+  override def toString: String = url
 }

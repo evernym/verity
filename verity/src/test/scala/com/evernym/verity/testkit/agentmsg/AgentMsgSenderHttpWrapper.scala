@@ -60,6 +60,7 @@ trait AgentMsgSenderHttpWrapper
   val respWaitTime: Duration = 15.seconds
 
   def mockClientAgent: AgentWithMsgHelper
+  implicit def walletAPIParam: WalletAPIParam = mockClientAgent.wap
 
   implicit val system: ActorSystem = AkkaTestBasic.system()
   def appConfig: AppConfig = new TestAppConfig()
@@ -270,7 +271,7 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
-    val response = createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
+    createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {
@@ -507,15 +508,14 @@ trait AgentMsgSenderHttpWrapper
     val fromDIDVerKey = mockClientAgent.getVerKeyFromWallet(fromDID)
     logApiStart(s"get verkey from wallet finished...")
     logApiStart(s"create sponsor keys...")
-    implicit val wap: WalletAPIParam = mockClientAgent.wap
-    lazy val sponsorKeys: NewKeyCreated = mockClientAgent.walletAPI.executeSync[NewKeyCreated](CreateNewKey(seed=Some("000000000000000000000000Trustee1")))
+    lazy val sponsorKeys: NewKeyCreated = mockClientAgent.testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed=Some("000000000000000000000000Trustee1")))
 
     val id = "my-id"
     val sponsorId = "evernym-test-sponsorabc123"
     val nonce = "12345678"
     val timestamp = TimeUtil.nowDateString
 
-    val encrypted = mockClientAgent.walletAPI.executeSync[Array[Byte]](
+    val encrypted = mockClientAgent.testWalletAPI.executeSync[Array[Byte]](
       SignMsg(KeyParam.fromVerKey(sponsorKeys.verKey),
         (nonce + timestamp + id + sponsorId).getBytes()
       )
@@ -718,23 +718,9 @@ trait AgentMsgSenderHttpWrapper
   def checkServiceMetric(metrics: String): Unit = {
     checkMetricExists(metrics,"as_endpoint_http_agent_msg_count")
     checkMetricExists(metrics,"as_endpoint_http_agent_msg_succeed_count")
-    checkMetricExists(metrics,"as_endpoint_http_agent_msg_failed_count")
-    checkMetricExists(metrics,"as_service_twilio_duration")
-    checkMetricExists(metrics,"as_service_twilio_succeed_count")
-    checkMetricExists(metrics,"as_service_twilio_failed_count")
-    checkMetricExists(metrics,"as_service_bandwidth_duration")
-    checkMetricExists(metrics,"as_service_bandwidth_succeed_count")
-    checkMetricExists(metrics,"as_service_bandwidth_failed_count")
-    checkMetricExists(metrics,"as_service_firebase_duration")
-    checkMetricExists(metrics,"as_service_firebase_succeed_count")
-    checkMetricExists(metrics,"as_service_firebase_failed_count")
     checkMetricExists(metrics,"as_service_dynamodb_persist_succeed_count")
-    checkMetricExists(metrics,"as_service_dynamodb_persist_failed_count")
     checkMetricExists(metrics,"as_service_dynamodb_persist_duration")
     checkMetricExists(metrics,"as_service_dynamodb_snapshot_succeed_count")
-    checkMetricExists(metrics,"as_service_dynamodb_snapshot_failed_count")
-    checkMetricExists(metrics,"as_service_libindy_wallet_duration")
-    checkMetricExists(metrics,"as_service_libindy_wallet_succeed_count")
   }
 
   private def checkMetricExists(metrics: String, expectedMetricName: String): Unit = {

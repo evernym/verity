@@ -3,36 +3,35 @@ package com.evernym.verity.http.base.restricted
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.model.StatusCodes._
 import akka.util.ByteString
+import com.evernym.verity.actor.appStateManager.{AppStateDetailedResp, CauseDetail, ListeningSuccessful, SuccessEvent}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.apphealth.{AppStateDetailedResp, AppStateManager, CauseDetail, ListeningSuccessful, SuccessEventParam}
-import com.evernym.verity.apphealth.AppStateConstants._
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.restricted.UpdateAppStatus
 import com.evernym.verity.{AppVersion, BuildInfo}
 import org.scalatest.time.{Seconds, Span}
 
 
-trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
-
+trait AppStatusHealthCheckSpec { this : EdgeEndpointBaseSpec =>
 
   def testSetAppStateAsListening(): Unit = {
     "when sent update app state api call" - {
-      "should respond with ok" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond with ok" taggedAs UNSAFE_IgnoreLog in {
         switchAppToListeningSate()
       }
     }
   }
 
   def switchAppToListeningSate(): Unit = {
-    val isInitializing = buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
+    val currentState = buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
       status shouldBe OK
       responseTo[AppStateDetailedResp].currentState
     }
-    if (isInitializing == STATUS_INITIALIZING) {
-      AppStateManager << SuccessEventParam(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
+    if (currentState == STATUS_INITIALIZING) {
+      publishAppStateEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
         causeDetail = CauseDetail("agent-service-started", "agent-service-started-listening-successfully"),
-        msg = Option("test setting app state to listening"))
+        msg = Option("test setting app state to listening")))
     } else {
       val msg = DefaultMsgCodec.toJson(UpdateAppStatus())
       buildPutReq("/agency/internal/health-check/application-state",
@@ -44,7 +43,7 @@ trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
 
   def testCheckAppStateIsListening(): Unit = {
     "when sent get app state api call" - {
-      "should respond with listening app state" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond with listening app state" taggedAs UNSAFE_IgnoreLog in {
         eventually(timeout(Span(5, Seconds))) {
           buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
             status shouldBe OK
@@ -74,7 +73,7 @@ trait AppStatusHealthCheckSpec { this : EndpointHandlerBaseSpec =>
     }
 
     "when sent update app state api call" - {
-      "should respond with ok" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond with ok" taggedAs UNSAFE_IgnoreLog in {
         buildPutReq("/agency/internal/health-check/application-state") ~> epRoutes ~> check {
           status shouldBe OK
         }

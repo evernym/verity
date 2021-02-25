@@ -1,16 +1,17 @@
 package com.evernym.verity.libindy.ledger
 
+import akka.actor.ActorSystem
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
 
 
-class LedgerTxnExecutorV1(val appConfig: AppConfig,
+class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
+                          val appConfig: AppConfig,
                           val walletAPI: Option[WalletAPI],
                           val pool: Option[Pool],
                           val currentTAA: Option[TransactionAuthorAgreement]

@@ -3,17 +3,17 @@ package com.evernym.verity.actor.agent.snapshot
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.KeyCreated
-import com.evernym.verity.actor.agent.SetupAgentEndpoint
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
 import com.evernym.verity.actor.agent.relationship.SelfRelationship
 import com.evernym.verity.actor.agent.user.UserAgentState
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.AgentWalletSetupProvider
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.testkit.mock.edge_agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.typesafe.config.{Config, ConfigFactory}
 
 class UserAgentSnapshotSpec
@@ -60,17 +60,15 @@ class UserAgentSnapshotSpec
     }
   }
 
-  lazy val mockEdgeAgent: MockEdgeAgent = buildMockConsumerEdgeAgent(
-    platform.agentActorContext.appConfig, mockAgencyAdmin)
+  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
 
-  lazy val userDID: DID = mockEdgeAgent.myDIDDetail.did
-  lazy val userDIDVerKey: VerKey = mockEdgeAgent.getVerKeyFromWallet(userDID)
+  lazy val userDID = mockEdgeAgent.myDIDDetail
 
   def initUserAgent(): Unit = {
-    val agentPairwiseKey = prepareNewAgentWalletData(userDID, userDIDVerKey, userAgentEntityId)
-    ua ! SetupAgentEndpoint(userDID, agentPairwiseKey.did)
+    val agentPairwiseKey = prepareNewAgentWalletData(userDID.didPair, userAgentEntityId)
+    ua ! SetupAgentEndpoint(userDID.didPair, agentPairwiseKey.didPair)
     expectMsg(Done)
-    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.did, agentPairwiseKey.verKey)
+    mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }
 
   def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
@@ -80,14 +78,14 @@ class UserAgentSnapshotSpec
   override def checkSnapshotState(state: UserAgentState,
                                   protoInstancesSize: Int): Unit = {
     state.publicIdentity.isDefined shouldBe false
-    state.agencyDID shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
+    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
     state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
-    state.thisAgentKeyId.contains(userDID) shouldBe false
+    state.thisAgentKeyId.contains(userDID.did) shouldBe false
 
     state.relationshipReq.name shouldBe SelfRelationship.empty.name
     state.relationshipReq.myDidDoc.isDefined shouldBe true
-    state.relationshipReq.myDidDoc_!.did shouldBe userDID
+    state.relationshipReq.myDidDoc_!.did shouldBe userDID.did
 
     //this is found only for pairwise actors and only for those protocols
     // which starts (the first message) from self-relationship actor and then

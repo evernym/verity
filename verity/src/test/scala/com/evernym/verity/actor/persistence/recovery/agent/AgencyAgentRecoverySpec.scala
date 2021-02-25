@@ -2,7 +2,8 @@ package com.evernym.verity.actor.persistence.recovery.agent
 
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
-import com.evernym.verity.actor.persistence.recovery.base.{AgencyAgentEventSetter, BaseRecoverySpec}
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.eventSetter.legacy.AgencyAgentEventSetter
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 
 class AgencyAgentRecoverySpec
@@ -12,6 +13,7 @@ class AgencyAgentRecoverySpec
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupBasicAgencyAgent()
+    closeClientWallets(Set(myAgencyAgentEntityId))
   }
 
   "KeyValueMapper actor" - {

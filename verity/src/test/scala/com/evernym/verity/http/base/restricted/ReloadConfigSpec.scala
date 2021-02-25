@@ -1,9 +1,9 @@
 package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.http.base.EndpointHandlerBaseSpec
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 
-trait ReloadConfigSpec { this : EndpointHandlerBaseSpec =>
+trait ReloadConfigSpec { this : EdgeEndpointBaseSpec =>
 
   def testReloadConfig(): Unit = {
     "when sent reload config api call" - {

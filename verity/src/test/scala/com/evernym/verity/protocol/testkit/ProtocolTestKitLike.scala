@@ -374,10 +374,10 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
     }
 
     // little helpers to help keep test scripts clean and concise
-    def backstate = container_!.backstate
-    def stateVersion = container_!.backstate.stateVersion
-    def roster = container_!.backstate.roster
-    def role = container_!.backstate.roster.selfRole_!
+    def backState = container_!.backState
+    def stateVersion = container_!.backState.stateVersion
+    def roster = container_!.backState.roster
+    def role = container_!.backState.roster.selfRole_!
     def state = container_!.state
     def participantId = container_!.participantId
     def eventRecorder = container_!.eventRecorder

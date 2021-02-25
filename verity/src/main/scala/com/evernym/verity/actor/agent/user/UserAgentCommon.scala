@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
+import akka.pattern.ask
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
@@ -16,7 +17,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
-import com.evernym.verity.cache.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
@@ -33,6 +33,7 @@ import com.evernym.verity.vault._
 import java.time.ZonedDateTime
 
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateAPIProvider, MsgStore}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
 
 import scala.concurrent.Future
 
@@ -70,9 +71,14 @@ trait UserAgentCommon
     case amw: AgentMsgWrapper if amw.isMatched(MFV_0_5, MSG_TYPE_GET_CONFIGS) =>
       handleGetConfigsMsg(GetConfigsMsgHelper.buildReqMsg(amw))
 
-    case amw: AgentMsgWrapper if amw.isMatched(MFV_0_5, MSG_TYPE_GET_MSGS) => handleGetMsgs(amw)
+    case amw: AgentMsgWrapper
+      if amw.isMatched(MFV_0_5, MSG_TYPE_GET_MSGS) ||
+        amw.isMatched(MFV_0_6, MSG_TYPE_GET_MSGS) => handleGetMsgs(amw)
 
-    case amw: AgentMsgWrapper if amw.isMatched(MFV_0_6, MSG_TYPE_GET_MSGS) => handleGetMsgs(amw)
+    case amw: AgentMsgWrapper
+      if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_MSG_STATUS) ||
+        amw.isMatched(MFV_0_6, MSG_TYPE_UPDATE_MSG_STATUS) =>
+      handleUpdateMsgStatus(amw)
   }
 
   /**
@@ -83,9 +89,13 @@ trait UserAgentCommon
     case gc: GetConfigs                 => sender ! AgentConfigs(getFilteredConfigs(gc.names))
     case sad: SetAgencyIdentity         => setAgencyIdentity(sad)
     case _: AgencyIdentitySet           => //nothing to od
+
+    //internal messages exchanged between actors
+    case gmr: GetMsgsReqMsg               => handleGetMsgsInternal(gmr)
+    case ums: UpdateMsgStatusReqMsg       => handleUpdateMsgStatusInternal(ums)
   }
 
-  override val receiveActorInitSpecificCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
+  override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
     case saw: SetAgentActorDetail   => setAgentActorDetail(saw)
     case sad: SetAgencyIdentity     => setAgencyIdentity(sad)
   }
@@ -102,18 +112,19 @@ trait UserAgentCommon
   def getMsgIdsEligibleForRetries: Set[MsgId] = failedMsgTracker.map(_.getMsgsEligibleForRetry).getOrElse(Set.empty)
 
   def setAgencyDIDForActor(): Future[Any] = {
-    val gcop = GetCachedObjectParam(Set(KeyDetail(AGENCY_DID_KEY, required = false)), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
-    agentActorContext.generalCache.getByParamAsync(gcop).mapTo[CacheQueryResponse].map { cqr =>
-      self ! SetAgencyIdentity(cqr.getAgencyDIDReq)
+    agencyDidPairFutByCache().flatMap { adp =>
+      self ? SetAgencyIdentity(adp)
     }
   }
 
-  override def postActorRecoveryCompleted(): List[Future[Any]] = {
+  override def preAgentStateFix(): Future[Any] = {
     msgStore.updateMsgStateMetrics()
-    List(setAgencyDIDForActor()) ++
-      ownerAgentKeyDID.map { oAgentDID =>
-      List(setAgentActorDetail(oAgentDID))
-    }.getOrElse(List.empty)
+    val fut1 = Seq(setAgencyDIDForActor())
+    val fut2 = ownerAgentKeyDIDPair.map { oadp =>
+      setAgentActorDetail(oadp)
+    }
+    val listOfFut = fut1 ++ fut2
+    Future.sequence(listOfFut)
   }
 
   def setSponsorDetail(s: SponsorRel): Unit = {
@@ -122,15 +133,17 @@ trait UserAgentCommon
   }
 
   def setAgentActorDetail(saw: SetAgentActorDetail): Unit = {
-    logger.debug("'SetAgentActorDetail' received", (LOG_KEY_SRC_DID, saw.did), (LOG_KEY_PERSISTENCE_ID, persistenceId))
-    setAndOpenWalletIfExists(saw.actorEntityId)
-    sender ! AgentActorDetailSet(saw.did, saw.actorEntityId)
+    logger.debug("'SetAgentActorDetail' received",
+      (LOG_KEY_SRC_DID, saw.didPair.DID), (LOG_KEY_PERSISTENCE_ID, persistenceId))
+    updateAgentWalletId(saw.actorEntityId)
+    sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
   }
 
   def setAgencyIdentity(saw: SetAgencyIdentity): Unit = {
-    logger.debug("'SetAgencyIdentity' received", (LOG_KEY_SRC_DID, saw.did), (LOG_KEY_PERSISTENCE_ID, persistenceId))
-    setAgencyDID(saw.did)
-    sender ! AgencyIdentitySet(saw.did)
+    logger.debug("'SetAgencyIdentity' received",
+      (LOG_KEY_SRC_DID, saw.didPair.DID), (LOG_KEY_PERSISTENCE_ID, persistenceId))
+    setAgencyDIDPair(saw.didPair)
+    sender ! AgencyIdentitySet(saw.didPair)
   }
 
   def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}

@@ -2,11 +2,28 @@ package com.evernym.verity.protocol.engine.asyncProtocol
 
 trait AsyncProtocolProgress {
 
-  var asyncServices: Set[AsyncProtocolService] = Set()
+  type AsyncCallCount = Int
 
-  def addsAsyncProtocolService(s: AsyncProtocolService): Unit = asyncServices += s
-  def removesAsyncProtocolService(s: AsyncProtocolService): Unit = asyncServices -= s
-  def clearInternalAsyncServices(): Unit = asyncServices = Set()
+  var asyncServices: Map[AsyncProtocolService, AsyncCallCount] = Map()
+
+  def addsAsyncProtocolService(s: AsyncProtocolService): Unit = {
+    val cur = asyncServices.getOrElse(s, 0)
+    s match {
+        // SegmentStateStore does not support stacking properly, this is workaround.
+      case SegmentStateStoreProgress if cur == 1 =>
+      case _ => asyncServices += (s -> (cur + 1))
+    }
+  }
+
+  def removesAsyncProtocolService(s: AsyncProtocolService): Unit = {
+    val cur = asyncServices.getOrElse(s, 0)
+    if (cur > 1)
+      asyncServices += (s -> (cur - 1))
+    else
+      asyncServices -= s
+  }
+
+  def clearInternalAsyncServices(): Unit = asyncServices = Map()
 
 
   /**

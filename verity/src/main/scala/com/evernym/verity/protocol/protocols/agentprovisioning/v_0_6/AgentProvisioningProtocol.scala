@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
@@ -11,7 +12,7 @@ import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AgentWalletSetupProvider, AskUserAgentCreator}
+import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
@@ -25,7 +26,6 @@ trait AgentProvisioningEvt
 class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String])
     extends Protocol[AgentProvisioningProtocol,Role,ProtoMsg,Any,State,String](AgentProvisioningProtoDef)
       with HasLogger
-      with AgentWalletSetupProvider
       with DEPRECATED_HasWallet {
 
   val logger: Logger = ctx.logger
@@ -91,15 +91,16 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
     val fromDID = ca.fromDID
     val fromDIDVerKey = ca.fromDIDVerKey
+    val fromDIDPair = DidPair(fromDID, fromDIDVerKey)
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
-    val agentPairwiseKey = prepareNewAgentWalletData(fromDID, fromDIDVerKey, aws)
-    walletAPI.executeSync[TheirKeyStored](StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true))
+    val agentPairwiseKey = prepareNewAgentWalletData(fromDIDPair, aws)
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(fromDID, fromDIDVerKey, ignoreIfAlreadyExists=true)))
     ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(agentPairwiseKey.did, Option(fromDID)))) //TODO: confirm if this is correct
     val provisionerPartiId = oa.parameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
     ctx.apply(ProvisionerPartiSet(provisionerPartiId))
     ctx.apply(AgentPairwiseKeyCreated(agentPairwiseKey.did, agentPairwiseKey.verKey))
     val endpointDetail = oa.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
-    ctx.signal(AskUserAgentCreator(fromDID, agentPairwiseKey.did, endpointDetail))
+    ctx.signal(AskUserAgentCreator(fromDIDPair, agentPairwiseKey.didPair, endpointDetail))
   }
 
   private def handleAgentCreated(apkc: State.AgentPairwiseKeyCreated): Unit = {

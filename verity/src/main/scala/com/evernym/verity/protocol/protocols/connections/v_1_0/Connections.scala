@@ -3,7 +3,6 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 import java.nio.charset.StandardCharsets
 import java.nio.{ByteBuffer, ByteOrder}
 import java.time.Instant
-
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
@@ -114,7 +113,7 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
           ctx.signal(Signal.UnhandledError("not supporting more than one ver keys"))
         case Right(m: Msg.InviteWithKey) =>
           val myDID = ctx.getRoster.selfId_!
-          ctx.wallet.verKey(myDID) match {
+          ctx.wallet.verKey(myDID) {
             case Success(myVerKey) =>
               ctx.apply(InviteAccepted(Some(ProvisionalRelationship(myDID, myVerKey, ctx.serviceEndpoint,
                 m.recipientKeys, m.routingKeys_!, m.serviceEndpoint)), a.label))
@@ -141,7 +140,7 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
     val rel = state.rel
     val didDoc = DIDDoc(rel.myDid, rel.myVerKey, rel.myEndpoint, m.myRoutingKeys)
     val conn = Msg.Connection(rel.myDid, didDoc.toDIDDocFormatted)
-    Connections.buildConnectionSig(conn, rel.myVerKey, ctx.wallet) match {
+    Connections.buildConnectionSig(conn, rel.myVerKey, ctx.wallet) {
       case Success(sigBlock: SigBlockCommunity) =>
         ctx.apply(ResponseSent(Some(Relationship(rel.myDid, rel.myVerKey, rel.myEndpoint,
           rel.theirDid, rel.theirVerKey, rel.theirEndpoint))))
@@ -271,7 +270,7 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
   def receivedConnRequest(m: Msg.ConnRequest): Unit = {
     val myDID = ctx.getRoster.selfId_!
     ctx.signal(Signal.ConnRequestReceived(m.connection, myDID))
-    ctx.wallet.verKey(myDID) match {
+    ctx.wallet.verKey(myDID)  {
       case Success(myVerKey) =>
         val theirDidDoc = m.connection.did_doc.toDIDDoc
         // this prioritizes the id in the DIDDoc over the DID in the message
@@ -280,17 +279,18 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
         // But we still have a hole in the DID itself. We don't currently use the DID outside its parts
         // so it is fine for now.
         val theirDiD = Option(theirDidDoc.getDID).getOrElse(m.connection.DID)
-        ctx.wallet.storeTheirDid(theirDiD, theirDidDoc.getVerkey)
-        val rel = Relationship(myDID, myVerKey, ctx.serviceEndpoint, theirDiD, theirDidDoc.getVerkey, theirDidDoc.getEndpoint, theirDidDoc.routingKeys)
-        ctx.apply(RequestReceived(Some(rel)))
-        ctx.signal(Signal.SetupTheirDidDoc(myDID, theirDidDoc.verkey, theirDidDoc.endpoint, theirDidDoc.routingKeys, Option(theirDiD)))
+        ctx.wallet.storeTheirDid (theirDiD, theirDidDoc.getVerkey) { _ =>
+          val rel = Relationship(myDID, myVerKey, ctx.serviceEndpoint, theirDiD, theirDidDoc.getVerkey, theirDidDoc.getEndpoint, theirDidDoc.routingKeys)
+          ctx.apply(RequestReceived(Some(rel)))
+          ctx.signal(Signal.SetupTheirDidDoc(myDID, theirDidDoc.verkey, theirDidDoc.endpoint, theirDidDoc.routingKeys, Option(theirDiD)))
+        }
       case Failure(_) =>
         sendProblemReport("request_processing_error", "error while processing request")
     }
   }
 
   def receivedConnResponse(s: State.RequestSent, m: Msg.ConnResponse): Unit = {
-    Connections.buildConnFromConnSig(m.`connection~sig`, ctx.wallet) match {
+    Connections.buildConnFromConnSig(m.`connection~sig`, ctx.wallet) {
       case Success(conn) =>
         val theirDidDoc = conn.did_doc.toDIDDoc
         ctx.signal(Signal.ConnResponseReceived(conn))
@@ -344,43 +344,53 @@ object Connections {
     bb.array
   }
 
-  def buildConnectionSig(conn: Msg.Connection, verKey: String, wallet: WalletAccess): Try[SigBlockCommunity] = {
+  def buildConnectionSig(conn: Msg.Connection, verKey: String, wallet: WalletAccess)
+                        (handler: Try[SigBlockCommunity] => Unit): Unit = {
     val conn_str = DefaultMsgCodec.toJson(conn)
     val bytes = curTimeStampBytes() ++ conn_str.getBytes
     val b64_encoded = Base64Util.getBase64UrlEncoded(bytes)
-    wallet.sign(bytes)
-      .map{ sig =>
-        SigBlockCommunity(
-          sig.toBase64UrlEncoded,
-          b64_encoded,
-          sig.verKey
-        )
-      }
+
+    wallet.sign(bytes) { result =>
+      handler(
+        result.map { sig =>
+          SigBlockCommunity(
+            sig.toBase64UrlEncoded,
+            b64_encoded,
+            sig.verKey
+          )
+        }
+      )
+    }
   }
 
   // Build a Connection object from a SigBlockCommunity. Verifies the signature as well and returns an error
   // if the signature is not verified or the verkey present in the SigBlockCommunity is different from the
   // one in the DID doc in Connection
-  def buildConnFromConnSig(sigBlock: SigBlockCommunity, wallet: WalletAccess): Try[Msg.Connection] = {
+  def buildConnFromConnSig(sigBlock: SigBlockCommunity, wallet: WalletAccess)
+                          (handler: Try[Msg.Connection] => Unit): Unit = {
     val conn_bytes = Base64Util.getBase64UrlDecoded(sigBlock.sig_data)
     val connJson = new String(conn_bytes.drop(8), StandardCharsets.UTF_8) //dropping timestamp portion
-    val conn = DefaultMsgCodec.fromJson[Msg.Connection](connJson)
-    val isVerified =
+    val conn: Msg.Connection = DefaultMsgCodec.fromJson[Msg.Connection](connJson)
+
     wallet.verify(
       conn_bytes,
       Base64Util.getBase64UrlDecoded(sigBlock.signature),
       sigBlock.signer,
-      SIGN_ED25519_SHA512_SINGLE
-    ).recover {
-      case ex =>
-        throw InvalidSigException(s"Error during exception - ${ex.getMessage}")
-    }.get
-    if (!isVerified) {
-      throw InvalidSigException("Signature verification failed")
+      SIGN_ED25519_SHA512_SINGLE) {
+      case Success(isVerified) =>
+        if (isVerified) {
+          val theirDidDoc = conn.did_doc.toDIDDoc
+          val (theirDid, theirVerKey) = (theirDidDoc.getDID, theirDidDoc.getVerkey)
+          wallet.storeTheirDid(theirDid, theirVerKey) {
+            case Success(_) => handler(Success(conn))
+            case Failure(ex) =>
+              handler(Failure(new Exception(s"Error during storing their did - ${ex.getMessage}")))
+          }
+        }
+        else
+          handler(Failure(InvalidSigException("Signature verification failed")))
+      case Failure(ex) =>
+        handler(Failure(InvalidSigException(s"Error during verification - ${ex.getMessage}")))
     }
-    val theirDidDoc = conn.did_doc.toDIDDoc
-    val (theirDid, theirVerKey) = (theirDidDoc.getDID, theirDidDoc.getVerkey)
-    wallet.storeTheirDid(theirDid, theirVerKey)
-    Try(conn)
   }
 }

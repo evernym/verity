@@ -10,46 +10,54 @@ trait AnonCredRequests {
   def createSchema(issuerDID: DID,
                    name: String,
                    version: String,
-                   data: String): Try[(String, String)]
+                   data: String)
+                  (handler: Try[(String, String)] => Unit): Unit
 
   def createCredDef(issuerDID: DID,
                     schemaJson: String,
                     tag: String,
                     sigType: Option[String]=None,
-                    revocationDetails: Option[String]=None): Try[(String, String)]
+                    revocationDetails: Option[String]=None)
+                   (handler: Try[(String, String)] => Unit): Unit
 
-  def createCredOffer(credDefId: String): Try[String]
+  def createCredOffer(credDefId: String)(handler: Try[String] => Unit): Unit
 
   def createCredReq(credDefId: String,
                     proverDID: DID,
                     credDefJson: String,
-                    credOfferJson: String): Try[CreatedCredReq]
+                    credOfferJson: String)
+                   (handler: Try[CreatedCredReq] => Unit): Unit
 
   def createCred(credOfferJson: String,
                  credReqJson: String,
                  credValuesJson: String,
                  revRegistryId: String,
-                 blobStorageReaderHandle: Int): Try[String]
+                 blobStorageReaderHandle: Int)
+                (handler: Try[String] => Unit): Unit
 
   def storeCred(credId: String,
                 credDefJson: String,
                 credReqMetadataJson: String,
                 credJson: String,
-                revRegDefJson: String): Try[String]
+                revRegDefJson: String)
+               (handler: Try[String] => Unit): Unit
 
-  def credentialsForProofReq(proofRequest: String): Try[String]
+  def credentialsForProofReq(proofRequest: String)
+                            (handler: Try[String] => Unit): Unit
 
   def createProof(proofRequest: String,
                   usedCredentials: String,
                   schemas: String,
                   credentialDefs: String,
-                  revStates: String): Try[String]
+                  revStates: String)
+                 (handler: Try[String] => Unit): Unit
 
   def verifyProof(proofRequest: String,
                   proof: String,
                   schemas: String,
                   credentialDefs: String,
                   revocRegDefs: String,
-                  revocRegs: String): Try[Boolean]
+                  revocRegs: String)
+                 (handler: Try[Boolean] => Unit): Unit
 
 }

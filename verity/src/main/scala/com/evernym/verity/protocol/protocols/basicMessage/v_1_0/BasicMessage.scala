@@ -1,17 +1,14 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
-import java.util.UUID
 
-import com.evernym.verity.Base64Encoded
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n, Timing => BaseTiming}
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
-import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
-import com.evernym.verity.util.TimeUtil._
+
 
 sealed trait Role
 object Role {

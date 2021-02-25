@@ -2,23 +2,17 @@ package com.evernym.verity.protocol.protocols.connecting.common
 
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status._
-import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.{DID, Parameters, UNINITIALIZED, VerKey}
 import com.evernym.verity.protocol.protocols._
 
 trait ConnectingStateBase[S]
   extends HasPairwiseConnectionState
-    with ConnectionMsgAndDeliveryState
-    with HasAppConfig { this: S =>
+    with ConnectionMsgAndDeliveryState { this: S =>
 
   var parameters: Parameters = _
   var stateStr: String = UNINITIALIZED
   var agentKeyDlgProof: Option[AgentKeyDlgProof] = None
-
-  def appConfig: AppConfig
-  def agentMsgTransformer: AgentMsgTransformer
 
   final def agencyDIDOpt: Option[DID] = parameters.paramValue(AGENCY_DID)
 

@@ -5,6 +5,7 @@ import "scalapb/scalapb.proto";
 package com.evernym.verity.actor.agent;
 
 message DidPair {
+    option (scalapb.message).extends = "com.evernym.verity.actor.DidPairBase";
     string DID = 1 [(scalapb.field).scala_name = "DID"];
     string verKey = 2;
 }

@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.util.http_listener
 
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
-import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, pathPrefix, post, reject}
+import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, parameters, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.HttpCustomTypes
 
@@ -11,7 +11,7 @@ trait PackedMsgHttpListener
 
   import akka.http.scaladsl.model.StatusCodes._
 
-  lazy val listeningUrl: String = s"${listeningEndpoint.url}/packed-msg"
+  lazy val listeningUrl: String = s"${listeningEndpoint.url}/packed-msg?qp1=qpv1"
 
   def handleAgentMsgReqForOctetStreamContentType: Route = {
     import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
@@ -38,7 +38,13 @@ trait PackedMsgHttpListener
       pathPrefix(s"${listeningEndpoint.path}") {
         extractRequest { implicit req: HttpRequest =>
           post {
-            agentMsgHandler
+            parameters('qp1 ? "N") { qp1 =>
+              if (qp1 == "qpv1") {
+                agentMsgHandler
+              } else {
+                reject
+              }
+            }
           }
         }
       }

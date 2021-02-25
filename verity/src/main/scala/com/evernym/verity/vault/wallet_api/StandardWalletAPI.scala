@@ -9,11 +9,9 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-
 class StandardWalletAPI(walletService: WalletService)
   extends WalletAPI
-    with FutureConverter
-    with AsyncToSync {
+    with FutureConverter {
 
   val logger: Logger = getLoggerByClass(classOf[WalletAPI])
 

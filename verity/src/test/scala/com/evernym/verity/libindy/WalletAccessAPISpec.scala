@@ -1,20 +1,21 @@
 package com.evernym.verity.libindy
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.libindy.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.external_api_access.InvalidSignType
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
-import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
+import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
 
 import scala.util.{Failure, Success}
 
-class WalletAccessAPISpec extends BasicSpec with HasTestWalletAPI {
+class WalletAccessAPISpec extends BasicSpec with HasDefaultTestWallet {
 
-  agentWalletAPI.walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
+  testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
   val selfParticipantId: ParticipantId = ParticipantUtil.participantId(
-    agentWalletAPI.walletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
-  val walletAccess = new WalletAccessAPI(appConfig, agentWalletAPI.walletAPI, selfParticipantId)
+    testWalletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
+  val walletAccess = new WalletAccessAPI(new TestAppConfig, testWalletAPI, selfParticipantId, {}, {})
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"
@@ -25,7 +26,7 @@ class WalletAccessAPISpec extends BasicSpec with HasTestWalletAPI {
 
   "WalletAccessLibindy newDid" - {
     "should succeed" in {
-      walletAccess.newDid() match {
+      walletAccess.newDid() {
         case Success((newDid, newVerKey)) =>
           did = newDid
           verKey = newVerKey
@@ -37,7 +38,7 @@ class WalletAccessAPISpec extends BasicSpec with HasTestWalletAPI {
 
   "WalletAccessLibindy sign" - {
     "sign of data should succeed" in {
-      walletAccess.sign(TEST_MSG) match {
+      walletAccess.sign(TEST_MSG) {
         case Success(signatureResult) => signature = signatureResult.signature
         case Failure(cause) =>
           fail(cause)
@@ -45,29 +46,41 @@ class WalletAccessAPISpec extends BasicSpec with HasTestWalletAPI {
     }
 
     "sign request with invalid sign type should fail" in {
-      walletAccess.sign(TEST_MSG, INVALID_SIGN_TYPE) shouldBe Failure(InvalidSignType(INVALID_SIGN_TYPE))
+      walletAccess.sign(TEST_MSG, INVALID_SIGN_TYPE) { result =>
+        result shouldBe Failure(InvalidSignType(INVALID_SIGN_TYPE))
+      }
     }
   }
 
   "WalletAccessLibindy verify" - {
     "verify request with correct signature should succeed" in {
-      walletAccess.verify(selfParticipantId, TEST_MSG, signature) shouldBe Success(true)
+      walletAccess.verify(selfParticipantId, TEST_MSG, signature) { result =>
+        result shouldBe Success(true)
+      }
     }
 
     "verify request with modified msg signature should return false" in {
-      walletAccess.verify(selfParticipantId, "modified msg".getBytes(), signature) shouldBe Success(false)
+      walletAccess.verify(selfParticipantId, "modified msg".getBytes(), signature) { result =>
+        result shouldBe Success(false)
+      }
     }
 
     "verify request with invalid data should fail" in {
-      walletAccess.verify(selfParticipantId, TEST_MSG, "short sig".getBytes()).isSuccess shouldBe false
+      walletAccess.verify(selfParticipantId, TEST_MSG, "short sig".getBytes()) { result =>
+        result.isSuccess shouldBe false
+      }
     }
 
     "verify request with invalid VerKey used should return false" in {
-      walletAccess.verify(selfParticipantId, TEST_MSG, signature, Some(verKey)) shouldBe Success(false)
+      walletAccess.verify(selfParticipantId, TEST_MSG, signature, Some(verKey)) { result =>
+        result shouldBe Success(false)
+      }
     }
 
     "verify request with invalid sign type should fail" in {
-      walletAccess.verify(selfParticipantId, TEST_MSG, signature, None, INVALID_SIGN_TYPE) shouldBe Failure(InvalidSignType(INVALID_SIGN_TYPE))
+      walletAccess.verify(selfParticipantId, TEST_MSG, signature, None, INVALID_SIGN_TYPE) { result =>
+        result shouldBe Failure(InvalidSignType(INVALID_SIGN_TYPE))
+      }
     }
   }
 

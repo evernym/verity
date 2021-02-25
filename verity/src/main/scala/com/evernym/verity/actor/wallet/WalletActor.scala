@@ -12,12 +12,12 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.StatusDetail
-import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
-import com.evernym.verity.vault.{KeyParam, WalletExt, WalletNotOpened, WalletProvider}
+import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -112,7 +112,11 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
         walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
         .map(w => SetWallet(Option(w)))
         .recover {
-          case _: WalletNotOpened => SetWallet(None)
+          case _ @ (_: WalletDoesNotExist)  =>
+            SetWallet(None)
+          case e =>
+            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage)
+            throw e
         }.pipeTo(self)
     }
   }
@@ -231,6 +235,8 @@ case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter)
 
 case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
+case object Close extends WalletCommand
+
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage
 
@@ -238,7 +244,9 @@ trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase
 case object WalletAlreadyCreated extends WalletCreatedBase
 
-case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
+case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 
 case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
 

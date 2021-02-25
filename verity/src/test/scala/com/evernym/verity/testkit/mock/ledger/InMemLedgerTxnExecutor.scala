@@ -37,7 +37,7 @@ class MockInMemLedgerTxnExecutor(initData: InitLedgerData)
   override def prepareSchemaForEndorsement(submitterDID: DID,
                                            schemaJson: String,
                                            endorserDID: DID,
-                                           walletAccess: WalletAccess): LedgerRequest = ???
+                                           walletAccess: WalletAccess): Future[LedgerRequest] = ???
 
   override def writeCredDef(submitterDID: DID,
                             credDefJson: String,
@@ -46,7 +46,7 @@ class MockInMemLedgerTxnExecutor(initData: InitLedgerData)
   override def prepareCredDefForEndorsement(submitterDID: DID,
                                             credDefJson: String,
                                             endorserDID: DID,
-                                            walletAccess: WalletAccess): LedgerRequest = ???
+                                            walletAccess: WalletAccess): Future[LedgerRequest] = ???
 
   override def getSchema(submitter: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = ???
 

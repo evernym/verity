@@ -6,9 +6,8 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
-import com.evernym.verity.apphealth.AppStateConstants.CONTEXT_GENERAL
-import com.evernym.verity.apphealth.{AppStateManager, ErrorEventParam, MildSystemError}
-import com.evernym.verity.cache._
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, AppStateEvent}
+import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.ledger.LedgerSvcException
@@ -16,6 +15,8 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
 import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
@@ -29,13 +30,14 @@ trait AgentMsgSender
   extends HasGeneralCache
     with HasLogger {
 
+  def publishAppStateEvent (event: AppStateEvent): Unit
   def msgSendingSvc: MsgSendingSvc
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit
 
   private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity): Future[CacheQueryResponse] = {
     runWithInternalSpan("getAgencyIdentityFut", "AgentMsgSender") {
       val gadp = GetAgencyIdentityCacheParam(localAgencyDID, gad)
-      val gadfcParam = GetCachedObjectParam(Set(KeyDetail(gadp, required = true)), AGENCY_DETAIL_CACHE_FETCHER_ID)
+      val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER_ID)
       generalCache.getByParamAsync(gadfcParam)
     }
   }
@@ -50,27 +52,15 @@ trait AgentMsgSender
       "error while getting endpoint from ledger (" +
         "possible-causes: ledger pool not reachable/up/responding etc, " +
         s"target DID: $theirAgencyDID)"
-    AppStateManager << ErrorEventParam(MildSystemError, CONTEXT_GENERAL,
-      new RemoteEndpointNotFoundErrorException(Option(errorMsg)), Option(errorMsg))
+    publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
+      new RemoteEndpointNotFoundErrorException(Option(errorMsg)), Option(errorMsg)))
     LedgerSvcException(errorMsg)
-  }
-
-  private def parseUrlParam(ep: String): UrlParam = {
-    try {
-      UrlParam(ep)
-    } catch {
-      case e: Exception =>
-        val errorMsg = s"error while parsing endpoint: ${Exceptions.getErrorMsg(e)}"
-        AppStateManager << ErrorEventParam(MildSystemError, CONTEXT_GENERAL,
-          new InvalidValueException(Option(errorMsg)), Option(errorMsg))
-        throw e
-    }
   }
 
   private def getRemoteAgencyEndpoint(implicit sm: SendMsgParam): Future[String] = {
     sm.theirRoutingParam.route match {
       case Left(theirAgencyDID) =>
-        theirAgencyEndpointFut(sm.localAgencyDID, theirAgencyDID).mapTo[CacheQueryResponse].map { cqr =>
+        theirAgencyEndpointFut(sm.localAgencyDID, theirAgencyDID).map { cqr =>
           cqr.getAgencyInfoReq(theirAgencyDID).endpointOpt.getOrElse(
             throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
           )
@@ -86,25 +76,25 @@ trait AgentMsgSender
     logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
     val epFut = getRemoteAgencyEndpoint
     epFut.map { ep =>
-      val urlParam = parseUrlParam(ep)
+      val urlParam = UrlParam(ep)
       logger.debug("remote agency detail received for msg to be sent to remote agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
       logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlParam))
       val respFut = msgSendingSvc.sendBinaryMsg(sm.msg)(urlParam)
       respFut.map {
         case Right(pm: PackedMsg) =>
           logger.debug("msg successfully sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
-          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_SENT.statusCode, responseMsg = Option(pm)))
+          handleMsgDeliveryResult(MsgDeliveryResult.success(sm, MSG_DELIVERY_STATUS_SENT, pm))
         case Left(e: HandledErrorException) =>
-          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+          handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
         case e: Any =>
-          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString)))
+          handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, e.toString))
       }.recover {
         case e: Exception =>
-          handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+          handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
       }
     }.recover {
       case e: Exception =>
-        handleMsgDeliveryResult(MsgDeliveryResult(sm, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(Exceptions.getErrorMsg(e))))
+        handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
         throw e
     }
   }
@@ -117,6 +107,18 @@ case class SendMsgParam(uid: MsgId,
                         theirRoutingParam: TheirRoutingParam,
                         isItARetryAttempt: Boolean)
 
+object MsgDeliveryResult {
+  def success(sm: SendMsgParam,
+            statusDetail: StatusDetail,
+            responseMsg: PackedMsg): MsgDeliveryResult = {
+    MsgDeliveryResult(sm, statusDetail.statusCode, None, Option(responseMsg))
+  }
+  def failed(sm: SendMsgParam,
+            statusDetail: StatusDetail,
+            statusMsg: String): MsgDeliveryResult = {
+    MsgDeliveryResult(sm, statusDetail.statusCode, Option(statusMsg), None)
+  }
+}
 case class MsgDeliveryResult(sm: SendMsgParam,
                              statusCode: String,
                              statusMsg: Option[String]=None,

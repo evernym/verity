@@ -1,8 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_1_0
 
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
-import com.evernym.verity.testkit.mock.HasCloudAgent
-import com.evernym.verity.testkit.mock.agent.MockAgent
+import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 /**
  * this will handle received/incoming/response agent messages

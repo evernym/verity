@@ -98,7 +98,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
 
   //this does have some overhead as it will create a new connection for each request
   private def sendByConnectionLevelFlowAPI(request: HttpRequest): Future[HttpResponse] = {
-    val up = UrlParam(request.uri.toString)   //TODO: finalize this
+    val up = UrlParam(request.uri.toString)
     val connectionFlow =
       if (up.isHttps) Http().outgoingConnectionHttps(up.host, up.port)
       else Http().outgoingConnection(up.host, up.port)

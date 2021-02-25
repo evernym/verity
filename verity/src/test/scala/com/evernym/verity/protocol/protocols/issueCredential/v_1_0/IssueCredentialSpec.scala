@@ -351,7 +351,7 @@ class IssueCredentialSpec
 
       val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
 
-      issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+      issuer.backState.roster.selfRole_! shouldBe Role.Issuer()
 
       holder ~ Ctl.AttachedOffer(attachedOffer)
       holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
@@ -359,7 +359,7 @@ class IssueCredentialSpec
         s.offer.credential_preview.attributes.head.value shouldBe "Joe"
       }
 
-      holder.backstate.roster.selfRole_! shouldBe Role.Holder()
+      holder.backState.roster.selfRole_! shouldBe Role.Holder()
 
       holder ~ buildSendRequest()
       holder expect signal[SignalMsg.Sent]
@@ -439,7 +439,7 @@ class IssueCredentialSpec
 
       val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
 
-      issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+      issuer.backState.roster.selfRole_! shouldBe Role.Issuer()
 
       holder ~ Ctl.AttachedOffer(attachedOffer)
       holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
@@ -447,7 +447,7 @@ class IssueCredentialSpec
         s.offer.credential_preview.attributes.head.value shouldBe "Joe"
       }
 
-      holder.backstate.roster.selfRole_! shouldBe Role.Holder()
+      holder.backState.roster.selfRole_! shouldBe Role.Holder()
 
       holder ~ buildSendRequest()
       holder expect signal[SignalMsg.Sent]
@@ -478,7 +478,7 @@ class IssueCredentialSpec
       issuer urlShortening MockableUrlShorteningAccess.shorteningFailed
 
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
-      issuer.backstate.roster.selfRole_! shouldBe Role.Issuer()
+      issuer.backState.roster.selfRole_! shouldBe Role.Issuer()
 
       // failed shortening
       val problemReport = issuer expect signal[SignalMsg.ProblemReport]

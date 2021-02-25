@@ -32,6 +32,17 @@ trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>
       }
     }
 
+    "when sent UPDATE_COM_METHOD msg with invalid protocol" - {
+      "should respond with error msg" in {
+        buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(TestComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT,
+          Option("ws:/abc"))).msg) ~> epRoutes ~> check {
+          status shouldBe BadRequest
+          responseTo[StatusDetailResp] shouldBe StatusDetailResp(INVALID_VALUE.withMessage(
+            "invalid http endpoint: 'ws:/abc' reason: unknown protocol: ws"))
+        }
+      }
+    }
+
     "when sent UPDATE_COM_METHOD msg with missing value" - {
       "should respond with error msg" in {
         buildAgentPostReq(mockEdgeAgent.v_0_5_req.prepareUpdateComMethodMsgForAgency(TestComMethod("1",

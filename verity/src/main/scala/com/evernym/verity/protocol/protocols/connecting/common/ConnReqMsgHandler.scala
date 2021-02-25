@@ -130,7 +130,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
     val urlMapperPathPrefix = Option(appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
     val urlMapperEndpoint = UrlParam(urlMapperSvcHost, urlMapperSvcPort, urlMapperPathPrefix)
     implicit val param: CreateAndSendTinyUrlParam = CreateAndSendTinyUrlParam(uid, phoneNo, urlMapperEndpoint)
-    val domainId = ctx.getBackstate.domainId
+    val domainId = ctx.getBackState.domainId
     createAndSendTinyUrl(`userName_!`, domainId, tryCount = 1)
   }
 

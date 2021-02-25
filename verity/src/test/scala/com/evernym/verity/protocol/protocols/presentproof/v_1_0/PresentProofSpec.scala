@@ -258,7 +258,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
 
-        verifier.backstate.roster.selfRole_! shouldBe Role.Verifier
+        verifier.backState.roster.selfRole_! shouldBe Role.Verifier
         verifier.expectAs(state[States.RequestSent]){ s =>
           s.data.requests should have size 1
           nonce = Some(s.data.requests.head.nonce)
@@ -374,7 +374,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
 
-        verifier.backstate.roster.selfRole_! shouldBe Role.Verifier
+        verifier.backState.roster.selfRole_! shouldBe Role.Verifier
         verifier.expectAs(state[States.RequestSent]){ s =>
           s.data.requests should have size 1
           nonce = Some(s.data.requests.head.nonce)

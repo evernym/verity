@@ -24,8 +24,8 @@ class AppStateManager(val notifierService: SysServiceNotifier,
   // these are published events, and sender may not be available for these events
   // and hence should not respond anything back
   private def handleEvents: Receive = {
-    case sep: SuccessEvent     => processSuccessEvent (sep)
-    case eep: ErrorEvent       => processErrorEvent (eep)
+    case se: SuccessEvent           => processSuccessEvent (se)
+    case ee: ErrorEvent             => processErrorEvent (ee)
     case StartDraining              => startDraining()
     case RecoverIfNeeded(context)   => recoverIfNeeded(context)
   }

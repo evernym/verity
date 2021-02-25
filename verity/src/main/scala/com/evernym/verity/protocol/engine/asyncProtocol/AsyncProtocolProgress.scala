@@ -2,7 +2,9 @@ package com.evernym.verity.protocol.engine.asyncProtocol
 
 trait AsyncProtocolProgress {
 
-  var asyncServices: Map[AsyncProtocolService, Int] = Map()
+  type AsyncCallCount = Int
+
+  var asyncServices: Map[AsyncProtocolService, AsyncCallCount] = Map()
 
   def addsAsyncProtocolService(s: AsyncProtocolService): Unit = {
     val cur = asyncServices.getOrElse(s, 0)

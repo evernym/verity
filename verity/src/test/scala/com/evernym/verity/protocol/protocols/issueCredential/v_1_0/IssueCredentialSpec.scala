@@ -314,7 +314,7 @@ class IssueCredentialSpec
       val invite = new String(Base64Util.getBase64UrlDecoded(base64))
       val inviteObj = new JSONObject(invite)
 
-      inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+      inviteObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation") or be ("https://didcomm.org/out-of-band/1.0/invitation"))
       inviteObj.has("@id") shouldBe true
 
       inviteObj.has("@id") shouldBe true
@@ -346,7 +346,7 @@ class IssueCredentialSpec
       val attachmentObj = new JSONObject(attachment)
 
       attachmentObj.getString("@id") should not be empty
-      attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
+      attachmentObj.getString("@type") should (be  ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential") or be ("https://didcomm.org/issue-credential/1.0/offer-credential"))
       attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
 
       val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)
@@ -402,7 +402,7 @@ class IssueCredentialSpec
       val invite = new String(Base64Util.getBase64UrlDecoded(base64))
       val inviteObj = new JSONObject(invite)
 
-      inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+      inviteObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation") or be ("https://didcomm.org/out-of-band/1.0/invitation"))
       inviteObj.has("@id") shouldBe true
 
       inviteObj.has("@id") shouldBe true
@@ -434,7 +434,7 @@ class IssueCredentialSpec
       val attachmentObj = new JSONObject(attachment)
 
       attachmentObj.getString("@id") should not be empty
-      attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential"
+      attachmentObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/offer-credential")or be ("https://didcomm.org/issue-credential/1.0/offer-credential"))
       attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
 
       val attachedOffer: OfferCred = DefaultMsgCodec.fromJson[OfferCred](attachment)

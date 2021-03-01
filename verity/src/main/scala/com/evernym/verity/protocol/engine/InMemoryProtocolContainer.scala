@@ -2,18 +2,19 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
-import com.evernym.verity.protocol.actor.ServiceDecorator
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, LedgerAccessController, WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.container.actor.ServiceDecorator
+import com.evernym.verity.protocol.engine.asyncService.wallet.{WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine.asyncService.ledger.{LedgerAccess, LedgerAccessController}
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.journal.JournalContext
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Read, ReadStorage, Write, WriteStorage}
-import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
                                                   participantId: ParticipantId,
@@ -69,45 +70,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   }
 
   val eventRecorder: RecordsEvents = pce.eventRecorder.getOrElse(new SimpleEventRecorder(definition.initialState))
-  val storageService: StorageService = new StorageService {
-    var S3Mock: Map[String, Array[Byte]] = Map()
-    def read(id: VerKey, cb: Try[Array[Byte]] => Unit): Unit = {
-      S3Mock.get(id) match {
-        case Some(x) => cb(Success(x))
-        case None => cb(Failure(throw new Exception))
-      }
-    }
-
-    def write(id: VerKey, data: Array[Byte], cb: Try[Any] => Unit): Unit =
-      S3Mock += (id -> data)
-  }
-
-  def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = {
-    val resp = msg match {
-      case Write(segmentAddress, segmentKey, value: GeneratedMessage) =>
-        if (maxSegmentSize(value)) system.storeSegment(segmentAddress, segmentKey, value)
-        else handleSegmentedMsgs(WriteStorage(segmentAddress, segmentKey, value), postExecution)
-        None
-      case WriteStorage(_, segmentKey, value) =>
-        storageService.write(segmentKey, value.asInstanceOf[Array[Byte]], {
-          case Success(_) =>
-          case Failure(e) => throw e
-        })
-        None
-      case Write(segmentAddress, segmentKey, value) =>
-        system.storeSegment(segmentAddress, segmentKey, value); None
-      case Read(segmentAddress, segmentKey) =>
-        system.getSegment(segmentAddress, segmentKey)
-      case ReadStorage(_, segmentKey, _) =>
-        var data: Option[Any] = None
-        storageService.read(segmentKey, {
-          case Success(d) =>  data = Some(d)
-          case Failure(e) => throw e
-        })
-        data
-    }
-    postExecution(Right(resp))
-  }
+  val segmentStorage: SegmentStoreAccess = new MockStorageService(system)
 
   def registerWithSystem(): Unit = pce.system.register(this)
 
@@ -127,22 +90,43 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
 
   override def serviceEndpoint: ServiceEndpoint = s"http://www.example.com/$participantId"
 
-  override def addToMsgQueue(msg: Any): Unit = {
-    system.submit(msg, participantId)
-  }
-
   registerWithSystem()
 
   override def urlShortening: UrlShorteningAccess =
     pce.urlShorteningAccessProvider.map(_()).getOrElse(throw new RuntimeException("no url shortener access provided to container"))
 
+  override def runAsyncOp(op: => Any): Unit = op
 }
 
 trait Logs {
   val logger: Logger = Logger(this.getClass)
 }
 
+class MockStorageService(system: SimpleProtocolSystem) extends SegmentStoreAccess {
+  var S3Mock: Map[String, Array[Byte]] = Map()
+  val MAX_SEGMENT_SIZE = 400000   //TODO: finalize this
+  def isLessThanMaxSegmentSize(data: GeneratedMessage): Boolean = data.serializedSize < MAX_SEGMENT_SIZE
 
+  def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
+                  (handler: Try[StoredSegment] => Unit): Unit = {
+    segment match {
+      case msg: GeneratedMessage =>
+        if (isLessThanMaxSegmentSize(msg)) {
+          system.storeSegment(segmentAddress, segmentKey, msg)
+        } else {
+          S3Mock += segmentKey -> msg.toByteArray
+        }
+      case other =>
+        system.storeSegment(segmentAddress, segmentKey, other)
+    }
+    handler(Try(StoredSegment(segmentAddress, Option(segment))))
+  }
+  def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+                    (handler: Try[Option[T]] => Unit): Unit = {
+    val data = system.getSegment(segmentAddress, segmentKey) orElse S3Mock.get(segmentKey)
+    handler(Try(data.map(_.asInstanceOf[T])))
+  }
+}
 
 trait HasInbox[A,B] {
   protected def inbox: BoxLike[A,B]

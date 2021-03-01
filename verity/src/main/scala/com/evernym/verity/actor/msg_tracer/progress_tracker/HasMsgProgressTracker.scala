@@ -9,7 +9,7 @@ import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgress
 import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME, SINGLETON_PARENT_PROXY}
-import com.evernym.verity.protocol.actor.ActorDriverGenParam
+import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.actor.msg_tracer.progress_tracker.RoutingEvent._
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache.GLOBAL_TRACKING_ID
 import com.evernym.verity.protocol.engine.{MsgId, MsgType, ProtoDef, ProtoRef, ProtocolRegistry, TypedMsgLike}

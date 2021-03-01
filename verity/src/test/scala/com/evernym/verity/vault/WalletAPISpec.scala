@@ -1,9 +1,8 @@
 package com.evernym.verity.vault
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.KEY_ED25519
+import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, HasTestWalletAPI}
 
 
@@ -39,8 +38,8 @@ class WalletAPISpec
       "should store their key successfully" in {
         val response = testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(bobKey.did, bobKey.verKey))(aliceWap)
         response shouldBe a[TheirKeyStored]
-        val responseVerKey = testWalletAPI.executeSync[VerKey](GetVerKey(bobKey.did))(aliceWap)
-        responseVerKey shouldBe bobKey.verKey
+        val responseVerKey = testWalletAPI.executeSync[GetVerKeyResp](GetVerKey(bobKey.did))(aliceWap)
+        responseVerKey.verKey shouldBe bobKey.verKey
       }
     }
 
@@ -48,8 +47,8 @@ class WalletAPISpec
       "should store their key successfully" in {
         val response = testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(aliceKey.did, aliceKey.verKey))(bobWap)
         response shouldBe a[TheirKeyStored]
-        val responseVerKey = testWalletAPI.executeSync[VerKey](GetVerKey(aliceKey.did))(bobWap)
-        responseVerKey shouldBe aliceKey.verKey
+        val responseVerKey = testWalletAPI.executeSync[GetVerKeyResp](GetVerKey(aliceKey.did))(bobWap)
+        responseVerKey.verKey shouldBe aliceKey.verKey
       }
     }
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.actor.wallet.GetVerKeyOpt
+import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyResp}
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.AuthKey
 import com.evernym.verity.config.AppConfig
@@ -150,8 +150,8 @@ case class DidDocBuilder(didDoc: DidDoc = DidDoc())(implicit didDocBuilderParam:
       authKeys.find(_.keyId == key.keyId).map { ak =>
         Future.successful(key.copy(givenVerKey = ak.verKey))
       }.getOrElse {
-        agentWalletAPI.walletAPI.executeAsync[Option[VerKey]](GetVerKeyOpt(key.keyId))(agentWalletAPI.walletAPIParam).map { vkOpt =>
-          AuthorizedKey(key.keyId, vkOpt.getOrElse(""), key.tags)
+        agentWalletAPI.walletAPI.executeAsync[Option[GetVerKeyResp]](GetVerKeyOpt(key.keyId))(agentWalletAPI.walletAPIParam).map { gvkrOpt =>
+          AuthorizedKey(key.keyId, gvkrOpt.map(_.verKey).getOrElse(""), key.tags)
         }
       }
     case other                    => Future.successful(other)

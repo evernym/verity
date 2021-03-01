@@ -30,7 +30,7 @@ import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFet
 import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.actor.ProtocolIdDetail
+import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger

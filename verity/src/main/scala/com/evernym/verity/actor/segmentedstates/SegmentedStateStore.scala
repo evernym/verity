@@ -6,7 +6,7 @@ import com.evernym.verity.actor.persistence.object_code_mapper.DefaultObjectCode
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ProtoRef
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Segment, SegmentKey}
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.walletBackup.BackupStored
 import com.google.protobuf.ByteString
 import scalapb.GeneratedMessage
@@ -38,7 +38,7 @@ class SegmentedStateStore(val appConfig: AppConfig)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
-  var state: Map[SegmentKey, Segment] = Map.empty
+  var state: Map[SegmentKey, Any] = Map.empty
 
   def receiveCmd: Receive = {
     case SaveSegmentedState(segmentKey, value: StorageReferenceStored) =>
@@ -57,7 +57,7 @@ class SegmentedStateStore(val appConfig: AppConfig)
     val data = ByteString.copyFrom(value.toByteArray)
     val sss = SegmentedStateStored(key, eventCode, data)
     writeAndApply(sss)
-    sender ! Some(sss)
+    sender ! Some(value)
   }
 
   def receiveEvent: Receive = {

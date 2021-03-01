@@ -22,8 +22,8 @@ import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.logging.ThrottledLogger
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.push_notification._
 import com.evernym.verity.util.MsgIdProvider

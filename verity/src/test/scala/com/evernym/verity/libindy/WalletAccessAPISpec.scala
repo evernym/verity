@@ -1,21 +1,36 @@
 package com.evernym.verity.libindy
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
-import com.evernym.verity.libindy.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.external_api_access.InvalidSignType
+import akka.actor.ActorRef
+import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
+import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
+import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
+import com.evernym.verity.protocol.engine.asyncService.AsyncOpRunner
+import com.evernym.verity.protocol.engine.asyncService.wallet.InvalidSignType
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
 
 import scala.util.{Failure, Success}
 
-class WalletAccessAPISpec extends BasicSpec with HasDefaultTestWallet {
+class WalletAccessAPISpec
+  extends BasicSpec
+    with ActorSpec
+    with HasDefaultTestWallet
+    with AsyncOpRunner {
 
-  testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
-  val selfParticipantId: ParticipantId = ParticipantUtil.participantId(
-    testWalletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
-  val walletAccess = new WalletAccessAPI(new TestAppConfig, testWalletAPI, selfParticipantId, {}, {})
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(this, ActorRef.noSender)
+
+  val selfParticipantId: ParticipantId = {
+    testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
+    val result = ParticipantUtil.participantId(
+      testWalletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
+    testWalletAPI.executeSync[Done.type](Close)
+    result
+  }
+
+  val walletAccess = new WalletAccessAPI(new TestAppConfig, walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"
@@ -27,9 +42,9 @@ class WalletAccessAPISpec extends BasicSpec with HasDefaultTestWallet {
   "WalletAccessLibindy newDid" - {
     "should succeed" in {
       walletAccess.newDid() {
-        case Success((newDid, newVerKey)) =>
-          did = newDid
-          verKey = newVerKey
+        case Success(keyCreated) =>
+          did = keyCreated.did
+          verKey = keyCreated.verKey
         case Failure(cause) =>
           fail(cause)
       }
@@ -39,7 +54,7 @@ class WalletAccessAPISpec extends BasicSpec with HasDefaultTestWallet {
   "WalletAccessLibindy sign" - {
     "sign of data should succeed" in {
       walletAccess.sign(TEST_MSG) {
-        case Success(signatureResult) => signature = signatureResult.signature
+        case Success(signedMsg) => signature = signedMsg.signatureResult.signature
         case Failure(cause) =>
           fail(cause)
       }
@@ -84,4 +99,7 @@ class WalletAccessAPISpec extends BasicSpec with HasDefaultTestWallet {
     }
   }
 
+  override def runAsyncOp(op: => Any): Unit = op
+  override def abortTransaction(): Unit = {}
+  def postAllAsyncOpsCompleted(): Unit = {}
 }

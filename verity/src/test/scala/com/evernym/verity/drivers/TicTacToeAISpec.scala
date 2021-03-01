@@ -1,6 +1,6 @@
 package com.evernym.verity.drivers
 
-import com.evernym.verity.protocol.actor.ActorDriverGenParam
+import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SimpleControllerProviderInputType
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{CellValue, O, X}

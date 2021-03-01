@@ -1,22 +1,18 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.actor.Init
-import com.evernym.verity.protocol.engine.asyncProtocol.AsyncProtocolProgress
-import com.evernym.verity.protocol.engine.external_api_access.AccessRight
+import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
@@ -24,7 +20,7 @@ import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
 
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * Generically holds and manages protocol state.
@@ -40,7 +36,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     with SegmentedStateContext[P,R,M,E,S,I]
     with JournalLogging
     with JournalProtocolSupport
-    with AsyncProtocolProgress {
+    with AsyncOpRunner {
 
   def pinstId: PinstId
 
@@ -60,7 +56,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def eventRecorder: RecordsEvents
 
-  def storageService: StorageService
+  def segmentStorage: SegmentStoreAccess
 
   def sendsMsgs: SendsMsgs
 
@@ -102,7 +98,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   /**
    * any in-flight, ephemeral (non-persisted) state
    */
-  private val partiMsg = new PartiMsg
+  private val participantMsg = new PartiMsg
   private var inFlight: Option[InFlight] = None
   def getInFlight: InFlight = inFlight.getOrElse(throw new IllegalStateAccess("in-flight"))
 
@@ -132,9 +128,9 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   def setupInflightMsg[A](msgId: Option[MsgId], threadId: Option[ThreadId],
-                          sender: SenderLike[R], segment: Option[Any] = None)(f: => A): A = {
+                          sender: SenderLike[R])(f: => A): A = {
     inFlight = inFlight.map(_.copy(msgId = msgId, threadId = threadId)).orElse(
-    Some(InFlight(msgId, threadId, sender, segment)))
+    Some(InFlight(msgId, threadId, sender)))
     f
   }
 
@@ -183,16 +179,6 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   def handleMsg: Any ?=> Any = {
-    case MsgWithSegment(msg, segment) =>
-      setupInflightMsg(None, None, new NilSender, segment) {
-        handleMsgBase(msg)
-      }
-    case _ @ (SegmentStorageComplete() | DataRetrieved() | DataNotFound()) =>
-
-    case pm:Envelope1[M] if isSegmentRetrievalNeeded(pm.msg)   => retrieveSegment(pm, pm.msg)
-
-    case cm:CtlEnvelope[_] if isSegmentRetrievalNeeded(cm.msg) => retrieveSegment(cm, cm.msg)
-
     case m => handleMsgBase(m)
   }
 
@@ -204,7 +190,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       runWithInternalSpan("proto-msg:" + msg.getClass.getSimpleName, "ProtocolContext") {
         withShadowAndRecord {
 
-          partiMsg.add(to, msgId)
+          participantMsg.add(to, msgId)
 
           val sender = getRoster.senderFromId(frm)
           setupInflightMsg(msgId, tid, sender) {
@@ -353,7 +339,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     try {
       constructShadow()
       val result = f
-      handleAllAsyncServices()
+      postAllAsyncOpsCompleted()
       result
     } catch {
       case e: Exception => abortTransaction(); throw e
@@ -361,11 +347,11 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   /**
-   * Internal Protocol Services need to complete before storing and event persistence - (url shortener, wallet, and ledger services)
-   * A flag is set in 'AsyncProtocolService' when a specific internal protocol service is in-progress.
+   * execute store segment, record events and finalizing state
+   * once all in-progress async services (url-shortener, wallet, ledger and segmentStorage) is executed
    */
-  def handleAllAsyncServices(): Unit = {
-    if (asyncProtocolServicesComplete()) {
+  def postAllAsyncOpsCompleted(): Unit = {
+    if (isAllAsyncOpsCompleted) {
       storeSegments()
       recordEvents getOrElse finalizeState
     }
@@ -374,9 +360,9 @@ trait ProtocolContext[P,R,M,E,S,I]
   def abortTransaction(): Unit = {
     allBoxes.foreach(_.clear())
     pendingEvents = Vector()
-    pendingSegments = None
+    pendingSegments = List()
     clearShadowState()
-    clearInternalAsyncServices()
+    resetAllAsyncOpCallBackHandlers()
     record("protocol context cleaned up")
   }
 
@@ -430,7 +416,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       inFlight = None
 
       clearShadowState()
-      clearInternalAsyncServices()
+      resetAllAsyncOpCallBackHandlers()
 
       processOutputBoxes()
       processNextInboxMsg()
@@ -440,11 +426,11 @@ trait ProtocolContext[P,R,M,E,S,I]
   /**
    * Finalization cannot happen until all protocol services are complete.
    * This includes:
-   *  1. Protocol 'Internal Services' - url shortener, wallet, and ledger services
+   *  1. Protocol 'Internal Services' - url shortener, wallet, ledger and segmentedStore services
    *  2. 'Segmented State' storage
    *  3. 'Event Persistence'
    */
-  def readyToFinalize: Boolean = pendingEvents.isEmpty && asyncProtocolServicesComplete() && pendingSegments.isEmpty
+  def readyToFinalize: Boolean = isAllAsyncOpsCompleted && pendingEvents.isEmpty && pendingSegments.isEmpty
 
   /**
    * This is called when the base 'onPersistFailure' or 'onPersistRejected' from akka persistence is invoked
@@ -477,14 +463,23 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   /**
-   * (If run in asynchronously on the ActorProtocolContainer) the actor will change its Receive behavior until
-   *    it knows the segment has been stored. The context will not finalize until the actor is informed of completed storage.
-   *    The actor will then change back to the base behavior.
+   * segmentStorageService.storeSegment implementation will store the given segments
+   *  (either to actor based storage or some external storage based on size constraints)
+   * and as with any other async service, the 'segmentStorageService.storeSegment' async op
+   * will be executed with AsyncOpRunner which will make sure to finalize things once
+   * async op is completed
    */
   def storeSegments(): Unit = {
-    pendingSegments foreach { msg =>
-      logger.debug(s"storing segment: $msg")
-      handleSegmentedMsgs(msg, storeSegmentHandler)
+    pendingSegments.foreach { ps =>
+      logger.debug(s"storing pending segment: $ps")
+      segmentStorage.storeSegment(ps.segmentAddress, ps.segmentKey, ps.value) {
+        case Success(ss: StoredSegment) =>
+          logger.debug(s"pending segment stored: $ss")
+          removeFromPendingList(ss.segmentAddress)
+        case Failure(exception) =>
+          logger.error("error while storing segment: " + exception.getMessage)
+          abortTransaction()
+      }
     }
   }
 
@@ -516,7 +511,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def msgId(fromPartiId: ParticipantId): Option[MsgId] =
   //TODO JL: why have two different ways of doing this?
-    partiMsg.getMsgIdForPartiId(fromPartiId) orElse inFlight.flatMap(_.msgId)
+    participantMsg.getMsgIdForPartiId(fromPartiId) orElse inFlight.flatMap(_.msgId)
 
   def prepareEnvelope[A](msg: A, toRole: Option[R]=None, fromRole: Option[R]=None): Envelope1[A] = {
     val fromPartiId = senderPartiId(fromRole)
@@ -568,7 +563,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     def applyParam(roster: Roster[R], name: String, value: ParticipantId): Roster[R] = {
       name match {
         case SELF_ID | OTHER_ID => roster.withParticipant(value, name == SELF_ID)
-        case x => roster// logger.debug(s"ignoring unsupported init parameter: $x"); roster
+        case _ => roster// logger.debug(s"ignoring unsupported init parameter: $x"); roster
       }
     }
 
@@ -641,17 +636,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     }
   }
 
-  case class InFlight(msgId: Option[MsgId], threadId: Option[ThreadId],
-                      sender: SenderLike[R], segment: Option[Any]=None) {
-
-    def segmentAs[T]: Option[T] = try {
-      segment.map(_.asInstanceOf[T])
-    } catch {
-      case _: ClassCastException => throw new SegmentTypeNotMatched()
-    }
-
-    def segmentAs_![T]: T = segmentAs.getOrElse(throw new SegmentNotFound())
-  }
+  case class InFlight(msgId: Option[MsgId], threadId: Option[ThreadId], sender: SenderLike[R])
 
   /**
    * protocol exceptions
@@ -689,24 +674,6 @@ class PartiMsg {
     }
   }
 }
-
-case class DataRetrieved() extends ActorMessage
-case class DataNotFound() extends ActorMessage
-case class SegmentStorageComplete() extends ActorMessage
-case class SegmentStorageFailed() extends ActorMessage
-case class UrlShortenerServiceComplete() extends ActorMessage
-case class WalletServiceComplete() extends ActorMessage
-case class ExternalStorageComplete(externalId: SegmentKey)
-case class MsgWithSegment(msg: Any, segment: Option[Any]) extends ActorMessage {
-
-  def msgId: MsgId = msg match {
-    case e: Envelope1[_] => e.msgId.getOrElse(MsgFamilyUtil.getNewMsgUniqueId)
-    case c: CtlEnvelope[_] => Option(c.msgId).getOrElse(MsgFamilyUtil.getNewMsgUniqueId)
-  }
-}
-
-class SegmentNotFound(msg: Option[String]=None) extends RuntimeException(msg.getOrElse("segment not found"))
-class SegmentTypeNotMatched(msg: Option[String]=None) extends RuntimeException(msg.getOrElse("segment type not matched"))
 
 abstract class NoHandler(msg: String, me: MatchError) extends RuntimeException(msg, me)
 

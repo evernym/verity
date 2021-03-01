@@ -3,7 +3,7 @@ package com.evernym.verity.ledger
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 
 import scala.concurrent.Future
 

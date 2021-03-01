@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.external_api_access.AccessRight
+import com.evernym.verity.protocol.engine.asyncService.AccessRight
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 

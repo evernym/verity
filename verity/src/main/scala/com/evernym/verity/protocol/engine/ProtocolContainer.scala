@@ -32,6 +32,8 @@ trait ProtocolContainer[P,R,M,E,S,I] extends ProtocolTypes[P,R,M,E,S,I] with Pro
 
   def protoRef: ProtoRef = definition.msgFamily.protoRef
 
+  def segmentedStateName: Option[String] = definition.segmentedStateName
+
   /**
     * Recovers if events exist in recorder, otherwise initializes.
     */

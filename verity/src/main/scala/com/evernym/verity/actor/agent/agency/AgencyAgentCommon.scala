@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, DidPair, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.CommonConfig.PROVISIONING
@@ -69,8 +69,8 @@ trait AgencyAgentCommon
     state.agencyDIDPair match {
       case Some(adp) if adp.DID.nonEmpty && adp.verKey.nonEmpty => Future(adp)
       case _ if state.agentWalletId.isDefined =>
-        walletAPI.executeAsync[VerKey](GetVerKey(agencyDID)).map { vk =>
-          DidPair(agencyDID, vk)
+        walletAPI.executeAsync[GetVerKeyResp](GetVerKey(agencyDID)).map { gvkr =>
+          DidPair(agencyDID, gvkr.verKey)
         }
       case _ => super.agencyDidPairFutByCache(agencyDID)
     }

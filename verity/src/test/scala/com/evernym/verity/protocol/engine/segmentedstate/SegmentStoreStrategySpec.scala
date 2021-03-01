@@ -13,7 +13,7 @@ class SegmentStoreStrategySpec extends BasicSpec {
     "can calculate SegmentId and SegmentAddress for given segment key" in {
       val segmentId = OneToOne.calcSegmentId("1a")
       segmentId shouldBe "0a238e1011c130f89921b3973f6e6ce0"
-      OneToOne.calcSegmentAddress(pinstId, domainId, segmentId) shouldBe s"pinst-id-$segmentId"
+      OneToOne.calcSegmentAddress(domainId, pinstId, segmentId) shouldBe s"pinst-id-$segmentId"
     }
   }
 
@@ -21,7 +21,7 @@ class SegmentStoreStrategySpec extends BasicSpec {
     "can calculate SegmentId and SegmentAddress for given segment key" in {
       val segmentId = Bucket_2_Legacy.calcSegmentId("1a")
       segmentId shouldBe "16"
-      Bucket_2_Legacy.calcSegmentAddress(pinstId, domainId, segmentId) shouldBe s"pinst-id-$segmentId"
+      Bucket_2_Legacy.calcSegmentAddress(domainId, pinstId, segmentId) shouldBe s"pinst-id-$segmentId"
     }
   }
 
@@ -29,7 +29,7 @@ class SegmentStoreStrategySpec extends BasicSpec {
     "can calculate SegmentId and SegmentAddress for given segment key" in {
       val segmentId = Bucket_4.calcSegmentId("1a")
       segmentId shouldBe "-9613"
-      Bucket_2_Legacy.calcSegmentAddress(pinstId, domainId, segmentId) shouldBe s"pinst-id-$segmentId"
+      Bucket_2_Legacy.calcSegmentAddress(domainId, pinstId, segmentId) shouldBe s"pinst-id-$segmentId"
     }
   }
 
@@ -37,7 +37,7 @@ class SegmentStoreStrategySpec extends BasicSpec {
     "can calculate SegmentId and SegmentAddress for given segment key" in {
       val segmentId = Bucket_4.calcSegmentId("1a")
       segmentId shouldBe "-9613"
-      OneToOneDomain.calcSegmentAddress(pinstId, domainId, segmentId) shouldBe s"domain-id-$segmentId"
+      OneToOneDomain.calcSegmentAddress(domainId, pinstId, segmentId) shouldBe s"domain-id-$segmentId"
     }
   }
 }

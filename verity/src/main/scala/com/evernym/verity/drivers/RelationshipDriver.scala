@@ -1,6 +1,6 @@
 package com.evernym.verity.drivers
 
-import com.evernym.verity.protocol.actor._
+import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{CreatePairwiseKey, SendSMSInvite}

@@ -18,7 +18,7 @@ import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.protocol.actor.ActorDriverGenParam
+import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.aws_s3.{S3AlpakkaApi, StorageAPI}

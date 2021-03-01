@@ -22,7 +22,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.vault._
 import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.wallet.SignMsg
+import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
@@ -307,8 +307,8 @@ trait UtilBase extends AsyncToSync {
   def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
                            (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
-    val sig = DEPRECATED_convertToSyncReq(walletAPI.executeAsync[Array[Byte]](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes)))
-    keyDlgProof.copy(signature=Base64Util.getBase64Encoded(sig))
+    val signedMsg = DEPRECATED_convertToSyncReq(walletAPI.executeAsync[SignedMsg](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes)))
+    keyDlgProof.copy(signature=Base64Util.getBase64Encoded(signedMsg.msg))
   }
 
   def jsonArray(item: String): String = jsonArray(Set(item))

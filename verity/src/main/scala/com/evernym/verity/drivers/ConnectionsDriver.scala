@@ -1,6 +1,6 @@
 package com.evernym.verity.drivers
 
-import com.evernym.verity.protocol.actor.{ActorDriver, ActorDriverGenParam}
+import com.evernym.verity.protocol.container.actor.{ActorDriver, ActorDriverGenParam}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}

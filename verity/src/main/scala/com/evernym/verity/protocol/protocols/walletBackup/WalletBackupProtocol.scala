@@ -13,6 +13,7 @@ import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.google.protobuf.ByteString
 
 import scala.language.implicitConversions
+import scala.util.{Failure, Success}
 
 case class BackupInitParams(recoveryVk: VerKey, ddAddress: String, cloudAddress: Array[Byte])
 
@@ -161,14 +162,15 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
   def recoverBackup(recoveryVk: VerKey, w: Option[WalletBackup], r: Role): Unit = {
     def restored(b: WalletBackup): Restored = Restored(getBase64Encoded(b))
 
-    val backup = ctx
-      .getInFlight
-      .segmentAs[BackupStored]
-      .map(x => restored(x.wallet.toByteArray))
-      .getOrElse(restored(w.getOrElse(throw new NoBackupAvailable)))
-
-    ctx.apply(RecoveredBackup())
-    ctx.send(backup, toRole=_toRole(r))
+    ctx.withSegment[BackupStored](recoveryVk) {
+      case Success(storedBackup: Option[BackupStored]) =>
+        val backup = storedBackup
+          .map(bs => restored(bs.wallet.toByteArray))
+          .getOrElse(restored(w.getOrElse(throw new NoBackupAvailable)))
+        ctx.apply(RecoveredBackup())
+        ctx.send(backup, toRole=_toRole(r))
+      case Failure(exception) => throw exception
+    }
   }
 
   def failedToPersist(err: PersistenceFailure): Unit = ctx.send(BackupFailure(err))

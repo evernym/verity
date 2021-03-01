@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
+import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet

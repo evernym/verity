@@ -41,7 +41,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.actor.{FromProtocol, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.{FromProtocol, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, Parameter, VerKey, _}
 import com.evernym.verity.protocol.protocols._

@@ -1,10 +1,11 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
 import com.evernym.verity.actor.agent.SponsorRel
+import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.Init
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, _}
@@ -13,7 +14,7 @@ import com.evernym.verity.util.TimeUtil._
 import com.evernym.verity.util.Base64Util.getBase64Decoded
 
 import scala.concurrent.duration.Duration
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 trait AgentProvisionEvt
@@ -151,11 +152,10 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     })
   }
 
-  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKey)(handler: Try[Boolean] => Unit): Unit = {
+  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKey)(handler: Try[VerifySigResult] => Unit): Unit = {
     val msg = (token.nonce + token.timestamp + token.sponseeId + token.sponsorId).getBytes
     ctx.wallet.verify(msg, getBase64Decoded(token.sig), sponsorVk, SIGN_ED25519_SHA512_SINGLE){handler(_)}
   }
-
 
   private def askForProvisioningIfValidSponsor(sponsorDetailsOpt: Option[SponsorDetails],
                                                token: ProvisionToken,
@@ -173,17 +173,17 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
       val sponsorVerKey = sponsorDetails.keys.find(_.verKey.equals(token.sponsorVerKey)).getOrElse(throw InvalidSponsorVerKey)
 
       isValidSignature(token, sponsorVerKey.verKey) {
-        case Success(value) if value =>
+        case Success(vsg) if vsg.verified =>
           if (cacheUsedTokens) {
-            if (ctx.getInFlight.segmentAs[AskedForProvisioning].isDefined) {
-              problemReport(DuplicateProvisionedApp)
-              return
-            } else
-              ctx.storeSegment(token.sig, AskedForProvisioning())
+            ctx.withSegment[AskedForProvisioning](token.sig) {
+              case Success(Some(_)) => problemReport(DuplicateProvisionedApp)
+              case Success(None)    =>
+                ctx.storeSegment(token.sig, AskedForProvisioning())
+                ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))
+                askForProvisioning(sig)
+              case Failure(exception) => problemReport(exception.getMessage, Option(exception.getMessage))
+            }
           }
-
-          ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))
-          askForProvisioning(sig)
         case _ => problemReport(InvalidSignature)
       }
     } catch {

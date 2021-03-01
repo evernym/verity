@@ -19,7 +19,7 @@ import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.State.AnswerV
 import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.evernym.verity.util.TimeUtil._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 sealed trait Role
 
@@ -132,8 +132,8 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
             getBase64Decoded(givenSig.signature),
             None
           ) {
-            case Success(validSignature) =>
-              answerValidated(answer, validResponse, validSignature, notExpired = notExpired)
+            case Success(sigVerifResult) =>
+              answerValidated(answer, validResponse, sigVerifResult.verified, notExpired = notExpired)
             case Failure(ex) =>
               ctx.logger.warn(s"Unable to verify signature - ${ex.getMessage}")
               answerValidated(answer, validResponse, validSignature = false, notExpired = notExpired)
@@ -216,9 +216,9 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
               case Some(n) =>
                 val signable = buildSignable(n)
                 ctx.wallet.sign(signable.bytes) {
-                  case Success(sig) =>
+                  case Success(signedMsg) =>
                     val sigBlock = Sig(
-                      sig.toBase64,
+                      signedMsg.signatureResult.toBase64,
                       signable.encoded,
                       now.toString
                     )

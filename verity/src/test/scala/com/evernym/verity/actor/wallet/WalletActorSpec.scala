@@ -11,8 +11,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
-import com.evernym.verity.protocol.engine.VerKey
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.KEY_ED25519
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Msg, PresentProof, ProofAttribute, ProofRequestUtil}
@@ -152,27 +151,27 @@ class WalletActorSpec
     "when sent GetVerKey command" - {
       "should respond with VerKey" in {
         issuerWalletActor ! GetVerKey(holderDidPair.DID)
-        val vk1 = expectMsgType[VerKey]
-        vk1 shouldBe holderDidPair.verKey
+        val vk1 = expectMsgType[GetVerKeyResp]
+        vk1 shouldBe GetVerKeyResp(holderDidPair.verKey)
 
         holderWalletActor ! GetVerKey(issuerDidPair.DID)
-        val vk2 = expectMsgType[VerKey]
-        vk2 shouldBe issuerDidPair.verKey
+        val vk2 = expectMsgType[GetVerKeyResp]
+        vk2 shouldBe GetVerKeyResp(issuerDidPair.verKey)
 
         verifierWalletActor ! GetVerKey(holderDidPair.DID)
-        val vk3 = expectMsgType[VerKey]
-        vk3 shouldBe holderDidPair.verKey
+        val vk3 = expectMsgType[GetVerKeyResp]
+        vk3 shouldBe GetVerKeyResp(holderDidPair.verKey)
       }
     }
 
     "when sent GetVerKeyOpt command" - {
       "should respond with optional VerKey" in {
         issuerWalletActor ! GetVerKeyOpt(holderDidPair.DID)
-        expectMsgType[Option[VerKey]]
+        expectMsgType[Option[GetVerKeyResp]]
         holderWalletActor ! GetVerKeyOpt(issuerDidPair.DID)
-        expectMsgType[Option[VerKey]]
+        expectMsgType[Option[GetVerKeyResp]]
         verifierWalletActor ! GetVerKeyOpt(holderDidPair.DID)
-        expectMsgType[Option[VerKey]]
+        expectMsgType[Option[GetVerKeyResp]]
       }
     }
 
@@ -183,9 +182,9 @@ class WalletActorSpec
         val keyParam = KeyParam.fromDID(newIssuerKey.did)
 
         issuerWalletActor ! SignMsg(keyParam, testByteMsg)
-        val signature = expectMsgType[Array[Byte]]
+        val sm = expectMsgType[SignedMsg]
 
-        holderWalletActor ! VerifySigByKeyParam(keyParam, challenge = testByteMsg, signature = signature)
+        holderWalletActor ! VerifySigByKeyParam(keyParam, challenge = testByteMsg, signature = sm.msg)
         val verifyResult = expectMsgType[VerifySigResult]
         assert(verifyResult.verified)
       }
@@ -324,7 +323,7 @@ class WalletActorSpec
             cfpr.credData.credReqData.masterSecretId,
             revStates
           )
-          val proof = expectMsgType[String]
+          val proof = expectMsgType[ProofCreated].proof
           logger.info("proof: " + proof)
         })
       }
@@ -352,7 +351,7 @@ class WalletActorSpec
       }
       val proofReqStr = PresentProof.extractRequest(verifierProofRequest).get
       holderWalletActor ! CredForProofReq(proofReqStr)
-      val credForProofReq = expectMsgType[String]
+      val credForProofReq = expectMsgType[CredForProofReqCreated].cred
       val data = CredForProofReqData(credForProofReq, cd)
       f(data)
     }
@@ -367,9 +366,9 @@ class WalletActorSpec
     val credPreview = IssueCredential.buildCredPreview(credValues)
     val credValuesJson = IssueCredential.buildCredValueJson(credPreview)
     issuerWalletActor ! CreateCred(crd.credOffer, crd.credReq, credValuesJson, null, -1)
-    val cred = expectMsgType[String]
+    val cred = expectMsgType[CredCreated].cred
     holderWalletActor ! StoreCred(UUID.randomUUID().toString, crd.credDef.credDefJson, crd.credReqMetaData, cred, null)
-    val credId = expectMsgType[String]
+    val credId = expectMsgType[CredStored].cred
     val cd = CredData(credId, cred, crd)
     f(cd)
   }
@@ -390,20 +389,20 @@ class WalletActorSpec
       tag = "tag",
       sigType = Some("CL"),
       revocationDetails = Some(RevocationDetails(support_revocation = false, "tails_file", 5).toString))
-    val createdCredDef = expectMsgType[CreatedCredDef](60.second)
+    val createdCredDef = expectMsgType[CredDefCreated](60.second)
     logger.info("cred def created")
 
     issuerWalletActor ! CreateCredOffer(createdCredDef.credDefId)
-    val credOfferJson = expectMsgType[String]
+    val credOfferJson = expectMsgType[CredOfferCreated].offer
     logger.info("cred offer created")
 
     holderWalletActor ! CreateMasterSecret(UUID.randomUUID().toString)
-    val masterSecretId = expectMsgType[String]
+    val masterSecretId = expectMsgType[MasterSecretCreated].ms
     logger.info("master secret created")
 
     holderWalletActor ! CreateCredReq(createdCredDef.credDefId, proverDID = holderDidPair.DID,
       createdCredDef.credDefJson, credOfferJson, masterSecretId)
-    val credReq = expectMsgType[CreatedCredReq]
+    val credReq = expectMsgType[CredReqCreated]
     logger.info("cred req created: " + credReq)
 
     CredReqData(schema.getSchemaId, schema.getSchemaJson,
@@ -415,7 +414,7 @@ class WalletActorSpec
 
 case class CredReqData(schemaId: String,
                        schemaJson: String,
-                       credDef: CreatedCredDef,
+                       credDef: CredDefCreated,
                        credOffer: String,
                        masterSecretId: String,
                        credReq: String,

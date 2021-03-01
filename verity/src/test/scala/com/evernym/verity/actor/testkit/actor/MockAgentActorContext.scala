@@ -8,7 +8,7 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc}
 import com.evernym.verity.protocol
-import com.evernym.verity.protocol.actor.ActorDriverGenParam
+import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeProtoDef
 import com.evernym.verity.storage_services.aws_s3.StorageAPI

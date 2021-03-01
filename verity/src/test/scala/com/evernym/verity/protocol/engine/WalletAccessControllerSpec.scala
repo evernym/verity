@@ -1,11 +1,14 @@
 package com.evernym.verity.protocol.engine
 
+import akka.actor.ActorRef
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.LedgerRequest
-import com.evernym.verity.libindy.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.SIGN_ED25519_SHA512_SINGLE
-import com.evernym.verity.protocol.engine.external_api_access._
+import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
+import com.evernym.verity.protocol.engine.asyncService.wallet.{SignatureResult, WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine.asyncService.{AccessNewDid, AccessSign, AccessVerify}
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
 
@@ -57,28 +60,28 @@ class WalletAccessControllerSpec extends BasicSpec {
   }
 
   class TestWalletAccess extends WalletAccess {
-    import com.evernym.verity.protocol.engine.external_api_access.WalletAccess._
+    import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess._
 
-    override def newDid(keyType: KeyType)(handler: Try[(DID, VerKey)] => Unit): Unit = handler(Try(("Did", "Verkey")))
+    override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(Try(NewKeyCreated("Did", "Verkey")))
 
-    override def verKey(forDID: DID)(handler: Try[VerKey] => Unit): Unit = handler(Try("Verkey"))
+    override def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit = handler(Try(GetVerKeyResp("Verkey")))
 
     override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
-                     (handler: Try[SignatureResult] => Unit): Unit =
-      handler(Try(external_api_access.SignatureResult(Array[Byte](1, 2, 3), "VerKey")))
+                     (handler: Try[SignedMsg] => Unit): Unit =
+      handler(Try(SignedMsg(Array[Byte](1, 2, 3), "VerKey")))
 
     override def verify(signer: ParticipantId,
                         msg: Array[Byte],
                         sig: Array[Byte],
                         verKeyUsed: Option[VerKey] = None,
                         signType: SignType = SIGN_ED25519_SHA512_SINGLE)
-                       (handler: Try[Boolean] => Unit): Unit = handler(Try(true))
+                       (handler: Try[VerifySigResult] => Unit): Unit = handler(Try(VerifySigResult(true)))
 
     override def verify(msg: Array[Byte],
                         sig: Array[Byte],
                         verKeyUsed: VerKey,
                         signType: SignType)
-                       (handler: Try[Boolean] => Unit): Unit = handler(Try(true))
+                       (handler: Try[VerifySigResult] => Unit): Unit = handler(Try(VerifySigResult(true)))
 
 
     override def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit =
@@ -88,46 +91,46 @@ class WalletAccessControllerSpec extends BasicSpec {
                               name:  String,
                               version:  String,
                               data:  String)
-                             (handler: Try[(String, String)] => Unit): Unit = ???
+                             (handler: Try[SchemaCreated] => Unit): Unit = ???
 
     override def createCredDef(issuerDID:  DID,
                                schemaJson:  String,
                                tag:  String,
                                sigType:  Option[String],
                                revocationDetails:  Option[String])
-                              (handler: Try[(String, String)] => Unit): Unit = ???
+                              (handler: Try[CredDefCreated] => Unit): Unit = ???
 
-    override def createCredOffer(credDefId: String)(handler: Try[String] => Unit): Unit = ???
+    override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit = ???
 
     override def createCredReq(credDefId: String,
                                proverDID: DID,
                                credDefJson: String,
                                credOfferJson: String)
-                              (handler: Try[CreatedCredReq] => Unit): Unit = ???
+                              (handler: Try[CredReqCreated] => Unit): Unit = ???
 
     override def createCred(credOfferJson: String,
                             credReqJson: String,
                             credValuesJson: String,
                             revRegistryId: String,
                             blobStorageReaderHandle: ParticipantIndex)
-                           (handler: Try[String] => Unit): Unit = ???
+                           (handler: Try[CredCreated] => Unit): Unit = ???
 
     override def storeCred(credId: String,
                            credReqMetadataJson: String,
                            credJson: String,
                            credDefJson: String,
                            revRegDefJson: String)
-                          (handler: Try[String] => Unit): Unit = ???
+                          (handler: Try[CredStored] => Unit): Unit = ???
 
     override def credentialsForProofReq(proofRequest: String)
-                                       (handler: Try[String] => Unit): Unit = ???
+                                       (handler: Try[CredForProofReqCreated] => Unit): Unit = ???
 
     override def createProof(proofRequest: String,
                              usedCredentials: String,
                              schemas: String,
                              credentialDefs: String,
                              revStates: String)
-                            (handler: Try[String] => Unit): Unit = ???
+                            (handler: Try[ProofCreated] => Unit): Unit = ???
 
     override def verifyProof(proofRequest: String,
                              proof: String,
@@ -135,7 +138,7 @@ class WalletAccessControllerSpec extends BasicSpec {
                              credentialDefs: String,
                              revocRegDefs: String,
                              revocRegs: String)
-                            (handler: Try[Boolean] => Unit): Unit = ???
+                            (handler: Try[ProofVerifResult] => Unit): Unit = ???
 
     override def signRequest(submitterDID: DID,
                              request: String)
@@ -145,11 +148,15 @@ class WalletAccessControllerSpec extends BasicSpec {
   }
 }
 
-object WalletAccessTest extends HasDefaultTestWallet {
+object WalletAccessTest
+  extends HasDefaultTestWallet {
+
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(null, ActorRef.noSender)
+
   testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
   val newKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =
-    new WalletAccessAPI(new TestAppConfig, testWalletAPI, selfParticipantId, {}, {})
+    new WalletAccessAPI(new TestAppConfig, testWalletAPI, selfParticipantId)
 }
 

@@ -17,7 +17,7 @@ import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
@@ -352,10 +352,12 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
     val promise = Promise[Either[StatusDetail, TxnResp]]()
     walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
-      case Success(signedRequest) => promise.completeWith(
+      case Success(signedRequest) =>
+        promise.completeWith(
         submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
       )
-      case Failure(ex) => promise.failure(ex)
+      case Failure(ex) =>
+        promise.failure(ex)
     }
     promise.future
   }

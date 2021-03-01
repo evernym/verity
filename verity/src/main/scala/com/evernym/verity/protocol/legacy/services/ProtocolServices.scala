@@ -2,13 +2,13 @@ package com.evernym.verity.protocol.legacy.services
 
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.appStateManager.AppStateEvent
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyOpt, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyOpt, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.MsgSendingSvc
-import com.evernym.verity.protocol.actor.MsgQueueServiceProvider
-import com.evernym.verity.protocol.engine.{DID, ProtocolContextApi, SERVICES_DEPRECATION_DATE, VerKey}
+import com.evernym.verity.protocol.container.actor.MsgQueueServiceProvider
+import com.evernym.verity.protocol.engine.{DID, ProtocolContextApi, SERVICES_DEPRECATION_DATE}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 
@@ -68,10 +68,10 @@ trait DEPRECATED_HasWallet {
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
   }
 
-  def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): VerKey =
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[VerKey](GetVerKey(did, getKeyFromPool)))
+  def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): GetVerKeyResp =
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[GetVerKeyResp](GetVerKey(did, getKeyFromPool)))
 
-  def getVerKeyViaCache(did: DID, getKeyFromPool: Boolean = false): Option[VerKey] =
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[Option[VerKey]](GetVerKeyOpt(did, getKeyFromPool)))
+  def getVerKeyViaCache(did: DID, getKeyFromPool: Boolean = false): Option[GetVerKeyResp] =
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[Option[GetVerKeyResp]](GetVerKeyOpt(did, getKeyFromPool)))
 
 }

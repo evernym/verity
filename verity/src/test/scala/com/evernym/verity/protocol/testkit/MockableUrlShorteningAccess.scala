@@ -1,27 +1,28 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.protocol.engine.urlShortening.{InviteShortened, UrlShorteningAccess}
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningResponse}
 
 import scala.util.{Failure, Success, Try}
 
 object MockableUrlShorteningAccess {
   def apply(): MockableUrlShorteningAccess = new MockableUrlShorteningAccess
-  def shorteningFailed = new MockableUrlShorteningAccess(defaultUrlShorteningFailure)
   def shortened = new MockableUrlShorteningAccess(defaultUrlShorteningSuccess)
+  def shorteningFailed = new MockableUrlShorteningAccess(defaultUrlShorteningFailure)
 
   def defaultUrlShorteningFailure: UrlShorteningAccess = new UrlShorteningAccess {
-    override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit =
+    override def shorten(longUrl: String)(handler: Try[UrlShorteningResponse] => Unit): Unit =
       handler(Failure(new Exception("because")))
   }
 
   def defaultUrlShorteningSuccess: UrlShorteningAccess = new UrlShorteningAccess {
-    override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit =
-      handler(Success(InviteShortened(inviteUrl, "http://short.url")))
+    override def shorten(longUrl: String)(handler: Try[UrlShorteningResponse] => Unit): Unit =
+      handler(Success(UrlShortened("http://short.url")))
   }
 }
 class MockableUrlShorteningAccess(mockShortening: UrlShorteningAccess = MockableUrlShorteningAccess.defaultUrlShorteningSuccess)
   extends UrlShorteningAccess {
 
-  override def shorten(inviteUrl: String)(handler: Try[InviteShortened] => Unit): Unit =
-    mockShortening.shorten(inviteUrl)(handler)
+  override def shorten(longUrl: String)(handler: Try[UrlShorteningResponse] => Unit): Unit =
+    mockShortening.shorten(longUrl)(handler)
 }

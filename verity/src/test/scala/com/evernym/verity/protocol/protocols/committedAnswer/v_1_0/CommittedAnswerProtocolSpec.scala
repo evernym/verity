@@ -5,7 +5,6 @@ import java.util.UUID
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Envelope1
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
@@ -54,7 +53,7 @@ class CommittedAnswerProtocolSpec
       "produces valid json" in { _ =>
         val t = MockableWalletAccess.randomSig()
         val msg = Msg.Answer(
-          Sig(t.get.toBase64, "SDFSDFSDFSDF", nowDateString)
+          Sig(t.get.signatureResult.toBase64, "SDFSDFSDFSDF", nowDateString)
         )
         val threadId = UUID.randomUUID().toString
         val jsonWithType = buildAgentMsg(

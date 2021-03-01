@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants.{NAME, _}
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.OptionUtil.blankOption
 

@@ -3,10 +3,11 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 import java.nio.charset.StandardCharsets
 import java.nio.{ByteBuffer, ByteOrder}
 import java.time.Instant
+
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi, _}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity
@@ -17,7 +18,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.SetupTheir
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.relationship.URL
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 
 import scala.util.{Failure, Success, Try}
 
@@ -114,8 +115,8 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
         case Right(m: Msg.InviteWithKey) =>
           val myDID = ctx.getRoster.selfId_!
           ctx.wallet.verKey(myDID) {
-            case Success(myVerKey) =>
-              ctx.apply(InviteAccepted(Some(ProvisionalRelationship(myDID, myVerKey, ctx.serviceEndpoint,
+            case Success(getVerKeyResp) =>
+              ctx.apply(InviteAccepted(Some(ProvisionalRelationship(myDID, getVerKeyResp.verKey, ctx.serviceEndpoint,
                 m.recipientKeys, m.routingKeys_!, m.serviceEndpoint)), a.label))
               ctx.signal(SetupTheirDidDoc(myDID, m.recipientKeys.head, m.serviceEndpoint, m.routingKeys_!, None))
             case Failure(_) =>
@@ -271,7 +272,7 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
     val myDID = ctx.getRoster.selfId_!
     ctx.signal(Signal.ConnRequestReceived(m.connection, myDID))
     ctx.wallet.verKey(myDID)  {
-      case Success(myVerKey) =>
+      case Success(getVerKeyResp) =>
         val theirDidDoc = m.connection.did_doc.toDIDDoc
         // this prioritizes the id in the DIDDoc over the DID in the message
         //
@@ -280,9 +281,11 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
         // so it is fine for now.
         val theirDiD = Option(theirDidDoc.getDID).getOrElse(m.connection.DID)
         ctx.wallet.storeTheirDid (theirDiD, theirDidDoc.getVerkey) { _ =>
-          val rel = Relationship(myDID, myVerKey, ctx.serviceEndpoint, theirDiD, theirDidDoc.getVerkey, theirDidDoc.getEndpoint, theirDidDoc.routingKeys)
+          val rel = Relationship(myDID, getVerKeyResp.verKey, ctx.serviceEndpoint,
+            theirDiD, theirDidDoc.getVerkey, theirDidDoc.getEndpoint, theirDidDoc.routingKeys)
           ctx.apply(RequestReceived(Some(rel)))
-          ctx.signal(Signal.SetupTheirDidDoc(myDID, theirDidDoc.verkey, theirDidDoc.endpoint, theirDidDoc.routingKeys, Option(theirDiD)))
+          ctx.signal(Signal.SetupTheirDidDoc(myDID, theirDidDoc.verkey, theirDidDoc.endpoint,
+            theirDidDoc.routingKeys, Option(theirDiD)))
         }
       case Failure(_) =>
         sendProblemReport("request_processing_error", "error while processing request")
@@ -352,11 +355,11 @@ object Connections {
 
     wallet.sign(bytes) { result =>
       handler(
-        result.map { sig =>
+        result.map { signedMsg =>
           SigBlockCommunity(
-            sig.toBase64UrlEncoded,
+            signedMsg.signatureResult.toBase64UrlEncoded,
             b64_encoded,
-            sig.verKey
+            signedMsg.signatureResult.verKey
           )
         }
       )
@@ -377,8 +380,8 @@ object Connections {
       Base64Util.getBase64UrlDecoded(sigBlock.signature),
       sigBlock.signer,
       SIGN_ED25519_SHA512_SINGLE) {
-      case Success(isVerified) =>
-        if (isVerified) {
+      case Success(sigVerifResult) =>
+        if (sigVerifResult.verified) {
           val theirDidDoc = conn.did_doc.toDIDDoc
           val (theirDid, theirVerKey) = (theirDidDoc.getDID, theirDidDoc.getVerkey)
           wallet.storeTheirDid(theirDid, theirVerKey) {

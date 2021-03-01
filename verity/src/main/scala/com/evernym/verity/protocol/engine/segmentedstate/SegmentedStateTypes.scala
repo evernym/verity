@@ -1,17 +1,9 @@
 package com.evernym.verity.protocol.engine.segmentedstate
 
-import com.evernym.verity.actor.StorageReferenceStored
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 
-trait SegmentedStateMsg
 
 object SegmentedStateTypes {
-
-  /**
-    * A Segment is a portion of the state, that is, one of the items in the collection.
-    * E.g., PhoneBookEntry(firstname, lastname, phonenumber)
-    */
-  type Segment = Any
-
 
   /**
     * Segments are logically divided by some key, called a Segment Key.
@@ -33,11 +25,6 @@ object SegmentedStateTypes {
     */
   type SegmentAddress = String
 
-  case class Write(segmentAddress: SegmentAddress, key: SegmentKey, value: Any) extends SegmentedStateMsg
-
-  case class WriteStorage(segmentAddress: SegmentAddress, key: SegmentKey, value: Any) extends SegmentedStateMsg
-
-  case class Read(segmentAddress: SegmentAddress, key: SegmentKey) extends SegmentedStateMsg
-
-  case class ReadStorage(segmentAddress: SegmentAddress, key: SegmentKey, storageRef: StorageReferenceStored) extends SegmentedStateMsg
 }
+
+case class PendingSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, value: Any)

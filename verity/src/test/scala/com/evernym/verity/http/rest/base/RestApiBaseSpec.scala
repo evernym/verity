@@ -10,7 +10,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.util.ByteString
 import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
-import com.evernym.verity.actor.wallet.{PackedMsg, SignMsg}
+import com.evernym.verity.actor.wallet.{PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitationDecodingSpec, ProvisionRelationshipSpec, UpdateComMethodSpec}
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
@@ -298,8 +298,8 @@ case class MockRestEnv(mockEnv: MockEnv) {
   }
 
   def computeSignature(verKey: VerKey): String = {
-    val signedVerKey = mockEnv.edgeAgent.testWalletAPI.executeSync[Array[Byte]](
+    val signedMsg = mockEnv.edgeAgent.testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(mockEnv.edgeAgent.wap)
-    Base58Util.encode(signedVerKey)
+    Base58Util.encode(signedMsg.msg)
   }
 }

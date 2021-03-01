@@ -9,6 +9,8 @@ import com.google.protobuf.ByteString
 import org.apache.commons.codec.digest.DigestUtils
 import org.hyperledger.indy.sdk.crypto.Crypto
 
+import scala.util.{Failure, Success}
+
 
 class DeadDropProtocol(val ctx: ProtocolContextApi[DeadDropProtocol, Role, DeadDropProtoMsg, DeadDropEvt, DeadDropState, String])
   extends Protocol[DeadDropProtocol, Role, DeadDropProtoMsg, DeadDropEvt, DeadDropState, String](DeadDropProtoDef)
@@ -80,8 +82,13 @@ class DeadDropProtocol(val ctx: ProtocolContextApi[DeadDropProtocol, Role, DeadD
         throw new AuthorizationFailed
       }
 
-      val segment = ctx.getInFlight.segmentAs[Item].map(i => DeadDropEntry(i.address, getBase64Encoded(i.data.toByteArray)))
-      ctx.send(DeadDropRetrieveResult(segment))
+      ctx.withSegment[Item](gd.address) {
+        case Success(item: Option[Item]) =>
+          val ddEntry = item.map(i => DeadDropEntry(i.address, getBase64Encoded(i.data.toByteArray)))
+          ctx.send(DeadDropRetrieveResult(ddEntry))
+        case Failure(exception) =>
+          throw exception
+      }
 
     case (_, Some(Persister()), ddlr: DeadDropRetrieveResult) =>
       // TODO: ???? I am the dead-drop protocol and I got the data

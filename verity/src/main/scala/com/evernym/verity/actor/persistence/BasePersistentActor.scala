@@ -492,8 +492,8 @@ trait BasePersistentActor
     basePersistentCmdHandler(cmdHandler) orElse
       receiveUnhandled
 
-  override def setNewReceiveBehaviour(receiver: Receive): Unit = {
-    context.become(basePersistentCmdHandler(receiver))
+  override def setNewReceiveBehaviour(receiver: Receive, discardOld: Boolean = true): Unit = {
+    context.become(basePersistentCmdHandler(receiver), discardOld)
   }
 
   override def receiveRecover: Receive = handleEvent
@@ -509,7 +509,7 @@ trait HasActorResponseTimeout {
 
   protected implicit lazy val duration: FiniteDuration =
     buildDuration(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
-  implicit lazy val akkActorResponseTimeout: Timeout = Timeout(duration)
+  implicit lazy val responseTimeout: Timeout = Timeout(duration)
 }
 
 

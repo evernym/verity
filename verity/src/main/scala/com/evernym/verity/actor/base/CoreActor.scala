@@ -38,7 +38,7 @@ trait CoreActor
         postCommandExecution(cmd)
       } catch {
         case e: Exception =>
-          handleException(e, sender())
+          handleException(e, sender)
       }
 
     case cmd if sysCmdHandler.isDefinedAt(cmd) =>
@@ -46,7 +46,7 @@ trait CoreActor
         sysCmdHandler(cmd)
       } catch {
         case e: Exception =>
-          handleException(e, sender())
+          handleException(e, sender)
       }
 
     case cmd if actualCmdReceiver.isDefinedAt(cmd) =>
@@ -138,8 +138,8 @@ trait CoreActor
     ExceptionHandler.handleException(e, sndr, Option(self))
   }
 
-  def setNewReceiveBehaviour(receiver: Receive): Unit = {
-    context.become(coreCommandHandler(receiver))
+  def setNewReceiveBehaviour(receiver: Receive, discardOld: Boolean = true): Unit = {
+    context.become(coreCommandHandler(receiver), discardOld)
   }
 
   def actorDetail: ActorDetail = ActorDetail(entityType, entityId, actorId)

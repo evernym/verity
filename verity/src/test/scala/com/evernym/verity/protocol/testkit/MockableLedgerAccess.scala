@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.testkit
 
+import akka.actor.ActorRef
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.ledger._
@@ -7,8 +8,10 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.Status
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.libindy.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, LedgerAccessException, LedgerRejectException, WalletAccessController}
+import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.asyncService.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
 import org.json.JSONObject
 
 import scala.util.{Failure, Try}
@@ -28,16 +31,16 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true) extends LedgerAccess {
   import MockableLedgerAccess._
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(null, ActorRef.noSender)
+
   val testWallet = new TestWallet(false)
   implicit val wap = testWallet.wap
-  override val walletAccess = new WalletAccessController(
+  override val walletAccess = new WalletAccessController (
     Set(),
-    new WalletAccessAPI(
+    new WalletAccessAPI (
       new TestAppConfig,
       testWallet.testWalletAPI,
-      testWallet.walletId,
-      {},
-      {}
+      testWallet.walletId
     )
   )
 
@@ -48,36 +51,70 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     "1 ENDORSER signature is required, Error: Not enough ENDORSER signatures\\nConstraint: 1 signature of any role " +
     "is required with additional metadata fees schema, Error: Fees are required for this txn type"
 
-  override def getCredDef(credDefId: String): Try[GetCredDefResp] =
-    if(ledgerAvailable) Try(credDefs.getOrElse(credDefId, throw new Exception("Unknown cred def")))
-    else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-
-  override def writeCredDef(submitterDID: DID, credDefJson: String): Try[Either[StatusDetail, TxnResp]] =
-    if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-    else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-    else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
-    else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-
-  override def getSchema(schemaId: String): Try[GetSchemaResp] =
-    if(ledgerAvailable) Try(schemas.getOrElse(schemaId, throw new Exception("Unknown schema")))
-    else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-
-  override def writeSchema(submitterDID: String, schemaJson: String): Try[Either[StatusDetail, TxnResp]] =
-    if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-    else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-    else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
-    else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-
-  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Try[LedgerRequest] = {
-    val json = new JSONObject(schemaJson)
-    json.put("endorser", endorserDID)
-    Try(LedgerRequest(json.toString))
+  override def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(credDefs.getOrElse(credDefId, throw new Exception("Unknown cred def")))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
   }
 
-  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Try[LedgerRequest] = {
-    val json = new JSONObject(credDefJson)
-    json.put("endorser", endorserDID)
-    Try(LedgerRequest(json.toString))
+  override def writeCredDef(submitterDID: DID, credDefJson: String)
+                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+      else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
+      else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(schemas.getOrElse(schemaId, throw new Exception("Unknown schema")))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def writeSchema(submitterDID: DID, schemaJson: String)
+                          (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+      else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
+      else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID)
+                                          (handler: Try[LedgerRequest] => Unit): Unit = {
+    handler {
+      val json = new JSONObject(schemaJson)
+      json.put("endorser", endorserDID)
+      Try(LedgerRequest(json.toString))
+    }
+  }
+
+  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID)
+                                           (handler: Try[LedgerRequest] => Unit): Unit = {
+    handler {
+      val json = new JSONObject(credDefJson)
+      json.put("endorser", endorserDID)
+      Try(LedgerRequest(json.toString))
+    }
+  }
+
+  override def getSchemas(schemaIds: Set[String])(handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(schemas.filterKeys(s => schemaIds.contains(s)))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def getCredDefs(credDefIds: Set[String])(handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(credDefs.filterKeys(c => credDefIds.contains(c)))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
   }
 }
 

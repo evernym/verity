@@ -8,14 +8,14 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols._
@@ -38,8 +38,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
 
-  lazy val myPairwiseDIDReq : DID = ctx.getState.myPairwiseDIDReq
-  lazy val myPairwiseVerKeyReq : VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)
+  lazy val myPairwiseDIDReq: DID = ctx.getState.myPairwiseDIDReq
+  lazy val myPairwiseVerKeyReq: VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
     val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
@@ -53,7 +53,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   def applyLocalEvent: ApplyEvent = {
     case (s, _, ads: AgentDetailSet) =>
-      s.thisAgentVerKeyOpt = Option(ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[VerKey](GetVerKey(ads.agentKeyDID))))
+      s.thisAgentVerKeyOpt = Option(ctx.DEPRECATED_convertAsyncToSync(
+        walletAPI.executeAsync[GetVerKeyResp](GetVerKey(ads.agentKeyDID))).verKey)
       s.agentDetail = Option(AgentDetail(ads.forDID, ads.agentKeyDID))
       s
 

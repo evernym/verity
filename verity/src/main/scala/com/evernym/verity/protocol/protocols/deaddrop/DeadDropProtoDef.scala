@@ -4,12 +4,10 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.protocol._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DEAD_DROP_STORE_DATA
-import com.evernym.verity.protocol.actor.ProtoMsg
+import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine.Scope.ProtocolScope
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.{Base64Encoded, Signature}
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 
 
 // TODO: Fix the inconsistent naming across the protocol: Store, StoreData, Add / Get, GetData, GetDeadDropMsg, Retrieve...
@@ -71,8 +69,4 @@ object DeadDropProtoDef
   }
 
   override def initialState: DeadDropState = DeadDropState.Uninitialized()
-
-  override def segmentRetrieval[A, B >: DeadDropState, C >: SegmentKey]: (A, B) ?=> C = {
-    case (r: Retrieve, _) => r.address
-  }
 }

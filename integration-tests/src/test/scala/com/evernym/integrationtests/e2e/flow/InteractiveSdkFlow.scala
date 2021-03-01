@@ -1322,7 +1322,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
           val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
           val baseMetric = currentNodeMetrics
-            .filter(_.name.equals(AS_NEW_PROTOCOL_COUNT.replace('.', '_')))
+            .filter(_.isName(AS_NEW_PROTOCOL_COUNT))
             .find(_.tags.get == tag)
             .get
 

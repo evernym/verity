@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.tokenizer
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.ServiceDecorator
+import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine.Constants.MFV_0_1
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull

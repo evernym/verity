@@ -7,7 +7,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam
 
@@ -67,7 +67,6 @@ case class LedgerRequest(req: String, needsSigning: Boolean=true, taa: Option[Tr
 }
 
 case class TransactionAuthorAgreement(version: String, digest: String, mechanism: String, timeOfAcceptance: String)
-
 
 
 trait CachedResp {

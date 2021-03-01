@@ -6,7 +6,6 @@ import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects2._
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
@@ -14,6 +13,8 @@ import com.evernym.verity.protocol.testkit.{InteractionController, TestSimplePro
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Conversions._
 import org.scalatest.concurrent.Eventually
+
+import scala.util.{Failure, Success}
 
 
 class StateSegments2Spec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(OneToOne))
@@ -112,10 +113,6 @@ object TestObjects2 {
 
     override val segmentedStateName = Option("phone-book")
 
-    override def segmentRetrieval[A, B >:State, C >: SegmentKey]: (A, B) ?=> C = {
-      case (g: Get, _) => g.key
-    }
-
     override def initParamNames: Set[ParameterName] = Set(SELF_ID)
 
     override def createInitMsg(params: Parameters) = Init(params)
@@ -150,9 +147,12 @@ object TestObjects2 {
       case (_:State.Initialized, add: Add)     =>
         ctx.storeSegment(add.entry.key, PhoneBookEntryAdded(add.entry.fName, add.entry.lName, add.entry.phoneNumber))
 
-      case (_, _: Get)    =>
-        ctx.getInFlight.segmentAs[PhoneBookEntryAdded].foreach { pbe =>
-          ctx.signal(PhoneBookEntryReceived(PhoneBookEntry(pbe.fName, pbe.lName, pbe.phoneNumber)))
+      case (_, g: Get)    =>
+        ctx.withSegment[PhoneBookEntryAdded](g.key) {
+          case Success(Some(value)) =>
+            ctx.signal(PhoneBookEntryReceived(PhoneBookEntry(value.fName, value.lName, value.phoneNumber)))
+          case Success(None)        => //nothing to do
+          case Failure(exception)   => throw exception
         }
     }
 

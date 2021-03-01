@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol
 
 import com.evernym.verity.drivers.{AgentProvisioningDriver, TicTacToeAI, WalletBackupDriver, _}
-import com.evernym.verity.protocol.actor.ActorDriverGenParam
+import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.PinstIdResolution.{DEPRECATED_V0_1, V0_2}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.{Bucket_2_Legacy, OneToOneDomain}
 import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef, ProtocolRegistry}

@@ -12,7 +12,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.testkit.{HasDefaultTestWallet, HasTestWalletAPI}
 import com.evernym.verity.testkit.util.PublicIdentifier
 import com.evernym.verity.util.Util.{getAgentKeyDlgProof, logger}
-import com.evernym.verity.vault.{EncryptParam, WalletAPIParam}
+import com.evernym.verity.vault.EncryptParam
 
 /**
  * a mock agent
@@ -49,7 +49,7 @@ trait MockAgent
 
   init()
 
-  def getVerKeyFromWallet(did: DID): VerKey = testWalletAPI.executeSync[VerKey](GetVerKey(did))
+  def getVerKeyFromWallet(did: DID): VerKey = testWalletAPI.executeSync[GetVerKeyResp](GetVerKey(did)).verKey
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)

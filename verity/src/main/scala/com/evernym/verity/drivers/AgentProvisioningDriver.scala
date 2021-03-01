@@ -6,7 +6,7 @@ import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor._
+import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.{DID, PinstId, ProtoRef, SignalEnvelope}
 import com.evernym.verity.protocol.legacy.services.{CreateAgentEndpointDetail, CreateKeyEndpointDetail}

@@ -5,12 +5,12 @@ import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD, MSG_STATUS_A
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.user.MsgHelper
-import com.evernym.verity.actor.wallet.{GetVerKeyOpt, PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyResp, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgParam}
-import com.evernym.verity.protocol.actor.ProtoMsg
+import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 
@@ -189,7 +189,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[Option[VerKey]](GetVerKeyOpt(senderDID))) foreach { _ =>
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[Option[GetVerKeyResp]](GetVerKeyOpt(senderDID))) foreach { _ =>
       throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))
     }

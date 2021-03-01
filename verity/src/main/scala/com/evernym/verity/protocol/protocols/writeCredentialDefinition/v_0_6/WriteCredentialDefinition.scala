@@ -1,17 +1,18 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
+import com.evernym.verity.actor.wallet.CredDefCreated
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.Init
+import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 trait Event
 
@@ -51,30 +52,35 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       val revocationDetails = m.revocationDetails.map(_.toString).getOrElse("{}")
 
       val submitterDID = _submitterDID(init)
-      ctx.wallet.createCredDef(
-        submitterDID,
-        getSchema(m.schemaId).get,
-        tag,
-        sigType=None,
-        revocationDetails=Some(revocationDetails)
-      ) {
-        case Success((credDefId, credDefJson)) =>
-          ctx.ledger.writeCredDef(submitterDID, credDefJson) match {
-            case Success(_) =>
-              ctx.apply(CredDefWritten(credDefId))
-              ctx.signal(StatusReport(credDefId))
-            case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
-              ctx.logger.warn(e.toString)
-              val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
-              if (endorserDID.nonEmpty) {
-                ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID) match {
-                  case Success(ledgerRequest) =>
-                    ctx.signal(NeedsEndorsement(credDefId, ledgerRequest.req))
-                    ctx.apply(AskedForEndorsement(credDefId, ledgerRequest.req))
-                  case Failure(e) => problemReport(e)
-                }
-              } else {
-                problemReport(new Exception("No default endorser defined"))
+      ctx.ledger.getSchema(m.schemaId) {
+        case Success (getSchemaResp) =>
+          val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
+          ctx.wallet.createCredDef(
+            submitterDID,
+            schemaJson,
+            tag,
+            sigType=None,
+            revocationDetails=Some(revocationDetails)
+          ) {
+            case Success(credDefCreated: CredDefCreated) =>
+              ctx.ledger.writeCredDef(submitterDID, credDefCreated.credDefJson) {
+                case Success(_) =>
+                  ctx.apply(CredDefWritten(credDefCreated.credDefId))
+                  ctx.signal(StatusReport(credDefCreated.credDefId))
+                case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
+                  ctx.logger.warn(e.toString)
+                  val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+                  if (endorserDID.nonEmpty) {
+                    ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorserDID) {
+                      case Success(ledgerRequest) =>
+                        ctx.signal(NeedsEndorsement(credDefCreated.credDefId, ledgerRequest.req))
+                        ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
+                      case Failure(e) => problemReport(e)
+                    }
+                  } else {
+                    problemReport(new Exception("No default endorser defined"))
+                  }
+                case Failure(e) => problemReport(e)
               }
             case Failure(e) => problemReport(e)
           }
@@ -90,14 +96,6 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     ctx.apply(WriteFailed(Option(e.getMessage).getOrElse("unknown error")))
     ctx.signal(ProblemReport(e.toString))
   }
-
-  def getSchema(id: String): Try[String] = Try(ctx
-    .ledger
-    .getSchema(id)
-    .get
-    .schema.map(DefaultMsgCodec.toJson)
-    .getOrElse(throw SchemaNotFound(id)))
-
 
   def _submitterDID(init: State.Initialized): DID =
     init

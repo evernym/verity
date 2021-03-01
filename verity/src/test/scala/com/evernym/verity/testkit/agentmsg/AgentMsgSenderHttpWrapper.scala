@@ -14,7 +14,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppConfig}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
@@ -515,11 +515,11 @@ trait AgentMsgSenderHttpWrapper
     val nonce = "12345678"
     val timestamp = TimeUtil.nowDateString
 
-    val encrypted = mockClientAgent.testWalletAPI.executeSync[Array[Byte]](
+    val encrypted = mockClientAgent.testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(sponsorKeys.verKey),
         (nonce + timestamp + id + sponsorId).getBytes()
       )
-    )
+    ).msg
 
     val token = Some(AgentProvisioningMsgFamily.ProvisionToken(id, sponsorId, nonce, timestamp, Base64Util.getBase64Encoded(encrypted), sponsorKeys.verKey))
     logApiStart(s"send post request with packed message started...")

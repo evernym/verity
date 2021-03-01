@@ -33,7 +33,7 @@ import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
+import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgFamily, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
 import com.evernym.verity.protocol.protocols

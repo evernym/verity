@@ -6,7 +6,7 @@ import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpecBase
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
@@ -28,10 +28,10 @@ trait UserAgentCreatorHelper
     sponsorWallet.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
 
   def sponsorSig(nonce: String, id: String, sponsorId: String, vk: VerKey, timestamp: String): Base64Encoded = {
-    val encrypted = sponsorWallet.executeSync[Array[Byte]](
+    val signedMsg = sponsorWallet.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(vk), (nonce + timestamp + id + sponsorId).getBytes())
     )
-    Base64Util.getBase64Encoded(encrypted)
+    Base64Util.getBase64Encoded(signedMsg.msg)
   }
 
   override def beforeAll(): Unit = {

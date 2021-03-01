@@ -5,9 +5,10 @@ import java.util.concurrent.TimeUnit
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
 import kamon.metric.MeasurementUnit

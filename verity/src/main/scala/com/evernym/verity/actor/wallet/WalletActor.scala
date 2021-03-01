@@ -14,6 +14,7 @@ import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
+import com.evernym.verity.protocol.engine.asyncService.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
@@ -239,34 +240,39 @@ case object Close extends WalletCommand
 
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage
+case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase
 case object WalletAlreadyCreated extends WalletCreatedBase
-
 case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
-
+case class GetVerKeyResp(verKey: VerKey) extends WalletCmdSuccessResponse
 case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
-
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse
-
+case class SignedMsg(msg: Array[Byte], fromVerKey: VerKey) extends WalletCmdSuccessResponse {
+  def signatureResult: SignatureResult = SignatureResult(msg, fromVerKey)
+}
+case class MasterSecretCreated(ms: String) extends WalletCmdSuccessResponse
+case class CredOfferCreated(offer: String) extends WalletCmdSuccessResponse
+case class CredDefCreated(credDefId: String, credDefJson: String) extends WalletCmdSuccessResponse
+case class CredReqCreated(credReqJson: String, credReqMetadataJson: String) extends WalletCmdSuccessResponse
+case class CredCreated(cred: String) extends WalletCmdSuccessResponse
+case class CredStored(cred: String) extends WalletCmdSuccessResponse
+case class CredForProofReqCreated(cred: String) extends WalletCmdSuccessResponse
+case class ProofCreated(proof: String) extends WalletCmdSuccessResponse
+case class ProofVerifResult(result: Boolean) extends WalletCmdSuccessResponse
 case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata]=None)
   extends WalletCmdSuccessResponse
 
-object UnpackedMsg {
-  def apply(msg: String, senderVerKey: Option[VerKey] = None, recipVerKey: Option[VerKey]=None): UnpackedMsg =
-    UnpackedMsg(msg.getBytes, senderVerKey, recipVerKey)
-}
 case class UnpackedMsg(msg: Array[Byte],
                        senderVerKey: Option[VerKey],
                        recipVerKey: Option[VerKey]) extends WalletCmdSuccessResponse {
   def msgString: String = new String(msg)
 }
+object UnpackedMsg {
+  def apply(msg: String, senderVerKey: Option[VerKey] = None, recipVerKey: Option[VerKey]=None): UnpackedMsg =
+    UnpackedMsg(msg.getBytes, senderVerKey, recipVerKey)
+}
 
-case class CreatedCredDef(credDefId: String, credDefJson: String) extends WalletCmdSuccessResponse
-
-case class CreatedCredReq(credReqJson: String, credReqMetadataJson: String) extends WalletCmdSuccessResponse
-
-case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage

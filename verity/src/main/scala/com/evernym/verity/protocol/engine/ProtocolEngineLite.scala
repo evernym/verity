@@ -2,9 +2,11 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
-import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLoggerLike}
 
 import scala.util.Try
@@ -75,23 +77,23 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
       handleMsg(definition.createInitMsg(params))
     }
 
-    override def storageService: StorageService = new StorageService {
-      override def read(id: VerKey, cb: Try[Array[Byte]] => Unit): Unit = {}
-
-      override def write(id: VerKey, data: Array[Byte], cb: Try[Any] => Unit): Unit = {}
+    override def segmentStorage: SegmentStoreAccess = new SegmentStoreAccess {
+      def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
+                      (handler: Try[StoredSegment] => Unit): Unit = {}
+      override def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+                                 (handler: Try[Option[T]] => Unit): Unit = {}
     }
-
-    def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = ???
 
     override def wallet: WalletAccess = ???
 
-    override def addToMsgQueue(msg: Any): Unit = ???
-    
     override def serviceEndpoint: ServiceEndpoint = ???
 
     override def ledger: LedgerAccess = ???
 
     override def urlShortening: UrlShorteningAccess = ???
+
+    override def runAsyncOp(op: => Any): Unit = ???
+
   }
 
   //TODO merge with next

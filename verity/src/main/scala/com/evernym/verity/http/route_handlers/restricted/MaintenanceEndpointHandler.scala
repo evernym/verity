@@ -18,7 +18,7 @@ import scala.concurrent.Future
 
 trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
 
-  implicit val akkActorResponseTimeout: Timeout
+  implicit val responseTimeout: Timeout
 
   protected def reloadConfig(onAllNodes: String): Future[Any] = {
     if (onAllNodes == YES) {

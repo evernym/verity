@@ -5,7 +5,6 @@ import java.util.{Base64, UUID}
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Envelope1
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
@@ -52,7 +51,7 @@ class QuestionAnswerProtocolSpec
         val t = MockableWalletAccess.randomSig()
         val msg = Msg.Answer(
           "be",
-          Some(SigBlock(t.get.toBase64, "SDFSDFSDFSDF", Seq.empty)),
+          Some(SigBlock(t.get.signatureResult.toBase64, "SDFSDFSDFSDF", Seq.empty)),
           None
         )
         val threadId = UUID.randomUUID().toString

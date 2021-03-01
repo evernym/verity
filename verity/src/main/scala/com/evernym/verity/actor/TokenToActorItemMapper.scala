@@ -19,10 +19,11 @@ import com.evernym.verity.protocol.engine.MsgId
  * this actor is used on inviter side
  *
  * for consumer app (connect.me) to be able to get invitation detail from the invitation sms
- * there was a need to map a given token (small random string) to point to the agent pairwise actor
- * which contains/sent the invitation, so that, it can be queried to respond with full invitation detail
- * for the given token.
- * this actor stores that mapping of token to agent pairwise actor
+ * there was a need to map a received token (small random string) in SMS,
+ * to point to the agent pairwise actor on inviter (enterprise side)
+ * which contains the invitation details, so that it can be queried to get full invitation detail.
+
+ * this actor stores that mapping of "token" to "agent pairwise actor"
  * @param system
  * @param appConfig
  */

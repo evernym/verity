@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.deaddrop
 import java.util.UUID
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignMsg}
+import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.{LegacyWalletAPI, TestWallet}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
@@ -21,10 +21,10 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
     val recoveryVerKey = nkc.verKey
     val namespace = passphrase  //TODO: is it ok to use passphrase as namespace?
     val locator = DigestUtils.sha256Hex(
-      walletAPI.executeSync[Array[Byte]](SignMsg(KeyParam(Left(recoveryVerKey)), namespace.getBytes)))
+      walletAPI.executeSync[SignedMsg](SignMsg(KeyParam(Left(recoveryVerKey)), namespace.getBytes)).msg)
     val hashedAddress = DigestUtils.sha256Hex(recoveryVerKey + locator)
     val locatorSignature =
-      walletAPI.executeSync[Array[Byte]](SignMsg(KeyParam(Left(recoveryVerKey)), locator.getBytes))
+      walletAPI.executeSync[SignedMsg](SignMsg(KeyParam(Left(recoveryVerKey)), locator.getBytes)).msg
     DeadDropData(recoveryVerKey, hashedAddress, locator, locatorSignature, dataOpt.getOrElse("test-data".getBytes))
   }
 

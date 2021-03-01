@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.tokenizer
 
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.Init
+import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, PushToken, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
@@ -83,8 +83,9 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
     val nonce = getNewEntityId
     val timestamp = TimeUtil.nowDateString
     ctx.wallet.sign((nonce + timestamp + m.sponseeId + m.sponsorId).getBytes) {
-      case Success(sig) =>
-        val token = TokenMsg(m.sponseeId, m.sponsorId, nonce, timestamp, sig.toBase64, sig.verKey)
+      case Success(signedMsg) =>
+        val token = TokenMsg(m.sponseeId, m.sponsorId, nonce, timestamp,
+          signedMsg.signatureResult.toBase64, signedMsg.signatureResult.verKey)
         ctx.apply(CreatedToken(
           setter=Some(SetRoster(requester=_otherIdx, tokenizer=_selfIdx)),
           token=Some(token.asEvent)

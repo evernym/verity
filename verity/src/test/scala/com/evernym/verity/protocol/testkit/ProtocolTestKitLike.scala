@@ -4,9 +4,10 @@ import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
 import com.evernym.verity.protocol.testkit.InteractionType.{OneParty, TwoParty}
 import com.evernym.verity.util.{MsgIdProvider, MsgUtil}
 import org.scalatest.matchers.should.Matchers

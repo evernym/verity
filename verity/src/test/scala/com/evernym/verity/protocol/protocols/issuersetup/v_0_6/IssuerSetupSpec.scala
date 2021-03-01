@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
+import com.evernym.verity.actor.wallet.NewKeyCreated
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+
 import scala.util.Success
 
 class IssuerSetupSpec
@@ -32,7 +34,7 @@ class IssuerSetupSpec
     "happy path create of Issuer public identifier" in withOwner { s =>
 
       s.owner walletAccess new MockableWalletAccess(
-        mockNewDid = () => Success(("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))
+        mockNewDid = () => Success(NewKeyCreated("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))
       )
 
       s.owner ~ Create()

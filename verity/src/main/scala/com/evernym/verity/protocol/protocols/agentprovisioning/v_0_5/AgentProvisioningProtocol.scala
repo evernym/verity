@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.{AgentDetail, DidPair}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.{Init, ProtoMsg}
+import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
@@ -172,7 +172,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   private def handlePairwiseEndpointCreated(pec: PairwiseEndpointCreated, pd: AgentDetail): Unit = {
     val pvk = getVerKeyReqViaCache(pd.agentKeyDID)
     ctx.apply(PairwiseEndpointSet(pec.participantId))
-    val connectedMsg = ConnectedRespMsg_MFV_0_5(pd.agentKeyDID, pvk)
+    val connectedMsg = ConnectedRespMsg_MFV_0_5(pd.agentKeyDID, pvk.verKey)
     ctx.send(connectedMsg, toRole=Option(Requester), fromRole=Option(Initiater))
   }
 
@@ -193,7 +193,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def handleCreateAgentMsg(s:State.Signedup): Unit = {
     if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
-    val fromDIDPair = DidPair(s.pdd.forDID, getVerKeyReqViaCache(s.pdd.forDID))
+    val fromDIDPair = DidPair(s.pdd.forDID, getVerKeyReqViaCache(s.pdd.forDID).verKey)
     val aws = s.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
     val agentPairwiseKey = prepareNewAgentWalletData(fromDIDPair, aws)
     ctx.apply(AgentPairwiseKeyCreated(agentPairwiseKey.did, agentPairwiseKey.verKey))

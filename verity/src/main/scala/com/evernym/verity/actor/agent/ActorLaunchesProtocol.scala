@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.protocol.actor.{ActorDriverGenParam, _}
+import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, _}
 import com.evernym.verity.protocol.engine._
 
 import scala.concurrent.Future

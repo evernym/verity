@@ -21,7 +21,7 @@ import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
-import com.evernym.verity.protocol.actor._
+import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
@@ -389,10 +389,12 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   //Duplicate code starts (same code exists in 'PairwiseConnState')
 
-  def pairwiseConnEventReceiver: Receive = ctx.getState.pairwiseConnReceiver orElse ctx.getState.connectingMsgState.msgEventReceiver
+  def pairwiseConnEventReceiver: Receive =
+    ctx.getState.pairwiseConnReceiver orElse
+      ctx.getState.connectingMsgState.msgEventReceiver
 
   def isUserPairwiseVerKey(verKey: VerKey): Boolean = {
-    val userPairwiseVerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq)
+    val userPairwiseVerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
     verKey == userPairwiseVerKey
   }
 
@@ -428,7 +430,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     val result = (ctx.getState.state.theirDIDDoc.flatMap(_.legacyRoutingDetail), ctx.getState.state.theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(v1: LegacyRoutingDetail), None) =>
         val theirAgencySealParam = SealParam(KeyParam(Left(getVerKeyReqViaCache(
-          v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL))))
+          v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL).verKey)))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
           List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap)

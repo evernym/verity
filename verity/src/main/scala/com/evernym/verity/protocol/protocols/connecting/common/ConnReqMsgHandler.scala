@@ -13,7 +13,7 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.protocol.actor.ProtoMsg
+import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil
@@ -238,7 +238,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   private def withinMaxTryCount(curTryCount: Int): Boolean = curTryCount <= MAX_BUILD_AND_SEND_SMS_TRY_COUNT
 
   def encParamFromThisAgentToOwner: EncryptParam = EncryptParam(
-    Set(KeyParam(Left(getVerKeyReqViaCache(getEncryptForDID)))),
+    Set(KeyParam(Left(getVerKeyReqViaCache(getEncryptForDID).verKey))),
     Option(KeyParam(Left(ctx.getState.thisAgentVerKeyReq)))
   )
 }

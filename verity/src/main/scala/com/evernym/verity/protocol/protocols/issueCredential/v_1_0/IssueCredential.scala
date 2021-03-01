@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
+import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCreated}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
@@ -9,7 +10,7 @@ import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, _}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
@@ -19,6 +20,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyA
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
+import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
 
@@ -86,8 +88,11 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     buildOobInvite(offer, s) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
-          case Success(m) => ctx.signal(SignalMsg.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
-          case Failure(_) =>
+          case Success(us: UrlShortened) => ctx.signal(SignalMsg.Invitation(invite.inviteURL, Option(us.shortUrl), invite.invitationId))
+          case Success(usf: UrlShorteningFailed) =>
+            ctx.signal(SignalMsg.buildProblemReport(usf.errorMsg, usf.errorCode))
+            ctx.apply(ProblemReportReceived("Shortening failed"))
+          case _ =>
             ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
             ctx.apply(ProblemReportReceived("Shortening failed"))
         }
@@ -137,7 +142,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
 
   def handleRequest(m: Ctl.Request, st: State.OfferReceived): Unit = {
-    ctx.ledger.getCredDef(m.cred_def_id) match {
+    ctx.ledger.getCredDef(m.cred_def_id) {
       case Success(GetCredDefResp(_, Some(cdj))) => sendCredRequest(m, st, DefaultMsgCodec.toJson(cdj))
 
       case Success(GetCredDefResp(_, None)) =>
@@ -159,7 +164,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   def sendCredRequest(m: Ctl.Request, st: State.OfferReceived, credDefJson: String): Unit = {
     val credOfferJson = extractCredOfferJson(st.credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, st.myPwDid, credDefJson, credOfferJson) {
-      case Success(credRequest) =>
+      case Success(credRequest: CredReqCreated) =>
         val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
         val attachmentEventObject = toEvent(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
@@ -198,8 +203,8 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val credReqJson = extractCredReqJson(credRequest)
     val credValuesJson = IssueCredential.buildCredValueJson(credOffer.credential_preview)
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId.orNull, -1) {
-      case Success(cred) =>
-        val attachment = buildAttachment(Some("libindy-cred-0"), payload=cred)
+      case Success(createdCred: CredCreated) =>
+        val attachment = buildAttachment(Some("libindy-cred-0"), payload=createdCred.cred)
         val attachmentEventObject = toEvent(attachment)
         val credIssued = CredIssued(Seq(attachmentEventObject), commentReq(comment))
         ctx.apply(IssueCredSent(Option(credIssued)))
@@ -356,10 +361,10 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   def buildOffer(m: Ctl.Offer)(handler: Try[(OfferSent, OfferCred)] => Unit): Unit = {
     ctx.wallet.createCredOffer(m.cred_def_id) {
-      case Success(credOffer) =>
+      case Success(coc: CredOfferCreated) =>
         val credPreview = buildCredPreview(m.credential_values)
         val credPreviewEventObject = credPreview.toOption.map(buildEventCredPreview)
-        val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload = credOffer)
+        val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload = coc.offer)
         val attachmentEventObject = toEvent(attachment)
 
         val credOffered = CredOffered(

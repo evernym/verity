@@ -3,6 +3,7 @@ package com.evernym.verity.testkit
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
+import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
@@ -103,4 +104,6 @@ class LegacyWalletAPI(appConfig: AppConfig,
   final def executeSync[T](cmd: Any)(implicit wap: WalletAPIParam): T = {
     convertToSyncReq(executeAsync(cmd))
   }
+
+  override def tell(cmd: Any)(implicit wap: WalletAPIParam, sender: ActorRef): Unit = ???
 }

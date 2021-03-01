@@ -1,12 +1,13 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
+import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
-import com.evernym.verity.protocol.engine.urlShortening.ShortenInvite
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
@@ -18,6 +19,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Ve
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.States.Complete
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
+import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 
 import scala.collection.mutable
@@ -164,29 +166,28 @@ class PresentProof (implicit val ctx: PresentProofContext)
         val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
         apply(AttributesGiven(DefaultMsgCodec.toJson(simplifiedProof)))
 
-        retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) match {
+        retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
           case Success((schemaJson, credDefJson)) =>
             runWithInternalSpan("processPresentation","PresentProof") {
-              val verified = ctx.wallet.verifyProof(
+              ctx.wallet.verifyProof(
                 proofRequestJson,
                 presentationJson,
                 schemaJson,
                 credDefJson,
                 "{}",
                 "{}",
-              ) { verified =>
-                val correct = checkEncodedAttributes(presentation)
+              ) { proofVerifResult =>
+                  val correct = checkEncodedAttributes(presentation)
+                  val validity = proofVerifResult
+                    .map(_.result && correct)
+                    .map {
+                      case true => ProofValidated
+                      case _ => ProofInvalid
+                    }
+                    .getOrElse(ProofUndefined) // verifyProof throw an exception
 
-                val validity = verified
-                  .map(_ && correct)
-                  .map {
-                    case true => ProofValidated
-                    case _ => ProofInvalid
-                  }
-                  .getOrElse(ProofUndefined) // verifyProof throw an exception
-
-                apply(ResultsOfVerification(validity))
-                signal(Sig.PresentationResult(validity, simplifiedProof))
+                  apply(ResultsOfVerification(validity))
+                  signal(Sig.PresentationResult(validity, simplifiedProof))
               }
             }
           case Failure(_) =>
@@ -280,9 +281,12 @@ class PresentProof (implicit val ctx: PresentProofContext)
     buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
-          case Success(m) =>
-            ctx.signal(Sig.Invitation(m.longInviteUrl, Option(m.shortInviteUrl), invite.invitationId))
-          case Failure(_) =>
+          case Success(us: UrlShortened) =>
+            ctx.signal(Sig.Invitation(invite.inviteURL, Option(us.shortUrl), invite.invitationId))
+          case Success(usf: UrlShorteningFailed) =>
+            ctx.signal(Sig.buildProblemReport(usf.errorMsg, usf.errorCode))
+            apply(Rejection(ctx.getRoster.selfRole.map(_.roleNum).getOrElse(0), "Shortening failed"))
+          case _ =>
             ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
             apply(Rejection(ctx.getRoster.selfRole.map(_.roleNum).getOrElse(0), "Shortening failed"))
         }
@@ -299,11 +303,12 @@ class PresentProof (implicit val ctx: PresentProofContext)
     val proofRequest: ProofRequest = s.data.requests.head
     val proofRequestJson: String = DefaultMsgCodec.toJson(proofRequest)
 
-    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[String] =>
-      val credentialsNeeded = credentialsNeededJson.map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
+    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofReqCreated] =>
+      val credentialsNeeded =
+        credentialsNeededJson.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
       val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, msg.selfAttestedAttrs)
 
-      doSchemaAndCredDefRetrieval(ids, proofRequest.allowsAllSelfAttested) match {
+      doSchemaAndCredDefRetrieval(ids, proofRequest.allowsAllSelfAttested) {
         case Success((schemaJson, credDefJson)) =>
           ctx.wallet.createProof(
             proofRequestJson,
@@ -312,10 +317,10 @@ class PresentProof (implicit val ctx: PresentProofContext)
             credDefJson,
             "{}"
           ) {
-            case Success(presentation) =>
-              val payload = buildAttachment(Some(AttIds.presentation0), presentation)
+            case Success(proofCreated) =>
+              val payload = buildAttachment(Some(AttIds.presentation0), proofCreated.proof)
               send(Msg.Presentation("", Seq(payload)))
-              apply(PresentationUsed(presentation))
+              apply(PresentationUsed(proofCreated.proof))
             case Failure(e) => signal(
               Sig.buildProblemReport(
                 s"Unable to crate proof presentation -- ${e.getMessage}",
@@ -372,6 +377,57 @@ class PresentProof (implicit val ctx: PresentProofContext)
         Sig.StatusReport(s.getClass.getSimpleName, None, None)
     }
     signal(status)
+  }
+
+  def retrieveLedgerElements(identifiers: Seq[Identifier], allowsAllSelfAttested: Boolean=false)
+                            (handler: Try[(String, String)] => Unit): Unit = {
+    val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
+
+    identifiers.foreach { identifier =>
+      ids.append((identifier.schema_id, identifier.cred_def_id))
+    }
+
+    doSchemaAndCredDefRetrieval(ids.toSet, allowsAllSelfAttested)(handler)
+  }
+
+  def doSchemaAndCredDefRetrieval(ids: Set[(String,String)], allowsAllSelfAttested: Boolean)
+                                 (handler: Try[(String, String)] => Unit): Unit = {
+    ids.size match {
+      case 0 if !allowsAllSelfAttested => Failure(new Exception("No ledger identifiers were included with the Presentation"))
+      case _ =>
+        doSchemaRetrieval(ids.map(_._1)) {
+          case Success(schema)    => doCredDefRetrieval(schema, ids.map(_._2))(handler)
+          case Failure(exception) => handler(Failure(exception))
+        }
+    }
+
+    def doSchemaRetrieval(ids: Set[String])(handler: Try[String] => Unit): Unit = {
+      ctx.ledger.getSchemas(ids) {
+        case Success(schemas) if schemas.size == ids.size =>
+          val retrievedSchemasJson = schemas.map { case (id, getSchemaResp) =>
+            val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
+            s""""$id": $schemaJson"""
+          }.mkString("{", ",", "}")
+          handler(Success(retrievedSchemasJson))
+        case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
+        case Failure(e) => handler(Failure(new Exception("Unable to retrieve schema from ledger", e)))
+      }
+    }
+
+
+    def doCredDefRetrieval(schemas: String, credDefIds: Set[String])
+                          (handler: Try[(String, String)] => Unit): Unit = {
+      ctx.ledger.getCredDefs(credDefIds) {
+        case Success(credDefs) if credDefs.size == ids.size =>
+          val retrievedCredDefJson = credDefs.map { case (id, getCredDefResp) =>
+            val credDefJson = DefaultMsgCodec.toJson(getCredDefResp.credDef)
+            s""""$id": $credDefJson"""
+          }.mkString("{", ",", "}")
+          handler(Success((schemas, retrievedCredDefJson)))
+        case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")
+        case Failure(e) => throw new Exception("Unable to retrieve cred def from ledger", e)
+      }
+    }
   }
 }
 
@@ -443,64 +499,6 @@ object PresentProof {
         x.encoded == CredValueEncoderV1_0.encodedValue(x.raw)
       }
       .forall(identity)
-  }
-
-  def retrieveLedgerElements(identifiers: Seq[Identifier], allowsAllSelfAttested: Boolean=false)
-                            (implicit ctx: PresentProofContext): Try[(String, String)] = {
-    val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
-
-    identifiers.foreach { identifier =>
-      ids.append((identifier.schema_id, identifier.cred_def_id))
-    }
-
-    doSchemaAndCredDefRetrieval(ids.toSet, allowsAllSelfAttested)
-  }
-
-  def doSchemaAndCredDefRetrieval(ids: Set[(String,String)], allowsAllSelfAttested: Boolean)
-                                 (implicit ctx: PresentProofContext): Try[(String, String)] = {
-    ids.size match {
-      case 0 if !allowsAllSelfAttested => Failure(new Exception("No ledger identifiers were included with the Presentation"))
-      case _ =>
-        doSchemaRetrieval(ids) match {
-          case Success(s) =>
-            doCredDefRetrieval(ids).map((s,_))
-          case Failure(exception) => Failure(exception)
-        }
-    }
-
-  }
-
-  def doSchemaRetrieval(ids: Set[(String,String)])
-                       (implicit ctx: PresentProofContext): Try[String] = {
-     Try(
-      ids
-        .map(_._1)
-        .map { x =>
-          ctx.ledger.getSchema(x) match {
-            case Success(s) => x -> DefaultMsgCodec.toJson(s.schema)
-            case Failure(e) => throw new Exception("Unable to retrieve schema from ledger", e)
-          }
-        }
-        .map(t => s""" "${t._1}": ${t._2} """)
-        .mkString("{", ",", "}")
-    )
-  }
-
-
-  def doCredDefRetrieval(ids: Set[(String,String)])
-                        (implicit ctx: PresentProofContext): Try[String] = {
-    Try(
-      ids
-        .map(_._2)
-        .map { x =>
-          ctx.ledger.getCredDef(x) match {
-            case Success(s) => x -> DefaultMsgCodec.toJson(s.credDef)
-            case Failure(e) => throw new Exception("Unable to retrieve cred def from ledger", e)
-          }
-        }
-        .map(t => s""" "${t._1}": ${t._2} """)
-        .mkString("{", ",", "}")
-    )
   }
 
   def credentialsToUse(credentialsNeeded: Try[AvailableCredentials],

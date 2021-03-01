@@ -50,7 +50,7 @@ class WriteSchemaSpec
   }
 
   "SchemaProtocol" - {
-    "should signal it needs endorsement when issuer did is not written to ledger" in {f =>
+    "should signal it needs endorsement when issuer did is not written to ledger" in { f =>
       f.writer.initParams(Map(
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
       ))

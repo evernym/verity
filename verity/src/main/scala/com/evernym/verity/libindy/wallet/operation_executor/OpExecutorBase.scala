@@ -3,8 +3,8 @@ package com.evernym.verity.libindy.wallet.operation_executor
 import java.util.concurrent.CompletableFuture
 
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.actor.wallet.GetVerKeyResp
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
 
 import scala.language.implicitConversions
@@ -14,11 +14,11 @@ import scala.concurrent.Future
 trait OpExecutorBase extends FutureConverter {
 
   def verKeyFuture(keys: Set[KeyParam], ledgerPoolManager: Option[LedgerPoolConnManager])
-                          (implicit we: WalletExt): Future[Set[VerKey]] = {
+                          (implicit we: WalletExt): Future[Set[GetVerKeyResp]] = {
     Future.sequence {
       keys.map { rk =>
         rk.verKeyParam match {
-          case Left(vk) => Future(vk)
+          case Left(vk) => Future(GetVerKeyResp(vk))
           case Right(gvk: GetVerKeyByDIDParam) =>
             DidOpExecutor.getVerKey(gvk.did, gvk.getKeyFromPool, ledgerPoolManager)
         }

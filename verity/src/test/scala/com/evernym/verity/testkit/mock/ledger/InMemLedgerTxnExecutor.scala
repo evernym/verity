@@ -4,7 +4,7 @@ import com.evernym.verity.Status.{LEDGER_POOL_NO_RESPONSE, StatusDetail}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 
 import scala.collection.mutable.{Map => MMap}
 import scala.concurrent.{ExecutionContextExecutor, Future}

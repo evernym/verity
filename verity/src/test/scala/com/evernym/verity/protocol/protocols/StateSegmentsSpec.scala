@@ -5,12 +5,13 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects._
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
 import org.scalatest.concurrent.Eventually
+
+import scala.util.{Failure, Success}
 
 
 class StateSegmentsSpec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(Bucket_2_Legacy))
@@ -120,10 +121,6 @@ object TestObjects {
 
     override val segmentedStateName = Option("phone-book")
 
-    override def segmentRetrieval[A, B >:State, C >: SegmentKey]: (A, B) ?=> C = {
-      case (gpbe: GetPhoneBookEntry, _) => gpbe.key
-    }
-
     override def initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID)
 
     override def createInitMsg(params: Parameters) = Init(params)
@@ -156,8 +153,10 @@ object TestObjects {
         addPhoneBookEntry(apbe)
 
       case (_, Some(User), gpbe: GetPhoneBookEntry) =>
-        val segment = ctx.getInFlight.segmentAs[PhoneBookEntryAdded]
-        ctx.send(PhoneBookLookupResult(segment))
+        ctx.withSegment[PhoneBookEntryAdded](gpbe.key) {
+          case Success(entry: Option[PhoneBookEntryAdded]) => ctx.send(PhoneBookLookupResult(entry))
+          case Failure(exception)   => throw exception
+        }
 
       case (_, Some(PhoneBookService), result: PhoneBookLookupResult) =>
         ctx.apply(RetrievedEntry(result.entry))

@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.protocol.engine.external_api_access.{LedgerAccess, WalletAccess}
-import com.evernym.verity.protocol.engine.segmentedstate.{SegmentStoreStrategy, SegmentedStateMsg}
-import com.evernym.verity.protocol.engine.urlShortening.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
 import com.evernym.verity.testkit.BasicSpec
@@ -24,10 +26,11 @@ class ProtocolContainerSpec extends BasicSpec {
             override def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit = ???
           }
 
-          override def storageService: StorageService = new StorageService {
-            override def read(id: VerKey, cb: Try[Array[Byte]] => Unit): Unit = {}
-
-            override def write(id: VerKey, data: Array[Byte], cb: Try[Any] => Unit): Unit = {}
+          override def segmentStorage: SegmentStoreAccess = new SegmentStoreAccess {
+            def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
+                            (handler: Try[StoredSegment] => Unit): Unit = {}
+            def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+                              (handler: Try[Option[T]] => Unit): Unit = {}
           }
 
           override def sendsMsgs: SendsMsgs = ???
@@ -38,19 +41,17 @@ class ProtocolContainerSpec extends BasicSpec {
 
           override def requestInit(): Unit = None // Do nothing
 
-          def handleSegmentedMsgs(msg: SegmentedStateMsg, postExecution: Either[Any, Option[Any]] => Unit): Unit = ???
-
           override def wallet: WalletAccess = ???
 
           override def serviceEndpoint: ServiceEndpoint = ???
-
-          override def addToMsgQueue(msg: Any): Unit = ???
 
           override def segmentStoreStrategy: Option[SegmentStoreStrategy] = ???
 
           override def ledger: LedgerAccess = ???
 
           override def urlShortening: UrlShorteningAccess = ???
+
+          override def runAsyncOp(op: => Any): Unit = ???
         }
 
         val container = new TestProtocolContainer[TicTacToe, TicTacToeRole, Any, Any, State, String](TicTacToeProtoDef)

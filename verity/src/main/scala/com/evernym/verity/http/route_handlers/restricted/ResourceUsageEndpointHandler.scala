@@ -23,7 +23,7 @@ import scala.concurrent.Future
 
 trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
 
-  implicit val akkActorResponseTimeout: Timeout
+  implicit val responseTimeout: Timeout
 
   protected def getBlockedResources(gblc: GetBlockedList): Future[Any] = {
     platform.singletonParentProxy ? ForResourceBlockingStatusMngr(gblc)

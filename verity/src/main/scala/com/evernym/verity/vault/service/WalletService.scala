@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
+import akka.actor.ActorRef
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
@@ -26,6 +27,8 @@ trait WalletService {
   protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
   lazy val BAD_REQ_ERRORS = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
+
+  def tell(walletId: String, cmd: Any)(implicit sender: ActorRef): Unit
 
   /**
    * asynchronous/non-blocking wallet service call

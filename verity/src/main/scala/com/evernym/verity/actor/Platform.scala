@@ -23,7 +23,7 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.protocol.actor.ActorProtocol
+import com.evernym.verity.protocol.container.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
 import java.time.ZoneId

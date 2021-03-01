@@ -1,11 +1,14 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import java.util.UUID
-import com.evernym.verity.actor.wallet.CreatedCredReq
+
+import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
+import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.{AnonCredRequests, LedgerAccess, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.{AnonCredRequests, WalletAccess}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
@@ -725,7 +728,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
             None,
             None,
             None,
-            true
+            self_attest_allowed = true
           )
           msg.proof_request.requested_predicates should have size 0
         }
@@ -1091,40 +1094,42 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
     Ctl.Request(name, proof_attrs, proof_predicates, revocation_interval)
 
 }
+
 //MockableAnonCredRequests.basic
 object PresentProofSpec {
   import com.evernym.verity.protocol.testkit.MockableAnonCredRequests.basic
   val invalidEncoding: AnonCredRequests = new AnonCredRequests {
-    override def createSchema(issuerDID:  DID,
-                              name:  String,
-                              version:  String,
-                              data:  String)
-                             (handler: Try[(String, String)] => Unit): Unit =
+    override def createSchema(issuerDID: DID,
+                              name: String,
+                              version: String,
+                              data: String)
+                             (handler: Try[SchemaCreated] => Unit): Unit =
       basic.createSchema(issuerDID, name, version, data)(handler)
 
-    override def createCredDef(issuerDID:  DID,
-                               schemaJson:  String,
-                               tag:  String,
-                               sigType:  Option[String],
-                               revocationDetails:  Option[String])
-                              (handler: Try[(String, String)] => Unit): Unit =
+    override def createCredDef(issuerDID: DID,
+                               schemaJson: String,
+                               tag: String,
+                               sigType: Option[String],
+                               revocationDetails: Option[String])
+                              (handler: Try[CredDefCreated] => Unit): Unit =
       basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
 
-    override def createCredOffer(a1: String)(handler: Try[String] => Unit): Unit = basic.createCredOffer(a1)(handler)
+    override def createCredOffer(a1: String)(handler: Try[CredOfferCreated] => Unit): Unit = basic.createCredOffer(a1)(handler)
     override def createCredReq(a1: String, a2: DID, a3: String, a4: String)
-                              (handler: Try[CreatedCredReq] => Unit): Unit =
+                              (handler: Try[CredReqCreated] => Unit): Unit =
       basic.createCredReq(a1, a2, a3, a4)(handler)
     override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int)
-                           (handler: Try[String] => Unit): Unit =
+                           (handler: Try[CredCreated] => Unit): Unit =
       basic.createCred(a1, a2, a3, a4, a5)(handler)
-    override def credentialsForProofReq(a1: String)(handler: Try[String] => Unit): Unit =
+    override def credentialsForProofReq(a1: String)(handler: Try[CredForProofReqCreated] => Unit): Unit =
       basic.credentialsForProofReq(a1)(handler)
     override def verifyProof(a1: String, a2: String, a3: String, a4: String, a5: String, a6: String)
-                            (handler: Try[Boolean] => Unit): Unit =
+                            (handler: Try[ProofVerifResult] => Unit): Unit =
       basic.verifyProof(a1, a2, a3, a4, a5, a6)(handler)
     override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String)
-                            (handler: Try[String] => Unit): Unit = handler(Try(
+                            (handler: Try[ProofCreated] => Unit): Unit = handler(Try(
       // changes raw value of attr1_referent 'Alex' to 'Mark'
+      ProofCreated(
       """{
         |   "proof":{},
         |   "requested_proof":{
@@ -1158,48 +1163,48 @@ object PresentProofSpec {
         |      }
         |   ]
         |}""".stripMargin
-    ))
+    )))
 
     override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
                            credDefJson: String, revRegDefJson: String)
-                          (handler: Try[String] => Unit): Unit =
-      handler(Try(Option(credId).getOrElse(UUID.randomUUID().toString)))
+                          (handler: Try[CredStored] => Unit): Unit =
+      handler(Try(CredStored(Option(credId).getOrElse(UUID.randomUUID().toString))))
   }
 
   val invalidProof: AnonCredRequests = new AnonCredRequests {
-    override def createSchema(issuerDID:  DID,
-                              name:  String,
-                              version:  String,
-                              data:  String)
-                             (handler: Try[(String, String)] => Unit): Unit =
+    override def createSchema(issuerDID: DID,
+                              name: String,
+                              version: String,
+                              data: String)
+                             (handler: Try[SchemaCreated] => Unit): Unit =
       basic.createSchema(issuerDID, name, version, data)(handler)
 
-    override def createCredDef(issuerDID:  DID,
-                               schemaJson:  String,
-                               tag:  String,
-                               sigType:  Option[String],
-                               revocationDetails:  Option[String])
-                              (handler: Try[(String, String)] => Unit): Unit =
+    override def createCredDef(issuerDID: DID,
+                               schemaJson: String,
+                               tag: String,
+                               sigType: Option[String],
+                               revocationDetails: Option[String])
+                              (handler: Try[CredDefCreated] => Unit): Unit =
       basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
 
-    override def createCredOffer(a1: String)(handler: Try[String] => Unit): Unit = basic.createCredOffer(a1)(handler)
+    override def createCredOffer(a1: String)(handler: Try[CredOfferCreated] => Unit): Unit = basic.createCredOffer(a1)(handler)
     override def createCredReq(a1: String, a2: DID, a3: String, a4: String)
-                              (handler: Try[CreatedCredReq] => Unit): Unit =
+                              (handler: Try[CredReqCreated] => Unit): Unit =
       basic.createCredReq(a1, a2, a3, a4)(handler)
     override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int)
-                           (handler: Try[String] => Unit): Unit =
+                           (handler: Try[CredCreated] => Unit): Unit =
       basic.createCred(a1, a2, a3, a4, a5)(handler)
-    override def credentialsForProofReq(a1: String)(handler: Try[String] => Unit): Unit =
+    override def credentialsForProofReq(a1: String)(handler: Try[CredForProofReqCreated] => Unit): Unit =
       basic.credentialsForProofReq(a1)(handler)
     override def verifyProof(a1: String, a2: String, a3: String, a4: String, a5: String, a6: String)
-                            (handler: Try[Boolean] => Unit): Unit =
-      handler(Try(false))
+                            (handler: Try[ProofVerifResult] => Unit): Unit =
+      handler(Try(ProofVerifResult(false)))
     override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String)
-                            (handler: Try[String] => Unit): Unit =
+                            (handler: Try[ProofCreated] => Unit): Unit =
       basic.createProof(a1, a2, a3, a4, a5)(handler)
     override def storeCred(credId: String, credDefJson: String, credReqMetadataJson: String, credJson: String,
                            revRegDefJson: String)
-                          (handler: Try[String] => Unit): Unit =
+                          (handler: Try[CredStored] => Unit): Unit =
       basic.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)(handler)
   }
 }

@@ -42,9 +42,9 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Initialized(), _, Create()) =>
       ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
       ctx.wallet.newDid() {
-        case Success((did, verkey)) =>
-          ctx.apply(CreatePublicIdentifierCompleted(did, verkey))
-          ctx.signal(PublicIdentifierCreated(PublicIdentifier(did, verkey)))
+        case Success(keyCreated) =>
+          ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
+          ctx.signal(PublicIdentifierCreated(PublicIdentifier(keyCreated.did, keyCreated.verKey)))
         case Failure(e) =>
           ctx.logger.warn("Wallet access failed to create DID/Verkey pair - " + e.getMessage)
           ctx.logger.warn(Exceptions.getStackTraceAsSingleLineString(e))

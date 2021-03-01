@@ -16,7 +16,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.constants.Constants.{RESOURCE_TYPE_ENDPOINT, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.protocol.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
+import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, MsgId, ProtoDef}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_v_0_5}

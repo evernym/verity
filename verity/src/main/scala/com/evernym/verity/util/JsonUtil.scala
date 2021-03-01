@@ -1,8 +1,5 @@
 package com.evernym.verity.util
 
-import java.util
-
-import com.evernym.verity.actor.metrics.LibindyMetricsRecord
 import com.evernym.verity.protocol.engine.util.DbcUtil
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}

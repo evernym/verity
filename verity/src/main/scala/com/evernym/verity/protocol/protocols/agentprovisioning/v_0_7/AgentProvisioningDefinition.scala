@@ -2,12 +2,10 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.Init
+import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
 import AgentProvisioningMsgFamily._
-import com.evernym.verity.protocol.engine.external_api_access.{AccessRight, AccessVerify}
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
-import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AccessVerify}
 
 object AgentProvisioningDefinition
   extends ProtocolDefinition[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String] {
@@ -30,9 +28,4 @@ object AgentProvisioningDefinition
   }
 
   override def initialState: AgentProvisioningState = State.Uninitialized()
-
-  override def segmentRetrieval[A, B >: AgentProvisioningState, C >: SegmentKey]: (A, B) ?=> C = {
-    case (_: GiveSponsorDetails, s: AwaitsSponsor) if s.token.isDefined =>
-      s.token.get.sig
-  }
 }

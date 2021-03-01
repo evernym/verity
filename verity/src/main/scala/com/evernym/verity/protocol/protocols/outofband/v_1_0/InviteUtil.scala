@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
+import com.evernym.verity.actor.wallet.GetVerKeyResp
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
@@ -13,7 +14,7 @@ object InviteUtil {
     (agencyVerKey, ctx.getRoster.selfId) match {
       case (Some(agencyVerKey), Some(did)) =>
         ctx.wallet.verKey(did) {
-          case Success(verKey: VerKey) =>
+          case Success(GetVerKeyResp(verKey: VerKey)) =>
             handler(Success(
               DIDDoc(
                 did,

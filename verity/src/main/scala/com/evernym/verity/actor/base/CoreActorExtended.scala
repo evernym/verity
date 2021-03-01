@@ -42,8 +42,8 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
     context.self ! PoisonPill
   }
 
-  override def setNewReceiveBehaviour(receiver: Receive): Unit = {
-    context.become(extendedCoreCommandHandler(receiver))
+  override def setNewReceiveBehaviour(receiver: Receive, discardOld: Boolean = true): Unit = {
+    context.become(extendedCoreCommandHandler(receiver), discardOld)
   }
 
 }

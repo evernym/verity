@@ -5,7 +5,7 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
-import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, UnpackMsg, UnpackedMsg, VerifySigByVerKey, VerifySigResult}
+import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigByVerKey, VerifySigResult}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
@@ -22,12 +22,12 @@ object CryptoOpExecutor extends OpExecutorBase {
   def handleLegacyPackMsg(lpm: LegacyPackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
                          (implicit we: WalletExt): Future[PackedMsg] = {
     val resp = for (
-      recipKey      <- verKeyFuture(lpm.recipVerKeyParams, ledgerPoolManager).map(_.head);
-      senderVerKey  <- verKeyFuture(lpm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
+      recipKeyResp      <- verKeyFuture(lpm.recipVerKeyParams, ledgerPoolManager).map(_.head);
+      senderVerKeyResp  <- verKeyFuture(lpm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
     ) yield {
-      val fut = senderVerKey match {
-        case None             => Crypto.anonCrypt(recipKey, lpm.msg)
-        case Some(senderKey)  => Crypto.authCrypt(we.wallet, senderKey, recipKey, lpm.msg)
+      val fut = senderVerKeyResp match {
+        case None        => Crypto.anonCrypt(recipKeyResp.verKey, lpm.msg)
+        case Some(gvkr)  => Crypto.authCrypt(we.wallet, gvkr.verKey, recipKeyResp.verKey, lpm.msg)
       }
       fut.map(r => PackedMsg(r))
     }
@@ -38,13 +38,13 @@ object CryptoOpExecutor extends OpExecutorBase {
                            (implicit we: WalletExt): Future[UnpackedMsg] = {
 
     val result = for (
-      fromVerKey <- verKeyFuture(lum.fromVerKeyParam.toSet, ledgerPoolManager).map(_.head)
+      fromVerKeyResp <- verKeyFuture(lum.fromVerKeyParam.toSet, ledgerPoolManager).map(_.head)
     ) yield {
       val result = if (lum.isAnonCryptedMsg) {
-        Crypto.anonDecrypt(we.wallet, fromVerKey, lum.msg)
+        Crypto.anonDecrypt(we.wallet, fromVerKeyResp.verKey, lum.msg)
           .map(dm => UnpackedMsg(dm, None, None))
       } else {
-        Crypto.authDecrypt(we.wallet, fromVerKey, lum.msg)
+        Crypto.authDecrypt(we.wallet, fromVerKeyResp.verKey, lum.msg)
           .map(dr => UnpackedMsg(dr.getDecryptedMessage, Option(dr.getVerkey), None))
       }
       result.recover {
@@ -67,10 +67,10 @@ object CryptoOpExecutor extends OpExecutorBase {
 
     val result = for (
       recipKeys     <- verKeyFuture(pm.recipVerKeyParams, ledgerPoolManager);
-      senderVerKey  <- verKeyFuture(pm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
+      senderVerKeyResp  <- verKeyFuture(pm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
     ) yield {
-      val recipKeysJson = jsonArray(recipKeys)
-      Crypto.packMessage(we.wallet, recipKeysJson, senderVerKey.orNull, pm.msg)
+      val recipKeysJson = jsonArray(recipKeys.map(_.verKey))
+      Crypto.packMessage(we.wallet, recipKeysJson, senderVerKeyResp.map(_.verKey).orNull, pm.msg)
       .map(PackedMsg(_))
     }
     result.flatten
@@ -91,10 +91,11 @@ object CryptoOpExecutor extends OpExecutorBase {
       }
   }
 
-  def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[Array[Byte]] = {
+  def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[SignedMsg] = {
     val verKeyFuture = handleGetVerKey(smp.keyParam)
-    verKeyFuture.flatMap { verKey =>
-      Crypto.cryptoSign(we.wallet, verKey, smp.msg)
+    verKeyFuture.flatMap { gvkr =>
+      Crypto.cryptoSign(we.wallet, gvkr.verKey, smp.msg)
+        .map(SignedMsg(_, gvkr.verKey))
     }
   }
 

@@ -4,7 +4,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.InviteShortened
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 

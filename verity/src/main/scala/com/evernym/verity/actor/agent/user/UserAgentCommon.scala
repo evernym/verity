@@ -20,7 +20,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWra
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols._

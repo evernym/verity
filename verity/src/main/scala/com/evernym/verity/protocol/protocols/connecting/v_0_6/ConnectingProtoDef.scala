@@ -6,7 +6,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.engine.{MsgName, _}

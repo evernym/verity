@@ -5,11 +5,12 @@ package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 // community to change it.
 
 import java.util.UUID
+
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol.Nonce
@@ -236,8 +237,8 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
               getBase64MultiDecoded(x.signature),
               x.signers.headOption
             ) {
-              case Success(validSignature) =>
-                answerValidated(m.response, validResponse, validSignature, notExpired)
+              case Success(sigVerifResult) =>
+                answerValidated(m.response, validResponse, sigVerifResult.verified, notExpired)
               case Failure(ex) =>
                 ctx.logger.warn(s"Unable to verify signature - ${ex.getMessage}")
                 answerValidated(m.response, validResponse, validSignature = false, notExpired)
@@ -391,11 +392,11 @@ object QuestionAnswerProtocol {
         val signable = buildSignableHash(state.question.question_text, resp, state.question.nonce)
         wallet.sign(signable.bytes) { result =>
           handler(
-            result.map { sig =>
+            result.map { signedMsg =>
               val sigBlock = SigBlock(
-                sig.toBase64UrlEncoded,
+                signedMsg.signatureResult.toBase64UrlEncoded,
                 signable.encoded,
-                Seq(sig.verKey)
+                Seq(signedMsg.signatureResult.verKey)
               )
               Msg.Answer(resp, Some(sigBlock), None)
             }

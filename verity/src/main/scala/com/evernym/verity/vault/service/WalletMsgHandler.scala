@@ -9,7 +9,6 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
 import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, LedgerWalletOpExecutor}
-import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.vault.{KeyParam, WalletConfig, WalletExt, WalletProvider}
@@ -50,35 +49,35 @@ object WalletMsgHandler {
     Future(Done)
   }
 
-  private def handleCreateProof(proof: CreateProof)(implicit we: WalletExt): Future[String] = {
+  private def handleCreateProof(proof: CreateProof)(implicit we: WalletExt): Future[ProofCreated] = {
     AnoncredsWalletOpExecutor.handleCreateProof(proof)
   }
 
-  private def handleCredForProofReq(req: CredForProofReq)(implicit we: WalletExt): Future[String] = {
+  private def handleCredForProofReq(req: CredForProofReq)(implicit we: WalletExt): Future[CredForProofReqCreated] = {
     AnoncredsWalletOpExecutor.handleCredForProofReq(req)
   }
 
-  private def handleCreateCred(cred: CreateCred)(implicit we: WalletExt): Future[String] = {
+  private def handleCreateCred(cred: CreateCred)(implicit we: WalletExt): Future[CredCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCred(cred)
   }
 
-  private def handleStoreCred(sc: StoreCred)(implicit we: WalletExt): Future[String] = {
+  private def handleStoreCred(sc: StoreCred)(implicit we: WalletExt): Future[CredStored] = {
     AnoncredsWalletOpExecutor.handleStoreCred(sc)
   }
 
-  private def handleCreateCredReq(req: CreateCredReq)(implicit we: WalletExt): Future[CreatedCredReq] = {
+  private def handleCreateCredReq(req: CreateCredReq)(implicit we: WalletExt): Future[CredReqCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCredReq(req)
   }
 
-  private def handleCreateCredOffer(offer: CreateCredOffer)(implicit we: WalletExt): Future[String] = {
+  private def handleCreateCredOffer(offer: CreateCredOffer)(implicit we: WalletExt): Future[CredOfferCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCredOffer(offer)
   }
 
-  private def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[CreatedCredDef] = {
+  private def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[CredDefCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCredDef(ccd)
   }
 
-  private def handleCreateMasterSecret(secret: CreateMasterSecret)(implicit we: WalletExt): Future[String] = {
+  private def handleCreateMasterSecret(secret: CreateMasterSecret)(implicit we: WalletExt): Future[MasterSecretCreated] = {
     AnoncredsWalletOpExecutor.handleCreateMasterSecret(secret)
   }
 
@@ -86,7 +85,7 @@ object WalletMsgHandler {
     CryptoOpExecutor.handleUnpackMsg(um)
   }
 
-  private def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[Array[Byte]] = {
+  private def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[SignedMsg] = {
     CryptoOpExecutor.handleSignMsg(smp)
   }
 
@@ -104,8 +103,8 @@ object WalletMsgHandler {
 
   private def handleVerifySigByKeyParam(vs: VerifySigByKeyParam)
                               (implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
-    handleGetVerKey(vs.keyParam).flatMap { verKey =>
-      CryptoOpExecutor.verifySig(verKey, vs.challenge, vs.signature)
+    handleGetVerKey(vs.keyParam).flatMap { gvkr =>
+      CryptoOpExecutor.verifySig(gvkr.verKey, vs.challenge, vs.signature)
     }
   }
 
@@ -158,7 +157,7 @@ object WalletMsgHandler {
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
   }
 
-  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[VerKey]] = {
+  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[GetVerKeyResp]] = {
     handleGetVerKey(GetVerKey(gvko.did, gvko.getKeyFromPool))
       .map(vk => Option(vk))
       .recover {
@@ -166,16 +165,16 @@ object WalletMsgHandler {
       }
   }
 
-  def handleGetVerKey(keyParam: KeyParam)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerKey] = {
+  def handleGetVerKey(keyParam: KeyParam)(implicit wmp: WalletMsgParam, we: WalletExt): Future[GetVerKeyResp] = {
     keyParam.verKeyParam.fold (
-      vk => Future.successful(vk),
+      vk => Future.successful(GetVerKeyResp(vk)),
       gvkByDid => {
         handleGetVerKey(GetVerKey(gvkByDid.did, gvkByDid.getKeyFromPool))
       }
     )
   }
 
-  def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerKey] =
+  def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt): Future[GetVerKeyResp] =
     DidOpExecutor.getVerKey(gvk.did, gvk.getKeyFromPool, wmp.poolManager)
 }
 

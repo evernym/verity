@@ -14,7 +14,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, GetMsgsReqMsg_MFV_0_5, PairwiseMsgUids}
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.protocol.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
+import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_V_0_5}

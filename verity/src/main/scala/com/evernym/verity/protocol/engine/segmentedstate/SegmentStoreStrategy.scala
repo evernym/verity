@@ -13,15 +13,16 @@ trait SegmentStoreStrategy {
   def calcSegmentId(segmentKey: SegmentKey): SegmentId
 
   /**
-    * By default it should mix given 'pinstid' with segmentId to make it unique so that one protocol instance
-    * should not be able to reach to a segment which belongs to a different protocol instance
-    *
-    * @param pinstId protocol instance id
-    * @param domainId domain id
-    * @param segmentId segment id
-    * @return
-    */
-  def calcSegmentAddress(pinstId: PinstId, domainId: DomainId, segmentId: SegmentId): SegmentAddress = {
+   * By default it should mix given either 'domainId' or 'pinstid' with segmentId to make
+   * it unique so that one protocol instance
+   * should not be able to reach to a segment which belongs to a different protocol instance
+   *
+   * @param domainId domain id
+   * @param pinstId protocol instance id
+   * @param segmentId segment id
+   * @return
+   */
+  def calcSegmentAddress(domainId: DomainId, pinstId: PinstId, segmentId: SegmentId): SegmentAddress = {
     pinstId + "-" + segmentId
   }
 }
@@ -70,7 +71,7 @@ object SegmentStoreStrategy {
      * @param segmentId segment id
      * @return
      */
-    override def calcSegmentAddress(pinstId: PinstId, domainId: DomainId, segmentId: SegmentId): SegmentAddress = {
+    override def calcSegmentAddress(domainId: DomainId, pinstId: PinstId, segmentId: SegmentId): SegmentAddress = {
       domainId + '-' + segmentId
     }
   }

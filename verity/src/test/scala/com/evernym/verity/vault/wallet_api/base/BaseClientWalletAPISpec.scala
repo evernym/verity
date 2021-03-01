@@ -84,7 +84,7 @@ trait UserWalletSetupHelper {
     val theirDidPair = CommonSpecUtil.generateNewDid()
     val stk = walletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDidPair.DID, theirDidPair.verKey))
     println(s"[$userId] their key stored")
-    val gvk = walletAPI.executeSync[Option[VerKey]](GetVerKeyOpt(nkc.did))
+    val gvk = walletAPI.executeSync[Option[GetVerKeyResp]](GetVerKeyOpt(nkc.did))
     println(s"[$userId] ver key retrieved")
   }
 

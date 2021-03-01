@@ -6,7 +6,9 @@ skinparam class {
     BorderColor<<sys>> Black
 }
 class UserAgent <<focus>>
-interface UserAgentCommon
+class UserAgentPairwise <<focus>>
+class AgencyAgent <<focus>>
+interface AgencyAgentCommon
 interface AgentPersistentActor
 interface BasePersistentActor
 abstract class PersistentActor <<sys>>
@@ -14,7 +16,7 @@ interface EventPersistenceEncryption
 interface CoreActorExtended
 interface CoreActor
 abstract class Actor <<sys>>
-interface EntityIdentifier
+class EntityIdentifier
 abstract class ActorLogging <<sys>>
 interface HasActorTimers
 abstract class Timers <<sys>>
@@ -26,11 +28,9 @@ interface PersistentEntityIdentifier
 abstract class Stash <<sys>>
 class DefaultPersistenceEncryption
 interface HasAppConfig
-interface UserAgentCommonStateUpdateImpl
-interface AgentStateUpdateInterface
-interface MsgAndDeliveryHandler
 interface AgentMsgHandler
 interface AgentCommon
+interface AgentStateUpdateInterface
 interface AgentIdentity
 interface HasAgentWallet
 interface HasWallet
@@ -49,48 +49,28 @@ class MsgRespTimeTracker
 interface AgentStateCleanupHelper
 interface HasLogger
 interface ShardRegionFromActorContext
-interface MsgStoreAPI
-interface LEGACY_connectingSignalHandler
-interface UserAgentStateUpdateImpl
-interface MsgNotifierForUserAgent
-interface MsgNotifierForUserAgentCommon
-interface MsgNotifierForStoredMsgs
 interface MsgNotifier
-interface PushNotifMsgBuilder
+interface LEGACY_connectingSignalHandler
+interface AgencyAgentStateUpdateImpl
+interface AgencyPackedMsgHandler
 interface AgentSnapshotter
 interface AgentStateInterface
 class State
 interface SnapshotterExt
 abstract class Snapshotter <<sys>>
-class UserAgentPairwise <<focus>>
-interface UserAgentPairwiseStateUpdateImpl
-interface AgentMsgSender
-interface HasGeneralCache
-interface UsesConfigs
-abstract class PairwiseConnState <<sys>>
-interface MsgDeliveryResultHandler
-interface HasAgentMsgTransformer
-interface MsgNotifierForUserAgentPairwise
-interface FailedMsgRetrier
-class AgencyAgent <<focus>>
-interface AgencyAgentCommon
-interface AgencyAgentStateUpdateImpl
-interface AgencyPackedMsgHandler
 class AgencyAgentPairwise <<focus>>
 interface AgencyAgentPairwiseStateUpdateImpl
+abstract class PairwiseConnState <<sys>>
 
-UserAgent -up-|> UserAgentCommon
-UserAgent -* UserAgentStateUpdateImpl
-UserAgent -down-* HasAgentActivity
-UserAgent --* MsgNotifierForUserAgent
-UserAgent -down-* AgentSnapshotter
-UserAgentCommon -up-|> AgentPersistentActor
-UserAgentCommon -* UserAgentCommonStateUpdateImpl
-UserAgentCommon -* MsgAndDeliveryHandler
-UserAgentCommon --* AgentMsgHandler
-UserAgentCommon -down-* ShardRegionFromActorContext
-UserAgentCommon -* MsgStoreAPI
-UserAgentCommon --* LEGACY_connectingSignalHandler
+AgencyAgent -up-|> AgencyAgentCommon
+AgencyAgent -* AgencyAgentStateUpdateImpl
+AgencyAgent -* AgencyPackedMsgHandler
+AgencyAgent -down-* AgentSnapshotter
+AgencyAgentCommon -up-|> AgentPersistentActor
+AgencyAgentCommon --* AgentMsgHandler
+AgencyAgentCommon -down-* ShardRegionFromActorContext
+AgencyAgentCommon --* MsgNotifier
+AgencyAgentCommon -* LEGACY_connectingSignalHandler
 AgentPersistentActor -up-|> BasePersistentActor
 AgentPersistentActor -* DefaultPersistenceEncryption
 AgentPersistentActor --* HasAppConfig
@@ -110,7 +90,6 @@ CoreActor -down-* ActorLogging
 HasActorTimers -up-|> Timers
 HasTransformationRegistry -up-|> LegacyTransformationRegistry
 PersistentEntityIdentifier -up-|> EntityIdentifier
-UserAgentCommonStateUpdateImpl -up-|> AgentStateUpdateInterface
 AgentMsgHandler -up-|> AgentCommon
 AgentMsgHandler -down-* ProtocolEngineExceptionHandler
 AgentMsgHandler --* AgentIncomingMsgHandler
@@ -132,42 +111,12 @@ HasAgentActivity -up-|> ShardRegionCommon
 ShardRegionCommon -up-|> ShardRegionNames
 ShardRegionNames -up-|> HasShardRegionNames
 ShardRegionFromActorContext -up-|> ShardRegionCommon
-UserAgentStateUpdateImpl -up-|> UserAgentCommonStateUpdateImpl
-MsgNotifierForUserAgent -up-|> MsgNotifierForUserAgentCommon
-MsgNotifierForUserAgentCommon -up-|> MsgNotifierForStoredMsgs
-MsgNotifierForStoredMsgs -up-|> MsgNotifier
-MsgNotifierForStoredMsgs -down-* PushNotifMsgBuilder
-PushNotifMsgBuilder -up-|> HasAppConfig
+AgencyAgentStateUpdateImpl -up-|> AgentStateUpdateInterface
+AgencyPackedMsgHandler -up-|> ResourceUsageCommon
 AgentSnapshotter --* AgentStateInterface
 AgentSnapshotter -up-|> SnapshotterExt
 AgentStateInterface -up-|> State
 SnapshotterExt -up-|> Snapshotter
-UserAgentPairwise -up-|> UserAgentCommon
-UserAgentPairwise -* UserAgentPairwiseStateUpdateImpl
-UserAgentPairwise --* AgentMsgSender
-UserAgentPairwise --* UsesConfigs
-UserAgentPairwise -down-* PairwiseConnState
-UserAgentPairwise -down-* MsgDeliveryResultHandler
-UserAgentPairwise --* MsgNotifierForUserAgentPairwise
-UserAgentPairwise -* FailedMsgRetrier
-UserAgentPairwise -down-* AgentSnapshotter
-UserAgentPairwiseStateUpdateImpl -up-|> UserAgentCommonStateUpdateImpl
-AgentMsgSender -up-|> HasGeneralCache
-AgentMsgSender -down-* HasLogger
-UsesConfigs -up-|> HasAppConfig
-MsgDeliveryResultHandler -up-|> HasAgentMsgTransformer
-MsgNotifierForUserAgentPairwise -up-|> MsgNotifierForUserAgentCommon
-AgencyAgent -up-|> AgencyAgentCommon
-AgencyAgent -* AgencyAgentStateUpdateImpl
-AgencyAgent -* AgencyPackedMsgHandler
-AgencyAgent -down-* AgentSnapshotter
-AgencyAgentCommon -up-|> AgentPersistentActor
-AgencyAgentCommon --* AgentMsgHandler
-AgencyAgentCommon -down-* ShardRegionFromActorContext
-AgencyAgentCommon --* MsgNotifier
-AgencyAgentCommon -* LEGACY_connectingSignalHandler
-AgencyAgentStateUpdateImpl -up-|> AgentStateUpdateInterface
-AgencyPackedMsgHandler -up-|> ResourceUsageCommon
 AgencyAgentPairwise -up-|> AgencyAgentCommon
 AgencyAgentPairwise -* AgencyAgentPairwiseStateUpdateImpl
 AgencyAgentPairwise -down-* PairwiseConnState

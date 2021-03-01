@@ -4,7 +4,7 @@ import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.urlShortening.InviteShortened
+import com.evernym.verity.protocol.engine.asyncService.urlShorter.InviteShortened
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
 import com.evernym.verity.util.MsgIdProvider

@@ -4,11 +4,11 @@ import java.util.concurrent.ExecutionException
 
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
-import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault.WalletExt
 import org.hyperledger.indy.sdk.InvalidStructureException
 import org.hyperledger.indy.sdk.did.{Did, DidJSONParameters}
@@ -20,14 +20,16 @@ object DidOpExecutor extends OpExecutorBase {
 
   def getVerKey(did: DID,
                 getKeyFromPool: Boolean,
-                ledgerPoolManager: Option[LedgerPoolConnManager])(implicit we: WalletExt): Future[VerKey] = {
+                ledgerPoolManager: Option[LedgerPoolConnManager])(implicit we: WalletExt): Future[GetVerKeyResp] = {
     val result = (getKeyFromPool, ledgerPoolManager) match {
       case (true, Some(lpm: IndyLedgerPoolConnManager)) => Did.keyForDid(lpm.poolConn_!, we.wallet, did)
       case _ => Did.keyForLocalDid(we.wallet, did)
     }
-    result.recover {
-      case e: Exception => throw new ExecutionException(e)
-    }
+    result
+      .map(vk => GetVerKeyResp(vk))
+      .recover {
+        case e: Exception => throw new ExecutionException(e)
+      }
   }
 
   def handleCreateDID(d: CreateDID)(implicit we: WalletExt): Future[NewKeyCreated] = {

@@ -5,7 +5,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
-import com.evernym.verity.protocol.engine.external_api_access.WalletAccess
+import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 
 import scala.concurrent.Future

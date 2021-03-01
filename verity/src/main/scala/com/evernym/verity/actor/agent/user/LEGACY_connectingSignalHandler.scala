@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.{Evt, MsgAnswered}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.util.TimeZoneUtil._
-import com.evernym.verity.protocol.actor.UpdateMsgDeliveryStatus
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.StorePayloadParam
 import com.evernym.verity.protocol.protocols.connecting.common.{AddMsg, UpdateDeliveryStatus, UpdateMsg}

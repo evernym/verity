@@ -10,7 +10,7 @@ object MsgFamily {
   //TODO: Evernym qualifier given below is just a test string,
   // we'll have to decide what it should be?
 
-  val QUALIFIER_FORMAT_HTTP = true
+  val QUALIFIER_FORMAT_HTTP = false
 
   val COMMUNITY_QUALIFIER: MsgFamilyQualifier = CommunityQualifier
   val EVERNYM_QUALIFIER: MsgFamilyQualifier = EvernymQualifier

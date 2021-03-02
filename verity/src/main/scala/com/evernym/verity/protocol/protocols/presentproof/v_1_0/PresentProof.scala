@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.ShortenInvite
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil

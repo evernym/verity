@@ -5,7 +5,7 @@ import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.asyncService.wallet.AnonCredRequests
+import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredRequests
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil._

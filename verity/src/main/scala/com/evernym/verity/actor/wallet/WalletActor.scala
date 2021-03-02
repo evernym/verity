@@ -14,7 +14,7 @@ import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
-import com.evernym.verity.protocol.engine.asyncService.wallet.SignatureResult
+import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
@@ -185,10 +185,8 @@ case class GetVerKey(did: DID, getKeyFromPool: Boolean = false) extends WalletCo
 
 case class SignMsg(keyParam: KeyParam, msg: Array[Byte]) extends WalletCommand
 
-case class VerifySigByKeyParam(keyParam: KeyParam, challenge: Array[Byte], signature: Array[Byte])
-  extends WalletCommand
-
-case class VerifySigByVerKey(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte])
+case class VerifySignature(keyParam: KeyParam, challenge: Array[Byte],
+                           signature: Array[Byte], verKeyUsed: Option[VerKey]=None)
   extends WalletCommand
 
 case class PackMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])

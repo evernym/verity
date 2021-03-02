@@ -3,9 +3,9 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.ledger._
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.asyncService.LedgerReadAccess
-import com.evernym.verity.protocol.engine.asyncService.ledger.{LedgerAccess, LedgerAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.asyncapi.LedgerReadAccess
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessController}
 import com.evernym.verity.testkit.BasicSpec
 
 import scala.util.Try

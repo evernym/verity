@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine.asyncService.wallet
+package com.evernym.verity.protocol.engine.asyncapi.wallet
 
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated

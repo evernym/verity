@@ -75,22 +75,22 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //agency agent actor
   val agencyAgentRegion: ActorRef = createPersistentRegion(
     AGENCY_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new AgencyAgent(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_AGENCY_AGENT)))
+    buildProp(Props(new AgencyAgent(agentActorContext)), Option(AGENCY_AGENT_ACTOR_DISPATCHER_NAME)))
 
   //agency agent actor for pairwise connection
   val agencyAgentPairwiseRegion: ActorRef = createPersistentRegion(
     AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-    buildProp(Props(new AgencyAgentPairwise(agentActorContext)), Option(ACTOR_DISPATCHER_NAME_AGENCY_AGENT_PAIRWISE)))
+    buildProp(Props(new AgencyAgentPairwise(agentActorContext)), Option(AGENCY_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)))
 
   //agent actor
   val userAgentRegion: ActorRef = createPersistentRegion(
     USER_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgent(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT)))
+    buildProp(Props(new UserAgent(agentActorContext, collectionsMetricsCollector)), Option(USER_AGENT_ACTOR_DISPATCHER_NAME)))
 
   //agent actor for pairwise connection
   val userAgentPairwiseRegion: ActorRef = createPersistentRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgentPairwise(agentActorContext, collectionsMetricsCollector)), Option(ACTOR_DISPATCHER_NAME_USER_AGENT_PAIRWISE)))
+    buildProp(Props(new UserAgentPairwise(agentActorContext, collectionsMetricsCollector)), Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)))
 
   object agencyAgent extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
@@ -115,7 +115,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
     ACTIVITY_TRACKER_REGION_ACTOR_NAME,
     buildProp(
       Props(new ActivityTracker(agentActorContext.appConfig, agentActorContext.agentMsgRouter)),
-      Option(ACTOR_DISPATCHER_NAME_ACTIVITY_TRACKER)
+      Option(ACTIVITY_TRACKER_ACTOR_DISPATCHER_NAME)
   ))
 
   //wallet actor
@@ -123,7 +123,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
     WALLET_REGION_ACTOR_NAME,
     buildProp(
       Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager)),
-      Option(ACTOR_DISPATCHER_NAME_WALLET_ACTOR)
+      Option(WALLET_ACTOR_ACTOR_DISPATCHER_NAME)
     ),
     passivateIdleEntityAfter = Option(
       passivateDuration(NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)

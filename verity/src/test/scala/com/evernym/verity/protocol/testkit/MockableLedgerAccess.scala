@@ -10,8 +10,9 @@ import com.evernym.verity.Status
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccessController
-import com.evernym.verity.protocol.engine.asyncService.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.vault.WalletAPIParam
 import org.json.JSONObject
 
 import scala.util.{Failure, Try}
@@ -31,14 +32,13 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true) extends LedgerAccess {
   import MockableLedgerAccess._
-  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(null, ActorRef.noSender)
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(null, new TestAppConfig, ActorRef.noSender, null)
 
   val testWallet = new TestWallet(false)
-  implicit val wap = testWallet.wap
+  implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessController (
     Set(),
     new WalletAccessAPI (
-      new TestAppConfig,
       testWallet.testWalletAPI,
       testWallet.walletId
     )

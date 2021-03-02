@@ -17,10 +17,10 @@ import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.appStateManager.AppStateEvent
-import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
-import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
+import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._

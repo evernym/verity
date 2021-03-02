@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.tokenizer
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AccessSign}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{Msg, Requester, Role, Tokenizer}
 

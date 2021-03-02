@@ -1,6 +1,5 @@
 package com.evernym.verity.actor
 
-import com.evernym.verity.Status
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.node_singleton.TrackingParam
 import com.evernym.verity.protocol.engine.{DID, Ledgers, VerKey}

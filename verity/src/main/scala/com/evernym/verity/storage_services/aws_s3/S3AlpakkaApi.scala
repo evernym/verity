@@ -22,6 +22,8 @@ trait StorageAPI {
 
 class S3AlpakkaApi(config: Config)(implicit val as: ActorSystem) extends StorageAPI {
   implicit val s3Attributes: Attributes = S3Attributes.settings(S3Settings(config.getConfig("alpakka.s3")))
+
+  //TODO: the class name seems to be generic but the below bucket configuration seem to be tightly coupled with wallet bucket???
   val bucketName: String = config.getConfig("wallet.backup").getString("s3-bucket-name")
 
   def createBucket(bucketName: String): Future[Done] = {

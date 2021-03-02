@@ -6,9 +6,9 @@ import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
-import com.evernym.verity.protocol.engine.asyncService.wallet.{SignatureResult, WalletAccess, WalletAccessController}
-import com.evernym.verity.protocol.engine.asyncService.{AccessNewDid, AccessSign, AccessVerify}
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessSign, AccessVerify}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
 
@@ -60,7 +60,7 @@ class WalletAccessControllerSpec extends BasicSpec {
   }
 
   class TestWalletAccess extends WalletAccess {
-    import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess._
+    import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
     override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(Try(NewKeyCreated("Did", "Verkey")))
 
@@ -151,12 +151,13 @@ class WalletAccessControllerSpec extends BasicSpec {
 object WalletAccessTest
   extends HasDefaultTestWallet {
 
-  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(null, ActorRef.noSender)
+  implicit def asyncAPIContext: AsyncAPIContext =
+    AsyncAPIContext(null, new TestAppConfig, ActorRef.noSender, null)
 
   testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
   val newKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =
-    new WalletAccessAPI(new TestAppConfig, testWalletAPI, selfParticipantId)
+    new WalletAccessAPI(testWalletAPI, selfParticipantId)
 }
 

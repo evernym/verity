@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine.asyncService.wallet
+package com.evernym.verity.protocol.engine.asyncapi.wallet
 
 import com.evernym.verity.actor.wallet.{GetVerKeyResp, NewKeyCreated, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest

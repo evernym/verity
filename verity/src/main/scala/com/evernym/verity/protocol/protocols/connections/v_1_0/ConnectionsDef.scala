@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify}
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 
 object ConnectionsDef extends ProtocolDefinition[Connections, Role, Msg, Event, State, String] {

@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.container.asyncapis.ledger
 
 import com.evernym.verity.Exceptions.NotFoundErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
@@ -12,7 +11,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerA
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, DID}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 
@@ -27,7 +26,7 @@ class LedgerAccessAPI(cache: Cache,
   override def getSchema(schemaId: String)
                          (handler: Try[GetSchemaResp] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      {
+      { implicit ec =>
         getSchemaBase(Set(schemaId)).map { r => r(schemaId) }
       },
       handler
@@ -36,13 +35,13 @@ class LedgerAccessAPI(cache: Cache,
 
   override def getSchemas(schemaIds: Set[String])
                          (handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
-    withAsyncOpExecutorActor({ getSchemaBase(schemaIds)}, handler)
+    withAsyncOpExecutorActor({ implicit ec => getSchemaBase(schemaIds)}, handler)
   }
 
   override def getCredDef(credDefId: String)
                          (handler: Try[GetCredDefResp] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      {
+      { implicit ec =>
         getCredDefsBase(Set(credDefId)).map { r => r(credDefId) }
       },
       handler
@@ -51,13 +50,13 @@ class LedgerAccessAPI(cache: Cache,
 
   override def getCredDefs(credDefIds: Set[String])
                           (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
-    withAsyncOpExecutorActor({getCredDefsBase(credDefIds)}, handler)
+    withAsyncOpExecutorActor({ implicit ec => getCredDefsBase(credDefIds)}, handler)
   }
 
   override def writeSchema(submitterDID: String, schemaJson: String)
                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      {ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess)},
+      { implicit ec => ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess)},
       handler
     )
   }
@@ -65,7 +64,7 @@ class LedgerAccessAPI(cache: Cache,
   override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID)
                                           (handler: Try[LedgerRequest] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      {ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)},
+      { implicit ec => ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)},
       handler
     )
   }
@@ -74,19 +73,20 @@ class LedgerAccessAPI(cache: Cache,
                             credDefJson: String)
                            (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      {ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)},
+      { implicit ec => ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)},
       handler)
   }
 
   override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID)
                                            (handler: Try[LedgerRequest] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      {ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)},
+      { implicit ec => ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)},
       handler
     )
   }
 
-  private def getSchemaBase(schemaIds: Set[String]): Future[Map[String, GetSchemaResp]] = {
+  private def getSchemaBase(schemaIds: Set[String])(implicit ec: ExecutionContext)
+  : Future[Map[String, GetSchemaResp]] = {
     val keyDetails = schemaIds.map { sId =>
       KeyDetail(GetSchema(sId), required = true)
     }
@@ -100,7 +100,8 @@ class LedgerAccessAPI(cache: Cache,
     }
   }
 
-  private def getCredDefsBase(credDefIds: Set[String]): Future[Map[String, GetCredDefResp]] = {
+  private def getCredDefsBase(credDefIds: Set[String])(implicit ec: ExecutionContext):
+  Future[Map[String, GetCredDefResp]] = {
     val keyDetails = credDefIds.map { cId =>
       KeyDetail(GetCredDef(cId), required = true)
     }

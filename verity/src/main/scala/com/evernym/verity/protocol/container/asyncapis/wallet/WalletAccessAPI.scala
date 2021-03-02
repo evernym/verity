@@ -19,7 +19,7 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
                       val asyncAPIContext: AsyncAPIContext)
   extends WalletAccess
     with AnonCredRequestsAPI
-    with BaseAsyncAccessImpl {
+    with BaseAsyncOpExecutorImpl {
 
   import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 

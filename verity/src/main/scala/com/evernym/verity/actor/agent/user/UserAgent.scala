@@ -696,7 +696,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, agentActorEntityId)
       case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, createKeyEndpointSetupDetailJson)
       case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, state.myDid_!)
-      case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, publicIdentityDID)
+      case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse(""))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
     }
@@ -713,12 +713,6 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       throw new RuntimeException("unsupported use case")
     }
   }
-
-  def publicIdentityDID: DID =
-    if (!useLegacyPublicIdentityBehaviour)
-      state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse("")
-    else
-      state.publicIdentity.map(_.DID).getOrElse(state.myDid_!)
 
   def encParamFromThisAgentToOwner: EncryptParam = {
     EncryptParam(

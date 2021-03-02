@@ -296,7 +296,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
         case MY_PAIRWISE_DID                        => Parameter(MY_PAIRWISE_DID, state.myDid_!)
         case MY_PAIRWISE_DID_VER_KEY                => Parameter(MY_PAIRWISE_DID_VER_KEY, myPairwiseVerKey)
         case THEIR_PAIRWISE_DID                     => Parameter(THEIR_PAIRWISE_DID, state.theirDid.getOrElse(""))
-        case MY_PUBLIC_DID                          => Parameter(MY_PUBLIC_DID, publicIdentityDID)
+        case MY_PUBLIC_DID                          => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).getOrElse(""))
 
         case THIS_AGENT_VER_KEY                     => Parameter(THIS_AGENT_VER_KEY, state.thisAgentVerKeyReq)
         case THIS_AGENT_WALLET_ID                   => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
@@ -318,9 +318,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       state.myDid_!
     }
   }
-
-  def publicIdentityDID: DID =
-    if (!useLegacyPublicIdentityBehaviour) state.publicIdentity.map(_.DID).getOrElse("") else mySelfRelDIDReq
 
   def getEncParamBasedOnMsgSender(implicit reqMsgContext: ReqMsgContext): EncryptParam = {
     encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)

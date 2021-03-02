@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.tokenizer
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.SignedMsg
-import com.evernym.verity.protocol.engine.asyncService.wallet
+import com.evernym.verity.protocol.engine.asyncapi.wallet
 import com.evernym.verity.protocol.protocols.tokenizer.State.{TokenCreated, TokenFailed, TokenReceived}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, Requester, SigningTokenErr, Tokenizer}
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}

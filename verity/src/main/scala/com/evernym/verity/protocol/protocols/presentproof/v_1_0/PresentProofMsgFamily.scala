@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.InviteShortened
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
 
 object PresentProofMsgFamily
   extends MsgFamily {

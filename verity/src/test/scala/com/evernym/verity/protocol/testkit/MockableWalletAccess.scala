@@ -4,8 +4,8 @@ import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProo
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, ParticipantIndex, VerKey}
-import com.evernym.verity.protocol.engine.asyncService.wallet.{AnonCredRequests, WalletAccess}
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.{KeyType, SignType}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.{KeyType, SignType}
 import com.evernym.verity.protocol.testkit.MockableWalletAccess._
 import com.evernym.verity.util.Base58Util
 

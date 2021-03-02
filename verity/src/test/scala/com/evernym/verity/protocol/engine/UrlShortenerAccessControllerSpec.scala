@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.protocol.engine.asyncService.{AsyncOpRunner, UrlShorteningAccess}
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccessController
+import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, UrlShorteningAccess}
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.testkit.MockableUrlShorteningAccess
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.urlshortener.UrlShortened

@@ -13,7 +13,7 @@ import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.constants.Constants.{AGENCY_DID_KEY, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID}
 import com.evernym.verity.util.Util.logger
 import com.evernym.verity.vault.WalletUtil._
-import com.evernym.verity.vault.{WalletDoesNotExist, WalletInvalidState}
+import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}

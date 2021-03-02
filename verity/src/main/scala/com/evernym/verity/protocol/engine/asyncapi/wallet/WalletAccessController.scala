@@ -1,9 +1,9 @@
-package com.evernym.verity.protocol.engine.asyncService.wallet
+package com.evernym.verity.protocol.engine.asyncapi.wallet
 
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.asyncService.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds}
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 
 import scala.util.{Failure, Try}

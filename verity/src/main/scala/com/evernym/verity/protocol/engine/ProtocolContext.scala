@@ -9,7 +9,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AsyncOpRunner}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext

@@ -32,10 +32,10 @@ import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStorageAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncService.AsyncOpRunner
-import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccessController
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccessController
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -291,6 +291,9 @@ class ActorProtocolContainer[
     Util.buildAgencyEndpoint(appConfig).url
   }
 
+
+  //---------------- async api infrastructure code
+
   /**
    * async api context needed by async api implementation for different purposes:
    *  a. most of them needs asyncOpRunner to be able to successfully process/execute async operation
@@ -299,13 +302,12 @@ class ActorProtocolContainer[
    *  c. if async operation uses 'ask' pattern, it needs to know timeout
    * @return
    */
-  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(this, self, responseTimeout)
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(this, appConfig, self, context, responseTimeout)
 
   override lazy val wallet =
     new WalletAccessController(
       grantedAccessRights,
       new WalletAccessAPI(
-        agentActorContext.appConfig,
         agentActorContext.walletAPI,
         getRoster.selfId_!)
     )
@@ -321,14 +323,12 @@ class ActorProtocolContainer[
   override lazy val urlShortening =
     new UrlShorteningAccessController(
       grantedAccessRights,
-      new UrlShorteningAccessAPI(context, appConfig)
+      new UrlShorteningAccessAPI()
     )
 
   override lazy val segmentStorage =
     new SegmentStorageAccessAPI(
-      agentActorContext.appConfig,
       agentActorContext.s3API,
-      context,
       protoRef,
       segmentedStateName)
 
@@ -343,9 +343,9 @@ class ActorProtocolContainer[
     case _: ProtocolCmd | _: SponsorRel => stash()
 
     //async future responses
-    case AsyncFutureResp(asyncOpResult) => postAsyncOpResult(asyncOpResult)
+    case AsyncOpResp(asyncOpResult)    => postAsyncOpResult(asyncOpResult)
     //non future based async op responses (from actors)
-    case asyncOpResult                  => postAsyncOpResult(Try(asyncOpResult))
+    case asyncOpResult                 => postAsyncOpResult(Try(asyncOpResult))
   }
 
   private def postAsyncOpResult(resp: Try[Any]): Unit = {
@@ -386,7 +386,7 @@ class ActorProtocolContainer[
           case e: Exception =>
             abortTransaction(); throw e
         }.onComplete { resp =>
-          self.tell(AsyncFutureResp(resp), sndr)    //keep the original sender
+          self.tell(AsyncOpResp(resp), sndr)    //keep the original sender
         }
 
       case other =>
@@ -480,8 +480,10 @@ case class FromProtocol(fromPinstId: PinstId, newRelationship: RelationshipLike)
  * wrapping future's responses to a case class as otherwise those responses (for example Tuple etc)
  * all will have to extend ActorMessage
  */
-case class AsyncFutureResp(resp: Try[Any]) extends ActorMessage
+case class AsyncOpResp(resp: Try[Any]) extends ActorMessage
 
 case class AsyncAPIContext(asyncOpRunner: AsyncOpRunner,
+                           appConfig: AppConfig,
                            senderActorRef: ActorRef,
+                           senderActorContext: akka.actor.ActorContext,
                            timeout: Timeout = Timeout(50.seconds))

@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.ShortenInvite
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, _}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._

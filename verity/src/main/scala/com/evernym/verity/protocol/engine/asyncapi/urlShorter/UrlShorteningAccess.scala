@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine.asyncService.urlShorter
+package com.evernym.verity.protocol.engine.asyncapi.urlShorter
 
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgBase

@@ -11,7 +11,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.KEY_ED25519
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Msg, PresentProof, ProofAttribute, ProofRequestUtil}
@@ -175,7 +175,7 @@ class WalletActorSpec
       }
     }
 
-    "when sent SignMsg command and check result with VerifySigByKeyParam command" - {
+    "when sent SignMsg command and check result with VerifySignature command" - {
       "should respond with success VerifySigResult" in {
         val newIssuerKey = createKeyInWallet(issuerWalletActor)
         storeTheirKeyInWallet(newIssuerKey, holderWalletActor)
@@ -184,9 +184,20 @@ class WalletActorSpec
         issuerWalletActor ! SignMsg(keyParam, testByteMsg)
         val sm = expectMsgType[SignedMsg]
 
-        holderWalletActor ! VerifySigByKeyParam(keyParam, challenge = testByteMsg, signature = sm.msg)
-        val verifyResult = expectMsgType[VerifySigResult]
-        assert(verifyResult.verified)
+        //if try to validate signature against wrong ver key, it should respond with failed verification
+        holderWalletActor ! VerifySignature(keyParam, challenge = testByteMsg, signature = sm.msg, Option(holderDidPair.verKey))
+        val verifyResult1 = expectMsgType[VerifySigResult]
+        verifyResult1.verified shouldBe false
+
+        //if try to validate signature against correct ver key, it should respond with successful verification
+        holderWalletActor ! VerifySignature(keyParam, challenge = testByteMsg, signature = sm.msg, Option(newIssuerKey.verKey))
+        val verifyResult2 = expectMsgType[VerifySigResult]
+        verifyResult2.verified shouldBe true
+
+        //if try to validate signature, it should respond with successful verification
+        holderWalletActor ! VerifySignature(keyParam, challenge = testByteMsg, signature = sm.msg)
+        val verifyResult3 = expectMsgType[VerifySigResult]
+        verifyResult3.verified shouldBe true
       }
     }
 

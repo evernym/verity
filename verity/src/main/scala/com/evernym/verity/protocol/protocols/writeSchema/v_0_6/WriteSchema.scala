@@ -6,7 +6,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer

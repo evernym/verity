@@ -151,7 +151,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def updateConfigs_0_6(name: String, logoUrl: String): UpdateConfigsV0_6 = {
     val updateConfigsJson = new JSONObject
-    updateConfigsJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "update-configs", "00.6", "update"))
+    updateConfigsJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "update-configs", "0.6", "update"))
     updateConfigsJson.put("@id", UUID.randomUUID.toString)
     val configs = new JSONArray
     val item1 = new JSONObject

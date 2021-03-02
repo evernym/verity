@@ -1,10 +1,10 @@
-package com.evernym.verity.protocol.engine.asyncService.ledger
+package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, LedgerReadAccess, LedgerWriteAccess}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, LedgerReadAccess, LedgerWriteAccess}
 
 import scala.util.{Failure, Try}
 

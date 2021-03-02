@@ -2,9 +2,9 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLoggerLike}

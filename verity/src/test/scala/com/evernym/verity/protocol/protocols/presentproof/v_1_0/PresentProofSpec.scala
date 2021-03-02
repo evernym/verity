@@ -7,8 +7,8 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncService.ledger.LedgerAccess
-import com.evernym.verity.protocol.engine.asyncService.wallet.{AnonCredRequests, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult

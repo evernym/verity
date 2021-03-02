@@ -19,7 +19,7 @@ import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMet
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
-import com.evernym.verity.actor.wallet.{PackedMsg, VerifySigByVerKey}
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.{AgentJsonMsg, MsgCodecException}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
@@ -29,7 +29,7 @@ import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE, UNKNOWN_SENDER_PARTICIPANT_ID}
-import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor
+import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._

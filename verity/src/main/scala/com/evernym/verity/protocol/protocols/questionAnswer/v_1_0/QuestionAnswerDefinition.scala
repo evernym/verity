@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AccessSign, AccessVerify}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, AccessVerify}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Role.{Questioner, Responder}
 

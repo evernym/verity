@@ -5,7 +5,7 @@ import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, _}

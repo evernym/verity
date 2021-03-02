@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine.asyncService
+package com.evernym.verity.protocol.engine.asyncapi
 
 sealed trait AccessRight
 

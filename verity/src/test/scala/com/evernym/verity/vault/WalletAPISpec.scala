@@ -2,7 +2,7 @@ package com.evernym.verity.vault
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.protocol.engine.asyncService.wallet.WalletAccess.KEY_ED25519
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, HasTestWalletAPI}
 
 

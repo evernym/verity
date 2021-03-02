@@ -3,9 +3,9 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
-import com.evernym.verity.protocol.engine.asyncService.wallet.{WalletAccess, WalletAccessController}
-import com.evernym.verity.protocol.engine.asyncService.ledger.{LedgerAccess, LedgerAccessController}
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}

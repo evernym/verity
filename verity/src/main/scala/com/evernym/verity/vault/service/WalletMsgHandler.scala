@@ -27,7 +27,7 @@ object WalletMsgHandler {
       case gvk: GetVerKey                   => handleGetVerKey(gvk)
       case gvko: GetVerKeyOpt               => handleGetVerKeyOpt(gvko)
       case sm: SignMsg                      => handleSignMsg(sm)
-      case vs: VerifySigByKeyParam          => handleVerifySigByKeyParam(vs)
+      case vs: VerifySignature              => handleVerifySignature(vs)
       case pm: PackMsg                      => handlePackMsg(pm)
       case um: UnpackMsg                    => handleUnpackMsg(um)
       case lpm: LegacyPackMsg               => handleLegacyPackMsg(lpm)
@@ -101,10 +101,12 @@ object WalletMsgHandler {
     CryptoOpExecutor.handleLegacyUnpackMsg(msg, wmp.poolManager)
   }
 
-  private def handleVerifySigByKeyParam(vs: VerifySigByKeyParam)
-                              (implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
+  private def handleVerifySignature(vs: VerifySignature)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
     handleGetVerKey(vs.keyParam).flatMap { gvkr =>
-      CryptoOpExecutor.verifySig(gvkr.verKey, vs.challenge, vs.signature)
+      if (vs.verKeyUsed.forall( _ == gvkr.verKey))
+        CryptoOpExecutor.verifySig(gvkr.verKey, vs.challenge, vs.signature)
+      else
+        Future.successful(VerifySigResult(false))
     }
   }
 

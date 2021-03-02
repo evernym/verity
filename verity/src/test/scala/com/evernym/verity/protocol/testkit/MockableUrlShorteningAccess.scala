@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.protocol.engine.asyncService.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningResponse}
 
 import scala.util.{Failure, Success, Try}

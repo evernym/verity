@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, UrlShorteningAccess}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, Protocol, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.engine.Scope.RelProvisioning
 

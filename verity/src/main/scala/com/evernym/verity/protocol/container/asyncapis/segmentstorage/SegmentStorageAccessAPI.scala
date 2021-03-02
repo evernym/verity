@@ -1,17 +1,13 @@
 package com.evernym.verity.protocol.container.asyncapis.segmentstorage
 
 import akka.pattern.ask
-import akka.actor.ActorContext
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.{ForIdentifier, StorageInfo, StorageReferenceStored}
-import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.{BaseAsyncAccessImpl, ProtoRef, SegmentStoreAccess, StoredSegment}
-import com.evernym.verity.protocol.engine.asyncService.AsyncOpRunner
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.storage_services.aws_s3.StorageAPI
 import com.typesafe.scalalogging.Logger
@@ -20,17 +16,12 @@ import scalapb.GeneratedMessage
 import scala.concurrent.Future
 import scala.util.Try
 
-class SegmentStorageAccessAPI(val appConfig: AppConfig,
-                              storageAPI: StorageAPI,
-                              context: ActorContext,
+class SegmentStorageAccessAPI(storageAPI: StorageAPI,
                               protoRef: ProtoRef,
                               segmentedStateName: Option[String])
-                             (implicit asyncAPIContext: AsyncAPIContext)
+                             (implicit val asyncAPIContext: AsyncAPIContext)
   extends SegmentStoreAccess
-    with BaseAsyncAccessImpl
-    with HasActorResponseTimeout {
-
-  implicit val asyncOpRunner: AsyncOpRunner = asyncAPIContext.asyncOpRunner
+    with BaseAsyncAccessImpl {
 
   private val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
   private val MAX_SEGMENT_SIZE = 400000   //TODO: shouldn't this be little less than 400 KB?

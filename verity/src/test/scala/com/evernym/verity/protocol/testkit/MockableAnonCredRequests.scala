@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.testkit
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.asyncService.wallet.AnonCredRequests
+import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredRequests
 
 import scala.util.Try
 

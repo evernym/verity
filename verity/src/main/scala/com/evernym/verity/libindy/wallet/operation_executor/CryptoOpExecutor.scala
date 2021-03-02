@@ -5,7 +5,7 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
-import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigByVerKey, VerifySigResult}
+import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
@@ -117,3 +117,5 @@ object CryptoOpExecutor extends OpExecutorBase {
     verifySig(vs.verKey, vs.challenge, vs.signature)
   }
 }
+
+case class VerifySigByVerKey(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte])

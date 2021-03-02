@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
 import AgentProvisioningMsgFamily._
-import com.evernym.verity.protocol.engine.asyncService.{AccessRight, AccessVerify}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerify}
 
 object AgentProvisioningDefinition
   extends ProtocolDefinition[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String] {

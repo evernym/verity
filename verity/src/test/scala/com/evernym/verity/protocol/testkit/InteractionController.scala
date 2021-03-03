@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.{Driver, SignalEnvelope, SimpleControllerProviderInputType}
+import com.evernym.verity.protocol.engine.{Driver, SignalEnvelope}
 import com.evernym.verity.util.MsgUtil
 
 class InteractionController(inType: SimpleControllerProviderInputType) extends PassiveController {

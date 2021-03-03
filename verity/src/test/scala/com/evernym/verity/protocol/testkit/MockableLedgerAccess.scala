@@ -30,9 +30,11 @@ object MockableLedgerAccess {
 
 class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
-                           val ledgerAvailable: Boolean = true) extends LedgerAccess {
+                           val ledgerAvailable: Boolean = true)
+  extends LedgerAccess with MockAsyncOpRunner {
+
   import MockableLedgerAccess._
-  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(null, new TestAppConfig, ActorRef.noSender, null)
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   val testWallet = new TestWallet(false)
   implicit val wap: WalletAPIParam = testWallet.wap

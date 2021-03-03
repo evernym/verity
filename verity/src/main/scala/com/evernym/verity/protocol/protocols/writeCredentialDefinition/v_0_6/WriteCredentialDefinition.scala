@@ -84,7 +84,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
               }
             case Failure(e) => problemReport(e)
           }
-        case Failure(e) => problemReport(e)
+        case Failure(e) =>
+          problemReport(e)
       }
     } catch {
       case e: Exception => problemReport(e)

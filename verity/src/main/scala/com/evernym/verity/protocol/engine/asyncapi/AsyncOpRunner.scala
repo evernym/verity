@@ -9,9 +9,9 @@ trait AsyncOpRunner {
   def abortTransaction()
 
   //TODO: it seems we should implement some kind of timeout in this class
-  // which does most of the orchestration of running the async operation
-  // and expecting container to call 'executeCallbackHandler' function
-  // but if container never calls that function then there should be some
+  // which does/expects most of the orchestration of running the async operation
+  // and expecting container to call 'executeCallbackHandler' function.
+  // But if container never calls 'executeCallbackHandler' function then there should be some
   // way to timeout this waiting operation in this class?
 
   /**
@@ -28,11 +28,19 @@ trait AsyncOpRunner {
 
   import scala.language.existentials
 
+  /**
+   * once 'runAsyncOp' function is executed and result is available,
+   * expectation is that the 'container' will call this (executeCallbackHandler)
+   * function with 'asyncOp' result
+   *
+   * @param asyncOpResp response of async operation
+   * @tparam T
+   * @return
+   */
   protected def executeCallbackHandler[T](asyncOpResp: Try[T]): Any = {
     try {
-      val callBackHandler = asyncOpCallbackHandlers.pop()
-      //TODO: fix the asInstanceOf in this below line
-      callBackHandler.asInstanceOf[AsyncOpCallbackHandler[T]](asyncOpResp)
+      val callBackHandler = popAsyncOpCallBackHandler[T]()
+      callBackHandler(asyncOpResp)
       postAllAsyncOpsCompleted()
     } catch {
       case e: Exception =>
@@ -44,8 +52,9 @@ trait AsyncOpRunner {
     asyncOpCallbackHandlers.push(cb)
   }
 
-  protected def popAsyncOpCallBackHandler(): Unit = {
-    asyncOpCallbackHandlers.pop()
+  protected def popAsyncOpCallBackHandler[T](): AsyncOpCallbackHandler[T] = {
+    //TODO: any way to remove 'asInstanceOf' in this function
+    asyncOpCallbackHandlers.pop().asInstanceOf[AsyncOpCallbackHandler[T]]
   }
 
   protected def resetAllAsyncOpCallBackHandlers(): Unit = {

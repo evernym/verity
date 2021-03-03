@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
@@ -77,7 +78,7 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
       handleMsg(definition.createInitMsg(params))
     }
 
-    override def segmentStorage: SegmentStoreAccess = new SegmentStoreAccess {
+    override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
       def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
                       (handler: Try[StoredSegment] => Unit): Unit = {}
       override def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)

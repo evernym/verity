@@ -176,7 +176,8 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
         case Success(vsg) if vsg.verified =>
           if (cacheUsedTokens) {
             ctx.withSegment[AskedForProvisioning](token.sig) {
-              case Success(Some(_)) => problemReport(DuplicateProvisionedApp)
+              case Success(Some(_)) =>
+                problemReport(DuplicateProvisionedApp)
               case Success(None)    =>
                 ctx.storeSegment(token.sig, AskedForProvisioning())
                 ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))

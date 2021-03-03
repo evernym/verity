@@ -5,9 +5,9 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.{SignalEnvelope, SimpleControllerProviderInputType}
+import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.{InteractionController, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import org.scalatest.BeforeAndAfterAll
 

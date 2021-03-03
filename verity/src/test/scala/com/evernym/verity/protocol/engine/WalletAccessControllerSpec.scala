@@ -14,7 +14,11 @@ import com.evernym.verity.util.ParticipantUtil
 
 import scala.util.Try
 
-class WalletAccessControllerSpec extends BasicSpec {
+
+class WalletAccessControllerSpec
+  extends BasicSpec
+    with MockAsyncOpRunner {
+
   "Wallet access controller" - {
     "mixed functions should pass if having correct access rights" in {
       val controller = new WalletAccessController(Set(AccessNewDid, AccessVerify), new TestWalletAccess)
@@ -152,7 +156,7 @@ object WalletAccessTest
   extends HasDefaultTestWallet {
 
   implicit def asyncAPIContext: AsyncAPIContext =
-    AsyncAPIContext(null, new TestAppConfig, ActorRef.noSender, null)
+    AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
   val newKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())

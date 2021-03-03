@@ -3,8 +3,7 @@ package com.evernym.verity.protocol.protocols.tokenizer
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.SignedMsg
-import com.evernym.verity.protocol.engine.asyncapi.wallet
-import com.evernym.verity.protocol.protocols.tokenizer.State.{TokenCreated, TokenFailed, TokenReceived}
+import com.evernym.verity.protocol.protocols.tokenizer.State.{Initialized, TokenCreated, TokenFailed, TokenReceived}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, Requester, SigningTokenErr, Tokenizer}
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
@@ -12,6 +11,7 @@ import com.evernym.verity.util.Base64Util.getBase64Encoded
 
 import scala.language.{implicitConversions, reflectiveCalls}
 import scala.util.{Failure, Try}
+
 
 class TokenizerSpec
   extends TestsProtocolsImpl(TokenizerDefinition)

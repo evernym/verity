@@ -21,7 +21,7 @@ class WalletAccessAPISpec
     with AsyncOpRunner {
 
   implicit def asyncAPIContext: AsyncAPIContext =
-    AsyncAPIContext(this, new TestAppConfig, ActorRef.noSender, null)
+    AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   val selfParticipantId: ParticipantId = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet)

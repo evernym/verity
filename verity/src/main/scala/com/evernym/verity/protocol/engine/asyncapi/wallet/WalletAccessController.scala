@@ -3,21 +3,19 @@ package com.evernym.verity.protocol.engine.asyncapi.wallet
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner, BaseAccessController}
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 
-import scala.util.{Failure, Try}
+import scala.util.Try
 
-class WalletAccessController(accessRights: Set[AccessRight], walletAccessImpl: WalletAccess)
-  extends WalletAccess {
+class WalletAccessController(val accessRights: Set[AccessRight],
+                             walletAccessImpl: WalletAccess)
+                            (implicit val asyncOpRunner: AsyncOpRunner)
+
+  extends WalletAccess
+    with BaseAccessController {
 
   import WalletAccess._
-
-  def runIfAllowed[T](right: AccessRight, f: (Try[T] => Unit) => Unit, handler: Try[T] => Unit): Unit =
-    if(accessRights(right))
-      f(handler)
-    else
-      handler(Failure(new IllegalAccessException))
 
   override def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyCreated] => Unit): Unit =
     runIfAllowed(AccessNewDid, {walletAccessImpl.newDid(keyType)}, handler)

@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.container.asyncapis.wallet
 
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredRequests
@@ -37,8 +36,8 @@ trait AnonCredRequestsAPI
 
   override def createSchema(issuerDID: DID, name:String, version: String, data: String)
                            (handler: Try[SchemaCreated] => Unit): Unit = {
-    withAsyncOpRunner(
-      {
+    withAsyncOpExecutorActor(
+      { implicit ec =>
         issuerCreateSchema(issuerDID, name, version, data).map { result =>
           SchemaCreated(result.getSchemaId, result.getSchemaJson)
         }
@@ -107,9 +106,9 @@ trait AnonCredRequestsAPI
   override def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String,
                            revocRegDefs: String, revocRegs: String)
                           (handler: Try[ProofVerifResult] => Unit): Unit = {
-    withAsyncOpRunner(
-      {AnoncredsWalletOpExecutor.verifyProof(
-        proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
+    withAsyncOpExecutorActor(
+      { implicit ec => AnoncredsWalletOpExecutor.verifyProof(
+          proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
       handler
     )
   }

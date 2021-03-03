@@ -9,6 +9,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
@@ -56,7 +57,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def eventRecorder: RecordsEvents
 
-  def segmentStorage: SegmentStoreAccess
+  def segmentStore: SegmentStoreAccess
 
   def sendsMsgs: SendsMsgs
 
@@ -472,7 +473,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def storeSegments(): Unit = {
     pendingSegments.foreach { ps =>
       logger.debug(s"storing pending segment: $ps")
-      segmentStorage.storeSegment(ps.segmentAddress, ps.segmentKey, ps.value) {
+      segmentStore.storeSegment(ps.segmentAddress, ps.segmentKey, ps.value) {
         case Success(ss: StoredSegment) =>
           logger.debug(s"pending segment stored: $ss")
           removeFromPendingList(ss.segmentAddress)

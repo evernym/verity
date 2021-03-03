@@ -52,56 +52,40 @@ trait AnonCredRequestsAPI
                              sigType: Option[String]=None,
                              revocationDetails: Option[String]=None)
                             (handler: Try[CredDefCreated] => Unit): Unit =
-    withAsyncOpRunner(
-      { walletApi.tell(
-        CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))
-      },
-      handler
-    )
+    walletApi.tell(CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))
 
   override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit = {
-    withAsyncOpRunner({walletApi.tell(CreateCredOffer(credDefId))}, handler)
+    walletApi.tell(CreateCredOffer(credDefId))
   }
 
   override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String)
                             (handler: Try[CredReqCreated] => Unit): Unit =
-    withAsyncOpRunner(
-      { walletApi.tell(CreateCredReq(credDefId, proverDID,
-        credDefJson, credOfferJson, masterSecretId))},
-      handler
-    )
+    walletApi.tell(CreateCredReq(credDefId, proverDID,
+        credDefJson, credOfferJson, masterSecretId))
 
   override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
                           revRegistryId: String, blobStorageReaderHandle: Int)
                          (handler: Try[CredCreated] => Unit): Unit = {
-    withAsyncOpRunner(
-      {walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson,
-        revRegistryId, blobStorageReaderHandle))},
-      handler
-    )
+    walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson,
+        revRegistryId, blobStorageReaderHandle))
   }
 
   override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
                          credDefJson: String, revRegDefJson: String)
                         (handler: Try[CredStored] => Unit): Unit = {
-    withAsyncOpRunner(
-      {walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))},
-      handler
-    )
+    walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))
   }
 
   override def credentialsForProofReq(proofRequest: String)
                                      (handler: Try[CredForProofReqCreated] => Unit): Unit =
-    withAsyncOpRunner({walletApi.tell(CredForProofReq(proofRequest))}, handler)
+    walletApi.tell(CredForProofReq(proofRequest))
 
   override def createProof(proofRequest: String, usedCredentials: String,
                            schemas: String, credentialDefs: String, revStates: String)
                           (handler: Try[ProofCreated] => Unit): Unit =
-    withAsyncOpRunner(
-      {walletApi.tell(
-        CreateProof(proofRequest, usedCredentials, schemas, credentialDefs, masterSecretId, revStates))},
-      handler
-    )
+    walletApi.tell(
+        CreateProof(proofRequest, usedCredentials, schemas, credentialDefs,
+          masterSecretId, revStates))
 
   override def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String,
                            revocRegDefs: String, revocRegs: String)

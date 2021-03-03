@@ -1,11 +1,13 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{WalletAccess, WalletAccessController}
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
@@ -70,7 +72,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   }
 
   val eventRecorder: RecordsEvents = pce.eventRecorder.getOrElse(new SimpleEventRecorder(definition.initialState))
-  val segmentStorage: SegmentStoreAccess = new MockStorageService(system)
+  val segmentStore: SegmentStoreAccess = new MockStorageService(system)
+  implicit val asyncOpRunner = this
 
   def registerWithSystem(): Unit = pce.system.register(this)
 
@@ -95,7 +98,15 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   override def urlShortening: UrlShorteningAccess =
     pce.urlShorteningAccessProvider.map(_()).getOrElse(throw new RuntimeException("no url shortener access provided to container"))
 
-  override def runAsyncOp(op: => Any): Unit = op
+  //this container is used by tests only.
+  // so far mockable apis (MockableLedgerAccess or MockableWalletAccess apis)
+  // are synchronous and hence below implementation of 'runAsyncOp' is different than
+  // what it might be in production code (like 'ActorProtocolContainer')
+  override def runAsyncOp(op: => Any): Unit = {
+    popAsyncOpCallBackHandler()
+    op
+    postAllAsyncOpsCompleted()
+  }
 }
 
 trait Logs {

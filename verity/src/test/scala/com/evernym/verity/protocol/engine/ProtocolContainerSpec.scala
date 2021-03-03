@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
@@ -26,7 +27,7 @@ class ProtocolContainerSpec extends BasicSpec {
             override def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit = ???
           }
 
-          override def segmentStorage: SegmentStoreAccess = new SegmentStoreAccess {
+          override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
             def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
                             (handler: Try[StoredSegment] => Unit): Unit = {}
             def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)

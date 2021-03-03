@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
-import com.evernym.verity.protocol.engine.{ContainerNotFoundException, SignalEnvelope, SimpleControllerProviderInputType}
+import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
-import com.evernym.verity.protocol.testkit.{InteractionController, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{ContainerNotFoundException, InteractionController, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.testkit.BasicFixtureSpec
 

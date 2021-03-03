@@ -12,9 +12,6 @@ class UrlShorteningAccessAPI(implicit val asyncAPIContext: AsyncAPIContext)
     with BaseAsyncAccessImpl {
 
   override def shorten(longUrl: String)(handler: Try[UrlShorteningResponse] => Unit): Unit = {
-    withAsyncOpRunner(
-      { context.system.actorOf(DefaultURLShortener.props(asyncAPIContext.appConfig)).tell(UrlInfo(longUrl), senderActorRef)},
-      handler
-    )
+    context.system.actorOf(DefaultURLShortener.props(asyncAPIContext.appConfig)).tell(UrlInfo(longUrl), senderActorRef)
   }
 }

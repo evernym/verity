@@ -29,11 +29,12 @@ import java.util.UUID
 
 import akka.util.Timeout
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
-import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStorageAccessAPI
+import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 
@@ -302,7 +303,9 @@ class ActorProtocolContainer[
    *  c. if async operation uses 'ask' pattern, it needs to know timeout
    * @return
    */
-  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(this, appConfig, self, context, responseTimeout)
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(appConfig, self, context, responseTimeout)
+  implicit def asyncOpRunner: AsyncOpRunner = this
+
 
   override lazy val wallet =
     new WalletAccessController(
@@ -326,11 +329,13 @@ class ActorProtocolContainer[
       new UrlShorteningAccessAPI()
     )
 
-  override lazy val segmentStorage =
-    new SegmentStorageAccessAPI(
-      agentActorContext.s3API,
-      protoRef,
-      segmentedStateName)
+  override lazy val segmentStore =
+    new SegmentStoreAccessController(
+      new SegmentStoreAccessAPI(
+        agentActorContext.s3API,
+        protoRef,
+        segmentedStateName)
+    )
 
   /**
    * receive behaviour when async operation is in progress
@@ -343,7 +348,8 @@ class ActorProtocolContainer[
     case _: ProtocolCmd | _: SponsorRel => stash()
 
     //async future responses
-    case AsyncOpResp(asyncOpResult)    => postAsyncOpResult(asyncOpResult)
+    case AsyncOpResp(asyncOpResult)    =>
+      postAsyncOpResult(asyncOpResult)
     //non future based async op responses (from actors)
     case asyncOpResult                 => postAsyncOpResult(Try(asyncOpResult))
   }
@@ -372,9 +378,7 @@ class ActorProtocolContainer[
   override protected def runAsyncOp(op: => Any): Unit = {
     //NOTE: using "discardOld" as false, so it will add this new behaviour to the "behavior stack"
     setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
-
     val result = op   //given operation gets executed here
-
     val sndr = sender()
     result match {
       //mostly this should be if async operation sent a command to an actor via tell
@@ -482,8 +486,7 @@ case class FromProtocol(fromPinstId: PinstId, newRelationship: RelationshipLike)
  */
 case class AsyncOpResp(resp: Try[Any]) extends ActorMessage
 
-case class AsyncAPIContext(asyncOpRunner: AsyncOpRunner,
-                           appConfig: AppConfig,
+case class AsyncAPIContext(appConfig: AppConfig,
                            senderActorRef: ActorRef,
                            senderActorContext: akka.actor.ActorContext,
                            timeout: Timeout = Timeout(50.seconds))

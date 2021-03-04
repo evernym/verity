@@ -273,14 +273,6 @@ trait UserAgentCommon
   override final def handleSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] =
     handleCommonSignalMsgs orElse handleSpecificSignalMsgs
 
-  /*
-  This is only temporary solution, so to have ability to switch to old (wrong) behaviour just for testing.
-  Do not enable this option without a good reason.
-  It should be removed after it is shown everything is working with a correct public identity behaviour.
-   */
-  def useLegacyPublicIdentityBehaviour: Boolean =
-    appConfig.getConfigBooleanOption(USER_AGENT_LEGACY_PUBLIC_IDENTITY_BEHAVIOUR).getOrElse(false)
-
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
 
 

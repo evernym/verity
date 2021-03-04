@@ -12,7 +12,7 @@ import org.hyperledger.indy.sdk.metrics.Metrics
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Actor {
 
@@ -27,26 +27,38 @@ class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Act
     )
     val metricsFuture = toFuture(Metrics.collectMetrics)
     Future.firstCompletedOf(Seq(metricsFuture, delayFuture)).onComplete {
-      case Success(metrics) =>
-        val metricsObj: Map[String, List[LibindyMetricsRecord]] = deserializeJsonStringToObject[Map[String, List[LibindyMetricsRecord]]](metrics)
-        metricsObj foreach (metricsItem => {
-          val metricsName = metricsItem._1
-          val metricsList = metricsItem._2
-          metricsList foreach (
-            metricsRecord => {
-              MetricsWriter.gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
+      result => {
+        result.flatMap {
+          metrics => {
+            Try {
+              val metricsObj: Map[String, List[LibindyMetricsRecord]] = deserializeJsonStringToObject[Map[String, List[LibindyMetricsRecord]]](metrics)
+              metricsObj foreach (metricsItem => {
+                val metricsName = metricsItem._1
+                val metricsList = metricsItem._2
+                metricsList foreach (
+                  metricsRecord => {
+                    MetricsWriter.gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
+                  }
+                  )
+              })
             }
-            )
-        })
-        replyTo ! CollectLibindySuccess()
-      case Failure(e) =>
-        logger.warn(Exceptions.getStackTraceAsSingleLineString(e))
-        replyTo ! CollectLibindyFailed(e.getMessage)
+          }
+        } match {
+          case Success(_) =>
+            replyTo ! CollectLibindySuccess()
+          case Failure(e) =>
+            logger.warn(Exceptions.getStackTraceAsSingleLineString(e))
+            replyTo ! CollectLibindyFailed(e.getMessage)
+        }
+      }
     }
   }
 }
 
-case class LibindyMetricsRecord(value: Long, tags: Map[String, String])
+case class LibindyMetricsRecord(value: Double, tags: Map[String, String])
+
 case class CollectLibindyMetrics() extends ActorMessage
+
 case class CollectLibindySuccess() extends ActorMessage
+
 case class CollectLibindyFailed(e: String) extends ActorMessage

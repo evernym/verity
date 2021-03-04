@@ -35,14 +35,7 @@ class LibindyMetricsCollectorSpec
         val criteria = MetricsFilterCriteria(filtered = false)
         awaitCond(
           MetricsReader.getNodeMetrics(criteria).metrics.exists(
-            metricDetail => {
-              metricDetail.name.contains("libindy_threadpool_threads_count") &&
-              metricDetail.value.isValidInt &&
-              metricDetail.tags.get.contains("label")
-            }
-          ) &&
-          MetricsReader.getNodeMetrics(criteria).metrics.exists(
-            metricDetail => metricDetail.name.contains("libindy_command") &&
+            metricDetail => metricDetail.name.contains("libindy_command_duration_ms_count") &&
               metricDetail.value.isValidInt &&
               metricDetail.tags.get.contains("command") &&
               metricDetail.tags.get.contains("stage")

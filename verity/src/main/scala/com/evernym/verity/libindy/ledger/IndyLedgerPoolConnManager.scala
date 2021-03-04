@@ -1,14 +1,12 @@
 package com.evernym.verity.libindy.ledger
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorSystem
 import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
 import com.evernym.verity.config.{AppConfig, CommonConfig, ConfigUtil}
@@ -24,6 +22,7 @@ import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.pool.Pool
 import org.hyperledger.indy.sdk.pool.PoolJSONParameters.CreatePoolLedgerConfigJSONParameter
 
+import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.duration.Duration
@@ -122,7 +121,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
 
   def deletePoolLedgerConfig(): Unit = {
     try {
-      Pool.deletePoolLedgerConfig(configName)
+      Pool.deletePoolLedgerConfig(configName).get()
     } catch {
       //TODO: Shall we catch some specific exception?
       case e: Exception =>
@@ -132,7 +131,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
 
   def close(): Unit = {
     if (isConnected) {
-      heldPoolConn.map(_.closePoolLedger)
+      heldPoolConn.foreach(_.closePoolLedger.get())
       heldPoolConn = None
     }
   }

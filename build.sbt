@@ -9,7 +9,7 @@ import Util.amGitlabCI
 
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
-import SharedLibrary.{LibPack, LibPackExt, defaultUpdateSharedLibraries, updateSharedLibraries}
+import SharedLibrary.{LibPackExt, defaultUpdateSharedLibraries, updateSharedLibraries}
 import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
@@ -21,13 +21,13 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.95.0~1256"
+val debPkgDepLibIndyMinVersion = "1.95.0~1280"
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1256"
+val libIndyVer = "1.95.0~1280"
 val sharedLibDeps = Seq(
   LibPackExt("libindy-async", libIndyVer, "libindy.so"),
-//  LibPack("libnullpay", libIndyVer),
+  LibPackExt("libnullpay-async", libIndyVer, "libnullpay.so"),
   LibPackExt("libvcx-async-test", "0.10.1-bionic~9999", "libvcx.so"), // For integration testing ONLY
 )
 
@@ -226,8 +226,8 @@ lazy val packageSettings = Seq (
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy-async(>= $debPkgDepLibIndyMinVersion)"
-//    s"libnullpay(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy, temporary disabling while there is no async libnullpay
+    s"libindy-async(>= $debPkgDepLibIndyMinVersion)",
+    s"libnullpay-async(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

@@ -28,7 +28,7 @@ val libIndyVer = "1.95.0~1256"
 val sharedLibDeps = Seq(
   LibPackExt("libindy-async", libIndyVer, "libindy.so"),
 //  LibPack("libnullpay", libIndyVer),
-  LibPackExt("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so"), // For integration testing ONLY
+  LibPackExt("libvcx-async-test", "0.10.1-bionic~9999", "libvcx.so"), // For integration testing ONLY
 )
 
 //dependency versions

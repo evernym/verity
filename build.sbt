@@ -9,7 +9,7 @@ import Util.amGitlabCI
 
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
-import SharedLibrary.{LibPack, defaultUpdateSharedLibraries, updateSharedLibraries}
+import SharedLibrary.{LibPack, LibPackExt, defaultUpdateSharedLibraries, updateSharedLibraries}
 import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
@@ -21,16 +21,14 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1618"
-val debPkgDepLibMySqlStorageVersion = "0.1.11"
+val debPkgDepLibIndyMinVersion = "1.95.0~1256"
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1618"
+val libIndyVer = "1.95.0~1256"
 val sharedLibDeps = Seq(
-  LibPack("libindy", libIndyVer),
-  LibPack("libnullpay", libIndyVer),
-  LibPack("libmysqlstorage",  "0.1.11"),
-  LibPack("libvcx", "0.10.1-bionic~1131"), // For integration testing ONLY
+  LibPackExt("libindy-async", libIndyVer, "libindy.so"),
+//  LibPack("libnullpay", libIndyVer),
+  LibPackExt("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so"), // For integration testing ONLY
 )
 
 //dependency versions
@@ -228,9 +226,8 @@ lazy val packageSettings = Seq (
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy(>= $debPkgDepLibIndyMinVersion)",
-    s"libnullpay(>= $debPkgDepLibIndyMinVersion)",  // must be the same version as libindy
-    s"libmysqlstorage(=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
+    s"libindy-async(>= $debPkgDepLibIndyMinVersion)"
+//    s"libnullpay(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy, temporary disabling while there is no async libnullpay
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

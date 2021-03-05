@@ -19,56 +19,45 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
                       val asyncAPIContext: AsyncAPIContext)
   extends WalletAccess
     with AnonCredRequestsAPI
-    with BaseAsyncAccessImpl {
+    with BaseAsyncOpExecutorImpl {
 
   import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
   override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = {
-    withAsyncOpRunner({ walletApi.tell(CreateDID(keyType)) }, handler)
+    walletApi.tell(CreateDID(keyType))
   }
 
   override def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit = {
-    withAsyncOpRunner(
-      { walletApi.tell(StoreTheirKey(did, verKey)) },
-      handler
-    )
+    walletApi.tell(StoreTheirKey(did, verKey))
   }
   
   override def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit = {
-    withAsyncOpRunner({ walletApi.tell(GetVerKey(forDID)) }, handler)
+    walletApi.tell(GetVerKey(forDID))
   }
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
                    (handler: Try[SignedMsg] => Unit): Unit = {
     // currently only one sign type is supported
     if (signType != SIGN_ED25519_SHA512_SINGLE)
-      withAsyncOpRunner( { Future.failed(InvalidSignType(signType))}, handler)
+      Future.failed(InvalidSignType(signType))
     else {
-      withAsyncOpRunner(
-        {
-          val did = getDIDFromParticipantId(selfParticipantId)
-          walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
-        },
-        handler)
+      val did = getDIDFromParticipantId(selfParticipantId)
+      walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
     }
   }
 
-  override def signRequest(submitterDID: DID, request: String)(handler: Try[LedgerRequest] => Unit): Unit = {
+  override def signRequest(submitterDID: DID, request: String)
+                          (handler: Try[LedgerRequest] => Unit): Unit = {
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
-    withAsyncOpRunner(
-      { walletApi.tell(SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef) },
-      handler
-    )
+    walletApi.tell(SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
   }
 
-  override def multiSignRequest(submitterDID: DID, request: String)(handler: Try[LedgerRequest] => Unit): Unit = {
+  override def multiSignRequest(submitterDID: DID, request: String)
+                               (handler: Try[LedgerRequest] => Unit): Unit = {
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
-    withAsyncOpRunner(
-      { walletApi.tell(MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef) },
-      handler
-    )
+    walletApi.tell(MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
   }
 
   override def verify(signer: ParticipantId,
@@ -79,14 +68,9 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
                      (handler: Try[VerifySigResult] => Unit): Unit = {
     // currently only one sign type is supported
     if (signType != SIGN_ED25519_SHA512_SINGLE) {
-      withAsyncOpRunner({Future.failed(InvalidSignType(signType))}, handler)
+      Future.failed(InvalidSignType(signType))
     } else {
-      withAsyncOpRunner(
-        {
-          walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))
-        },
-        handler
-      )
+      walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))
     }
   }
 
@@ -97,10 +81,7 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
                      (handler: Try[VerifySigResult] => Unit): Unit = {
   // libindy currently supports only one VerKey per DID
   // we check the VerKey used belongs to the party who signed the message.
-    withAsyncOpRunner(
-      { walletApi.tell(VerifySignature(KeyParam.fromVerKey(verKeyUsed), msg, sig)) },
-      handler
-    )
+    walletApi.tell(VerifySignature(KeyParam.fromVerKey(verKeyUsed), msg, sig))
   }
 
   private def getDIDFromParticipantId(participantId: ParticipantId): DID = {

@@ -2,10 +2,10 @@ package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
-import com.evernym.verity.protocol.engine.{DebugProtocols, SimpleProtocolSystem, VerKey}
+import com.evernym.verity.protocol.engine.{DebugProtocols, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily._
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
+import com.evernym.verity.protocol.testkit.{SimpleProtocolSystem, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.scalatest.concurrent.Eventually

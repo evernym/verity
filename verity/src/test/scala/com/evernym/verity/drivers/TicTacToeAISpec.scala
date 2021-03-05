@@ -2,15 +2,13 @@ package com.evernym.verity.drivers
 
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.SimpleControllerProviderInputType
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{CellValue, O, X}
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
 import com.evernym.verity.protocol.protocols.tictactoe.{Board, State, TicTacToeProtoDef}
 import com.evernym.verity.util.intTimes
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{MakeMove, MakeOffer}
-import com.evernym.verity.protocol.testkit.{InteractionController, ProtocolTestKit}
+import com.evernym.verity.protocol.testkit.{InteractionController, ProtocolTestKit, SimpleControllerProviderInputType}
 import com.evernym.verity.testkit.BasicSpec
-
 
 import scala.util.Random
 

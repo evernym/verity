@@ -1,14 +1,13 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.{DebugProtocols, SignalEnvelope, SimpleControllerProviderInputType}
+import com.evernym.verity.protocol.engine.{DebugProtocols, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{O, X}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{AcceptOffer, MakeOffer, _}
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.{InteractionController, ProtocolTestKit}
+import com.evernym.verity.protocol.testkit.{InteractionController, ProtocolTestKit, SimpleControllerProviderInputType}
 import com.evernym.verity.util.Conversions._
 import com.evernym.verity.testkit.BasicSpec
-
 
 import scala.language.postfixOps
 

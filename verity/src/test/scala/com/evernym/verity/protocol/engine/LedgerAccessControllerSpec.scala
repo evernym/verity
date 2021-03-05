@@ -10,7 +10,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 import scala.util.Try
 
-class LedgerAccessControllerSpec extends BasicSpec {
+class LedgerAccessControllerSpec extends BasicSpec with MockAsyncOpRunner {
 
   "Ledger access controller" - {
     "when given correct access rights" - {

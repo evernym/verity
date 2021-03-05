@@ -3,12 +3,12 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DIDDoc, SignalEnvelope, SimpleControllerProviderInputType}
+import com.evernym.verity.protocol.engine.{DIDDoc, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.{Accept, TheirDidDocUpdated, TheirDidUpdated}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Role.{Invitee, Inviter}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.UpdateTheirDid
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.{InteractionController, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, MockableWalletAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 
 

@@ -1,5 +1,6 @@
 package com.evernym.verity.testkit.util
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.config.AppConfig
@@ -15,11 +16,9 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
+
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
-
-import akka.actor.ActorSystem
-
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -50,16 +49,6 @@ class LedgerUtil (val appConfig: AppConfig,
   // Read requests don't require a particular submitterDID, so here is a random one
   private val privateGetDID: DID = "KZyKVMqt5ShMvxLF1zKM7F"
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)
-
-//  var currentTAA = taa
-//  var defaultTAA = ConfigUtil.findTAAConfig(appConfig, "1.0.0")
-//
-//  def taaToUse(): Option[TransactionAuthorAgreement] = {
-//    currentTAA match {
-//      case Some(_)  => currentTAA
-//      case None     => defaultTAA
-//    }
-//  }
 
   Pool.setProtocolVersion(LEDGER_TXN_PROTOCOL_V2).get
 

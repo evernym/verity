@@ -41,7 +41,7 @@ trait SegmentedStateContext[P,R,M,E,S,I]
     val segmentId = segmentStoreStrategy_!.calcSegmentId(segmentKey)
     val domainId = Try(getDomainId).getOrElse(withShadowAndRecord(getDomainId))
     val segmentAddress = segmentStoreStrategy_!.calcSegmentAddress(domainId, pinstId, segmentId)
-    segmentStorage.withSegment(segmentAddress, segmentKey)(handler)
+    segmentStore.withSegment(segmentAddress, segmentKey)(handler)
   }
 
 }

@@ -1,5 +1,7 @@
 package com.evernym.verity.http.common
 
+import java.util.UUID
+
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -40,13 +42,12 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
   def sendPlainTextMsg(payload: String, method: HttpMethod = HttpMethods.POST)
                       (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     runWithClientSpan("sendPlainTextMsg", getClass.getSimpleName) {
-      logSendingRequest(method)
       val req = HttpRequest(
         method = method,
         uri = up.url,
         entity = HttpEntity(payload)
       )
-      sendRequest(req).flatMap { response =>
+      sendRequestAndHandleResponse(req) { response =>
         val prp = performResponseParsing[String]
         prp(response)
       }
@@ -56,13 +57,12 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
   def sendJsonMsg(payload: String)
                  (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     runWithClientSpan("sendJsonMsg", getClass.getSimpleName) {
-      logSendingRequest()
       val req = HttpRequest(
         method = HttpMethods.POST,
         uri = up.url,
         entity = HttpEntity(MediaTypes.`application/json`, payload)
       )
-      sendRequest(req).flatMap { response =>
+      sendRequestAndHandleResponse(req) { response =>
         val prp = performResponseParsing[String]
         prp(response)
       }
@@ -72,13 +72,12 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
   def sendBinaryMsg(payload: Array[Byte])
                    (implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
     runWithClientSpan("sendBinaryMsg", getClass.getSimpleName) {
-      logSendingRequest()
       val req = HttpRequest(
         method = HttpMethods.POST,
         uri = up.url,
         entity = HttpEntity(HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE, payload)
       )
-      sendRequest(req).flatMap { response =>
+      sendRequestAndHandleResponse(req) { response =>
         import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
         val prp = performResponseParsing[Array[Byte]]
         prp(response).map(_.map(bd => PackedMsg(bd)))
@@ -86,12 +85,16 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
     }
   }
 
-  private def logSendingRequest(method: HttpMethod)(implicit up: UrlParam): Unit = {
-    logSendingRequest(Option(method))
-  }
-
-  private def logSendingRequest(method: Option[HttpMethod]=None)(implicit up: UrlParam): Unit = {
-    logger.info(s"Sending ${method.getOrElse(HttpMethods.POST)} to uri ${up.host}:${up.port}/${up.path}")
+  private def sendRequestAndHandleResponse[T](req: HttpRequest)
+                                             (respHandler: HttpResponse => Future[Either[HandledErrorException, T]])
+                                             (implicit up: UrlParam):
+  Future[Either[HandledErrorException, T]] = {
+    val id = UUID.randomUUID().toString
+    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path}")
+    sendRequest(req).flatMap { response =>
+      logger.info(s"[$id] [incoming response] [${response.status}]")
+      respHandler(response)
+    }
   }
 
   private def logger: Logger = getLoggerByClass(getClass)

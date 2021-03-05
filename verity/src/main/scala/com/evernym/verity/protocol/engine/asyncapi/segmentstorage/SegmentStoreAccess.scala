@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.asyncapi.segmentstorage
 
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 

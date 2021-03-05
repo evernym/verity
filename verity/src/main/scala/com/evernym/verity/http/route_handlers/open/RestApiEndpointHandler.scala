@@ -35,7 +35,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   protected def handleRestMsgReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String])
                       (implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgCount
-
+    logger.info(s"[${reqMsgContext.id}] [incoming request] [POST] rest message ${reqMsgContext.clientIpAddressLogStr}")
     entity(as[String]) { payload =>
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
@@ -50,7 +50,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   protected def handleRestGetStatusReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String], params: Map[String, String])
                             (implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgCount
-
+    logger.info(s"[${reqMsgContext.id}] [incoming request] [GET] rest message ${reqMsgContext.clientIpAddressLogStr}")
     val msgType = buildGetStatusMsgType(protoRef, params)
     val msg = buildGetStatusMsg(msgType, params)
     val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext, sync = true)
@@ -60,21 +60,27 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  protected def responseHandler: PartialFunction[Any, HttpResponse] = {
+  protected def responseHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, HttpResponse] = {
     case br: ActorErrorResp  =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
-      RestExceptionHandler.handleUnexpectedResponse(br)
+      val errResp = RestExceptionHandler.handleUnexpectedResponse(br)
+      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${errResp.status}]")
+      errResp
     case Done             =>
       incrementAgentMsgSucceedCount
+      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.Accepted}]")
       HttpResponse(StatusCodes.Accepted, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestAcceptedResponse())))
     case resp: String     =>
       incrementAgentMsgSucceedCount
+      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.OK}] (string to json response)")
       HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(resp))))
     case jsonMsg: JsonMsg =>
       incrementAgentMsgSucceedCount
+      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.OK}] (json response)")
       HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(new JSONObject(jsonMsg.msg)))))
     case native: Any      =>
       incrementAgentMsgSucceedCount
+      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.OK}] (native to json response)")
       HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(native))))
   }
 

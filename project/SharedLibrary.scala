@@ -22,6 +22,8 @@ object SharedLibrary {
     val libraryName: String = s"$packageName.so"
   }
 
+  case class LibPackExt(packageName: String, packageVersion: String, libraryName: String ) extends Lib
+
   val updateSharedLibraries = taskKey[Unit]("Update Shared Libraries")
 
   val packageSubDir = "pkg"

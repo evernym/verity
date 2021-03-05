@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.On
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects2._
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
-import com.evernym.verity.protocol.testkit.{InteractionController, TestSimpleProtocolSystem, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, SimpleControllerProviderInputType, TestSimpleProtocolSystem, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Conversions._
 import org.scalatest.concurrent.Eventually

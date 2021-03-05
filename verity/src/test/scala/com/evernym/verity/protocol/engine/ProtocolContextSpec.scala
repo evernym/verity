@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
-import com.evernym.verity.protocol.testkit.{InteractionController, InteractionType, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, InteractionType, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.protocol.{Control, HasMsgType}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import org.scalatest.Assertions.fail

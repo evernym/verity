@@ -2,33 +2,37 @@ package com.evernym.verity.protocol.container.asyncapis.segmentstorage
 
 import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.{ForIdentifier, StorageInfo, StorageReferenceStored}
 import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.engine.{BaseAsyncAccessImpl, ProtoRef, SegmentStoreAccess, StoredSegment}
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController}
+import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, ProtoRef}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.storage_services.aws_s3.StorageAPI
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class SegmentStorageAccessAPI(storageAPI: StorageAPI,
-                              protoRef: ProtoRef,
-                              segmentedStateName: Option[String])
-                             (implicit val asyncAPIContext: AsyncAPIContext)
+class SegmentStoreAccessAPI(storageAPI: StorageAPI,
+                            protoRef: ProtoRef,
+                            segmentedStateName: Option[String])
+                           (implicit val asyncAPIContext: AsyncAPIContext,
+                              val asyncOpRunner: AsyncOpRunner)
   extends SegmentStoreAccess
-    with BaseAsyncAccessImpl {
+    with BaseAccessController
+    with BaseAsyncOpExecutorImpl {
 
   private val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
   private val MAX_SEGMENT_SIZE = 400000   //TODO: shouldn't this be little less than 400 KB?
 
   private def isLessThanMaxSegmentSize(data: GeneratedMessage): Boolean = data.serializedSize < MAX_SEGMENT_SIZE
 
-  private def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any): Future[StoredSegment] = {
+  private def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any)
+                                   (implicit ec: ExecutionContext): Future[StoredSegment] = {
     val typeName = SegmentedStateStore.buildTypeName(protoRef, segmentedStateName.get)
     val segmentedStateRegion = ClusterSharding.get(context.system).shardRegion(typeName)
     val fut = segmentedStateRegion ? ForIdentifier(segmentAddress, cmd)
@@ -41,11 +45,12 @@ class SegmentStorageAccessAPI(storageAPI: StorageAPI,
 
   private def storeInExternalStorage(segmentAddress: SegmentAddress,
                                      segmentKey: SegmentKey,
-                                     data: GeneratedMessage): Future[StoredSegment] = {
+                                     data: GeneratedMessage)
+                                    (implicit ec: ExecutionContext): Future[StoredSegment] = {
     logger.debug(s"storing storage state: $data")
     storageAPI.upload(segmentAddress + segmentKey, data.toByteArray).flatMap {
       case storageInfo: StorageInfo =>
-        logger.debug(s"Data stored at: ${storageInfo.endpoint}")
+        logger.debug(s"data stored at: ${storageInfo.endpoint}")
         val storageReference = StorageReferenceStored(storageInfo.`type`, SegmentedStateStore.eventCode(data), Some(storageInfo))
         sendToSegmentedRegion(segmentAddress, SaveSegmentedState(segmentKey, storageReference))
       case value =>
@@ -59,7 +64,8 @@ class SegmentStorageAccessAPI(storageAPI: StorageAPI,
 
   private def saveSegmentedState(segmentAddress: SegmentAddress,
                                  segmentKey: SegmentKey,
-                                 segment: Any): Future[StoredSegment] = {
+                                 segment: Any)
+                                (implicit ec: ExecutionContext): Future[StoredSegment] = {
     val fut = segment match {
       case segmentData: GeneratedMessage if isLessThanMaxSegmentSize(segmentData) =>
         val cmd = SaveSegmentedState(segmentKey, segmentData)
@@ -76,13 +82,15 @@ class SegmentStorageAccessAPI(storageAPI: StorageAPI,
 
   private def readFromExternalStorage[T](segmentAddress: SegmentAddress,
                                          segmentKey: SegmentKey,
-                                         storageRef: StorageReferenceStored): Future[Option[T]] = {
+                                         storageRef: StorageReferenceStored)
+                                        (implicit ec: ExecutionContext): Future[Option[T]] = {
     storageAPI.download(segmentAddress + segmentKey).map { data: Array[Byte]  =>
       Option(SegmentedStateStore.buildEvent(storageRef.eventCode, data).asInstanceOf[T])
     }
   }
 
-  private def readSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey): Future[Any] = {
+  private def readSegmentedState(segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+                                (implicit ec: ExecutionContext): Future[Any] = {
     val cmd = GetSegmentedState(segmentKey)
     sendToSegmentedRegion(segmentAddress, cmd).flatMap {
       case StoredSegment(segmentAddress, Some(srs: StorageReferenceStored)) =>
@@ -95,11 +103,19 @@ class SegmentStorageAccessAPI(storageAPI: StorageAPI,
 
   override def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
                            (handler: Try[StoredSegment] => Unit): Unit = {
-    withAsyncOpRunner({ saveSegmentedState(segmentAddress, segmentKey, segment) }, handler )
+    withAsyncOpExecutorActor(
+      { implicit ec: ExecutionContext => saveSegmentedState(segmentAddress, segmentKey, segment) },
+      handler
+    )
   }
 
   override def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
                              (handler: Try[Option[T]] => Unit): Unit = {
-    withAsyncOpRunner({ readSegmentedState(segmentAddress, segmentKey) }, handler)
+    withAsyncOpExecutorActor(
+      { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey) },
+      handler
+    )
   }
+
+  override def accessRights: Set[AccessRight] = Set.empty
 }

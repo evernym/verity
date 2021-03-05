@@ -4,24 +4,21 @@ import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, LedgerReadAccess, LedgerWriteAccess}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController, LedgerReadAccess, LedgerWriteAccess}
 
-import scala.util.{Failure, Try}
+import scala.util.Try
 
-class LedgerAccessController(accessRights: Set[AccessRight],
+class LedgerAccessController(val accessRights: Set[AccessRight],
                              ledgerRequestsImp: LedgerAccess)
-  extends LedgerAccess {
+                            (implicit val asyncOpRunner: AsyncOpRunner)
+  extends LedgerAccess
+    with BaseAccessController {
 
   override def walletAccess: WalletAccess = ledgerRequestsImp.walletAccess
 
-  def runIfAllowed[T](right: AccessRight, f: (Try[T] => Unit) => Unit, handler: Try[T] => Unit): Unit =
-    if(accessRights(right))
-      f(handler)
-    else
-      handler(Failure(new IllegalAccessException))
-
-  def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit =
+  def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit = {
     runIfAllowed(LedgerReadAccess, {ledgerRequestsImp.getSchema(schemaId)}, handler)
+  }
 
   def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit =
     runIfAllowed(LedgerReadAccess, {ledgerRequestsImp.getCredDef(credDefId)}, handler)

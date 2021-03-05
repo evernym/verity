@@ -36,7 +36,8 @@ trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
       "jvm_memory_pool_free_bytes_count",   "jvm_memory_pool_free_bytes_sum",   "jvm_memory_pool_free_bytes_bucket",
       "jvm_gc_seconds_count",               "jvm_gc_seconds_sum",               "jvm_gc_seconds_bucket",
       "jvm_memory_used_bytes_count",        "jvm_memory_used_bytes_sum",        "jvm_memory_used_bytes_bucket",
-      "libindy_threadpool_threads_count"
+      "libindy_command_duration_ms_count",  "libindy_command_duration_ms_sum",  "libindy_command_duration_ms_bucket",
+      "libindy_wallet_count"
     )
     expectedMetrics.foreach { emn =>
       val pmn = MetricsReader.convertToProviderName(emn)

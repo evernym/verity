@@ -62,7 +62,8 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString, initData: Map[
   def msgFamilyDetail: Option[MsgFamilyDetail] = getByKeyOpt[MsgFamilyDetail](MSG_TYPE_DETAIL)
   def msgPackFormat: MsgPackFormat = MsgPackFormat.fromString(data.getOrElse(MSG_PACK_VERSION, "n/a").toString)
 
+  def clientIpAddressLogStr: String = clientIpAddress.map (ip => s"from ip address: $ip").getOrElse("")
+
   implicit def agentMsgContext: AgentMsgContext =
     AgentMsgContext(msgPackFormat, msgFamilyDetailReq.familyVersion, originalMsgSenderVerKeyOpt)
 }
-

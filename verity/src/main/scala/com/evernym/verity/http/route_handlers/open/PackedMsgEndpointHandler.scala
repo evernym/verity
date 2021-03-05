@@ -29,15 +29,20 @@ trait PackedMsgEndpointHandler
 
   protected def handleAgentMsgResponse: PartialFunction[(Any, ReqMsgContext), ToResponseMarshallable] = {
 
-    case (rmw: PackedMsg, _: ReqMsgContext) =>
+    case (pm: PackedMsg, rmc) =>
       incrementAgentMsgSucceedCount
-      HttpEntity(MediaTypes.`application/octet-stream`, rmw.msg)
+      logger.info(s"[${rmc.id}] [outgoing response] [$OK] packed message")
+      HttpEntity(MediaTypes.`application/octet-stream`, pm.msg)
 
-    case (Done, _) => OK
+    case (Done, rmc) =>
+      logger.info(s"[${rmc.id}] [outgoing response] [$OK]")
+      OK
 
-    case (e, _: ReqMsgContext) =>
+    case (e, rmc) =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
-      handleUnexpectedResponse(e)
+      val errResp = handleUnexpectedResponse(e)
+      logger.info(s"[${rmc.id}] [outgoing response] [${errResp.status}]")
+      errResp
   }
 
   /**
@@ -80,7 +85,7 @@ trait PackedMsgEndpointHandler
     }
   }
 
-  protected def handleAgentMsgReqForUnsupportedContentType(x: Any)(implicit reqMsgContext: ReqMsgContext): Route = {
+  protected def handleAgentMsgReqForUnsupportedContentType()(implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgFailedCount(Map("class" -> "InvalidContentType"))
     reject
   }
@@ -89,12 +94,14 @@ trait PackedMsgEndpointHandler
     // flow diagram: fwd + ctl + proto + legacy, step 1 -- Packed msg arrives.
     incrementAgentMsgCount
     implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
+    logger.info(s"[${reqMsgContext.id}] [incoming request] [POST] packed message ${reqMsgContext.clientIpAddressLogStr}")
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
     req.entity.contentType.mediaType match {
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
         handleAgentMsgReqForOctetStreamContentType
       case x =>
-        handleAgentMsgReqForUnsupportedContentType(x)
+        logger.info(s"[${reqMsgContext.id}] [outgoing response] content type not supported")
+        handleAgentMsgReqForUnsupportedContentType()
     }
   }
 

@@ -6,15 +6,12 @@ import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
 import akka.event.Logging.DebugLevel
 import akka.pattern.ask
-import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.engine.VerKey
@@ -610,7 +607,7 @@ trait ItemContainerBase
     (pendingStorageCleanup.isEmpty, isMigrationFinished(cs.requestedByItemContainerId)) match {
       case (true, true) =>
         cleanStorageRequestedByContainerIds = cleanStorageRequestedByContainerIds + cs.requestedByItemContainerId
-        deleteMessages(lastSequenceNr)    //this will delete all events of this actor
+        deleteMessagesExtended(lastSequenceNr)    //this will delete all events of this actor
       case (true, false) =>
         logMsg("clean storage won't be processed as migration is not started or not yet marked as finished", DebugLevel)
       case (false, _)   =>
@@ -618,16 +615,10 @@ trait ItemContainerBase
     }
   }
 
-  override def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
-    logMsg("delete message success received: " + dms, DebugLevel)
+  override def postAllMsgsDeleted(): Unit = {
     cleanStorageRequestedByContainerIds.foreach { cleanupRequestedEntityId =>
       sendContainerStorageCleaned(cleanupRequestedEntityId)
     }
-  }
-
-  override def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
-    logMsg("delete message failure received: " + dmf, DebugLevel)
-    notifyAppStateManager(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_DELETION, dmf.cause, Option(dmf.cause.getMessage)))
   }
 
   /**

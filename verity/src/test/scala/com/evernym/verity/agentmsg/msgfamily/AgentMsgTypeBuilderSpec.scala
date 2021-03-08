@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily
 
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, typeStrFromMsgType}
+import com.evernym.verity.protocol.engine.MsgFamily.{QUALIFIER_FORMAT_HTTP, EVERNYM_QUALIFIER, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.MsgType
 import com.evernym.verity.testkit.BasicSpec
 
@@ -17,9 +17,9 @@ class AgentMsgTypeBuilderSpec extends BasicSpec {
 
   testMsgTypes map typeStrFromMsgType foreach {
     str => {
-      if(str.contains("did")) {
-        str should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX_DID
-      } else str should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX_HTTP
+      if(QUALIFIER_FORMAT_HTTP) {
+        str should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX_HTTP
+      } else str should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX_DID
     }
   }
 

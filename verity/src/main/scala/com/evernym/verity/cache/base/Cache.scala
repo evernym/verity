@@ -210,10 +210,7 @@ trait CacheBase {
  */
 case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
 
-class Cache(override val name: String, override val fetchers: Map[Int, CacheValueFetcher]) extends CacheBase {
-  logger.info(s"Cache '$name' initializing")
-  fetchers.foreach(f =>logger.info(s"Cache '$name' fetcher id = ${f._1}, max size = ${f._2.maxSize}"))
-}
+class Cache(override val name: String, override val fetchers: Map[Int, CacheValueFetcher]) extends CacheBase
 
 /**
  *

@@ -11,7 +11,6 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam
 
-import scala.collection.immutable.ListMap
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 case class TxnResp(from: DID,
@@ -101,36 +100,9 @@ trait LedgerSvc {
 
   implicit val executor: ExecutionContextExecutor = system.dispatcher
 
-  private val getTAARespCache: Map[String, GetTAACachedResp] = Map.empty
-  // TODO: Figure out why getNymRespCache and getAttribRespCache are useful. They never mutate from Map.empty.
-  private val getNymRespCache: Map[String, GetNymCachedResp] = Map.empty
-  private val getAttribRespCache: Map[String, Map[String, GetAttribCacheResp]] = Map.empty
-  private val getSchemaRespCache: Map[String, GetSchemaCacheResp] = Map.empty
-  private val getCredDefRespCache: Map[String, GetCredDefCacheResp] = Map.empty
-
   //get taa
   private def _getTAA(submitterDetail: Submitter, version: Option[String]=None): Future[Either[StatusDetail, GetTAAResp]] = {
-    _getTAAFromCache(version).map { gtaar =>
-      Future.successful(Right(gtaar))
-    }.getOrElse(_getTAAFromLedger(submitterDetail))
-  }
-
-  private def _getTAAFromCache(version: Option[String]): Option[GetTAAResp] = {
-    version match {
-      case Some(v) =>
-        getTAARespCache.get(v).find(_.isNotExpired).map(_.resp)
-      case None =>
-        // The ledger returns the latest version defined on the ledger. We will do the same in the cache.
-        if (getTAARespCache.keys.isEmpty) None
-        else {
-          val key: String = ListMap(getTAARespCache.toSeq.sortWith(_._1 > _._1):_*).keys.head
-          val latestCachedTAA: Option[GetTAACachedResp] = getTAARespCache.get(key)
-          latestCachedTAA match {
-            case Some(taa) => Option(taa.resp)
-            case None => None
-          }
-        }
-    }
+    _getTAAFromLedger(submitterDetail)
   }
 
   private def _getTAAFromLedger(submitterDetail: Submitter):
@@ -147,13 +119,7 @@ trait LedgerSvc {
 
   //get nym
   private def _getNym(submitterDetail: Submitter, id: String): Future[Either[StatusDetail, GetNymResp]] = {
-    _getNymFromCache(id).map { gnr =>
-      Future.successful(Right(gnr))
-    }.getOrElse(_getNymFromLedger(submitterDetail, id))
-  }
-
-  private def _getNymFromCache(id: String): Option[GetNymResp] = {
-    getNymRespCache.get(id).find(_.isNotExpired).map(_.resp)
+    _getNymFromLedger(submitterDetail, id)
   }
 
   private def _getNymFromLedger(submitterDetail: Submitter, id: String):
@@ -169,13 +135,7 @@ trait LedgerSvc {
   }
 
   private def _getSchema(schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
-    _getSchemaFromCache(schemaId).map { hit =>
-      Future.successful(Right(hit))
-    }.getOrElse(_getSchemaFromLedger(Submitter(), schemaId))
-  }
-
-  private def _getSchemaFromCache(schemaId: String): Option[GetSchemaResp] = {
-    getSchemaRespCache.get(schemaId).find(_.isNotExpired).map(_.resp)
+    _getSchemaFromLedger(Submitter(), schemaId)
   }
 
   private def _getSchemaFromLedger(submitterDetail: Submitter, schemaId: String):
@@ -191,13 +151,7 @@ trait LedgerSvc {
   }
 
   private def _getCredDef(credDefId: String): Future[Either[StatusDetail, GetCredDefResp]] = {
-    _getCredDefFromCache(credDefId).map { hit =>
-      Future.successful(Right(hit))
-    }.getOrElse(_getCredDefFromLedger(Submitter(), credDefId))
-  }
-
-  private def _getCredDefFromCache(credDefId: String): Option[GetCredDefResp] = {
-    getCredDefRespCache.get(credDefId).find(_.isNotExpired).map(_.resp)
+    _getCredDefFromLedger(Submitter(), credDefId)
   }
 
   private def _getCredDefFromLedger(submitterDetail: Submitter, credDefId: String):
@@ -215,13 +169,7 @@ trait LedgerSvc {
   //get attrib
   private def _getAttrib(submitterDetail: Submitter, id: String,
                          attribName: String): Future[Either[StatusDetail, GetAttribResp]] = {
-    _getAttribFromCache(id, attribName).map { gar =>
-      Future.successful(Right(gar))
-    }.getOrElse(_getAttribFromLedger(submitterDetail, id, attribName))
-  }
-
-  private def _getAttribFromCache(id: String, attribName: String): Option[GetAttribResp] = {
-    getAttribRespCache.get(id).flatMap(am => am.get(attribName).map(_.resp))
+    _getAttribFromLedger(submitterDetail, id, attribName)
   }
 
   private def _getAttribFromLedger(submitterDetail: Submitter, id: String, attribName: String):

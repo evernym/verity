@@ -6,7 +6,7 @@ import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.testkit.{AppStateManagerTestKit, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.{IgnoreLog, UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.actor.appStateManager.state.SickState
+import com.evernym.verity.actor.appStateManager.state.ListeningState
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.config.Config
 import org.scalatest.time.{Seconds, Span}
@@ -131,16 +131,15 @@ class DeleteMessageFailureItemManagerSpec
     //    }
 
     "when sent 'GetItem' for id 1 during 'ListeningSuccessful' app state" - {
-      "app state manager switches to sick state" taggedAs (IgnoreLog, UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
+      "app state manager should not change state" taggedAs (IgnoreLog, UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
         exitSecurityManager.exitCallCount shouldBe 0
         asmTestKit.withListeningAppState() {
           //note: eventually, during item container cleanup, if delete events fail (which we are doing in test)
-          //it should call app state manager with SeriousSystemError event which ultimately change app status to Sick
+          //it should NOT change app state
           eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
             sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
             expectMsgType[ItemCmdResponse]
-            exitSecurityManager.exitCallCount shouldBe 0
-            asmTestKit.checkAppManagerState(SickState)
+            asmTestKit.checkAppManagerState(ListeningState)
           }
         }
       }

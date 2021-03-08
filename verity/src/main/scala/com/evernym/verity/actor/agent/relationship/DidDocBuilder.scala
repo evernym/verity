@@ -129,18 +129,18 @@ case class DidDocBuilder(didDoc: DidDoc = DidDoc())(implicit didDocBuilderParam:
         val updatedAuthKeys = ce.authKeyIds.map { ak =>
           result.find(e => e._2.exists(_.keyId == ak)).map(_._1.keyId).getOrElse(ak)
         }
-        ce.updateAuthKeyIds(updatedAuthKeys)
+        ce.updateAuthKeyIds(updatedAuthKeys.toSet.toSeq)
       }
+
       //update the did doc with new data
-      withAuthorizedKeys(authKeysToRetain)
-        .withEndpoints(updatedEndpoints)
+      withEndpoints(updatedEndpoints)
+        .withAuthorizedKeys(authKeysToRetain)
         .didDoc
     }
   }
 
   /**
-   * maps one type of authorized key to different type of authorized key
-   * currently it maps "AuthorizedKey with empty ver key"  to "AuthorizedKey with actual ver key"
+   * updates auth keys with empty verKey with actual verKey
    *
    * @return
    */

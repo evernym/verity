@@ -89,7 +89,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
       if (batchStatus.isCompleted) {
         batchStatus = BatchStatus.empty
         if (recordedBatchSize.last != recordedBatchSize.current) {
-          val event = BatchSizeRecorded(batchSize, batchSize)
+          val event = BatchSizeRecorded(nextSeqNoForDeletion, nextSeqNoForDeletion)
           applyEvent(event)
           writeWithoutApply(event)
         }
@@ -120,9 +120,9 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
 
   def recordBatchSizeIfChanged(): Unit = {
     val eventOpt = if (recordedBatchSize.last == -1) {
-      Option(BatchSizeRecorded(batchSize, batchSize))
-    } else if (recordedBatchSize.current != batchSize) {
-      Option(BatchSizeRecorded(recordedBatchSize.current, batchSize))
+      Option(BatchSizeRecorded(nextSeqNoForDeletion, nextSeqNoForDeletion))
+    } else if (recordedBatchSize.current != nextSeqNoForDeletion) {
+      Option(BatchSizeRecorded(recordedBatchSize.current, nextSeqNoForDeletion))
     } else None
     eventOpt.foreach { event =>
       applyEvent(event)
@@ -262,7 +262,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val agentMsgRouter: Ag
     routeStoreStatusReq.copy(inProgressCleanupStatus = inProgressCleanupStatus)
   }
 
-  lazy val batchSize: Int =
+  lazy val nextSeqNoForDeletion: Int =
     appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
     .getOrElse(5)
 

@@ -264,7 +264,7 @@ trait AgentCommon
       state.relationship match {
         case Some(rel) =>
           val oldAuthKeys = getAllAuthKeys(rel)
-          for (
+          val result = for (
             updatedMyDidDoc     <- updatedDidDoc(preAddedAuthKeys, rel.myDidDoc);
             updatedThoseDidDocs <- updatedDidDocs(preAddedAuthKeys, rel.thoseDidDocs);
             newAgencyDIDPair    <- agencyDidPairFut()
@@ -277,9 +277,11 @@ trait AgentCommon
             val authKeyToBePersisted =
               computeAgencyAuthKeyToBePersisted(preAgencyDidPair, newAgencyDIDPair) ++
                 computeAuthKeyToBePersisted(preAddedAuthKeys, oldAuthKeys, newAuthKeys)
-            self ? UpdateState(newAgencyDIDPair, updatedRel, authKeyToBePersisted)
-          }.map { _ =>
-            sndr ! Done
+            self.tell(UpdateState(newAgencyDIDPair, updatedRel, authKeyToBePersisted), sndr)
+          }
+          result.recover {
+            case e: RuntimeException =>
+              handleException(e, self)
           }
         case None =>
           sndr ! Done
@@ -319,18 +321,18 @@ trait AgentCommon
     Future.successful("post agent state fix")
   }
 
-  def updatedDidDoc(explicitlyAddedAuthKeys: Set[AuthKey], didDocOpt: Option[DidDoc]): Future[Option[DidDoc]] =
-    swap {
-      didDocOpt.map { dd => updatedDidDocs(explicitlyAddedAuthKeys, Seq(dd)).map(ld => ld.head) }
-    }
+  def updatedDidDoc(explicitlyAddedAuthKeys: Set[AuthKey],
+                    didDocOpt: Option[DidDoc]): Future[Option[DidDoc]] = {
+    didDocOpt.map { dd =>
+      updatedDidDocs(explicitlyAddedAuthKeys, Seq(dd)).map(_.headOption)
+    }.getOrElse(Future.successful(None))
+  }
 
-  def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey], didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
+  def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey],
+                     didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
       DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
-
-  private def swap[M](x: Option[Future[M]]): Future[Option[M]] =
-    Future.sequence(Option.option2Iterable(x)).map(_.headOption)
 }
 
 case class UpdateState(agencyDidPair: DidPair, relationship: Relationship, persistAuthKeys: Set[AuthKey]) extends ActorMessage

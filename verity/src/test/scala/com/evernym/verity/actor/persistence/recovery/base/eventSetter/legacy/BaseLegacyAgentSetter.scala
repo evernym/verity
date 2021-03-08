@@ -44,6 +44,8 @@ trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore 
   protected lazy val basicUserAgentEvents = scala.collection.immutable.Seq(
     OwnerDIDSet(mySelfRelDIDPair.DID),
     AgentKeyCreated(mySelfRelAgentDIDPair.DID),
+    ComMethodUpdated("1", 2, "http://abc.xyz.com"),
+    ComMethodUpdated("2", 2, "http://abc.xyz.com", Option(ComMethodPackaging("plain", Seq(mySelfRelDIDPair.verKey))))
   )
 
   private def setupBasicUserAgentWalletData(): Unit = {

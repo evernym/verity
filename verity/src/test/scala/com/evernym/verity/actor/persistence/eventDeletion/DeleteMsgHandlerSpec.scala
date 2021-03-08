@@ -34,7 +34,7 @@ class DeleteMsgHandlerSpec
     }
 
     "when tried to delete events" - {
-      "should be successfully persisted" in {
+      "should be successfully deleted" in {
         //here we are indirectly testing success and failure scenario along with max batch size as well.
         EventFilter.info(pattern = "delete message successful: DeleteMessagesSuccess(.*)", occurrences = 8) intercept {
           mockActor ! StartMsgDeletion

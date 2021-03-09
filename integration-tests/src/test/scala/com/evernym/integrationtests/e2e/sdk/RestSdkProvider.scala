@@ -120,7 +120,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     new UndefinedUpdateEndpoint_0_6 {
       override def update(context: Context): Unit = {
         val updateJson = new JSONObject
-        updateJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "configs", "0.6", "UPDATE_COM_METHOD"))
+        updateJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(UpdateEndpointV0_6.QUALIFIER), "configs", "0.6", "UPDATE_COM_METHOD"))
         updateJson.put("comMethod", {
           val json = new JSONObject
           json.put("id", "webhook")
@@ -151,7 +151,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   override def updateConfigs_0_6(name: String, logoUrl: String): UpdateConfigsV0_6 = {
     val updateConfigsJson = new JSONObject
-    updateConfigsJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "update-configs", "0.6", "update"))
+    updateConfigsJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(UpdateConfigsV0_6.QUALIFIER), "update-configs", "0.6", "update"))
     updateConfigsJson.put("@id", UUID.randomUUID.toString)
     val configs = new JSONArray
     val item1 = new JSONObject
@@ -187,7 +187,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
   }
   override def writeSchema_0_6(name: String, version: String, attrs: String*): WriteSchemaV0_6 = {
     val writeSchemaJson = new JSONObject
-    writeSchemaJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "write-schema", "0.6", "write"))
+    writeSchemaJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(WriteSchemaV0_6.QUALIFIER), "write-schema", "0.6", "write"))
     writeSchemaJson.put("@id", UUID.randomUUID.toString)
     writeSchemaJson.put("name", name)
     writeSchemaJson.put("version", version)
@@ -207,7 +207,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 = {
 
     val writeCredDefJson = new JSONObject
-    writeCredDefJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "write-cred-def", "0.6", "write"))
+    writeCredDefJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(WriteCredentialDefinitionV0_6.QUALIFIER), "write-cred-def", "0.6", "write"))
     writeCredDefJson.put("@id", UUID.randomUUID.toString)
     writeCredDefJson.put("name", name)
     writeCredDefJson.put("schemaId", schemaId)
@@ -229,7 +229,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 = {
     val askJson = new JSONObject
-    askJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "basicmessage", "1.0", "send-message"))
+    askJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(BasicMessageV1_0.QUALIFIER), "basicmessage", "1.0", "send-message"))
     askJson.put("@id", UUID.randomUUID.toString)
     askJson.put("~for_relationship", forRelationship)
     askJson.put("content", content)

@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.actor.wallet.{GetVerKeyResp, NewKeyCreated, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.wallet.{GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.util.Base64Util
@@ -12,9 +13,13 @@ trait WalletAccess
 
   import WalletAccess._
 
+  def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit
+
   def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyCreated] => Unit): Unit
 
   def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit
+
+  def verKeyOpt(forDID: DID)(handler: Try[GetVerKeyOptResp] => Unit): Unit
 
   def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
           (handler: Try[SignedMsg] => Unit): Unit
@@ -44,7 +49,7 @@ trait WalletAccess
              signType: SignType
             )(handler: Try[VerifySigResult] => Unit): Unit
 
-  def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit
+  def storeTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit
 
   def signRequest(submitterDID: DID, request: String)(handler: Try[LedgerRequest] => Unit): Unit
 

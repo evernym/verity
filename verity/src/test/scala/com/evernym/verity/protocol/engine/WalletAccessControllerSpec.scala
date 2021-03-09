@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import akka.actor.ActorRef
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.LedgerRequest
@@ -66,9 +67,14 @@ class WalletAccessControllerSpec
   class TestWalletAccess extends WalletAccess {
     import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
+    override def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit =
+      handler(Try(NewKeyCreated("Did", "Verkey")))
+
     override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(Try(NewKeyCreated("Did", "Verkey")))
 
     override def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit = handler(Try(GetVerKeyResp("Verkey")))
+
+    override def verKeyOpt(forDID: DID)(handler: Try[GetVerKeyOptResp] => Unit): Unit = handler(Try(GetVerKeyOptResp(Option("Verkey"))))
 
     override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
                      (handler: Try[SignedMsg] => Unit): Unit =
@@ -88,7 +94,7 @@ class WalletAccessControllerSpec
                        (handler: Try[VerifySigResult] => Unit): Unit = handler(Try(VerifySigResult(true)))
 
 
-    override def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit =
+    override def storeTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit =
       handler(Try(TheirKeyStored(did, verKey)))
 
     override def createSchema(issuerDID:  DID,

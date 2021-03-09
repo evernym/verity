@@ -5,17 +5,17 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueExce
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{AgentDetail, DidPair}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
-import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
+import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator, HasAgentProvWallet}
 import com.evernym.verity.util.{Base58Util, ParticipantUtil}
-import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
+
+import scala.util.{Failure, Success}
 
 
 sealed trait Role
@@ -26,19 +26,17 @@ object Provisioner extends Role
 trait AgentProvisioningEvt
 
 class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String])
-    extends Protocol[AgentProvisioningProtocol,Role,ProtoMsg,Any,
-      State, String](AgentProvisioningProtoDef)
+    extends Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String](AgentProvisioningProtoDef)
       with HasLogger
-      with DEPRECATED_HasWallet {
+      with HasAgentProvWallet {
 
   val logger: Logger = ctx.logger
 
-  override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
+  lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
 
   override def applyEvent: ApplyEvent = {
 
     case (_, _, pi: ProtocolInitialized) =>
-      initState(pi.parameters)
       val parameters = Parameters(pi.parameters.map(p => Parameter(p.name, p.value)).toSet)
       (State.Initialized(parameters), initialize(pi.parameters))
 
@@ -74,14 +72,16 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   }
 
-  private def initState(params: Seq[ParameterStored]): Unit = {
-    val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
-    initWalletDetail(seed)
-  }
-
   def initialize(params: Seq[ParameterStored]): Roster[Role] = {
     //TODO: this still feels like boiler plate, need to come back and fix it
-    ctx.updatedRoster(params.map(p => InitParamBase(p.name, p.value)))
+    //NOTE: this updatedParams is done to be able to populate 'selfId' in the roster
+    // which is required to be able to use ctx.wallet apis
+    val updatedParams = params.map { p =>
+      if (p.name == AGENT_PROVISIONER_PARTICIPANT_ID) {
+        ParameterStored(SELF_ID, p.value)
+      } else p
+    }
+    ctx.updatedRoster(updatedParams.map(p => InitParamBase(p.name, p.value)))
   }
 
 
@@ -113,13 +113,9 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
   }
 
   protected def mainHandleControl: (State, Control) ?=> Unit = {
-
-    case (_: State.Uninitialized , ip: Init)                              => handleInitParams(ip)
-
-    case (pkc: State.PairwiseDIDSet, pec: PairwiseEndpointCreated)        => handlePairwiseEndpointCreated(pec, pkc.pdd)
-
-    case (apkc: State.AgentKeyCreated, _: AgentCreationCompleted) => handleAgentCreated(apkc)
-
+    case (_: State.Uninitialized , ip: Init)                        => handleInitParams(ip)
+    case (pkc: State.PairwiseDIDSet, pec: PairwiseEndpointCreated)  => handlePairwiseEndpointCreated(pec, pkc.pdd)
+    case (apkc: State.AgentKeyCreated, _: AgentCreationCompleted)   => handleAgentCreated(apkc)
   }
 
   private def handleInitParams(ip: Init): Unit = {
@@ -129,13 +125,18 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def handleConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
     if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
-    validateConnectMsg(crm)
-    processValidatedConnectMsg(crm, initParameters)
+    validateConnectMsg(crm) {
+      processValidatedConnectMsg(crm, initParameters)
+    }
   }
 
-  private def validateConnectMsg(crm: ConnectReqMsg_MFV_0_5): Unit = {
+  private def validateConnectMsg(crm: ConnectReqMsg_MFV_0_5)(postValidation: => Unit): Unit = {
     checkIfDIDBelongsToVerKey(crm.fromDID, crm.fromDIDVerKey)
-    checkIfDIDAlreadyExists(crm.fromDID)
+    ctx.wallet.verKeyOpt(crm.fromDID) {
+      case Success(GetVerKeyOptResp(None))     => postValidation
+      case Success(GetVerKeyOptResp(Some(_)))  => throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)
+      case Failure(e)                          => throw e
+    }
   }
 
   private def checkIfDIDBelongsToVerKey(did: DID, verKey: VerKey): Unit = {
@@ -146,42 +147,31 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     }
   }
 
-  /**
-   * ensures agent provisioning throws error if it is already provisioned
-   * @param forDID
-   */
-  def checkIfDIDAlreadyExists(forDID: DID): Unit = {
-    if (getVerKeyViaCache(forDID).isDefined) {
-      throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)
+  private def processValidatedConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
+    ctx.wallet.newDid() {
+      case Success(nkc: NewKeyCreated)  =>
+        ctx.wallet.storeTheirDid(crm.fromDID, crm.fromDIDVerKey) {
+          case Success(_: TheirKeyStored) =>
+            ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(crm.fromDID, None)))
+            val provisionerPartiId = initParameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
+            ctx.apply(ProvisioningInitiaterPartiSet(provisionerPartiId))
+            ctx.apply(PairwiseDIDSet(crm.fromDID, nkc.did))
+            val endpointDetail = initParameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
+            val askPairwiseCreator = AskAgencyPairwiseCreator(nkc.didPair, crm.didPair, endpointDetail)
+            ctx.signal(askPairwiseCreator)
+          case Failure(e) => throw e
+        }
+      case Failure(e)     => throw e
     }
   }
 
-  private def processValidatedConnectMsg(crm: ConnectReqMsg_MFV_0_5, initParameters: Parameters): Unit = {
-    val agentPairwiseKey = ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey()))
-    storeTheirKey(crm.fromDID, crm.fromDIDVerKey)
-    ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(crm.fromDID, None)))
-    val provisionerPartiId = initParameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
-    ctx.apply(ProvisioningInitiaterPartiSet(provisionerPartiId))
-    val event = PairwiseDIDSet(crm.fromDID, agentPairwiseKey.did)
-    ctx.apply(event)
-    val endpointDetail = initParameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
-    val askPairwiseCreator = AskAgencyPairwiseCreator(agentPairwiseKey.didPair, crm.didPair, endpointDetail)
-    ctx.signal(askPairwiseCreator)
-  }
-
   private def handlePairwiseEndpointCreated(pec: PairwiseEndpointCreated, pd: AgentDetail): Unit = {
-    val pvk = getVerKeyReqViaCache(pd.agentKeyDID)
-    ctx.apply(PairwiseEndpointSet(pec.participantId))
-    val connectedMsg = ConnectedRespMsg_MFV_0_5(pd.agentKeyDID, pvk.verKey)
-    ctx.send(connectedMsg, toRole=Option(Requester), fromRole=Option(Initiater))
-  }
-
-  private def storeTheirKey(did: DID, verKey: VerKey): Unit = {
-    try {
-      ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(did, verKey)))
-    } catch {
-      case e: BadRequestErrorException if e.respCode == ALREADY_EXISTS.statusCode =>
-        throw new BadRequestErrorException(CONN_STATUS_ALREADY_CONNECTED.statusCode)
+    ctx.wallet.verKey(pd.agentKeyDID) {
+      case Success(gvkr: GetVerKeyResp) =>
+        ctx.apply(PairwiseEndpointSet(pec.participantId))
+        val connectedMsg = ConnectedRespMsg_MFV_0_5(pd.agentKeyDID, gvkr.verKey)
+        ctx.send(connectedMsg, toRole=Option(Requester), fromRole=Option(Initiater))
+      case Failure(e) => throw e
     }
   }
 
@@ -193,12 +183,19 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
 
   private def handleCreateAgentMsg(s:State.Signedup): Unit = {
     if (ConfigUtil.sponsorRequired(appConfig)) throw new BadRequestErrorException(PROVISIONING_PROTOCOL_DEPRECATED.statusCode)
-    val fromDIDPair = DidPair(s.pdd.forDID, getVerKeyReqViaCache(s.pdd.forDID).verKey)
-    val aws = s.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
-    val agentPairwiseKey = prepareNewAgentWalletData(fromDIDPair, aws)
-    ctx.apply(AgentPairwiseKeyCreated(agentPairwiseKey.did, agentPairwiseKey.verKey))
-    val endpointDetail = s.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
-    ctx.signal(AskUserAgentCreator(fromDIDPair, agentPairwiseKey.didPair, endpointDetail))
+    ctx.wallet.verKey(s.pdd.forDID) {
+      case Success(gvkr: GetVerKeyResp) =>
+        val fromDIDPair = DidPair(s.pdd.forDID, gvkr.verKey)
+        val aws = s.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
+        prepareNewAgentWalletData(fromDIDPair, aws) {
+          case Success(nkc: NewKeyCreated) =>
+            ctx.apply(AgentPairwiseKeyCreated(nkc.did, nkc.verKey))
+            val endpointDetail = s.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
+            ctx.signal(AskUserAgentCreator(fromDIDPair, nkc.didPair, endpointDetail))
+          case Failure(e) => throw e
+        }
+      case Failure(e) => throw e
+    }
   }
 
   private def handleAgentCreated(akc: State.AgentKeyCreated): Unit = {
@@ -206,8 +203,6 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     ctx.apply(UserAgentCreated())
     ctx.send(agentCreatedRespMsg, toRole = Option(Requester), fromRole = Option(Provisioner))
   }
-
-  override def walletAPI: WalletAPI = ctx.SERVICES_DEPRECATED.walletAPI
 }
 
 /**

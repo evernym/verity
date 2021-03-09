@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.container.asyncapis.wallet
 
+import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -23,16 +24,24 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
 
   import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
+  override def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit = {
+    walletApi.tell(DEPRECATED_SetupNewWallet(withTheirDIDPair))(WalletAPIParam(walletId), senderActorRef)
+  }
+
   override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = {
     walletApi.tell(CreateDID(keyType))
   }
 
-  override def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit = {
-    walletApi.tell(StoreTheirKey(did, verKey))
+  override def storeTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit = {
+    walletApi.tell(StoreTheirKey(did, verKey, ignoreIfAlreadyExists))
   }
   
   override def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit = {
     walletApi.tell(GetVerKey(forDID))
+  }
+
+  override def verKeyOpt(forDID: DID)(handler: Try[GetVerKeyOptResp] => Unit): Unit = {
+    walletApi.tell(GetVerKeyOpt(forDID))
   }
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)

@@ -167,11 +167,11 @@ class WalletActorSpec
     "when sent GetVerKeyOpt command" - {
       "should respond with optional VerKey" in {
         issuerWalletActor ! GetVerKeyOpt(holderDidPair.DID)
-        expectMsgType[Option[GetVerKeyResp]]
+        expectMsgType[GetVerKeyOptResp]
         holderWalletActor ! GetVerKeyOpt(issuerDidPair.DID)
-        expectMsgType[Option[GetVerKeyResp]]
+        expectMsgType[GetVerKeyOptResp]
         verifierWalletActor ! GetVerKeyOpt(holderDidPair.DID)
-        expectMsgType[Option[GetVerKeyResp]]
+        expectMsgType[GetVerKeyOptResp]
       }
     }
 
@@ -337,6 +337,23 @@ class WalletActorSpec
           val proof = expectMsgType[ProofCreated].proof
           logger.info("proof: " + proof)
         })
+      }
+    }
+
+    "when sent DEPRECATED_SetupNewWallet command" - {
+      "should create wallet and keys" in {
+        val newWalletActor = agentRegion(UUID.randomUUID().toString, walletRegionActor)
+        val theirDidPair: DidPair = CommonSpecUtil.generateNewDid(Option(UUID.randomUUID().toString.replace("-", "")))
+        newWalletActor ! DEPRECATED_SetupNewWallet(theirDidPair)
+        val nkc = expectMsgType[NewKeyCreated]
+
+        newWalletActor ! GetVerKey(nkc.did)
+        val gvkr1 = expectMsgType[GetVerKeyResp]
+        gvkr1.verKey shouldBe nkc.verKey
+
+        newWalletActor ! GetVerKey(theirDidPair.DID)
+        val gvkr2 = expectMsgType[GetVerKeyResp]
+        gvkr2.verKey shouldBe theirDidPair.verKey
       }
     }
   }

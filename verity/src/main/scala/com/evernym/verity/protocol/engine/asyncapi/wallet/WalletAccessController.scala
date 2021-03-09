@@ -1,9 +1,10 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner, BaseAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, DEPRECATED_AccessSetupNewWallet, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner, BaseAccessController}
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 
 import scala.util.Try
@@ -17,11 +18,17 @@ class WalletAccessController(val accessRights: Set[AccessRight],
 
   import WalletAccess._
 
+  def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit =
+    runIfAllowed(DEPRECATED_AccessSetupNewWallet, {walletAccessImpl.DEPRECATED_setupNewWallet(walletId, withTheirDIDPair)}, handler)
+
   override def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyCreated] => Unit): Unit =
     runIfAllowed(AccessNewDid, {walletAccessImpl.newDid(keyType)}, handler)
 
   override def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit =
     runIfAllowed(AccessVerKey, {walletAccessImpl.verKey(forDID)}, handler)
+
+  override def verKeyOpt(forDID: DID)(handler: Try[GetVerKeyOptResp] => Unit): Unit =
+    runIfAllowed(AccessVerKey, {walletAccessImpl.verKeyOpt(forDID)}, handler)
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
                    (handler: Try[SignedMsg] => Unit): Unit =
@@ -42,8 +49,8 @@ class WalletAccessController(val accessRights: Set[AccessRight],
                      (handler: Try[VerifySigResult] => Unit): Unit =
     runIfAllowed(AccessVerify, {walletAccessImpl.verify(msg, sig, verKeyUsed, signType)}, handler)
 
-  override def storeTheirDid(did: DID, verKey: VerKey)(handler: Try[TheirKeyStored] => Unit): Unit =
-    runIfAllowed(AccessStoreTheirDiD, {walletAccessImpl.storeTheirDid(did, verKey)}, handler)
+  override def storeTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit =
+    runIfAllowed(AccessStoreTheirDiD, {walletAccessImpl.storeTheirDid(did, verKey, ignoreIfAlreadyExists)}, handler)
 
   override def createSchema(issuerDID:  DID,
                             name:  String,

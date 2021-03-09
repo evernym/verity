@@ -51,7 +51,7 @@ object CryptoOpExecutor extends OpExecutorBase {
         case _: InvalidStructureException =>
           throw new BadRequestErrorException(INVALID_VALUE.statusCode,
             Option("invalid sealed/encrypted box"))
-        case _: Exception =>
+        case e: Exception =>
           throw new BadRequestErrorException(UNHANDLED.statusCode,
             Option("unhandled error while unsealing/decrypting msg"))
       }

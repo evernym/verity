@@ -55,6 +55,14 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
         sndr ! resp
         tryOpeningWalletIfExists()
       }
+
+    case snw: DEPRECATED_SetupNewWallet =>
+      val sndr = sender()
+      val fut = WalletMsgHandler.handleCreateWalletASync()
+      withErrorHandling(fut).map { _ =>
+        tryOpeningWalletIfExists()
+        self.tell(snw, sndr)
+      }
   }
 
   /**
@@ -81,6 +89,9 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
    * @return
    */
   def postOpenWalletReceiver: Receive = {
+    case snw: DEPRECATED_SetupNewWallet =>
+      DEPRECATED_handleSetupNewWallet(snw.withTheirDidPair)
+
     case CreateWallet if walletExtOpt.isDefined =>
       sender ! WalletAlreadyCreated
 
@@ -89,6 +100,15 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
       handleRespFut(sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
+  private def DEPRECATED_handleSetupNewWallet(theirDidPair: DidPair): Unit = {
+    val sndr = sender()
+    val fut = WalletMsgHandler.executeAsync[TheirKeyStored](StoreTheirKey(theirDidPair.DID, theirDidPair.verKey)).flatMap { r =>
+      WalletMsgHandler.executeAsync[NewKeyCreated](CreateNewKey()).mapTo[NewKeyCreated]
+    }
+    withErrorHandling(fut).map { resp =>
+      sndr ! resp
+    }
+  }
   private def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
     withErrorHandling(fut).pipeTo(sndr)
   }
@@ -107,10 +127,14 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     openWalletIfExists()
   }
 
+  def openWallet(): Future[WalletExt] = {
+    walletProvider.openAsync(
+      walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
+  }
+
   def openWalletIfExists(): Unit = {
     runWithInternalSpan(s"openWallet", "WalletActor") {
-      walletProvider.openAsync(
-        walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
+      openWallet()
         .map(w => SetWallet(Option(w)))
         .recover {
           case _ @ (_: WalletDoesNotExist)  =>
@@ -171,6 +195,8 @@ case class SetWalletParam(wp: WalletParam) extends WalletCommand
 case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand
 
 case object CreateWallet extends WalletCommand
+
+case class DEPRECATED_SetupNewWallet(withTheirDidPair: DidPair) extends WalletCommand
 
 case class CreateNewKey(DID: Option[DID] = None, seed: Option[String] = None) extends WalletCommand
 
@@ -246,6 +272,7 @@ case object WalletAlreadyCreated extends WalletCreatedBase
 case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
+case class GetVerKeyOptResp(verKey: Option[VerKey]) extends WalletCmdSuccessResponse
 case class GetVerKeyResp(verKey: VerKey) extends WalletCmdSuccessResponse
 case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse

@@ -14,7 +14,7 @@ trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
   def testMetrics(): Unit = {
     "when sent get metrics api call" - {
       "should response with metrics" taggedAs (UNSAFE_IgnoreLog) in {
-        eventually(timeout(Span(5, Seconds))) {
+        eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
           buildGetReq("/agency/internal/metrics") ~> epRoutes ~> check {
             status shouldBe OK
             val nmd = responseTo[NodeMetricsData]
@@ -32,10 +32,10 @@ trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
   def checkExpectedMetrics(metrics: List[MetricDetail]): Unit = {
     val expectedMetrics = Set(
       "jvm_memory_pool_committed_bytes",
-      "span_processing_time_seconds_count", "span_processing_time_seconds_sum", "span_processing_time_seconds_bucket",
       "jvm_memory_pool_free_bytes_count",   "jvm_memory_pool_free_bytes_sum",   "jvm_memory_pool_free_bytes_bucket",
       "jvm_gc_seconds_count",               "jvm_gc_seconds_sum",               "jvm_gc_seconds_bucket",
       "jvm_memory_used_bytes_count",        "jvm_memory_used_bytes_sum",        "jvm_memory_used_bytes_bucket",
+      "span_processing_time_seconds_count", "span_processing_time_seconds_sum", "span_processing_time_seconds_bucket",
       "libindy_command_duration_ms_count",  "libindy_command_duration_ms_sum",  "libindy_command_duration_ms_bucket",
       "libindy_wallet_count"
     )

@@ -159,11 +159,12 @@ object WalletMsgHandler {
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
   }
 
-  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Option[GetVerKeyResp]] = {
+  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt):
+  Future[GetVerKeyOptResp] = {
     handleGetVerKey(GetVerKey(gvko.did, gvko.getKeyFromPool))
-      .map(vk => Option(vk))
+      .map(gvk => GetVerKeyOptResp(Option(gvk.verKey)))
       .recover {
-        case _: ExecutionException => None
+        case _: ExecutionException => GetVerKeyOptResp(None)
       }
   }
 

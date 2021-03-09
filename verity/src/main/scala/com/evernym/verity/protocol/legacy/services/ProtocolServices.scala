@@ -1,16 +1,13 @@
 package com.evernym.verity.protocol.legacy.services
 
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.appStateManager.AppStateEvent
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyOpt, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.protocol.container.actor.MsgQueueServiceProvider
-import com.evernym.verity.protocol.engine.{DID, ProtocolContextApi, SERVICES_DEPRECATION_DATE}
+import com.evernym.verity.protocol.engine.SERVICES_DEPRECATION_DATE
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.vault.WalletAPIParam
 
 /** General services provided to protocols.
   *
@@ -49,29 +46,3 @@ class LegacyProtocolServicesImpl[M,E,I](val appConfig: AppConfig,
                                         val connectEndpointServiceProvider: CreateKeyEndpointServiceProvider //only used in legacy connecting (0.5 and 0.6) protocols
 ) extends ProtocolServices[M,E,I]
 
-
-trait DEPRECATED_HasWallet {
-  def ctx: ProtocolContextApi[_,_,_,_,_,_]
-
-  def appConfig: AppConfig
-  def walletAPI: WalletAPI
-
-  var walletId: String = _
-  implicit lazy val wap: WalletAPIParam = WalletAPIParam(walletId)
-
-  def initWalletDetail(seed: String): Unit = walletId = seed
-
-  protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
-    val agentWAP = WalletAPIParam(walletId)
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[WalletCreated.type](CreateWallet)(agentWAP))
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
-  }
-
-  def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): GetVerKeyResp =
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[GetVerKeyResp](GetVerKey(did, getKeyFromPool)))
-
-  def getVerKeyViaCache(did: DID, getKeyFromPool: Boolean = false): Option[GetVerKeyResp] =
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[Option[GetVerKeyResp]](GetVerKeyOpt(did, getKeyFromPool)))
-
-}

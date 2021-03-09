@@ -4,6 +4,7 @@ sealed trait AccessRight
 
 sealed trait WalletAccessRight extends AccessRight
 
+case object DEPRECATED_AccessSetupNewWallet extends WalletAccessRight
 case object AccessNewDid extends WalletAccessRight
 case object AccessSign extends WalletAccessRight
 case object AccessVerify extends WalletAccessRight

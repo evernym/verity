@@ -6,6 +6,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, DEPRECATED_AccessSetupNewWallet, AccessRight, AccessStoreTheirDiD, AccessVerKey}
 import com.evernym.verity.protocol.engine.{MsgName, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 import com.evernym.verity.util.Util.getNewActorId
@@ -66,6 +67,7 @@ object AgentProvisioningProtoDef
 
   override def initialState: State = State.Uninitialized()
 
+  override val requiredAccess: Set[AccessRight] = Set(DEPRECATED_AccessSetupNewWallet, AccessVerKey, AccessNewDid, AccessStoreTheirDiD)
 }
 
 case class ConnectReqMsg_MFV_0_5(fromDID: DID, fromDIDVerKey: VerKey) extends ProtoMsg {

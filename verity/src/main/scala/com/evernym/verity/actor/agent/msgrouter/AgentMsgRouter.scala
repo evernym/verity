@@ -212,6 +212,12 @@ object AgentMsgRouter {
     // DID is derived from the first 16 bytes.
     // This hack will work currently because, one we don't support rotating keys and all DID are created
     // using libindy.
+
+    // For 32-bit string it's Base58-encoded value will have ~45 characters
+    // If route string has significantly longer value, we can assume it's not valid
+    if (route.length > 100) { // value that definitely cover 32 byte payload
+      return Failure(new InvalidValueException(Some("Route value is too long")))
+    }
     val decodedRoute = Base58Util.decode(route)
     decodedRoute match {
       case Success(m) =>

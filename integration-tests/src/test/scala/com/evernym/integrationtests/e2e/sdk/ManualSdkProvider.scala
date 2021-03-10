@@ -1,7 +1,5 @@
 package com.evernym.integrationtests.e2e.sdk
 
-import java.io.{File, FileOutputStream}
-
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.verity.protocol.engine.DID
@@ -23,6 +21,7 @@ import com.evernym.verity.sdk.utils.Context
 import net.glxn.qrgen.QRCode
 import org.json.JSONObject
 
+import java.io.{File, FileOutputStream}
 import scala.concurrent.duration.Duration
 
 class ManualSdkProvider(val sdkConfig: SdkConfig)
@@ -61,6 +60,14 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
   }
 
   override def provision_0_7: ProvisionV0_7 = new UndefinedProvision_0_7() {
+    override def provision(context: Context): Context = {
+      printProvisionInstructions()
+
+      context
+    }
+  }
+
+  override def provision_0_7(token: String): ProvisionV0_7 = new UndefinedProvision_0_7() {
     override def provision(context: Context): Context = {
       printProvisionInstructions()
 

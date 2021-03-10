@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject}
+import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -40,18 +40,18 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def noneParam: String = "null"
 
-  val oneQuote = "\""
+  private val oneQuote = "\""
 
-  override def jsonParam: AsJsonObject => String = { j => s"""(JsonObject)JsonObject.Parse(${quotedJsonString(j)})""" }
-  def quotedJsonString: AsJsonObject => String = { j => s"""@$oneQuote${rawJsonString(j)}$oneQuote""" }
-  def rawJsonString: AsJsonObject => String = { j => j.toJson.toString.replace("\"", "\"\"") }
+  def jsonEscape: AsJsonObject => String = { j => j.toJson.toString.replace("\"", "\"\"") }
+  override def rawJsonParam: AsJsonObject => String = { j => s"""@$oneQuote${jsonEscape(j)}$oneQuote""" }
+  override def jsonParam: AsJsonObject => String = { j => s"""(JsonObject)JsonObject.Parse(${rawJsonParam(j)})""" }
 
   override def mapParam: Map[_, _] => String = {m =>
-    s"JsonSerializer.Deserialize<Dictionary<string, string>>(${quotedJsonString(MapAsJsonObject(m))})"
+    s"JsonSerializer.Deserialize<Dictionary<string, string>>(${rawJsonParam(MapAsJsonObject(m))})"
   }
 
   def toJsonArray(objects: Seq[AsJsonObject]): String =
-    s"""@$oneQuote[${objects.map(rawJsonString).mkString(",")}]$oneQuote"""
+    s"""@$oneQuote[${objects.map(jsonEscape).mkString(",")}]$oneQuote"""
 
   override def sdkTypeAbbreviation: String = "dot"
   override def sdkType: String = "DOTNET"
@@ -161,6 +161,23 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           ctx,
           "using VeritySDK.Protocols.Provision;",
           "Console.WriteLine((Provision.v0_7().provision(context)).toJson().ToString());"
+        )
+        ctx
+          .toContextBuilder
+          .json(newContext)
+          .build()
+      }
+    }
+  }
+
+  override def provision_0_7(token: String): ProvisionV0_7 = {
+    new UndefinedProvision_0_7 {
+      override def provision(ctx: Context): Context = {
+        val tokenObj = TokenAsJsonObject(token)
+        val newContext = executeOneLine(
+          ctx,
+          "using VeritySDK.Protocols.Provision;",
+          s"""Console.WriteLine((Provision.v0_7(${rawJsonParam(tokenObj)}).provision(context)).toJson().ToString());"""
         )
         ctx
           .toContextBuilder

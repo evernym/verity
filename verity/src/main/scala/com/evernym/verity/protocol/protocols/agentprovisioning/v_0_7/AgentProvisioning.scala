@@ -5,17 +5,17 @@ import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{CloudWaitingOnSponsor, EdgeCreationWaitingOnSponsor, FailedAgentCreation, Initialized, Provisioning, RequestedToProvision, Uninitialized, AgentCreated => AgentCreatedState}
-import com.evernym.verity.util.TimeUtil._
 import com.evernym.verity.util.Base64Util.getBase64Decoded
+import com.evernym.verity.util.TimeUtil._
 
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 trait AgentProvisionEvt
 
@@ -161,8 +161,7 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
                                                token: ProvisionToken,
                                                cacheUsedTokens: Boolean,
                                                window: Duration,
-                                               sig: Signal
-                                              ): Unit = {
+                                               sig: Signal): Unit = {
     try {
       val sponsorDetails = sponsorDetailsOpt.getOrElse(throw NoSponsor)
 
@@ -176,14 +175,18 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
         case Success(vsg) if vsg.verified =>
           if (cacheUsedTokens) {
             ctx.withSegment[AskedForProvisioning](token.sig) {
-              case Success(Some(_)) =>
-                problemReport(DuplicateProvisionedApp)
               case Success(None)    =>
                 ctx.storeSegment(token.sig, AskedForProvisioning())
-                ctx.logger.debug((s"ask for provisioning: $sponsorDetails"))
+                ctx.logger.debug(s"ask for provisioning (with caching token): $sponsorDetails")
                 askForProvisioning(sig)
-              case Failure(exception) => problemReport(exception.getMessage, Option(exception.getMessage))
+              case Success(Some(_)) =>
+                problemReport(DuplicateProvisionedApp)
+              case Failure(exception) =>
+                problemReport(exception.getMessage, Option(exception.getMessage))
             }
+          } else {
+            ctx.logger.debug(s"ask for provisioning (without caching token): $sponsorDetails")
+            askForProvisioning(sig)
           }
         case _ => problemReport(InvalidSignature)
       }

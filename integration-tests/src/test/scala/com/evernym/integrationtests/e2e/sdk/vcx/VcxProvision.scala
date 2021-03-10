@@ -64,6 +64,10 @@ protected trait VcxProvision {
   def provision_0_7: ProvisionV0_7 = new UndefinedProvision_0_7 {
     override def provision(context: Context): Context = provisionImpl(context)
   }
+
+  def provision_0_7(token: String): ProvisionV0_7 = new UndefinedProvision_0_7 {
+    override def provision(context: Context): Context = provisionImpl(context)
+  }
 }
 
 object VcxProvision {

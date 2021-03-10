@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject}
+import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -35,9 +35,8 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def booleanParam: Boolean => String = _.toString
   override def noneParam: String = "null"
-  override def jsonParam: AsJsonObject => String = { j =>
-    s"""JSON.parse(`${j.toJson.toString()}`)"""
-  }
+  override def rawJsonParam: AsJsonObject => String = { json => s"""`${json.toJson.toString()}`""" }
+  override def jsonParam: AsJsonObject => String = { j => s"""JSON.parse(${rawJsonParam(j)})""" }
   override def mapParam: Map[_, _] => String = {m => jsonParam(MapAsJsonObject(m))}
 
   override lazy val interpreter: InterpreterEnv = {
@@ -94,6 +93,25 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       }
     }
   }
+
+  override def provision_0_7(token: String): ProvisionV0_7 = {
+    new UndefinedProvision_0_7 {
+      override def provision(ctx: Context): Context = {
+        val tokenObj = TokenAsJsonObject(token)
+        val newContext = executeOneLine(
+          ctx,
+          """require('verity-sdk')""",
+          s"""console.log(JSON.stringify(await new sdk.protocols.v0_7.Provision(null, ${rawJsonParam(tokenObj)}).provision(context)))"""
+        )
+
+        ctx
+          .toContextBuilder
+          .json(newContext)
+          .build()
+      }
+    }
+  }
+
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = {
     new UndefinedIssuerSetup_0_6 {

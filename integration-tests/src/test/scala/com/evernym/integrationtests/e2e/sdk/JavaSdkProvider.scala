@@ -1,9 +1,7 @@
 package com.evernym.integrationtests.e2e.sdk
 
-import java.nio.file.Path
-
 import com.evernym.integrationtests.e2e.env.SdkConfig
-import com.evernym.verity.protocol.engine.{DID, ThreadId}
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.BasicMessage
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -31,6 +29,7 @@ import com.evernym.verity.sdk.protocols.writeschema.WriteSchema
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
 
+import java.nio.file.Path
 import scala.collection.JavaConverters._
 
 class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None)
@@ -42,6 +41,7 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
   override def available(): Unit = classOf[Context].getName
 
   override def provision_0_7: ProvisionV0_7 = Provision.v0_7()
+  override def provision_0_7(token: String): ProvisionV0_7 = Provision.v0_7(token)
 
   override def updateEndpoint_0_6: UpdateEndpointV0_6 = UpdateEndpoint.v0_6()
 

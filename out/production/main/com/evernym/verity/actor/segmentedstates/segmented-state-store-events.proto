@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package com.evernym.verity.actor.segmentedstates;
-
-message SegmentedStateWritten {
-    string key = 1;
-    bytes data = 2;
-};

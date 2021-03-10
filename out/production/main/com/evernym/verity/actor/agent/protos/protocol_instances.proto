@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-import "scalapb/scalapb.proto";
-
-package com.evernym.verity.actor.agent;
-
-message ProtocolRunningInstances {
-    map<string, string> instances = 1;
-}

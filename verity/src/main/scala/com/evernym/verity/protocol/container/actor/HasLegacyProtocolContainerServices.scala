@@ -43,44 +43,6 @@ extends TokenToActorMappingProvider
       this, this, this))
   }
 
-  /**
-   * this is for legacy protocol only who sends back a synchronous response
-   * @param resp
-   * @param msgIdOpt
-   * @param sndr
-   */
-  def handleResponse(resp: Try[Any], msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
-    def sendRespToCaller(resp: Any, msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
-      sndr.filter(_ != self).foreach { ar =>
-        ar ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt)
-      }
-    }
-
-    resp match {
-      case Success(r)  =>
-        r match {
-          case ()               => //if unit then nothing to do
-          case fut: Future[Any] => handleFuture(fut, msgIdOpt)
-          case x                => sendRespToCaller(x, msgIdOpt, sndr)
-        }
-
-      case Failure(e) =>
-        val error = convertProtoEngineException(e)
-        sendRespToCaller(error, msgIdOpt, sndr)
-    }
-
-    def handleFuture(fut: Future[Any], msgIdOpt: Option[MsgId]): Unit = {
-      fut.map {
-        case Right(r) => sendRespToCaller(r, msgIdOpt, sndr)
-        case Left(l)  => sendRespToCaller(l, msgIdOpt, sndr)
-        case x        => sendRespToCaller(x, msgIdOpt, sndr)
-      }.recover {
-        case e: Exception =>
-          sendRespToCaller(e, msgIdOpt, sndr)
-      }
-    }
-  }
-
   def addToMsgQueue(msg: Any): Unit = {
     self ! ProtocolCmd(msg, None)
   }

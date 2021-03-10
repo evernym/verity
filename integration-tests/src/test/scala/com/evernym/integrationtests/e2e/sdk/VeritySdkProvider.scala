@@ -74,6 +74,7 @@ trait VeritySdkProvider {
   //protocol apis
 
   def provision_0_7: ProvisionV0_7
+  def provision_0_7(token: String): ProvisionV0_7
 
   def issuerSetup_0_6: IssuerSetupV0_6
 

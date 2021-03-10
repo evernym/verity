@@ -1,18 +1,18 @@
 package com.evernym.verity.storage_services.aws_s3
 
 import akka.actor.ActorSystem
-import akka.stream.alpakka.s3.scaladsl.S3
-import akka.stream.alpakka.s3._
-import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.Attributes
+import akka.stream.alpakka.s3._
+import akka.stream.alpakka.s3.scaladsl.S3
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.typesafe.config.Config
-import com.evernym.verity.Status.S3_FAILURE
 import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.actor.StorageInfo
-
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status.S3_FAILURE
+import com.evernym.verity.actor.StorageInfo
+import com.typesafe.config.Config
+
 import scala.concurrent.Future
 
 trait StorageAPI {
@@ -20,11 +20,12 @@ trait StorageAPI {
   def download(id: String): Future[Array[Byte]]
 }
 
+//TODO: need to review this class and fix issues mentioned in VE-2454
 class S3AlpakkaApi(config: Config)(implicit val as: ActorSystem) extends StorageAPI {
   implicit val s3Attributes: Attributes = S3Attributes.settings(S3Settings(config.getConfig("alpakka.s3")))
 
   //TODO: the class name seems to be generic but the below bucket configuration seem to be tightly coupled with wallet bucket???
-  val bucketName: String = config.getConfig("wallet.backup").getString("s3-bucket-name")
+  lazy val bucketName: String = config.getConfig("wallet.backup").getString("s3-bucket-name")
 
   def createBucket(bucketName: String): Future[Done] = {
     S3.makeBucket(bucketName)

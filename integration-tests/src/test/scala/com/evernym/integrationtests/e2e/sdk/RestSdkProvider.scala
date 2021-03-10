@@ -92,6 +92,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   // TODO: change after implementing this in rest.
   override def provision_0_7: ProvisionV0_7 = Provision.v0_7()
+  override def provision_0_7(token: String): ProvisionV0_7 = Provision.v0_7(token)
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = {
     val createJson = new JSONObject

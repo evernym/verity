@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status
+import com.evernym.verity.{ActorErrorResp, Status}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, HasAgentActivity, MsgPackFormat, PayloadMetadata, ProtocolEngineExceptionHandler, ProtocolRunningInstances, SponsorRel, Thread, ThreadContextDetail, TypeFormat}
@@ -340,11 +340,15 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   def handleProtocolSyncRespMsg(psrm: ProtocolSyncRespMsg): Unit = {
     psrm.requestMsgId.foreach { requestMsgId =>
       withReqMsgId(requestMsgId, { arc =>
+        val extraDetail = psrm.msg match {
+          case aer: ActorErrorResp => s"[${aer.toString}]"
+          case _                   => ""
+        }
         recordOutMsgEvent(arc.reqId,
           MsgEvent(
             arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID),
             psrm.msg.getClass.getSimpleName,
-            "Synchronous Response Msg (must be from legacy protocol)")
+            s"Synchronous Response Msg (must be from legacy protocol) $extraDetail")
         )
       })
       msgRespContext.get(requestMsgId).flatMap(_.senderActorRef).foreach { senderActorRef =>

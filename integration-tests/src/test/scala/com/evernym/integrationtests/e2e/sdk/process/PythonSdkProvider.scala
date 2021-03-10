@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject}
+import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -58,8 +58,10 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def booleanParam: Boolean => String = _.toString.capitalize
   override def noneParam: String = "None"
   private val tripleQuote = "\"\"\""
+  override def rawJsonParam: AsJsonObject => String = { json => s"""$tripleQuote${json.toJson.toString()}$tripleQuote"""}
+
   override def jsonParam: AsJsonObject => String = { j =>
-    s"""json.loads($tripleQuote ${j.toJson.toString} $tripleQuote)"""
+    s"""json.loads(${rawJsonParam(j)})"""
   }
   override def mapParam: Map[_, _] => String = {m => jsonParam(MapAsJsonObject(m))}
 
@@ -96,6 +98,24 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           ctx,
           "from verity_sdk.protocols.v0_7.Provision import Provision",
           "print((await Provision().provision(context)).to_json())"
+        )
+
+        ctx
+          .toContextBuilder
+          .json(newContext)
+          .build()
+      }
+    }
+  }
+
+  override def provision_0_7(token: String): ProvisionV0_7 = {
+    new UndefinedProvision_0_7 {
+      override def provision(ctx: Context): Context = {
+        val tokenObj = TokenAsJsonObject(token)
+        val newContext = executeOneLine(
+          ctx,
+          "from verity_sdk.protocols.v0_7.Provision import Provision",
+          s"""print((await Provision(${rawJsonParam(tokenObj)}).provision(context)).to_json())"""
         )
 
         ctx

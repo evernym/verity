@@ -8,6 +8,7 @@ import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
+import com.evernym.integrationtests.e2e.util.ProvisionTokenUtil.genTokenOpt
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
@@ -76,6 +77,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
   def provisionAgent(name: String, sdk: VeritySdkProvider, verityUrl: String)(implicit scenario: Scenario): Unit = {
     s"provision agent for $name" - {
       s"[$name] provisioning agent to application for sdk [${sdk.sdkConfig.name}]"  taggedAs UNSAFE_IgnoreLog in {
+        val token = genTokenOpt(
+          sdk.sdkConfig.verityInstance.sponsorSeed
+        )
         val walletConfig = sdk.walletConfig(this.suiteTempDir.resolve("wallets").toString)
         val config = sdk.sdkConfig
         // FIXME Move this to sdk
@@ -86,7 +90,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
               verityUrl,
               sdk.sdkConfig.keySeed.orNull
             )
-            val proto = sdk.provision_0_7
+            val proto = token.map(sdk.provision_0_7).getOrElse(sdk.provision_0_7)
             proto.provision(ctx)
           case Some((domainDID, verkey, seed)) =>
             ContextBuilder.fromScratch(
@@ -1314,21 +1318,23 @@ trait InteractiveSdkFlow extends MetricsFlow {
                               dumpToFile: Boolean=false): Unit = {
     s"${app.name} validating protocol metrics" - {
       s"[$protoRef] validation" in {
-        eventually(timeout(30 seconds), Interval(Span(1, Second))) {
+        eventually(timeout(30 seconds), Interval(2 seconds)) {
           //Get metrics for specific app
           val allNodeMetrics = app.getAllNodeMetrics()
           allNodeMetrics.data.headOption.nonEmpty shouldBe true
           val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
           if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
-          val tag = Map("proto_ref" -> protoRef, "sponsorId" -> "", "sponseeId" -> "")
-          val baseMetric = currentNodeMetrics
-            .filter(_.isName(AS_NEW_PROTOCOL_COUNT))
-            .find(_.tags.get == tag)
-            .get
+          val expectedTags = Map("proto_ref" -> protoRef)
+          val protoMetric =
+            currentNodeMetrics
+              .filter(_.isName(AS_NEW_PROTOCOL_COUNT))
+              .find (m => expectedTags.toSet subsetOf m.tags.getOrElse(Map.empty).toSet)
+
+          protoMetric.value should not be None
 
           //TODO: When integration tests start provisioning using a sponsor (0.7), the sponsor tag may change the count
-          if (baseMetric.value != expectedMetricCount)
-            fail(s"$protoRef did not have the expected number of metrics - found: ${baseMetric.value}, expected: $expectedMetricCount")
+          if (protoMetric.get.value != expectedMetricCount)
+            fail(s"$protoRef did not have the expected number of metrics - found: ${protoMetric.value}, expected: $expectedMetricCount")
         }
       }
     }

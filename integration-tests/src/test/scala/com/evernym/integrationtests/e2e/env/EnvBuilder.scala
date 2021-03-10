@@ -5,8 +5,8 @@ import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.CollectionUtil.containsDuplicates
@@ -46,6 +46,7 @@ object Constants {
   final val VERITY_INSTANCE_MESSAGE_TRACKING_ENABLED = MESSAGE_TRACKING_ENABLED
   final val VERITY_INSTANCE_MESSAGE_TRACKING_BY_ID = MESSAGE_TRACKING_BY_ID
   final val VERITY_INSTANCE_SEED = "seed"
+  final val VERITY_INSTANCE_SPONSOR_SEED = "sponsor-seed"
   final val VERITY_INSTANCE_REQUIRE_SPONSOR = "require-sponsor"
 
   final val SDKS = "sdks"
@@ -149,6 +150,8 @@ trait IntegrationTestEnvBuilder {
     val setup = booleanReq(instanceConfig, VERITY_INSTANCE_SETUP, key)
     val endpoint = stringOption(instanceConfig, VERITY_INSTANCE_ENDPOINT, key)
     val seed = if (setup) stringOption(instanceConfig, VERITY_INSTANCE_SEED, key) else None
+    val sponsorSeed = if (setup) stringOption(instanceConfig, VERITY_INSTANCE_SPONSOR_SEED, key) else None
+
 
     val listeningPort = if (setup) {
       Option(intReq(instanceConfig, VERITY_INSTANCE_LISTENING_PORT, key))
@@ -169,6 +172,7 @@ trait IntegrationTestEnvBuilder {
       endpoint,
       listeningPort,
       seed,
+      sponsorSeed,
       ledgerConfig,
       jdwpPort,
       trackMessages,
@@ -279,7 +283,6 @@ object IntegrationTestEnvBuilder {
           val genesisContent = EntityUtils.toString(e)
 
           val tempFile = tempDir.resolve("genesis.txn")
-//          val tempFile = Files.createTempFile("genesis-", ".txn")
 
           Files.write(tempFile, genesisContent.getBytes)
           tempFile.toFile
@@ -298,6 +301,7 @@ object VerityInstance {
             endpointOpt: Option[String],
             listeningPort: Option[Int],
             seed: Option[String],
+            sponsorSeed: Option[String],
             ledgerConfig: LedgerConfig,
             jdwpPort: Option[Int],
             messageTrackingEnabled: Option[Boolean],
@@ -310,6 +314,7 @@ object VerityInstance {
       optionToEndpoint(endpointOpt, setup, listeningPort),
       listeningPort,
       seed,
+      sponsorSeed,
       ledgerConfig,
       jdwpPort,
       messageTrackingEnabled,
@@ -430,6 +435,7 @@ case class VerityInstance(name: String,
                           endpoint: UrlParam,
                           listeningPort: Option[Int]=None,
                           seed: Option[String]=None,
+                          sponsorSeed: Option[String]=None,
                           ledgerConfig: LedgerConfig,
                           jdwpPort: Option[Int]=None,
                           messageTrackingEnabled: Option[Boolean]=None,

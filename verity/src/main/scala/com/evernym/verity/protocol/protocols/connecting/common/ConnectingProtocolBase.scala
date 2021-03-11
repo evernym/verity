@@ -8,23 +8,21 @@ import com.evernym.verity.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, DidPair, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata, Thread}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnectingMsgHelper, _}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.appStateManager.AppStateEvent
-import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.legacy.services.DEPRECATED_HasWallet
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
@@ -641,3 +639,27 @@ case object UpdateDeliveryStatus {
   }
 }
 case class UpdateDeliveryStatus(msgId: MsgId, to: String, newStatusCode: String, statusDetail: Option[String]) extends LegacyConnectingSignal
+
+
+trait DEPRECATED_HasWallet {
+  def ctx: ProtocolContextApi[_,_,_,_,_,_]
+
+  def appConfig: AppConfig
+  def walletAPI: WalletAPI
+
+  var walletId: String = _
+  implicit lazy val wap: WalletAPIParam = WalletAPIParam(walletId)
+
+  def initWalletDetail(seed: String): Unit = walletId = seed
+
+  protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
+    val agentWAP = WalletAPIParam(walletId)
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[WalletCreated.type](CreateWallet)(agentWAP))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
+  }
+
+  def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): GetVerKeyResp =
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[GetVerKeyResp](GetVerKey(did, getKeyFromPool)))
+
+}

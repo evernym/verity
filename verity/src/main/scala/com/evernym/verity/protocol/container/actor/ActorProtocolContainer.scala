@@ -23,11 +23,12 @@ import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.{ActorResponse, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
 import java.util.UUID
 
 import akka.util.Timeout
+import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAccessAPI
@@ -40,7 +41,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 /**
  *
  * @tparam P Protocol type
@@ -360,10 +361,7 @@ class ActorProtocolContainer[
     context.unbecome()
     unstashAll()
 
-    //NOTE: using 'handleResponse' in below line to be able to send back synchronous response
-    // of callback handler execution to waiting caller in case it original request was expecting a synchronous response
-    val msgId = getInFlight.msgId
-    handleResponse(Try(executeCallbackHandler(resp)), msgId, senderActorRef)
+    withHandleResp { executeCallbackHandler(resp) }
   }
 
   /**
@@ -378,23 +376,71 @@ class ActorProtocolContainer[
   override protected def runAsyncOp(op: => Any): Unit = {
     //NOTE: using "discardOld" as false, so it will add this new behaviour to the "behavior stack"
     setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
-    val result = op   //given operation gets executed here
-    val sndr = sender()
-    result match {
-      //mostly this should be if async operation sent a command to an actor via tell
-      case () =>
+    withHandleResp {
+      val result = op //given operation gets executed here
+      val sndr = sender()
+      result match {
+        //mostly this should be if async operation sent a command to an actor via tell
+        case () =>
 
-      //there are still few apis which responds with Future (ultimately they should migrated to use actor tell)
-      case f: Future[Any] =>
-        f.recover {
-          case e: Exception =>
-            abortTransaction(); throw e
-        }.onComplete { resp =>
-          self.tell(AsyncOpResp(resp), sndr)    //keep the original sender
+        //there are still few apis which responds with Future (ultimately they should migrated to use actor tell)
+        case f: Future[Any] =>
+          f.recover {
+            case e: Exception =>
+              abortTransaction(); throw e
+          }.onComplete { resp =>
+            self.tell(AsyncOpResp(resp), sndr) //keep the original sender
+          }
+
+        case other =>
+          abortTransaction(); throw new RuntimeException("unexpected response while executing async operation: " + other)
+      }
+    }
+  }
+
+  def withHandleResp(code: => Unit): Unit = {
+    //NOTE: using 'handleResponse' in below line to be able to send back synchronous response
+    // of callback handler execution to waiting caller in case it original request was expecting a synchronous response
+    val msgId = getInFlight.msgId
+    handleResponse(Try(code), msgId, senderActorRef)
+  }
+
+  /**
+   * this is for legacy protocol and for unhandled error while executing async apis
+   * @param resp
+   * @param msgIdOpt
+   * @param sndr
+   */
+  def handleResponse(resp: Try[Any], msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
+    def sendRespToCaller(resp: Any, msgIdOpt: Option[MsgId], sndr: Option[ActorRef]): Unit = {
+      sndr.filter(_ != self).foreach { ar =>
+        ar ! ProtocolSyncRespMsg(ActorResponse(resp), msgIdOpt)
+      }
+    }
+
+    resp match {
+      case Success(r)  =>
+        r match {
+          case ()               => //if unit then nothing to do
+          case fut: Future[Any] => handleFuture(fut, msgIdOpt)
+          case x                => sendRespToCaller(x, msgIdOpt, sndr)
         }
 
-      case other =>
-        abortTransaction(); throw new RuntimeException("unexpected response while executing async operation: " + other)
+      case Failure(e) =>
+        logger.error("error response from protocol actor: " + e.getMessage)
+        val error = convertProtoEngineException(e)
+        sendRespToCaller(error, msgIdOpt, sndr)
+    }
+
+    def handleFuture(fut: Future[Any], msgIdOpt: Option[MsgId]): Unit = {
+      fut.map {
+        case Right(r) => sendRespToCaller(r, msgIdOpt, sndr)
+        case Left(l)  => sendRespToCaller(l, msgIdOpt, sndr)
+        case x        => sendRespToCaller(x, msgIdOpt, sndr)
+      }.recover {
+        case e: Exception =>
+          sendRespToCaller(e, msgIdOpt, sndr)
+      }
     }
   }
 }

@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider._
-import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider, VeritySdkProvider}
+import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
@@ -159,6 +159,7 @@ trait ProcessSdkProvider
   def mapParam: Map[_, _] => String
   def noneParam: String
   def jsonParam: AsJsonObject => String
+  def rawJsonParam: AsJsonObject => String
 
   def testDir: Path
 
@@ -204,6 +205,10 @@ object ProcessSdkProvider {
           o.put(e._1.toString, e._2.toString)
       }
     }
+  }
+
+  case class TokenAsJsonObject(token: String) extends AsJsonObject {
+    override def toJson: JSONObject = new JSONObject(token)
   }
 
   def versionToModule(version: String) = {

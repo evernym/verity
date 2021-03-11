@@ -45,7 +45,7 @@ trait WalletService {
         if (BAD_REQ_ERRORS.map(_.statusCode).contains(wer.sd.statusCode)) {
           throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         } else {
-          logger.error(s"error while executing wallet command: ${cmd.getClass.getSimpleName}, error msg: ${wer.sd.statusMsg}",
+          logger.error(s"error while executing wallet command: ${cmd.getClass.getSimpleName} against wallet id ${walletId}, error msg: ${wer.sd.statusMsg}",
             (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
           throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         }

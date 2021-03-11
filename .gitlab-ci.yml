@@ -305,7 +305,7 @@ deploy-manually-team1:
     TARGET_ENVIRONMENT: 'team2'
   when: manual
 
-deploy-master:
+deploy-dev-rc:
   extends:
     - .deploy-common
   only:

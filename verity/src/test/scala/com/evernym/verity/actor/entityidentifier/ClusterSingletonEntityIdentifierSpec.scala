@@ -1,7 +1,8 @@
 package com.evernym.verity.actor.entityidentifier
 
 import com.evernym.verity.actor.base.{ActorDetail, GetActorDetail}
-import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, ForUserAgentPairwiseActorWatcher, ForWatcherManager}
+import com.evernym.verity.actor.cluster_singleton.watcher.ForEntityItemWatcher
+import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, ForWatcherManager}
 import com.evernym.verity.actor.entityidentifier.base.EntityIdentifierBaseSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
@@ -43,9 +44,9 @@ class ClusterSingletonEntityIdentifierSpec
     "UserAgentPairwiseWatcherManager actor" - {
       "when asked for GetActorDetail" - {
         "should respond with correct entity identifiers" in {
-          clusterSingletonProxy ! ForUserAgentPairwiseActorWatcher(GetActorDetail)
+          clusterSingletonProxy ! ForEntityItemWatcher(GetActorDetail)
           val actualDetail = expectMsgType[ActorDetail]
-          val expectedDetail = ActorDetail("watcher-managerChild", USER_AGENT_PAIRWISE_ACTOR_WATCHER, s"watcher-managerChild-$USER_AGENT_PAIRWISE_ACTOR_WATCHER")
+          val expectedDetail = ActorDetail("watcher-managerChild", "AgentActorWatcher", s"watcher-managerChild-AgentActorWatcher")
           assertActorDetail(actualDetail, expectedDetail)
         }
       }

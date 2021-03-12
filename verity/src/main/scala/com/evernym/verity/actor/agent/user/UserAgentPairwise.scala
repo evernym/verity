@@ -22,9 +22,6 @@ import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
 import com.evernym.verity.actor.agent.user.UserAgentPairwise.{COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, COLLECTION_METRIC_MND_MSGS_TAG}
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryEligibilityCriteria}
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
-import com.evernym.verity.actor.cluster_singleton.ForUserAgentPairwiseActorWatcher
-import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, RemoveItem}
-import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.InternalReqHelperData
@@ -88,7 +85,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     new FailedMsgTracker(maxRetryCount, retryEligibilityCriteriaProvider)
   )
 
-  override final def agentCmdReceiver: Receive = commonCmdReceiver orElse cmdReceiver
+  override final def receiveAgentCmd: Receive = commonCmdReceiver orElse cmdReceiver orElse retryCmdReceiver
 
   override def incomingMsgHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, Any] =
     agentCommonMsgHandler orElse agentMsgHandler
@@ -208,14 +205,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       .withRecipDID(mySelfRelDIDReq)
       .withSenderVerKey(state.thisAgentVerKeyReq)
       .encryptParam
-
-  def addItemToWatcher(itemId: ItemId): Unit = {
-    singletonParentProxyActor ! ForUserAgentPairwiseActorWatcher(AddItem(itemId, None, None))
-  }
-
-  def removeItemFromWatcher(itemId: ItemId): Unit = {
-    singletonParentProxyActor ! ForUserAgentPairwiseActorWatcher(RemoveItem(itemId))
-  }
 
   def checkIfTheirDidDocExists(): Unit = {
     if (state.theirDidDoc.isEmpty)
@@ -648,7 +637,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   def handleCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
     val pidEvent = scke.pid.map(pd => ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
     scke.ownerAgentActorEntityId.foreach(setAgentWalletId)
-    val pubIdEvent = scke.publicIdentity.map{ pi => PublicIdentityStored(pi.DID, pi.verKey) }    
+    val pubIdEvent = scke.publicIdentity.map{ pi => PublicIdentityStored(pi.DID, pi.verKey) }
     val odsEvt = OwnerSetForAgent(scke.mySelfRelDID, scke.ownerAgentKeyDIDReq, scke.ownerAgentKeyDIDVerKeyReq)
     val cdsEvt = AgentDetailSet(
       scke.forDIDPair.DID, scke.newAgentKeyDIDPair.DID,

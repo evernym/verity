@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.container.actor
 import akka.pattern.ask
 import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.ActorResponse
+import com.evernym.verity.{ActorResponse, Status}
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
@@ -98,7 +98,10 @@ extends TokenToActorMappingProvider
  * @param statusDetail - status detail
  */
 case class UpdateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String,
-                                   statusDetail: Option[String]) extends Control with ActorMessage
+                                   statusDetail: Option[String]) extends Control with ActorMessage {
+
+  def isFailed: Boolean = statusCode == Status.MSG_DELIVERY_STATUS_FAILED.statusCode
+}
 
 /**
  * Purpose of this service is to provide a way for protocol to schedule a message for itself

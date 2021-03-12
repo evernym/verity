@@ -5,7 +5,7 @@ import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException.Missing
 
-//checks any stale configurations and logs a warning if found
+//checks any stale (removed or renamed) configurations and logs info message if found
 
 object StaleConfigValidator extends ConfigValidatorCreator {
   override def create(config: Config): ConfigValidator = new StaleConfigValidator(config)
@@ -26,6 +26,7 @@ trait StaleConfigValidatorBase extends ConfigValidator {
 
     StaleConfig("verity.wallet-api"),
     StaleConfig("kamon.instrumentation.akka.filters.group"),
+    StaleConfig("verity.user-agent-pairwise-watcher"),
 
     //renamed configs
     StaleConfig("verity.cache.key-value-mapper-cache-expiration-time-in-seconds", "verity.cache.key-value-mapper.expiration-time-in-seconds"),

@@ -186,14 +186,14 @@ object ItemCommonConstants {
   final val ITEM_MIGRATION_STRATEGY_AUTO = 0
   final val ITEM_MIGRATION_STRATEGY_MANUAL = 1
 
-  final val ITEM_STATUS_ACTIVE = 0
-  final val ITEM_STATUS_REMOVED = 1
+  final val ITEM_STATUS_REMOVED = 0
+  final val ITEM_STATUS_ACTIVE = 1
   final val ITEM_STATUS_MIGRATED = 2
 
   def getStatusString(status: Int): String = {
     status match {
-      case ITEM_STATUS_ACTIVE => "active"
       case ITEM_STATUS_REMOVED => "removed"
+      case ITEM_STATUS_ACTIVE => "active"
       case ITEM_STATUS_MIGRATED => "migrated"
     }
   }

@@ -3,6 +3,7 @@ package com.evernym.verity.itemmanager
 import java.time.LocalDateTime
 
 import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants.ENTITY_ID_MAPPER_VERSION_V1
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
 import com.evernym.verity.actor.itemmanager.{ExternalCmdWrapper, ItemConfigManager, ItemContainerMapper}
@@ -19,13 +20,14 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
   final val ITEM_ID_3 = "335"
   final val ITEM_ID_4 = "584"
 
-  final val ITEM_OWNER_ID = "uap-1"
   final val ITEM_OWNER_VER_KEY = None
 
   final val ORIG_ITEM_DETAIL = "detail"
   final val UPDATED_ITEM_DETAIL = "detail updated"
 
-  val itemManagerEntityId1: String = ITEM_OWNER_ID
+  def ITEM_TYPE: String
+
+  val itemManagerEntityId1: String = ItemConfigManager.entityId(appConfig, ITEM_TYPE)
 
   implicit val persistenceConfig: SnapshotConfig = SnapshotConfig (
     snapshotEveryNEvents=None,
@@ -81,7 +83,8 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
   }
 
   lazy val LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION = ENTITY_ID_MAPPER_VERSION_V1
-  lazy val LATEST_CONFIGURED_ITEM_ACTOR_ENTITY_ID_VERSION_PREFIX = ItemConfigManager.entityIdVersionPrefix(appConfig)
+  lazy val LATEST_CONFIGURED_ITEM_ACTOR_ENTITY_ID_VERSION_PREFIX =
+    ItemConfigManager.entityIdVersionPrefix(appConfig)
 
   def configForDeleteEventFailure: Config =  {
     AkkaTestBasic.customJournal("com.evernym.verity.itemmanager.FailsOnDeleteEventsTestJournal")
@@ -89,10 +92,10 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
 
   def watcherConfig: Config =
     ConfigFactory parseString {
-      """
+      s"""
         |verity {
-        |
-        |  user-agent-pairwise-watcher {
+        |  actor.watcher {
+        |    version = v1
         |    enabled = true
         |
         |    scheduled-job {
@@ -109,11 +112,6 @@ trait ItemManagerSpecBase extends PersistentActorSpec with BasicSpec with Eventu
         |    migration {
         |      chunk-size = 20
         |    }
-        |
-        |  }
-        |
-        |  cache {
-        |    agency-detail-cache-expiration-time-in-seconds = 0
         |  }
         |}
         |""".stripMargin

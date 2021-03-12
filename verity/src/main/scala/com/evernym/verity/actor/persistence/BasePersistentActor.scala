@@ -335,6 +335,10 @@ trait BasePersistentActor
   def basePostActorRecoveryCompleted(): Unit = {
     postActorRecoveryCompleted().map { _ =>
       self ! PostRecoveryActorInitSucceeded
+    }.recover {
+      case e: RuntimeException =>
+        logger.error("error while actor recovery: " + e.getMessage, (LOG_KEY_PERSISTENCE_ID, persistenceId))
+        self ! ActorInitPostRecoveryFailed
     }
   }
 

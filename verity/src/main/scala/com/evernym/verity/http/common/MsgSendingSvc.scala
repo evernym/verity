@@ -94,6 +94,10 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
     sendRequest(req).flatMap { response =>
       logger.info(s"[$id] [incoming response] [${response.status}]")
       respHandler(response)
+    }.recover {
+      case e: Exception =>
+        logger.info(s"[$id] [incoming response] [Error: ${e.getMessage}]")
+        throw e
     }
   }
 

@@ -5,21 +5,23 @@ import java.time.LocalDateTime
 import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.ReqId
+import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgressTracking}
 import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.constants.ActorNameConstants.{MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME, SINGLETON_PARENT_PROXY}
+import com.evernym.verity.constants.ActorNameConstants.MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.actor.msg_tracer.progress_tracker.RoutingEvent._
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache.GLOBAL_TRACKING_ID
 import com.evernym.verity.protocol.engine.{MsgId, MsgType, ProtoDef, ProtoRef, ProtocolRegistry, TypedMsgLike}
+import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc16
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.HashUtil
-import com.evernym.verity.util.Util.getActorRefFromSelection
 
 
-trait HasMsgProgressTracker { this: Actor =>
+trait HasMsgProgressTracker
+  extends HasSingletonParentProxy { this: Actor with HasAppConfig =>
 
   def appConfig: AppConfig
   def selfRelTrackingId: String
@@ -169,6 +171,4 @@ trait HasMsgProgressTracker { this: Actor =>
   private lazy val msgProgressTrackerRegion: ActorRef =
     ClusterSharding(context.system)
       .shardRegion(MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME)
-
-  lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
 }

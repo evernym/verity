@@ -41,7 +41,7 @@ trait MsgNotifier {
   /**
    * this actor will be created for each actor (UserAgent or UserAgentPairwise) of the logical agent
    */
-  private val pusher: ActorRef = {
+  private lazy val pusher: ActorRef = {
     context.actorOf(Pusher.props(appConfig), s"pusher-$persistenceId")
   }
 

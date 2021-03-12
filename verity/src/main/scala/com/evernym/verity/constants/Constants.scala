@@ -118,6 +118,8 @@ object Constants {
   val RESOURCE_TYPE_NAME_ENDPOINT = "endpoint"
   val RESOURCE_TYPE_NAME_MESSAGE = "message"
 
+  val LIBINDY_LEGACY_FLAVOR = "legacy"
+
   val WALLET_TYPE_DEFAULT = "default"
   val WALLET_TYPE_MYSQL = "mysql"
   val WALLET_KEY_DERIVATION_METHOD = "RAW"

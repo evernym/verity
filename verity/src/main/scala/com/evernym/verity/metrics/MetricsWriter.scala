@@ -14,11 +14,13 @@ object MetricsWriter {
 
 trait GaugeApi {
   def increment(name: String): Unit
-  def increment(name: String, times: Long): Unit
+  def increment(name: String, times: Double): Unit
   def decrement(name: String): Unit
-  def decrement(name: String, times: Long): Unit
+  def decrement(name: String, times: Double): Unit
   def incrementWithTags(name: String, tags: Map[String, String] = Map.empty)
-  def incrementWithTags(name: String, value: Long, tags: Map[String, String])
+  def incrementWithTags(name: String, value: Double, tags: Map[String, String])
+  def decrementWithTags(name: String, tags: Map[String, String] = Map.empty)
+  def decrementWithTags(name: String, value: Double, tags: Map[String, String])
   def updateWithTags(name: String, value: Double, tags: Map[String, String] = Map.empty)
   def update(name: String, value: Double): Unit
 }
@@ -30,7 +32,7 @@ object GaugeApiImpl extends GaugeApi {
     initializedGaugeMetric(name).withoutTags().increment()
   }
 
-  def increment(name: String, times: Long): Unit = {
+  def increment(name: String, times: Double): Unit = {
     initializedGaugeMetric(name).withoutTags().increment(times)
   }
 
@@ -38,7 +40,7 @@ object GaugeApiImpl extends GaugeApi {
     initializedGaugeMetric(name).withoutTags().decrement()
   }
 
-  def decrement(name: String, times: Long): Unit = {
+  def decrement(name: String, times: Double): Unit = {
     initializedGaugeMetric(name).withoutTags().decrement(times)
   }
 
@@ -46,9 +48,18 @@ object GaugeApiImpl extends GaugeApi {
     initializedGaugeMetric(name).withTags(TagSet.from(tags)).increment()
   }
 
-  def incrementWithTags(name: String, value: Long, tags: Map[String, String]): Unit = {
+  def incrementWithTags(name: String, value: Double, tags: Map[String, String]): Unit = {
     initializedGaugeMetric(name).withTags(TagSet.from(tags)).increment(value)
   }
+
+  def decrementWithTags(name: String, tags: Map[String, String] = Map.empty): Unit = {
+    initializedGaugeMetric(name).withTags(TagSet.from(tags)).decrement()
+  }
+
+  def decrementWithTags(name: String, value: Double, tags: Map[String, String]): Unit = {
+    initializedGaugeMetric(name).withTags(TagSet.from(tags)).decrement(value)
+  }
+
 
   def updateWithTags(name: String, value: Double, tags: Map[String, String] = Map.empty): Unit = {
     initializedGaugeMetric(name).withTags(TagSet.from(tags)).update(value)

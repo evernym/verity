@@ -109,6 +109,7 @@ trait CommonConfig {
 
   private val LIB_INDY = s"$VERITY.lib-indy"
   val LIB_INDY_LIBRARY_DIR_LOCATION = s"$LIB_INDY.library-dir-location"
+  val LIB_INDY_FLAVOR = s"$LIB_INDY.flavor"
 
   private val LIB_INDY_WALLET = s"$LIB_INDY.wallet"
   val LIB_INDY_WALLET_TYPE = s"$LIB_INDY_WALLET.type"

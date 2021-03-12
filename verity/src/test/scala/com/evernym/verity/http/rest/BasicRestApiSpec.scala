@@ -212,6 +212,20 @@ class BasicRestApiSpec
     }
   }
 
+  "when sent write schema rest api msg without required field in JSON payload" - {
+    "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
+      lazy val payload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write","@id":"${UUID.randomUUID.toString}"}""")
+      buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
+        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        Seq(RawHeader("x-aPi-KeY", s"${mockEntRestEnv.myDIDApiKey}"))
+      ) ~> epRoutes ~> check {
+        status shouldBe BadRequest
+        header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
+        responseTo[RestErrorResponse] shouldBe RestErrorResponse(Status.MISSING_REQ_FIELD.statusCode, "required attribute not found (missing/empty/null): 'name'")
+      }
+    }
+  }
+
   "when sent write schema rest api msg with invalid route" - {
     "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
       buildPostReq(s"/api/invalid-route/write-schema/0.6/${UUID.randomUUID.toString}",

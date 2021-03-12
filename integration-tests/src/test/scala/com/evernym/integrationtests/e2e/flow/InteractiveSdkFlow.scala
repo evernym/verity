@@ -1267,16 +1267,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
       val senderSdk = receivingSdk(sender)
       val receiverSdk = receivingSdk(receiver)
 
-      s"[${sender.name}] send message with huge forRelationship" in {
-        val str = Base58Util.encode(UUID.randomUUID().toString.getBytes())
-        val forRel =  (1 to 1000).foldLeft("")((prev, _) => prev + str)
-        val caught = intercept[IOException] {
-          senderSdk.basicMessage_1_0(forRel, content, sentTime, localization)
-            .message(senderSdk.context)
-        }
-        caught.getMessage should include ("Route value is too long")
-      }
-
       s"[${sender.name}] send message" in {
         val forRel = senderSdk.relationship_!(relationshipId).owningDID
         senderSdk.basicMessage_1_0(forRel, content, sentTime, localization)

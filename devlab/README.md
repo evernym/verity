@@ -1,6 +1,6 @@
 # Verity Devlab
 
-Allows quickly bring up, resting and down the external services for typical `verity` environment. Currently it manges the following services:
+Allows quickly bring up, resting and down the external services for typical `verity` environment. Currently, it manages the following services:
 1. dynamodb - event storage
 2. mysql - for wallet data storage
 2. pool - indy ledger network

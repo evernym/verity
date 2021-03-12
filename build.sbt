@@ -21,14 +21,15 @@ import scala.language.postfixOps
 enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.95.0~1280"
+val debPkgDepLibIndyMinVersion = "1.15.0~1618"
+val debPkgDepLibMySqlStorageVersion = "0.1.13"
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1280"
+val libIndyVer = "1.15.0~1618"
 val sharedLibDeps = Seq(
-  LibPackExt("libindy-async", libIndyVer, "libindy.so"),
-  LibPackExt("libnullpay-async", libIndyVer, "libnullpay.so"),
-  LibPackExt("libvcx-async-test", "0.10.1-bionic~9999", "libvcx.so"), // For integration testing ONLY
+  LibPackExt("libindy", libIndyVer, "libindy.so"),
+  LibPackExt("libnullpay", libIndyVer, "libnullpay.so"),
+  LibPackExt("libvcx-test", "0.10.1-bionic~1131", "libvcx.so"), // For integration testing ONLY
 )
 
 //dependency versions
@@ -226,8 +227,9 @@ lazy val packageSettings = Seq (
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy-async(>= $debPkgDepLibIndyMinVersion)",
-    s"libnullpay-async(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy
+    s"libindy(>= $debPkgDepLibIndyMinVersion)",
+    s"libnullpay(>= $debPkgDepLibIndyMinVersion)",  // must be the same version as libindy
+    s"libmysqlstorage(>=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

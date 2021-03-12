@@ -17,7 +17,7 @@ trait MetricsFlow {
   def testMetrics(aae: ApplicationAdminExt): Unit = {
     s"when sent get metrics api call (${aae.name})" - {
       "should be able to fetch metrics" in {
-        eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
+        eventually(timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
           val allNodeMetrics = aae.getAllNodeMetrics()
           allNodeMetrics.data.headOption.nonEmpty shouldBe true
           val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)

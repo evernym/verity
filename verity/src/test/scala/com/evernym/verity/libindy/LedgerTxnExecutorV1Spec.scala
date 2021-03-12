@@ -26,7 +26,7 @@ import scala.concurrent.{Await, Future}
 class LedgerTxnExecutorV1Spec
   extends ActorSpec
     with BasicSpecWithIndyCleanup
-    with MockitoSugar{
+    with MockitoSugar {
 
   val maxWaitTime: Duration = 50000.millis
   lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]

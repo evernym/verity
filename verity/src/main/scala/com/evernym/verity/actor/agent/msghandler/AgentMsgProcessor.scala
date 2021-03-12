@@ -37,6 +37,7 @@ import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitPro
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgFamily, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
 import com.evernym.verity.protocol.protocols
+import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
@@ -76,6 +77,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     with HasActorResponseTimeout
     with MsgTraceProvider
     with HasMsgProgressTracker
+    with HasAppConfig
     with HasLogger {
 
   val logger: Logger = LoggingUtil.getLoggerByName("AgentMsgProcessor")

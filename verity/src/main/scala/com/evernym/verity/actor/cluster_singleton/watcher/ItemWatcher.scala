@@ -6,7 +6,7 @@ import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.ForWatcherManagerChild
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
-import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, ItemManagerEntityId, ItemType}
+import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
 import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
@@ -18,53 +18,45 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ActorErrorResp
+import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.actor.itemmanager.ItemConfigManager.addNewItemContainerMapper
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
+import scala.util.Try
 
 
 /**
  * this is parent for any watcher manager actor we create
  * (as of today there is only one such watcher manager called 'uap-actor-watcher' [uap = user agent pairwise])
  * @param appConfig application configuration
- * @param childActorDetails child actor to be created by this Watcher Manager actor
  */
-class WatcherManager(val appConfig: AppConfig, val childActorDetails: Set[WatcherChildActorDetail])
+class WatcherManager(val appConfig: AppConfig)
   extends CoreActorExtended {
   val logger: Logger = getLoggerByClass(classOf[WatcherManager])
 
-  childActorDetails.foreach { cad =>
-    val enabled = appConfig.getConfigBooleanOption(cad.enabledConfName).getOrElse(true)
-    logger.debug("watcher manager child actor detail " + enabled)
-    if (enabled) {
-      logger.debug(s"${cad.actorName} child actor is enabled to be created")
-      getRequiredActor(cad.actorName, cad.actorProp)
-    }
-  }
-
-  def getRequiredActor(name: String, props: Props): ActorRef = context.child(name).getOrElse(context.actorOf(props, name))
-
-  def forwardToChild(actorName: String, cmd: Any): Unit = {
-    childActorDetails.find(_.actorName == actorName).foreach { childActorDetail =>
-      val enabled = appConfig.getConfigBooleanOption(childActorDetail.enabledConfName).getOrElse(true)
-      if (enabled) {
-        val actorRef = getRequiredActor(childActorDetail.actorName, childActorDetail.actorProp)
-        actorRef forward cmd
-      }
-    }
-  }
+  //NOTE: don't make below statement lazy, it needs to start as soon as possible
+  val agentActorWatcher: ActorRef = context.actorOf(AgentActorWatcher.props(appConfig), "AgentActorWatcher")
 
   override def receiveCmd: Receive = {
-    case fwmc: ForWatcherManagerChild => forwardToChild(fwmc.getActorName, fwmc.cmd)
+    case fwmc: ForWatcherManagerChild => agentActorWatcher forward fwmc.cmd
   }
 }
 
+object WatcherManager {
+  val name: String = WATCHER_MANAGER
+  def props(appConfig: AppConfig): Props = Props(new WatcherManager(appConfig))
+}
 
-trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with HasAppConfig {
-  implicit def appConfig: AppConfig
+class AgentActorWatcher(val appConfig: AppConfig)
+  extends CoreActorExtended
+    with HasActorResponseTimeout
+    with HasAppConfig {
 
-  val logger: Logger = getLoggerByClass(classOf[WatcherBase])
+  addNewItemContainerMapper(itemManagerEntityId, TimeBasedItemContainerMapper(ENTITY_ID_MAPPER_VERSION_V1))
+
+  val logger: Logger = getLoggerByClass(classOf[AgentActorWatcher])
 
   override def receiveCmd: Receive = {
     case CheckForPeriodicTaskExecution  => handlePeriodicTaskExecution()
@@ -83,14 +75,6 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
     }
     processOneBatchOfFetchedActiveItems()
   }
-  /**
-   * type of item being watched
-   * this is only used to find correct item container mapper version
-   * see 'buildItemContainerEntityId' method in 'ItemConfigManager'
-   * @return
-   */
-  def itemType: ItemType
-
 
   def ownerVerKey: Option[VerKey]=None
 
@@ -98,13 +82,14 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
    * item manager entity id which will be used by this watcher actor to send messages like save item, get item etc.
    * @return
    */
-  def itemManagerEntityId: ItemManagerEntityId
+
+  lazy val itemManagerEntityId: String = "watcher"
 
   /**
    * configuration which decides if items should be migrated to next linked container or not.
    * @return
    */
-  def migrateItemsToNextLinkedContainer: Boolean
+  lazy val migrateItemsToNextLinkedContainer: Boolean = true
 
   /**
    * configuration which decides if items should be migrated to latest versioned containers or not.
@@ -112,16 +97,10 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
    * and we want old container's active items to be migrated to new containers (as per new version)
    * @return
    */
-  def migrateItemsToLatestVersionedContainers: Boolean
-
-  /**
-   * should be overridden by implementing class and it should send a message to that item
-   * @param itemId item id being watched
-   */
-  def sendMsgToWatchedItem(itemId: ItemId): Unit
+  lazy val migrateItemsToLatestVersionedContainers: Boolean = false
 
   def buildItemManagerConfig: SetItemManagerConfig = SetItemManagerConfig(
-    itemType,
+    itemManagerEntityId,
     ownerVerKey,
     migrateItemsToNextLinkedContainer,
     migrateItemsToLatestVersionedContainers)
@@ -132,20 +111,56 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
     itemManagerRegion ! ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(buildItemManagerConfig, None))
   }
 
-  def addItem(ai: AddItem): Future[Any] = {
-    val uip = UpdateItem(ai.itemId, ai.status, ai.detail, None)
+  private def addItem(ai: AddItem): Future[Any] = {
+    val itemId = buildUniqueItemId(ai.itemId, ai.itemEntityType)
+    val uip = UpdateItem(itemId, Option(ITEM_STATUS_ACTIVE), ai.detail, None)
     itemManagerRegion ? ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(uip, None))
   }
 
-  def removeItem(ri: RemoveItem): Future[Any] = {
-    val uip = UpdateItem(ri.itemId, Option(ITEM_STATUS_REMOVED), None, None)
+  private def removeItem(ri: RemoveItem): Future[Any] = {
+    val itemId = buildUniqueItemId(ri.itemId, ri.itemEntityType)
+    val uip = UpdateItem(itemId, Option(ITEM_STATUS_REMOVED), None, None)
     itemManagerRegion ? ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(uip, None))
   }
 
-  lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
-    USER_AGENT_PAIRWISE_WATCHER_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(200)
+  private def sendMsgToWatchedItem(itemId: String): Unit = {
+    val (entityId, regionActor) = {
+      val tokens = itemId.split("#", 2)
+      (tokens.head, entityRegion(tokens.last))
+    }
+    regionActor ! ForIdentifier(entityId, CheckWatchedItem)
+  }
 
-  lazy val batchSize: Int = appConfig.getConfigIntOption(ITEM_WATCHER_BATCH_SIZE).getOrElse(100)
+  private def buildUniqueItemId(entityId: String, entityType: String): String = {
+    if (entityId.contains("#"))
+      throw new RuntimeException("invalid entity id (it shouldn't contain '#'): " + entityId)
+    entityId + "#" + Try(entityTypeId(entityType)).getOrElse(entityType)
+  }
+
+  private def entityRegion(entityTypeToken: String): ActorRef = {
+    Try(actorTypeToRegions(entityTypeToken.toInt)).getOrElse(
+      ClusterSharding(context.system).shardRegion(entityTypeToken)
+    )
+  }
+
+  private def entityTypeId(entityType: String): Int = {
+    entityTypeMappings.find(e => e._2 == entityType).map(_._1)
+      .getOrElse(throw new RuntimeException("entity type mapping not found for type: " + entityType))
+  }
+
+  private lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+    s"$AGENT_ACTOR_WATCHER_SCHEDULED_JOB_INTERVAL_IN_SECONDS")
+    .getOrElse(200)
+
+  private lazy val batchSize: Int = appConfig.getConfigIntOption(ITEM_WATCHER_BATCH_SIZE).getOrElse(100)
+
+  private lazy val entityTypeMappings = EntityTypeMapper.buildEntityTypeMappings(appConfig)
+  private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, context.system)
+
+  private def activeRegisteredItemMetricsName: String =
+    s"as.akka.actor.$itemManagerEntityId.retry.active.count"
+  private def pendingActiveRegisteredItemMetricsName: String =
+    s"as.akka.actor.$itemManagerEntityId.retry.pending.count"
 
   scheduleJob(
     "CheckForPeriodicTaskExecution",
@@ -155,7 +170,7 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
 
   setItemManagerConfig()
 
-  def fetchAllActiveItems(): Unit = {
+  private def fetchAllActiveItems(): Unit = {
     val fut = itemManagerRegion ? ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(GetItems(Set(ITEM_STATUS_ACTIVE)), None))
     fut map {
       case ai: AllItems => self ! FetchedActiveItems(ai.items)
@@ -163,13 +178,13 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
     }
   }
 
-  def updateFetchedItems(fai: FetchedActiveItems): Unit = {
+  private def updateFetchedItems(fai: FetchedActiveItems): Unit = {
     activeItems = activeItems ++ fai.items
     MetricsWriter.gaugeApi.updateWithTags(activeRegisteredItemMetricsName, activeItems.size)
     processOneBatchOfFetchedActiveItems()
   }
 
-  def processOneBatchOfFetchedActiveItems(): Unit = {
+  private def processOneBatchOfFetchedActiveItems(): Unit = {
     if (activeItems.nonEmpty) {
       getBatchedRecords.foreach { case (itemId, _) =>
         sendMsgToWatchedItem(itemId)
@@ -179,26 +194,25 @@ trait WatcherBase extends CoreActorExtended with HasActorResponseTimeout with Ha
     }
   }
 
-  def getBatchedRecords: Map[ItemId, ItemDetail] = {
+  private def getBatchedRecords: Map[ItemId, ItemDetail] = {
     if (batchSize >= 0) {
       activeItems.take(batchSize)
     } else activeItems
   }
 
   var activeItems: Map[ItemId, ItemDetail] = Map.empty
-
-  def activeRegisteredItemMetricsName: String
-  def pendingActiveRegisteredItemMetricsName: String
 }
 
 case object CheckForPeriodicTaskExecution extends ActorMessage
-case class AddItem(itemId: ItemId, status: Option[Int], detail: Option[String]) extends ActorMessage
-case class RemoveItem(itemId: ItemId) extends ActorMessage
+case class AddItem(itemId: ItemId, itemEntityType: String, detail: Option[String]=None) extends ActorMessage
+case class RemoveItem(itemId: ItemId, itemEntityType: String) extends ActorMessage
 case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
-case class WatcherChildActorDetail(enabledConfName: String, actorName: String, actorProp: Props)
 
-object WatcherManager {
-  val name: String = WATCHER_MANAGER
-  def props(appConfig: AppConfig, childActorDetails: Set[WatcherChildActorDetail]): Props =
-    Props(new WatcherManager(appConfig, childActorDetails))
+object AgentActorWatcher {
+  def props(config: AppConfig): Props = Props(new AgentActorWatcher(config))
 }
+
+case object CheckWatchedItem extends ActorMessage
+
+
+case class ForEntityItemWatcher(override val cmd: Any) extends ForWatcherManagerChild

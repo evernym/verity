@@ -452,10 +452,6 @@ trait ItemContainerBase
     }
   }
 
-  def getMigrationCandidateItems(toContainerEntityIdOpt: Option[ItemContainerEntityId]): Map[ItemId, ItemDetail] = {
-    getActiveItemsOnly
-  }
-
   def startMigrationIfNotAlreadyStarted(toContainerEntityIdOpt: Option[ItemContainerEntityId]): Unit = {
     if (isMigrationNotStarted(toContainerEntityIdOpt)) {
       writeAndApply(MigrationStarted(getContainerId(toContainerEntityIdOpt), getMillisForCurrentUTCZonedDateTime))
@@ -520,7 +516,7 @@ trait ItemContainerBase
     logMsg("migrate items received: " + mi, DebugLevel)
     if (isMigrationNotStarted(mi.toContainerEntityIdOpt) || !isMigrationFinished(mi.toContainerEntityIdOpt)) {
       startMigrationIfNotAlreadyStarted(mi.toContainerEntityIdOpt)
-      val candidates = getMigrationCandidateItems(mi.toContainerEntityIdOpt).take(itemMigrationChunkSize)
+      val candidates = getActiveItemsOnly.take(itemMigrationChunkSize)
       if (candidates.nonEmpty) {
         logMsg("few items will be migrated", DebugLevel)
         candidates.foreach { case (itemId, itemDetail) =>
@@ -539,7 +535,7 @@ trait ItemContainerBase
     case gi: GetItem =>
       items.get(gi.id) match {
         case Some(v) => handleItemFound(gi, v)
-        case None => handleItemNotFound(gi)
+        case None    => handleItemNotFound(gi)
       }
   }
 

@@ -14,7 +14,7 @@ import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
-import com.evernym.verity.actor.cluster_singleton.watcher.{UserAgentPairwiseActorWatcher, WatcherChildActorDetail, WatcherManager}
+import com.evernym.verity.actor.cluster_singleton.watcher.WatcherManager
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
@@ -40,13 +40,12 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   val logger: Logger = getLoggerByClass(classOf[SingletonParent])
   val cluster: Cluster = akka.cluster.Cluster(context.system)
-
   var nodes: Set[Address] = Set.empty[Address]
 
   def allSingletonPropsMap: Map[String, Props] =
     Map(
       KeyValueMapper.name -> KeyValueMapper.props,
-      WatcherManager.name -> WatcherManager.props(appConfig, childActorDetails),
+      WatcherManager.name -> WatcherManager.props(appConfig),
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
       ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig),
@@ -170,14 +169,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   override final def receiveCmd: Receive = receiveCommon
 
-  lazy val childActorDetails: Set[WatcherChildActorDetail] = {
-    Set(
-      WatcherChildActorDetail(USER_AGENT_PAIRWISE_WATCHER_ENABLED,
-        UserAgentPairwiseActorWatcher.name,
-        UserAgentPairwiseActorWatcher.props(userAgentPairwiseRegionName, appConfig))
-    )
-  }
-
   def createChildActors(): Unit = {
     allSingletonPropsMap.foreach { e =>
       context.actorOf(e._2, e._1)
@@ -210,8 +201,6 @@ case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingleton
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
 
-trait ForWatcherManagerChild extends ForSingletonChild
-
-case class ForUserAgentPairwiseActorWatcher(override val cmd: Any) extends ForWatcherManagerChild {
-  def getActorName: String = USER_AGENT_PAIRWISE_ACTOR_WATCHER
+trait ForWatcherManagerChild extends ActorMessage {
+  def cmd: Any
 }

@@ -39,7 +39,7 @@ trait ItemManagerBase
 
   val receiveCmdBeforeItemConfigSet: Receive = {
     case so: SetItemManagerConfig => handleSetItemManagerConfig(so)
-    case am: ActorMessage => unhandledMsg(am, ItemManagerConfigNotYetSet)
+    case am: ActorMessage         => unhandledMsg(am, ItemManagerConfigNotYetSet)
   }
 
   val receiveCmdAfterItemConfigSet: Receive = {
@@ -82,7 +82,6 @@ trait ItemManagerBase
         addItemToInitializedContainer(tailContainerId)
       }
   }
-
 
   var itemManagerState: Option[ItemManagerStateDetail] = None
   var saveItemIdsInProgress: Map[ItemId, ActorRef] = Map.empty

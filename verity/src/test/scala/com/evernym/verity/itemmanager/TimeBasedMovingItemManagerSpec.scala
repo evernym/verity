@@ -11,7 +11,7 @@ import org.scalatest.time.{Seconds, Span}
 
 class TimeBasedMovingItemManagerSpec extends ItemManagerSpecBase {
 
-  override def overrideConfig: Option[Config] = Option {
+  override lazy val overrideConfig: Option[Config] = Option {
     watcherConfig
   }
 
@@ -23,16 +23,15 @@ class TimeBasedMovingItemManagerSpec extends ItemManagerSpecBase {
         ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
           TestTimeBasedItemContainerMapper(ENTITY_ID_MAPPER_VERSION_V1))
         ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
+          TestTimeBasedItemContainerMapper(LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION))
+        ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
           TestTimeBasedItemContainerMapper(LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION + 1))
       }
     }
     "when tried to add same mapper again" - {
       "it should not change any state as such" in {
-        val thrown = intercept[InvalidValueException] {
-          ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
-            TestTimeBasedItemContainerMapper(LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION))
-        }
-        thrown.respMsg.exists(s => s.contains("duplicate mappers not allowed")) shouldBe true
+        ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
+          TestTimeBasedItemContainerMapper(LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION))
       }
     }
     "when tried to add new mapper with invalid value" - {

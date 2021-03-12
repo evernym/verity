@@ -3,13 +3,14 @@ package com.evernym.verity.actor.agent.user
 import akka.event.LoggingReceive
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
-import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
-import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.{HasSingletonParentProxy, MsgPackFormat}
+import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, CheckWatchedItem, ForEntityItemWatcher, RemoveItem}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
-import com.evernym.verity.actor.persistence.AgentPersistentActor
+import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.protocol.protocols.HasAppConfig
 
 import scala.concurrent.Future
 
@@ -17,25 +18,28 @@ import scala.concurrent.Future
  * retries (re-sends) failed messages to their next hop
  * as of now only used for pairwise connections
  */
-trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
-
-  override final def receiveAgentCmd: Receive = agentCmdReceiver orElse retryCmdReceiver
+trait FailedMsgRetrier
+  extends HasSingletonParentProxy { this: BasePersistentActor with HasAppConfig =>
 
   val retryCmdReceiver: Receive = LoggingReceive.withLabel("retryCmdReceiver") {
     case FailedMsgRetrierInit   => init()
-    case CheckRetryJobScheduled => scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
+    case CheckWatchedItem       => handleCheckWatchedItem()
     case RetryUndeliveredMsgs   => resendUndeliveredMsgsIfAny()
   }
 
   self ! FailedMsgRetrierInit
 
-  def init(): Unit = {
+  private def init(): Unit = {
     scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
   }
 
-  def scheduleRetryFailedMsgsJobIfNotAlreadyScheduled(): Unit = {
+  private def handleCheckWatchedItem(): Unit = {
+    isRegistered = true
+    scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
+  }
+
+  private def scheduleRetryFailedMsgsJobIfNotAlreadyScheduled(): Unit = {
     if (retryFailedMsgsJob.isEmpty) {
-      addItemToWatcherIfNotAlreadyDone()
       logger.debug(s"[$persistenceId] retryFailedMsgsJob is not scheduled at this moment, it will be scheduled now")
       retryFailedMsgsJob = {
         val jobId = "RetryUndeliveredMsgs"
@@ -51,7 +55,7 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
     }
   }
 
-  def handleNoMsgToRetry(): Unit = {
+  private def handleNoMsgToRetry(): Unit = {
     retryFailedMsgsJob.foreach { jobId =>
       stopScheduledJob(jobId)
       retryFailedMsgsJob = None
@@ -60,16 +64,47 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
     removeItemFromWatcherIfNotAlreadyDone()
   }
 
-  def resendUndeliveredMsgsIfAny(): Unit = {
+  private def resendUndeliveredMsgsIfAny(): Unit = {
     val pendingMsgs = getMsgIdsEligibleForRetries
     logger.debug(s"[$persistenceId]: pending msgs during retry undelivered msg: " + pendingMsgs)
     if (pendingMsgs.nonEmpty) {
       getBatchedRecords(pendingMsgs).foreach { uid =>
+        log.debug("send msg to their agent: " + uid)
         sendMsgToTheirAgent(uid, isItARetryAttempt = true, msgPackFormat(uid))
       }
     } else {
       handleNoMsgToRetry()
     }
+  }
+
+  private def removeItemFromWatcherIfNotAlreadyDone(): Unit = {
+    if (isRegistered) {
+      removeItemFromWatcher(entityId)
+      isRegistered = false
+    }
+  }
+
+  private def addItemToWatcherIfNotAlreadyDone(): Unit = {
+    if (! isRegistered) {
+      addItemToWatcher(entityId)
+      isRegistered = true
+    }
+  }
+
+  override def postCommandExecution(cmd: Any): Unit = {
+    cmd match {
+      case uds: UpdateMsgDeliveryStatus if uds.isFailed =>
+        addItemToWatcherIfNotAlreadyDone()
+        scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
+      case _ => //nothing to do
+    }
+  }
+
+  private def getBatchedRecords(pendingMsgs: Set[MsgId]): Set[MsgId] = {
+    val currentBatchSize = batchSize.getOrElse(defaultBatchSize)
+    if (currentBatchSize >=0 ) {
+      pendingMsgs.take(currentBatchSize)
+    } else pendingMsgs
   }
 
   override def preReceiveTimeoutCheck(): Boolean = {
@@ -85,38 +120,20 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
     }
   }
 
-  def removeItemFromWatcherIfNotAlreadyDone(): Unit = {
-    if (! isDeRegistered) {
-      removeItemFromWatcher(entityId)
-      isDeRegistered = true
-    }
+  def addItemToWatcher(itemId: ItemId): Unit = {
+    singletonParentProxyActor ! ForEntityItemWatcher(AddItem(itemId, entityType))
+    log.debug("item added to watcher: " + itemId)
   }
 
-  def addItemToWatcherIfNotAlreadyDone(): Unit = {
-    if (isDeRegistered) {
-      addItemToWatcher(entityId)
-      isDeRegistered = false
-    }
+  def removeItemFromWatcher(itemId: ItemId): Unit = {
+    singletonParentProxyActor ! ForEntityItemWatcher(RemoveItem(itemId, entityType))
+    log.debug("item removed from watcher: " + itemId)
   }
 
-  override def postCommandExecution(cmd: Any): Unit = {
-    cmd match {
-      case _: ProcessPackedMsg | _: ProcessRestMsg =>
-        scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
-      case _ => //nothing to do
-    }
-  }
+  private var isRegistered: Boolean = false
+  private var retryFailedMsgsJob: Option[JobId] = None
+  private lazy val defaultBatchSize: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_BATCH_SIZE).getOrElse(30)
 
-  private def getBatchedRecords(pendingMsgs: Set[MsgId]): Set[MsgId] = {
-    val currentBatchSize = batchSize.getOrElse(defaultBatchSize)
-    if (currentBatchSize >=0 ) {
-      pendingMsgs.take(currentBatchSize)
-    } else pendingMsgs
-  }
-
-  var isDeRegistered: Boolean = false
-  var retryFailedMsgsJob: Option[JobId] = None
-  lazy val defaultBatchSize: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_BATCH_SIZE).getOrElse(30)
   lazy val maxRetryCount: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_MAX_RETRY_COUNT).getOrElse(5)
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
@@ -124,11 +141,7 @@ trait FailedMsgRetrier { this: AgentPersistentActor with AgentMsgHandler =>
   def scheduledJobInterval: Int
   def getMsgIdsEligibleForRetries: Set[MsgId]
   def sendMsgToTheirAgent(uid: MsgId, isItARetryAttempt: Boolean, mpf: MsgPackFormat): Future[Any]
-  def agentCmdReceiver: Receive
-  def addItemToWatcher(itemId: ItemId): Unit
-  def removeItemFromWatcher(itemId: ItemId): Unit
 }
 
 case object RetryUndeliveredMsgs extends ActorMessage
-case object CheckRetryJobScheduled extends ActorMessage
 case object FailedMsgRetrierInit extends ActorMessage

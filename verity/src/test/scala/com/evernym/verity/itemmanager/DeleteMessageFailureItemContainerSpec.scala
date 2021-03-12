@@ -21,7 +21,7 @@ class DeleteMessageFailureItemManagerSpec
 
   val asmTestKit = new AppStateManagerTestKit(this)
 
-  override def overrideConfig: Option[Config] = Option {
+  override lazy val overrideConfig: Option[Config] = Option {
     watcherConfig
       .withFallback(configForDeleteEventFailure)
   }

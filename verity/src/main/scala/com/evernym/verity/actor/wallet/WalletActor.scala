@@ -192,7 +192,9 @@ trait WalletCommand extends ActorMessage {
 
 case class SetWalletParam(wp: WalletParam) extends WalletCommand
 
-case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand
+case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand {
+  override def toString: DID = s"${this.getClass.getSimpleName}(wallet: $wallet)"
+}
 
 case object CreateWallet extends WalletCommand
 

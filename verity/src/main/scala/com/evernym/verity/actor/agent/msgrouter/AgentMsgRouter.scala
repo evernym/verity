@@ -15,6 +15,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.RouteTo
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
@@ -187,16 +188,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
 
   protected def getActorTypeToRegions(actorTypeId: Int): ActorRef = actorTypeToRegions(actorTypeId)
 
-  private lazy val actorTypeToRegions = Map(
-    ACTOR_TYPE_AGENCY_AGENT_ACTOR                -> ClusterSharding(actorSystem).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME) ,
-    ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR       -> ClusterSharding(actorSystem).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME),
-    ACTOR_TYPE_USER_AGENT_ACTOR                  -> ClusterSharding(actorSystem).shardRegion(USER_AGENT_REGION_ACTOR_NAME),
-    ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR         -> ClusterSharding(actorSystem).shardRegion(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME),
-
-    //legacy mapping
-    LEGACY_ACTOR_TYPE_USER_AGENT_ACTOR           -> ClusterSharding(actorSystem).shardRegion(LEGACY_USER_AGENT_REGION_ACTOR_NAME),
-    LEGACY_ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR  -> ClusterSharding(actorSystem).shardRegion(LEGACY_USER_AGENT_PAIRWISE_REGION_ACTOR_NAME)
-  )
+  private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, actorSystem)
 }
 
 object AgentMsgRouter {

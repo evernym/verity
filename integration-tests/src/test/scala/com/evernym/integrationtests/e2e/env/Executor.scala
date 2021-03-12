@@ -34,17 +34,17 @@ class AgencyAgentSetupHelper {
 
 object Executor {
 
-  class MockEnterpriseEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9002"))
+  class MockEnterpriseEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6801"))
     extends AgentMsgSenderHttpWrapper {
     override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }
 
-  class MockConsumerEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9001"))
+  class MockConsumerEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6701"))
     extends AgentMsgSenderHttpWrapper {
     override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }
 
-  class MockVerityEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9003"))
+  class MockVerityEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6901"))
     extends AgentMsgSenderHttpWrapper {
     override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
   }

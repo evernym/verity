@@ -22,7 +22,7 @@ enablePlugins(JavaAppPackaging)
 
 //deb package dependencies versions
 val debPkgDepLibIndyMinVersion = "1.15.0~1618"
-val debPkgDepLibMySqlStorageVersion = "0.1.13"
+val debPkgDepLibMySqlStorageVersion = "0.1.11"
 
 //shared libraries versions
 val libIndyVer = "1.15.0~1618"
@@ -229,7 +229,7 @@ lazy val packageSettings = Seq (
     "default-jre",
     s"libindy(>= $debPkgDepLibIndyMinVersion)",
     s"libnullpay(>= $debPkgDepLibIndyMinVersion)",  // must be the same version as libindy
-    s"libmysqlstorage(>=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
+    s"libmysqlstorage(=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

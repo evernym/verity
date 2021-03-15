@@ -18,7 +18,7 @@ import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, MsgEvent}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.metrics.CustomMetrics._
@@ -485,7 +485,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     } catch {
       case e: RuntimeException =>
         recordInMsgChildEvent(reqMsgContext.id,
-          s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
+          s"${reqMsgContext.id}",
           ChildEvent("validation-error", "error while validating com method: " + e.getMessage))
         throw e
     }

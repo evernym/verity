@@ -231,10 +231,17 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def updateStateWithOwnerAgentKey(): Unit = {
-    if (agentWalletId.isDefined) {
-      state.ownerAgentDidPair.foreach { didPair =>
-        state = state.copy(relationship = state.relWithNewAuthKeyAddedInMyDidDoc(
-          didPair.DID, didPair.verKey, Set(OWNER_AGENT_KEY)))
+    state.ownerAgentDidPair.foreach { didPair =>
+      val authKey = state.myAuthKeys.find(_.keyId == didPair.DID)
+      authKey match {
+        case None =>
+          state = state.copy(relationship = state.relWithNewAuthKeyAddedInMyDidDoc(
+            didPair.DID, didPair.verKey, Set(OWNER_AGENT_KEY)))
+
+        case Some(ak) if ak.verKeyOpt.isDefined =>
+          state = state.copy(ownerAgentDidPair = Option(didPair.copy(verKey = ak.verKey)))
+
+        case _ => //nothing to do
       }
     }
   }

@@ -1,11 +1,11 @@
 package com.evernym.verity.http.route_handlers.restricted
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.pattern.ask
 import akka.http.scaladsl.server.Directives.{extractClientIP, extractRequest, handleExceptions, logRequestResult, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{ConfigureTracking, GetState, RecordedStates, TrackingConfigured}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{ConfigureTracking, GetState, MsgProgressTrackerHtmlGenerator, RecordedStates, TrackingConfigured}
 import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgressTracking, StopProgressTracking}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam, TrackingStatus}
@@ -37,8 +37,8 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
     Future.successful(MsgProgressTrackerCache.allIdsBeingTracked)
   }
 
-  protected def getRecordedState(trackingId: String, topReqSize: Option[Int], topDelSize: Option[Int]): Future[Any] = {
-    platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, GetState(topReqSize, topDelSize))
+  protected def getRecordedState(trackingId: String, topReqSize: Option[Int]): Future[Any] = {
+    platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, GetState(topReqSize))
   }
 
   protected def msgProgressBackendResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
@@ -72,13 +72,19 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
                       }
                     } ~
                     get {
-                      parameters('topRequestsSize.?, 'topDeliverySize.?) {
-                        (topRequestsSize, topDeliverySize) =>
+                      parameters('onlyTopN.?, 'withDetail.?, 'inHtml.?) {
+                        (onlyTopN, withDetail, inHtml) =>
                           complete {
-                            val topReqSize = topRequestsSize.map(_.toInt)
-                            val topDelSize = topDeliverySize.map(_.toInt)
-                            getRecordedState(trackingId, topReqSize, topDelSize) map {
-                              case rs: RecordedStates => handleExpectedResponse(rs)
+                            val topReqSize = onlyTopN.map(_.toInt)
+                            val includeDetail = withDetail.contains("Y")
+                            getRecordedState(trackingId, topReqSize) map {
+                              case rs: RecordedStates =>
+                                if (inHtml.contains("Y")) {
+                                  val htmlResp = MsgProgressTrackerHtmlGenerator.generateRequestsInHtml(trackingId, rs, includeDetail)
+                                  HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, htmlResp))
+                                } else {
+                                  handleExpectedResponse(rs)
+                                }
                               case x => handleUnexpectedResponse(x)
                             }
                           }

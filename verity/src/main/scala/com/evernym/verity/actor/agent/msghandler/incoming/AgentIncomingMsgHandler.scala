@@ -42,15 +42,14 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
           if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
             recordInMsgEvent(um.rmc.id,
               MsgEvent(
-                s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
-                um.amw.headAgentMsg.msgFamilyDetail.toString,
-                s"self: ${self.path}"
+                s"${um.rmc.id}",
+                um.amw.headAgentMsg.msgFamilyDetail.msgType.toString
               ))
             incomingMsgHandler(um.rmc)(um.amw)
           } else {
             handleException(um.cause, sender())
             recordInMsgEvent(um.rmc.id, MsgEvent.withTypeAndDetail(
-              um.amw.headAgentMsg.msgFamilyDetail.toString, s"FAILED: unhandled message (${um.cause.getMessage})"))
+              um.amw.headAgentMsg.msgFamilyDetail.msgType.toString, s"FAILED: unhandled message (${um.cause.getMessage})"))
           }
         } catch protoExceptionHandler
       }

@@ -348,7 +348,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         }
         recordOutMsgEvent(arc.reqId,
           MsgEvent(
-            arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID),
+            arc.respMsgId.getOrElse(arc.reqId),
             psrm.msg.getClass.getSimpleName,
             s"Synchronous Response Msg (must be from legacy protocol) $extraDetail")
         )
@@ -368,7 +368,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     sar ! msg
     MsgTracerProvider.recordMetricsForAsyncReqMsgId(reqMsgId, NEXT_HOP_MY_EDGE_AGENT_SYNC)   //tracing related
     withReqMsgId(reqMsgId, { arc =>
-      recordOutMsgChildEvent(arc.reqId, arc.respMsgId.getOrElse(MsgEvent.DEFAULT_TRACKING_MSG_ID),
+      recordOutMsgChildEvent(arc.reqId, arc.respMsgId.getOrElse(reqMsgId),
         ChildEvent(msg.getClass.getSimpleName, detail = Option(s"SENT: outgoing message to $NEXT_HOP_MY_EDGE_AGENT_SYNC")))
     })
   }

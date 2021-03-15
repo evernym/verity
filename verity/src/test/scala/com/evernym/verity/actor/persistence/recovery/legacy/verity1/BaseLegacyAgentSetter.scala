@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.persistence.recovery.base.eventSetter.legacy
+package com.evernym.verity.actor.persistence.recovery.legacy.verity1
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.recovery.base.{AgentIdentifiers, BasePersistentStore}
@@ -44,14 +44,19 @@ trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore 
   protected lazy val basicUserAgentEvents = scala.collection.immutable.Seq(
     OwnerDIDSet(mySelfRelDIDPair.DID),
     AgentKeyCreated(mySelfRelAgentDIDPair.DID),
-    ComMethodUpdated("1", 2, "http://abc.xyz.com"),
-    ComMethodUpdated("2", 2, "http://abc.xyz.com", Option(ComMethodPackaging("plain", Seq(mySelfRelDIDPair.verKey))))
+    ComMethodUpdated("push-token", 1, "firebase-push-token"),
+    ComMethodUpdated("webhook", 2, "http://abc.xyz.com"),
+    ConfigUpdated("name","name1", 1615697665879l),
+    ConfigUpdated("logoUrl","/logo_url.ico",1615697665880l),
+
+    //pairwise connection event for each new connection
+    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey)
   )
 
   private def setupBasicUserAgentWalletData(): Unit = {
     createWallet(mySelfRelAgentEntityId)
-    createNewKey(mySelfRelAgentEntityId, Option(mySelfRelDIDKeySeed))
     createNewKey(mySelfRelAgentEntityId, Option(mySelfRelAgentDIDKeySeed))
+    storeTheirKey(mySelfRelAgentEntityId, mySelfRelDIDPair)
   }
 }
 
@@ -67,8 +72,8 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersiste
   }
 
   private def setupBasicUserAgentPairwiseWalletData(): Unit = {
-    createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelDIDKeySeed))
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
+    storeTheirKey(mySelfRelAgentEntityId, myPairwiseRelDIDPair)
     if (addTheirPairwiseKeyInWallet)
       storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
     storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)

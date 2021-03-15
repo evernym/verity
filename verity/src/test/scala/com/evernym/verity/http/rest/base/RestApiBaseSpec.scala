@@ -205,9 +205,8 @@ trait RestApiBaseSpec
   }
 
   def sendMsgWithLargeMsgForRel(mockRestEnv: MockRestEnv): Unit = {
-    val largeInvalidForRelString = (1 to 100).foldLeft(""){ (prev, _) =>
-      prev + "~?<>!@#$%^&*(,)_+=:;}{'][." + UUID.randomUUID().toString
-    }
+    val str = Base58Util.encode(UUID.randomUUID().toString.getBytes())
+    val largeInvalidForRelString =  (1 to 1000).foldLeft("")((prev, _) => prev + str)
     val jsonObject = new JSONObject()
     jsonObject.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/committedanswer/1.0/ask-question")
     jsonObject.put("@id", s"${UUID.randomUUID.toString}")

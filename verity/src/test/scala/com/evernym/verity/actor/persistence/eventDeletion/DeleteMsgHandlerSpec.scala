@@ -15,7 +15,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Future
 
-
+//tests how deletion of events (messages) handled in batches
 class DeleteMsgHandlerSpec
   extends BasicSpec
     with ActorSpec

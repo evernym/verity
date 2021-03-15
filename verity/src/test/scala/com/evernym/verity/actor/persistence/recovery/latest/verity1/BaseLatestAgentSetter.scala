@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.persistence.recovery.base.eventSetter.latest
+package com.evernym.verity.actor.persistence.recovery.latest.verity1
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.recovery.base.{AgentIdentifiers, BasePersistentStore}
@@ -44,6 +44,8 @@ trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore 
   protected lazy val basicUserAgentEvents = scala.collection.immutable.Seq(
     OwnerDIDSet(mySelfRelDIDPair.DID, mySelfRelDIDPair.verKey),
     AgentKeyCreated(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey),
+    ComMethodUpdated("1", 2, "http://abc.xyz.com"),
+    ComMethodUpdated("2", 2, "http://abc.xyz.com", Option(ComMethodPackaging("plain", Seq(mySelfRelDIDPair.verKey))))
   )
 
   private def setupBasicUserAgentWalletData(): Unit = {
@@ -55,8 +57,6 @@ trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore 
 
 trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersistentStore =>
 
-  val addTheirPairwiseKeyInWallet: Boolean = true
-
   def uapRegion: agentRegion = agentRegion(myPairwiseRelAgentEntityId, userAgentPairwiseRegionActor)
 
   def setupBasicUserAgentPairwise(): Unit = {
@@ -67,8 +67,7 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersiste
   private def setupBasicUserAgentPairwiseWalletData(): Unit = {
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelDIDKeySeed))
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
-    if (addTheirPairwiseKeyInWallet)
-      storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
+    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
     storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
     storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
   }
@@ -81,15 +80,19 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersiste
 
   protected lazy val basicUserAgentPairwiseEvents = scala.collection.immutable.Seq(
     OwnerSetForAgent(mySelfRelDIDPair.DID, mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey),
-    AgentDetailSet(myPairwiseRelDIDPair.DID,myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
-    AgentKeyDlgProofSet(myPairwiseRelAgentDIDPair.DID, myPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
-    MsgCreated("001","connReq",myPairwiseRelDIDPair.DID,"MS-101",1548446192302L,1548446192302L,"",None),
-    MsgCreated("002","connReqAnswer",theirPairwiseRelDIDPair.DID,"MS-104",1548446192302L,1548446192302L,"",None),
-    MsgAnswered("001","MS-104","002",1548446192302L),
-    //below are still legacy events
-    TheirAgentDetailSet(theirPairwiseRelDIDPair.DID, theirPairwiseRelAgentDIDPair.DID),
-    TheirAgentKeyDlgProofSet(theirPairwiseRelAgentDIDPair.DID, theirPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
-    TheirAgencyIdentitySet(theirAgencyAgentDIDPair.DID, theirAgencyAgentDIDPair.verKey,"0.0.0.1:9000/agency/msg")
+    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
+    ConnectionStatusUpdated(
+      reqReceived = true,
+      answerStatusCode = "MS-104",
+      Option(TheirDidDocDetail(
+        theirPairwiseRelDIDPair.DID,
+        theirAgencyAgentDIDPair.DID,
+        theirPairwiseRelAgentDIDPair.DID,
+        theirPairwiseRelAgentDIDPair.verKey,
+        "dummy-signature",
+        pairwiseDIDVerKey = theirPairwiseRelDIDPair.verKey
+      ))
+    )
   )
 
 }

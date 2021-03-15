@@ -68,7 +68,7 @@ trait AgentOutgoingMsgHandler
     def sendAndRecordMetrics(msg: Any, sndr: ActorRef): Unit = {
       sndr ! msg
       recordOutMsgEvent(reqMsgContext.id,
-        MsgEvent(s"${MsgEvent.DEFAULT_TRACKING_MSG_ID}-$actorTypeId",
+        MsgEvent(s"${reqMsgContext.id}",
         respMsgType, s"SENT: synchronous response to caller"))
     }
     respMsg match {

@@ -9,11 +9,12 @@ import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
+import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -36,6 +37,10 @@ trait BasePersistentStore
 
   def createWallet(walletId: String): Unit = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet)(WalletAPIParam(walletId))
+  }
+
+  def createDID(walletId: String): NewKeyCreated = {
+    testWalletAPI.executeSync[NewKeyCreated](CreateDID(KEY_ED25519))(WalletAPIParam(walletId))
   }
 
   def createNewKey(walletId: String, seed: Option[String]=None): NewKeyCreated = {
@@ -80,12 +85,22 @@ trait BasePersistentStore
 
   def getEvents(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Seq[Any] = {
     val events = persTestKit.persistedInStorage(pp.toString)
-    val encKey = encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(pp.entityId, appConfig))
-    val transformer = getTransformer(encKey)
+    val transformer = getTransformerFor(pp, encryptionKey)
     events.map { e =>
       transformer.undo(e.asInstanceOf[PersistentMsg])
     }
+  }
+
+  def getSnapshot[T](pp: PersistenceIdParam): T = {
+    val rawEvent = snapTestKit.expectNextPersistedType[PersistentMsg](pp.toString)
+    val transformer = getTransformerFor(pp, None)
+    transformer.undo(rawEvent).asInstanceOf[T]
+  }
+
+  def getTransformerFor(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Any <=> PersistentMsg = {
+    val encKey = encryptionKey.getOrElse(
+      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(pp.entityId, appConfig))
+    getTransformer(encKey)
   }
 
   /**

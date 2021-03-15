@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.state.base
 
 import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, OWNER_AGENT_KEY}
-import com.evernym.verity.actor.agent.relationship.{AuthorizedKeyLike, DidDoc, KeyId, Relationship}
+import com.evernym.verity.actor.agent.relationship.{AuthorizedKey, AuthorizedKeyLike, DidDoc, KeyId, Relationship}
 import com.evernym.verity.actor.agent.{ConnectionStatus, DidPair, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.protocol.engine._
 
@@ -122,7 +122,7 @@ trait AgentStateInterface extends State {
   def thisAgentVerKey: Option[VerKey] = thisAgentAuthKey.filter(_.verKeyOpt.isDefined).map(_.verKey)
   def thisAgentVerKeyReq: VerKey = thisAgentVerKey.getOrElse(throw new RuntimeException("this agent ver key not found"))
 
-  def ownerAgentVerKey: Option[VerKey] = relationship.flatMap(_.myDidDocAuthKeyByTag(OWNER_AGENT_KEY)).map(_.verKey)
+  def ownerAgentVerKey: Option[VerKey] = relationship.flatMap(_.myDidDocAuthKeyByTag(OWNER_AGENT_KEY)).flatMap(_.verKeyOpt)
 
   def theirAgentAuthKey: Option[AuthorizedKeyLike] = relationship.flatMap(_.theirDidDocAuthKeyByTag(AGENT_KEY_TAG))
   def theirAgentAuthKeyReq: AuthorizedKeyLike = theirAgentAuthKey.getOrElse(
@@ -132,8 +132,11 @@ trait AgentStateInterface extends State {
   def theirAgentVerKey: Option[VerKey] = theirAgentAuthKey.flatMap(_.verKeyOpt)
   def theirAgentVerKeyReq: VerKey = theirAgentVerKey.getOrElse(throw new RuntimeException("their agent ver key not yet set"))
 
-  def myAuthVerKeys: Set[VerKey] =
-    relationship.flatMap(_.myDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
+  def myAuthKeys: Set[AuthorizedKey] =
+    relationship.flatMap(_.myDidDoc.flatMap(_.authorizedKeys.map(_.keys.toSet))).getOrElse(Set.empty)
+
+  def myAuthVerKeys: Set[VerKey] = myAuthKeys.flatMap(k => k.verKeyOpt)
+
   def theirAuthVerKeys: Set[VerKey] =
     relationship.flatMap(_.theirDidDoc.flatMap(_.authorizedKeys.map(_.safeVerKeys))).getOrElse(Set.empty)
   def allAuthedVerKeys: Set[VerKey] = myAuthVerKeys ++ theirAuthVerKeys ++ theirAgentVerKey ++ ownerAgentVerKey

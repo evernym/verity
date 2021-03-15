@@ -1,0 +1,1 @@
+this package has specs to tests recovery of persistent actors with legacy and new/latest events.

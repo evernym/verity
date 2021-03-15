@@ -1,0 +1,1 @@
+this package has specs to tests recovery of specific persistent actors 

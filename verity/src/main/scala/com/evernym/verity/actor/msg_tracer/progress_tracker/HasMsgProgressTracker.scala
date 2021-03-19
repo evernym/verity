@@ -42,8 +42,8 @@ trait HasMsgProgressTracker
     recordOutMsgEvent(reqId, MsgEvent(id, msgTypeStr + " [signal]", detail))
   }
 
-  def recordSignalMsgTrackingEvent(reqId: ReqId, msgTypeStr: String, detail:String): Unit = {
-    recordOutMsgEvent(reqId, MsgEvent.withTypeAndDetail(msgTypeStr + " [signal]", detail))
+  def recordLocallyHandledSignalMsgTrackingEvent(reqId: ReqId, msgTypeStr: String): Unit = {
+    recordOutMsgEvent(reqId, MsgEvent("n/a", msgTypeStr + " [signal]", "to-be-handled-locally"))
   }
 
   def recordProtoMsgTrackingEvent(reqId: ReqId, id: String, typedMsg: MsgType, detail: Option[String]): Unit = {

@@ -387,7 +387,7 @@ case class MsgEvent(msgId: Option[String] = None,
 
 case class RecordRoutingEvent(reqId: String, event: RoutingEvent) extends RecordReqData {
   def withDetailAppended(detail: String): RecordRoutingEvent = {
-    copy(event = event.copy(detail = Option(event.detail.map(d => s"$d ").getOrElse("") + detail)))
+    copy(event = event.copy(detail = Option(event.detail.map(d => s"$d").getOrElse("") + "\n" + detail)))
   }
 }
 case class RecordInMsgEvent(reqId: String, event: MsgEvent) extends RecordReqData

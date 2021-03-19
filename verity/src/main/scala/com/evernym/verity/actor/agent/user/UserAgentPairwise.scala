@@ -377,13 +377,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   def processPersistedSendRemoteMsg(ppsrm: ProcessPersistedSendRemoteMsg): Unit = {
     runWithInternalSpan("processPersistedSendRemoteMsg", "UserAgentPairwise") {
       recordOutMsgEvent(ppsrm.reqHelperData.reqMsgContext.id,
-        MsgEvent(ppsrm.msgCreated.uid, ppsrm.msgCreated.typ, s"refMsgId: ${ppsrm.msgCreated.refMsgId}"))
+        MsgEvent(ppsrm.msgCreated.uid, ppsrm.msgCreated.typ,
+          OptionUtil.emptyOption(ppsrm.msgCreated.refMsgId).map(rmid => s"refMsgId: $rmid")))
       implicit val reqMsgContext: ReqMsgContext = ppsrm.reqHelperData.reqMsgContext
       val msgCreatedResp = SendRemoteMsgHelper.buildRespMsg(ppsrm.msgCreated.uid)(reqMsgContext.agentMsgContext)
       val otherRespMsgs = if (ppsrm.sendRemoteMsg.sendMsg) sendMsgV1(List(ppsrm.msgCreated.uid)) else List.empty
 
-      val wrapInBundledMsg = reqMsgContext.agentMsgContext.msgPackFormat == MPF_MSG_PACK
-      val param = AgentMsgPackagingUtil.buildPackMsgParam(getEncParamBasedOnMsgSender, msgCreatedResp ++ otherRespMsgs, wrapInBundledMsg)
+      val param = AgentMsgPackagingUtil.buildPackMsgParam(getEncParamBasedOnMsgSender, msgCreatedResp ++ otherRespMsgs, reqMsgContext.wrapInBundledMsg)
       logger.debug("param (during general proof/cred msgs): " + param)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sendRespMsg("SendRemoteMsgResp", rp, sender)
@@ -433,7 +433,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     addUserResourceUsage(reqMsgContext.clientIpAddressReq,
       RESOURCE_TYPE_MESSAGE, MSG_TYPE_SEND_MSGS, Option(domainId))
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
-    val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg)
+    val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg, reqMsgContext.wrapInBundledMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
     sendRespMsg("SendMsgResp", rp, sender)
   }
@@ -469,7 +469,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
           sendToMyRegisteredComMethods(uid)
         }
         val nextHop = if (sentBySelf) NEXT_HOP_THEIR_ROUTING_SERVICE else NEXT_HOP_MY_EDGE_AGENT
-        recordOutMsgDeliveryEvent(uid, MsgEvent.withOnlyDetail("outgoing message for next hop: " + nextHop))
         MsgRespTimeTracker.recordMetrics(reqMsgContext.id, msg.getType, nextHop)
       }
     }
@@ -596,8 +595,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   private def sendFinalPackedMsgToTheirRoutingService(packedMsg: PackedMsg,
                                                       smp: SendMsgParam): Future[Any] = {
-    sendToTheirAgencyEndpoint(smp.copy(msg = packedMsg.msg)).map { _ =>
-      recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, "SENT: outgoing message to their routing service"))
+    sendToTheirAgencyEndpoint(smp.copy(msg = packedMsg.msg)).map {
+      case Left(e) =>
+        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, s"FAILED: outgoing message to their routing service (error: ${e.toString})"))
+      case _ =>
+        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, "SENT: outgoing message to their routing service"))
     }.recover {
       case e: Throwable =>
         recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, s"FAILED: outgoing message to their routing service (error: ${e.getLocalizedMessage})"))
@@ -624,7 +626,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     }
     writeAndApply(ConnStatusUpdated(updateConnStatus.statusCode))
     val connectionStatusUpdatedRespMsg = UpdateConnStatusMsgHelper.buildRespMsg(updateConnStatus.statusCode)(reqMsgContext.agentMsgContext)
-    val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, connectionStatusUpdatedRespMsg)
+    val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, connectionStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
     sendRespMsg("ConnStatusUpdatedResp", rp)
   }

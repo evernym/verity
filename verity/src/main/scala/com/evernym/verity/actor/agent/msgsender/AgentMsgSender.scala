@@ -6,7 +6,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, AppStateEvent}
+import com.evernym.verity.actor.appStateManager.{AppStateEvent, ErrorEvent, MildSystemError}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.MsgSendingSvc
@@ -75,28 +75,29 @@ trait AgentMsgSender
   def sendToTheirAgencyEndpoint(implicit sm: SendMsgParam): Future[Any] = {
     logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
     val epFut = getRemoteAgencyEndpoint
-    epFut.map { ep =>
+    epFut.flatMap { ep =>
       val urlParam = UrlParam(ep)
       logger.debug("remote agency detail received for msg to be sent to remote agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
       logger.debug("determined the endpoint to be used", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType), (LOG_KEY_REMOTE_ENDPOINT, urlParam))
-      val respFut = msgSendingSvc.sendBinaryMsg(sm.msg)(urlParam)
-      respFut.map {
-        case Right(pm: PackedMsg) =>
-          logger.debug("msg successfully sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
-          handleMsgDeliveryResult(MsgDeliveryResult.success(sm, MSG_DELIVERY_STATUS_SENT, pm))
-        case Left(e: HandledErrorException) =>
-          handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
-        case e: Any =>
-          handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, e.toString))
-      }.recover {
-        case e: Exception =>
-          handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
-      }
+      msgSendingSvc.sendBinaryMsg(sm.msg)(urlParam)
+    }.map { r =>
+      handleSendMsgResp(sm)(r)
+      r
     }.recover {
       case e: Exception =>
         handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
         throw e
     }
+  }
+
+  private def handleSendMsgResp(sm: SendMsgParam): PartialFunction[Either[HandledErrorException, PackedMsg], Unit] = {
+    case Right(pm: PackedMsg) =>
+      logger.debug("msg successfully sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
+      handleMsgDeliveryResult(MsgDeliveryResult.success(sm, MSG_DELIVERY_STATUS_SENT, pm))
+    case Left(e: HandledErrorException) =>
+      handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
+    case e: Any =>
+      handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, e.toString))
   }
 }
 

@@ -1,11 +1,14 @@
 package com.evernym.verity.actor.agent.agency
 
+import java.util.UUID
+
 import akka.pattern.ask
 import akka.event.LoggingReceive
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
+import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, DidPair, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -41,13 +44,6 @@ trait AgencyAgentCommon
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
     case GetSponsorRel                  => sender ! sponsorRel.getOrElse(SponsorRel.empty)
     case saw: SetAgentActorDetail       => setAgentActorDetail(saw)
-//    case apd: AgentProvisioningDone     =>
-//      //dhh Why is this message untyped?
-//      sendToAgentMsgProcessor(ProcessUntypedMsgV2(
-//        CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey),
-//        AgentProvisioningDefinition,
-//        apd.threadId
-//      ))
   }
 
   override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
@@ -164,7 +160,10 @@ trait AgencyAgentCommon
       case NeedsCloudAgent(requesterKeys, _) =>
         Future.successful(ProvisioningParam(requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey))
       case NeedsEdgeAgent(requesterVk, _) =>
-        agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { nk =>
+        //by calculating seed from the 'requesterVk' we are trying to guarantee
+        // that verity will create/allow only one edge agent for given 'requesterVk'
+        val requesterVkSeed = UUID.nameUUIDFromBytes(requesterVk.getBytes).toString.replace("-", "")
+        agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey(seed = Option(requesterVkSeed))).map { nk =>
           ProvisioningParam(nk.did, nk.verKey, requesterVk)
         }
     }
@@ -178,8 +177,11 @@ trait AgencyAgentCommon
           requester.sponsorRel
         )
         val fut = userAgentRegion ? ForIdentifier(newActorId, setupEndpoint)
-        fut.mapTo[AgentProvisioningDone].map { apd =>
-          Option(ControlMsg(CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey)))
+        fut.map {
+          case apd: AgentProvisioningDone =>
+            Option(ControlMsg(CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey)))
+          case _: RouteAlreadySet =>
+            Option(ControlMsg(AlreadyProvisioned(pp.domainDID)))
         }
       }
     }

@@ -31,6 +31,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
     "give-sponsor-details"        -> classOf[GiveSponsorDetails],
     "no-sponsor-needed"           -> classOf[NoSponsorNeeded],
     "needs-token"                 -> classOf[InvalidToken],
+    "already-provisioned"         -> classOf[AlreadyProvisioned],
     "complete-agent-provisioning" -> classOf[CompleteAgentProvisioning]
   )
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -157,6 +158,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   case class GiveSponsorDetails(sponsor: Option[SponsorDetails], cacheUsedTokens: Boolean,
                                 tokenWindow: Duration)                    extends Ctl
   case class InvalidToken()                                               extends Ctl
+  case class AlreadyProvisioned(did: DID)                                 extends Ctl
   case class NoSponsorNeeded()                                            extends Ctl
   case class CompleteAgentProvisioning(selfDID: DID, agentVerKey: VerKey) extends Ctl
 
@@ -192,6 +194,9 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   }
   case object DefaultProblem extends ProvisioningException {
     def err = "Error creating agent"
+  }
+  case object AlreadyProvisionedProblem extends ProvisioningException {
+    def err = "Already provisioned for given key"
   }
 
   /**

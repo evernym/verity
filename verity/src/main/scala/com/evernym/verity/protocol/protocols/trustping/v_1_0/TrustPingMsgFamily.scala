@@ -13,7 +13,6 @@ object TrustPingFamily extends MsgFamily {
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "ping"           -> classOf[Msg.Ping],
-//    "Ping"           -> classOf[Msg.Ping], // For error in VCX
     "ping_response"  -> classOf[Msg.Response]
   )
 

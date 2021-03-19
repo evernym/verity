@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.MsgPackFormat._
 import com.evernym.verity.actor.agent.user._
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{MsgEvent, HasMsgProgressTracker}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, MsgEvent}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -208,7 +208,7 @@ trait MsgNotifierForStoredMsgs
               case Some(keys) if keys.nonEmpty => keys
               case _ => defaultSelfRecipKeys
             }
-            msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).map { packedMsg =>
+            msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).flatMap { packedMsg =>
               msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
             }
           case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
@@ -330,24 +330,27 @@ trait MsgNotifierForStoredMsgs
           self ! UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
           logger.debug("received push com methods: " + cms)
           val pushStart = System.currentTimeMillis()
-          val fut = sendPushNotif(cms, pnData, comMethods.sponsorId) map { r =>
+          val fut = sendPushNotif(cms, pnData, comMethods.sponsorId).map { r =>
             val duration = System.currentTimeMillis() - pushStart
             MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_DURATION, duration)
+            handleErrorIfFailed(r)
             r match {
               case pnds: PushNotifResponse =>
                 val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, pnds.statusCode, pnds.statusDetail)
                 updatePushNotificationDeliveryStatus(updateDeliveryStatus, umds)
                 if (pnds.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
                   MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_SUCCEED_COUNT)
+                  Right(pnds)
                 } else {
                   MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_FAILED_COUNT)
+                  Left(pnds)
                 }
               case x =>
                 val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(x.toString))
                 updatePushNotificationDeliveryStatus(updateDeliveryStatus, umds)
                 MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_FAILED_COUNT)
+                Left(x)
             }
-            handleErrorIfFailed(r)
           }
           recordDeliveryState(pnData.uid, pnData.msgType, s"push notification", fut)
         } else {
@@ -362,8 +365,11 @@ trait MsgNotifierForStoredMsgs
   }
 
   def recordDeliveryState(msgId: MsgId, msgType: String, msg: String, fut: Future[Any]): Future[Any] = {
-    fut.map { _ =>
-      recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"SENT: outgoing message to registered com method ($msg)"))
+    fut.map {
+      case Left(e) =>
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to registered com method ($msg) (error: ${e.toString})"))
+      case _ =>
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"SENT: outgoing message to registered com method ($msg)"))
     }.recover {
       case e: Throwable =>
         recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to registered com method ($msg) (error: ${e.getMessage})"))

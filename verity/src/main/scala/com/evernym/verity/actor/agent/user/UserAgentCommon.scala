@@ -168,7 +168,7 @@ trait UserAgentCommon
       handleUpdateConfig(tupdateConf)
       postUpdateConfig(tupdateConf, reqMsgContext.latestDecryptedMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
-      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg)
+      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sendRespMsg("ConfigUpdated", rp, sender)
     }
@@ -194,7 +194,7 @@ trait UserAgentCommon
           writeAndApply(ConfigRemoved(cn))
       }
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
-      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg)
+      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sendRespMsg("ConfigRemoved", rp, sender)
     }
@@ -208,7 +208,7 @@ trait UserAgentCommon
     runWithInternalSpan("handleGetConfigsMsg", "UserAgentCommon") {
       val confs = getFilteredConfigs(getConfs.configs)
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
-      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg)
+      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sendRespMsg("Configs", rp, sender)
     }

@@ -21,7 +21,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormalizedPhoneNumber, replaceVariables}
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_MSG_PACK, MPF_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.concurrent.Future
@@ -88,7 +88,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
     }
 
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
-      createInviteRespMsg ++ otherRespMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+      createInviteRespMsg ++ otherRespMsgs, agentMsgContext.wrapInBundledMsg)
     buildAgentPackedMsg(agentMsgContext.msgPackFormatToBeUsed, param)
   }
 

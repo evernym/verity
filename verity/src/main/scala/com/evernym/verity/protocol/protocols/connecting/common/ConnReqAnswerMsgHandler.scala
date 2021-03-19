@@ -173,7 +173,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     }
     val param: PackMsgParam = AgentMsgPackagingUtil.buildPackMsgParam(
       encParamBasedOnMsgSender(agentMsgContext.senderVerKey),
-      inviteAnsweredRespMsg ++ otherRespMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+      inviteAnsweredRespMsg ++ otherRespMsgs, agentMsgContext.wrapInBundledMsg)
     buildAgentPackedMsg(agentMsgContext.msgPackFormatToBeUsed, param)
   }
 

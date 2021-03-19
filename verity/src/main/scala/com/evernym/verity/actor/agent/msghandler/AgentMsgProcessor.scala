@@ -122,15 +122,15 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
     //pinst -> actor driver (processSignalMsg method) -> this actor [for further processing]
     case psm: ProcessSignalMsg     =>
-      recordProcessSignalMsgMetrics(psm)
+      recordProcessSignalMsgProgress(psm)
       sendToAgentActor(psm)
   }
 
-  def recordProcessSignalMsgMetrics(psm: ProcessSignalMsg): Unit = {
+  def recordProcessSignalMsgProgress(psm: ProcessSignalMsg): Unit = {
     psm.requestMsgId.foreach { rmid =>
       withReqMsgId(rmid, { arc =>
         val msgType = msgTypeStr(psm.protoRef, psm.smp.signalMsg)
-        recordSignalMsgTrackingEvent(arc.reqId, msgType,"to-be-handled-locally")
+        recordLocallyHandledSignalMsgTrackingEvent(arc.reqId, msgType)
       })
     }
   }
@@ -341,18 +341,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   def handleProtocolSyncRespMsg(psrm: ProtocolSyncRespMsg): Unit = {
     psrm.requestMsgId.foreach { requestMsgId =>
-      withReqMsgId(requestMsgId, { arc =>
-        val extraDetail = psrm.msg match {
-          case aer: ActorErrorResp => s"[${aer.toString}]"
-          case _                   => ""
-        }
-        recordOutMsgEvent(arc.reqId,
-          MsgEvent(
-            arc.respMsgId.getOrElse(arc.reqId),
-            psrm.msg.getClass.getSimpleName,
-            s"Synchronous Response Msg (must be from legacy protocol) $extraDetail")
-        )
-      })
       msgRespContext.get(requestMsgId).flatMap(_.senderActorRef).foreach { senderActorRef =>
         sendMsgToWaitingCaller(psrm.msg, requestMsgId, senderActorRef)
       }
@@ -368,8 +356,16 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     sar ! msg
     MsgTracerProvider.recordMetricsForAsyncReqMsgId(reqMsgId, NEXT_HOP_MY_EDGE_AGENT_SYNC)   //tracing related
     withReqMsgId(reqMsgId, { arc =>
-      recordOutMsgChildEvent(arc.reqId, arc.respMsgId.getOrElse(reqMsgId),
-        ChildEvent(msg.getClass.getSimpleName, detail = Option(s"SENT: outgoing message to $NEXT_HOP_MY_EDGE_AGENT_SYNC")))
+      val extraDetail = om match {
+        case aer: ActorErrorResp => Option(s"[${aer.toString}]")
+        case _                   => None
+      }
+      recordOutMsgEvent(arc.reqId,
+        MsgEvent(
+          arc.respMsgId.getOrElse(arc.reqId),
+          msg.getClass.getSimpleName + extraDetail.map(ed => s" ($ed)").getOrElse(""),
+          s"SENT: to $NEXT_HOP_MY_EDGE_AGENT_SYNC")
+      )
     })
   }
 
@@ -621,6 +617,9 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           case (MSG_FAMILY_AGENT_PROVISIONING, MFV_0_7, "create-edge-agent")         =>
             extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
 
+          case (MSG_FAMILY_AGENT_PROVISIONING, MFV_0_7, MSG_TYPE_CREATE_AGENT)         =>
+            extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
+
           case (MSG_FAMILY_TOKEN_PROVISIONING, MFV_0_1, "get-token")                 =>
             extract(imp, Option(MsgRespConfig(isSyncReq = true, imp.senderVerKey)))
 
@@ -760,11 +759,12 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         ChildEvent(fwdMsg.msgFamilyDetail.toString, "received forward message"))
         if (isFwdForThisAgent(fwdMsg)) {
           val msgId = MsgUtil.newMsgId
+          recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.msgFamilyDetail.msgType.toString))
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
           sendToAgentActor(StoreAndSendMsgToMyDomain(
             OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
             msgId, fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN), ParticipantUtil.DID(param.selfParticipantId), None))
-          recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
+          recordOutMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
             s"packed msg sent to agent actor to be forwarded to edge agent"))
           sndr.tell(Done, self)
         } else {

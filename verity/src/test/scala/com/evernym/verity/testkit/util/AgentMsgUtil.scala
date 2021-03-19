@@ -1,5 +1,7 @@
 package com.evernym.verity.testkit.util
 
+import java.util.UUID
+
 import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
@@ -28,9 +30,17 @@ case class CreateAgent_MFV_0_5(`@type`: TypeDetail)
 
 case class CreateAgent_MFV_0_6(`@type`: String, fromDID: DID, fromDIDVerKey: VerKey)
 
-case class CreateAgent_MFV_0_7(`@type`: String, requesterKeys: RequesterKeys, provisionToken: Option[ProvisionToken])
+case class CreateAgent_MFV_0_7(`@type`: String,
+                               requesterKeys: RequesterKeys,
+                               provisionToken: Option[ProvisionToken],
+                               `~thread`: Option[Thread] = Option(
+                                 Thread(Option(UUID.randomUUID().toString))))
 
-case class CreateEdgeAgent_MFV_0_7(`@type`: String, requesterVk: VerKey, provisionToken: Option[ProvisionToken])
+case class CreateEdgeAgent_MFV_0_7(`@type`: String,
+                                   requesterVk: VerKey,
+                                   provisionToken: Option[ProvisionToken],
+                                   `~thread`: Option[Thread] = Option(
+                                     Thread(Option(UUID.randomUUID().toString))))
 
 case class CreateKey_MFV_0_5(`@type`: TypeDetail, forDID: DID, forDIDVerKey: VerKey)
 

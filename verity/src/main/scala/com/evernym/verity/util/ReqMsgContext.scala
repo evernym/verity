@@ -7,6 +7,7 @@ import com.evernym.verity.constants.Constants.{CLIENT_IP_ADDRESS, MSG_PACK_VERSI
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgpacker.MsgFamilyDetail
 import com.evernym.verity.protocol.engine.VerKey
@@ -64,6 +65,10 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString, initData: Map[
 
   def clientIpAddressLogStr: String = clientIpAddress.map (ip => s"from ip address: $ip").getOrElse("")
 
+  def wrapInBundledMsg: Boolean = msgPackFormat match {
+    case MPF_MSG_PACK => true
+    case _            => false
+  }
   implicit def agentMsgContext: AgentMsgContext =
     AgentMsgContext(msgPackFormat, msgFamilyDetailReq.familyVersion, originalMsgSenderVerKeyOpt)
 }

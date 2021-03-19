@@ -4,15 +4,14 @@ import java.time.{Duration => JavaDuration}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import com.evernym.verity.actor.agent.agency.UserAgentCreatorHelper
-import com.evernym.verity.actor.agent.{HasAgentActivity, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, SponsorRel}
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.metrics.MetricHelpers._
 import com.evernym.verity.metrics.TestReporter.awaitReport
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TimeUtil
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.tag.TagSet
 import org.scalatest.BeforeAndAfterEach
 
@@ -22,8 +21,7 @@ import scala.util.Try
 class ActivityTrackerSpec
   extends PersistentActorSpec
     with HasAgentActivity
-    with UserAgentCreatorHelper
-    with BasicSpec
+    with AgentProvHelper
     with BeforeAndAfterEach {
 
   override def afterAll(): Unit = {
@@ -272,6 +270,26 @@ class ActivityTrackerSpec
 
 
   override def actorSystem: ActorSystem = system
+
+  override def overrideSpecificConfig: Option[Config] = Option {
+    ConfigFactory parseString {
+      s"""
+      verity.metrics {
+        activity-tracking {
+          active-user {
+            time-windows = ["15 d", "30 d", "7 d", "1 d", "9 min", "2 d", "3 d"]
+            monthly-window = true
+            enabled = true
+          }
+          active-relationships {
+            time-windows = ["7 d"]
+            monthly-window = true
+            enabled = true
+          }
+        }
+      }"""
+    }
+  }
 }
 
 case class MetricWithTags(name: String, totalValue: Double, tags: Map[TagSet, Double]) {

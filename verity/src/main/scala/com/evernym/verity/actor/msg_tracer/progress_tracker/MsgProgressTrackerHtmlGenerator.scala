@@ -40,11 +40,12 @@ object MsgProgressTrackerHtmlGenerator {
             val anyDlvFailed = dlvEvents.exists(me => me.toString.contains("FAILED"))
             val anyDlvSent = dlvEvents.exists(me => me.toString.contains("SENT"))
             val syncRespSent = rs.outMsgEvents.exists(oml => oml.exists(om => om.toString.contains("SENT")))
+            val localSigMsgSent = rs.outMsgEvents.exists(oml => oml.exists(om => om.toString.contains("to-be-handled-locally")))
             val reqDetail = if (includeDetail) rs.toString.replace("\n", "\\n") else "n/a"
             val color =
               if (outMsgIds.isEmpty) "black"
               else if (anyDlvFailed) "red"
-              else if (anyDlvSent || syncRespSent) "green"
+              else if (anyDlvSent || syncRespSent || localSigMsgSent) "green"
               else "yellow"
 
             s"""
@@ -56,7 +57,7 @@ object MsgProgressTrackerHtmlGenerator {
             rs.routingEvents.flatMap(_.headOption) match {
               case Some(re) =>
                 "req-id:" + rs.reqId + "<br>" +
-                  re.detail.getOrElse("") + "<br>" +
+                  re.detail.map(_.replace("\n","<br>")).getOrElse("") + "<br>" +
                   s"recorded-at: ${re.recordedAt.toString}"
               case None => "n/a"
             }

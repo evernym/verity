@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.protocols
 
-import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpec_V_0_7
+import com.evernym.verity.actor.agent.{AgentProvHelper, SponsorRel}
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricHelpers.{SPONSOR_ID, SPONSOR_ID2, getMetricWithTags}
 import com.evernym.verity.metrics.{CustomMetrics, MetricWithTags}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING}
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.tag.TagSet
 
 
@@ -13,7 +13,7 @@ trait ProtocolMetricsSpec
 
 class AriesProtocolMetricSpec
   extends ProtocolMetricsSpec
-    with AgencyAgentPairwiseSpec_V_0_7 {
+    with AgentProvHelper {
 
   def agentProvisioningProtocolMetric(): Unit = {
     CustomMetrics.initGaugeMetrics()
@@ -25,10 +25,10 @@ class AriesProtocolMetricSpec
 
         val a1 = newEdgeAgent()
         val a2 = newEdgeAgent()
-        createCloudAgent(SponsorRel(SPONSOR_ID, "id"), sponsorKeys().verKey, getNonce, a1)
 
-        val a = getMetrics(AS_NEW_PROTOCOL_COUNT).tags
+        createCloudAgent(SponsorRel(SPONSOR_ID, "id"), sponsorKeys().verKey, getNonce, a1)
         assert(numberOfTags(getMetrics(AS_NEW_PROTOCOL_COUNT), tag) == count + 1)
+
         createCloudAgent(SponsorRel(SPONSOR_ID2, "id2"), sponsorKeys().verKey, getNonce, a2)
         assert(numberOfTags(getMetrics(AS_NEW_PROTOCOL_COUNT), tag) == count + 2)
       }
@@ -41,5 +41,21 @@ class AriesProtocolMetricSpec
       baseMetric.tags.filter(x => x._1 == tagSet).getOrElse(tagSet, 0.0)
 
   }
+
   agentProvisioningProtocolMetric()
+
+  override def overrideSpecificConfig: Option[Config] = Option {
+    ConfigFactory parseString {
+      """
+        verity.metrics {
+          protocol {
+            tags {
+              uses-sponsor = true
+              uses-sponsee = true
+            }
+          }
+        }
+        """.stripMargin
+    }
+  }
 }

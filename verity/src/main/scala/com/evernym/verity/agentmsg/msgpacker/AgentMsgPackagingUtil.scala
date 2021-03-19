@@ -233,7 +233,7 @@ object AgentMsgPackagingUtil {
     jsonObject.toString
   }
 
-  def buildPackMsgParam(encryptInfo: EncryptParam, respMsgs: List[Any], wrapInBundledMsgs: Boolean = true):
+  def buildPackMsgParam(encryptInfo: EncryptParam, respMsgs: List[Any], wrapInBundledMsgs: Boolean):
     PackMsgParam = PackMsgParam(encryptInfo, respMsgs, wrapInBundledMsgs)
 
   def buildBundledMsg(msgs: List[String]): String = {

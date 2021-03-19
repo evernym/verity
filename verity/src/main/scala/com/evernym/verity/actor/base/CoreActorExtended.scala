@@ -31,9 +31,9 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
   def preReceiveTimeoutCheck(): Boolean = true
 
   def handleReceiveTimeout(): Unit = {
-    genericLogger.debug(s"[$actorId] processing ReceiveTimeout")
+    log.debug(s"[$actorId] processing ReceiveTimeout")
     if (preReceiveTimeoutCheck()) {
-      genericLogger.debug(s"[$actorId] actor wil start preparing for shutdown... ")
+      log.debug(s"[$actorId] actor wil start preparing for shutdown... ")
       stopActor()
     }
   }

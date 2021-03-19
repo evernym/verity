@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, NotifyMsgDetail}
-import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam}
+import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam, RouteAlreadySet}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, SelfRelationship, _}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
@@ -303,7 +303,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   def handlePairwiseConnSet(pd: PairwiseConnSetExt, sndr: ActorRef): Unit = {
     implicit val reqMsgContext: ReqMsgContext = pd.reqMsgContext
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pd.agentDID, pd.agentDIDVerKey)(reqMsgContext.agentMsgContext)
-    val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, keyCreatedRespMsg)
+    val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, keyCreatedRespMsg, reqMsgContext.wrapInBundledMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
     sendRespMsg("CreateNewPairwiseKeyResp", rp, sndr)
   }
@@ -397,7 +397,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
           }
         }
       case MPF_INDY_PACK | MPF_MSG_PACK =>
-        val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg)
+        val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
         val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormat, param) (agentMsgTransformer, wap)
         sendRespMsg("ComMethodUpdatedResp", rp)
       case Unrecognized(_) =>
@@ -548,11 +548,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     buildSuccessfullyUpdatedMsgStatusResp(success).map { successResult =>
       val msgStatusUpdatedByConnsRespMsg =
         UpdateMsgStatusByConnsMsgHelper.buildRespMsg(successResult, errorResult)(reqMsgContext.agentMsgContext)
-      val wrapInBundledMsg = reqMsgContext.msgPackFormat match {
-        case MPF_MSG_PACK => true
-        case _            => false
-      }
-      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgStatusUpdatedByConnsRespMsg, wrapInBundledMsg)
+      val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgStatusUpdatedByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
       sendRespMsg(respMsgType, rp, sndr)
     }
@@ -611,7 +607,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         }.toMap
         val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(pairwiseResults)(reqMsgContext.agentMsgContext)
         val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
-          getMsgsByConnsRespMsg, reqMsgContext.agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+          getMsgsByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
         val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
         sendRespMsg("GetMsgsByConnsResp", rp, sndr)
       case Failure(e) =>
@@ -642,6 +638,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     val setRouteFut = setRoute(se.ownerDID, Option(se.agentKeyDID))
     var sponsorRel: Option[SponsorRel] = None
     val sndr = sender()
+
     val resp = se match {
       case s: SetupAgentEndpoint_V_0_7  =>
         sponsorRel = s.sponsorRel
@@ -656,10 +653,10 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
     AgentActivityTracker.newAgent(sponsorRel)
-
     setRouteFut map {
-      case _: RouteSet  => sndr ! resp
-      case _            => throw new RuntimeException("route not set for user agent")
+      case _: RouteSet          => sndr ! resp
+      case ras: RouteAlreadySet => sndr ! ras
+      case _                    => throw new RuntimeException("route not set for user agent")
     }
   }
 

@@ -1,7 +1,7 @@
 package com.evernym.verity.agentmsg
 
 import com.evernym.verity.actor.agent.MsgPackFormat
-import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_MSGS_SENT, MSG_TYPE_MSG_CREATED, MSG_TYPE_MSG_DETAIL}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgCreatedRespMsg_MFV_0_5, MsgsSentRespMsg_MFV_0_5}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
@@ -44,6 +44,11 @@ package object msgfamily {
     def msgPackFormatToBeUsed: MsgPackFormat = msgPackFormat match {
       case MPF_PLAIN => MPF_INDY_PACK
       case x         => x
+    }
+
+    def wrapInBundledMsg: Boolean = msgPackFormat match {
+      case MPF_MSG_PACK => true
+      case _            => false
     }
   }
 

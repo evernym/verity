@@ -23,6 +23,7 @@ trait AgentMsgHandler{ this: AgentMsgHelper with MockAgent with HasCloudAgent =>
     private def unpackCreateAgentProblemReport(pmw: PackedMsg, unsealFromDID: DID)
     : CreateAgentProblemReport_MFV_0_7 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[CreateAgentProblemReport_MFV_0_7]
+      require(Option(cm.msg).isDefined, "not received agent create problem")
       logApiCallProgressMsg("problemReport: " + cm)
       cm
     }

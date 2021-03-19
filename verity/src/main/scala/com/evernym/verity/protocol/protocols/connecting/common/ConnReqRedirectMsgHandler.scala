@@ -152,7 +152,7 @@ trait ConnReqRedirectMsgHandler[S <: ConnectingStateBase[S]] {
     val respMsgs = redirectRespMsg ++ otherRespMsgs
     val param: PackMsgParam = AgentMsgPackagingUtil.buildPackMsgParam(
       encParamBasedOnMsgSender(agentMsgContext.senderVerKey),
-      respMsgs, agentMsgContext.msgPackFormat == MPF_MSG_PACK)
+      respMsgs, agentMsgContext.wrapInBundledMsg)
     buildAgentPackedMsg(agentMsgContext.msgPackFormat, param)
   }
 

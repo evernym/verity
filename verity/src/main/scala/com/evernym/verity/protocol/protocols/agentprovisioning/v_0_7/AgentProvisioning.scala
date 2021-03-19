@@ -37,8 +37,13 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     case (_, _, e: ProblemReport) =>
       ctx.apply(ProvisionFailed(e.msg))
 
+      //once agent is created, and if this protocol receives create agent request again
+      // we shouldn't change protocol's state to 'FailedAgentCreation',
+      // just send the problem report
     case (_: AgentCreatedState,     _,                m: CreateCloudAgent)   =>
       problemReport(_duplicateAgent(m.requesterKeys), Some(_duplicateAgent(m.requesterKeys)))
+    case (_: AgentCreatedState,     _,                m: CreateEdgeAgent)   =>
+      problemReport(_duplicateAgent(m.requesterVk), Some(_duplicateAgent(m.requesterVk)))
   }
 
   override def handleControl: Control ?=> Any = {
@@ -64,11 +69,14 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
       askForProvisioning(provisioningSignal(s))
 
     case (_: AwaitsSponsor, Some(Provisioner), InvalidToken())                          =>
-      problemReport(MissingToken.err)
+      provisioningFailed(MissingToken.err)
 
-    case (_: Provisioning, Some(Provisioner), x: CompleteAgentProvisioning)             =>
-      ctx.apply(AgentProvisioned(x.selfDID, x.agentVerKey))
-      ctx.send(AgentCreated(x.selfDID, x.agentVerKey))
+    case (_: Provisioning, Some(Provisioner), _: AlreadyProvisioned)                    =>
+      provisioningFailed(AlreadyProvisionedProblem.err)
+
+    case (_: Provisioning, Some(Provisioner), cap: CompleteAgentProvisioning)           =>
+      ctx.apply(AgentProvisioned(cap.selfDID, cap.agentVerKey))
+      ctx.send(AgentCreated(cap.selfDID, cap.agentVerKey))
   }
 
   override def applyEvent: ApplyEvent = {
@@ -121,8 +129,8 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     try {
       fn()
     } catch {
-      case e: ProvisioningException => problemReport(e.err)
-      case e: Exception => problemReport(e.getMessage)
+      case e: ProvisioningException => provisioningFailed(e.err)
+      case e: Exception => provisioningFailed(e.getMessage)
     }
   }
 
@@ -180,19 +188,20 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
                 ctx.logger.debug(s"ask for provisioning (with caching token): $sponsorDetails")
                 askForProvisioning(sig)
               case Success(Some(_)) =>
-                problemReport(DuplicateProvisionedApp)
+                provisioningFailed(DuplicateProvisionedApp)
               case Failure(exception) =>
-                problemReport(exception.getMessage, Option(exception.getMessage))
+                provisioningFailed(exception.getMessage, Option(exception.getMessage))
             }
           } else {
             ctx.logger.debug(s"ask for provisioning (without caching token): $sponsorDetails")
             askForProvisioning(sig)
           }
-        case _ => problemReport(InvalidSignature)
+        case _ =>
+          provisioningFailed(InvalidSignature)
       }
     } catch {
-      case e: ProvisioningException => problemReport(e.err, Option(e.err))
-      case NonFatal(e) => problemReport(e.getMessage)
+      case e: ProvisioningException => provisioningFailed(e.err, Option(e.err))
+      case NonFatal(e) => provisioningFailed(e.getMessage)
     }
   }
 
@@ -228,19 +237,23 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
       .toSet
     )
 
-  def problemReport(logErr: String, optMsg: Option[String]=None): Unit = {
-    ctx.logger.info(logErr)
-    ctx.apply(ProvisionFailed(logErr))
-    ctx.send(ProblemReport(optMsg.getOrElse(DefaultProblem.err)))
+  def provisioningFailed(ex: ProvisioningException): Unit = {
+    provisioningFailed(ex.err, Option(ex.err))
   }
 
-  def problemReport(ex: ProvisioningException): Unit = {
-    problemReport(ex.err, Option(ex.err))
+  def provisioningFailed(logErr: String, optMsg: Option[String]=None): Unit = {
+    ctx.apply(ProvisionFailed(logErr))
+    problemReport(logErr, optMsg)
+  }
+
+  def problemReport(logErr: String, optMsg: Option[String]=None): Unit = {
+    ctx.logger.info(logErr)
+    ctx.send(ProblemReport(optMsg.getOrElse(DefaultProblem.err)))
   }
 
   def _isRequester(setter: SetRoster): Boolean = setter.requesterIdx == _selfIdx
   def _otherIdx: ParticipantIndex = ctx.getRoster.otherIndex(ctx.getRoster.selfIndex_!)
   def _selfIdx: ParticipantIndex = ctx.getRoster.selfIndex_!
-  def _duplicateAgent(keys: RequesterKeys): String =
+  def _duplicateAgent(keys: Any): String =
     s"Agent already created for $keys"
 }

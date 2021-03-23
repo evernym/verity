@@ -40,7 +40,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   val logger: Logger = getLoggerByClass(classOf[SingletonParent])
   val cluster: Cluster = akka.cluster.Cluster(context.system)
-  var nodes: Set[Address] = Set.empty[Address]
+  var nodes: Map[Address, Boolean] = Map.empty[Address, Boolean]
 
   def allSingletonPropsMap: Map[String, Props] =
     Map(
@@ -72,17 +72,24 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   def getRequiredActor(props: Props, name: String): ActorRef = context.child(name).getOrElse(context.actorOf(props, name))
 
-  def sendCmdToAllNodeSingletons(cmd: Any): Set[Future[Any]] = {
+  def sendCmdToAllNodeSingletons(cmd: Any): Iterable[Future[Any]] = {
     nodes.map { node =>
-      buildNodeSingletonPath(node) ? cmd
+      buildNodeSingletonPath(node._1) ? cmd
     }
   }
 
   def sendCmdToNode(nodeAddr: Address, cmd: Any): Unit = {
-    buildNodeSingletonPath(nodeAddr) ! cmd
+    try {
+      buildNodeSingletonPath(nodeAddr) ! cmd
+      nodes += nodeAddr -> true
+    } catch {
+      case e: Throwable =>
+        logger.warn(s"failed to send message to node $nodeAddr : ${e.getMessage}")
+        self ! RetrySendCmdToNode(nodeAddr)
+    }
   }
 
-  def sendCmdToAllNodeSingletonsWithReducedFuture(cmd: Any): Future[Set[Any]] = {
+  def sendCmdToAllNodeSingletonsWithReducedFuture(cmd: Any): Future[Iterable[Any]] = {
     Future.sequence(sendCmdToAllNodeSingletons(cmd))
   }
 
@@ -96,13 +103,12 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
   override def sysCmdHandler: Receive = {
     case me: MemberEvent =>
       me match {
-        case me @ (_: MemberUp | _:MemberJoined | _:MemberWeaklyUp) =>
-          nodes += me.member.address
+        case me @ (_: MemberUp | _: MemberJoined) =>
+          nodes += me.member.address -> false
           logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
           sendCmdToNode(me.member.address, NodeAddedToClusterSingleton)
-
         case me @ (_:MemberExited | _:MemberRemoved | _:MemberLeft) =>
-          nodes = nodes.filterNot(_ == me.member.address)
+          nodes -= me.member.address
           logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
 
         case _ => //nothing to do
@@ -161,6 +167,12 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           handleException(e, sndr)
           logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
+
+    case sc: RetrySendCmdToNode =>
+      logger.debug(s"sending NodeAddedToClusterSingleton command to node: ${sc.address}")
+      nodes.get(sc.address).foreach {
+        case false => sendCmdToNode(sc.address, NodeAddedToClusterSingleton)
+      }
   }
 
   def buildNodeSingletonPath(node :Address): ActorRef = {
@@ -200,6 +212,7 @@ case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingleton
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
+case class RetrySendCmdToNode(address: Address) extends ActorMessage
 
 trait ForWatcherManagerChild extends ActorMessage {
   def cmd: Any

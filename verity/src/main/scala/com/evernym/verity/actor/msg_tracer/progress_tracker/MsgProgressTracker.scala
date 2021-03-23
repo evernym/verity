@@ -130,7 +130,7 @@ class MsgProgressTracker(val appConfig: AppConfig)
 
       val orderedState = candidateReqIds.flatMap(reqId => reqState.get(reqId).map(_.prepared()))
 
-      sndr ! RecordedStates(orderedState)
+      sndr ! RecordedStates(orderedState, finishTrackingAt)
     }
   }
 
@@ -398,7 +398,7 @@ case class RecordOutMsgDeliveryEvents(msgId: String, events: List[MsgEvent]) ext
 case class GetState(requestStateSize: Option[Int] = None,
                     latestFirst: Boolean = true) extends ProgressTrackerMsg
 
-case class RecordedStates(requestStates: List[RequestState]) extends ProgressTrackerMsg
+case class RecordedStates(requestStates: List[RequestState], trackingExpiresAt: Instant) extends ProgressTrackerMsg
 
 case class ConfigureTracking(trackForMinutes: Option[Int] = None,
                              stopNow: Boolean=false,

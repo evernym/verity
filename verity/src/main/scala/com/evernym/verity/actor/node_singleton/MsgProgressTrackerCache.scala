@@ -4,19 +4,19 @@ object MsgProgressTrackerCache {
 
   val GLOBAL_TRACKING_ID = "global"
 
-  private var trackingIds: Set[TrackingParam] = Set.empty
+  private var trackingParams: Set[TrackingParam] = Set.empty
 
   def startProgressTracking(trackingParam: TrackingParam): Unit = {
-    trackingIds = trackingIds + trackingParam
+    trackingParams = trackingParams + trackingParam
   }
 
   def stopProgressTracking(trackingId: String): Unit =
-    trackingIds = trackingIds.filterNot(tp => tp.trackingId == trackingId || tp.ipAddress.contains(trackingId))
+    trackingParams = trackingParams.filterNot(tp => tp.trackingId == trackingId)
 
-  def isTracked(id: String): Boolean = trackingIds.exists(_.trackingId == id)
+  def isTracked(id: String): Boolean = trackingParams.exists(_.trackingId == id)
 
-  def allIdsBeingTracked: TrackingStatus = TrackingStatus(trackingIds)
+  def allIdsBeingTracked: TrackingStatus = TrackingStatus(trackingParams)
 }
 
-case class TrackingParam(trackingId: String, ipAddress: Option[String]=None)
+case class TrackingParam(trackingId: String)
 case class TrackingStatus(trackedIds: Set[TrackingParam])

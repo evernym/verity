@@ -145,7 +145,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
       logger.debug("agency agent key setup starting...")
       setAgentWalletId(entityId)
       val sndr = sender()
-      agentActorContext.walletAPI.executeAsync[WalletCreated.type](CreateWallet)(wap)
+      agentActorContext.walletAPI.executeAsync[WalletCreated.type](CreateWallet())(wap)
         .map { _ =>
           agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey(seed = ck.seed)).map { kc =>
             self.tell(FinishCreateKey(kc), sndr)

@@ -597,12 +597,15 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
                                                       smp: SendMsgParam): Future[Any] = {
     sendToTheirAgencyEndpoint(smp.copy(msg = packedMsg.msg)).map {
       case Left(e) =>
-        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, s"FAILED: outgoing message to their routing service (error: ${e.toString})"))
+        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType,
+          s"FAILED [outgoing message to their routing service (${smp.theirRoutingParam.routingTarget}) (error: ${e.toString})]"))
       case _ =>
-        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, "SENT: outgoing message to their routing service"))
+        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType,
+          s"SENT [outgoing message to their routing service (${smp.theirRoutingParam.routingTarget})]"))
     }.recover {
       case e: Throwable =>
-        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType, s"FAILED: outgoing message to their routing service (error: ${e.getLocalizedMessage})"))
+        recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType,
+          s"FAILED [outgoing message to their routing service (${smp.theirRoutingParam.routingTarget}) (error: ${e.getMessage})]"))
     }
   }
 

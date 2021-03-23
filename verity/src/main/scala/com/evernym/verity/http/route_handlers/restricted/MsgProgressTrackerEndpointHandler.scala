@@ -80,7 +80,7 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
                             getRecordedState(trackingId, topReqSize) map {
                               case rs: RecordedStates =>
                                 if (inHtml.contains("Y")) {
-                                  val htmlResp = MsgProgressTrackerHtmlGenerator.generateRequestsInHtml(trackingId, rs, includeDetail)
+                                  val htmlResp = MsgProgressTrackerHtmlGenerator.generateRequestsInHtml(rs, includeDetail)
                                   HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, htmlResp))
                                 } else {
                                   handleExpectedResponse(rs)

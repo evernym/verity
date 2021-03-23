@@ -1,13 +1,15 @@
 package com.evernym.verity.actor.msg_tracer.progress_tracker
 
+import java.time.temporal.ChronoUnit
 import java.time.Instant
 
 
 object MsgProgressTrackerHtmlGenerator {
 
-  def generateRequestsInHtml(trackingId: String,
-                             reqStates: RecordedStates,
+  def generateRequestsInHtml(reqStates: RecordedStates,
                              includeDetail: Boolean): String = {
+
+    val expiryTimeInMinutes = ChronoUnit.MINUTES.between(Instant.now, reqStates.trackingExpiresAt)
 
     def generateTableRows: String = {
 
@@ -101,9 +103,9 @@ object MsgProgressTrackerHtmlGenerator {
         .tftable tr:hover {background-color:#ffffff;}
 
         .status {width:3%}
-        .routing {width:22%}
-        .inmsg {width:25%}
-        .outmsg {width:25%}
+        .routing {width:24%}
+        .inmsg {width:24%}
+        .outmsg {width:24%}
         .msgdlv {width:25%}
 
         p {
@@ -112,7 +114,7 @@ object MsgProgressTrackerHtmlGenerator {
       </style>
 
       <p align="center">
-        Page loaded at: ${Instant.now()}
+        Page loaded at: ${Instant.now()}, tracking expires in minutes: $expiryTimeInMinutes
       </p>
 
       <table class="tftable" border="1">

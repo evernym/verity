@@ -31,13 +31,13 @@ class DidDocBuilderSpec
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
 
   lazy val (relDidPair, thisAgentKey, otherAgentKey, theirAgentKey) = {
-    testWalletAPI.executeSync[WalletCreatedBase](CreateWallet)
+    testWalletAPI.executeSync[WalletCreatedBase](CreateWallet())
 
     val relDIDPair = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())
     val thisAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("0000000000000000000000000000TEST")))
     val otherAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000OTHER")))
     val theirAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
-    testWalletAPI.executeSync[Done.type](Close)
+    testWalletAPI.executeSync[Done.type](Close())
     (relDIDPair, thisAgentKey, otherAgentKey, theirAgentKey)
   }
 

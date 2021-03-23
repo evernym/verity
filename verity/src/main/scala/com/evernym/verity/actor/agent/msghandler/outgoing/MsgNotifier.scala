@@ -183,7 +183,7 @@ trait MsgNotifierForStoredMsgs
             msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
           case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
-        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (legacy): ${hcm.value}", fut)
+        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint legacy: ${hcm.value}", fut)
         logger.debug("message sent to endpoint (legacy): " + hcm)
       }
     }
@@ -213,7 +213,7 @@ trait MsgNotifierForStoredMsgs
             }
           case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
         }
-        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint (new): ${hcm.value}", fut)
+        recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint new: ${hcm.value}", fut)
         logger.debug("message sent to endpoint: " + hcm)
       }
     }
@@ -367,12 +367,15 @@ trait MsgNotifierForStoredMsgs
   def recordDeliveryState(msgId: MsgId, msgType: String, msg: String, fut: Future[Any]): Future[Any] = {
     fut.map {
       case Left(e) =>
-        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to registered com method ($msg) (error: ${e.toString})"))
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(
+          msgType, s"FAILED [outgoing message to registered com method ($msg) (error: ${e.toString})]"))
       case _ =>
-        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"SENT: outgoing message to registered com method ($msg)"))
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(
+          msgType, s"SENT [outgoing message to registered com method ($msg)]"))
     }.recover {
       case e: Throwable =>
-        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(msgType, s"FAILED: outgoing message to registered com method ($msg) (error: ${e.getMessage})"))
+        recordOutMsgDeliveryEvent(msgId, MsgEvent.withTypeAndDetail(
+          msgType, s"FAILED [outgoing message to registered com method ($msg) (error: ${e.getMessage})]"))
     }
   }
 

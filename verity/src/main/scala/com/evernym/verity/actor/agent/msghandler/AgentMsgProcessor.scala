@@ -16,7 +16,7 @@ import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRout
 import com.evernym.verity.actor.agent.relationship.AuthorizedKeyLike
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent}
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent, TrackingIdParam}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -364,7 +364,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         MsgEvent(
           arc.respMsgId.getOrElse(arc.reqId),
           msg.getClass.getSimpleName + extraDetail.map(ed => s" ($ed)").getOrElse(""),
-          s"SENT: to $NEXT_HOP_MY_EDGE_AGENT_SYNC")
+          s"SENT [to $NEXT_HOP_MY_EDGE_AGENT_SYNC]")
       )
     })
   }
@@ -433,7 +433,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     }.recover {
       case e: RuntimeException =>
         recordRoutingChildEvent(ppm.reqMsgContext.id,
-          childEventWithDetail(s"FAILED: packed msg handling (error: ${e.getMessage})", sndr))
+          childEventWithDetail(s"FAILED [packed msg handling (error: ${e.getMessage})]", sndr))
         handleException(convertProtoEngineException(e), sndr)
     }
   }
@@ -492,6 +492,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     logger.debug(s"msg for relationship received : " + mfr)
     val tm = typedMsg(mfr.msgToBeSent)
     val rmc = mfr.reqMsgContext.getOrElse(ReqMsgContext())
+    recordArrivedRoutingEvent(rmc.id, rmc.startTime,
+      rmc.clientIpAddress.map(cip => s"fromIpAddress: $cip").getOrElse(""))
     recordRoutingChildEvent(rmc.id, childEventWithDetail(s"msg for relationship received"))
     sendTypedMsgToProtocol(tm, param.relationshipId, mfr.threadId, mfr.senderParticipantId,
       mfr.msgRespConfig, mfr.msgPackFormat, mfr.msgTypeDeclarationFormat)(rmc)
@@ -821,7 +823,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param senderVerKey message sender ver key
    */
   private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
-    reqMsgContext.clientIpAddress.foreach(checkToStartIpAddressBasedTracking)
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
     reqMsgContext.clientIpAddress.foreach { ipAddress =>
       addUserResourceUsage(ipAddress, RESOURCE_TYPE_MESSAGE,
@@ -893,8 +894,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   override def agentWalletIdReq: String = param.agentWalletId
   override def stateDetailsFor: Future[PartialFunction[String, Parameter]] = Future(param.protoInitParams)
 
-  override def selfRelTrackingId: String = domainId
-  override def pairwiseRelTrackingIds: List[String] = param.pairwiseRelTrackingIds
+  override def trackingIdParam: TrackingIdParam = param.trackingIdParam
 
   lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(param.thisAgentAuthKey.verKey))
   lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, walletAPI)(WalletAPIParam(param.agentWalletId))
@@ -920,7 +920,7 @@ case class StateParam(agentActorRef: ActorRef,
                       allowedUnauthedMsgTypes: Set[MsgType],
                       allAuthedKeys: Set[VerKey],
                       userIdForResourceUsageTracking: Option[VerKey] => Option[String],
-                      pairwiseRelTrackingIds: List[String])
+                      trackingIdParam: TrackingIdParam)
 
 case class ProcessUnpackedMsg(amw: AgentMsgWrapper,
                               msgThread: Option[Thread]=None,

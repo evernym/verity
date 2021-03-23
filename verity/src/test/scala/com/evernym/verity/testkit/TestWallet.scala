@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
+import com.evernym.verity.actor.wallet.{CreateWallet, WalletCommand, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.vault.{AgentWalletAPI, WalletAPIParam}
@@ -49,7 +49,7 @@ trait HasDefaultTestWallet extends HasTestWalletAPI {
   implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
 
   if (createWallet) {
-    testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
+    testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
   }
 }
 
@@ -59,7 +59,7 @@ trait HasDefaultTestWallet extends HasTestWalletAPI {
  */
 class TestWallet(override val createWallet: Boolean = false) extends HasDefaultTestWallet {
 
-  def executeSync[T](cmd: Any): T = {
+  def executeSync[T](cmd: WalletCommand): T = {
     testWalletAPI.executeSync[T](cmd)(wap)
   }
 }

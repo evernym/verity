@@ -38,7 +38,6 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     case um: UnhandledMsg                 =>
       runWithInternalSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler") {
         try {
-          um.rmc.clientIpAddress.foreach(checkToStartIpAddressBasedTracking)
           if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
             recordInMsgEvent(um.rmc.id,
               MsgEvent(
@@ -109,7 +108,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         allowedUnauthedMsgTypes,
         allAuthedKeys,
         userIdForResourceUsageTracking,
-        pairwiseRelTrackingIds)
+        trackingIdParam
+      )
       val msgProcessor =
           context.actorOf(Props(new AgentMsgProcessor(
             agentActorContext.appConfig,

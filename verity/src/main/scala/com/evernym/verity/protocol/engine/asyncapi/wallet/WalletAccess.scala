@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.wallet.{GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.util.Base64Util
@@ -13,7 +13,7 @@ trait WalletAccess
 
   import WalletAccess._
 
-  def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit
+  def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[AgentWalletSetupCompleted] => Unit): Unit
 
   def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyCreated] => Unit): Unit
 

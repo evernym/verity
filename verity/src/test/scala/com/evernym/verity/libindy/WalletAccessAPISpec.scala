@@ -24,10 +24,10 @@ class WalletAccessAPISpec
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   val selfParticipantId: ParticipantId = {
-    testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
+    testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
     val result = ParticipantUtil.participantId(
       testWalletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
-    testWalletAPI.executeSync[Done.type](Close)
+    testWalletAPI.executeSync[Done.type](Close())
     result
   }
 

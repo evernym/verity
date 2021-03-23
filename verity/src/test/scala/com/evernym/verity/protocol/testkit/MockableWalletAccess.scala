@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, ParticipantIndex, VerKey}
@@ -27,12 +27,16 @@ object MockableWalletAccess {
   def alwaysSignAs(as: Try[SignedMsg]=randomSig()): MockableWalletAccess =
     MockableWalletAccess(mockVerify=trueVerify _, mockSign = {()=>as})
 
-  def randomDid(): Try[NewKeyCreated] = {
+  def newKey(): NewKeyCreated = {
     val randomDid = new Array[Byte](16)
     Random.nextBytes(randomDid)
     val randomKey = new Array[Byte](32)
     Random.nextBytes(randomKey)
-    Try(NewKeyCreated(Base58Util.encode(randomDid), Base58Util.encode(randomKey)))
+    NewKeyCreated(Base58Util.encode(randomDid), Base58Util.encode(randomKey))
+  }
+
+  def randomDid(): Try[NewKeyCreated] = {
+    Try(newKey())
   }
 
   def randomVerKey(forDID: String): Try[GetVerKeyResp] = {
@@ -65,8 +69,8 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
                            anonCreds: AnonCredRequests = MockableAnonCredRequests.basic
                           ) extends WalletAccess {
 
-  def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit =
-    handler(mockNewDid())
+  override def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[AgentWalletSetupCompleted] => Unit): Unit =
+    handler(Try(AgentWalletSetupCompleted(ownerDidPair, newKey())))
 
   override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(mockNewDid())
 

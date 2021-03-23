@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.agent.agency
 
-import java.util.UUID
-
 import akka.pattern.ask
 import akka.event.LoggingReceive
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -12,7 +10,7 @@ import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.agent.user.{AgentProvisioningDone, GetSponsorRel}
 import com.evernym.verity.actor.agent.{AgentActorDetailSet, DidPair, SetAgentActorDetail, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
+import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKey, GetVerKeyResp, SetupNewAgentWallet}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.CommonConfig.PROVISIONING
@@ -156,49 +154,40 @@ trait AgencyAgentCommon
     logger.debug(s"Cloud Agent provisioning requested: $requester")
 
     val newActorId = getNewActorId
-    val provParamFut = requester match {
+
+    val (setupNewWalletCmd, requesterVerKey) = requester match {
       case NeedsCloudAgent(requesterKeys, _) =>
-        Future.successful(ProvisioningParam(requesterKeys.fromDID, requesterKeys.fromVerKey, requesterKeys.fromVerKey))
+        (SetupNewAgentWallet(Option(DidPair(requesterKeys.fromDID, requesterKeys.fromVerKey))), requesterKeys.fromVerKey)
       case NeedsEdgeAgent(requesterVk, _) =>
-        //by calculating seed from the 'requesterVk' we are trying to guarantee
-        // that verity will create/allow only one edge agent for given 'requesterVk'
-        val requesterVkSeed = UUID.nameUUIDFromBytes(requesterVk.getBytes).toString.replace("-", "")
-        agentActorContext.walletAPI.executeAsync[NewKeyCreated](CreateNewKey(seed = Option(requesterVkSeed))).map { nk =>
-          ProvisioningParam(nk.did, nk.verKey, requesterVk)
-        }
+        //NOTE: earlier, at this point a "new key" used to get created in agency agent's wallet
+        // and then that key used to stored in the newly to be provisioned user agent's wallet
+        // which was wrong and it is fixed now, see more detail in this ticket: VE-2477
+        // in future though, for previously (with old logic) provisioned edge agents,
+        // if at all the user agent needs private keys of that key, it won't find it and
+        // it may require those keys to be migrated to make them work.
+        (SetupNewAgentWallet(None), requesterVk)
     }
-    provParamFut.flatMap { pp =>
-      prepareNewAgentWalletData(pp.domainDID, pp.domainVerKey, newActorId).flatMap { agentPairwiseKey =>
-        val setupEndpoint = SetupAgentEndpoint_V_0_7(
-          threadId,
-          DidPair(pp.domainDID, pp.domainVerKey) ,
-          DidPair(agentPairwiseKey.did, agentPairwiseKey.verKey),
-          pp.requestVerKey,
-          requester.sponsorRel
-        )
-        val fut = userAgentRegion ? ForIdentifier(newActorId, setupEndpoint)
-        fut.map {
-          case apd: AgentProvisioningDone =>
-            Option(ControlMsg(CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey)))
-          case _: RouteAlreadySet =>
-            Option(ControlMsg(AlreadyProvisioned(pp.domainDID)))
-        }
-      }
+
+    prepareNewAgentWalletData(setupNewWalletCmd, newActorId).flatMap { wsc =>
+      val setupEndpoint = SetupAgentEndpoint_V_0_7(
+        threadId,
+        wsc.ownerDidPair ,
+        wsc.agentKey.didPair,
+        requesterVerKey,
+        requester.sponsorRel
+      )
+      userAgentRegion ? ForIdentifier(newActorId, setupEndpoint)
+    }.map {
+      case apd: AgentProvisioningDone =>
+        Option(ControlMsg(CompleteAgentProvisioning(apd.selfDID, apd.agentVerKey)))
+      case _: RouteAlreadySet =>
+        Option(ControlMsg(AlreadyProvisioned(requesterVerKey)))
     }
   }
 
-  def prepareNewAgentWalletData(requesterDid: DID, requesterVerKey: VerKey, walletId: String): Future[NewKeyCreated]  = {
+  def prepareNewAgentWalletData(setupNewWalletCmd: SetupNewAgentWallet, walletId: String): Future[AgentWalletSetupCompleted]  = {
     implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
-    val fut1 = walletAPI.executeAsync[WalletCreated.type](CreateWallet)
-    val fut2 = walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(requesterDid, requesterVerKey))
-    val fut3 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey())
-    fut1.map { _ =>
-      //below futures should be only executed when fut1 (create wallet) is done
-      for (
-        _       <- fut2;
-        fut3Res <- fut3
-      ) yield fut3Res
-    }.flatten
+    walletAPI.executeAsync[AgentWalletSetupCompleted](setupNewWalletCmd)
   }
 
   def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, None)

@@ -26,7 +26,7 @@ class WalletActorPassivationSpec
   "Wallet Actor" - {
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
-        walletActor ! CreateWallet
+        walletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
       }
     }

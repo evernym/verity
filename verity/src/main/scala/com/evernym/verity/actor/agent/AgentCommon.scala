@@ -22,7 +22,7 @@ import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.msg_tracer.progress_tracker.HasMsgProgressTracker
+import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
@@ -142,8 +142,7 @@ trait AgentCommon
   def ownerAgentKeyDIDPair: Option[DidPair]
 
   //tracking ids
-  def selfRelTrackingId: String = domainId
-  def pairwiseRelTrackingIds: List[String] = (state.myDid ++ state.theirDid).toList
+  def trackingIdParam: TrackingIdParam = TrackingIdParam(domainId, state.myDid, state.theirDid)
 
   lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (
     AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)

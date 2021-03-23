@@ -13,7 +13,7 @@ trait AgentWalletSetupProvider extends AwaitResult {
   //when we change protocols to start using async api, we should change this too
   protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
     val agentWAP = WalletAPIParam(walletId)
-    convertToSyncReq(walletAPI.executeAsync[WalletCreated.type](CreateWallet)(agentWAP))
+    convertToSyncReq(walletAPI.executeAsync[WalletCreated.type](CreateWallet())(agentWAP))
     convertToSyncReq(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
     convertToSyncReq(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
   }

@@ -5,7 +5,7 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.wallet.{NewKeyCreated, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
@@ -92,15 +92,15 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     val fromDIDPair = DidPair(fromDID, fromDIDVerKey)
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
     prepareNewAgentWalletData(fromDIDPair, aws) {
-      case Success(nkc: NewKeyCreated) =>
+      case Success(awsc: AgentWalletSetupCompleted) =>
         ctx.wallet.storeTheirDid(fromDID, fromDIDVerKey, ignoreIfAlreadyExists = true) {
           case Success(_: TheirKeyStored) =>
-            ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(nkc.did, Option(fromDID)))) //TODO: confirm if this is correct
+            ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(awsc.agentKey.did, Option(fromDID)))) //TODO: confirm if this is correct
             val provisionerPartiId = oa.parameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
             ctx.apply(ProvisionerPartiSet(provisionerPartiId))
-            ctx.apply(AgentPairwiseKeyCreated(nkc.did, nkc.verKey))
+            ctx.apply(AgentPairwiseKeyCreated(awsc.agentKey.did, awsc.agentKey.verKey))
             val endpointDetail = oa.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
-            ctx.signal(AskUserAgentCreator(fromDIDPair, nkc.didPair, endpointDetail))
+            ctx.signal(AskUserAgentCreator(fromDIDPair, awsc.agentKey.didPair, endpointDetail))
           case Failure(e) => throw e
         }
       case Failure(e) => throw e

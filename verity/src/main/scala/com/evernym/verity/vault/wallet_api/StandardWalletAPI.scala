@@ -1,6 +1,7 @@
 package com.evernym.verity.vault.wallet_api
 
 import akka.actor.ActorRef
+import com.evernym.verity.actor.wallet.WalletCommand
 import com.evernym.verity.libindy.wallet.operation_executor.FutureConverter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.service._
@@ -16,11 +17,11 @@ class StandardWalletAPI(walletService: WalletService)
 
   val logger: Logger = getLoggerByClass(classOf[WalletAPI])
 
-  def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
+  def executeAsync[T](cmd: WalletCommand)(implicit wap: WalletAPIParam): Future[T] = {
     walletService.executeAsync(wap.walletId, cmd)
   }
 
-  def tell(cmd: Any)(implicit wap: WalletAPIParam, sender: ActorRef): Unit = {
+  def tell(cmd: WalletCommand)(implicit wap: WalletAPIParam, sender: ActorRef): Unit = {
     walletService.tell(wap.walletId, cmd)
   }
 }

@@ -85,25 +85,25 @@ class LegacyWalletAPI(appConfig: AppConfig,
     })
   }
 
-  def executeAsync[T](cmd: Any)(implicit wap: WalletAPIParam): Future[T] = {
+  def executeAsync[T](cmd: WalletCommand)(implicit wap: WalletAPIParam): Future[T] = {
     val wp = generateWalletParamSync(wap.walletId, appConfig, walletProvider)
     implicit val wmp: WalletMsgParam = WalletMsgParam(walletProvider, wp, ledgerPoolManager)
     val resp = cmd match {
-      case CreateWallet =>
+      case _: CreateWallet =>
         val walletExt = WalletMsgHandler.handleCreateAndOpenWalletSync()
         addToOpenedWalletIfReq(walletExt)(wp)
         Future(WalletCreated)
       case other        =>
         executeOpWithWalletInfo(cmd.getClass.getSimpleName, { implicit we: WalletExt =>
-          WalletMsgHandler.executeAsync[T](other)
+          WalletMsgHandler.executeAsync(other)
         })
     }
     resp.map(_.asInstanceOf[T])
   }
 
-  final def executeSync[T](cmd: Any)(implicit wap: WalletAPIParam): T = {
+  final def executeSync[T](cmd: WalletCommand)(implicit wap: WalletAPIParam): T = {
     convertToSyncReq(executeAsync(cmd))
   }
 
-  override def tell(cmd: Any)(implicit wap: WalletAPIParam, sender: ActorRef): Unit = ???
+  override def tell(cmd: WalletCommand)(implicit wap: WalletAPIParam, sender: ActorRef): Unit = ???
 }

@@ -31,6 +31,7 @@ trait AgentMsgHandler{ this: AgentMsgHelper with MockAgent with HasCloudAgent =>
     def handleAgentCreatedResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): AgentCreated_MFV_0_7 = {
       logger.debug("Unpacking agent created response message (MFV 0.7)")
       val acm = unpackAgentCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
+      require(Option(acm.selfDID).isDefined, "not received agent create response")
       logger.debug("Set cloud agent detail")
       setCloudAgentDetail(DidPair(acm.selfDID, acm.agentVerKey))
       acm

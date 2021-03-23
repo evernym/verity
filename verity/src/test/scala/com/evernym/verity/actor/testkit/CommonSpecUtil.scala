@@ -66,7 +66,7 @@ trait CommonSpecUtil {
   def createWallet(walletId: String, walletAPI: LegacyWalletAPI): WalletAPIParam = {
     val wap = WalletAPIParam(walletId)
     try {
-      walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
+      walletAPI.executeSync[WalletCreated.type](CreateWallet())(wap)
     } catch {
       case _: WalletAlreadyExist =>
         //nothing to do

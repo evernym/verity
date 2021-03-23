@@ -77,7 +77,7 @@ trait UserWalletSetupHelper {
   protected def _baseWalletSetupWithSyncAPI(userId: Int, walletAPI: LegacyWalletAPI): Unit = {
     implicit val wap: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
     println(s"[$userId] about to start executing wallet operations for an user")
-    val wc = walletAPI.executeSync[WalletCreated.type](CreateWallet)(wap)
+    val wc = walletAPI.executeSync[WalletCreated.type](CreateWallet())(wap)
     println(s"[$userId] wallet created")
     val nkc = walletAPI.executeSync[NewKeyCreated](CreateNewKey())
     println(s"[$userId] new key created")
@@ -93,7 +93,7 @@ trait UserWalletSetupHelper {
     implicit val wap: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
     println(s"[$userId] about to start executing wallet operations for an user")
     val result = for (
-      _ <- walletAPI.executeAsync[WalletCreated.type](CreateWallet)
+      _ <- walletAPI.executeAsync[WalletCreated.type](CreateWallet())
     ) yield {
       println(s"[$userId] wallet created")
 

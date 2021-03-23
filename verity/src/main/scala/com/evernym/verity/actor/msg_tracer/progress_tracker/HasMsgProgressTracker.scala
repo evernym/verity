@@ -6,8 +6,8 @@ import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.ReqId
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
-import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgressTracking}
-import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam}
+import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
@@ -24,15 +24,7 @@ trait HasMsgProgressTracker
   extends HasSingletonParentProxy { this: Actor with HasAppConfig =>
 
   def appConfig: AppConfig
-  def selfRelTrackingId: String
-  def pairwiseRelTrackingIds: List[String]
-
-  lazy val sha256SelfRelTrackingId: String = sha256HashedTrackingId(selfRelTrackingId)
-  lazy val sha256PairwiseRelTrackingId: Option[String] = {
-    Option(sha256HashedTrackingId(pairwiseRelTrackingIds.sorted.mkString("")))
-  }
-
-  def sha256HashedTrackingId(str: String): String = HashUtil.hash(SHA256_trunc16)(str).hex
+  def trackingIdParam: TrackingIdParam
 
   def recordSignalMsgTrackingEvent(reqId: ReqId, id: String, typedMsg: MsgType, detail: Option[String]): Unit = {
     recordSignalMsgTrackingEvent(reqId, id, typedMsg.toString, detail)
@@ -75,8 +67,9 @@ trait HasMsgProgressTracker
                               childEvent: ChildEvent): Unit = {
     recordRoutingChildEvents(reqId, List(childEvent))
   }
-  def recordRoutingChildEvents(reqId: ReqId,
-                               childEvents: List[ChildEvent]): Unit = {
+
+  private def recordRoutingChildEvents(reqId: ReqId,
+                                       childEvents: List[ChildEvent]): Unit = {
     sendToMsgTracker(RecordRoutingChildEvents(reqId, ROUTING_EVENT_ID_PROCESSING, childEvents))
   }
 
@@ -122,9 +115,7 @@ trait HasMsgProgressTracker
     candidateTrackingIds.foreach { trackingId =>
       if (MsgProgressTrackerCache.isTracked(trackingId)) {
         val finalCmd = cmd match {
-          case rre: RecordRoutingEvent
-            if MsgProgressTracker.isGlobalOrIpAddress(trackingId) =>
-            rre.withDetailAppended(s"(trackingDetail => $extraDetail)")
+          case rre: RecordRoutingEvent => rre.withDetailAppended(extraDetail)
           case other                   => other
         }
         msgProgressTrackerRegion ! ForIdentifier(trackingId, finalCmd)
@@ -132,43 +123,31 @@ trait HasMsgProgressTracker
     }
   }
 
-  private def candidateTrackingIds: Set[String] = {
+  private def candidateTrackingIds: Set[String] = defaultTrackingIds ++ Option(GLOBAL_TRACKING_ID)
 
-    val ipAddressTrackingIds =
-      MsgProgressTrackerCache
-        .allIdsBeingTracked
-        .trackedIds
-        .filter(tp => defaultRelTrackingIds.contains(tp.trackingId))
-        .flatMap(_.ipAddress)
+  lazy val extraDetail: String = trackingIdParam.domainTrackingDetail + trackingIdParam.relTrackingDetail.getOrElse("")
 
-    val globalTrackingId = Option(GLOBAL_TRACKING_ID)
-
-    defaultRelTrackingIds ++ ipAddressTrackingIds ++ globalTrackingId
-  }
-
-  def checkToStartIpAddressBasedTracking(ipAddress: String): Unit = {
-    if (MsgProgressTrackerCache.isTracked(ipAddress)) {
-      defaultRelTrackingIds.foreach { trackingId =>
-        if (! MsgProgressTrackerCache.isTracked(trackingId))
-          singletonParentProxyActor ! SendCmdToAllNodes(StartProgressTracking(
-            TrackingParam(trackingId, Option(ipAddress))))
-      }
-    }
-  }
-
-  lazy val extraDetail: String = {
-    val selfRelDetail = s"selfRelTrackingId: $sha256SelfRelTrackingId"
-    if (sha256PairwiseRelTrackingId.contains(sha256SelfRelTrackingId)) {
-      selfRelDetail
-    } else {
-      selfRelDetail + sha256PairwiseRelTrackingId.map(id => s", pairwiseRelTrackingId: $id").getOrElse("")
-    }
-  }
-
-  private lazy val defaultRelTrackingIds = Set(sha256SelfRelTrackingId) ++ sha256PairwiseRelTrackingId
-
+  private lazy val defaultTrackingIds = Set(trackingIdParam.sha256DomainId) ++ trackingIdParam.sha256MyRelId
 
   private lazy val msgProgressTrackerRegion: ActorRef =
     ClusterSharding(context.system)
       .shardRegion(MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME)
+}
+
+case class TrackingIdParam(domainId: String, myId: Option[String], theirId: Option[String]) {
+  lazy val sha256DomainId: String = HashUtil.hash(SHA256_trunc16)(domainId).hex
+  lazy val sha256MyRelId: Option[String] = myId.map(HashUtil.hash(SHA256_trunc16)(_).hex)
+  lazy val sha256TheirRelId: Option[String] = theirId.map(HashUtil.hash(SHA256_trunc16)(_).hex)
+
+  lazy val domainTrackingDetail = s"domainTrackingId: $sha256DomainId"
+  lazy val relTrackingDetail: Option[MsgId] =
+    if (myId.contains(domainId)) None
+    else {
+      sha256MyRelId.map { myId =>
+        s"\nmyRelTrackingId: $myId" +
+          sha256TheirRelId
+            .map { theirId => s"\ntheirRelTrackingId: $theirId" }
+            .getOrElse("")
+      } orElse None
+    }
 }

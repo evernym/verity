@@ -1,5 +1,7 @@
 package com.evernym.verity.actor.wallet
 
+import java.util.UUID
+
 import akka.pattern.pipe
 import akka.actor.{ActorRef, Stash}
 import com.evernym.verity.Exceptions.HandledErrorException
@@ -48,18 +50,18 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
    * @return
    */
   def postInitReceiver: Receive = {
-    case CreateWallet =>
+    case cmd: CreateWallet =>
+      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
       val sndr = sender()
       val fut = WalletMsgHandler.handleCreateWalletASync()
-      withErrorHandling(fut).map { resp =>
-        sndr ! resp
-        tryOpeningWalletIfExists()
-      }
+      sendRespWhenResolved(cmd.id, sndr, fut)
+        .map { _ =>
+          tryOpeningWalletIfExists()
+        }
 
-    case snw: DEPRECATED_SetupNewWallet =>
+    case snw: SetupNewAgentWallet =>
       val sndr = sender()
-      val fut = WalletMsgHandler.handleCreateWalletASync()
-      withErrorHandling(fut).map { _ =>
+      WalletMsgHandler.handleCreateWalletASync().map { _ =>
         tryOpeningWalletIfExists()
         self.tell(snw, sndr)
       }
@@ -89,28 +91,47 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
    * @return
    */
   def postOpenWalletReceiver: Receive = {
-    case snw: DEPRECATED_SetupNewWallet =>
-      DEPRECATED_handleSetupNewWallet(snw.withTheirDidPair)
+    case snaw: SetupNewAgentWallet =>
+      handleSetupNewAgentWallet(snaw)
 
-    case CreateWallet if walletExtOpt.isDefined =>
+    case _: CreateWallet if walletExtOpt.isDefined =>
       sender ! WalletAlreadyCreated
 
     case cmd: WalletCommand if walletExtOpt.isDefined =>    //only entertain commands extending 'WalletCommand'
       val sndr = sender()
-      handleRespFut(sndr, WalletMsgHandler.executeAsync(cmd))
+      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
+      sendRespWhenResolved(cmd.id, sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
-  private def DEPRECATED_handleSetupNewWallet(theirDidPair: DidPair): Unit = {
+  private def handleSetupNewAgentWallet(snw: SetupNewAgentWallet): Unit = {
     val sndr = sender()
-    val fut = WalletMsgHandler.executeAsync[TheirKeyStored](StoreTheirKey(theirDidPair.DID, theirDidPair.verKey)).flatMap { r =>
-      WalletMsgHandler.executeAsync[NewKeyCreated](CreateNewKey()).mapTo[NewKeyCreated]
+    logger.debug(s"[$actorId] [${snw.id}] wallet op started: " + snw)
+    val ownerKeyFut =
+      snw.ownerDidPair match {
+        case Some(odp) =>
+          val stk = StoreTheirKey(odp.DID, odp.verKey)
+          WalletMsgHandler.executeAsync(stk).mapTo[TheirKeyStored].map(_.didPair)
+        case None =>
+          WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated].map(_.didPair)
+      }
+
+    val createNewKeyFut = WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
+
+    val fut = for (
+      odp <- ownerKeyFut;
+      nks <- createNewKeyFut
+    ) yield {
+      AgentWalletSetupCompleted(odp, nks)
     }
-    withErrorHandling(fut).map { resp =>
-      sndr ! resp
-    }
+
+    sendRespWhenResolved(snw.id, sndr, fut)
   }
-  private def handleRespFut(sndr: ActorRef, fut: Future[Any]): Unit = {
-    withErrorHandling(fut).pipeTo(sndr)
+  private def sendRespWhenResolved(cmdId: String, sndr: ActorRef, fut: Future[Any]): Future[Any] = {
+    withErrorHandling(fut)
+      .map { r =>
+        logger.debug(s"[$actorId] [$cmdId] wallet op finished: " + r)
+        r
+      }.pipeTo(sndr)
   }
 
   private def withErrorHandling(fut: Future[Any]): Future[Any] = {
@@ -185,9 +206,10 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
 
 //command
 trait WalletCommand extends ActorMessage {
-  //overridden to make sure if this codebase is logging these commands anywhere
-  //it doesn't log any critical/private information
+  //overridden to make sure if this codebase is logging this wallet command anywhere
+  // it doesn't log any critical/private information
   override def toString: DID = this.getClass.getSimpleName
+  val id: DID = UUID.randomUUID().toString  //only for logging purposes
 }
 
 case class SetWalletParam(wp: WalletParam) extends WalletCommand
@@ -196,9 +218,9 @@ case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand {
   override def toString: DID = s"${this.getClass.getSimpleName}(wallet: $wallet)"
 }
 
-case object CreateWallet extends WalletCommand
+case class CreateWallet() extends WalletCommand
 
-case class DEPRECATED_SetupNewWallet(withTheirDidPair: DidPair) extends WalletCommand
+case class SetupNewAgentWallet(ownerDidPair: Option[DidPair]) extends WalletCommand
 
 case class CreateNewKey(DID: Option[DID] = None, seed: Option[String] = None) extends WalletCommand
 
@@ -220,9 +242,7 @@ case class VerifySignature(keyParam: KeyParam, challenge: Array[Byte],
 case class PackMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
   extends WalletCommand
 
-case class UnpackMsg(msg: Array[Byte]) extends WalletCommand {
-  override def toString: String = s"UnpackMsg: " + new String(msg)
-}
+case class UnpackMsg(msg: Array[Byte]) extends WalletCommand
 
 case class LegacyPackMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
   extends WalletCommand
@@ -262,10 +282,11 @@ case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter)
 
 case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
-case object Close extends WalletCommand
+case class Close() extends WalletCommand
 
 //responses
 trait WalletCmdSuccessResponse extends ActorMessage
+case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCreated) extends WalletCmdSuccessResponse
 case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
@@ -276,7 +297,9 @@ case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessRespo
 }
 case class GetVerKeyOptResp(verKey: Option[VerKey]) extends WalletCmdSuccessResponse
 case class GetVerKeyResp(verKey: VerKey) extends WalletCmdSuccessResponse
-case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse
+case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+  def didPair: DidPair = DidPair(did, verKey)
+}
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse
 case class SignedMsg(msg: Array[Byte], fromVerKey: VerKey) extends WalletCmdSuccessResponse {
   def signatureResult: SignatureResult = SignatureResult(msg, fromVerKey)

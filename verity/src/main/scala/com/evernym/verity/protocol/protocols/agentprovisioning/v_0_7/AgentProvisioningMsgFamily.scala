@@ -158,7 +158,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   case class GiveSponsorDetails(sponsor: Option[SponsorDetails], cacheUsedTokens: Boolean,
                                 tokenWindow: Duration)                    extends Ctl
   case class InvalidToken()                                               extends Ctl
-  case class AlreadyProvisioned(did: DID)                                 extends Ctl
+  case class AlreadyProvisioned(requesterVerKey: VerKey)                  extends Ctl
   case class NoSponsorNeeded()                                            extends Ctl
   case class CompleteAgentProvisioning(selfDID: DID, agentVerKey: VerKey) extends Ctl
 

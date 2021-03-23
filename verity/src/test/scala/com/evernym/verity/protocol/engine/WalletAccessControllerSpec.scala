@@ -67,8 +67,8 @@ class WalletAccessControllerSpec
   class TestWalletAccess extends WalletAccess {
     import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
-    override def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit =
-      handler(Try(NewKeyCreated("Did", "Verkey")))
+    override def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[AgentWalletSetupCompleted] => Unit): Unit =
+      handler(Try(AgentWalletSetupCompleted(ownerDidPair, NewKeyCreated("Did", "Verkey"))))
 
     override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(Try(NewKeyCreated("Did", "Verkey")))
 
@@ -164,7 +164,7 @@ object WalletAccessTest
   implicit def asyncAPIContext: AsyncAPIContext =
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
-  testWalletAPI.executeSync[WalletCreated.type](CreateWallet)
+  testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
   val newKey: NewKeyCreated = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey())
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =

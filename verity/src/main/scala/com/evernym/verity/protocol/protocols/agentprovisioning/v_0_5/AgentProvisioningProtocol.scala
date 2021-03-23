@@ -5,7 +5,7 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueExce
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{AgentDetail, DidPair}
-import com.evernym.verity.actor.wallet.{GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, TheirKeyStored}
+import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
@@ -188,10 +188,10 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
         val fromDIDPair = DidPair(s.pdd.forDID, gvkr.verKey)
         val aws = s.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
         prepareNewAgentWalletData(fromDIDPair, aws) {
-          case Success(nkc: NewKeyCreated) =>
-            ctx.apply(AgentPairwiseKeyCreated(nkc.did, nkc.verKey))
+          case Success(awsc: AgentWalletSetupCompleted) =>
+            ctx.apply(AgentPairwiseKeyCreated(awsc.agentKey.did, awsc.agentKey.verKey))
             val endpointDetail = s.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
-            ctx.signal(AskUserAgentCreator(fromDIDPair, nkc.didPair, endpointDetail))
+            ctx.signal(AskUserAgentCreator(fromDIDPair, awsc.agentKey.didPair, endpointDetail))
           case Failure(e) => throw e
         }
       case Failure(e) => throw e

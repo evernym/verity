@@ -118,14 +118,16 @@ class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
 
   import mockEdgeAgent.v_0_7_resp._
 
+  lazy val nonce: String = getNonce
+
   def createEdgeAgentTest(): Unit = {
-    "when sent first create agent (edge) msg 0.7" - {
+    "when sent first create edge agent msg 0.7" - {
       "should respond with AGENT_CREATED msg with new domainId" taggedAs UNSAFE_IgnoreLog  in {
 
         val agentDid = createEdgeAgent(
           SponsorRel("sponsor1", "id"),
           sponsorKeys().verKey,
-          getNonce,
+          nonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
         )
@@ -133,16 +135,16 @@ class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
       }
     }
 
-    "when sent same create agent again" - {
-      "should respond with error agent already created" taggedAs UNSAFE_IgnoreLog in {
+    "when sent same create agent with same used token" - {
+      "should respond successfully" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateEdgeAgent(
           SponsorRel("sponsor1", "id"),
           sponsorKeys().verKey,
-          getNonce,
+          nonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
         )
-        handleCreateAgentProblemReport(sentCreateAgent.msg)
+        handleAgentCreatedResp(sentCreateAgent.msg)
       }
     }
   }

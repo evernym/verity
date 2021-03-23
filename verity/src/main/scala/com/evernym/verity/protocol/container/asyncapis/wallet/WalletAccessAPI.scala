@@ -24,8 +24,8 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
 
   import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
-  override def DEPRECATED_setupNewWallet(walletId: String, withTheirDIDPair: DidPair)(handler: Try[NewKeyCreated] => Unit): Unit = {
-    walletApi.tell(DEPRECATED_SetupNewWallet(withTheirDIDPair))(WalletAPIParam(walletId), senderActorRef)
+  override def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[AgentWalletSetupCompleted] => Unit): Unit = {
+    walletApi.tell(SetupNewAgentWallet(Option(ownerDidPair)))(WalletAPIParam(walletId), senderActorRef)
   }
 
   override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = {

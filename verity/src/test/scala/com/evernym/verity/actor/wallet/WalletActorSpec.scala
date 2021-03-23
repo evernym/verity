@@ -6,11 +6,13 @@ import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agentRegion
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
@@ -35,9 +37,11 @@ class WalletActorSpec
 
   val logger: Logger = getLoggerByClass(classOf[WalletActorSpec])
 
-  lazy val issuerKeySeed: String = UUID.randomUUID().toString.replace("-", "")
-  lazy val holderKeySeed: String = UUID.randomUUID().toString.replace("-", "")
-  lazy val verifierKeySeed: String = UUID.randomUUID().toString.replace("-", "")
+  def newKeySeed: String = UUID.randomUUID().toString.replace("-", "")
+
+  lazy val issuerKeySeed: String = newKeySeed
+  lazy val holderKeySeed: String = newKeySeed
+  lazy val verifierKeySeed: String = newKeySeed
 
   lazy val issuerDidPair: DidPair = CommonSpecUtil.generateNewDid(Option(issuerKeySeed))
   lazy val holderDidPair: DidPair = CommonSpecUtil.generateNewDid(Option(holderKeySeed))
@@ -53,22 +57,22 @@ class WalletActorSpec
 
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
-        issuerWalletActor ! CreateWallet
+        issuerWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
-        holderWalletActor ! CreateWallet
+        holderWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
-        verifierWalletActor ! CreateWallet
+        verifierWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
       }
     }
 
     "when sent CreateWallet command again" - {
       "should respond with WalletAlreadyCreated" in {
-        issuerWalletActor ! CreateWallet
+        issuerWalletActor ! CreateWallet()
         expectMsgType[WalletAlreadyCreated.type]
-        holderWalletActor ! CreateWallet
+        holderWalletActor ! CreateWallet()
         expectMsgType[WalletAlreadyCreated.type]
-        verifierWalletActor ! CreateWallet
+        verifierWalletActor ! CreateWallet()
         expectMsgType[WalletAlreadyCreated.type]
       }
     }
@@ -97,11 +101,11 @@ class WalletActorSpec
 
     "when sent CreateWallet command after poison pill" - {
       "should respond with WalletAlreadyCreated" in {
-        issuerWalletActor ! CreateWallet
+        issuerWalletActor ! CreateWallet()
         expectMsgType[WalletAlreadyCreated.type]
-        holderWalletActor ! CreateWallet
+        holderWalletActor ! CreateWallet()
         expectMsgType[WalletAlreadyCreated.type]
-        verifierWalletActor ! CreateWallet
+        verifierWalletActor ! CreateWallet()
         expectMsgType[WalletAlreadyCreated.type]
       }
     }
@@ -340,20 +344,56 @@ class WalletActorSpec
       }
     }
 
-    "when sent DEPRECATED_SetupNewWallet command" - {
+    "when sent SetupNewWallet command for cloud agent setup" - {
       "should create wallet and keys" in {
+
+        val domainDidPair: DidPair = CommonSpecUtil.generateNewDid(Option(newKeySeed))
+
         val newWalletActor = agentRegion(UUID.randomUUID().toString, walletRegionActor)
-        val theirDidPair: DidPair = CommonSpecUtil.generateNewDid(Option(UUID.randomUUID().toString.replace("-", "")))
-        newWalletActor ! DEPRECATED_SetupNewWallet(theirDidPair)
-        val nkc = expectMsgType[NewKeyCreated]
+        newWalletActor ! SetupNewAgentWallet(Option(domainDidPair))
+        val wsc = expectMsgType[AgentWalletSetupCompleted]
+        wsc.ownerDidPair shouldBe domainDidPair
 
-        newWalletActor ! GetVerKey(nkc.did)
+        newWalletActor ! GetVerKey(wsc.agentKey.did)
         val gvkr1 = expectMsgType[GetVerKeyResp]
-        gvkr1.verKey shouldBe nkc.verKey
+        gvkr1.verKey shouldBe wsc.agentKey.verKey
 
-        newWalletActor ! GetVerKey(theirDidPair.DID)
+        newWalletActor ! GetVerKey(wsc.ownerDidPair.DID)
         val gvkr2 = expectMsgType[GetVerKeyResp]
-        gvkr2.verKey shouldBe theirDidPair.verKey
+        gvkr2.verKey shouldBe domainDidPair.verKey
+      }
+    }
+
+    "when sent SetupNewWallet command for edge agent setup" - {
+      "should create wallet and keys" in {
+
+        val requesterVk: VerKey = CommonSpecUtil.generateNewDid(Option(newKeySeed)).verKey
+
+        val newWalletActor = agentRegion(UUID.randomUUID().toString, walletRegionActor)
+
+        newWalletActor ! SetupNewAgentWallet(None)
+        val wsc = expectMsgType[AgentWalletSetupCompleted]
+
+        newWalletActor ! GetVerKey(wsc.agentKey.did)
+        val gvkr1 = expectMsgType[GetVerKeyResp]
+        gvkr1.verKey shouldBe wsc.agentKey.verKey
+
+        newWalletActor ! GetVerKey(wsc.ownerDidPair.DID)
+        val gvkr2 = expectMsgType[GetVerKeyResp]
+        gvkr2.verKey shouldBe wsc.ownerDidPair.verKey
+
+        newWalletActor ! GetVerKeyOpt(requesterVk)
+        val gvkr3 = expectMsgType[GetVerKeyOptResp]
+        gvkr3.verKey shouldBe None
+      }
+    }
+
+    "when sent Close command" - {
+      "should close wallet" in {
+        List(issuerWalletActor, holderWalletActor, verifierWalletActor).foreach { walletActor =>
+          walletActor ! Close()
+          expectMsgType[Done.type]
+        }
       }
     }
   }

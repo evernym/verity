@@ -36,7 +36,7 @@ trait BasePersistentStore
   lazy val agentRouteStoreEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
-    testWalletAPI.executeSync[WalletCreated.type](CreateWallet)(WalletAPIParam(walletId))
+    testWalletAPI.executeSync[WalletCreated.type](CreateWallet())(WalletAPIParam(walletId))
   }
 
   def createDID(walletId: String): NewKeyCreated = {
@@ -56,7 +56,7 @@ trait BasePersistentStore
   }
 
   def closeWallet(walletId: String): Done.type = {
-    testWalletAPI.executeSync[Done.type](Close)(WalletAPIParam(walletId))
+    testWalletAPI.executeSync[Done.type](Close())(WalletAPIParam(walletId))
   }
 
   def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)

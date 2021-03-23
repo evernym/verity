@@ -17,7 +17,7 @@ import scala.concurrent.Future
 
 object WalletMsgHandler {
 
-  def executeAsync[T](cmd: Any)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Any] = {
+  def executeAsync(cmd: Any)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Any] = {
     cmd match {
       case cnk: CreateNewKey                => handleCreateNewKey(cnk)
       case slr: SignLedgerRequest           => handleSignLedgerReq(slr)
@@ -40,7 +40,7 @@ object WalletMsgHandler {
       case sc: StoreCred                    => handleStoreCred(sc)
       case cfpr: CredForProofReq            => handleCredForProofReq(cfpr)
       case cp: CreateProof                  => handleCreateProof(cp)
-      case Close                            => handleCloseWallet()
+      case _: Close                         => handleCloseWallet()
     }
   }
 

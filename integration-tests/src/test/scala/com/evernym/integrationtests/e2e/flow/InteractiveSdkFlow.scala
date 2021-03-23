@@ -22,16 +22,13 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.RevocationRegistryConf
 import com.evernym.verity.sdk.utils.ContextBuilder
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.util.LedgerUtil
-import com.evernym.verity.util.{Base58Util, Base64Util, OptionUtil}
+import com.evernym.verity.util.{Base64Util, OptionUtil}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
-import org.scalatest.time.{Second, Span}
 
-import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable

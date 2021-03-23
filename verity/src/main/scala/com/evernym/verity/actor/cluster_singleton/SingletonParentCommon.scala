@@ -170,8 +170,8 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
     case sc: RetrySendCmdToNode =>
       logger.debug(s"sending NodeAddedToClusterSingleton command to node: ${sc.address}")
-      nodes.get(sc.address).foreach {
-        case false => sendCmdToNode(sc.address, NodeAddedToClusterSingleton)
+      nodes.get(sc.address).foreach { isUp =>
+        if(!isUp) sendCmdToNode(sc.address, NodeAddedToClusterSingleton)
       }
   }
 

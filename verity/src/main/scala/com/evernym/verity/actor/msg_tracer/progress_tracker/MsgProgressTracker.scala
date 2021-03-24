@@ -351,12 +351,8 @@ case class RecordRoutingChildEvents(reqId: String,
 
 
 object MsgEvent {
-  def withOnlyId(msgId: String): MsgEvent =
-    MsgEvent(Option(msgId), None, None)
-  def withOnlyType(msgType: String): MsgEvent =
-    MsgEvent(None, msgType = Option(msgType))
-  def withOnlyDetail(detail: String): MsgEvent =
-    MsgEvent(None, detail = Option(detail))
+  def withIdAndDetail(msgId: String, detail: String): MsgEvent =
+    MsgEvent(msgId = Option(msgId), detail = Option(detail))
   def withTypeAndDetail(msgType: String, detail: String): MsgEvent =
     MsgEvent(msgType = Option(msgType), detail = Option(detail))
 

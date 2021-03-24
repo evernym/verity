@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.pattern.pipe
 import akka.actor.{ActorRef, Stash}
 import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.Status.UNHANDLED
+import com.evernym.verity.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.AppConfig
@@ -13,9 +13,9 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitte
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
-import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
+import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor.buildErrorDetail
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
@@ -126,19 +126,24 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
 
     sendRespWhenResolved(snw.id, sndr, fut)
   }
+
   private def sendRespWhenResolved(cmdId: String, sndr: ActorRef, fut: Future[Any]): Future[Any] = {
-    withErrorHandling(fut)
+    withErrorHandling(cmdId, fut)
       .map { r =>
         logger.debug(s"[$actorId] [$cmdId] wallet op finished: " + r)
         r
       }.pipeTo(sndr)
   }
 
-  private def withErrorHandling(fut: Future[Any]): Future[Any] = {
+  private def withErrorHandling(id: String, fut: Future[Any]): Future[Any] = {
     fut.recover {
-      case e: HandledErrorException =>
+      case e: HandledErrorException if e.respCode == INVALID_VALUE.statusCode =>
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
-      case e: Exception =>
+      case e: HandledErrorException =>
+        logger.error(s"[$actorId] [$id] handled error while wallet operation: " + e.errorDetail.getOrElse(e.getMessage))
+        WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
+      case e: Throwable =>
+        logger.error(s"[$actorId] [$id] unhandled error while wallet operation: " + buildErrorDetail(e))
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
     }
   }

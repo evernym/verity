@@ -2,6 +2,7 @@ package com.evernym.verity.libindy.wallet.operation_executor
 
 import java.util.concurrent.ExecutionException
 
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
@@ -49,14 +50,22 @@ object DidOpExecutor extends OpExecutorBase {
     } catch {
       case e: ExecutionException =>
         e.getCause match {
-          case _: InvalidStructureException =>
-            throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(e.getMessage))
-          case _: Exception =>
+          case e: InvalidStructureException =>
+            throw new BadRequestErrorException(
+              INVALID_VALUE.statusCode,
+              Option(e.getMessage),
+              errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
+          case e: Exception =>
             throw new InternalServerErrorException(
-              UNHANDLED.statusCode, Option("unhandled error while creating new key"))
+              UNHANDLED.statusCode,
+              Option("unhandled error while creating new key"),
+              errorDetail = buildOptionErrorDetail(e))
         }
-      case _: Exception =>
-        throw new BadRequestErrorException(UNHANDLED.statusCode, Option("unhandled error while creating new key"))
+      case e: Exception =>
+        throw new BadRequestErrorException(
+          UNHANDLED.statusCode,
+          Option("unhandled error while creating new key"),
+          errorDetail = buildOptionErrorDetail(e))
     }
   }
 
@@ -70,10 +79,14 @@ object DidOpExecutor extends OpExecutorBase {
         Future(TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))
       case e: Exception if e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
         throw new BadRequestErrorException(
-          ALREADY_EXISTS.statusCode, Option("'their' pw keys are already in the wallet"))
-      case _: Exception =>
+          ALREADY_EXISTS.statusCode,
+          Option("'their' pw keys are already in the wallet"),
+          errorDetail = buildOptionErrorDetail(e))
+      case e: Exception =>
         throw new InternalServerErrorException(
-          UNHANDLED.statusCode, Option("unhandled error while storing their key"))
+          UNHANDLED.statusCode,
+          Option("unhandled error while storing their key"),
+          errorDetail = buildOptionErrorDetail(e))
     }
   }
 }

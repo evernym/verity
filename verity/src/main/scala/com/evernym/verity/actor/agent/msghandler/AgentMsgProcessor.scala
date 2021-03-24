@@ -360,7 +360,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         case aer: ActorErrorResp => Option(s"[${aer.toString}]")
         case _                   => None
       }
-      recordOutMsgEvent(arc.reqId,
+      recordOutMsgDeliveryEvent(
+        arc.respMsgId.getOrElse(arc.reqId),
         MsgEvent(
           arc.respMsgId.getOrElse(arc.reqId),
           msg.getClass.getSimpleName + extraDetail.map(ed => s" ($ed)").getOrElse(""),

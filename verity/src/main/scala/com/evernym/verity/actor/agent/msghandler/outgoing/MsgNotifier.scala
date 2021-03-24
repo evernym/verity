@@ -101,11 +101,17 @@ trait MsgNotifierForStoredMsgs
     // one com method registered (either http endpoint or push notification)
     logger.debug("about to notify user for newly received message: " + notifMsgDtl.uid + s"(${notifMsgDtl.msgType})")
     getAllComMethods.map { allComMethods =>
-      val fut1 = msgStore.getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(notifMsgDtl, pw, Option(allComMethods)))
-      val fut2 = Option(sendMsgToRegisteredPushNotif(notifMsgDtl, updateDeliveryStatus, Option(allComMethods)))
-      val fut3 = Option(fwdMsgToSponsor(notifMsgDtl, Option(allComMethods)))
-      val allFut = (fut1 ++ fut2 ++ fut3).toSet
-      Future.sequence(allFut)
+      if (allComMethods.comMethods.nonEmpty) {
+        val fut1 = msgStore.getMsgPayload(notifMsgDtl.uid).map(pw => sendMsgToRegisteredEndpoint(notifMsgDtl, pw, Option(allComMethods)))
+        val fut2 = Option(sendMsgToRegisteredPushNotif(notifMsgDtl, updateDeliveryStatus, Option(allComMethods)))
+        val fut3 = Option(fwdMsgToSponsor(notifMsgDtl, Option(allComMethods)))
+        val allFut = (fut1 ++ fut2 ++ fut3).toSet
+        Future.sequence(allFut)
+      } else {
+        recordOutMsgDeliveryEvent(notifMsgDtl.uid,
+          MsgEvent.withIdAndDetail(notifMsgDtl.uid, s"SUCCESSFUL [no registered com method found]"))
+        Future.successful("no registered com methods found")
+      }
     }
   }
 

@@ -39,15 +39,17 @@ object MsgProgressTrackerHtmlGenerator {
             val outMsgIds = rs.outMsgEvents.map(_.flatMap(_.msgId)).getOrElse(List.empty)
             val dlvEvents = rs.outMsgDeliveryEvents.getOrElse(List.empty)
 
-            val anyDlvFailed = dlvEvents.exists(me => me.toString.contains("FAILED"))
-            val anyDlvSent = dlvEvents.exists(me => me.toString.contains("SENT"))
-            val syncRespSent = rs.outMsgEvents.exists(oml => oml.exists(om => om.toString.contains("SENT")))
+            val anyFailedDlv = dlvEvents.exists(me => me.toString.contains("FAILED"))
+            val anySuccessfulDlv = dlvEvents.exists(me => me.toString.contains("SENT") || me.toString.contains("SUCCESSFUL"))
+            val anySyncRespSent = rs.outMsgEvents.exists(oml => oml.exists(om => om.toString.contains("SENT")))
             val localSigMsgSent = rs.outMsgEvents.exists(oml => oml.exists(om => om.toString.contains("to-be-handled-locally")))
-            val reqDetail = if (includeDetail) rs.toString.replace("\n", "\\n") else "n/a"
+            val reqDetail =
+              if (includeDetail) rs.toString.replace("\n", "\\n")
+              else "include `withDetail=Y` query param to see detail"
             val color =
               if (outMsgIds.isEmpty) "black"
-              else if (anyDlvFailed) "red"
-              else if (anyDlvSent || syncRespSent || localSigMsgSent) "green"
+              else if (anyFailedDlv) "red"
+              else if (anySuccessfulDlv || anySyncRespSent || localSigMsgSent) "green"
               else "yellow"
 
             s"""
@@ -84,38 +86,85 @@ object MsgProgressTrackerHtmlGenerator {
 
 
     def generateTableHeader: String =
-      """
+      s"""
+       <tr>
+          <th class="heading" colspan="5"> Page loaded at: ${Instant.now()}, tracking expires in minutes: $expiryTimeInMinutes </th>
+       </tr>
        <tr>
          <th class="status">Status</th>
-         <th class="routing">RoutingDetail</th>
+         <th class="routing">RequestDetail</th>
          <th class="inmsg">IncomingMsgs</th>
          <th class="outmsg">OutgoingMsgs</th>
-         <th class="msgdlv">OutgoingMsgs<br>Delivery Status (Async)</th>
+         <th class="msgdlv">OutgoingMsgs<br>Delivery Status</th>
        </tr>
-        """
+      """
 
     s"""
       <style type="text/css">
-        .tftable {font-size:12px;color:#333333;width:100%;border-width: 1px;border-color: #729ea5;border-collapse: collapse;}
-        .tftable th {font-size:12px;background-color:#acc8cc;border-width: 1px;padding: 8px;border-style: solid;border-color: #729ea5;text-align:left;}
-        .tftable tr {background-color:#d4e3e5;}
-        .tftable td {font-size:12px;border-width: 1px;padding: 8px;border-style: solid;border-color: #729ea5;}
-        .tftable tr:hover {background-color:#ffffff;}
 
-        .status {width:3%}
-        .routing {width:24%}
-        .inmsg {width:24%}
-        .outmsg {width:24%}
-        .msgdlv {width:25%}
+        .tftable {
+          font-size:12px;
+          color:#333333;
+          width:100%;
+          border-width: 1px;
+          border-color: #729ea5;
+          #border-collapse: collapse;
+          position: relative;
+        }
+
+        .tftable tr {
+          background-color:#d4e3e5;
+        }
+
+        .tftable tr:hover {
+          background-color:#ffffff;
+        }
+
+        .tftable th {
+          position: sticky;
+          top: 0;
+          padding: 8px;
+          font-size: 12px;
+          background-color: #ac938e ;
+          border-style: solid;
+          border-color: black;
+          text-align: center;
+        }
+
+        .tftable td {
+          padding: 8px;
+          font-size: 12px;
+          border-width: 1px;
+          border-style: solid;
+          border-color: #729ea5;
+        }
+
+        .heading {
+          background-color: #acc8cc !important;
+          width: 100%;
+          text-align: center;
+        }
+
+        .status {
+          width: 3%
+        }
+        .routing {
+          width: 24%
+        }
+        .inmsg {
+          width: 24%
+        }
+        .outmsg {
+          width: 24%
+        }
+        .msgdlv {
+          width: 25%
+        }
 
         p {
           background-color: #bb887e;
         }
       </style>
-
-      <p align="center">
-        Page loaded at: ${Instant.now()}, tracking expires in minutes: $expiryTimeInMinutes
-      </p>
 
       <table class="tftable" border="1">
         $generateTableHeader

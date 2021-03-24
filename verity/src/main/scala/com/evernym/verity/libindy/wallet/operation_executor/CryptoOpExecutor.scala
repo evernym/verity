@@ -1,5 +1,6 @@
 package com.evernym.verity.libindy.wallet.operation_executor
 
+import com.evernym.verity.Exceptions
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
@@ -48,12 +49,16 @@ object CryptoOpExecutor extends OpExecutorBase {
           .map(dr => UnpackedMsg(dr.getDecryptedMessage, Option(dr.getVerkey), None))
       }
       result.recover {
-        case _: InvalidStructureException =>
-          throw new BadRequestErrorException(INVALID_VALUE.statusCode,
-            Option("invalid sealed/encrypted box"))
+        case e: InvalidStructureException =>
+          throw new BadRequestErrorException(
+            INVALID_VALUE.statusCode,
+            Option("invalid sealed/encrypted box: " + e.getMessage),
+            errorDetail = buildOptionErrorDetail(e))
         case e: Exception =>
-          throw new BadRequestErrorException(UNHANDLED.statusCode,
-            Option("unhandled error while unsealing/decrypting msg"))
+          throw new BadRequestErrorException(
+            UNHANDLED.statusCode,
+            Option("unhandled error while unsealing/decrypting msg: " + e.getMessage),
+            errorDetail = buildOptionErrorDetail(e))
       }
     }
     result.flatten
@@ -80,14 +85,23 @@ object CryptoOpExecutor extends OpExecutorBase {
     Crypto.unpackMessage(we.wallet, um.msg)
       .map(r => UnpackedMsg(r, None, None))
       .recover {
-        case e: BadRequestErrorException => throw e
+        case e: BadRequestErrorException =>
+          throw e
         case e: WalletItemNotFoundException =>
-          throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(e.getMessage))
-        case _: InvalidStructureException =>
-          throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option("invalid packed message"))
-        case _: Exception =>
-          throw new BadRequestErrorException(UNHANDLED.statusCode,
-            Option("unhandled error while unpacking message"))
+          throw new BadRequestErrorException(
+            INVALID_VALUE.statusCode,
+            Option(e.getMessage),
+            errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
+        case e: InvalidStructureException =>
+          throw new BadRequestErrorException(
+            INVALID_VALUE.statusCode,
+            Option("invalid packed message: " + e.getMessage),
+            errorDetail = buildOptionErrorDetail(e))
+        case e: Exception =>
+          throw new BadRequestErrorException(
+            UNHANDLED.statusCode,
+            Option("unhandled error while unpacking message: " + e.getMessage),
+            errorDetail = buildOptionErrorDetail(e))
       }
   }
 
@@ -104,12 +118,18 @@ object CryptoOpExecutor extends OpExecutorBase {
     Crypto.cryptoVerify(verKey, challenge, signature)
       .map(VerifySigResult(_))
       .recover {
-          case _@ (_:InvalidStructureException |_: InvalidParameterException) =>
-            throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
-              Option("signature verification failed"), Option(detail))
-          case _: Exception =>
-            throw new BadRequestErrorException(SIGNATURE_VERIF_FAILED.statusCode,
-              Option("unhandled error"), Option(detail))
+          case e @ (_:InvalidStructureException |_: InvalidParameterException) =>
+            throw new BadRequestErrorException(
+              SIGNATURE_VERIF_FAILED.statusCode,
+              Option("signature verification failed"),
+              Option(detail),
+              errorDetail = buildOptionErrorDetail(e))
+          case e: Exception =>
+            throw new BadRequestErrorException(
+              SIGNATURE_VERIF_FAILED.statusCode,
+              Option("unhandled error"),
+              Option(detail),
+              errorDetail = buildOptionErrorDetail(e))
       }
   }
 

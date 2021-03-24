@@ -66,9 +66,13 @@ trait AgentOutgoingMsgHandler
                   respMsg: Any,
                   sndr: ActorRef = sender())(implicit reqMsgContext: ReqMsgContext): Unit = {
     def sendAndRecordMetrics(msg: Any, sndr: ActorRef): Unit = {
-      sndr ! msg
+      //the 'respMsgType' is 'just a high level hint' about which the response message type
+      // exact message type would be different word with some version info
       recordOutMsgEvent(reqMsgContext.id,
-        MsgEvent(s"${reqMsgContext.id}", s"$respMsgType (just a hint)", s"SENT [synchronous response to caller]"))
+        MsgEvent(reqMsgContext.id, s"$respMsgType (just a hint)"))
+      sndr ! msg
+      recordOutMsgDeliveryEvent(reqMsgContext.id,
+        MsgEvent.withIdAndDetail(reqMsgContext.id, s"SENT [synchronous response to caller]"))
     }
     respMsg match {
       case fut: Future[Any] => fut.map { msg =>

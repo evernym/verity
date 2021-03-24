@@ -2,14 +2,16 @@ package com.evernym.verity.libindy.wallet.operation_executor
 
 import java.util.concurrent.CompletableFuture
 
+import com.evernym.verity.Exceptions
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.GetVerKeyResp
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
+import org.hyperledger.indy.sdk.IndyException
 
 import scala.language.implicitConversions
 import scala.compat.java8.FutureConverters
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionException, Future}
 
 trait OpExecutorBase extends FutureConverter {
 
@@ -23,6 +25,26 @@ trait OpExecutorBase extends FutureConverter {
             DidOpExecutor.getVerKey(gvk.did, gvk.getKeyFromPool, ledgerPoolManager)
         }
       }
+    }
+  }
+
+  def buildOptionErrorDetail(e: Throwable): Option[String] = {
+    Option(buildErrorDetail(e))
+  }
+
+  def buildErrorDetail(e: Throwable): String = {
+    e match {
+      case ee: ExecutionException =>
+        Option(ee.getCause) match {
+          case Some(ie: IndyException) =>
+            ie.getSdkMessage + "\n" + Exceptions.getStackTraceAsSingleLineString(ie)
+          case Some(other: Exception) =>
+            other.getMessage + "\n" + Exceptions.getStackTraceAsSingleLineString(other)
+          case _ =>
+            ee.getMessage + "\n" + Exceptions.getStackTraceAsSingleLineString(ee)
+        }
+      case other =>
+        other.getMessage + "\n" + Exceptions.getStackTraceAsSingleLineString(other)
     }
   }
 }

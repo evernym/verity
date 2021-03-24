@@ -7,13 +7,15 @@ import com.evernym.verity.Status._
 object Exceptions {
 
   /*
-    respCode    : error response code (like GNR-100 etc)
-    respMsg     : simple error response message which can be shown to user
-    respDetail  : more detailed response message (can be shown to user as well)
-    errorDetail : this was intended to contain more detail but mostly for developers only
+    respCode    : response code (like GNR-100 etc)
+    respMsg     : short response message which can be shown to user
+    respDetail  : detailed response message (can be shown to user as well)
+    errorDetail : this was intended to contain more detail but only for developers
    */
-  case class HandledErrorException(respCode: String, respMsg: Option[String] = None,
-                                   respDetail: Option[String] = None, errorDetail: Option[Any] = None)
+  case class HandledErrorException(respCode: String,
+                                   respMsg: Option[String] = None,
+                                   respDetail: Option[String] = None,
+                                   errorDetail: Option[Any] = None)
     extends RuntimeException(respMsg.getOrElse(Status.getStatusMsgFromCode(respCode))){
 
     override def toString: String = {

@@ -85,7 +85,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     } catch {
       case e: Throwable =>
         logger.warn(s"failed to send message to node $nodeAddr : ${e.getMessage}")
-        self ! RetrySendCmdToNode(nodeAddr)
+        self ! SendCmdToNode(nodeAddr)
     }
   }
 
@@ -168,7 +168,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
-    case sc: RetrySendCmdToNode =>
+    case sc: SendCmdToNode =>
       logger.debug(s"sending NodeAddedToClusterSingleton command to node: ${sc.address}")
       nodes.get(sc.address).foreach { isUp =>
         if(!isUp) sendCmdToNode(sc.address, NodeAddedToClusterSingleton)
@@ -212,7 +212,7 @@ case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingleton
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
-case class RetrySendCmdToNode(address: Address) extends ActorMessage
+case class SendCmdToNode(address: Address) extends ActorMessage
 
 trait ForWatcherManagerChild extends ActorMessage {
   def cmd: Any

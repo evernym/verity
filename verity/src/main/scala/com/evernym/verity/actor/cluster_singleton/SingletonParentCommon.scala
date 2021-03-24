@@ -85,7 +85,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     } catch {
       case e: Throwable =>
         logger.warn(s"failed to send message to node $nodeAddr : ${e.getMessage}")
-        self ! SendCmdToNode(nodeAddr)
+        self ! RetryNodeAddedToClusterSingleton(nodeAddr)
     }
   }
 
@@ -151,7 +151,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       val sndr = sender()
       f.onComplete{
         case Success(result) =>
-          sndr ! AllNodeMetricsData(result.asInstanceOf[Set[NodeMetricsData]].toList)
+          sndr ! AllNodeMetricsData(result.asInstanceOf[Iterable[NodeMetricsData]].toList)
         case Failure(e: Throwable) =>
           logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
           handleException(e, sndr)
@@ -168,7 +168,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
           logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
       }
 
-    case sc: SendCmdToNode =>
+    case sc: RetryNodeAddedToClusterSingleton =>
       logger.debug(s"sending NodeAddedToClusterSingleton command to node: ${sc.address}")
       nodes.get(sc.address).foreach { isUp =>
         if(!isUp) sendCmdToNode(sc.address, NodeAddedToClusterSingleton)
@@ -212,7 +212,7 @@ case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingleton
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
-case class SendCmdToNode(address: Address) extends ActorMessage
+case class RetryNodeAddedToClusterSingleton(address: Address) extends ActorMessage
 
 trait ForWatcherManagerChild extends ActorMessage {
   def cmd: Any

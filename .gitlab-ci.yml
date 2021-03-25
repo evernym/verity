@@ -5,7 +5,7 @@ variables:
   indyNodeVersion: "1.12.3"
   sovtokenVersion: "1.0.8"
   TRIGGERAPI_URL_VERITY_RELEASE: "https://gitlab.corp.evernym.com/api/v4/projects/688/trigger/pipeline"
-  TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy-new"
+  TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
 
 
 .on-master: # job always runs for 'master', otherwise it manual

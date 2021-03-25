@@ -27,6 +27,7 @@ import com.evernym.verity.util.Util._
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
 
@@ -85,7 +86,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     } catch {
       case e: Throwable =>
         logger.warn(s"failed to send message to node $nodeAddr : ${e.getMessage}")
-        self ! RetryNodeAddedToClusterSingleton(nodeAddr)
+        actorSystem.scheduler.scheduleOnce(5.seconds, self, RetryNodeAddedToClusterSingleton(nodeAddr))
     }
   }
 

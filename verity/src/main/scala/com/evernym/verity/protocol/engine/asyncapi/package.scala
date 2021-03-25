@@ -9,7 +9,7 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.container.actor.{AsyncAPIContext, AsyncOpResp}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
+import scala.util.Try
 
 package object asyncapi {
   type AsyncOpCallbackHandler[T] = Try[T] => Unit
@@ -34,11 +34,9 @@ trait BaseAsyncOpExecutorImpl extends BaseAsyncAccessImpl {
    * spins up a new actor to run given async operation which returns future
    * and then sends back the result of the future to the sender (actor protocol container)
    * @param f the async operation to be executed
-   * @param handler handler to be executed with the response of async operation
    * @tparam T
    */
-  protected def withAsyncOpExecutorActor[T](f: ExecutionContext => Future[Any],
-                                              handler: Try[T] => Unit): Unit = {
+  protected def withAsyncOpExecutorActor[T](f: ExecutionContext => Future[Any]): Unit = {
     val props = AsyncOpExecutorActor
       .props(asyncAPIContext.senderActorRef, f)
       .withDispatcher(ASYNC_OP_EXECUTOR_ACTOR_DISPATCHER_NAME)
@@ -60,10 +58,7 @@ class AsyncOpExecutorActor(senderActorRef: ActorRef, op: ExecutionContext => Fut
     val result = op(ex)
     result match {
       case f: Future[Any] =>
-        f.recover {
-          case e: Exception =>
-            sendResponse(Failure(e))
-        }.onComplete { resp =>
+        f.onComplete { resp =>
           sendResponse(resp)
         }
     }

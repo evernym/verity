@@ -41,8 +41,7 @@ trait AnonCredRequestsAPI
         issuerCreateSchema(issuerDID, name, version, data).map { result =>
           SchemaCreated(result.getSchemaId, result.getSchemaJson)
         }
-      },
-      handler
+      }
     )
   }
 
@@ -92,8 +91,7 @@ trait AnonCredRequestsAPI
                           (handler: Try[ProofVerifResult] => Unit): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => AnoncredsWalletOpExecutor.verifyProof(
-          proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
-      handler
+          proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)}
     )
   }
 

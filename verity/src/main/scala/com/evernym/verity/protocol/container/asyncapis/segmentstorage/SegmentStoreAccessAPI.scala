@@ -104,16 +104,14 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   override def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
                            (handler: Try[StoredSegment] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      { implicit ec: ExecutionContext => saveSegmentedState(segmentAddress, segmentKey, segment) },
-      handler
+      { implicit ec: ExecutionContext => saveSegmentedState(segmentAddress, segmentKey, segment) }
     )
   }
 
   override def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
                              (handler: Try[Option[T]] => Unit): Unit = {
     withAsyncOpExecutorActor(
-      { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey) },
-      handler
+      { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey) }
     )
   }
 

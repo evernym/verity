@@ -112,6 +112,19 @@ class SdkFlowSpec
 
     setupIssuer(sdk, ledgerUtil)
 
+    val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
+
+    writeSchemaNeedsEndorsement(
+      sdk,
+      ledgerUtil,
+      schemaName,
+      "0.1",
+      "license_num",
+      "first_name",
+      "last_name")
+
+    writeIssuerToLedger(sdk, ledgerUtil)
+
     updateConfigs(
       sdk,
       ledgerUtil,
@@ -119,7 +132,7 @@ class SdkFlowSpec
       "/logo_url.ico"
     )
 
-    val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
+
     writeSchema(
       sdk,
       ledgerUtil,

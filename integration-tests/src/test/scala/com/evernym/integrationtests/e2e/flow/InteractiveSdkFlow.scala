@@ -163,16 +163,26 @@ trait InteractiveSdkFlow extends MetricsFlow {
           assert(resp.getJSONObject("identifier").has("did"))
         }
       }
+    }
+  }
 
-      s"[$issuerName] write issuer DID to ledger" taggedAs UNSAFE_IgnoreLog in {
-        val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
-        issuerSdk.publicDID = Some(issuerDID)
+  def writeIssuerToLedger(sdk: VeritySdkProvider, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+    writeIssuerToLedger(sdk, sdk, ledgerUtil)
+  }
 
-        ledgerUtil.bootstrapNewDID(issuerDID, issuerVerkey, "ENDORSER")
-        eventually(Timeout(scenario.timeout), Interval(Duration("20 seconds"))) {
-          ledgerUtil.checkDidOnLedger(issuerDID, issuerVerkey, "ENDORSER")
-        }
+  def writeIssuerToLedger(issuerSdk: VeritySdkProvider,
+                          msgReceiverSdkProvider: VeritySdkProvider,
+                          ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
+    s"[$issuerName] write issuer DID to ledger" taggedAs UNSAFE_IgnoreLog in {
+      val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
+      issuerSdk.publicDID = Some(issuerDID)
+
+      ledgerUtil.bootstrapNewDID(issuerDID, issuerVerkey, "ENDORSER")
+      eventually(Timeout(scenario.timeout), Interval(Duration("20 seconds"))) {
+        ledgerUtil.checkDidOnLedger(issuerDID, issuerVerkey, "ENDORSER")
       }
     }
   }
@@ -269,6 +279,39 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$issuerName] check schema is on ledger" in {
         val (issuerDID, _): (DID, VerKey) = currentIssuerId(issuerSdk, msgReceiverSdk)
         ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+      }
+    }
+  }
+
+  def writeSchemaNeedsEndorsement(sdk: VeritySdkProvider,
+                                  ledgerUtil: LedgerUtil,
+                                  schemaName: String,
+                                  schemaVersion: String,
+                                  schemaAttrs: String*)
+                                 (implicit scenario: Scenario): Unit = {
+    writeSchemaNeedsEndorsement(sdk, sdk, ledgerUtil, schemaName, schemaVersion, schemaAttrs: _*)
+  }
+
+  def writeSchemaNeedsEndorsement(issuerSdk: VeritySdkProvider,
+                                  msgReceiverSdkProvider: VeritySdkProvider,
+                                  ledgerUtil: LedgerUtil,
+                                  schemaName: String,
+                                  schemaVersion: String,
+                                  schemaAttrs: String*)
+                                 (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"write schema on $issuerName" - {
+
+      val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use write-schema protocol before issuer DID is on ledger" in {
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        schema.write(issuerSdk.context)
+
+        msgReceiverSdk.expectMsg("needs-endorsement") {resp =>
+          resp shouldBe an[JSONObject]
+          resp.getString("schemaJson").contains("endorser") shouldBe true
+        }
       }
     }
   }

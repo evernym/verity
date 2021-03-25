@@ -86,6 +86,7 @@ class MultiTenantSpec
   def sdkIssuerSetupInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
     apps(verity1).sdks.foreach { sdk =>
       setupIssuer(sdk, ledgerUtil)
+      writeIssuerToLedger(sdk, ledgerUtil)
 
       updateConfigs(
         sdk,

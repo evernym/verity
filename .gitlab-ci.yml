@@ -283,7 +283,7 @@ publish-tests-manual:
       --request POST
       --form token=$CI_JOB_TOKEN
       --form ref=$TRIGGERAPI_REF_VERITY_RELEASE
-      --form "variables[PACKAGE_VERSION]=$VERITY_VERSION"
+      --form "variables[VERITY_PACKAGE_VERSION]=$VERITY_VERSION"
       --form "variables[TARGET_ENV]=$TARGET_ENVIRONMENT"
       --form "variables[CI_PROJECT_ID_SOURCE]=$CI_PROJECT_ID"
       --form "variables[UPSTREAM_BRANCH]=$CI_COMMIT_REF_NAME"

@@ -22,7 +22,8 @@ object WalletUtil {
       val userName = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_CRED_USERNAME)
       val password = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_CRED_PASSWORD)
       val dbName = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_DB_NAME)
-      new MySqlWalletConfig(readHost, writeHost, port, userName, password, dbName)
+      val connectionLimit = appConfig.getConfigIntOption(CommonConfig.WALLET_STORAGE_CONNECTION_LIMIT)
+      new MySqlWalletConfig(readHost, writeHost, port, userName, password, dbName, connectionLimit)
     } else new DefaultWalletConfig
   }
 

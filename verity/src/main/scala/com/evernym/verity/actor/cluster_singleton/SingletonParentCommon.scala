@@ -57,7 +57,7 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
   implicit override def actorSystem: ActorSystem = agentActorContext.system
 
   implicit val timeout: Timeout = buildTimeout(agentActorContext.appConfig,
-    TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
+    TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
 
   override final def preStart(): Unit = {
     try {

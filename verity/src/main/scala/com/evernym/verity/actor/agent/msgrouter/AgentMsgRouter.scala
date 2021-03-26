@@ -46,7 +46,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   override def actorSystem: ActorSystem = system
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
-    DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
+    DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
 
   val logger: Logger = getLoggerByClass(classOf[AgentMsgRouter])
 

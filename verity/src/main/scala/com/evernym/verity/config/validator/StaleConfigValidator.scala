@@ -15,24 +15,29 @@ class StaleConfigValidator (val config: Config) extends StaleConfigValidatorBase
 
 trait StaleConfigValidatorBase extends ConfigValidator {
 
-  def staleConfigs: Set[StaleConfig] = Set (
+  private def staleConfigs: Set[StaleConfig] = removedConfig ++ renamedConfig
 
-    //removed configs
-    StaleConfig("agency.config"),
-    StaleConfig("agency.routing"),
-    StaleConfig("agency.services.sms-service.external-services.twilio.endpoint"),
-    StaleConfig("agency.lib-indy.library-file-location"),
-    StaleConfig("agency.lib-indy.ledger.wallet-type"),
+  private def removedConfig: Set[RemovedConfig] = Set (
+    RemovedConfig("agency.config"),
+    RemovedConfig("agency.routing"),
+    RemovedConfig("agency.services.sms-service.external-services.twilio.endpoint"),
+    RemovedConfig("agency.lib-indy.library-file-location"),
+    RemovedConfig("agency.lib-indy.ledger.wallet-type"),
 
-    StaleConfig("verity.wallet-api"),
-    StaleConfig("kamon.instrumentation.akka.filters.group"),
-    StaleConfig("verity.user-agent-pairwise-watcher"),
+    RemovedConfig("verity.wallet-api"),
+    RemovedConfig("kamon.instrumentation.akka.filters.group"),
 
-    //renamed configs
-    StaleConfig("verity.cache.key-value-mapper-cache-expiration-time-in-seconds", "verity.cache.key-value-mapper.expiration-time-in-seconds"),
-    StaleConfig("verity.cache.agent-config-cache-expiration-time-in-seconds", "verity.cache.agent-config.expiration-time-in-seconds"),
-    StaleConfig("verity.cache.agency-detail-cache-expiration-time-in-seconds", "verity.cache.agency-detail.expiration-time-in-seconds"),
-    StaleConfig("verity.cache.get-ver-key-cache-expiration-time-in-seconds", "verity.cache.ledger-get-ver-key.expiration-time-in-seconds, verity.cache.wallet-get-ver-key.expiration-time-in-seconds")
+    RemovedConfig("verity.timeout.sms-service-ask-timeout-in-seconds"),
+    RemovedConfig("verity.timeout.service-shutdown-timeout-in-seconds"),
+    RemovedConfig("verity.user-agent-pairwise-watcher")
+  )
+
+  private def renamedConfig: Set[RenamedConfig] = Set (
+    RenamedConfig("verity.cache.key-value-mapper-cache-expiration-time-in-seconds", "verity.cache.key-value-mapper.expiration-time-in-seconds"),
+    RenamedConfig("verity.cache.agent-config-cache-expiration-time-in-seconds", "verity.cache.agent-config.expiration-time-in-seconds"),
+    RenamedConfig("verity.cache.agency-detail-cache-expiration-time-in-seconds", "verity.cache.agency-detail.expiration-time-in-seconds"),
+    RenamedConfig("verity.cache.get-ver-key-cache-expiration-time-in-seconds", "verity.cache.ledger-get-ver-key.expiration-time-in-seconds, verity.cache.wallet-get-ver-key.expiration-time-in-seconds"),
+    RenamedConfig("verity.timeout.actor-ref-resolve-timeout-in-seconds", "verity.timeout.general-actor-ref-resolve-timeout-in-seconds"),
   )
 
   override val validationType: String = "stale configuration checking"
@@ -54,12 +59,26 @@ trait StaleConfigValidatorBase extends ConfigValidator {
   }
 }
 
-object StaleConfig {
-  def apply(oldPath: String, newPath: String): StaleConfig = StaleConfig(oldPath, Option(newPath))
+
+trait StaleConfig {
+  def oldPath: String
+  def newPath: Option[String]
+}
+
+/**
+ *
+ * @param oldPath the config path which has been removed
+ */
+case class RemovedConfig(oldPath: String) extends StaleConfig {
+  override def newPath: Option[String] = None
+}
+
+object RenamedConfig {
+  def apply(oldPath: String, newPath: String): RenamedConfig = RenamedConfig(oldPath, Option(newPath))
 }
 /**
  *
- * @param oldPath the config path which has been removed/unused
- * @param newPath the new config path if path is changed
+ * @param oldPath the config path which is renamed
+ * @param newPath the new config path
  */
-case class StaleConfig(oldPath: String, newPath: Option[String]=None)
+case class RenamedConfig(oldPath: String, newPath: Option[String]) extends StaleConfig

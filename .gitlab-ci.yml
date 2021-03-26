@@ -30,7 +30,7 @@ stages:
 
 license-data-check:
   stage: check
-  script: ./devops/license-date-check.sh
+  script: ./cicd/license-date-check.sh
   only:
     refs:
       - branches
@@ -49,7 +49,7 @@ license-data-check:
     - mkdir -p $CI_PROJECT_DIR/.sbt && cp -r ~/.sbt/* $CI_PROJECT_DIR/.sbt/.
   tags:
     - docker-machine
-    - compute-2xlarge
+    - general-xlarge
 
 unit-test:
   extends: .test
@@ -190,7 +190,7 @@ integration:
     - sbt debian:packageBin
   tags:
     - docker-machine
-    - compute-xlarge
+    - general-xlarge
 
 package:
   extends: .package-common
@@ -232,34 +232,6 @@ publish-manual:
   extends: .publish-common
   dependencies:
     - package-manual
-  only:
-    refs:
-      - branches
-      - tags
-      - merge_requests
-  when: manual
-
-.publish-tests-common:
-  stage: publish
-  cache:
-    paths:
-      - $CI_PROJECT_DIR/.sbt/
-      - $CI_PROJECT_DIR/.ivy2/
-  script:
-    - cd $CI_PROJECT_DIR
-    - sbt "integrationTests/publish"
-  tags:
-    - docker-machine
-    - compute-xlarge
-
-publish-tests:
-  extends: .publish-tests-common
-  only:
-    refs:
-      - master@dev/verity/verity
-
-publish-tests-manual:
-  extends: .publish-tests-common
   only:
     refs:
       - branches

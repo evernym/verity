@@ -1,5 +1,85 @@
 # Verity
 
+## Development Environment
+
+### OS Requirements
+`verity`uses native libraries that must be built for the target OS. These libraries are currently only built for a couple
+of LTS releases of Ubuntu.
+
+* 16.04
+* 18.04
+
+Because of this, development of `verity` requires (or at least this guide requires) use of one of the above versions of
+Ubuntu (either native or in a docker container)
+
+
+### JDK
+
+`verity` targets `JDK` `1.8` (normally openjdk)
+
+**Install (Ubuntu):**
+```shell
+sudo apt install openjdk-8-jdk
+```
+
+### Scala and SBT 
+
+`verity` is written in scala and built using SBT. Scala is installed with SBT, so only SBT needs to be installed.
+
+**Install (Ubuntu):**
+
+See instructions on [sbt website](https://www.scala-sbt.org/download.html).
+
+### envFullCheck
+
+There is an `sbt` task that checks and helps guide setup of the development environment. Run the following in repo's root 
+directory:
+
+```sbt envFullCheck```
+
+The output should help guid developers to identify missing tools and libraries in the environment. If the tool or 
+library is missing, the output will provide general guidance on how to still the missing element. 
+
+There are currently three
+scopes:
+* `Core` -- Tools and libraries required to build and run unit tests.
+* `Integration` -- Tools and libraries required to build and run integration tests.
+* `IntegrationSDK` -- Tools and libraries to required to build and run integration tests on specific SDKs.
+
+## Development Tasks
+
+### Compile
+The following `sbt` task will compile the main `verity` project and its assoicated tests.
+
+```shell
+sbt compile test:compile
+```
+
+
+### Compile ProtoBuf Objects:
+We are using protobuf to generate event case classes to support schema evolution.
+If you get errors in an IDE because of missing object, you may need to generate the protobuf object. That can be down 
+as follows:
+
+```
+sbt protocGenerate test:protocGenerate
+```
+
+If that doesn't resolve it, try cleaning before generate protobuf object and compiling:
+
+```
+sbt clean
+sbt protocGenerate test:protocGenerate
+sbt compile test:compile
+```
+
+### Unit Tests
+
+```sbt test```
+
+### Integration Tests
+See details here: [integration-tests/README.md](integration-tests/README.md)
+
 ## Development Process
 All developers are expected to do the following:
 
@@ -9,66 +89,15 @@ All developers are expected to do the following:
    a branch is not ready to be vetted/tested by GitLab CI/CD pipelines. Doing so
    allows developers to push to origin w/o needlessly consuming resources and
    knowingly producing failed jobs.
-4. Get new and [existing tests](#running-tests) passing before submitting a merge request
-5. Use a [devlab environment](#devlab-environment) to test artifact
-   installation/upgrade
-6. Use a [devlab environment](#devlab-environment) to develop (write and test)
-   Puppet code used to maintain Team and production environments. See
-   [RC Environments, Continuous Deploy Documentation](https://docs.google.com/document/d/1guYpEbn4sQ5gpzrs-hUfAjNoIWx7fNBRU2hxWA6tmpE/edit?usp=sharing)
-   for details.
+4. Get new and current tests (unit and integration) passing before submitting a merge request
+5. Use a [puppet devlab environment](https://gitlab.corp.evernym.com/puppet/puppet-agency-devlab) to test artifact installation/upgrade
+6. Use a [puppet devlab environment](https://gitlab.corp.evernym.com/puppet/puppet-agency-devlab) to develop (write and test) puppet code used to maintain Team and production environments.
 7. Have at least one peer review merge requests (MR)
-8. Once an MR has been merged, and artifacts have been published, [upgrade the
-   team environment](https://docs.google.com/document/d/1guYpEbn4sQ5gpzrs-hUfAjNoIWx7fNBRU2hxWA6tmpE/edit#heading=h.6wk6io6m471b) and assign another team member to test the changes using the
+8. Once an MR has been merged, and artifacts have been published, upgrade the
+   team environment and assign another team member to test the changes using the
    team environment
 
-## Development Environment
-
-### Setup
-```
-./devops/scripts/dev-env/setup-all.sh
-```
-
-##### Install a docker if you don't already have it installed
-```
-./devops/scripts/dev-env/install-docker.sh
-```
-
-##### Create and start docker-based Indy Pool
-```
-./devops/scripts/ledger/install.sh
-```
-
-### How to create proto related events
-We are using protobuf to generate event case classes to support schema evolution.
-If you get errors like, event case class not found, execute the following commands:
-
-```
-sbt protocGenerate
-sbt test:protocGenerate
-```
-
-If that doesn't resolve it, then:
-
-```
-sbt clean compile
-sbt test:compile
-```
-
-### Unit Tests
-Assumptions: 
-
-* libindy library is already installed
-* proto event classes is already generated
-
-```sbt test```
-
-See [Running Tests in Docker from an IDE](https://docs.google.com/document/d/1TsL-vIzMXHtbQQcjXypSjFIQcGIqp7N4ahmkMZESvRY)
-for instructions on how to run unit tests in Docker from an IDE
-
-### Integration/E2E Tests
-See details here: integration-tests/README.md
-
-## Devlab Environment
+## Test Deployment Environment
 Once all unit and integration tests are passing, use a devlab environment (see puppet-agency-devlab)
 to test the installation/upgrade of artifacts (debian packages) and develop new
 Puppet code needed to install and configure artifacts in Team and production
@@ -77,12 +106,8 @@ performing integration tests with connect.me, CAS, EAS, libvcx, VUI, etc., as
 well as ensuring older versions of those artifacts still operate with newer
 versions of Verity.
 
-## Team Environment
-Team environments are intended to be used for team collaboration, including 
-verification/validation by Product Owners.
-
 ### Remote Debugging
-All team environments are, by default, configured to allow remote debugging
+All development environments are, by default, configured to allow remote debugging
 using JDWP port 5005 on CAS/EAS/VAS. However, for security reasons, this port is
 only open to traffic originating from localhost (127.0.0.1). Therefore,
 developers must use ssh forwarding to remote debug CAS/EAS/VAS in team
@@ -92,19 +117,14 @@ The following command routes 5005 localhost traffic to port 5005 on team1's CAS
 ```ssh -vAC -L 5005:localhost:5005 dcas-ore-dt101```
 The following command routes 5006 localhost traffic to port 5005 on team1's EAS
 ```ssh -vAC -L 5006:localhost:5005 deas-ore-dt101```
-
-#### Developers can then create a "Remote" debug session in IntelliJ
-##### Source code must be checked out at the hash that was used to produce the artifact being debugged so line numbers match. Checkout the git hash in the version number of CAS/EAS/VAS being remotely debugged.
-##### Run > Edit Configurations > + > Remote
-##### Set 'Debugger Mode' to 'Attach to remote JVM'
-##### Set 'host' to localhost and 'port' to the local port you chose when setting up ssh forwarding (i.e. 5005, 5006 from the examples above)
-##### Set breakpoints
-##### Click the "debug" symbol next to the run script and do what it takes for the remote service to hit your breakpoints. Integration tests, Verity UI, Verity SDK, and Connect.Me are typically used to do so.
-
-## Coding Conventions
-### Error Handling
-The [AppStateManager](verity/src/main/scala/com/evernym/verity/apphealth/README.md)
-
+ 
+Developers can then create a "Remote" debug session in IntelliJ by: 
+* Checking out the commit has used to build the deployed artifact
+* Run > Edit Configurations > + > Remote
+* Set 'Debugger Mode' to 'Attach to remote JVM'
+* Set 'host' to localhost and 'port' to the local port you chose when setting up ssh forwarding (i.e. 5005, 5006 from the examples above)
+* Set breakpoints
+* Click the "debug" symbol next to the run script and do what it takes for the remote service to hit your breakpoints. Integration tests, Verity UI, Verity SDK, and Connect.Me are typically used to do so.
 
 # Acknowledgements
 This effort is part of a project that has received funding from the European Union’s Horizon 2020 research and innovation program under grant agreement No 871932 delivered through our participation in the eSSIF-Lab, which aims to advance the broad adoption of self-sovereign identity for the benefit of all.

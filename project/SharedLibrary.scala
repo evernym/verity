@@ -1,9 +1,30 @@
-import java.nio.file.{Files, Path, Paths}
+import DevEnvironmentTasks.envOsCheck
+import SharedLibrary.{Lib, defaultUpdateSharedLibraries}
+import sbt.Keys.{streams, target}
 
+import java.nio.file.{Files, Path, Paths}
 import sbt._
 import sbt.internal.util.ManagedLogger
 
 import scala.sys.process._
+
+
+object SharedLibraryTasks {
+  //noinspection TypeAnnotation
+  def init = {
+    Seq(
+      ThisBuild / updateSharedLibraries := defaultUpdateSharedLibraries(
+        sharedLibraries.value,
+        target.value.toPath.resolve("shared-libs"),
+        streams.value.log,
+        envOsCheck.value
+      )
+    )
+  }
+
+  val sharedLibraries = taskKey[Seq[Lib]]("List native shared libraries")
+  val updateSharedLibraries = taskKey[Unit]("Update Shared Libraries")
+}
 
 object SharedLibrary {
   val managedSharedLibTrigger: String = "VERITY_MANAGE_SHARED_LIBS"
@@ -13,34 +34,37 @@ object SharedLibrary {
    */
   sealed trait Lib {
     def packageName: String
-    def packageVersion: String
+    def packageVersion(os: Ubuntu): String
     def libraryName: String
   }
 
   // For cases where the library and package share the same name
-  case class LibPack(packageName: String, packageVersion: String) extends Lib {
+  case class StandardLib(packageName: String, givenVersion: String) extends Lib {
+    override def packageVersion(os: Ubuntu): String = givenVersion
     val libraryName: String = s"$packageName.so"
   }
 
-  case class LibPackExt(packageName: String, packageVersion: String, libraryName: String ) extends Lib
+  case class NonMatchingLib(packageName: String, givenVersion: String, libraryName: String ) extends Lib {
+    override def packageVersion(os: Ubuntu): String = givenVersion
+  }
 
-  val updateSharedLibraries = taskKey[Unit]("Update Shared Libraries")
+  case class NonMatchingDistLib(packageName: String, packageBaseVersion: String, libraryName: String ) extends Lib {
+    override def packageVersion(os: Ubuntu): String = s"$packageBaseVersion-${os.codeName}"
+  }
 
   val packageSubDir = "pkg"
   val libsSubDir = "libs"
 
   def defaultUpdateSharedLibraries(libs: Seq[Lib],
                                    shareLibTarget: Path,
-                                   logger: ManagedLogger): Unit = {
+                                   logger: ManagedLogger,
+                                   osType: Option[Ubuntu]): Unit = {
     if(!sys.env.contains(managedSharedLibTrigger)) return
 
-    // check that required commands are available
-    try {
-      "dpkg --version".!!
-      "apt-get -v".!!
-    }
-    catch{
-      case e: Exception => throw new Exception("Required commands not found! must have dpkg and apt-get", e)
+    val os = osType.getOrElse(throw new Exception("This task requires Ubuntu"))
+
+    if(!os.toolsCheck) {
+      throw new Exception("This task requires tools that are not available")
     }
 
     // downloads and unpacks given shared libraries
@@ -48,7 +72,7 @@ object SharedLibrary {
       downloadSharedLibrary(
         l.packageName,
         l.libraryName,
-        l.packageVersion,
+        l.packageVersion(os),
         shareLibTarget,
         logger
       )
@@ -58,7 +82,19 @@ object SharedLibrary {
     // if library is not libindy, expects it only dependency to be libindy (this is true as of now)
     // if the library is libindy, check that its dependencies are on the box
     libs.foreach{ l =>
-      checkDeps(l.packageName, l.packageVersion, shareLibTarget)
+      checkDeps(
+        l.packageName,
+        l.packageVersion(os),
+        shareLibTarget
+      )
+    }
+  }
+
+  private def modifyVer(os: Ubuntu, pkgName: String, pkgVer: String) = {
+    pkgName match {
+      case "libindy" => s"$pkgVer-${os.codeName}"
+      case "libnullpay" => s"$pkgVer-${os.codeName}"
+      case _ => pkgVer
     }
   }
 

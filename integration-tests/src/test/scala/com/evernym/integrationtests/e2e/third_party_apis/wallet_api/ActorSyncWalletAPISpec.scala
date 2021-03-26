@@ -4,8 +4,7 @@ import com.evernym.verity.vault.wallet_api.base.ActorClientWalletAPISpecBase
 
 /**
  * this is an integration test and it depends on mysql based wallet storage
- * mysql can be installed by executing        : <repo-root>/devops/scripts/wallet-storage-mysql/install.sh
- * required tables can be setup by executing  : <repo-root>/devops/scripts/wallet-storage-mysql/clean-setup.sh
+ * See devlab README to see how to have a local mysql DB available
  */
 
 //NOTE: this one exercises "SYNC wallet api" from within actors

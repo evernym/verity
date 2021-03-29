@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily
 
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, VALID_MESSAGE_TYPE_REG_EX, typeStrFromMsgType}
+import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, QUALIFIER_FORMAT_HTTP, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, msgQualifierFromQualifierStr, qualifierStrFromMsgQualifier, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.MsgType
 import com.evernym.verity.testkit.BasicSpec
 
@@ -16,7 +16,25 @@ class AgentMsgTypeBuilderSpec extends BasicSpec {
   )
 
   testMsgTypes map typeStrFromMsgType foreach {
-    _ should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX
+    str => {
+      if(QUALIFIER_FORMAT_HTTP) {
+        str should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX_HTTP
+      } else str should fullyMatch regex VALID_MESSAGE_TYPE_REG_EX_DID
+    }
   }
+
+  val testCommunityQualifierStr = qualifierStrFromMsgQualifier(COMMUNITY_QUALIFIER)
+  val testEvernymQualifierStr = qualifierStrFromMsgQualifier(EVERNYM_QUALIFIER)
+
+  if(QUALIFIER_FORMAT_HTTP) {
+    testCommunityQualifierStr shouldBe "didcomm.org"
+    testEvernymQualifierStr shouldBe "didcomm.evernym.com"
+  } else {
+    testCommunityQualifierStr shouldBe "BzCbsNYhMrjHiqZDTUASHg"
+    testEvernymQualifierStr shouldBe "123456789abcdefghi1234"
+  }
+
+  msgQualifierFromQualifierStr("didcomm.org") shouldBe COMMUNITY_QUALIFIER
+  msgQualifierFromQualifierStr("didcomm.evernym.com") shouldBe EVERNYM_QUALIFIER
 
 }

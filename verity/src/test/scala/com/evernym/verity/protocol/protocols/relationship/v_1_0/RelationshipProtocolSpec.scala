@@ -1017,7 +1017,7 @@ class RelationshipProtocolSpec
   }
 
   def checkInvitationState(inv: Msg.Invitation, label: String = labelStr, profileUrl: Option[String] = Option(defLogo)): Unit = {
-    inv.`@type` shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation"
+    inv.`@type` should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation") or be ("https://didcomm.org/connections/1.0/invitation"))
     inv.label shouldBe label
     inv.profileUrl shouldBe profileUrl
   }
@@ -1034,7 +1034,7 @@ class RelationshipProtocolSpec
     val json = getInvitationJsonFromUrl(inviteURL, "c_i")
 
     json.getString("@id") shouldBe invitationId
-    json.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation"
+    json.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation") or be ("https://didcomm.org/connections/1.0/invitation"))
     json.getString("label") shouldBe label
     profileUrl match {
       case Some(value) => json.getString("profileUrl") shouldBe value
@@ -1069,7 +1069,7 @@ class RelationshipProtocolSpec
                                ): Unit = {
     val json = getInvitationJsonFromUrl(inviteURL, "oob")
     json.getString("@id") shouldBe invitationId
-    json.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+    json.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation") or be ("https://didcomm.org/out-of-band/1.0/invitation"))
     json.getString("label") shouldBe label
     profileUrl match {
       case Some(value) => json.getString("profileUrl") shouldBe value

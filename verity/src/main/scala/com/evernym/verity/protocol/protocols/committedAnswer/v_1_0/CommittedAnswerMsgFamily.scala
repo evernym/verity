@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTim
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Ctl.Init
 
 object CommittedAnswerMsgFamily extends MsgFamily {
-  override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
+  override val qualifier: MsgFamilyQualifier = MsgFamily.COMMUNITY_QUALIFIER
   override val name: MsgFamilyName = "committedanswer"
   override val version: MsgFamilyVersion = "1.0"
 

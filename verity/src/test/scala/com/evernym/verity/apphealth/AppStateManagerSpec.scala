@@ -2,7 +2,7 @@ package com.evernym.verity.apphealth
 
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
-import com.evernym.verity.actor.testkit.{AppStateManagerTestKit, PersistentActorSpec}
+import com.evernym.verity.actor.testkit.{ActorSpec, AppStateManagerTestKit}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.actor.appStateManager.state.{DegradedState, DrainingState, InitializingState, ListeningState, ShutdownState, ShutdownWithErrors, SickState}
@@ -14,7 +14,7 @@ import org.scalatest.time.{Seconds, Span}
 
 
 class AppStateManagerSpec
-  extends PersistentActorSpec
+  extends ActorSpec
     with BasicFixtureSpec
     with CancelGloballyAfterFailure
     with Eventually {
@@ -82,47 +82,6 @@ class AppStateManagerSpec
       }
     }
 
-    "when in 'Listening' state" - {
-
-      "MildSystemError event is received" - {
-        "should switch to 'DegradedState' state" in { implicit asmTestKit =>
-          switchToListeningState()
-
-          publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
-            new RuntimeException("exception message"), msg = Option(CAUSE_MESSAGE_MILD_SYSTEM_ERROR)))
-
-          eventually {
-            withLatestAppState { implicit las =>
-              las.currentState shouldBe DegradedState
-
-              assertEvents(las.stateEvents, 3)
-              assertCausesByState(las.causesByState,
-                Map(
-                  STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-                  STATUS_DEGRADED -> List(withUnhandledCodeAndMsg(CAUSE_DETAIL_MILD_SYSTEM_ERROR))))
-              assertCausesByContext(las.causesByContext,
-                Map(
-                  CONTEXT_GENERAL -> Set(withUnhandledCodeAndMsg(CAUSE_DETAIL_MILD_SYSTEM_ERROR), CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
-            }
-          }
-        }
-      }
-
-      "SeriousSystemError event is received" - {
-        "should switch to 'SickState' state" in { implicit asmTestKit =>
-          switchToListeningState()
-          switchToSickState()
-        }
-      }
-
-      "DrainingStarted event is received" - {
-        "should switch to 'Draining' state" taggedAs UNSAFE_IgnoreAkkaEvents in { implicit asmTestKit =>
-          switchToListeningState()
-          switchToDraining()
-        }
-      }
-    }
-
     "when in 'Sick' state" - {
 
       "'ManualUpdate' is received" - {
@@ -176,6 +135,52 @@ class AppStateManagerSpec
       }
     }
 
+    "when in 'Listening' state" - {
+
+      "MildSystemError event is received" - {
+        "should switch to 'DegradedState' state" in { implicit asmTestKit =>
+          switchToListeningState()
+
+          publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
+            new RuntimeException("exception message"), msg = Option(CAUSE_MESSAGE_MILD_SYSTEM_ERROR)))
+
+          eventually {
+            withLatestAppState { implicit las =>
+              las.currentState shouldBe DegradedState
+
+              assertEvents(las.stateEvents, 3)
+              assertCausesByState(las.causesByState,
+                Map(
+                  STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
+                  STATUS_DEGRADED -> List(withUnhandledCodeAndMsg(CAUSE_DETAIL_MILD_SYSTEM_ERROR))))
+              assertCausesByContext(las.causesByContext,
+                Map(
+                  CONTEXT_GENERAL -> Set(withUnhandledCodeAndMsg(CAUSE_DETAIL_MILD_SYSTEM_ERROR), CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
+            }
+          }
+        }
+      }
+
+      "SeriousSystemError event is received" - {
+        "should switch to 'SickState' state" in { implicit asmTestKit =>
+          switchToListeningState()
+          switchToSickState()
+        }
+      }
+
+      "DrainingStarted event is received" - {
+        "should switch to 'Draining' state" taggedAs UNSAFE_IgnoreAkkaEvents in { implicit asmTestKit =>
+          switchToListeningState()
+
+          //keep this as the last part of this spec because as part of this test
+          // current node leaves the cluster and if if there are any further test (after this one)
+          // which try to create new actor (while system is draining), then it throws exception
+          // 'cannot create children while terminating or terminated'
+          switchToDraining()
+        }
+      }
+    }
+
   }
 
   /**************************************************************************************
@@ -186,15 +191,15 @@ class AppStateManagerSpec
     publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_GENERAL, CAUSE_DETAIL_LISTENING_SUCCESSFULLY,
         msg = Option(CAUSE_MESSAGE_LISTENING_SUCCESSFULLY)))
 
-      eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
-        withLatestAppState { implicit las =>
-          las.currentState shouldBe ListeningState
+    eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
+      withLatestAppState { implicit las =>
+        las.currentState shouldBe ListeningState
 
-          assertEvents(las.stateEvents, 2)
-          assertCausesByState(las.causesByState, Map(STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
-          assertCausesByContext(las.causesByContext, Map(CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
-        }
+        assertEvents(las.stateEvents, 2)
+        assertCausesByState(las.causesByState, Map(STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
+        assertCausesByContext(las.causesByContext, Map(CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
       }
+    }
   }
 
 
@@ -202,21 +207,21 @@ class AppStateManagerSpec
     publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, new RuntimeException("runtime exception"),
         msg = Option(CAUSE_MESSAGE_SERIOUS_SYSTEM_ERROR)))
 
-      eventually {
-        withLatestAppState { implicit las =>
-          las.currentState shouldBe SickState
+    eventually {
+      withLatestAppState { implicit las =>
+        las.currentState shouldBe SickState
 
-          assertEvents(las.stateEvents, 3)
-          assertCausesByState(las.causesByState,
-            Map(
-              STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-              STATUS_SICK -> List(withUnhandledCodeAndMsg(CAUSE_DETAIL_SERIOUS_SYSTEM_ERROR))))
-          assertCausesByContext(las.causesByContext,
-            Map(
-              CONTEXT_GENERAL -> Set(withUnhandledCodeAndMsg(CAUSE_DETAIL_SERIOUS_SYSTEM_ERROR),
-                CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
-        }
+        assertEvents(las.stateEvents, 3)
+        assertCausesByState(las.causesByState,
+          Map(
+            STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
+            STATUS_SICK -> List(withUnhandledCodeAndMsg(CAUSE_DETAIL_SERIOUS_SYSTEM_ERROR))))
+        assertCausesByContext(las.causesByContext,
+          Map(
+            CONTEXT_GENERAL -> Set(withUnhandledCodeAndMsg(CAUSE_DETAIL_SERIOUS_SYSTEM_ERROR),
+              CAUSE_DETAIL_LISTENING_SUCCESSFULLY)))
       }
+    }
   }
 
 
@@ -228,40 +233,40 @@ class AppStateManagerSpec
         msg = Option(CAUSE_MESSAGE_DRAINING_STARTED)
       ))
 
-      eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
-        withLatestAppState { implicit las =>
-          las.currentState shouldBe DrainingState
+    eventually(timeout(Span(7, Seconds)), interval(Span(1, Seconds))) {
+      withLatestAppState { implicit las =>
+        las.currentState shouldBe DrainingState
 
-          assertEvents(las.stateEvents, 3)
-          assertCausesByState(las.causesByState,
-            Map(
-              STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-              STATUS_DRAINING -> List(CAUSE_DETAIL_DRAINING_STARTED)))
-          assertCausesByContext(las.causesByContext,
-            Map(
-              CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-              CONTEXT_AGENT_SERVICE_DRAIN -> Set(CAUSE_DETAIL_DRAINING_STARTED))
-          )
-        }
+        assertEvents(las.stateEvents, 3)
+        assertCausesByState(las.causesByState,
+          Map(
+            STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
+            STATUS_DRAINING -> List(CAUSE_DETAIL_DRAINING_STARTED)))
+        assertCausesByContext(las.causesByContext,
+          Map(
+            CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
+            CONTEXT_AGENT_SERVICE_DRAIN -> Set(CAUSE_DETAIL_DRAINING_STARTED))
+        )
       }
+    }
 
-      eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
-        withLatestAppState { implicit las =>
-          las.currentState shouldBe ShutdownState
+    eventually(timeout(Span(7, Seconds)), interval(Span(1, Seconds))) {
+      withLatestAppState { implicit las =>
+        las.currentState shouldBe ShutdownState
 
-          assertEvents(las.stateEvents, 4)
-          assertCausesByState(las.causesByState,
-            Map(
-              STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-              STATUS_DRAINING -> List(CAUSE_DETAIL_DRAINING_STARTED),
-              STATUS_SHUTDOWN -> List(CAUSE_DETAIL_SHUTDOWN)))
-          assertCausesByContext(las.causesByContext,
-            Map(
-              CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-              CONTEXT_AGENT_SERVICE_DRAIN -> Set(CAUSE_DETAIL_DRAINING_STARTED),
-              CONTEXT_AGENT_SERVICE_SHUTDOWN -> Set(CAUSE_DETAIL_SHUTDOWN)))
-        }
+        assertEvents(las.stateEvents, 4)
+        assertCausesByState(las.causesByState,
+          Map(
+            STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
+            STATUS_DRAINING -> List(CAUSE_DETAIL_DRAINING_STARTED),
+            STATUS_SHUTDOWN -> List(CAUSE_DETAIL_SHUTDOWN)))
+        assertCausesByContext(las.causesByContext,
+          Map(
+            CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
+            CONTEXT_AGENT_SERVICE_DRAIN -> Set(CAUSE_DETAIL_DRAINING_STARTED),
+            CONTEXT_AGENT_SERVICE_SHUTDOWN -> Set(CAUSE_DETAIL_SHUTDOWN)))
       }
+    }
   }
 
   val CAUSE_DETAIL_LISTENING_SUCCESSFULLY   = CauseDetail("ls", "listening successfully")
@@ -326,9 +331,11 @@ class AppStateManagerSpec
   }
 
   def withFixture(test: OneArgTest): Outcome = {
-    val fixture = new AppStateManagerTestKit(this)
-
-    super.withFixture(test.toNoArgTest(fixture))
+    val fixture = new AppStateManagerTestKit(this, appConfig)
+    val r = super.withFixture(test.toNoArgTest(fixture))
+    fixture.stop()
+    Thread.sleep(1000)  //just to make sure the app state manager actor gets stopped
+    r
   }
 
 }

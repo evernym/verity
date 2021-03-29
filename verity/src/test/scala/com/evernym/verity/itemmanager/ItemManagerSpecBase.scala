@@ -3,7 +3,6 @@ package com.evernym.verity.itemmanager
 import java.time.LocalDateTime
 
 import com.evernym.verity.actor.ForIdentifier
-import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants.ENTITY_ID_MAPPER_VERSION_V1
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
 import com.evernym.verity.actor.itemmanager.{ExternalCmdWrapper, ItemConfigManager, ItemContainerMapper}

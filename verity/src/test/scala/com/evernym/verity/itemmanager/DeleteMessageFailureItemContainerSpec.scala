@@ -19,7 +19,7 @@ class DeleteMessageFailureItemManagerSpec
     with ItemManagerSpecBase
     with SystemExitSpec {
 
-  val asmTestKit = new AppStateManagerTestKit(this)
+  val asmTestKit = new AppStateManagerTestKit(this, appConfig)
 
   override lazy val overrideConfig: Option[Config] = Option {
     watcherConfig

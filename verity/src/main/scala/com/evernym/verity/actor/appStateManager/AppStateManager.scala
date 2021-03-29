@@ -4,8 +4,10 @@ import akka.actor.{ActorLogging, Props}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.{AppVersion, BuildInfo}
 import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.config.AppConfig
 
-class AppStateManager(val notifierService: SysServiceNotifier,
+class AppStateManager(val appConfig: AppConfig,
+                      val notifierService: SysServiceNotifier,
                       val shutdownService: SysShutdownProvider)
   extends CoreActorExtended
     with AppStateManagerBase
@@ -48,6 +50,8 @@ trait AppStateRequest extends ActorMessage
 trait AppStateEvent extends ActorMessage
 
 object AppStateManager {
-  def props(sysServiceNotifier: SysServiceNotifier, shutdownService: SysShutdownProvider): Props =
-    Props(new AppStateManager(sysServiceNotifier, shutdownService))
+  def props(appConfig: AppConfig,
+            sysServiceNotifier: SysServiceNotifier,
+            shutdownService: SysShutdownProvider): Props =
+    Props(new AppStateManager(appConfig, sysServiceNotifier, shutdownService))
 }

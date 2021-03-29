@@ -45,9 +45,9 @@ class WalletActorPassivationSpec
     }
   }
 
-  override def overrideConfig: Option[Config] = Option {
+  override lazy val overrideConfig: Option[Config] = Option {
     ConfigFactory.parseString {
-      """verity.non-persistent-actor.base.WalletActor.passivate-time-in-seconds = 2
+      s"""verity.non-persistent-actor.base.WalletActor.passivate-time-in-seconds = 2
          akka.loglevel = DEBUG
         """.stripMargin
     }

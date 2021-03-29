@@ -12,7 +12,7 @@ class PusherSpec
   extends ActorSpec
     with BasicSpec {
 
-  val asmTestKit = new AppStateManagerTestKit(this)
+  val asmTestKit = new AppStateManagerTestKit(this, appConfig)
 
   lazy val pusher: ActorRef = system.actorOf(Pusher.props(AppConfigWrapper), s"pusher-1")
 

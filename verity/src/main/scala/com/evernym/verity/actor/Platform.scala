@@ -58,7 +58,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //initialize app state manager
   val appStateManager: ActorRef = agentActorContext.system.actorOf(
-    AppStateManager.props(services.sysServiceNotifier, services.sysShutdownService), name = "app-state-manager")
+    AppStateManager.props(appConfig, services.sysServiceNotifier, services.sysShutdownService), name = "app-state-manager")
 
   val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig), name = "node-singleton")
 

@@ -41,7 +41,7 @@ class NodeSingleton(val appConfig: AppConfig)
 
     case RefreshNodeConfig =>
       logger.info(s"configuration refresh started...")
-      AppConfigWrapper.reload()
+      appConfig.reload()
       sender ! NodeConfigRefreshed
       logger.info(s"configuration refresh done !!")
 
@@ -49,7 +49,7 @@ class NodeSingleton(val appConfig: AppConfig)
       logger.info(s"configuration override started...")
       try {
         val newConfig = ConfigFactory.parseString(onc.configStr)
-        AppConfigWrapper.setConfig(newConfig.withFallback(AppConfigWrapper.config))
+        appConfig.setConfig(newConfig.withFallback(appConfig.config))
         sender ! NodeConfigRefreshed
         logger.info(s"configuration override done !!")
       } finally {

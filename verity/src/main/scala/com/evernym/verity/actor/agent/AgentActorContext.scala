@@ -66,7 +66,7 @@ trait AgentActorContext extends ActorContext {
   lazy val s3API: StorageAPI = new S3AlpakkaApi(appConfig.config)
 
   def createActorSystem(): ActorSystem = {
-    ActorSystem("verity", AppConfigWrapper.getLoadedConfig)
+    ActorSystem("verity", appConfig.getLoadedConfig)
   }
 
   object _smsSender extends SMSSender {

@@ -10,7 +10,7 @@ import com.evernym.verity.Exceptions.{HandledErrorException, TransitionHandlerNo
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.state.{AppState, DegradedState, DrainingState, InitializingState, ListeningState, ShutdownState, ShutdownWithErrors, SickState}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.http.common.StatusDetailResp
@@ -24,6 +24,7 @@ import scala.util.{Failure, Success}
 
 trait AppStateManagerBase { this: Actor =>
 
+  val appConfig: AppConfig
   val appVersion: AppVersion
   val notifierService: SysServiceNotifier
   val shutdownService: SysShutdownProvider
@@ -216,16 +217,16 @@ trait AppStateManagerBase { this: Actor =>
     logTransitionMsg(newState, msg)
   }
 
-  def performServiceDrain()(implicit appStateManager: AppStateManagerBase): Unit = {
+  def performServiceDrain(): Unit = {
     try {
       // TODO: Start a CoordinatedShutdown (rely on the ClusterDaemon addTask here) OR do the following?
       val cluster = Cluster(context.system)
       val f: Future[Boolean] = Future {
-        lazy val delayBeforeLeavingCluster = AppConfigWrapper.getConfigIntOption(
+        val delayBeforeLeavingCluster = appConfig.getConfigIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-        lazy val delayBetweenStatusChecks = AppConfigWrapper.getConfigIntOption(
+        val delayBetweenStatusChecks = appConfig.getConfigIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS).getOrElse(1)
-        lazy val maxStatusCheckCount = AppConfigWrapper.getConfigIntOption(
+        val maxStatusCheckCount = appConfig.getConfigIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT).getOrElse(20)
         logger.info(s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before
                           starting the Coordinated Shutdown...""")
@@ -265,12 +266,12 @@ trait AppStateManagerBase { this: Actor =>
 
           // Begin shutting down the node. The transition to "Shutdown" will stop the sysServiceNotifier and
           // perform a service shutdown (system exit).
-          processSuccessEvent(SuccessEvent(Shutdown, CONTEXT_AGENT_SERVICE_SHUTDOWN,
+          self ! SuccessEvent(Shutdown, CONTEXT_AGENT_SERVICE_SHUTDOWN,
             causeDetail = CauseDetail(
               "agent-service-shutdown", "agent-service-shutdown-successfully"
             ),
             msg = Option("Akka node is about to shutdown.")
-          ))
+          )
 
         case Failure(error) =>
           logger.error(

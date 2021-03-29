@@ -46,7 +46,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   implicit def actorSystem: ActorSystem = agentActorContext.system
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
-    DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
+    DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
   implicit val zoneId: ZoneId = UTCZoneId
 
   //initialize required libraries (libindy/libmysqlstorage etc)
@@ -58,7 +58,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //initialize app state manager
   val appStateManager: ActorRef = agentActorContext.system.actorOf(
-    AppStateManager.props(services.sysServiceNotifier, services.sysShutdownService), name = "app-state-manager")
+    AppStateManager.props(appConfig, services.sysServiceNotifier, services.sysShutdownService), name = "app-state-manager")
 
   val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig), name = "node-singleton")
 

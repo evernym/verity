@@ -34,12 +34,8 @@ object DrainingState extends AppState {
    */
   override def postTransition(param: EventParam)(implicit appStateManager: AppStateManagerBase): Unit = {
     import appStateManager._
-    // TODO: consider checking if param.system is None BEFORE anything else. Doing so prevents the state transition,
-    //       because the node cannot 'leave' the cluster without a reference to the ActorSystem.
-    //       If param.system is guaranteed to be a valid ActorSystem reference, performServiceDrain does not need
-    //       to make the check for None.
-    //       Doing it the current way ensures traffic stops being routed from the load balancer to this node, but
-    //       does not ensure the akka node gracefully leaves the cluster (migrate singletons, shards, etc.)
+    //TODO: Doing it the current way ensures traffic stops being routed from the load balancer to this node,
+    // but does not ensure the akka node gracefully leaves the cluster (migrate singletons, shards, etc.)
     notifierService.setStatus(name)
     appStateManager.performServiceDrain()
   }

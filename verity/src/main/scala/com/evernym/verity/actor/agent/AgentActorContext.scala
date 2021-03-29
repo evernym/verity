@@ -11,7 +11,7 @@ import com.evernym.verity.actor.{ActorContext, TokenToActorItemMapperProvider}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
-import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
@@ -66,11 +66,11 @@ trait AgentActorContext extends ActorContext {
   lazy val s3API: StorageAPI = new S3AlpakkaApi(appConfig.config)
 
   def createActorSystem(): ActorSystem = {
-    ActorSystem("verity", AppConfigWrapper.getLoadedConfig)
+    ActorSystem("verity", appConfig.getLoadedConfig)
   }
 
   object _smsSender extends SMSSender {
-    implicit lazy val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS, DEFAULT_SMS_SERVICE_ASK_TIMEOUT_IN_SECONDS)
+    implicit lazy val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
     val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig), "sms-sender")
 
     override def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]] = {

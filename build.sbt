@@ -9,7 +9,10 @@ import Util.amGitlabCI
 
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
-import SharedLibrary.{LibPackExt, defaultUpdateSharedLibraries, updateSharedLibraries}
+import DevEnvironment.DebianRepo
+import DevEnvironmentTasks.{envRepos, jdkExpectedVersion}
+import SharedLibrary.{NonMatchingDistLib, NonMatchingLib}
+import SharedLibraryTasks.{sharedLibraries, updateSharedLibraries}
 import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
@@ -20,17 +23,37 @@ import scala.language.postfixOps
 
 enablePlugins(JavaAppPackaging)
 
-//deb package dependencies versions
-val debPkgDepLibIndyMinVersion = "1.15.0~1618"
-val debPkgDepLibMySqlStorageVersion = "0.1.11"
+ThisBuild / jdkExpectedVersion := "1.8"
+
+val evernymUbuntuRepo = DebianRepo(
+  "https://repo.corp.evernym.com/deb",
+  "evernym-ubuntu",
+  "main",
+  "954B 4A2B 453F 834B 6962  7B5F 5A45 7C93 E812 1A0A",
+  "https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key"
+)
+
+val evernymDevRepo = DebianRepo(
+  "https://repo.corp.evernym.com/deb",
+  "evernym-agency-dev-ubuntu",
+  "main",
+  "954B 4A2B 453F 834B 6962  7B5F 5A45 7C93 E812 1A0A",
+  "https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key"
+)
 
 //shared libraries versions
 val libIndyVer = "1.15.0~1618"
+val libMysqlStorageVer = "0.1.11"
 val sharedLibDeps = Seq(
-  LibPackExt("libindy", libIndyVer, "libindy.so"),
-  LibPackExt("libnullpay", libIndyVer, "libnullpay.so"),
-  LibPackExt("libvcx-test", "0.10.1-bionic~1131", "libvcx.so"), // For integration testing ONLY
+  NonMatchingDistLib("libindy", libIndyVer, "libindy.so"),
+  NonMatchingDistLib("libnullpay", libIndyVer, "libnullpay.so"),
+  NonMatchingLib("libmysqlstorage", libMysqlStorageVer, "libmysqlstorage.so"),
+  NonMatchingLib("libvcx", "0.10.1-bionic~1131", "libvcx.so"), // For integration testing ONLY
 )
+
+//deb package dependencies versions
+val debPkgDepLibIndyMinVersion = libIndyVer
+val debPkgDepLibMySqlStorageVersion = libMysqlStorageVer
 
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
@@ -73,7 +96,13 @@ ThisBuild / patch := patchNum(
 version := s"${major.value}.${minor.value}.${patch.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
-lazy val root = project.in(file(".")).aggregate(verity)
+ThisBuild / sharedLibraries := sharedLibDeps
+ThisBuild / envRepos := Seq(evernymDevRepo, evernymUbuntuRepo)
+SharedLibraryTasks.init
+DevEnvironmentTasks.init
+
+lazy val root = (project in file("."))
+  .aggregate(verity)
 
 lazy val verity = (project in file("verity"))
   .enablePlugins(DebianPlugin)
@@ -85,12 +114,6 @@ lazy val verity = (project in file("verity"))
     packageSettings,
     protoBufSettings,
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
-    updateSharedLibraries := defaultUpdateSharedLibraries(
-      sharedLibDeps,
-      target.value.toPath.resolve("shared-libs"),
-      streams.value.log
-    ),
-
     // Conditionally download an unpack shared libraries
     update := update.dependsOn(updateSharedLibraries).value
   )

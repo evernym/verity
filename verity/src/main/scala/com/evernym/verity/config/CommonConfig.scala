@@ -235,11 +235,8 @@ trait CommonConfig {
   val AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE = "akka.sharding-region-name.user-agent-pairwise"
 
   private val TIMEOUT = s"$VERITY.timeout"
-  val TIMEOUT_GENERAL_ASK_TIMEOUT_IN_SECONDS = s"$TIMEOUT.general-ask-timeout-in-seconds"
   val TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS = s"$TIMEOUT.general-actor-ask-timeout-in-seconds"
-  val TIMEOUT_ACTOR_REF_RESOLVE_TIMEOUT_IN_SECONDS = s"$TIMEOUT.actor-ref-resolve-timeout-in-seconds"
-  val TIMEOUT_SMS_SERVICE_ASK_TIMEOUT_IN_SECONDS = s"$TIMEOUT.sms-service-ask-timeout-in-seconds"
-  val TIMEOUT_SERVICE_SHUTDOWN_TIMEOUT_IN_SECONDS = s"$TIMEOUT.service-shutdown-timeout-in-seconds"
+  val TIMEOUT_GENERAL_ACTOR_REF_RESOLVE_TIMEOUT_IN_SECONDS = s"$TIMEOUT.general-actor-ref-resolve-timeout-in-seconds"
 
   private val ACTOR_DISPATCHER_NAME = "akka.actor.dispatchers"
   val AGENCY_AGENT_ACTOR_DISPATCHER_NAME = s"$ACTOR_DISPATCHER_NAME.agency-agent-dispatcher"

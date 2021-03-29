@@ -8,8 +8,9 @@ import com.evernym.verity.Status.APP_STATUS_UPDATE_MANUAL
 import com.evernym.verity.actor.appStateManager.AppStateConstants.{CONTEXT_MANUAL_UPDATE, STATUS_LISTENING}
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateManager, CauseDetail, GetCurrentState, GetDetailedAppState, ListeningSuccessful, ManualUpdate, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.state.{AppState, InitializingState, ListeningState}
-import com.evernym.verity.actor.base.{Done, Ping}
+import com.evernym.verity.actor.base.{Done, Ping, Stop}
 import com.evernym.verity.actor.testkit.actor.{MockNotifierService, MockShutdownService}
+import com.evernym.verity.config.AppConfig
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Seconds, Span}
@@ -22,16 +23,17 @@ import org.scalatest.time.{Seconds, Span}
  * AppStateManagerSpec is using this extensively
  *
  * @param testKit this is to be able to use 'expectMsgType' functionality provided by TestKit
- * @param self (actor reference of test code so that it can receive response from the AppStateManager actor)
  */
-class AppStateManagerTestKit(testKit: TestKitBase)(implicit self: ActorRef)
+class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
   extends Eventually with Matchers {
+
+  implicit val self: ActorRef = testKit.testActor
 
   private val actorName: String = UUID.randomUUID().toString
 
   private val appManager: ActorRef = {
     val ar = testKit.system.actorOf(
-      AppStateManager.props(MockNotifierService, MockShutdownService), actorName)
+      AppStateManager.props(appConfig, MockNotifierService, MockShutdownService), actorName)
     ar ! Ping(sendBackConfirmation = true)
     testKit.expectMsgType[Done.type]
     ar
@@ -54,6 +56,11 @@ class AppStateManagerTestKit(testKit: TestKitBase)(implicit self: ActorRef)
   def checkAppManagerState(expectedState: AppState): Unit = {
     sendToAppStateManager(GetCurrentState)
     testKit.expectMsgType[AppState] shouldBe expectedState
+  }
+
+  def stop(): Unit = {
+    sendToAppStateManager(Stop(sendBackConfirmation = true))
+    testKit.expectMsgType[Done.type]
   }
 
   def changeAppState(newAppState: AppState): Unit = {

@@ -139,8 +139,8 @@ trait UtilBase extends AsyncToSync {
                               (implicit appConfig: AppConfig): ActorRef = {
     val awaitDuration = buildDuration(
       appConfig,
-      TIMEOUT_ACTOR_REF_RESOLVE_TIMEOUT_IN_SECONDS,
-      DEFAULT_ACTOR_REF_RESOLVE_TIMEOUT_IN_SECONDS)
+      TIMEOUT_GENERAL_ACTOR_REF_RESOLVE_TIMEOUT_IN_SECONDS,
+      DEFAULT_GENERAL_ACTOR_REF_RESOLVE_TIMEOUT_IN_SECONDS)
     val resolveTimeout = resolveTimeoutOpt.getOrElse(Timeout(awaitDuration))
     Await.result(actorSystem.actorSelection(path).resolveOne()(resolveTimeout), awaitDuration)
   }

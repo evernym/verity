@@ -8,7 +8,7 @@ import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, KeyDetail, KeyMapp
 import com.evernym.verity.cache.providers.MaxWeightParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
-import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_RESPONSE_TIMEOUT_IN_SECONDS
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.ObjectSizeUtil
 import com.evernym.verity.util.Util.buildTimeout
@@ -92,7 +92,7 @@ trait SyncCacheValueFetcher extends CacheValueFetcher {
 
 trait AsyncCacheValueFetcher extends CacheValueFetcher {
 
-  implicit val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ASK_TIMEOUT_IN_SECONDS)
+  implicit val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_RESPONSE_TIMEOUT_IN_SECONDS)
 
   def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]]
 

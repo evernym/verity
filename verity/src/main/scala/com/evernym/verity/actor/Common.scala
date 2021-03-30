@@ -98,7 +98,7 @@ case class OverrideNodeConfig(configStr: String) extends ActorMessage
 case object NodeConfigOverridden extends ActorMessage
 
 case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessage
-case class GetMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessage
+case class SendMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessage
 
 case class StartProgressTracking(trackingId: TrackingParam) extends ActorMessage
 case class StopProgressTracking(trackingId: String) extends ActorMessage

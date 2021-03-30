@@ -39,11 +39,39 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
   extends CoreActorExtended
     with ShardRegionFromActorContext {
 
-  val logger: Logger = getLoggerByClass(classOf[SingletonParent])
-  val cluster: Cluster = akka.cluster.Cluster(context.system)
-  var nodes: Map[Address, Boolean] = Map.empty[Address, Boolean]
+  override final def receiveCmd: Receive = {
+    case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
+    case forCmd: ForWatcherManager      => forwardToChild(WATCHER_MANAGER, forCmd.cmd)
+    case forCmd: ForSingletonChild      => forwardToChild(forCmd.getActorName, forCmd.cmd)
 
-  def allSingletonPropsMap: Map[String, Props] =
+    case sc: SendCmdToAllNodes          => sendCmdToAllNodes(sc)
+    case sc: SendNodeAddedAck           => sendNodeAddedAck(sc)
+
+    case RefreshConfigOnAllNodes        => refreshConfigOnAllNodes()
+    case oc: OverrideConfigOnAllNodes   => overrideConfigOnAllNodes(oc)
+    case sm: SendMetricsOfAllNodes      => sendMetricsOfAllNodes(sm)
+  }
+
+  override def sysCmdHandler: Receive = {
+    case me: MemberEvent =>
+      me match {
+        case me @ (_: MemberUp | _: MemberJoined) =>
+          nodes += me.member.address -> NodeParam.empty
+          logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
+          sendNodeAddedAck(SendNodeAddedAck(me.member.address))
+        case me @ (_:MemberExited | _:MemberRemoved | _:MemberLeft) =>
+          nodes -= me.member.address
+          logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
+
+        case _ => //nothing to do
+      }
+  }
+
+  private val logger: Logger = getLoggerByClass(classOf[SingletonParent])
+  private val cluster: Cluster = akka.cluster.Cluster(context.system)
+  private var nodes: Map[Address, NodeParam] = Map.empty[Address, NodeParam]
+
+  private def allSingletonPropsMap: Map[String, Props] =
     Map(
       KeyValueMapper.name -> KeyValueMapper.props,
       WatcherManager.name -> WatcherManager.props(appConfig),
@@ -71,118 +99,112 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     createChildActors()
   }
 
-  def getRequiredActor(props: Props, name: String): ActorRef = context.child(name).getOrElse(context.actorOf(props, name))
+  private def getRequiredActor(props: Props, name: String): ActorRef = context.child(name).getOrElse(context.actorOf(props, name))
 
-  def sendCmdToAllNodeSingletons(cmd: Any): Iterable[Future[Any]] = {
-    nodes.map { node =>
-      buildNodeSingletonPath(node._1) ? cmd
+  private def sendCmdToAllNodeSingletons(cmd: Any): Iterable[Future[Any]] = {
+    nodes.map { case (address, nodeParam) =>
+      try {
+        nodeParam.nodeSingletonActorRef.getOrElse(buildNodeSingletonPath(address)) ? cmd
+      } catch {
+        case e: Throwable =>
+          logger.warn(s"error while sending $cmd to node $address: ${e.getMessage}")
+          Future.failed(e)
+      }
     }
   }
 
-  def sendCmdToNode(nodeAddr: Address, cmd: Any): Unit = {
-    try {
-      buildNodeSingletonPath(nodeAddr) ! cmd
-      nodes += nodeAddr -> true
-    } catch {
-      case e: Throwable =>
-        logger.warn(s"failed to send message to node $nodeAddr : ${e.getMessage}")
-        actorSystem.scheduler.scheduleOnce(5.seconds, self, RetryNodeAddedToClusterSingleton(nodeAddr))
-    }
-  }
-
-  def sendCmdToAllNodeSingletonsWithReducedFuture(cmd: Any): Future[Iterable[Any]] = {
+  private def sendCmdToAllNodeSingletonsWithReducedFuture(cmd: Any): Future[Iterable[Any]] = {
     Future.sequence(sendCmdToAllNodeSingletons(cmd))
   }
 
-  def forwardToChild(actorName: String, cmd: Any): Unit = {
+  private def forwardToChild(actorName: String, cmd: Any): Unit = {
     allSingletonPropsMap.get(actorName).foreach { props =>
       val actor = getRequiredActor(props, actorName)
       actor forward cmd
     }
   }
 
-  override def sysCmdHandler: Receive = {
-    case me: MemberEvent =>
-      me match {
-        case me @ (_: MemberUp | _: MemberJoined) =>
-          nodes += me.member.address -> false
-          logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
-          sendCmdToNode(me.member.address, NodeAddedToClusterSingleton)
-        case me @ (_:MemberExited | _:MemberRemoved | _:MemberLeft) =>
-          nodes -= me.member.address
-          logger.info(s"node ${me.member.address} status changed to ${me.member.status}")
-
-        case _ => //nothing to do
+  private def sendNodeAddedAck(sc: SendNodeAddedAck): Unit = {
+    nodes.get(sc.address).foreach { nodeParam =>
+      if(! nodeParam.isAckSent) {
+        try {
+          logger.debug(s"getting node singleton actor ref for node: ${sc.address}")
+          val ar = buildNodeSingletonPath (sc.address)
+          logger.debug(s"sending NodeAddedToClusterSingleton to node: ${sc.address}")
+          ar ! NodeAddedToClusterSingleton
+          nodes += sc.address -> nodeParam.copy(nodeSingletonActorRef = Option(ar), isAckSent = true)
+        } catch {
+          case e: Throwable =>
+            logger.warn(s"error while sending NodeAddedToClusterSingleton message to node ${sc.address}: ${e.getMessage}")
+            if (sc.curAttemptCount < sc.maxAttemptCount) {
+              val afterSeconds = (sc.curAttemptCount * 3).seconds   //backoff timer
+              timers.startSingleTimer(sc.address, sc.copy(curAttemptCount = sc.curAttemptCount + 1), afterSeconds)
+            } else {
+              val errorMsg = s"max retry attempt reached to send node added acknowledgement to node ${sc.address}"
+              publishAppStateEvent(ErrorEvent(SeriousSystemError, CONTEXT_ACTOR_INIT, e, Option(errorMsg)))
+            }
+        }
       }
+    }
   }
 
-  def receiveCommon: Receive = {
 
-    case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
-    case forCmd: ForWatcherManager      => forwardToChild(WATCHER_MANAGER, forCmd.cmd)
-    case forCmd: ForSingletonChild      => forwardToChild(forCmd.getActorName, forCmd.cmd)
-
-    case RefreshConfigOnAllNodes =>
-      logger.debug(s"refreshing config on nodes: $nodes")
-      val f = sendCmdToAllNodeSingletonsWithReducedFuture(RefreshNodeConfig)
-      val sndr = sender()
-      f.onComplete{
-        case Success(_) =>
-          sndr ! ConfigRefreshed
-        case Failure(e) =>
-          sndr ! ConfigRefreshFailed
-          logger.error("could not refresh config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-      }
-
-    case oc: OverrideConfigOnAllNodes =>
-      logger.debug(s"override config on nodes: $nodes")
-      val f = sendCmdToAllNodeSingletonsWithReducedFuture(OverrideNodeConfig(oc.configStr))
-      val sndr = sender()
-      f.onComplete{
-        case Success(_) =>
-          sndr ! ConfigOverridden
-        case Failure(e) =>
-          sndr ! ConfigOverrideFailed
-          logger.error("could not override config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-      }
-
-    case getMetricsOfAllNode: GetMetricsOfAllNodes =>
-      logger.debug(s"fetching metrics from nodes: $nodes")
-      val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(getMetricsOfAllNode.filters))
-      val sndr = sender()
-      f.onComplete{
-        case Success(result) =>
-          sndr ! AllNodeMetricsData(result.asInstanceOf[Iterable[NodeMetricsData]].toList)
-        case Failure(e: Throwable) =>
-          logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-          handleException(e, sndr)
-      }
-
-    case sc: SendCmdToAllNodes =>
-      logger.debug(s"sending ${sc.cmd} command to node(s): $nodes")
-      val sndr = sender()
-      val f = sendCmdToAllNodeSingletonsWithReducedFuture(sc.cmd)
-      f.onComplete {
-        case Success(_) => sndr ! Done
-        case Failure(e) =>
-          handleException(e, sndr)
-          logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-      }
-
-    case sc: RetryNodeAddedToClusterSingleton =>
-      logger.debug(s"sending NodeAddedToClusterSingleton command to node: ${sc.address}")
-      nodes.get(sc.address).foreach { isUp =>
-        if(!isUp) sendCmdToNode(sc.address, NodeAddedToClusterSingleton)
-      }
+  private def sendCmdToAllNodes(sc: SendCmdToAllNodes): Unit = {
+    logger.debug(s"sending ${sc.cmd} command to node(s): $nodes")
+    val sndr = sender()
+    val f = sendCmdToAllNodeSingletonsWithReducedFuture(sc.cmd)
+    f.onComplete {
+      case Success(_) => sndr ! Done
+      case Failure(e) =>
+        handleException(e, sndr)
+        logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+    }
   }
 
-  def buildNodeSingletonPath(node :Address): ActorRef = {
+  private def sendMetricsOfAllNodes(sm: SendMetricsOfAllNodes): Unit = {
+    logger.debug(s"fetching metrics from nodes: $nodes")
+    val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(sm.filters))
+    val sndr = sender()
+    f.onComplete{
+      case Success(result) =>
+        sndr ! AllNodeMetricsData(result.asInstanceOf[Iterable[NodeMetricsData]].toList)
+      case Failure(e: Throwable) =>
+        logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+        handleException(e, sndr)
+    }
+  }
+
+  private def overrideConfigOnAllNodes(oc: OverrideConfigOnAllNodes): Unit = {
+    logger.debug(s"override config on nodes: $nodes")
+    val f = sendCmdToAllNodeSingletonsWithReducedFuture(OverrideNodeConfig(oc.configStr))
+    val sndr = sender()
+    f.onComplete{
+      case Success(_) =>
+        sndr ! ConfigOverridden
+      case Failure(e) =>
+        sndr ! ConfigOverrideFailed
+        logger.error("could not override config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+    }
+  }
+
+  private def refreshConfigOnAllNodes(): Unit = {
+    logger.debug(s"refreshing config on nodes: $nodes")
+    val f = sendCmdToAllNodeSingletonsWithReducedFuture(RefreshNodeConfig)
+    val sndr = sender()
+    f.onComplete{
+      case Success(_) =>
+        sndr ! ConfigRefreshed
+      case Failure(e) =>
+        sndr ! ConfigRefreshFailed
+        logger.error("could not refresh config", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
+    }
+  }
+
+  private def buildNodeSingletonPath(node :Address): ActorRef = {
     getActorRefFromSelection(s"$node$NODE_SINGLETON_PATH", context.system)
   }
 
-  override final def receiveCmd: Receive = receiveCommon
-
-  def createChildActors(): Unit = {
+  private def createChildActors(): Unit = {
     allSingletonPropsMap.foreach { e =>
       context.actorOf(e._2, e._1)
     }
@@ -213,8 +235,19 @@ case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingleton
   def getActorName: String = ROUTE_MAINTENANCE_HELPER
 }
 case object NodeAddedToClusterSingleton extends ActorMessage
-case class RetryNodeAddedToClusterSingleton(address: Address) extends ActorMessage
+
+case class SendNodeAddedAck(address: Address, curAttemptCount: Int = 1, maxAttemptCount: Int = 10) extends ActorMessage
 
 trait ForWatcherManagerChild extends ActorMessage {
   def cmd: Any
 }
+
+object NodeParam {
+  def empty: NodeParam = NodeParam()
+}
+/**
+ *
+ * @param nodeSingletonActorRef actor ref of node singleton actor
+ * @param isAckSent acknowledgement sent
+ */
+case class NodeParam(nodeSingletonActorRef: Option[ActorRef] = None, isAckSent: Boolean = false)

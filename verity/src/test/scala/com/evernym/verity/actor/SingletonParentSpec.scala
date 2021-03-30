@@ -47,7 +47,7 @@ class SingletonParentSpec extends PersistentActorSpec with BasicSpec {
 
         "when sent GetMetricsOfAllNodes command" - {
           "should respond with AllNodeMetricsData" in {
-            singletonParentProxy ! GetMetricsOfAllNodes(MetricsFilterCriteria())
+            singletonParentProxy ! SendMetricsOfAllNodes(MetricsFilterCriteria())
             expectMsgPF() {
               case _: AllNodeMetricsData =>
             }

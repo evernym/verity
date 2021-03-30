@@ -26,7 +26,7 @@ trait MetricsEndpointHandler { this: HttpRouteWithPlatform =>
   protected def fetchMetrics(gqp: GetMetricQueryParam): Future[Any] = {
     (platform.libIndyMetricsCollector ? CollectLibindyMetrics()).flatMap(_ => {
       if (gqp.offAllNodes) {
-        platform.singletonParentProxy ? GetMetricsOfAllNodes(gqp.filterCriteria)
+        platform.singletonParentProxy ? SendMetricsOfAllNodes(gqp.filterCriteria)
       } else {
         platform.nodeSingleton ? GetNodeMetrics(gqp.filterCriteria)
       }

@@ -5,8 +5,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
+import com.evernym.integrationtests.e2e.sdk.process.SdkProviderException
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
@@ -312,6 +314,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
     val httpResponse = Await.result(result, httpTimeout)
     logger.debug(s"# POST Response:${httpResponse.status} ${httpResponse.entity}")
+    processResponseStatus(httpResponse)
   }
 
   def sendHttpGetReq(ctx: Context, protoRef: ProtoRef, threadId: Option[String], parameters: Map[String, String] = Map.empty): Unit = {
@@ -329,7 +332,15 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     val httpResponse = Await.result(result, httpTimeout)
 
     logger.debug(s"# GET Response:${httpResponse.status} ${httpResponse.entity}")
+    processResponseStatus(httpResponse)
     receiveMsgFromResponse(httpResponse)
+  }
+
+  def processResponseStatus(httpResponse: HttpResponse): Unit = {
+    if (httpResponse.status.isFailure()){
+      val respString = httpResponse.entity.asInstanceOf[HttpEntity.Strict].getData().utf8String
+      throw SdkProviderException(respString)
+    }
   }
 
   def encodeGetParameters(parameters: Map[String, String]): String = {

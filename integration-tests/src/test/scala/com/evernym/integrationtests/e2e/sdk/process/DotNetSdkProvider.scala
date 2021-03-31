@@ -498,7 +498,6 @@ object DotNetSdkProvider {
     using System.Text;
     using System.Text.Json;
     using System.Json;
-    using System.Console;
     using VeritySDK.Exceptions;
     using VeritySDK.Handler;
     using VeritySDK.Utils;
@@ -511,7 +510,7 @@ object DotNetSdkProvider {
     }
     catch (Exception e) {
       Error.WriteLine(e.Message);
-      Environment.ExitCode = $sdkErrExitCode;
+      return $sdkErrExitCode;
     }
     finally {
         context.CloseWallet();

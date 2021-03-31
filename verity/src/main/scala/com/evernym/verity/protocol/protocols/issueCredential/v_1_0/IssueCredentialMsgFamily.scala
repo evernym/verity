@@ -77,11 +77,20 @@ object Ctl {
 
   case class Status() extends Ctl
 
-  case class AttachedOffer(offer: OfferCred) extends Ctl
+  case class AttachedOffer(offer: OfferCred) extends Ctl {
+    override def validate(): Unit = {
+      checkRequired("offer", offer)
+    }
+  }
 
   case class Propose(cred_def_id: String,
                      credential_values: Map[String, String],
-                     comment: Option[String]=Some("")) extends Ctl
+                     comment: Option[String]=Some("")) extends Ctl {
+    override def validate(): Unit = {
+      checkRequired("cred_def_id", cred_def_id)
+      checkRequired("credential_values", credential_values)
+    }
+  }
 
   case class Offer(cred_def_id: String,
                    credential_values: Map[String, String],
@@ -89,10 +98,19 @@ object Ctl {
                    comment: Option[String]=Some(""),
                    auto_issue: Option[Boolean]=None,
                    by_invitation: Option[Boolean]=None,
-                  ) extends Ctl
+                  ) extends Ctl {
+    override def validate(): Unit = {
+      checkRequired("cred_def_id", cred_def_id)
+      checkRequired("credential_values", credential_values)
+    }
+  }
 
   case class Request(cred_def_id: String,
-                     comment: Option[String]=Some("")) extends Ctl
+                     comment: Option[String]=Some("")) extends Ctl {
+    override def validate(): Unit = {
+      checkRequired("cred_def_id", cred_def_id)
+    }
+  }
 
   case class Issue(revRegistryId: Option[String]=None,
                    comment: Option[String]=Some(""),
@@ -128,21 +146,40 @@ trait Msg extends MsgBase
 object Msg {
   case class ProposeCred(cred_def_id: String,
                          credential_proposal: Option[CredPreview]=None,
-                         comment: Option[String]=Some("")) extends Msg
+                         comment: Option[String]=Some("")) extends Msg {
+    checkRequired("cred_def_id", cred_def_id)
+  }
 
   case class OfferCred(credential_preview: CredPreview,
                        `offers~attach`: Vector[AttachmentDescriptor],
                        comment: Option[String]=Some(""),
-                       price: Option[String]=None) extends Msg
+                       price: Option[String]=None) extends Msg {
+    override def validate(): Unit = {
+      checkRequired("credential_preview", credential_preview)
+      checkRequired("offers~attach", `offers~attach`, allowEmpty = true)
+    }
+  }
 
   case class RequestCred(`requests~attach`: Vector[AttachmentDescriptor],
-                         comment: Option[String]=Some("")) extends Msg
+                         comment: Option[String]=Some("")) extends Msg {
+    override def validate(): Unit = {
+      checkRequired("requests~attach", `requests~attach`, allowEmpty = true)
+    }
+  }
 
   case class IssueCred(`credentials~attach`: Vector[AttachmentDescriptor],
                        comment: Option[String]=Some(""),
-                       `~please_ack`: Option[PleaseAck]=None) extends Msg
+                       `~please_ack`: Option[PleaseAck]=None) extends Msg {
+    override def validate(): Unit = {
+      checkRequired("credentials~attach", `credentials~attach`, allowEmpty = true)
+    }
+  }
 
-  case class Ack(status: String) extends Msg with AdoptableAck
+  case class Ack(status: String) extends Msg with AdoptableAck {
+    override def validate(): Unit = {
+      checkRequired("status", `status`, allowEmpty = true)
+    }
+  }
 
   case class ProblemReport(description: ProblemDescription, override val comment: Option[String] = None)
     extends Msg

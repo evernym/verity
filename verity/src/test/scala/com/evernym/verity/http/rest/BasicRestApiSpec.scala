@@ -19,7 +19,7 @@ import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestEr
 class BasicRestApiSpec
   extends RestApiBaseSpec {
 
-  lazy val payload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write","@id":"${UUID.randomUUID.toString}","name":"schema-name","version":"1.0","attrNames":[]}""")
+  lazy val createSchemaPayload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write","@id":"${UUID.randomUUID.toString}","name":"schema-name","version":"1.0","attrNames":["first_name","last_name"]}""")
   lazy val createConnectionPayload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/connecting/0.6/CREATE_CONNECTION","@id":"${UUID.randomUUID.toString}","sourceId": "${UUID.randomUUID.toString}","includePublicDID": false}""")
 
   "when performed prerequisite setup" - {
@@ -35,7 +35,7 @@ class BasicRestApiSpec
   "when sent write-schema rest api request msg on disabled api" - {
     "should respond with NotImplemented" taggedAs UNSAFE_IgnoreLog in withRestApiDisabled {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe NotImplemented
@@ -48,7 +48,7 @@ class BasicRestApiSpec
   "when sent write-schema rest api request msg without authorization header" - {
     "should respond with Unauthorized" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
       ) ~> epRoutes ~> check {
         status shouldBe Unauthorized
         header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
@@ -60,7 +60,7 @@ class BasicRestApiSpec
   "when sent write-schema rest api request msg with authorization header without ':'" - {
     "should respond with Unauthorized" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", "invalidHeader"))
       ) ~> epRoutes ~> check {
         status shouldBe Unauthorized
@@ -73,7 +73,7 @@ class BasicRestApiSpec
   "when sent write-schema rest api request msg with authorization header with too many ':'" - {
     "should respond with Unauthorized" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", "invalid:Head:er"))
       ) ~> epRoutes ~> check {
         status shouldBe Unauthorized
@@ -86,7 +86,7 @@ class BasicRestApiSpec
   "when sent write-schema rest api request msg with invalid authorisation verkey" - {
     "should respond with Unauthorized" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"BXaNZkPPGE7rWSNLif16C8JNGhLRxU44HkhWQQhkj32P:${mockEntRestEnv.myDIDSignature}"))
       ) ~> epRoutes ~> check {
         status shouldBe Unauthorized
@@ -99,7 +99,7 @@ class BasicRestApiSpec
   "when sent write-schema rest api request msg with invalid authorisation signature" - {
     "should respond with Unauthorized" in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"${{mockEntRestEnv.myDIDVerKey}}:SbvE1CrMvEMueHsgfQA6ayTqjfpFUGboGuv6hSJru1v8kDZ4nrJP4SpVfBk7ub6f7SAA3eQmh6gWZBdub8XU9JP"))
       ) ~> epRoutes ~> check {
         status shouldBe Unauthorized
@@ -117,14 +117,14 @@ class BasicRestApiSpec
 
   "when sent valid write schema rest api request msg" - {
     "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
-      performWriteSchema(mockEntRestEnv, payload)
+      performWriteSchema(mockEntRestEnv, createSchemaPayload)
     }
   }
 
   "when sent valid write schema rest api request msg without threadId" - {
     "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe Accepted
@@ -137,7 +137,7 @@ class BasicRestApiSpec
   "when sent valid write schema rest api request msg with case insensitive auth header" - {
     "should respond with Accepted" taggedAs UNSAFE_IgnoreLog in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("x-aPi-KeY", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe Accepted
@@ -150,7 +150,7 @@ class BasicRestApiSpec
   "when sent write schema rest api msg with wrong protocol family name" - {
     "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema-wrong/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe BadRequest
@@ -163,7 +163,7 @@ class BasicRestApiSpec
   "when sent write schema rest api msg with wrong protocol version" - {
     "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.0/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe BadRequest
@@ -229,7 +229,7 @@ class BasicRestApiSpec
   "when sent write schema rest api msg with invalid route" - {
     "should respond with BadRequest" taggedAs UNSAFE_IgnoreLog in {
       buildPostReq(s"/api/invalid-route/write-schema/0.6/${UUID.randomUUID.toString}",
-        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
         Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
       ) ~> epRoutes ~> check {
         status shouldBe BadRequest

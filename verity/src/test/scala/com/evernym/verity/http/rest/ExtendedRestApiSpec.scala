@@ -13,7 +13,7 @@ import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 class ExtendedRestApiSpec
   extends RestApiBaseSpec {
 
-  lazy val payload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write","@id":"${UUID.randomUUID.toString}","name":"schema-name","version":"1.0","attrNames":[]}""")
+  lazy val createSchemaPayload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/write-schema/0.6/write","@id":"${UUID.randomUUID.toString}","name":"schema-name","version":"1.0","attrNames":["firstName","lastName"]}""")
   lazy val createConnectionPayload: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/connecting/0.6/CREATE_CONNECTION","@id":"${UUID.randomUUID.toString}","sourceId": "${UUID.randomUUID.toString}","includePublicDID": false}""")
 
   val connId1 = "conn1"
@@ -38,7 +38,7 @@ class ExtendedRestApiSpec
     "tried to setup issuer" - {
       "should be able to setup successfully" in {
         performIssuerSetup(mockEntRestEnv)
-        performWriteSchema(mockEntRestEnv, payload)
+        performWriteSchema(mockEntRestEnv, createSchemaPayload)
       }
     }
 

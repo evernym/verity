@@ -143,14 +143,14 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
 
     case hr: HttpResponse if hr.status ==  BadRequest =>
       val error = s"error response ('${hr.status.value}') received from '${up.url}': (${hr.entity})"
-      logger.error(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString),
+      logger.warn(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString),
         (LOG_KEY_RESPONSE_CODE, BadRequest.intValue), (LOG_KEY_ERR_MSG, BadRequest.reason))
       Unmarshal(hr.entity).to[String].map { _ =>
         Left(buildHandledError(BAD_REQUEST.withMessage(error))) }
 
     case hr: HttpResponse =>
       val error = s"error response ('${hr.status.value}') received from '${up.url}': (${hr.entity})"
-      logger.error(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString), (LOG_KEY_ERR_MSG, hr.status))
+      logger.warn(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString), (LOG_KEY_ERR_MSG, hr.status))
       Unmarshal(hr.entity).to[String].map { _ =>
         Left(buildHandledError(UNHANDLED.withMessage(error)))
       }

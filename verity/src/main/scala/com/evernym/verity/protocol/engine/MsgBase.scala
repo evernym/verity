@@ -18,26 +18,29 @@ trait MsgBase {
     throw new EmptyValueForOptionalFieldProtocolEngineException(Option(s"empty value given for optional field: '$fieldName'"))
   }
 
-  def checkRequired(fieldName: String, fieldValue: Any): Unit = {
+  def checkRequired(fieldName: String, fieldValue: Any, allowEmpty: Boolean = false): Unit = {
+    // check if null
     if (Option(fieldValue).isEmpty) throwMissingReqFieldException(fieldName)
     fieldValue match {
       case mb: MsgBase => mb.validate()
+      case s: String => if (!allowEmpty && s.trim.isEmpty) throwMissingReqFieldException(fieldName)
+      case l: List[Any] =>
+        if (!allowEmpty && l.isEmpty) throwMissingReqFieldException(fieldName)
+        l.foreach(checkRequired(s"$fieldName item", _))
+      case v: Vector[Any] =>
+        if (!allowEmpty && v.isEmpty) throwMissingReqFieldException(fieldName)
+        v.foreach(checkRequired(s"$fieldName item", _))
+      case s: Seq[Any] =>
+        if (!allowEmpty && s.isEmpty) throwMissingReqFieldException(fieldName)
+        s.foreach(checkRequired(s"$fieldName item", _))
+      case m: Map[_, _] =>
+        if (!allowEmpty && m.isEmpty) throwMissingReqFieldException(fieldName)
+        for ((key, value) <- m) {
+          checkRequired(s"$fieldName key", key)
+          checkRequired(s"$fieldName value", value, allowEmpty = true)
+        }
       case _ =>
     }
-  }
-
-  def checkRequired(fieldName: String, fieldValue: List[Any]): Unit = {
-    if (Option(fieldValue).isEmpty || fieldValue.isEmpty)
-      throwMissingReqFieldException(fieldName)
-    fieldValue.foreach {
-      case mb: MsgBase => mb.validate()
-      case _ =>
-    }
-  }
-
-  def checkRequired(fieldName: String, fieldValue: String): Unit = {
-    val fv = Option(fieldValue)
-    if (fv.isEmpty || fv.exists(_.trim.isEmpty)) throwMissingReqFieldException(fieldName)
   }
 
   def checkOptionalNotEmpty(fieldName: String, fieldValue: Option[Any]): Unit = {

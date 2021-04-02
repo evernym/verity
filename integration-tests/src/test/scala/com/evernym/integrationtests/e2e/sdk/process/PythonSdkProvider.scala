@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject}
+import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject, sdkErrExitCode}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -319,6 +319,7 @@ import asyncio
 import json
 from verity_sdk.utils.Context import Context
 from verity_sdk.protocols.v1_0.Relationship import GoalsList
+from sys import stderr, exit
 
 # ==== IMPORTS ====
 $imports
@@ -337,6 +338,9 @@ async def main():
         # ==== COMMAND ====
         $cmd
         # =================
+    except Exception as e:
+        print(e.response.content, file=stderr)
+        exit($sdkErrExitCode)
     finally:
         await context.close_wallet()
 

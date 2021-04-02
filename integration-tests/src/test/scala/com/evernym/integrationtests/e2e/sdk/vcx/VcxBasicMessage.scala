@@ -23,7 +23,7 @@ trait VcxBasicMessage
       override def message(context: Context): Unit = {
 
         val messageJSON = new JSONObject ()
-          .put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/message")
+          .put("@type", MsgFamily.typeStrFromMsgType(BasicMessageMsgFamily, "message"))
           .put("@id", threadId)
           .put("~l10n",
             new JSONObject()

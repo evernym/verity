@@ -111,7 +111,11 @@ package object Ctl {
                   agencyVerkey: Option[ParameterValue],
                   publicDid: Option[ParameterValue]
                  ) extends CtlMsg
-  case class AttachedRequest(request: Msg.RequestPresentation) extends CtlMsg
+  case class AttachedRequest(request: Msg.RequestPresentation) extends CtlMsg {
+    override def validate(): Unit = {
+      checkRequired("request", request)
+    }
+  }
   case class Request(name: String,
                      proof_attrs: Option[List[ProofAttribute]],
                      proof_predicates: Option[List[ProofPredicate]],

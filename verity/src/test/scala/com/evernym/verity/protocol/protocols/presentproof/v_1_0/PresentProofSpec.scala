@@ -224,7 +224,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val invite = new String(Base64Util.getBase64UrlDecoded(base64))
         val inviteObj = new JSONObject(invite)
 
-        inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+        inviteObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation") or be ("https://didcomm.org/out-of-band/1.0/invitation"))
 
         inviteObj.has("@id") shouldBe true
         InviteUtil.isThreadedInviteId(inviteObj.getString("@id"))
@@ -256,7 +256,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val attachmentObj = new JSONObject(attachment)
 
         attachmentObj.getString("@id") should not be empty
-        attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation"
+        attachmentObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation") or be ("https://didcomm.org/present-proof/1.0/request-presentation"))
         attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
 
         val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
@@ -340,7 +340,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val invite = new String(Base64Util.getBase64UrlDecoded(base64))
         val inviteObj = new JSONObject(invite)
 
-        inviteObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation"
+        inviteObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/invitation") or be ("https://didcomm.org/out-of-band/1.0/invitation"))
 
         inviteObj.has("@id") shouldBe true
         InviteUtil.isThreadedInviteId(inviteObj.getString("@id"))
@@ -372,7 +372,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val attachmentObj = new JSONObject(attachment)
 
         attachmentObj.getString("@id") should not be empty
-        attachmentObj.getString("@type") shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation"
+        attachmentObj.getString("@type") should (be ("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/present-proof/1.0/request-presentation") or be ("https://didcomm.org/present-proof/1.0/request-presentation"))
         attachmentObj.getJSONObject("~thread").getString("thid") should not be empty
 
         val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)

@@ -105,7 +105,7 @@ case class ProcessSignalMsg(smp: SignalMsgParam,
                             threadContextDetail: ThreadContextDetail,
                             requestMsgId: Option[MsgId]=None
                            ) extends ActorMessage {
-  def threadId = threadContextDetail.threadId
+  def threadId: ThreadId = threadContextDetail.threadId
 }
 /**
  * a wrapper message containing the 'signalMsg' which is sent from the protocol and intercepted by the driver

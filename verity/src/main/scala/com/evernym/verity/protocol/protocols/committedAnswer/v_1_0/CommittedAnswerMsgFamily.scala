@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTim
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Ctl.Init
 
 object CommittedAnswerMsgFamily extends MsgFamily {
-  override val qualifier: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
+  override val qualifier: MsgFamilyQualifier = MsgFamily.COMMUNITY_QUALIFIER
   override val name: MsgFamilyName = "committedanswer"
   override val version: MsgFamilyVersion = "1.0"
 
@@ -45,9 +45,18 @@ object Msg {
                       valid_responses: Vector[QuestionResponse],
                       `@timing`: Option[BaseTiming], // Expects field expireTime
                       external_links: Seq[Link] = Seq.empty
-                     ) extends Msg
+                     ) extends Msg {
+    override def validate(): Unit = {
+      checkRequired("question_text", question_text)
+      checkRequired("valid_responses", valid_responses)
+    }
+  }
 
-  case class Answer(`response.@sig`: Sig) extends Msg
+  case class Answer(`response.@sig`: Sig) extends Msg {
+    override def validate(): Unit = {
+      checkRequired("response.@sig", `response.@sig`)
+    }
+  }
 }
 
 case class Sig(signature: Base64Encoded,
@@ -65,7 +74,12 @@ object Ctl {
   case class AskQuestion(text: String,
                          detail: Option[String],
                          valid_responses: Vector[String],
-                         expiration: Option[String]) extends Ctl
+                         expiration: Option[String]) extends Ctl {
+    override def validate(): Unit = {
+      checkRequired("text", text)
+      checkRequired("valid_responses", valid_responses)
+    }
+  }
 
   case class AnswerQuestion(response: Option[String]) extends Ctl
 

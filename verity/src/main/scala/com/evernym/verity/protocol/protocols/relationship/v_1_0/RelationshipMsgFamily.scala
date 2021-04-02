@@ -71,7 +71,7 @@ object Msg {
                         recipientKeys: Vector[VerKey],
                         routingKeys: Option[Vector[VerKey]],
                         profileUrl: Option[String],
-                        `@type`: String = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/invitation",
+                        `@type`: String = MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "connections", "1.0", "invitation"),
                         `@id`: String = MsgIdProvider.getNewMsgId) extends BaseInvitation {
 
     def routingKeys_! : Vector[VerKey] = routingKeys.getOrElse(Vector.empty)
@@ -85,8 +85,7 @@ object Msg {
                                  service: Vector[ServiceFormatted],
                                  profileUrl: Option[String],
                                  public_did: Option[String],
-                                 `@type`: String = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/" +
-                                   OutOfBandMsgFamily.name + "/1.0/invitation",
+                                 `@type`: String = MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, OutOfBandMsgFamily.name, OutOfBandMsgFamily.version, "invitation"), //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/" +
                                  `@id`: String = MsgIdProvider.getNewMsgId) extends BaseInvitation
 }
 
@@ -110,7 +109,17 @@ object Ctl {
 
   trait CreateInvitation extends Ctl
   case class ConnectionInvitation(shortInvite: Option[Boolean]=None) extends CreateInvitation
-  case class OutOfBandInvitation(goalCode: String, goal: String, shortInvite: Option[Boolean]=None) extends CreateInvitation
+  case class OutOfBandInvitation(goalCode: String, goal: String, shortInvite: Option[Boolean]=None) extends CreateInvitation {
+    override def validate(): Unit = {
+      checkRequired("goalCode", goalCode)
+      checkRequired("goal", goal)
+    }
+  }
   case class SMSConnectionInvitation() extends CreateInvitation
-  case class SMSOutOfBandInvitation(goalCode: String, goal: String) extends CreateInvitation
+  case class SMSOutOfBandInvitation(goalCode: String, goal: String) extends CreateInvitation {
+    override def validate(): Unit = {
+      checkRequired("goalCode", goalCode)
+      checkRequired("goal", goal)
+    }
+  }
 }

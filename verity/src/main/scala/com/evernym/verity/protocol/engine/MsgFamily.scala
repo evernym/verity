@@ -1,19 +1,42 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
-import com.evernym.verity.agentmsg.msgcodec.MsgTypeParsingException
+import com.evernym.verity.agentmsg.msgcodec.{InvalidMsgQualifierException, MsgTypeParsingException, UnrecognizedMsgQualifierException}
 
 import scala.util.matching.Regex
 
-
 object MsgFamily {
-  val EVERNYM_QUALIFIER: MsgFamilyQualifier = "123456789abcdefghi1234"
 
-  val COMMUNITY_QUALIFIER: MsgFamilyQualifier = "BzCbsNYhMrjHiqZDTUASHg"
+  //TODO: Evernym qualifier given below is just a test string,
+  // we'll have to decide what it should be?
 
-  val MSG_FAMILY_DID_METHOD: String = "sov"
+  val QUALIFIER_FORMAT_HTTP = false
 
-  val VALID_MESSAGE_TYPE_REG_EX: Regex = "did:(.*):(.*);spec/(.*)/(.*)/(.*)".r
+  val COMMUNITY_QUALIFIER: MsgFamilyQualifier = CommunityQualifier
+  val EVERNYM_QUALIFIER: MsgFamilyQualifier = EvernymQualifier
+
+  val VALID_MESSAGE_TYPE_REG_EX_HTTP: Regex = "(https)://(.*)/(.*)/(.*)/(.*)".r
+  val VALID_MESSAGE_TYPE_REG_EX_DID: Regex = "did:(.*):(.*);spec/(.*)/(.*)/(.*)".r
+
+  def msgQualifierFromQualifierStr(qualifier: String): MsgFamilyQualifier = {
+    qualifier match {
+      case "did:sov:BzCbsNYhMrjHiqZDTUASHg" => COMMUNITY_QUALIFIER
+      case "BzCbsNYhMrjHiqZDTUASHg" => COMMUNITY_QUALIFIER
+      case "did:sov:123456789abcdefghi1234" => EVERNYM_QUALIFIER
+      case "123456789abcdefghi1234" => EVERNYM_QUALIFIER
+      case "didcomm.org" => COMMUNITY_QUALIFIER
+      case "didcomm.evernym.com" => EVERNYM_QUALIFIER
+      case _ => throw new UnrecognizedMsgQualifierException(qualifier)
+    }
+  }
+
+  def qualifierStrFromMsgQualifier(msgFamilyQualifier: MsgFamilyQualifier): String = {
+    msgFamilyQualifier match {
+      case EVERNYM_QUALIFIER => if(QUALIFIER_FORMAT_HTTP) "didcomm.evernym.com" else "123456789abcdefghi1234"
+      case COMMUNITY_QUALIFIER => if(QUALIFIER_FORMAT_HTTP) "didcomm.org" else "BzCbsNYhMrjHiqZDTUASHg"
+      case _ => throw new InvalidMsgQualifierException
+    }
+  }
 
   def typeStrFromMsgType(msgType: MsgType): String = typeStrFromMsgType(
     msgType.familyQualifier,
@@ -37,13 +60,16 @@ object MsgFamily {
                                msgName: MsgName
                               ): String = {
     //note: if the string format below changes, we will need to change VALID_MESSAGE_TYPE_REG_EX above accordingly
-    s"did:$MSG_FAMILY_DID_METHOD:$familyQualifier;spec/$familyName/$familyVersion/$msgName"
+    if(QUALIFIER_FORMAT_HTTP) {  s"https://${qualifierStrFromMsgQualifier(familyQualifier)}/$familyName/$familyVersion/$msgName"
+    } else s"did:sov:${qualifierStrFromMsgQualifier(familyQualifier)};spec/$familyName/$familyVersion/$msgName"
   }
 
   final def msgTypeFromTypeStr(typeStr: String): MsgType = {
     typeStr match {
-      case VALID_MESSAGE_TYPE_REG_EX(_, msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType) =>
-        MsgType(msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType)
+      case VALID_MESSAGE_TYPE_REG_EX_DID(_, msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType) =>
+        MsgType(msgQualifierFromQualifierStr(msgFamilyQualifier), msgFamily, msgFamilyVersion, msgType)
+      case VALID_MESSAGE_TYPE_REG_EX_HTTP(_, msgFamilyQualifier, msgFamily, msgFamilyVersion, msgType) =>
+        MsgType(msgQualifierFromQualifierStr(msgFamilyQualifier), msgFamily, msgFamilyVersion, msgType)
       case _ =>
         throw new MsgTypeParsingException(typeStr)
     }

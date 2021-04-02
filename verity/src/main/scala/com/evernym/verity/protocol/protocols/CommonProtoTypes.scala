@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols
 
-import com.evernym.verity.protocol.engine.{MsgTypeStr, VerKey}
+import com.evernym.verity.protocol.engine.{MsgFamily, MsgTypeStr, VerKey}
 import com.evernym.verity.Base64Encoded
 
 object CommonProtoTypes {
@@ -20,7 +20,7 @@ object CommonProtoTypes {
                       sig_data: Base64Encoded,
                       signers: Seq[VerKey],
                       `@type`: Option[MsgTypeStr]
-                              = Some("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/signature/1.0/ed25519Sha512_single")
+                              = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single"))  //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/signature/1.0/ed25519Sha512_single")
                       )
 
   // Aries RFC has replaced `signers` with `signer` and now only 1 verkey is contained.
@@ -29,6 +29,6 @@ object CommonProtoTypes {
                       sig_data: Base64Encoded,
                       signer: VerKey,
                       `@type`: Option[MsgTypeStr]
-                      = Some("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/signature/1.0/ed25519Sha512_single")
+                      = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single"))
                      )
 }

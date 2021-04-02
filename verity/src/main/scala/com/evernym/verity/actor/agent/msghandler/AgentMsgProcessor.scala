@@ -127,11 +127,11 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def recordProcessSignalMsgProgress(psm: ProcessSignalMsg): Unit = {
-    psm.requestMsgId.foreach { rmid =>
-      withReqMsgId(rmid, { arc =>
+    psm.requestMsgId.foreach { _ =>
+      withReqMsgId { arc =>
         val msgType = msgTypeStr(psm.protoRef, psm.smp.signalMsg)
         recordLocallyHandledSignalMsgTrackingEvent(arc.reqId, msgType)
-      })
+      }
     }
   }
 
@@ -231,17 +231,17 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     val respMsgId = getNewMsgId
     //tracking related
     omc.requestMsgId.foreach { rmId =>
-      updateAsyncReqContext(rmId, respMsgId, Option(msgType.msgName))
-      withReqMsgId(rmId, { arc =>
+      updateAsyncReqContext(respMsgId, Option(msgType.msgName))
+      withReqMsgId{ arc =>
         if (isSignalMsg)
           recordSignalMsgTrackingEvent(arc.reqId, respMsgId, msgType, None)
         else
           recordProtoMsgTrackingEvent(arc.reqId, respMsgId, msgType, None)
-      })
+      }
     }
 
     //tracking related
-    omc.requestMsgId.map(reqMsgId => (reqMsgId, msgRespContext.get(reqMsgId))) match {
+    omc.requestMsgId.map(reqMsgId => (reqMsgId, msgRespContext)) match {
       case Some((rmid, Some(MsgRespContext(_, packForVerKey, Some(sar))))) =>
         // pack the message if needed.
         val updatedOmpFut = threadContext.msgPackFormat match {
@@ -254,7 +254,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         }
         updatedOmpFut.map { updatedOmp =>
           logger.debug(s"outgoing msg will be sent to waiting caller...")
-          sendMsgToWaitingCaller(updatedOmp, rmid, sar)
+          sendMsgToWaitingCaller(updatedOmp, sar)
         }
       case Some((_, _))  =>
         sendOutgoingMsg(omp, omc, respMsgId, msgType, threadContext)
@@ -340,22 +340,20 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param psrm protocol synchronous response message
    */
   def handleProtocolSyncRespMsg(psrm: ProtocolSyncRespMsg): Unit = {
-    psrm.requestMsgId.foreach { requestMsgId =>
-      msgRespContext.get(requestMsgId).flatMap(_.senderActorRef).foreach { senderActorRef =>
-        sendMsgToWaitingCaller(psrm.msg, requestMsgId, senderActorRef)
-      }
+    msgRespContext.flatMap(_.senderActorRef).foreach { senderActorRef =>
+      sendMsgToWaitingCaller(psrm.msg, senderActorRef)
     }
   }
 
-  private def sendMsgToWaitingCaller(om: Any, reqMsgId: MsgId, sar: ActorRef): Unit = {
-    msgRespContext = msgRespContext.filterNot(_._1 == reqMsgId)
+  private def sendMsgToWaitingCaller(om: Any, sar: ActorRef): Unit = {
+    msgRespContext = None
     val msg = om match {
       case OutgoingMsgParam(om, _)   => om
       case other                     => other
     }
     sar ! msg
-    MsgTracerProvider.recordMetricsForAsyncReqMsgId(reqMsgId, NEXT_HOP_MY_EDGE_AGENT_SYNC)   //tracing related
-    withReqMsgId(reqMsgId, { arc =>
+    MsgTracerProvider.recordMetricsForAsyncReq(NEXT_HOP_MY_EDGE_AGENT_SYNC)   //tracing related
+    withReqMsgId { arc =>
       val extraDetail = om match {
         case aer: ActorErrorResp => Option(s"[${aer.toString}]")
         case _                   => None
@@ -367,7 +365,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           msg.getClass.getSimpleName + extraDetail.map(ed => s" ($ed)").getOrElse(""),
           s"SENT [to $NEXT_HOP_MY_EDGE_AGENT_SYNC]")
       )
-    })
+    }
   }
 
   def handleProtocolServiceDecorator(sd: ServiceDecorator,
@@ -496,15 +494,16 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     recordArrivedRoutingEvent(rmc.id, rmc.startTime,
       rmc.clientIpAddress.map(cip => s"fromIpAddress: $cip").getOrElse(""))
     recordRoutingChildEvent(rmc.id, childEventWithDetail(s"msg for relationship received"))
-    sendTypedMsgToProtocol(tm, param.relationshipId, mfr.threadId, mfr.senderParticipantId,
+    sendTypedMsgToProtocol(tm, mfr.threadId, mfr.senderParticipantId, param.relationshipId,
       mfr.msgRespConfig, mfr.msgPackFormat, mfr.msgTypeDeclarationFormat)(rmc)
   }
 
   protected def sendTypedMsg(ptm: ProcessTypedMsg): Unit = {
-    sendTypedMsgToProtocol(ptm.tmsg,
-      ptm.relationshipId,
+    sendTypedMsgToProtocol(
+      ptm.tmsg,
       ptm.threadId,
       ptm.senderParticipantId,
+      ptm.relationshipId,
       ptm.msgRespConfig,
       ptm.msgPackFormat,
       ptm.msgTypeDeclarationFormat,
@@ -515,7 +514,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   protected def sendUntypedMsgToProtocolV1(msg: Any,
                                            relationshipId: Option[RelationshipId]): Unit = {
     val tm = typedMsg(msg)
-    sendTypedMsgToProtocol(tm, relationshipId, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID,
+    sendTypedMsgToProtocol(tm, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID, relationshipId,
       Option(MsgRespConfig(isSyncReq(msg))), None, None)
   }
 
@@ -527,26 +526,19 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   //dhh What does an "untyped message" mean?
-  //this overloaded method would be only used to send untyped msgs to protocol
+  //this method would be only used to send untyped msgs to protocol
   protected def sendUntypedMsgToProtocolV2(msg: Any,
                                            protoDef: ProtoDef,
-                                           threadId: ThreadId = DEFAULT_THREAD_ID,
-                                           msgRespConfig: MsgRespConfig = MsgRespConfig(isSyncReq = false),
-                                           msgPackFormat: Option[MsgPackFormat]=None,
-                                           msgTypeDeclarationFormat: Option[TypeFormat]=None,
-                                           usesLegacyGenMsgWrapper: Boolean=false,
-                                           usesLegacyBundledMsgWrapper: Boolean=false): Unit = {
+                                           threadId: ThreadId = DEFAULT_THREAD_ID): Unit = {
     val typedMsg = protoDef.msgFamily.typedMsg(msg)
     sendTypedMsgToProtocol(
       typedMsg,
-      param.relationshipId,
       threadId,
       param.selfParticipantId,
-      Option(msgRespConfig),
-      msgPackFormat,
-      msgTypeDeclarationFormat,
-      usesLegacyGenMsgWrapper,
-      usesLegacyBundledMsgWrapper
+      param.relationshipId,
+      Option(MsgRespConfig(isSyncReq = false)),
+      None,
+      None
     )
   }
 
@@ -604,7 +596,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       // THIS IS A STOPGAP AND SHOULD NOT BE EXPANDED
       val imp = STOP_GAP_MsgTypeMapper.changedMsgParam(givenImp)
 
-      val (msgToBeSent: TypedMsg, threadId: ThreadId, forRelationship, respDetail: Option[MsgRespConfig]) =
+      val (msgToBeSent, threadId, forRelationship, respDetail) =
         (imp.msgType.familyName, imp.msgType.familyVersion, imp.msgType.msgName) match {
 
           //this is special case where connecting protocols (0.5 & 0.6)
@@ -656,7 +648,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         }
       } else {
         // flow diagram: ctl.self, step 10 -- Handle msg for self relationship.
-        sendTypedMsgToProtocol(msgToBeSent, param.relationshipId, threadId, senderPartiId,
+        sendTypedMsgToProtocol(msgToBeSent, threadId, senderPartiId, param.relationshipId,
           respDetail, imp.msgPackFormat,
           imp.msgFormat, imp.usesLegacyGenMsgWrapper, imp.usesLegacyBundledMsgWrapper
         )
@@ -676,9 +668,9 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   protected def sendTypedMsgToProtocol(tmsg: TypedMsgLike,
-                                       relationshipId: Option[RelationshipId],
                                        threadId: ThreadId,
                                        senderParticipantId: ParticipantId,
+                                       relationshipId: Option[RelationshipId],
                                        msgRespConfig: Option[MsgRespConfig],
                                        msgPackFormat: Option[MsgPackFormat],
                                        msgTypeDeclarationFormat: Option[TypeFormat],
@@ -702,7 +694,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     sendGenericRespOrPrepareForAsyncResponse(msgEnvelope.msgId.get, senderParticipantId, msgRespConfig)
     //tracing/tracking metrics related
     msgEnvelope.msgId.foreach { rmId =>
-      storeAsyncReqContext(rmId, tmsg.msgType.msgName, rmc.id, rmc.clientIpAddress)
+      storeAsyncReqContext(tmsg.msgType.msgName, rmc.id, rmc.clientIpAddress)
     }
     recordInMsgTrackingEvent(rmc.id, msgEnvelope.msgId.getOrElse(""), tmsg, None, pair.protoDef)
     val tc = ThreadContextDetail(threadId,
@@ -729,11 +721,13 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                                                msgRespConfigOpt: Option[MsgRespConfig]): Unit = {
     // flow diagram: proto, step 11 -- send 200 OK
     msgRespConfigOpt match {
-      case Some(mrc) =>
-        val respWaitingActorRef = if (mrc.isSyncReq) Some(sender()) else None
-        msgRespContext = msgRespContext + (msgId -> MsgRespContext(senderPartiId, mrc.packForVerKey, respWaitingActorRef))
-      case None =>
-        sender ! Done
+      case None => sender ! Done
+      case Some(mrc) if msgRespContext.isEmpty =>
+        val respWaitingActorRef = if (mrc.isSyncReq) Some(sender) else None
+        msgRespContext = Option(MsgRespContext(senderPartiId, mrc.packForVerKey, respWaitingActorRef))
+      case _ =>
+        //this would be the case wherein protocol sent a signal message to be handled by agent actor
+        // and then agent actor sent another control message in response to that.
     }
   }
 
@@ -884,7 +878,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * in memory state, stores information required to send response
    * to a synchronous requests
    */
-  var msgRespContext: Map[MsgId, MsgRespContext] = Map.empty
+  var msgRespContext: Option[MsgRespContext] = None
 
   override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
     param.protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))

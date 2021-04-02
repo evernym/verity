@@ -3,7 +3,7 @@ package com.evernym.verity.msg_tracer
 import java.time.Instant
 
 import akka.actor.ActorSystem
-import com.evernym.verity.{ReqId, ReqMsgId, RespMsgId}
+import com.evernym.verity.{ReqId, RespMsgId}
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 
 /**
@@ -28,18 +28,18 @@ trait MsgTraceProvider
   object MsgTracerProvider {
 
     def recordMetricsForAsyncRespMsgId(respMsgId: RespMsgId, nextHop: String): Unit = {
-      val (matched, _) = asyncReqContext.partition(_._2.respMsgId.contains(respMsgId))
-      recordMetricsViaAsyncContext(matched, nextHop)
+      if (asyncReqContext.exists(_.respMsgId.contains(respMsgId)))
+        recordMetricsViaAsyncContext(nextHop)
     }
 
-    def recordMetricsForAsyncReqMsgId(reqMsgId: ReqMsgId, nextHop: String): Unit = {
-      val (matched, _) = asyncReqContext.partition(_._1 == reqMsgId)
-      recordMetricsViaAsyncContext(matched, nextHop)
+    def recordMetricsForAsyncReq(nextHop: String): Unit = {
+      if (asyncReqContext.isDefined)
+        recordMetricsViaAsyncContext(nextHop)
     }
 
-    private def recordMetricsViaAsyncContext(reqContexts: Map[ReqMsgId, AsyncReqContext], nextHop: String): Unit = {
-      reqContexts.foreach { case (_, reqDetail) =>
-        MsgRespTimeTracker.recordMetrics(reqDetail.reqId, reqDetail.msgName, nextHop)
+    private def recordMetricsViaAsyncContext(nextHop: String): Unit = {
+      asyncReqContext.foreach { reqContext =>
+        MsgRespTimeTracker.recordMetrics(reqContext.reqId, reqContext.msgName, nextHop)
       }
     }
   }
@@ -48,60 +48,29 @@ trait MsgTraceProvider
 
 trait HasAsyncReqContext {
 
-  protected var asyncReqContext: Map[ReqMsgId, AsyncReqContext] = Map.empty
+  protected var asyncReqContext: Option[AsyncReqContext] = None
 
-  /**
-   * after how much time record stored in 'asyncReqContext' should be considered as not required
-   */
-  protected val maxAliveMillis: Int = 2*60*1000 //2 min
-
-  /**
-   * remove stale state (to handle unhappy paths where record doesn't gets cleaned up)
-   */
-  protected def removeStale(): Unit = {
-    val curEpochMillis = Instant.now().toEpochMilli
-    val (matched, _) = asyncReqContext.partition(r => (curEpochMillis - r._2.capturedAtEpochMillis) < maxAliveMillis)
-    asyncReqContext = matched
+  protected def storeAsyncReqContext(msgName: String, reqId: ReqId, clientIpAddress: Option[String]=None): Unit = {
+    asyncReqContext = Option(AsyncReqContext(reqId, msgName, clientIpAddress))
   }
 
-  protected def storeAsyncReqContext(reqMsgId: ReqMsgId, msgName: String, reqId: ReqId, clientIpAddress: Option[String]=None): Unit = {
-    removeStale()
-    asyncReqContext = asyncReqContext + (reqMsgId -> AsyncReqContext(reqId, msgName, clientIpAddress))
-  }
-
-  protected def asyncReqContextViaReqMsgId(reqMsgId: ReqMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
-    val (matched, others) = asyncReqContext.partition(_._1 == reqMsgId)
-    if (removeMatched) {
-      asyncReqContext = others
-    }
-    matched.values.headOption
-  }
-
-  protected def asyncReqContextViaRespMsgId(respMsgId: RespMsgId, removeMatched: Boolean=false): Option[AsyncReqContext] = {
-    val (matched, others) = asyncReqContext.partition(r => r._2.respMsgId.contains(respMsgId))
-    if (removeMatched) {
-      asyncReqContext = others
-    }
-    matched.values.headOption
+  protected def asyncReqContextViaRespMsgId(respMsgId: RespMsgId): Option[AsyncReqContext] = {
+    asyncReqContext.find(r => r.respMsgId.contains(respMsgId))
   }
 
   /**
    * stores relationship between request message id and response message id
    * to be used later on
-   * @param reqMsgId request msg id
    * @param respMsgId response msg id
    */
-  protected def updateAsyncReqContext(reqMsgId: ReqMsgId, respMsgId: RespMsgId, msgName: Option[String]=None): Unit = {
-    val (matched, _) = asyncReqContext.partition(_._1 == reqMsgId)
-    matched.foreach { m =>
-      val newMsgName = m._2.msgName + msgName.map(mn => s":$mn").getOrElse("")
-      val updated = m._2.copy(respMsgId = Option(respMsgId), msgName = newMsgName)
-      asyncReqContext = asyncReqContext ++ Map(m._1 -> updated)
-    }
+  protected def updateAsyncReqContext(respMsgId: RespMsgId, msgName: Option[String]=None): Unit = {
+    val newMsgName = asyncReqContext.map(_.msgName) + msgName.map(mn => s":$mn").getOrElse("")
+    val updated = asyncReqContext.map(_.copy(respMsgId = Option(respMsgId), msgName = newMsgName))
+    asyncReqContext = updated
   }
 
-  protected def withReqMsgId(reqMsgId: ReqMsgId, f: AsyncReqContext => Unit): Unit = {
-    asyncReqContextViaReqMsgId(reqMsgId).foreach { arc =>
+  protected def withReqMsgId(f: AsyncReqContext => Unit): Unit = {
+    asyncReqContext.foreach { arc =>
       f(arc)
     }
   }

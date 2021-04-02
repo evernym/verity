@@ -32,6 +32,29 @@ class BasicRestApiSpec
     }
   }
 
+  "when sent update [update-configs 0.6] rest api request msg" - {
+    "should respond with Accepted" in {
+      val updateConfigs: ByteString = ByteString(s"""{"@type":"did:sov:123456789abcdefghi1234;spec/update-configs/0.6/update","@id":"${UUID.randomUUID.toString}","configs":[{"name": "ent-name"},{"logoUrl": "ent-logo-url"}]}""")
+
+      buildPostReq(s"/api/${mockEntRestEnv.myDID}/update-configs/0.6/${UUID.randomUUID.toString}",
+        HttpEntity.Strict(ContentTypes.`application/json`, updateConfigs),
+        Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
+      ) ~> epRoutes ~> check {
+        status shouldBe Accepted
+      }
+    }
+  }
+
+  "when sent get-status [update-configs 0.6] rest api request msg" - {
+    "should respond with OK" in {
+      buildGetReq(s"/api/${mockEntRestEnv.myDID}/update-configs/0.6/${UUID.randomUUID.toString}",
+        Seq(RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"))
+      ) ~> epRoutes ~> check {
+        status shouldBe OK
+      }
+    }
+  }
+
   "when sent write-schema rest api request msg on disabled api" - {
     "should respond with NotImplemented" taggedAs UNSAFE_IgnoreLog in withRestApiDisabled {
       buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",

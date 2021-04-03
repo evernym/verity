@@ -1,10 +1,12 @@
 package com.evernym.integrationtests.e2e.apis
 
+import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.IntegrationTestEnv
 import com.evernym.integrationtests.e2e.flow.{AdminFlow, InteractiveSdkFlow, SetupFlow}
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario, ScenarioAppEnvironment}
+import com.evernym.integrationtests.e2e.sdk.{JavaSdkProvider, RelData, VeritySdkProvider}
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.sdk.vcx.vcx.VcxApi
@@ -13,6 +15,7 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.utils.ContextBuilder
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
@@ -22,9 +25,6 @@ import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-
-import java.util.UUID
-import java.util.concurrent.ExecutionException
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -50,6 +50,7 @@ class VcxOnlySpec
   def appEnv: IntegrationTestEnv = specifySdkType(testEnv)
 
   val cas1 = testEnv.instance_!(APP_NAME_CAS_1).appInstance
+  val verity1 = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
 
   runScenario("vcxOnlyFlow") {
     lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
@@ -62,7 +63,7 @@ class VcxOnlySpec
 
     implicit val scenario: Scenario = Scenario(
       "VCX only work-flows",
-      List(cas1),
+      List(cas1, verity1),
       suiteTempDir,
       projectDir,
       defaultTimeout = Some(10 minute)
@@ -81,13 +82,15 @@ class VcxOnlySpec
     walletBackup(apps(cas1), "1", key)
     walletBackup(apps(cas1), "2", key, Some("SDFSDFSDF"))
 
+    inboxOverflow(23000, apps(verity1), apps(cas1))
+
 //    val largeWalletEntry = new Array[Byte](700000).map(_ => 't'.toByte)
 //    walletBackup(apps(Consumer), "3", key, Some(new String(largeWalletEntry)))
 
     apps.forEachApplication(cleanupSdk)
   }
 
-  def walletBackup(app: ApplicationAdminExt, run: String, key: String, walletAdd: Option[String] = None)(implicit scenario: Scenario): Unit = {
+    def walletBackup(app: ApplicationAdminExt, run: String, key: String, walletAdd: Option[String] = None)(implicit scenario: Scenario): Unit = {
     val id = UUID.randomUUID().toString
 
     val sdk = app.sdk match {
@@ -134,6 +137,40 @@ class VcxOnlySpec
           )
           walletDataJson.getString("value") shouldBe s
         }
+      }
+    }
+  }
+
+  def inboxOverflow(limit: Int, sender: ApplicationAdminExt, receiver: ApplicationAdminExt)(implicit scenario: Scenario): Unit = {
+    val senderSdk = sender.sdk match {
+      case Some(s: JavaSdkProvider) => s
+      case Some(x) => throw new Exception(s"InboxOverflow sender works with JavaSdkProvider only -- Not ${x.getClass.getSimpleName}")
+      case _ => throw new Exception(s"InboxOverflow sender works with JavaSdkProvider only")
+    }
+
+    val receiverSdk = receiver.sdk match {
+      case Some(s: VcxSdkProvider) => s
+      case Some(x) => throw new Exception(s"InboxOverflow receiver works with VcxSdkProvider only -- Not ${x.getClass.getSimpleName}")
+      case _ => throw new Exception(s"InboxOverflow receiver works with VcxSdkProvider only")
+    }
+    val connectionId = "spammy-connection"
+    connect_1_0(sender.name, senderSdk, senderSdk, receiver.name, receiverSdk, connectionId, "spammy connection")
+    overflowAndRead(senderSdk, receiverSdk, limit, connectionId)
+  }
+
+  def overflowAndRead(senderSdk: JavaSdkProvider, receiverSdk: VcxSdkProvider, limit: Int, connectionId: String)(implicit scenario: Scenario): Unit = {
+    val msg = "Hello, World!"*limit
+    "Overflow inbox of VCX client with commited questions from Verity SDK" - {
+      s"Send ${limit} basic messages length ${msg.length}" in {
+        val relDID = senderSdk.relationship_!(connectionId).owningDID
+        for (a <- 1 to 350) {
+          senderSdk.basicMessage_1_0(relDID, msg, "2018-1-19T01:24:00-000", "en")
+            .message(senderSdk.context)
+        }
+      }
+
+      "Receive messages" in {
+        receiverSdk.expectMsg(TestConstants.defaultTimeout)
       }
     }
   }

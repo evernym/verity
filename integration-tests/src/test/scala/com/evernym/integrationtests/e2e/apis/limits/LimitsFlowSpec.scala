@@ -1,5 +1,6 @@
 package com.evernym.integrationtests.e2e.apis.limits
 
+import com.evernym.integrationtests.e2e.apis.SdkFlowSpec.metricKey
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
 import com.evernym.integrationtests.e2e.flow._
@@ -88,6 +89,10 @@ class LimitsFlowSpec
         sdkBasicInteractions(apps, ledgerUtil)
       }
 
+      "inbox limit interaction" - {
+        sdkMobileAppReadInteraction(apps, ledgerUtil)
+      }
+
 
       //todo implement other cases
       "oob interaction" - {
@@ -106,6 +111,20 @@ class LimitsFlowSpec
     apps.forEachApplication(fetchAgencyDetail)
 
     apps.forEachApplication(provisionAgent)
+  }
+
+  def sdkMobileAppReadInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+    val veritySdk = apps(verity1)
+    val vcxSdk = apps(cas1)
+    val connectionId1 = "spammy-connection-1"
+
+    connect_1_0(veritySdk, vcxSdk, connectionId1, "spammy connection")
+    overflowAndRead(veritySdk, vcxSdk, 230, 184, 184, connectionId1)
+
+    val connectionId2 = "spammy-connection-2"
+
+    connect_1_0(veritySdk, vcxSdk, connectionId2, "spammy connection 2")
+    overflowAndRead(veritySdk, vcxSdk, 230, 185, 184, connectionId2)
   }
 
   def sdkIssuerSetupInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {

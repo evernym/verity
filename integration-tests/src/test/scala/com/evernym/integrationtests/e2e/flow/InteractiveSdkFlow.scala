@@ -3,10 +3,11 @@ package com.evernym.integrationtests.e2e.flow
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
+import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
-import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof}
+import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof, VcxSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.integrationtests.e2e.util.ProvisionTokenUtil.genTokenOpt
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -14,7 +15,7 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, COMMUNITY_QUALIFIER}
+import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -34,6 +35,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.util.UUID
 import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
@@ -1512,6 +1514,34 @@ trait InteractiveSdkFlow extends MetricsFlow {
       }
     }
   }
+
+  def overflowAndRead(sender: ApplicationAdminExt, receiver: ApplicationAdminExt, limitMsg: Int, numberMsg: Int, expectedNumber: Int, connectionId: String)(implicit scenario: Scenario): Unit = {
+    val msg = "Hello, World!"*limitMsg
+    s"Overflow inbox of VCX client with ${numberMsg} commited questions from Verity SDK" - {
+
+      val senderSdk = receivingSdk(sender)
+      val receiverSdk = receiver.sdk match {
+        case Some(s: VcxSdkProvider) => s
+        case Some(x) => throw new Exception(s"InboxOverflow receiver works with VcxSdkProvider only -- Not ${x.getClass.getSimpleName}")
+        case _ => throw new Exception(s"InboxOverflow receiver works with VcxSdkProvider only")
+      }
+
+      s"Send ${numberMsg} basic messages length ${msg.length}" in {
+        val relDID = senderSdk.relationship_!(connectionId).owningDID
+        for (a <- 1 to numberMsg) {
+          senderSdk.basicMessage_1_0(relDID, msg, "2018-1-19T01:24:00-000", "en")
+            .message(senderSdk.context)
+          Thread.sleep(400)
+        }
+      }
+
+      s"Receive ${expectedNumber} messages" in {
+        val result = receiverSdk.getAllMsgsFromConnection(TestConstants.defaultTimeout, connectionId)
+        result.length shouldBe expectedNumber
+      }
+    }
+  }
+
 }
 
 object InteractiveSdkFlow {

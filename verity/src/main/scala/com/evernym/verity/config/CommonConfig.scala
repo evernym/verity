@@ -137,7 +137,7 @@ trait CommonConfig {
   val WALLET_STORAGE_CRED_USERNAME = s"$WALLET_STORAGE.credentials-username"
   val WALLET_STORAGE_CRED_PASSWORD = s"$WALLET_STORAGE.credentials-password"
   val WALLET_STORAGE_DB_NAME = s"$WALLET_STORAGE.db-name"
-  val WALLET_STORAGE_CONNECTION_LIMIT = s"WALLET_STORAGE.connection-limit"
+  val WALLET_STORAGE_CONNECTION_LIMIT = s"$WALLET_STORAGE.connection-limit"
 
   private val SALT = s"$VERITY.salt"
   val SALT_WALLET_NAME = s"$SALT.wallet-name"

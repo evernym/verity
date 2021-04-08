@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.flow
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof}
@@ -14,7 +14,7 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, COMMUNITY_QUALIFIER}
+import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -30,6 +30,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
@@ -258,7 +259,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                   schemaAttrs: String*)
                  (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
-    s"write schema on $issuerName" - {
+    s"write schema $schemaName on $issuerName" - {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
@@ -277,6 +278,34 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$issuerName] check schema is on ledger" in {
         val (issuerDID, _): (DID, VerKey) = currentIssuerId(issuerSdk, msgReceiverSdk)
         ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+      }
+    }
+  }
+
+  def writeFailingSchema(issuerSdk: VeritySdkProvider,
+                  msgReceiverSdkProvider: VeritySdkProvider,
+                  ledgerUtil: LedgerUtil,
+                  schemaName: String,
+                  schemaVersion: String,
+                  expectedErrorMessage: String,
+                  schemaAttrs: String*)
+                 (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"write schema $schemaName on $issuerName" - {
+
+      val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use write-schema protocol" in {
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        logger.error(Instant.now().toString)
+        schema.write(issuerSdk.context)
+
+
+        msgReceiverSdk.expectMsg("problem-report") {resp =>
+          resp shouldBe an[JSONObject]
+          val msg = resp.getString("message")
+          msg should include (expectedErrorMessage)
+        }
       }
     }
   }
@@ -617,7 +646,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                      (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
     val holderName = holderSdk.sdkConfig.name
-    s"issue credential (1.0) to $holderName from $issuerName on relationship ($relationshipId)" - {
+    s"issue credential (1.0) '$credDefName' to $holderName from $issuerName on relationship ($relationshipId)" - {
       val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
       val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
       var tid = ""

@@ -175,14 +175,14 @@ object ResourceUsageTracker {
    *
    * @param entityId an entity id being tracked
    * @param resourceName a resource name being tracked
-   * @param apiToken a token used to find out a specific applicable rule
+   * @param ipAddress a source IP address
    */
-  private def checkIfUsageIsBlocked(entityId: EntityId, resourceName: ResourceName, apiToken: ApiToken): Unit = {
-    val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(apiToken, entityId)
+  private def checkIfUsageIsBlocked(entityId: EntityId, resourceName: ResourceName, ipAddress: IpAddress): Unit = {
+    val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(ipAddress, entityId)
     if (isBlacklisted) {
       throw new BadRequestErrorException(USAGE_BLOCKED.statusCode)
     }
-    val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(apiToken, entityId)
+    val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
     if (! isWhitelisted) {
       ResourceBlockingStatusMngrCache.checkIfUsageBlocked(entityId, resourceName)
     }
@@ -212,7 +212,7 @@ object ResourceUsageTracker {
         val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
         if (! isWhitelisted) {
           if (! ResourceBlockingStatusMngrCache.isInUnblockingPeriod(entityId, rn)) {
-            val aru = tracking.AddResourceUsage(resourceType, rn, ipAddress, sendBackAck)
+            val aru = tracking.AddResourceUsage(resourceType, rn, entityId, sendBackAck)
             rut.tell(ForIdentifier(entityId, aru), Actor.noSender)
           }
         }

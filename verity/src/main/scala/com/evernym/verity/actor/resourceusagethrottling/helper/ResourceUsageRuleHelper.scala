@@ -1,8 +1,9 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
-
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.resourceusagethrottling._
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserIdForResourceUsageTracking
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -21,13 +22,31 @@ object ResourceUsageRuleHelper {
     resourceUsageRules = new ResourceUsageRuleConfigValidator(AppConfigWrapper.getLoadedConfig).buildResourceUsageRules()
   }
 
+  def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[ApiToken]): Boolean = {
+    tokens.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
+  }
+
+  val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
+  val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
+
+  def isUserIdInTokenSet(userId: UserId, tokens: Set[ApiToken]): Boolean = {
+    tokens.exists {
+      case `userId` => true
+      case OWNER_ID_PATTERN => userId.startsWith(OWNER_ID_PREFIX)
+      case COUNTERPARTY_ID_PATTERN => userId.startsWith(COUNTERPARTY_ID_PREFIX)
+      case _ => false
+    }
+  }
+
   def getRuleNameByToken(token: ApiToken): UsageRuleName = {
-    val isTokenAnIpAddress = SubnetUtilsExt.isClassfulIpAddress(token)
     resourceUsageRules.rulesToTokens.find {
       case (_ , v) =>
-        if (isTokenAnIpAddress)
-          v.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(token))
-        else v.contains(token)
+        if (SubnetUtilsExt.isClassfulIpAddress(token))
+          isIpAddressInTokenSet(token, v)
+        else if (isUserIdForResourceUsageTracking(token))
+          isUserIdInTokenSet(token, v)
+        else
+          v.contains(token)
     }.map(_._1).getOrElse(DEFAULT_USAGE_RULE_NAME)
   }
 
@@ -94,23 +113,23 @@ case class ResourceUsageRuleConfig(
 
   /**
    *
-   * @param apiToken a token to help finding which resource usage rules to apply
+   * @param ipAddress a source IP address
    * @param entityId entity id being tracked
    * @return
    */
-  def isWhitelisted(apiToken: ApiToken, entityId: EntityId): Boolean = {
-    val tokenToBeChecked = Set(apiToken, entityId)
+  def isWhitelisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
+    val tokenToBeChecked = Set(ipAddress, entityId)
     tokenToBeChecked.exists(isTokenPresent(_, whitelistedTokens))
   }
 
   /**
    *
-   * @param apiToken a token to help finding which resource usage rules to apply
+   * @param ipAddress a source IP address
    * @param entityId entity id being tracked
    * @return
    */
-  def isBlacklisted(apiToken: ApiToken, entityId: EntityId): Boolean = {
-    val tokenToBeChecked = Set(apiToken, entityId)
+  def isBlacklisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
+    val tokenToBeChecked = Set(ipAddress, entityId)
     tokenToBeChecked.exists(isTokenPresent(_, blacklistedTokens))
   }
 
@@ -122,7 +141,7 @@ case class ResourceUsageRuleConfig(
    */
   private def isTokenPresent(token: ApiToken, tokens: Set[ApiToken]): Boolean = {
     if (SubnetUtilsExt.isClassfulIpAddress(token))
-      tokens.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(token))
+      isIpAddressInTokenSet(token, tokens)
     else
       tokens.contains(token)
   }

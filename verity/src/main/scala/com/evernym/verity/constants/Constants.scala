@@ -118,6 +118,9 @@ object Constants {
   val RESOURCE_TYPE_NAME_ENDPOINT = "endpoint"
   val RESOURCE_TYPE_NAME_MESSAGE = "message"
 
+  val OWNER_ID_PREFIX = "owner-"
+  val COUNTERPARTY_ID_PREFIX = "counterparty-"
+
   val LIBINDY_LEGACY_FLAVOR = "legacy"
 
   val WALLET_TYPE_DEFAULT = "default"

@@ -15,7 +15,8 @@ package object resourceusagethrottling {
 
 
   /**
-   * any identifier used to identify a unique user
+   * any identifier used to identify a unique user,
+   * is always started with "owner-" or "counterparty-" prefix
    */
   type UserId = String
 
@@ -39,7 +40,6 @@ package object resourceusagethrottling {
   /**
    * a token to look into 'rule-to-tokens' in 'resource-usage-rule.conf'
    * to find out which usage rule is applicable
-   * in "current implementation", api token is 'ip-address' only
    */
   type ApiToken = String
 

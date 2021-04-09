@@ -18,6 +18,7 @@ import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent, TrackingIdParam}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
+import com.evernym.verity.actor.resourceusagethrottling.UserId
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.buildAgentMsg
@@ -820,8 +821,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
     reqMsgContext.clientIpAddress.foreach { ipAddress =>
-      addUserResourceUsage(ipAddress, RESOURCE_TYPE_MESSAGE,
-        getResourceName(msgType.msgName), userId)
+      addUserResourceUsage(ipAddress, RESOURCE_TYPE_MESSAGE, getResourceName(msgType.msgName), userId)
     }
     senderVerKey.foreach { svk =>
       if (!param.allowedUnauthedMsgTypes.contains(msgType)) {
@@ -914,7 +914,7 @@ case class StateParam(agentActorRef: ActorRef,
                       senderParticipantId: Option[VerKey] => ParticipantId,
                       allowedUnauthedMsgTypes: Set[MsgType],
                       allAuthedKeys: Set[VerKey],
-                      userIdForResourceUsageTracking: Option[VerKey] => Option[String],
+                      userIdForResourceUsageTracking: Option[VerKey] => Option[UserId],
                       trackingIdParam: TrackingIdParam)
 
 case class ProcessUnpackedMsg(amw: AgentMsgWrapper,

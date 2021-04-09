@@ -14,6 +14,8 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
+import com.evernym.verity.actor.resourceusagethrottling.UserId
+import com.evernym.verity.constants.Constants.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX}
 
 import scala.concurrent.Future
 
@@ -81,14 +83,14 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   def stateDetailsFor: Future[PartialFunction[String, Parameter]]
   def sponsorRel: Option[SponsorRel] = None
 
-  private def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[String] =
+  def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[UserId] =
     (state.relationship.map(_.relationshipType), senderVerKey) match {
-      case (Some(ANYWISE_RELATIONSHIP), _)            => senderVerKey
-      case (Some(SELF_RELATIONSHIP), _)               => Option(domainId)
+      case (Some(ANYWISE_RELATIONSHIP), _)            => senderVerKey.map(COUNTERPARTY_ID_PREFIX + _)
+      case (Some(SELF_RELATIONSHIP), _)               => Option(domainId).map(OWNER_ID_PREFIX + _)
       case (Some(PAIRWISE_RELATIONSHIP), Some(svk))   =>
-        if (state.theirAuthVerKeys.contains(svk)) state.theirDid
-        else Option(domainId)
-      case _                                          => senderVerKey
+        if (state.theirAuthVerKeys.contains(svk)) state.theirDid.map(COUNTERPARTY_ID_PREFIX + _)
+        else Option(domainId).map(OWNER_ID_PREFIX + _)
+      case _                                          => throw new RuntimeException("UserId cannot be determined")
     }
 
   def sendToAgentMsgProcessor(cmd: Any): Unit = {

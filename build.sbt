@@ -46,7 +46,7 @@ val libIndyVer = "1.95.0~1353"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
   NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
-  NonMatchingLib("libvcx-async-test", "0.10.1-bionic~9999", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so")  // For integration testing ONLY
 )
 
 val additionalJars: Seq[String] = Seq(

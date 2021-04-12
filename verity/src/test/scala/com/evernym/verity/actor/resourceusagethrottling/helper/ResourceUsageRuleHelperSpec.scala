@@ -50,10 +50,6 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
       1800 -> BucketRule(50, "90")
     ))
 
-    val customGetMsgsMessageBuckets = ResourceUsageRule( Map (
-      600 -> BucketRule(200, "100"),
-    ))
-
     val defaultMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
       "CREATE_MSG_connReq" -> connReqMessageBuckets,
       "DUMMY_MSG" -> getMsgsMessageBuckets,
@@ -81,8 +77,8 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
     )
 
     val ruleToTokens = Map (
-      "default"-> Set.empty[String],
-      "custom" -> Set("127.0.2.0/24", "127.1.0.1", "randomToken", "128.0.0.1")
+      "default" -> Set.empty[String],
+      "custom" -> Set("127.0.2.0/24", "127.1.0.1", "counterparty-*", "owner-111111111111111111111", "128.0.0.1")
     )
 
     val logAndWarnMsgActions = ViolationActions ( Map (
@@ -148,8 +144,11 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
         ResourceUsageRuleHelper.getRuleNameByToken("127.0.0.4") shouldBe "default"
         ResourceUsageRuleHelper.getRuleNameByToken("128.0.0.1") shouldBe "custom"
         ResourceUsageRuleHelper.getRuleNameByToken("191.0.0.4") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByToken("randomToken") shouldBe "custom"
         ResourceUsageRuleHelper.getRuleNameByToken("otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByToken("owner-111111111111111111111") shouldBe "custom"
+        ResourceUsageRuleHelper.getRuleNameByToken("owner-222222222222222222222") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByToken("counterparty-111111111111111111111") shouldBe "custom"
+        ResourceUsageRuleHelper.getRuleNameByToken("counterparty-222222222222222222222") shouldBe "custom"
         ResourceUsageRuleHelper.getRuleNameByToken("191.0.0.4otherToken") shouldBe "default"
         ResourceUsageRuleHelper.getRuleNameByToken("191.0.0.4/otherToken") shouldBe "default"
       }

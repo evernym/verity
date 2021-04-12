@@ -3,7 +3,7 @@ package com.evernym.verity.actor.resourceusagethrottling.helper
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
-import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserIdForResourceUsageTracking
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{COUNTERPARTY_ID_PATTERN, OWNER_ID_PATTERN, isUserIdForResourceUsageTracking}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -23,11 +23,8 @@ object ResourceUsageRuleHelper {
   }
 
   def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[ApiToken]): Boolean = {
-    tokens.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
+    tokens.filter(SubnetUtilsExt.isIpAddressOrCidrNotation).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
   }
-
-  val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
-  val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
 
   def isUserIdInTokenSet(userId: UserId, tokens: Set[ApiToken]): Boolean = {
     tokens.exists {
@@ -105,9 +102,7 @@ case class ResourceUsageRuleConfig(
                                     rulesToTokens: Map[UsageRuleName, Set[ApiToken]],
                                     blacklistedTokens: Set[ApiToken],
                                     whitelistedTokens: Set[ApiToken],
-                                    actionRules: Map[ActionRuleId, ViolationActions],
-                                    tokenCharsetRegex: Option[String] = None,
-                                    ipCheckRegex: Option[String] = None
+                                    actionRules: Map[ActionRuleId, ViolationActions]
                                   ){
   val logger: Logger = getLoggerByClass(classOf[ResourceUsageRuleConfig])
 

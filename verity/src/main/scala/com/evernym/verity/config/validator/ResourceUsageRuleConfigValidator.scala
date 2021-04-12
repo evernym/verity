@@ -2,10 +2,11 @@ package com.evernym.verity.config.validator
 
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserIdOrPatternForResourceUsageTracking
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, Instruction, InstructionDetail, ResourceTypeUsageRule, ResourceUsageRule, ResourceUsageRuleConfig, UsageRule, UsageViolationActionExecutorValidator, ViolationActions}
 import com.evernym.verity.config.CommonConfig.{BLACKLISTED_TOKENS, RESOURCE_USAGE_RULES, RULE_TO_TOKENS, USAGE_RULES, VIOLATION_ACTION, WHITELISTED_TOKENS}
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
-import com.evernym.verity.util.SubnetUtilsExt.{getSubnetUtilsExt, isSupportedIPAddress}
+import com.evernym.verity.util.SubnetUtilsExt.{getSubnetUtilsExt, isIpAddressOrCidrNotation}
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.{Config, ConfigValue}
 
@@ -115,8 +116,6 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
   }
 
   def validateRuleToTokens(c: ResourceUsageRuleConfig): Unit = {
-    val tokenCharsetRegex = c.tokenCharsetRegex
-    val ipCheckRegex = c.ipCheckRegex
     val usageRuleNames = c.usageRules.keySet
     var allTokens = Set.empty[String]
     c.rulesToTokens.foreach { case (name, tokens) =>
@@ -132,14 +131,13 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
       } else {
         allTokens = allTokens ++ tokens
       }
-      tokens.foreach(t => checkIfValidToken(t, tokenCharsetRegex, ipCheckRegex, s"$RULE_TO_TOKENS.$name"))
+      tokens.foreach(t => checkIfValidToken(t, s"$RULE_TO_TOKENS.$name"))
     }
     validateRuleToTokenConflicts(RULE_TO_TOKENS, c.rulesToTokens)
   }
 
-  def checkIfValidToken(token: String, tokenCharsetRegex: Option[String], ipCheckRegex:Option[String],
-                        confName: String): Unit = {
-    val validToken: Boolean = isValidToken(token, tokenCharsetRegex, ipCheckRegex)
+  def checkIfValidToken(token: String, confName: String): Unit = {
+    val validToken: Boolean = isValidToken(token)
     if (! validToken) {
       val problem = s"invalid token: $token"
       val configOrigin = config.getValue(confName).origin()
@@ -147,16 +145,8 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
     }
   }
 
-  def isValidToken(token: String, tokenCharsetRegex: Option[String] = None,
-                   ipCheckRegex:Option[String] = None): Boolean = {
-    val charSetRegex = tokenCharsetRegex.getOrElse("[a-zA-Z0-9-./]*")
-    val IPCheckRegex = ipCheckRegex.getOrElse("(\\d+.\\d+.\\d+.\\d+){1}(\\/+\\w*)")
-
-    (token.matches(charSetRegex), token.matches(IPCheckRegex)) match {
-      case (true, true) => isSupportedIPAddress(token)
-      case (true, false) => true
-      case (false, _) => false
-    }
+  def isValidToken(token: String): Boolean = {
+    token == "global" || isIpAddressOrCidrNotation(token) || isUserIdOrPatternForResourceUsageTracking(token)
   }
 
   def validateRuleToTokenConflicts(confName: String, rulesToTokens: Map[String, Set[String]]): Unit = {
@@ -172,8 +162,8 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
   case class TokensToValidate(confName: String, tokens: Set[String])
 
   def validatedIpRangeConflicts(tokens: TokensToValidate, otherTokens: TokensToValidate):Unit = {
-    val filteredOtherTokens = otherTokens.tokens.filter(isSupportedIPAddress)
-    tokens.tokens.filter(isSupportedIPAddress).foreach { token =>
+    val filteredOtherTokens = otherTokens.tokens.filter(isIpAddressOrCidrNotation)
+    tokens.tokens.filter(isIpAddressOrCidrNotation).foreach { token =>
       val subnetUtil = getSubnetUtilsExt(token)
       filteredOtherTokens.foreach { otherToken =>
         val otherSubnetUtil = getSubnetUtilsExt(otherToken)
@@ -203,14 +193,12 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
 
   def validateBlacklistedAndWhitelistedTokens(c: ResourceUsageRuleConfig): Unit = {
     val commonTokens = c.whitelistedTokens.intersect(c.blacklistedTokens)
-    val tokenCharsetRegex = c.tokenCharsetRegex
-    val ipCheckRegex = c.tokenCharsetRegex
     if (commonTokens.nonEmpty) {
       val problem = s"whitelisted-tokens and blacklisted-tokens config can't contain same tokens: ${commonTokens.mkString(", ")}"
       throw getValidationFailedExc(config.getValue(WHITELISTED_TOKENS).origin(), WHITELISTED_TOKENS, problem)
     }
-    c.whitelistedTokens.foreach(t => checkIfValidToken(t, tokenCharsetRegex, ipCheckRegex, WHITELISTED_TOKENS))
-    c.blacklistedTokens.foreach(t => checkIfValidToken(t, tokenCharsetRegex, ipCheckRegex, BLACKLISTED_TOKENS))
+    c.whitelistedTokens.foreach(t => checkIfValidToken(t, WHITELISTED_TOKENS))
+    c.blacklistedTokens.foreach(t => checkIfValidToken(t, BLACKLISTED_TOKENS))
     validatedIpRangeConflicts(TokensToValidate(WHITELISTED_TOKENS, c.whitelistedTokens),
       TokensToValidate(BLACKLISTED_TOKENS, c.blacklistedTokens))
   }
@@ -253,13 +241,9 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
       val actionRules =
         try { getViolationActionRules(apiUsageRulesConfig, "violation-action") }
         catch { case _: Missing => Map.empty[String, ViolationActions] }
-      val tokenCharsetRegex = try { Option(apiUsageRulesConfig.getString("token-charset-regex")) }
-      catch { case _: Missing => None }
-      val ipCheckRegex = try { Option(apiUsageRulesConfig.getString("ip-check-regex")) }
-      catch { case _: Missing => None }
 
       ResourceUsageRuleConfig(applyUsageRules, persistAllUsageStates, snapshotAfterEvents,
-        rules, ruleToTokens, blacklisted, whitelisted, actionRules, tokenCharsetRegex, ipCheckRegex)
+        rules, ruleToTokens, blacklisted, whitelisted, actionRules)
     } catch {
       case _: Missing =>
         ResourceUsageRuleConfig(applyUsageRules = false, persistAllBucketUsages = false, 100,

@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, AgentMsgProcessor, ProcessUntypedMsgV2, StateParam, UnhandledMsg}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
@@ -12,10 +11,9 @@ import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
+import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.ANYWISE_RELATIONSHIP
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
-import com.evernym.verity.actor.resourceusagethrottling.UserId
-import com.evernym.verity.constants.Constants.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX}
+import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, UserId}
 
 import scala.concurrent.Future
 
@@ -83,15 +81,16 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   def stateDetailsFor: Future[PartialFunction[String, Parameter]]
   def sponsorRel: Option[SponsorRel] = None
 
-  def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[UserId] =
+  def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[UserId] = {
+    val myDomainAuthedKeys = state.myAuthVerKeys ++ configuredAuthedKeys
     (state.relationship.map(_.relationshipType), senderVerKey) match {
-      case (Some(ANYWISE_RELATIONSHIP), _)            => senderVerKey.map(COUNTERPARTY_ID_PREFIX + _)
-      case (Some(SELF_RELATIONSHIP), _)               => Option(domainId).map(OWNER_ID_PREFIX + _)
-      case (Some(PAIRWISE_RELATIONSHIP), Some(svk))   =>
-        if (state.theirAuthVerKeys.contains(svk)) state.theirDid.map(COUNTERPARTY_ID_PREFIX + _)
-        else Option(domainId).map(OWNER_ID_PREFIX + _)
-      case _                                          => throw new RuntimeException("UserId cannot be determined")
+      case (Some(ANYWISE_RELATIONSHIP), _)    => senderVerKey.map(COUNTERPARTY_ID_PREFIX + _)
+      case (Some(_), Some(svk))               =>
+        if (myDomainAuthedKeys.contains(svk)) Option(domainId).map(OWNER_ID_PREFIX + _)
+        else Option(COUNTERPARTY_ID_PREFIX + state.theirDid.getOrElse(svk))
+      case _                                  => senderVerKey.map(COUNTERPARTY_ID_PREFIX  + _)
     }
+  }
 
   def sendToAgentMsgProcessor(cmd: Any): Unit = {
     val sndr = sender()

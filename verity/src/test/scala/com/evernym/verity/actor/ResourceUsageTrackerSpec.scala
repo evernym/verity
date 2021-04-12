@@ -214,12 +214,17 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       Thread.sleep(2000)
     }
 
-    def sendToResourceUsageTrackerRegionAddResourceUsage(to: String, resourceType: ResourceType, resourceName: ResourceName, userIdOpt: Option[UserId], restartActorBefore: Boolean=false): Unit = {
+    def sendToResourceUsageTracker(to: String,
+                                   resourceType: ResourceType,
+                                   resourceName: ResourceName,
+                                   userIdOpt: Option[UserId],
+                                   restartActorBefore: Boolean=false): Unit = {
       if (restartActorBefore) {
         restartResourceUsageTrackerActor(to)
       }
 
-      ResourceUsageTracker.addUserResourceUsage(to, resourceType, resourceName, sendBackAck = false, userIdOpt)(resourceUsageTrackerRegion)
+      ResourceUsageTracker.addUserResourceUsage(resourceType, resourceName,
+        Option(to), userIdOpt, sendBackAck = false)(resourceUsageTrackerRegion)
     }
 
     def sendToResourceUsageTrackerRegion(to: String, cmd: Any, restartActorBefore: Boolean=false): Unit = {
@@ -282,7 +287,7 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
           if(resourceUsage._1 != globalToken) {
             try {
               logger.debug(s"Adding resource usage for resourceName: ${resourceUsage._3} and IP/entityId: ${resourceUsage._1} and user DID: ${resourceUsage._2}")
-              sendToResourceUsageTrackerRegionAddResourceUsage(resourceUsage._1, RESOURCE_TYPE_MESSAGE, resourceUsage._3, resourceUsage._2)
+              sendToResourceUsageTracker(resourceUsage._1, RESOURCE_TYPE_MESSAGE, resourceUsage._3, resourceUsage._2)
               expectNoMessage()
             } catch {
               case e: BadRequestErrorException =>
@@ -523,7 +528,7 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
           )))
         expectMsg(Done)
 
-        sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_MESSAGE, createMsgConnReq, None)
+        sendToResourceUsageTracker(user1IpAddress, RESOURCE_TYPE_MESSAGE, createMsgConnReq, None)
         expectNoMessage()
 
         // Expect usageBlockingStatus and usageWarningStatus to continue to be empty
@@ -544,9 +549,9 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
       "when sent AddResourceUsage command for two different IP addresses" - {
         "should succeed and respond with no message (async)" in {
-          sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user1DID))
+          sendToResourceUsageTracker(user1IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user1DID))
           expectNoMessage()
-          sendToResourceUsageTrackerRegionAddResourceUsage(user2IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user2DID))
+          sendToResourceUsageTracker(user2IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user2DID))
           expectNoMessage()
         }
       }
@@ -576,9 +581,9 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
       "when sent same AddResourceUsage commands again" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user1DID))
+          sendToResourceUsageTracker(user1IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user1DID))
           expectNoMessage()
-          sendToResourceUsageTrackerRegionAddResourceUsage(user2IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user2DID))
+          sendToResourceUsageTracker(user2IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user2DID))
           expectNoMessage()
         }
       }
@@ -608,9 +613,9 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
       "when sent same AddResourceUsage command for another resource type" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_MESSAGE, createMsgConnReq, None)
+          sendToResourceUsageTracker(user1IpAddress, RESOURCE_TYPE_MESSAGE, createMsgConnReq, None)
           expectNoMessage()
-          sendToResourceUsageTrackerRegionAddResourceUsage(user2IpAddress, RESOURCE_TYPE_MESSAGE, DUMMY_MSG, Some(user2DID))
+          sendToResourceUsageTracker(user2IpAddress, RESOURCE_TYPE_MESSAGE, DUMMY_MSG, Some(user2DID))
           expectNoMessage()
         }
       }

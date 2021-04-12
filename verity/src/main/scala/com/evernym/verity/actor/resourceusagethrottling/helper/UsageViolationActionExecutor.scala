@@ -6,6 +6,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{WarnCaller, WarnResourceForCaller}
+import com.evernym.verity.actor.resourceusagethrottling.ENTITY_ID_GLOBAL
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
@@ -65,11 +66,11 @@ trait Instruction {
     // 2. entityId must be an IP Address if track-by is "ip"
     // 3. entityId must be a user ID if track-by is "user"
     trackBy match {
-      case Some("global") => entityId.equals("global")
-      case Some("ip") => SubnetUtilsExt.isClassfulIpAddress(entityId)
-      case Some("user") => isUserIdForResourceUsageTracking(entityId)
-      case None => true
-      case _ => false
+      case Some("global") => entityId.equals(ENTITY_ID_GLOBAL)
+      case Some("ip")     => SubnetUtilsExt.isClassfulIpAddress(entityId)
+      case Some("user")   => isUserIdForResourceUsageTracking(entityId)
+      case None           => true
+      case _              => false
     }
   }
 
@@ -79,7 +80,7 @@ trait Instruction {
     var trackByValue: String = violatedRule.entityId
     trackBy match {
       case "global" => trackByValue = trackBy
-      case _ =>
+      case _        =>
     }
     (trackByValue, periodInSec)
   }

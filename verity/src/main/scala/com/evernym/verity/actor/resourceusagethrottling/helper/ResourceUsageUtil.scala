@@ -1,10 +1,9 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import java.time.{ZoneId, ZonedDateTime}
-
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.VALIDATION_FAILED
-import com.evernym.verity.constants.Constants.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX}
+import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX}
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util.{isDID, isVerKey}
 

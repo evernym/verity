@@ -50,10 +50,6 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
       1800 -> BucketRule(50, "90")
     ))
 
-    val customGetMsgsMessageBuckets = ResourceUsageRule( Map (
-      600 -> BucketRule(200, "100"),
-    ))
-
     val defaultMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
       "CREATE_MSG_connReq" -> connReqMessageBuckets,
       "DUMMY_MSG" -> getMsgsMessageBuckets,
@@ -77,6 +73,10 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
 
     val expectedRules = Map (
       "default" -> defaultUsageRule,
+      "global" -> defaultUsageRule,
+      "ip-address" -> defaultUsageRule,
+      "user-id-owner" -> defaultUsageRule,
+      "user-id-counterparty" -> defaultUsageRule,
       "custom" -> customUsageRule
     )
 
@@ -145,13 +145,20 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
 
     "when called get resource usage rule for a token" - {
       "should respond with applicable resource usage rule name" in{
-        ResourceUsageRuleHelper.getRuleNameByToken("127.0.0.4") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByToken("128.0.0.1") shouldBe "custom"
-        ResourceUsageRuleHelper.getRuleNameByToken("191.0.0.4") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByToken("randomToken") shouldBe "custom"
-        ResourceUsageRuleHelper.getRuleNameByToken("otherToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByToken("191.0.0.4otherToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByToken("191.0.0.4/otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("global") shouldBe "global"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("127.0.0.4") shouldBe "ip-address"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("191.0.0.4") shouldBe "ip-address"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
+
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("128.0.0.1") shouldBe "custom"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("randomToken") shouldBe "custom"
+
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("191.0.0.4otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("191.0.0.4/otherToken") shouldBe "default"
       }
     }
   }

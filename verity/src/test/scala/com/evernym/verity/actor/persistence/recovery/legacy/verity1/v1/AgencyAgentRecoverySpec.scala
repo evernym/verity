@@ -17,7 +17,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 //this tests legacy agency agent actor's recovery
 class AgencyAgentRecoverySpec
   extends BaseRecoverySpec
-    with AgencyAgentEventSetter{
+    with AgencyAgentEventSetter {
 
   override def beforeAll(): Unit = {
     super.beforeAll()

@@ -110,16 +110,6 @@ object Constants {
   val MSG_PACK_VERSION = "msg-pack-version"
 
   val CLIENT_IP_ADDRESS = "client_ip"
-  val RESOURCE_NAME_ALL = "all"
-
-  val RESOURCE_TYPE_ENDPOINT = 1
-  val RESOURCE_TYPE_MESSAGE = 2
-
-  val RESOURCE_TYPE_NAME_ENDPOINT = "endpoint"
-  val RESOURCE_TYPE_NAME_MESSAGE = "message"
-
-  val OWNER_ID_PREFIX = "owner-"
-  val COUNTERPARTY_ID_PREFIX = "counterparty-"
 
   val LIBINDY_LEGACY_FLAVOR = "legacy"
 

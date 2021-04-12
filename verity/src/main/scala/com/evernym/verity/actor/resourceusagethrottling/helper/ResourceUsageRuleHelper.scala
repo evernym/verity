@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserIdForResourceUsageTracking
@@ -14,44 +13,54 @@ object ResourceUsageRuleHelper {
 
   loadResourceUsageRules()
 
-  val DEFAULT_USAGE_RULE_NAME = "default"
-
   var resourceUsageRules: ResourceUsageRuleConfig = _
 
   def loadResourceUsageRules(): Unit = {
     resourceUsageRules = new ResourceUsageRuleConfigValidator(AppConfigWrapper.getLoadedConfig).buildResourceUsageRules()
   }
 
-  def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[ApiToken]): Boolean = {
-    tokens.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
-  }
-
   val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
   val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
 
-  def isUserIdInTokenSet(userId: UserId, tokens: Set[ApiToken]): Boolean = {
-    tokens.exists {
-      case `userId` => true
-      case OWNER_ID_PATTERN => userId.startsWith(OWNER_ID_PREFIX)
-      case COUNTERPARTY_ID_PATTERN => userId.startsWith(COUNTERPARTY_ID_PREFIX)
-      case _ => false
+  def isIpAddressInTokenSet(entityId: EntityId, tokens: Set[ApiToken]): Boolean = {
+    tokens
+      .filter(SubnetUtilsExt.isSupportedIPAddress)
+      .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(entityId))
+  }
+
+  private def isUserIdInTokenSet(entityId: EntityId, tokens: Set[ApiToken]): Boolean = {
+    tokens
+      .filterNot(SubnetUtilsExt.isSupportedIPAddress)
+      .exists {
+        case `entityId`               => true
+        case OWNER_ID_PATTERN         => entityId.startsWith(OWNER_ID_PREFIX)
+        case COUNTERPARTY_ID_PATTERN  => entityId.startsWith(COUNTERPARTY_ID_PREFIX)
+        case _                        => false
     }
   }
 
-  def getRuleNameByToken(token: ApiToken): UsageRuleName = {
+  def getRuleNameByTrackingEntityId(entityId: EntityId): UsageRuleName = {
     resourceUsageRules.rulesToTokens.find {
       case (_ , v) =>
-        if (SubnetUtilsExt.isClassfulIpAddress(token))
-          isIpAddressInTokenSet(token, v)
-        else if (isUserIdForResourceUsageTracking(token))
-          isUserIdInTokenSet(token, v)
+        if (SubnetUtilsExt.isClassfulIpAddress(entityId))
+          isIpAddressInTokenSet(entityId, v)
+        else if (isUserIdForResourceUsageTracking(entityId))
+          isUserIdInTokenSet(entityId, v)
         else
-          v.contains(token)
-    }.map(_._1).getOrElse(DEFAULT_USAGE_RULE_NAME)
+          v.contains(entityId)
+    }.map(_._1).getOrElse(getDefaultRuleNameByEntityId(entityId))
   }
 
-  private def getUsageRuleByToken(token: ApiToken): Option[UsageRule] = {
-    resourceUsageRules.usageRules.get(getRuleNameByToken(token))
+  def getDefaultRuleNameByEntityId(entityId: EntityId): String = {
+    if (entityId == ENTITY_ID_GLOBAL) GLOBAL_DEFAULT_RULE_NAME
+    else if (SubnetUtilsExt.isSupportedIPAddress(entityId)) IP_ADDRESS_DEFAULT_RULE_NAME
+    else if (entityId.startsWith(OWNER_ID_PREFIX)) USER_ID_OWNER_DEFAULT_RULE_NAME
+    else if (entityId.startsWith(COUNTERPARTY_ID_PREFIX)) USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME
+    else DEFAULT_USAGE_RULE_NAME
+  }
+
+  private def getUsageRuleByTrackingEntityId(entityId: EntityId): Option[UsageRule] = {
+    resourceUsageRules.usageRules.get(getRuleNameByTrackingEntityId(entityId))
   }
 
   private def getResourceTypeUsageRule(ur: UsageRule, resourceTypeName: ResourceTypeName): Option[ResourceTypeUsageRule] = {
@@ -73,8 +82,10 @@ object ResourceUsageRuleHelper {
     }
   }
 
-  def getResourceUsageRule(token: ApiToken, resourceType: ResourceType, resourceName: ResourceName): Option[ResourceUsageRule] = {
-    getUsageRuleByToken(token).flatMap { ur =>
+  def getResourceUsageRule(entityId: EntityId,
+                           resourceType: ResourceType,
+                           resourceName: ResourceName): Option[ResourceUsageRule] = {
+    getUsageRuleByTrackingEntityId(entityId).flatMap { ur =>
       val resourceTypeName = getHumanReadableResourceType(resourceType)
       getResourceTypeUsageRule(ur, resourceTypeName).flatMap { rtur =>
         getResourceUsageRule(rtur, resourceName)
@@ -117,20 +128,17 @@ case class ResourceUsageRuleConfig(
    * @param entityId entity id being tracked
    * @return
    */
-  def isWhitelisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
-    val tokenToBeChecked = Set(ipAddress, entityId)
-    tokenToBeChecked.exists(isTokenPresent(_, whitelistedTokens))
+  def isWhitelisted(tokens: ApiToken*): Boolean = {
+    tokens.exists(isTokenPresent(_, whitelistedTokens))
   }
 
   /**
    *
-   * @param ipAddress a source IP address
-   * @param entityId entity id being tracked
+   * @param tokens tokens to be checked against blacklisted tokens
    * @return
    */
-  def isBlacklisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
-    val tokenToBeChecked = Set(ipAddress, entityId)
-    tokenToBeChecked.exists(isTokenPresent(_, blacklistedTokens))
+  def isBlacklisted(tokens: ApiToken*): Boolean = {
+    tokens.exists(isTokenPresent(_, blacklistedTokens))
   }
 
   /**

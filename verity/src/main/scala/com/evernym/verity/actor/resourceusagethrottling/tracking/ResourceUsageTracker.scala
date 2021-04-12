@@ -4,7 +4,6 @@ import java.time.ZonedDateTime
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.LoggingReceive
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
@@ -94,7 +93,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
       ResourceUsageRuleHelper.loadResourceUsageRules()
       if (ResourceUsageRuleHelper.resourceUsageRules.applyUsageRules) {
         val persistUpdatedBucketEntries =
-          resourceUsageTracker.updateResourceUsage(aru.apiToken, aru.resourceType, aru.resourceName)
+          resourceUsageTracker.updateResourceUsage(entityId, aru.resourceType, aru.resourceName)
         persistUpdatedBucketEntries.foreach { ube =>
           ube.entries.foreach(asyncWriteWithoutApply)
         }
@@ -140,7 +139,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   def analyzeUsage(aru: AddResourceUsage): Unit = {
     runWithInternalSpan("analyzeUsage", "ResourceUsageTracker") {
       Future {
-        ResourceUsageRuleHelper.getResourceUsageRule(aru.apiToken, aru.resourceType, aru.resourceName).foreach { usageRule =>
+        ResourceUsageRuleHelper.getResourceUsageRule(entityId, aru.resourceType, aru.resourceName).foreach { usageRule =>
           val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)
           usageRule.bucketRules.foreach { case (bucketId, bucketRule) =>
             actualUsages.usages.get(bucketId).foreach { actualCount =>
@@ -175,44 +174,49 @@ object ResourceUsageTracker {
    *
    * @param entityId an entity id being tracked
    * @param resourceName a resource name being tracked
-   * @param ipAddress a source IP address
    */
-  private def checkIfUsageIsBlocked(entityId: EntityId, resourceName: ResourceName, ipAddress: IpAddress): Unit = {
-    val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(ipAddress, entityId)
+  private def checkIfUsageIsBlocked(entityId: EntityId,
+                                    resourceName: ResourceName): Unit = {
+    val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(entityId)
     if (isBlacklisted) {
       throw new BadRequestErrorException(USAGE_BLOCKED.statusCode)
     }
-    val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
+    val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(entityId)
     if (! isWhitelisted) {
       ResourceBlockingStatusMngrCache.checkIfUsageBlocked(entityId, resourceName)
     }
   }
 
   /**
-   *
-   * @param ipAddress ipAddress
    * @param resourceType endpoint or message
    * @param resourceName resource name being tracked
-   * @param sendBackAck
-   * @param userIdOpt
+   * @param sendBackAck shall an ack being sent back
+   * @param ipAddressOpt ipAddress from which request arrived
+   * @param userIdOpt user id being tracked
    * @param rut
    */
-  def addUserResourceUsage(ipAddress: IpAddress, resourceType: ResourceType, resourceName: ResourceName,
-                           sendBackAck: Boolean, userIdOpt: Option[UserId])(rut: ActorRef): Unit = {
+  def addUserResourceUsage(resourceType: ResourceType,
+                           resourceName: ResourceName,
+                           ipAddressOpt: Option[IpAddress],
+                           userIdOpt: Option[UserId],
+                           sendBackAck: Boolean)(rut: ActorRef): Unit = {
     // Do NOT increment global counter if entityId or userIdOpt is blocked.
-    // global MUST be AFTER entityId and userIdOpt.
-    val trackByEntityIds = Option(ipAddress) ++ userIdOpt ++ Option("global")
-    val resourceNames = Set(RESOURCE_NAME_ALL, resourceName)
+    // global MUST be AFTER `ipAddressOpt` and `userIdOpt`.
+    val trackByEntityIds = ipAddressOpt ++ userIdOpt ++ Option(ENTITY_ID_GLOBAL)
+    val resourceNames = Set(resourceName, RESOURCE_NAME_ALL)
 
     trackByEntityIds.foreach { entityId =>
+      //check if tracked entity is NOT blocked
       resourceNames.foreach { rn =>
-        checkIfUsageIsBlocked(entityId, rn, ipAddress)
+        checkIfUsageIsBlocked(entityId, rn)
       }
-      resourceNames.foreach { rn =>
-        val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
+
+      //track if neither 'whitelisted' nor in 'UnblockingPeriod'
+      resourceNames.foreach { resourceName =>
+        val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(entityId)
         if (! isWhitelisted) {
-          if (! ResourceBlockingStatusMngrCache.isInUnblockingPeriod(entityId, rn)) {
-            val aru = tracking.AddResourceUsage(resourceType, rn, entityId, sendBackAck)
+          if (! ResourceBlockingStatusMngrCache.isInUnblockingPeriod(entityId, resourceName)) {
+            val aru = tracking.AddResourceUsage(resourceType, resourceName, sendBackAck)
             rut.tell(ForIdentifier(entityId, aru), Actor.noSender)
           }
         }
@@ -238,10 +242,14 @@ case class Bucket(usedCount: Int = 0,
   }
 }
 
-case class BucketExt(usedCount: Int = 0, allowedCount: Int,
-                     startDateTime: Option[ZonedDateTime], endDateTime: Option[ZonedDateTime])
+case class BucketExt(usedCount: Int = 0,
+                     allowedCount: Int,
+                     startDateTime: Option[ZonedDateTime],
+                     endDateTime: Option[ZonedDateTime])
 
-case class AddResourceUsage(resourceType: ResourceType, resourceName: ResourceName, apiToken: ApiToken, sendBackAck: Boolean=true) extends ActorMessage
+case class AddResourceUsage(resourceType: ResourceType,
+                            resourceName: ResourceName,
+                            sendBackAck: Boolean=true) extends ActorMessage
 case class GetResourceUsage(resourceName: ResourceName) extends ActorMessage
 case class ResourceUsages(usages: Map[ResourceName, Map[BucketIdStr, BucketExt]]) extends ActorMessage
 

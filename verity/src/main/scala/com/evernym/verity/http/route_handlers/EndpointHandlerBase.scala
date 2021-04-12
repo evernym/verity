@@ -8,6 +8,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.configured.ConfiguredApiRoutes
@@ -45,7 +46,7 @@ trait EndpointHandlerBase
   }
 
   protected def handleGetAgencyIdentity(withDetail: Boolean)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT, "GET_agency", None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency", Option(clientIpAddress), None)
     complete {
       sendToAgencyAgent(GetLocalAgencyIdentity(withDetail)).map[ToResponseMarshallable] {
         msgResponseHandler

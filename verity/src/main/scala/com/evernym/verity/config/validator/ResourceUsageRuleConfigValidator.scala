@@ -2,6 +2,7 @@ package com.evernym.verity.config.validator
 
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.actor.resourceusagethrottling.{DEFAULT_USAGE_RULE_NAME, GLOBAL_DEFAULT_RULE_NAME, IP_ADDRESS_DEFAULT_RULE_NAME, USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME, USER_ID_OWNER_DEFAULT_RULE_NAME}
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, Instruction, InstructionDetail, ResourceTypeUsageRule, ResourceUsageRule, ResourceUsageRuleConfig, UsageRule, UsageViolationActionExecutorValidator, ViolationActions}
 import com.evernym.verity.config.CommonConfig.{BLACKLISTED_TOKENS, RESOURCE_USAGE_RULES, RULE_TO_TOKENS, USAGE_RULES, VIOLATION_ACTION, WHITELISTED_TOKENS}
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
@@ -147,7 +148,8 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
     }
   }
 
-  def isValidToken(token: String, tokenCharsetRegex: Option[String] = None,
+  def isValidToken(token: String,
+                   tokenCharsetRegex: Option[String] = None,
                    ipCheckRegex:Option[String] = None): Boolean = {
     val charSetRegex = tokenCharsetRegex.getOrElse("[a-zA-Z0-9-./]*")
     val IPCheckRegex = ipCheckRegex.getOrElse("(\\d+.\\d+.\\d+.\\d+){1}(\\/+\\w*)")
@@ -159,7 +161,8 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
     }
   }
 
-  def validateRuleToTokenConflicts(confName: String, rulesToTokens: Map[String, Set[String]]): Unit = {
+  def validateRuleToTokenConflicts(confName: String,
+                                   rulesToTokens: Map[String, Set[String]]): Unit = {
     rulesToTokens.foreach { case (rule, tokens) =>
       rulesToTokens.filterNot(_._1 == rule).foreach{ case (otherRule, otherTokens) =>
         validatedIpRangeConflicts(
@@ -171,7 +174,9 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
 
   case class TokensToValidate(confName: String, tokens: Set[String])
 
-  def validatedIpRangeConflicts(tokens: TokensToValidate, otherTokens: TokensToValidate):Unit = {
+  def validatedIpRangeConflicts(tokens: TokensToValidate,
+                                otherTokens: TokensToValidate):Unit = {
+
     val filteredOtherTokens = otherTokens.tokens.filter(isSupportedIPAddress)
     tokens.tokens.filter(isSupportedIPAddress).foreach { token =>
       val subnetUtil = getSubnetUtilsExt(token)
@@ -187,6 +192,19 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
   }
 
   def validateUsageRules(c: ResourceUsageRuleConfig): Unit = {
+    val ruleNames = Set(
+      GLOBAL_DEFAULT_RULE_NAME,
+      IP_ADDRESS_DEFAULT_RULE_NAME,
+      USER_ID_OWNER_DEFAULT_RULE_NAME,
+      USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME,
+      DEFAULT_USAGE_RULE_NAME
+    )
+    ruleNames.foreach { rn =>
+      if (! c.usageRules.keySet.contains(rn))
+        throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode,
+          Option(s"'$USAGE_RULES' config doesn't contain default configs for '$rn'"))
+    }
+
     c.usageRules.values.foreach { ur =>
       ur.resourceTypeUsageRules.values.foreach { rtur =>
         rtur.resourceUsageRules.values.foreach { rur =>

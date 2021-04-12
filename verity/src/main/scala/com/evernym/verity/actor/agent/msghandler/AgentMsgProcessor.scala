@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
@@ -18,7 +17,7 @@ import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent, TrackingIdParam}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.actor.resourceusagethrottling.UserId
+import com.evernym.verity.actor.resourceusagethrottling.{RESOURCE_TYPE_MESSAGE, UserId}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.buildAgentMsg
@@ -29,7 +28,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE, UNKNOWN_SENDER_PARTICIPANT_ID}
+import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
@@ -820,9 +819,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
-    reqMsgContext.clientIpAddress.foreach { ipAddress =>
-      addUserResourceUsage(ipAddress, RESOURCE_TYPE_MESSAGE, getResourceName(msgType.msgName), userId)
-    }
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType.msgName), reqMsgContext.clientIpAddress, userId)
     senderVerKey.foreach { svk =>
       if (!param.allowedUnauthedMsgTypes.contains(msgType)) {
         AgentMsgProcessor.checkIfMsgSentByAuthedMsgSenders(param.allAuthedKeys, svk)

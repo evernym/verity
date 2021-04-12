@@ -36,6 +36,7 @@ interface HasAgentWallet
 interface HasWallet
 interface HasSetRoute
 interface HasMsgProgressTracker
+interface HasSingletonParentProxy
 interface ResourceUsageCommon
 interface ProtocolEngineExceptionHandler
 interface AgentIncomingMsgHandler
@@ -104,6 +105,7 @@ AgentCommon -* HasSetRoute
 AgentCommon --* HasMsgProgressTracker
 AgentCommon --* ResourceUsageCommon
 HasAgentWallet -up-|> HasWallet
+HasMsgProgressTracker -up-|> HasSingletonParentProxy
 AgentOutgoingMsgHandler -up-|> SendOutgoingMsg
 AgentOutgoingMsgHandler -down-* AgentIdentity
 AgentOutgoingMsgHandler -down-* HasAgentActivity

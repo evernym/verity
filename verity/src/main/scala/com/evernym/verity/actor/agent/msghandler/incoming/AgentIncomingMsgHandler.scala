@@ -22,6 +22,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   def agentIncomingCommonCmdReceiver[A]: Receive = {
 
     //edge agent -> agency routing service -> this actor
+    // flow diagram: fwd + ctl + proto + legacy, step 6 -- Received by agent actor.
     case ppm: ProcessPackedMsg if isReadyToHandleIncomingMsg
                                           => sendToAgentMsgProcessor(ppm)
 

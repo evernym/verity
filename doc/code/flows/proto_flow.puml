@@ -1,6 +1,6 @@
 @startuml
 
-title Calls in the "ctl" Flow
+title Calls in the "proto" Flow
 
 autonumber 1
 note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReq( ) -- Packed msg\narrives.
@@ -12,7 +12,9 @@ PackedMsgEndpointHandler -> AgencyPackedMsgHandler
 note over AgencyPackedMsgHandler #ffffff: handleFwdMsg( ) -- Called after seeing\n"Forward" in plaintext.
 AgencyPackedMsgHandler -> AgentMsgRouter
 note over AgentMsgRouter #ffffff: routePackedMsg( ) -- Find route to\nrelevant actor, send inner msg.
-AgentMsgRouter -> AgentMsgProcessor
+AgentMsgRouter -> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: agentIncomingCommonCmdReceiver( ) --\nReceived by agent actor.
+AgentIncomingMsgHandler -> AgentMsgProcessor
 note over AgentMsgProcessor #ffffff: handleProcessPackedMsg( ) -- Receive and\ndecrypt.
 AgentMsgProcessor --> AgentMsgProcessor
 note over AgentMsgProcessor #ffffff: extractMsgAndSendToProtocol( ) -- add\ncontext to actor if sender expects sync\nresponse.
@@ -24,16 +26,11 @@ note over AgentMsgProcessor #ffffff: extractMsgAndSendToProtocol( ) -- Handle\nm
 AgentMsgProcessor -> AgentMsgRouter
 end
 
-group 200: self
-autonumber 201
-AgentMsgProcessor --> AgentMsgProcessor
-note over AgentMsgProcessor #ffffff: extractMsgAndSendToProtocol( ) -- Handle\nmsg for self relationship.
-AgentMsgProcessor -> AgentMsgRouter
-end
-
-autonumber 8
+autonumber 9
 note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\ninternal message.
-AgentMsgRouter --> AgentMsgRouter
+AgentMsgRouter -> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: sendGenericRespOrPrepareForAsyncResponse( )\n-- send 200 OK
+AgentMsgProcessor -> AgentMsgRouter
 note over AgentMsgRouter #ffffff: routeInternalMsg( )
 AgentMsgRouter -> AgentMsgProcessor
 note over AgentMsgProcessor #ffffff: handleMsgForRel( )

@@ -11,18 +11,20 @@ note over PackedMsgEndpointHandler #ffffff: processPackedMsg( ) -- Decrypt and c
 PackedMsgEndpointHandler -> AgencyPackedMsgHandler
 note over AgencyPackedMsgHandler #ffffff: handleFwdMsg( ) -- Called after seeing\n"Forward" in plaintext.
 AgencyPackedMsgHandler -> AgentMsgRouter
-note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\npacked messages.
-AgentMsgRouter --> AgentMsgRouter
 note over AgentMsgRouter #ffffff: routePackedMsg( ) -- Find route to\nrelevant actor, send inner msg.
-AgentMsgRouter -> AgentMsgProcessor
+AgentMsgRouter --> AgentMsgRouter
+note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\npacked messages.
+AgentMsgRouter -> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: agentIncomingCommonCmdReceiver( ) --\nReceived by agent actor.
+AgentIncomingMsgHandler -> AgentMsgProcessor
 note over AgentMsgProcessor #ffffff: handleProcessPackedMsg( ) -- Receive and\ndecrypt.
 
 group 100: edge
 autonumber 101
 AgentMsgProcessor --> AgentMsgProcessor
 note over AgentMsgProcessor #ffffff: routingMsgHandler( ) -- store outgoing\nmsg.
-AgentMsgProcessor -> AgentMsgHandler
-note over AgentMsgHandler #ffffff: sendStoredMsgToMyDomain( ) -- Queue msg\nfor delivery to edge.
+AgentMsgProcessor -> UserAgentCommon
+note over UserAgentCommon #ffffff: sendAgentMsgToRegisteredEndpoint( ) --\nQueue msg for delivery to edge.
 end
 
 @enduml

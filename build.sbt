@@ -42,13 +42,11 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1618"
-val libMysqlStorageVer = "0.1.11"
+val libIndyVer = "1.95.0~1353"
 val sharedLibDeps = Seq(
-  NonMatchingDistLib("libindy", libIndyVer, "libindy.so"),
-  NonMatchingDistLib("libnullpay", libIndyVer, "libnullpay.so"),
-  NonMatchingLib("libmysqlstorage", libMysqlStorageVer, "libmysqlstorage.so"),
-  NonMatchingLib("libvcx", "0.10.1-bionic~1131", "libvcx.so"), // For integration testing ONLY
+  NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
+  NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
+  NonMatchingLib("libvcx-async-test", "0.10.1-bionic~9999", "libvcx.so")  // For integration testing ONLY
 )
 
 val additionalJars: Seq[String] = Seq(
@@ -57,7 +55,6 @@ val additionalJars: Seq[String] = Seq(
 
 //deb package dependencies versions
 val debPkgDepLibIndyMinVersion = libIndyVer
-val debPkgDepLibMySqlStorageVersion = libMysqlStorageVer
 
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
@@ -256,9 +253,8 @@ lazy val packageSettings = Seq (
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy(>= $debPkgDepLibIndyMinVersion)",
-    s"libnullpay(>= $debPkgDepLibIndyMinVersion)",  // must be the same version as libindy
-    s"libmysqlstorage(=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
+    s"libindy-async(>= $debPkgDepLibIndyMinVersion)",
+    s"libnullpay-async(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

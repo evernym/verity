@@ -39,7 +39,7 @@ object ResourceUsageRuleHelper {
     }
   }
 
-  def getRuleNameByTrackingEntityId(entityId: EntityId): UsageRuleName = {
+  def getRuleNameByEntityId(entityId: EntityId): UsageRuleName = {
     resourceUsageRules.rulesToTokens.find {
       case (_ , v) =>
         if (SubnetUtilsExt.isClassfulIpAddress(entityId))
@@ -59,8 +59,8 @@ object ResourceUsageRuleHelper {
     else DEFAULT_USAGE_RULE_NAME
   }
 
-  private def getUsageRuleByTrackingEntityId(entityId: EntityId): Option[UsageRule] = {
-    resourceUsageRules.usageRules.get(getRuleNameByTrackingEntityId(entityId))
+  private def getUsageRuleByEntityId(entityId: EntityId): Option[UsageRule] = {
+    resourceUsageRules.usageRules.get(getRuleNameByEntityId(entityId))
   }
 
   private def getResourceTypeUsageRule(ur: UsageRule, resourceTypeName: ResourceTypeName): Option[ResourceTypeUsageRule] = {
@@ -85,7 +85,7 @@ object ResourceUsageRuleHelper {
   def getResourceUsageRule(entityId: EntityId,
                            resourceType: ResourceType,
                            resourceName: ResourceName): Option[ResourceUsageRule] = {
-    getUsageRuleByTrackingEntityId(entityId).flatMap { ur =>
+    getUsageRuleByEntityId(entityId).flatMap { ur =>
       val resourceTypeName = getHumanReadableResourceType(resourceType)
       getResourceTypeUsageRule(ur, resourceTypeName).flatMap { rtur =>
         getResourceUsageRule(rtur, resourceName)

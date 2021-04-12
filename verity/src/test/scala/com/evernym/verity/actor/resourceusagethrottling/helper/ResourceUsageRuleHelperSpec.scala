@@ -5,6 +5,91 @@ import com.evernym.verity.testkit.BasicSpec
 
 class ResourceUsageRuleHelperSpec extends BasicSpec {
 
+  "ResourceUsageTracker" - {
+    "when initialized" - {
+      "api usage rules should be loaded" in {
+        ResourceUsageRuleHelper.loadResourceUsageRules()
+        ResourceUsageRuleHelper.resourceUsageRules shouldBe getExpectedResourceUsageRule
+      }
+    }
+
+    "when called get resource usage rule for a token" - {
+      "should respond with applicable resource usage rule name" in{
+        ResourceUsageRuleHelper.getRuleNameByEntityId("global") shouldBe "global"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("127.0.0.4") shouldBe "ip-address"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4") shouldBe "ip-address"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
+
+        ResourceUsageRuleHelper.getRuleNameByEntityId("128.0.0.1") shouldBe "custom"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("randomToken") shouldBe "default"
+
+        ResourceUsageRuleHelper.getRuleNameByEntityId("otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4/otherToken") shouldBe "default"
+      }
+    }
+  }
+
+  "ResourceUsageRuleConfig" - {
+    val whiteListedToken = Set("127.0.0.1/16", "192.0.23.14/24", "valid_whitelisted_token", "199.0.0.1")
+    val blackListedToken = Set("198.0.0.1/32", "15.0.12.11/12", "valid_blacklisted_token", "200.0.0.2")
+    val randomIPAddress = "188.0.0.1"
+    val whiteListedIP = "127.0.0.1"
+    val blackListedIP = "198.0.0.1"
+
+    val resourceUsageRuleConfig = ResourceUsageRuleConfig(applyUsageRules = true, persistAllBucketUsages=false,
+      snapshotAfterEvents = 0, Map.empty[String, UsageRule], Map.empty[String, Set[String]],
+      blackListedToken, whiteListedToken, Map.empty[String, ViolationActions])
+
+    "when tested ip address for whitelisted or blacklisted check" - {
+      "should respond accordingly" in {
+        resourceUsageRuleConfig.isWhitelisted(whiteListedIP, randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("127.0.0.2", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("199.0.0.1", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("127.0.255.255", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("192.0.23.255", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("198.0.0.1", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("200.0.0.2", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("15.15.255.255", randomIPAddress) shouldBe true
+      }
+    }
+
+    "when provided random ip and random token" - {
+      "should return false" in {
+        resourceUsageRuleConfig.isWhitelisted("10.0.1.1", randomIPAddress) shouldBe false
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_to", randomIPAddress) shouldBe false
+        resourceUsageRuleConfig.isBlacklisted("19.0.1.1", randomIPAddress) shouldBe false
+      }
+    }
+
+    "when provided any out of range ip (ipv4 ip)" - {
+      "should return false" in {
+        resourceUsageRuleConfig.isWhitelisted("11.0.23.255", randomIPAddress) shouldBe false
+        resourceUsageRuleConfig.isBlacklisted("10.15.255.255", randomIPAddress) shouldBe false
+      }
+    }
+
+    "when provided blacklisted/whitelisted token and any other IP" - {
+      "should return true" in {
+        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token", whiteListedIP) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", blackListedIP) shouldBe true
+      }
+    }
+
+    "when provided randomToken token and whitelisted/blacklisted IP" - {
+      "should return true" in {
+        resourceUsageRuleConfig.isBlacklisted("random_token", blackListedIP) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("random_token", whiteListedIP) shouldBe true
+      }
+    }
+  }
+
   def getExpectedResourceUsageRule: ResourceUsageRuleConfig = {
     val defaultEndpointUsageBuckets = ResourceUsageRule( Map (
       300 -> BucketRule(100, "50"),
@@ -82,7 +167,7 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
 
     val ruleToTokens = Map (
       "default"-> Set.empty[String],
-      "custom" -> Set("127.0.2.0/24", "127.1.0.1", "randomToken", "128.0.0.1")
+      "custom" -> Set("127.0.2.0/24", "127.1.0.1", "128.0.0.1")
     )
 
     val logAndWarnMsgActions = ViolationActions ( Map (
@@ -132,92 +217,6 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
 
     ResourceUsageRuleConfig(applyUsageRules = true, persistAllBucketUsages = false,
       snapshotAfterEvents = 2, expectedRules, ruleToTokens, Set.empty, Set.empty, actionRules)
-  }
-
-  "ResourceUsageTracker" - {
-
-    "when initialized" - {
-      "api usage rules should be loaded" in {
-        ResourceUsageRuleHelper.loadResourceUsageRules()
-        ResourceUsageRuleHelper.resourceUsageRules shouldBe getExpectedResourceUsageRule
-      }
-    }
-
-    "when called get resource usage rule for a token" - {
-      "should respond with applicable resource usage rule name" in{
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("global") shouldBe "global"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("127.0.0.4") shouldBe "ip-address"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("191.0.0.4") shouldBe "ip-address"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
-
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("128.0.0.1") shouldBe "custom"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("randomToken") shouldBe "custom"
-
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("otherToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("191.0.0.4otherToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByTrackingEntityId("191.0.0.4/otherToken") shouldBe "default"
-      }
-    }
-  }
-
-  "ResourceUsageRuleConfig" - {
-    val whiteListedToken = Set("127.0.0.1/16", "192.0.23.14/24", "valid_whitelisted_token", "199.0.0.1")
-    val blackListedToken = Set("198.0.0.1/32", "15.0.12.11/12", "valid_blacklisted_token", "200.0.0.2")
-    val randomIPAddress = "188.0.0.1"
-    val whiteListedIP = "127.0.0.1"
-    val blackListedIP = "198.0.0.1"
-
-    val resourceUsageRuleConfig = ResourceUsageRuleConfig(applyUsageRules = true, persistAllBucketUsages=false,
-      snapshotAfterEvents = 0, Map.empty[String, UsageRule], Map.empty[String, Set[String]],
-      blackListedToken, whiteListedToken, Map.empty[String, ViolationActions])
-
-    "when tested ip address for whitelisted or blacklisted check" - {
-      "should respond accordingly" in {
-        resourceUsageRuleConfig.isWhitelisted(whiteListedIP, randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("127.0.0.2", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("199.0.0.1", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("127.0.255.255", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("192.0.23.255", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("198.0.0.1", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("200.0.0.2", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("15.15.255.255", randomIPAddress) shouldBe true
-      }
-    }
-
-    "when provided random ip and random token" - {
-      "should return false" in {
-        resourceUsageRuleConfig.isWhitelisted("10.0.1.1", randomIPAddress) shouldBe false
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_to", randomIPAddress) shouldBe false
-        resourceUsageRuleConfig.isBlacklisted("19.0.1.1", randomIPAddress) shouldBe false
-      }
-    }
-
-    "when provided any out of range ip (ipv4 ip)" - {
-      "should return false" in {
-        resourceUsageRuleConfig.isWhitelisted("11.0.23.255", randomIPAddress) shouldBe false
-        resourceUsageRuleConfig.isBlacklisted("10.15.255.255", randomIPAddress) shouldBe false
-      }
-    }
-
-    "when provided blacklisted/whitelisted token and any other IP" - {
-      "should return true" in {
-        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token", whiteListedIP) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", blackListedIP) shouldBe true
-      }
-    }
-
-    "when provided randomToken token and whitelisted/blacklisted IP" - {
-      "should return true" in {
-        resourceUsageRuleConfig.isBlacklisted("random_token", blackListedIP) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("random_token", whiteListedIP) shouldBe true
-      }
-    }
   }
 
 }

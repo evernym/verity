@@ -253,4 +253,4 @@ case class AddResourceUsage(resourceType: ResourceType,
 case class GetResourceUsage(resourceName: ResourceName) extends ActorMessage
 case class ResourceUsages(usages: Map[ResourceName, Map[BucketIdStr, BucketExt]]) extends ActorMessage
 
-case object GetAllResourceUsages  extends ActorMessage
+case object GetAllResourceUsages extends ActorMessage

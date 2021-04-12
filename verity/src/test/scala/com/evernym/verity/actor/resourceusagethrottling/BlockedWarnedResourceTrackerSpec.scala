@@ -1,19 +1,16 @@
-package com.evernym.verity.actor
-
-import java.time.temporal.ChronoUnit
-import java.time.{DateTimeException, ZonedDateTime}
+package com.evernym.verity.actor.resourceusagethrottling
 
 import akka.actor.{ActorRef, ReceiveTimeout}
 import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
 import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
-import com.evernym.verity.actor.resourceusagethrottling.{tracking, _}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
+import com.evernym.verity.actor._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
@@ -24,11 +21,16 @@ import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
+import java.time.temporal.ChronoUnit
+import java.time.{DateTimeException, ZonedDateTime}
 import scala.concurrent.duration._
 
-class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with Eventually {
+class BlockedWarnedResourceTrackerSpec
+  extends PersistentActorSpec
+    with BasicSpec
+    with Eventually {
 
-  val logger: Logger = getLoggerByClass(classOf[ResourceUsageTrackerSpec])
+  val logger: Logger = getLoggerByClass(classOf[BlockedWarnedResourceTrackerSpec])
 
   val DUMMY_MSG = "DUMMY_MSG"
   val globalToken = "global"

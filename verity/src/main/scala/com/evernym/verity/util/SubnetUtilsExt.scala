@@ -10,13 +10,13 @@ object SubnetUtilsExt {
 
   val logger: Logger = getLoggerByClass(classOf[SubnetUtilsExt])
 
-  def isSupportedIPAddress(token: String): Boolean = {
-    isClassfulIpAddress(token) || isClasslessIPAddress(token)
+  def isIpAddressOrCidrNotation(token: String): Boolean = {
+    isClassfulIpAddress(token) || isClasslessIpAddress(token)
   }
 
   def getSubnetUtilsExt(ipAddress: String): SubnetUtilsExt = {
-    val classlessIPAddress = if (isClassfulIpAddress(ipAddress)) ipAddress + "/32" else ipAddress
-    val utils = new SubnetUtilsExt(classlessIPAddress)
+    val classlessIpAddress = if (isClassfulIpAddress(ipAddress)) ipAddress + "/32" else ipAddress
+    val utils = new SubnetUtilsExt(classlessIpAddress)
     logger.trace("ip address range: " + utils.getSubnetInfo.getLowAddress +
       " - " + utils.getSubnetInfo.getHighAddress + " for CIDR IP: "+ipAddress)
     utils
@@ -24,7 +24,7 @@ object SubnetUtilsExt {
 
   def isClassfulIpAddress(token: String): Boolean = InetAddressUtils.isIPv4Address(token)
 
-  def isClasslessIPAddress(token: String): Boolean = {
+  def isClasslessIpAddress(token: String): Boolean = {
     try {
       new SubnetUtilsExt(token)
       true

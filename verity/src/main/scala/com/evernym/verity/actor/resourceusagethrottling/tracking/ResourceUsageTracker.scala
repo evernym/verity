@@ -179,7 +179,7 @@ object ResourceUsageTracker {
                                     resourceName: ResourceName): Unit = {
     val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(entityId)
     if (isBlacklisted) {
-      throw new BadRequestErrorException(USAGE_BLOCKED.statusCode)
+      throw new BadRequestErrorException(USAGE_BLOCKED.statusCode, Option("usage blocked"))
     }
     val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(entityId)
     if (! isWhitelisted) {

@@ -24,13 +24,13 @@ object ResourceUsageRuleHelper {
 
   def isIpAddressInTokenSet(entityId: EntityId, tokens: Set[ApiToken]): Boolean = {
     tokens
-      .filter(SubnetUtilsExt.isSupportedIPAddress)
+      .filter(SubnetUtilsExt.isIpAddressOrCidrNotation)
       .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(entityId))
   }
 
   private def isUserIdInTokenSet(entityId: EntityId, tokens: Set[ApiToken]): Boolean = {
     tokens
-      .filterNot(SubnetUtilsExt.isSupportedIPAddress)
+      .filterNot(SubnetUtilsExt.isIpAddressOrCidrNotation)
       .exists {
         case `entityId`               => true
         case OWNER_ID_PATTERN         => entityId.startsWith(OWNER_ID_PREFIX)
@@ -53,7 +53,7 @@ object ResourceUsageRuleHelper {
 
   def getDefaultRuleNameByEntityId(entityId: EntityId): String = {
     if (entityId == ENTITY_ID_GLOBAL) GLOBAL_DEFAULT_RULE_NAME
-    else if (SubnetUtilsExt.isSupportedIPAddress(entityId)) IP_ADDRESS_DEFAULT_RULE_NAME
+    else if (SubnetUtilsExt.isClassfulIpAddress(entityId)) IP_ADDRESS_DEFAULT_RULE_NAME
     else if (entityId.startsWith(OWNER_ID_PREFIX)) USER_ID_OWNER_DEFAULT_RULE_NAME
     else if (entityId.startsWith(COUNTERPARTY_ID_PREFIX)) USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME
     else DEFAULT_USAGE_RULE_NAME
@@ -116,9 +116,7 @@ case class ResourceUsageRuleConfig(
                                     rulesToTokens: Map[UsageRuleName, Set[ApiToken]],
                                     blacklistedTokens: Set[ApiToken],
                                     whitelistedTokens: Set[ApiToken],
-                                    actionRules: Map[ActionRuleId, ViolationActions],
-                                    tokenCharsetRegex: Option[String] = None,
-                                    ipCheckRegex: Option[String] = None
+                                    actionRules: Map[ActionRuleId, ViolationActions]
                                   ){
   val logger: Logger = getLoggerByClass(classOf[ResourceUsageRuleConfig])
 

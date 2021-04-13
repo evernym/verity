@@ -9,6 +9,7 @@ import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache,
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
@@ -33,10 +34,11 @@ class ResourceUsageViolationSpec
   val user3IpAddress = "127.3.0.3"
   val user4IpAddress = "127.4.0.4"
 
-  val user1DID = "111111111111111111111"
-  val user2DID = "222222222222222222222"
-  val user3DID = "333333333333333333333"
-  val user4DID = "444444444444444444444"
+  val user1DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user2DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+
   val createMsgConnReq: String = MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
 
   def resourceUsageTrackerSpec() {
@@ -53,9 +55,9 @@ class ResourceUsageViolationSpec
     val expectedBlockedResources: List[BlockedResourcesParam] = List(
       BlockedResourcesParam(user1IpAddress, createMsgConnReq, 2, 600),
       BlockedResourcesParam(user2IpAddress, DUMMY_MSG, 3, 60),
-      //BlockedResourcesParam(user2DID, DUMMY_MSG, 3, 120),
+      BlockedResourcesParam(user2DID, DUMMY_MSG, 3, 120),
       BlockedResourcesParam(user4IpAddress, DUMMY_MSG, 3, 60),
-      //BlockedResourcesParam(user4DID, DUMMY_MSG, 3, 120),
+      BlockedResourcesParam(user4DID, DUMMY_MSG, 3, 120),
       BlockedResourcesParam(globalToken, DUMMY_MSG, 4, 180)
     )
 
@@ -107,7 +109,7 @@ class ResourceUsageViolationSpec
       // Test blocked
       //
       // The following rule in resource-usage-rule-spec.conf (resource-usage-rule.conf file used for tests) causes
-      // violation-action group 70 to call log-msg, warn-user, and block-resource after the second iteration; when
+      // violation-action group 70 to call log-msg, warn-entity, and block-resource after the second iteration; when
       // allowed-counts of 2 is exceeded on bucket -1 (infinite bucket).
       //
       // CREATE_MSG_connReq {
@@ -122,8 +124,8 @@ class ResourceUsageViolationSpec
       // # log it and block only resource
       // 70 {
       //   log-msg: {"level": "info"}
-      //   warn-user: {"track-by": "ip", "period": -1}
-      //   block-resource: {"track-by": "ip", "period": 600}
+      //   warn-entity: {"entity-types": "ip", "period": -1}
+      //   block-resource: {"entity-types": "ip", "period": 600}
       // }
       //
       // Expect the CREATE_MSG_connReq resource to be blocked for user1IpAddress
@@ -147,22 +149,22 @@ class ResourceUsageViolationSpec
       //
       // 101 {
       //   # Log only at debug level if and only if entityId is an IP address
-      //   log-msg: {"track-by": "ip", "level": "info"}
+      //   log-msg: {"entity-types": "ip", "level": "info"}
       //   # Block if and only if entityId is an IP address
-      //   block-resource: {"track-by": "ip", "period": 60}
+      //   block-resource: {"entity-types": "ip", "period": 60}
       // }
       //
       // 102 {
       //   # Log only at trace level if and only if entityId is a DID (21 to 23 length)
-      //   log-msg: {"track-by": "user", "level": "debug"}
-      //   block-resource: {"track-by": "user", "period": 120}
+      //   log-msg: {"entity-types": "user", "level": "debug"}
+      //   block-resource: {"entity-types": "user", "period": 120}
       // }
       //
       // 103 {
       //   # Log only at info level if and only if entityId is "global"
-      //   log-msg: {"track-by": "global", "level": "trace"}
+      //   log-msg: {"entity-types": "global", "level": "trace"}
       //   # Block if and only if entityId is "global"
-      //   block-resource: {"track-by": "global", "period": 180}
+      //   block-resource: {"entity-types": "global", "period": 180}
       // }
       //
       // Expect the DUMMY_MSG resource to be blocked for user2IpAddress (action 101), user2DID (action 102),
@@ -262,11 +264,11 @@ class ResourceUsageViolationSpec
       // # suspicious, log it
       // 50 {
       //   log-msg: {"level": "info"}
-      //   warn-resource: {"track-by": "ip", "period": 600}
+      //   warn-resource: {"entity-types": "ip", "period": 600}
       // }
       //
       // Expect both a warning on the CREATE_MSG_connReq resource (warn-resource from violation-action group 50) and a
-      // warning on the caller's IP (warn-user from violation-action group 70 (see "Test blocked" comment above)
+      // warning on the caller's IP (warn-entity from violation-action group 70 (see "Test blocked" comment above)
       eventually {
         singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned = false,
           onlyActive = true, inChunks = false))

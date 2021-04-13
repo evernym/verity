@@ -32,9 +32,11 @@ trait InstructionDetailValidator {
 
   val LOG_MSG_INSTRUCTION = "log-msg"
   val WARN_RESOURCE_INSTRUCTION = "warn-resource"
-  val WARN_USER_INSTRUCTION = "warn-user"
+  val WARN_ENTITY_INSTRUCTION = "warn-entity"
   val BLOCK_RESOURCE_INSTRUCTION = "block-resource"
-  val BLOCK_USER_INSTRUCTION = "block-user"
+  val BLOCK_ENTITY_INSTRUCTION = "block-entity"
+
+  val ENTITY_TYPES_FILTER = "entity-types"
 }
 
 
@@ -59,30 +61,24 @@ trait Instruction {
 
   def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit
 
-  def entityIdShouldBeTracked(entityId: String, actionDetail: InstructionDetail): Boolean = {
-    val trackBy = actionDetail.detail.get("track-by")
-    // Must only execute the instruction if the entityId matches the track-by type
-    // 1. entityId must be "global" if track-by is "global"
-    // 2. entityId must be an IP Address if track-by is "ip"
-    // 3. entityId must be a user ID if track-by is "user"
-    trackBy match {
-      case Some("global") => entityId.equals(ENTITY_ID_GLOBAL)
-      case Some("ip")     => SubnetUtilsExt.isClassfulIpAddress(entityId)
-      case Some("user")   => isUserIdForResourceUsageTracking(entityId)
-      case None           => true
-      case _              => false
-    }
+  def isOkToExecuteInstruction(entityId: EntityId, instructionDetail: InstructionDetail): Boolean = {
+    val supportedEntityTypes =
+      instructionDetail.detail.get(ENTITY_TYPES_FILTER)
+        .map(_.toString.split(",").toSet).getOrElse(Set.empty)
+
+    // Must only execute the instruction if the violated entity type matches with provided entity-types
+    val currEntityType =
+      if (entityId.equals(ENTITY_ID_GLOBAL)) "global"
+      else if (SubnetUtilsExt.isClassfulIpAddress(entityId)) "ip"
+      else if (isUserIdForResourceUsageTracking(entityId)) "user"
+      else throw new RuntimeException("entity type doesn't supported")
+
+    supportedEntityTypes.isEmpty || supportedEntityTypes.contains(currEntityType)
   }
 
   def buildTrackingData(violatedRule: ViolatedRule, actionDetail: InstructionDetail): (EntityId, Int) = {
     val periodInSec = actionDetail.detail.getOrElse("period", "-1").toString.toInt
-    val trackBy = actionDetail.detail.getOrElse("track-by", "ip").toString
     var entityId: String = violatedRule.entityId
-    //TODO: below doesn't make any sense
-    trackBy match {
-      case "global" => entityId = trackBy
-      case _        =>
-    }
     (entityId, periodInSec)
   }
 }
@@ -122,7 +118,7 @@ class PeriodValidator(val instructionName: String, val required: Boolean = true)
 }
 
 class TrackByValidator(val instructionName: String, val required: Boolean = true) extends InstructionDetailValidator {
-  val keyName = "track-by"
+  val keyName = "entity-types"
   val _required: Boolean = required
 
   def validate(keyPath: String, value: Any): Unit = {
@@ -186,7 +182,7 @@ class WarnResourceInstruction(val spar: ActorRef) extends Instruction {
 
 class WarnUserInstruction(val spar: ActorRef) extends Instruction {
   val logger: Logger = getLoggerByName("WarnUserInstruction")
-  override val name: String = WARN_USER_INSTRUCTION
+  override val name: String = WARN_ENTITY_INSTRUCTION
   override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
@@ -210,7 +206,7 @@ class BlockResourceInstruction(val spar: ActorRef) extends Instruction {
 
 class BlockUserInstruction(val spar: ActorRef) extends Instruction {
   val logger: Logger = getLoggerByName("BlockUserInstruction")
-  override val name: String = BLOCK_USER_INSTRUCTION
+  override val name: String = BLOCK_ENTITY_INSTRUCTION
   override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
@@ -239,10 +235,10 @@ trait UsageViolationActionExecutorBase {
 
   def execute(actionId: String, violatedRule: ViolatedRule)(implicit sender: ActorRef): Unit = {
     ResourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId).foreach { ar =>
-      ar.instructions.foreach { case (actionName, detail) =>
-        instructions.find(_.name == actionName).foreach { i: Instruction =>
-          if (i.entityIdShouldBeTracked(violatedRule.entityId, detail)) {
-            i.execute(violatedRule, detail)
+      ar.instructions.foreach { case (instructionName, instructionDetail) =>
+        instructions.find(_.name == instructionName).foreach { i: Instruction =>
+          if (i.isOkToExecuteInstruction(violatedRule.entityId, instructionDetail)) {
+            i.execute(violatedRule, instructionDetail)
           }
         }
       }

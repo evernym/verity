@@ -15,7 +15,7 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
     }
 
     "when called get resource usage rule for a token" - {
-      "should respond with applicable resource usage rule name" in{
+      "should respond with applicable resource usage rule name" in {
         ResourceUsageRuleHelper.getRuleNameByEntityId("global") shouldBe "global"
         ResourceUsageRuleHelper.getRuleNameByEntityId("127.0.0.4") shouldBe "ip-address"
         ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4") shouldBe "ip-address"
@@ -93,53 +93,53 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
   def getExpectedResourceUsageRule: ResourceUsageRuleConfig = {
     val defaultEndpointUsageBuckets = ResourceUsageRule(
       Map (
-      300 -> BucketRule(100, "50"),
-      600 -> BucketRule(200, "70"),
-      1200 -> BucketRule(400, "90")
+        300 -> BucketRule(100, "50"),
+        600 -> BucketRule(200, "70"),
+        1200 -> BucketRule(400, "90")
     ))
 
     val postAgencyMsgEndpointUsageBuckets = ResourceUsageRule(
       Map (
-      300 -> BucketRule(100, "50"),
-      600 -> BucketRule(200, "70"),
-      1200 -> BucketRule(400, "90")
+        300 -> BucketRule(100, "50"),
+        600 -> BucketRule(200, "70"),
+        1200 -> BucketRule(400, "90")
     ))
 
     val defaultEndpointUsageItemBuckets = ResourceTypeUsageRule(
       Map (
-      "default" -> defaultEndpointUsageBuckets,
-      "POST_agency_msg" -> postAgencyMsgEndpointUsageBuckets
+        "default" -> defaultEndpointUsageBuckets,
+        "POST_agency_msg" -> postAgencyMsgEndpointUsageBuckets
     ))
 
     val defaultMsgUsageBuckets = ResourceUsageRule(
       Map (
-      300 -> BucketRule(100, "50"),
-      600 -> BucketRule(200, "70"),
-      1200 -> BucketRule(400, "90")
+        300 -> BucketRule(100, "50"),
+        600 -> BucketRule(200, "70"),
+        1200 -> BucketRule(400, "90")
     ))
 
     val connReqMessageBuckets = ResourceUsageRule(
       Map (
-      -1 -> BucketRule(100, "70", persistUsageState = true),
-      300 -> BucketRule(5, "50"),
-      600 -> BucketRule(20, "70"),
-      1800 -> BucketRule(50, "90")
+        -1 -> BucketRule(100, "70", persistUsageState = true),
+        300 -> BucketRule(5, "50"),
+        600 -> BucketRule(20, "70"),
+        1800 -> BucketRule(50, "90")
     ))
 
     val getMsgsMessageBuckets = ResourceUsageRule(
       Map (
-      300 -> BucketRule(3, "100"),
-      600 -> BucketRule(3, "101"),
-      1200 -> BucketRule(3, "102"),
-      1800 -> BucketRule(4, "103"),
+        300 -> BucketRule(3, "100"),
+        600 -> BucketRule(3, "101"),
+        1200 -> BucketRule(3, "102"),
+        1800 -> BucketRule(4, "103"),
     ))
 
     val customConnReqMessageBuckets = ResourceUsageRule(
       Map (
-      -1 -> BucketRule(2, "70", persistUsageState = true),
-      300 -> BucketRule(5, "50"),
-      600 -> BucketRule(20, "70"),
-      1800 -> BucketRule(50, "90")
+        -1 -> BucketRule(2, "70", persistUsageState = true),
+        300 -> BucketRule(5, "50"),
+        600 -> BucketRule(20, "70"),
+        1800 -> BucketRule(50, "90")
     ))
 
     val defaultMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
@@ -179,18 +179,18 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
 
     val logAndWarnMsgActions = ViolationActions ( Map (
       "log-msg" -> InstructionDetail(Map("level" -> "info")),
-      "warn-resource" -> InstructionDetail(Map("track-by" -> "ip", "period" -> 600))
+      "warn-resource" -> InstructionDetail(Map("entity-types" -> "ip", "period" -> 600))
     ))
 
     val logAndWarnIpAndBlockResourceActions = ViolationActions( Map (
       "log-msg" -> InstructionDetail( Map("level" -> "info")),
-      "warn-user" -> InstructionDetail(Map("track-by" -> "ip", "period" -> -1)),
-      "block-resource" -> InstructionDetail(Map("track-by" -> "ip", "period" -> 600))
+      "warn-entity" -> InstructionDetail(Map("entity-types" -> "ip", "period" -> -1)),
+      "block-resource" -> InstructionDetail(Map("entity-types" -> "ip", "period" -> 600))
     ))
 
     val logAndBlockUserActions = ViolationActions( Map (
       "log-msg" -> InstructionDetail(Map("level" -> "info")),
-      "block-user" -> InstructionDetail(Map("track-by" -> "ip", "period" -> -1))
+      "block-entity" -> InstructionDetail(Map("entity-types" -> "ip", "period" -> -1))
     ))
 
     val logWarnActions = ViolationActions( Map (
@@ -198,18 +198,18 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
     ))
 
     val logInfoBlockIp60 = ViolationActions( Map (
-      "log-msg" -> InstructionDetail(Map("track-by" -> "ip", "level" -> "info")),
-      "block-resource" -> InstructionDetail(Map("track-by" -> "ip", "period" -> 60))
+      "log-msg" -> InstructionDetail(Map("entity-types" -> "ip", "level" -> "info")),
+      "block-resource" -> InstructionDetail(Map("entity-types" -> "ip", "period" -> 60))
     ))
 
     val logDebugBlockUser120 = ViolationActions( Map (
-      "log-msg" -> InstructionDetail(Map("track-by" -> "user", "level" -> "debug")),
-      "block-resource" -> InstructionDetail(Map("track-by" -> "user", "period" -> 120))
+      "log-msg" -> InstructionDetail(Map("entity-types" -> "user", "level" -> "debug")),
+      "block-resource" -> InstructionDetail(Map("entity-types" -> "user", "period" -> 120))
     ))
 
     val logTraceBlockGlobal180 = ViolationActions( Map (
-      "log-msg" -> InstructionDetail(Map("track-by" -> "global", "level" -> "trace")),
-      "block-resource" -> InstructionDetail(Map("track-by" -> "global", "period" -> 180))
+      "log-msg" -> InstructionDetail(Map("entity-types" -> "global", "level" -> "trace")),
+      "block-resource" -> InstructionDetail(Map("entity-types" -> "global", "period" -> 180))
     ))
 
     val actionRules = Map (

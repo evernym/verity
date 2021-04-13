@@ -122,21 +122,20 @@ case class ResourceUsageRuleConfig(
 
   /**
    *
-   * @param ipAddress a source IP address
-   * @param entityId entity id being tracked
+   * @param token token to be checked against whitelisted tokens
    * @return
    */
-  def isWhitelisted(tokens: ApiToken*): Boolean = {
-    tokens.exists(isTokenPresent(_, whitelistedTokens))
+  def isWhitelisted(token: ApiToken): Boolean = {
+    isTokenPresent(token, whitelistedTokens)
   }
 
   /**
    *
-   * @param tokens tokens to be checked against blacklisted tokens
+   * @param token token to be checked against blacklisted tokens
    * @return
    */
-  def isBlacklisted(tokens: ApiToken*): Boolean = {
-    tokens.exists(isTokenPresent(_, blacklistedTokens))
+  def isBlacklisted(token: ApiToken): Boolean = {
+    isTokenPresent(token, blacklistedTokens)
   }
 
   /**

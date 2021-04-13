@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.resourceusagethrottling.tracking
 
 import java.time.ZonedDateTime
-
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.LoggingReceive
 import com.evernym.verity.Exceptions.BadRequestErrorException
@@ -20,6 +19,7 @@ import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
 import com.evernym.verity.config.CommonConfig.{USAGE_RULES, VIOLATION_ACTION}
 
 import scala.concurrent.Future
@@ -139,6 +139,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   def analyzeUsage(aru: AddResourceUsage): Unit = {
     runWithInternalSpan("analyzeUsage", "ResourceUsageTracker") {
       Future {
+        val ruleName = getRuleNameByEntityId(entityId)
         ResourceUsageRuleHelper.getResourceUsageRule(entityId, aru.resourceType, aru.resourceName).foreach { usageRule =>
           val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)
           usageRule.bucketRules.foreach { case (bucketId, bucketRule) =>
@@ -148,13 +149,18 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
               if (actualCount >= allowedCount) {
                 val rulePath =
                   s"""$USAGE_RULES.${
-                    if (customAllowedCount.isDefined) "custom" else "default"
+                    if (customAllowedCount.isDefined) "custom-limit" else ruleName
                   }.${
                     ResourceUsageRuleHelper.getHumanReadableResourceType(aru.resourceType)
                   }.${aru.resourceName}"""
                 val actionPath = VIOLATION_ACTION
                 val vr = ViolatedRule(entityId, aru.resourceName, bucketRule, actualCount, rulePath, bucketId, actionPath)
-                actionExecutor.execute(bucketRule.violationActionId, vr)(self)
+                try {
+                  actionExecutor.execute(bucketRule.violationActionId, vr)(self)
+                } catch {
+                  case e: Exception =>
+                    logger.info(s"[$entityId] error while executing resource usage violation action: $vr, error: ${e.getMessage}")
+                }
               }
             }
           }
@@ -200,7 +206,7 @@ object ResourceUsageTracker {
                            ipAddressOpt: Option[IpAddress],
                            userIdOpt: Option[UserId],
                            sendBackAck: Boolean)(rut: ActorRef): Unit = {
-    // Do NOT increment global counter if entityId or userIdOpt is blocked.
+    // Do NOT increment global counter if ipAddressOpt or userIdOpt is blocked.
     // global MUST be AFTER `ipAddressOpt` and `userIdOpt`.
     val trackByEntityIds = ipAddressOpt ++ userIdOpt ++ Option(ENTITY_ID_GLOBAL)
     val resourceNames = Set(resourceName, RESOURCE_NAME_ALL)

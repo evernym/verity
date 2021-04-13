@@ -5,7 +5,8 @@ import com.evernym.verity.testkit.BasicSpec
 
 class ResourceUsageRuleHelperSpec extends BasicSpec {
 
-  "ResourceUsageTracker" - {
+  "ResourceUsageRuleHelper" - {
+
     "when initialized" - {
       "api usage rules should be loaded" in {
         ResourceUsageRuleHelper.loadResourceUsageRules()
@@ -36,7 +37,6 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
   "ResourceUsageRuleConfig" - {
     val whiteListedToken = Set("127.0.0.1/16", "192.0.23.14/24", "valid_whitelisted_token", "199.0.0.1")
     val blackListedToken = Set("198.0.0.1/32", "15.0.12.11/12", "valid_blacklisted_token", "200.0.0.2")
-    val randomIPAddress = "188.0.0.1"
     val whiteListedIP = "127.0.0.1"
     val blackListedIP = "198.0.0.1"
 
@@ -46,89 +46,96 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
 
     "when tested ip address for whitelisted or blacklisted check" - {
       "should respond accordingly" in {
-        resourceUsageRuleConfig.isWhitelisted(whiteListedIP, randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("127.0.0.2", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("199.0.0.1", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("127.0.255.255", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("192.0.23.255", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("198.0.0.1", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("200.0.0.2", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("15.15.255.255", randomIPAddress) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted(whiteListedIP) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("127.0.0.2") shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("199.0.0.1") shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("127.0.255.255") shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("192.0.23.255") shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token") shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("198.0.0.1") shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("200.0.0.2") shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("15.15.255.255") shouldBe true
       }
     }
 
     "when provided random ip and random token" - {
       "should return false" in {
-        resourceUsageRuleConfig.isWhitelisted("10.0.1.1", randomIPAddress) shouldBe false
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_to", randomIPAddress) shouldBe false
-        resourceUsageRuleConfig.isBlacklisted("19.0.1.1", randomIPAddress) shouldBe false
+        resourceUsageRuleConfig.isWhitelisted("10.0.1.1") shouldBe false
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_to") shouldBe false
+        resourceUsageRuleConfig.isBlacklisted("19.0.1.1") shouldBe false
       }
     }
 
     "when provided any out of range ip (ipv4 ip)" - {
       "should return false" in {
-        resourceUsageRuleConfig.isWhitelisted("11.0.23.255", randomIPAddress) shouldBe false
-        resourceUsageRuleConfig.isBlacklisted("10.15.255.255", randomIPAddress) shouldBe false
+        resourceUsageRuleConfig.isWhitelisted("11.0.23.255") shouldBe false
+        resourceUsageRuleConfig.isBlacklisted("10.15.255.255") shouldBe false
       }
     }
 
     "when provided blacklisted/whitelisted token and any other IP" - {
       "should return true" in {
-        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token", whiteListedIP) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", randomIPAddress) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token", blackListedIP) shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token") shouldBe true
+        resourceUsageRuleConfig.isBlacklisted("valid_blacklisted_token") shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token") shouldBe true
+        resourceUsageRuleConfig.isWhitelisted("valid_whitelisted_token") shouldBe true
       }
     }
 
     "when provided randomToken token and whitelisted/blacklisted IP" - {
       "should return true" in {
-        resourceUsageRuleConfig.isBlacklisted("random_token", blackListedIP) shouldBe true
-        resourceUsageRuleConfig.isWhitelisted("random_token", whiteListedIP) shouldBe true
+        resourceUsageRuleConfig.isBlacklisted(blackListedIP) shouldBe true
+        resourceUsageRuleConfig.isWhitelisted(whiteListedIP) shouldBe true
       }
     }
   }
 
   def getExpectedResourceUsageRule: ResourceUsageRuleConfig = {
-    val defaultEndpointUsageBuckets = ResourceUsageRule( Map (
+    val defaultEndpointUsageBuckets = ResourceUsageRule(
+      Map (
       300 -> BucketRule(100, "50"),
       600 -> BucketRule(200, "70"),
       1200 -> BucketRule(400, "90")
     ))
 
-    val postAgencyMsgEndpointUsageBuckets = ResourceUsageRule( Map (
+    val postAgencyMsgEndpointUsageBuckets = ResourceUsageRule(
+      Map (
       300 -> BucketRule(100, "50"),
       600 -> BucketRule(200, "70"),
       1200 -> BucketRule(400, "90")
     ))
 
-    val defaultEndpointUsageItemBuckets = ResourceTypeUsageRule( Map (
+    val defaultEndpointUsageItemBuckets = ResourceTypeUsageRule(
+      Map (
       "default" -> defaultEndpointUsageBuckets,
       "POST_agency_msg" -> postAgencyMsgEndpointUsageBuckets
     ))
 
-    val defaultMsgUsageBuckets = ResourceUsageRule( Map (
+    val defaultMsgUsageBuckets = ResourceUsageRule(
+      Map (
       300 -> BucketRule(100, "50"),
       600 -> BucketRule(200, "70"),
       1200 -> BucketRule(400, "90")
     ))
 
-    val connReqMessageBuckets = ResourceUsageRule( Map (
+    val connReqMessageBuckets = ResourceUsageRule(
+      Map (
       -1 -> BucketRule(100, "70", persistUsageState = true),
       300 -> BucketRule(5, "50"),
       600 -> BucketRule(20, "70"),
       1800 -> BucketRule(50, "90")
     ))
 
-    val getMsgsMessageBuckets = ResourceUsageRule( Map (
+    val getMsgsMessageBuckets = ResourceUsageRule(
+      Map (
       300 -> BucketRule(3, "100"),
       600 -> BucketRule(3, "101"),
       1200 -> BucketRule(3, "102"),
       1800 -> BucketRule(4, "103"),
     ))
 
-    val customConnReqMessageBuckets = ResourceUsageRule( Map (
+    val customConnReqMessageBuckets = ResourceUsageRule(
+      Map (
       -1 -> BucketRule(2, "70", persistUsageState = true),
       300 -> BucketRule(5, "50"),
       600 -> BucketRule(20, "70"),

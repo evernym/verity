@@ -6,7 +6,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{WarnCaller, WarnResourceForCaller}
-import com.evernym.verity.actor.resourceusagethrottling.ENTITY_ID_GLOBAL
+import com.evernym.verity.actor.resourceusagethrottling.{ENTITY_ID_GLOBAL, EntityId}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
@@ -74,15 +74,16 @@ trait Instruction {
     }
   }
 
-  def buildTrackingData(violatedRule: ViolatedRule, actionDetail: InstructionDetail): (String, Int) = {
+  def buildTrackingData(violatedRule: ViolatedRule, actionDetail: InstructionDetail): (EntityId, Int) = {
     val periodInSec = actionDetail.detail.getOrElse("period", "-1").toString.toInt
     val trackBy = actionDetail.detail.getOrElse("track-by", "ip").toString
-    var trackByValue: String = violatedRule.entityId
+    var entityId: String = violatedRule.entityId
+    //TODO: below doesn't make any sense
     trackBy match {
-      case "global" => trackByValue = trackBy
+      case "global" => entityId = trackBy
       case _        =>
     }
-    (trackByValue, periodInSec)
+    (entityId, periodInSec)
   }
 }
 
@@ -176,8 +177,8 @@ class WarnResourceInstruction(val spar: ActorRef) extends Instruction {
   override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
-    val (trackByValue, warnPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
-    spar ! ForResourceWarningStatusMngr(WarnResourceForCaller(trackByValue,
+    val (entityId, warnPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
+    spar ! ForResourceWarningStatusMngr(WarnResourceForCaller(entityId,
       violatedRule.resourceName, warnPeriod=Option(warnPeriodInSec)))
   }
 
@@ -189,8 +190,8 @@ class WarnUserInstruction(val spar: ActorRef) extends Instruction {
   override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
-    val (trackByValue, warnPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
-    spar ! ForResourceWarningStatusMngr(WarnCaller(trackByValue, warnPeriod=Option(warnPeriodInSec)))
+    val (entityId, warnPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
+    spar ! ForResourceWarningStatusMngr(WarnCaller(entityId, warnPeriod=Option(warnPeriodInSec)))
   }
 }
 
@@ -200,8 +201,8 @@ class BlockResourceInstruction(val spar: ActorRef) extends Instruction {
   override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
-    val (trackByValue, blockPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
-    spar ! ForResourceBlockingStatusMngr(BlockResourceForCaller(trackByValue,
+    val (entityId, blockPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
+    spar ! ForResourceBlockingStatusMngr(BlockResourceForCaller(entityId,
       violatedRule.resourceName, blockPeriod=Option(blockPeriodInSec)))
   }
 
@@ -213,8 +214,8 @@ class BlockUserInstruction(val spar: ActorRef) extends Instruction {
   override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
-    val (trackByValue, blockPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
-    spar ! ForResourceBlockingStatusMngr(BlockCaller(trackByValue, blockPeriod=Option(blockPeriodInSec)))
+    val (entityId, blockPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
+    spar ! ForResourceBlockingStatusMngr(BlockCaller(entityId, blockPeriod=Option(blockPeriodInSec)))
   }
 }
 

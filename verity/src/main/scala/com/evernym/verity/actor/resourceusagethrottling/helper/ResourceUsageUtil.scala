@@ -30,16 +30,32 @@ object ResourceUsageUtil {
   val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
   val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
 
+  val USER_ID_OWNER_REGEX: Regex = s"($OWNER_ID_PREFIX)(.+)".r
+  val USER_ID_COUNTERPARTY_REGEX: Regex = s"($COUNTERPARTY_ID_PREFIX)(.+)".r
   val USER_ID_REGEX: Regex = s"($OWNER_ID_PREFIX|$COUNTERPARTY_ID_PREFIX)(.+)".r
 
-  def isUserIdForResourceUsageTracking(value: String): Boolean = {
+  def isUserId(value: String): Boolean = {
     value match {
       case USER_ID_REGEX(_, rawId) => isDID(rawId) || isVerKey(rawId)
       case _ => false
     }
   }
 
-  def isUserIdOrPatternForResourceUsageTracking(value: String): Boolean = {
+  def isUserIdOwner(value: String): Boolean = {
+    value match {
+      case USER_ID_OWNER_REGEX(_, rawId) => isDID(rawId) || isVerKey(rawId)
+      case _ => false
+    }
+  }
+
+  def isUserIdCounterparty(value: String): Boolean = {
+    value match {
+      case USER_ID_COUNTERPARTY_REGEX(_, rawId) => isDID(rawId) || isVerKey(rawId)
+      case _ => false
+    }
+  }
+
+  def isUserIdOrPattern(value: String): Boolean = {
     value match {
       case USER_ID_REGEX(_, rawId) => rawId == "*" || isDID(rawId) || isVerKey(rawId)
       case _ => false

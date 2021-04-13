@@ -2,7 +2,7 @@ package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
-import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserIdForResourceUsageTracking
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserId
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -44,7 +44,7 @@ object ResourceUsageRuleHelper {
       case (_ , v) =>
         if (SubnetUtilsExt.isClassfulIpAddress(entityId))
           isIpAddressInTokenSet(entityId, v)
-        else if (isUserIdForResourceUsageTracking(entityId))
+        else if (isUserId(entityId))
           isUserIdInTokenSet(entityId, v)
         else
           v.contains(entityId)

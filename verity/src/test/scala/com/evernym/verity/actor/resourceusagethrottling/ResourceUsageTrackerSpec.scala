@@ -1,21 +1,10 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import akka.actor.ReceiveTimeout
-import com.evernym.verity.actor.ForIdentifier
-import com.evernym.verity.actor.resourceusagethrottling.tracking.{BucketExt, GetAllResourceUsages, ResourceUsageCommon, ResourceUsages}
-import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.testkit.BasicSpec
-import org.scalatest.concurrent.Eventually
+import com.evernym.verity.actor.resourceusagethrottling.tracking._
 
 class ResourceUsageTrackerSpec
-  extends PersistentActorSpec
-    with ResourceUsageCommon
-    with BasicSpec
-    with Eventually {
-
-  override def beforeAll(): Unit = {
-    { val r = platform.resourceUsageTrackerRegion }
-  }
+  extends BaseResourceUsageTrackerSpec
+    with ResourceUsageCommon {
 
   "ResourceUsageTracker" - {
 
@@ -214,7 +203,7 @@ class ResourceUsageTrackerSpec
 
   def checkUsage(entityId: EntityId,
                  expectedUsages: ResourceUsages): Unit = {
-    sendToResourceUsageTracker(entityId, GetAllResourceUsages)
+    sendToResourceUsageTrackerRegion(entityId, GetAllResourceUsages)
     val actualUsages = expectMsgType[ResourceUsages]
     expectedUsages.usages.foreach { expResourceUsage =>
       val actualResourceUsageOpt = actualUsages.usages.get(expResourceUsage._1)
@@ -230,18 +219,6 @@ class ResourceUsageTrackerSpec
         actualBucketExt.endDateTime.isDefined shouldBe true
       }
     }
-  }
-
-  def sendToResourceUsageTracker(to: String, cmd: Any, restartActorBefore: Boolean=false): Unit = {
-    if (restartActorBefore) {
-      restartResourceUsageTrackerActor(to)
-    }
-    resourceUsageTrackerRegion ! ForIdentifier(to, cmd)
-  }
-
-  def restartResourceUsageTrackerActor(to: String): Unit = {
-    resourceUsageTrackerRegion ! ForIdentifier(to, ReceiveTimeout)
-    Thread.sleep(2000)
   }
 
 }

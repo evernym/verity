@@ -11,7 +11,6 @@ import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.ANYWISE_RELATIONSHIP
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, UserId}
 
@@ -83,12 +82,11 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
   def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[UserId] = {
     val myDomainAuthedKeys = state.myAuthVerKeys ++ configuredAuthedKeys
-    (state.relationship.map(_.relationshipType), senderVerKey) match {
-      case (Some(ANYWISE_RELATIONSHIP), _)    => senderVerKey.map(COUNTERPARTY_ID_PREFIX + _)
-      case (Some(_), Some(svk))               =>
+    senderVerKey match {
+      case Some(svk) =>
         if (myDomainAuthedKeys.contains(svk)) Option(domainId).map(OWNER_ID_PREFIX + _)
         else Option(COUNTERPARTY_ID_PREFIX + state.theirDid.getOrElse(svk))
-      case _                                  => senderVerKey.map(COUNTERPARTY_ID_PREFIX  + _)
+      case None => senderVerKey.map(COUNTERPARTY_ID_PREFIX  + _)
     }
   }
 

@@ -60,7 +60,7 @@ val indyWrapperVer  = "1.15.0-dev-1618"
 
 val akkaVer         = "2.6.10"
 val akkaHttpVer     = "10.2.2"
-val akkaMgtVer      = "1.0.9"
+val akkaMgtVer      = "1.0.10"
 val alpAkkaVer      = "2.0.2"
 val kamonVer        = "2.1.9"
 val kanelaAgentVer  = "1.0.7"

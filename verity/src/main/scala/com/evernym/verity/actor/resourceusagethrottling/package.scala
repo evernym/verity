@@ -3,20 +3,20 @@ package com.evernym.verity.actor
 package object resourceusagethrottling {
 
   /**
-   * EntityId can be an "ip address" or "user id" or "global"
-   * which is being tracked
+   * EntityId being tracked for resource usages
+   * Possible values are: "global", "<ip-address>", "owner-<user-id>" or "counterparty-<user-id>"
    */
   type EntityId = String
 
   /**
-   * ip address
+   * an ip address
    */
   type IpAddress = String
-
 
   /**
    * any identifier used to identify a unique user,
    * is always started with "owner-" or "counterparty-" prefix
+   * with a DID/verKey being appended to it
    */
   type UserId = String
 
@@ -40,8 +40,10 @@ package object resourceusagethrottling {
   /**
    * a token to look into 'rule-to-tokens' in 'resource-usage-rule.conf'
    * to find out which usage rule is applicable
+   *
+   * this can be an ip-address, CIDR based ip address or user-id related pattern
    */
-  type ApiToken = String
+  type EntityIdToken = String
 
   /**
    * 'usage-rules' (in resource-usage-rule.conf) allows to define multiple rules

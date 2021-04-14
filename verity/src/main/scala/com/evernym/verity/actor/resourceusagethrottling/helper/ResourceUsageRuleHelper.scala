@@ -22,13 +22,13 @@ object ResourceUsageRuleHelper {
   val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
   val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
 
-  def isIpAddressInTokenSet(entityId: EntityId, tokens: Set[ApiToken]): Boolean = {
+  def isIpAddressInTokenSet(entityId: EntityId, tokens: Set[EntityIdToken]): Boolean = {
     tokens
       .filter(SubnetUtilsExt.isIpAddressOrCidrNotation)
       .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(entityId))
   }
 
-  private def isUserIdInTokenSet(entityId: EntityId, tokens: Set[ApiToken]): Boolean = {
+  private def isUserIdInTokenSet(entityId: EntityId, tokens: Set[EntityIdToken]): Boolean = {
     tokens
       .filterNot(SubnetUtilsExt.isIpAddressOrCidrNotation)
       .exists {
@@ -113,9 +113,9 @@ case class ResourceUsageRuleConfig(
                                     persistAllBucketUsages: Boolean,
                                     snapshotAfterEvents: Int,
                                     usageRules: Map[UsageRuleName, UsageRule],
-                                    rulesToTokens: Map[UsageRuleName, Set[ApiToken]],
-                                    blacklistedTokens: Set[ApiToken],
-                                    whitelistedTokens: Set[ApiToken],
+                                    rulesToTokens: Map[UsageRuleName, Set[EntityIdToken]],
+                                    blacklistedTokens: Set[EntityIdToken],
+                                    whitelistedTokens: Set[EntityIdToken],
                                     actionRules: Map[ActionRuleId, ViolationActions]
                                   ){
   val logger: Logger = getLoggerByClass(classOf[ResourceUsageRuleConfig])
@@ -125,7 +125,7 @@ case class ResourceUsageRuleConfig(
    * @param token token to be checked against whitelisted tokens
    * @return
    */
-  def isWhitelisted(token: ApiToken): Boolean = {
+  def isWhitelisted(token: EntityIdToken): Boolean = {
     isTokenPresent(token, whitelistedTokens)
   }
 
@@ -134,7 +134,7 @@ case class ResourceUsageRuleConfig(
    * @param token token to be checked against blacklisted tokens
    * @return
    */
-  def isBlacklisted(token: ApiToken): Boolean = {
+  def isBlacklisted(token: EntityIdToken): Boolean = {
     isTokenPresent(token, blacklistedTokens)
   }
 
@@ -144,7 +144,7 @@ case class ResourceUsageRuleConfig(
    * @param tokens configured tokens used for lookup
    * @return
    */
-  private def isTokenPresent(token: ApiToken, tokens: Set[ApiToken]): Boolean = {
+  private def isTokenPresent(token: EntityIdToken, tokens: Set[EntityIdToken]): Boolean = {
     if (SubnetUtilsExt.isClassfulIpAddress(token))
       isIpAddressInTokenSet(token, tokens)
     else

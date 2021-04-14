@@ -64,7 +64,7 @@ val akkaMgtVer      = "1.0.9"
 val alpAkkaVer      = "2.0.2"
 val kamonVer        = "2.1.9"
 val kanelaAgentVer  = "1.0.7"
-val jacksonVer      = "2.11.1"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
+val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
 val sdnotifyVer     = "1.3"
 

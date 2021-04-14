@@ -13,6 +13,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.config.CommonConfig.REST_API_ENABLED
+import com.evernym.verity.http.common.CustomExceptionHandler.handleUnexpectedResponse
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
@@ -37,6 +38,9 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     incrementAgentMsgCount
     logger.info(s"[${reqMsgContext.id}] [incoming request] [POST] rest message ${reqMsgContext.clientIpAddressLogStr}")
     entity(as[String]) { payload =>
+      if (payload.length > 400000) { //todo decide value
+        throw new BadRequestErrorException("GNR-100", Some("Message size is too big")) //todo return proper data
+      }
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
       val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext)

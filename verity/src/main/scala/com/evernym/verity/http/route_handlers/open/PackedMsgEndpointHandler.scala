@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, MediaTypes, RemoteAddress}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
@@ -77,6 +78,9 @@ trait PackedMsgEndpointHandler
     // flow diagram: fwd + ctl + proto + legacy, step 2 -- Detect binary content.
     import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
     entity(as[Array[Byte]]) { data =>
+      if (data.length > 400000) { //todo decide value
+        throw new BadRequestErrorException("GNR-100", Some("Message size is too big")) //todo return proper data
+      }
       complete {
         processPackedMsg(PackedMsgWrapper(data, reqMsgContext)).map[ToResponseMarshallable] {
           handleAgentMsgResponse(_, reqMsgContext)

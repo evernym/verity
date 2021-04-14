@@ -124,7 +124,7 @@ lazy val integrationTests = (project in file("integration-tests"))
     settings,
     protoBufSettings,
     libraryDependencies ++= addDeps(
-      commonLibraryDependencies ++ Seq.apply ("org.iq80.leveldb" % "leveldb" % "0.11" ),
+      commonLibraryDependencies ++ Seq.apply ("org.iq80.leveldb" % "leveldb" % "0.12" ),
       Seq("scalatest_2.12"),
       "test"),
 
@@ -341,7 +341,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
-    "org.iq80.leveldb" % "leveldb" % "0.11",      //to be used in E2E tests
+    "org.iq80.leveldb" % "leveldb" % "0.12",      //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 

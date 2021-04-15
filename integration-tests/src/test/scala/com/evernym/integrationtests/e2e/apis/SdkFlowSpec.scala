@@ -190,8 +190,8 @@ class SdkFlowSpec
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
       GoalCode.ISSUE_VC)
 
-    val strBelowLimit ="1234567890"*2000
-    val strAboveLimit ="1234567890"*5000
+    val strBelowLimit ="1234567890"*2200
+    val strAboveLimit ="1234567890"*7000
 
     issueCredential_1_0(
       apps(verity1),
@@ -211,7 +211,7 @@ class SdkFlowSpec
       (0 to 9).map{i=> s"attr$i" -> strAboveLimit}.toMap,
       limitsCredDefName,
       "tag",
-      "too big" // todo replace with actual message
+      "Payload size is too big"
     )
   }
 

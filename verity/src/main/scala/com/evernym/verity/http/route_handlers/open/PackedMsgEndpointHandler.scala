@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.{HttpEntity, HttpRequest, MediaTypes, RemoteAddr
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
@@ -78,8 +79,11 @@ trait PackedMsgEndpointHandler
     // flow diagram: fwd + ctl + proto + legacy, step 2 -- Detect binary content.
     import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
     entity(as[Array[Byte]]) { data =>
-      if (data.length > 400000) { //todo decide value
-        throw new BadRequestErrorException("GNR-100", Some("Message size is too big")) //todo return proper data
+      logger.error(s"DATA length: ${data.length}")
+      // Fixme: this size is quick solution to ensure that received data won't exceed 400k limit of Dynamodb messages.
+      //       Number below is selected during testing and not intended to be 100% accurate
+      if (data.length > 400000) {
+        throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Payload size is too big"))
       }
       complete {
         processPackedMsg(PackedMsgWrapper(data, reqMsgContext)).map[ToResponseMarshallable] {

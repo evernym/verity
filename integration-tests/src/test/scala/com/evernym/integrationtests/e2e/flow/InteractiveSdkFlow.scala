@@ -690,7 +690,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
     val holderName = holderSdk.sdkConfig.name
     s"issue credential (1.0) to $holderName from $issuerName on relationship ($relationshipId) expecting error" - {
 
-      s"[$issuerName] send a credential offer expecting error ${UUID.randomUUID().toString}" in {
+      s"[$issuerName] send a credential offer expecting error" in {
         val forRel = issuerSdk.relationship_!(relationshipId).owningDID
         val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
 

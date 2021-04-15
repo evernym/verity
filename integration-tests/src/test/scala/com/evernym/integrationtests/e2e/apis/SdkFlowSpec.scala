@@ -165,7 +165,16 @@ class SdkFlowSpec
       ledgerUtil,
       limitsSchema,
       "0.1",
-      (0 to 9).map{i=> s"attr$i"}: _*
+      "attr0",
+      "attr1",
+      "attr2",
+      "attr3",
+      "attr4",
+      "attr5",
+      "attr6",
+      "attr7",
+      "attr8",
+      "attr9"
     )
 
     writeCredDef(

@@ -287,7 +287,7 @@ lazy val commonLibraryDependencies = {
     "org.hyperledger" % "indy" % indyWrapperVer,
 
     //logging dependencies
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     akkaGrp %% "akka-slf4j" % akkaVer,
 

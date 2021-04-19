@@ -1,6 +1,8 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.stream.Attributes
+import akka.Done
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
@@ -11,7 +13,7 @@ import com.evernym.verity.protocol
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeProtoDef
-import com.evernym.verity.storage_services.aws_s3.StorageAPI
+import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.evernym.verity.texter.SMSSender
 
@@ -36,15 +38,20 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val agentMsgRouter: AgentMsgRouter = new MockAgentMsgRouter(mockParam.actorTypeToRegions)(appConfig, system)
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 
-  override lazy val s3API: StorageAPI = new StorageAPI {
-    var S3Mock: Map[String, Array[Byte]] = Map()
-    override def upload(id: String, data: Array[Byte]): Future[StorageInfo] = {
-      S3Mock += (id -> data)
+  override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig) {
+    var storageMock: Map[String, Array[Byte]] = Map()
+
+    override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+      storageMock += (id -> data)
       Future { StorageInfo("https://s3-us-west-2.amazonaws.com", "test-bucket") }
     }
 
-    override def download(id: String): Future[Array[Byte]] = {
-      Future { S3Mock(id) }
+    override def get(bucketName: String, id: String): Future[Array[Byte]] = {
+      Future { storageMock(id) }
+    }
+
+    override def delete(bucketName: String, id: String): Future[Done] = {
+      Future { storageMock -= id; Done }
     }
   }
 

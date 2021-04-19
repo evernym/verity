@@ -320,6 +320,8 @@ lazy val commonLibraryDependencies = {
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
+
+    "org.iq80.leveldb" % "leveldb" % "0.11",      //used as alternate StorageAPI to S3
   )
 
   //for macro libraries that are compile-time-only
@@ -341,7 +343,6 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
-    "org.iq80.leveldb" % "leveldb" % "0.11",      //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 

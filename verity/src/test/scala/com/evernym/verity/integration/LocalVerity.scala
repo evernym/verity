@@ -1,7 +1,6 @@
 package com.evernym.verity.integration
 
 import java.nio.file.Path
-
 import akka.pattern.ask
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
@@ -11,8 +10,9 @@ import akka.util.Timeout
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.appStateManager.GetCurrentState
 import com.evernym.verity.actor.appStateManager.state.{AppState, ListeningState}
-import com.evernym.verity.app_launcher.{DefaultAgentActorContext, PlatformBuilder}
+import com.evernym.verity.app_launcher.{DefaultAgentActorContext, HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.http.route_handlers.HttpRouteHandler
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.testkit.mock.ledger.{InMemLedgerPoolConnManager, InitLedgerData}
 
@@ -32,6 +32,8 @@ object LocalVerity {
     AppConfigWrapper.DEPRECATED_setConfigWithoutValidation(localConfig)
 
     val platform =  initializeApp(initData)
+    val httpServer = new HttpServer(platform, new HttpRouteHandler(platform).endpointRoutes)
+    httpServer.start()
 
     waitTillUp(platform.appStateManager)
 

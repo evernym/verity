@@ -64,7 +64,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
           dm.forRel match {
             case Some(rel) =>
               val tc = psm.threadContextDetail
-              val msgForRel = MsgForRelationship(dm.msg, psm.threadId, selfParticipantId,
+              val msgForRel = MsgForRelationship(domainId, dm.msg, psm.threadId, selfParticipantId,
                 Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
               agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
             case None =>

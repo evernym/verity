@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
@@ -42,7 +42,7 @@ case class UpdateComMethodReqMsg_MFV_0_6(comMethod: ComMethod) extends MsgBase {
   }
 }
 
-case class UpdateComMethodReqMsg(msgFamilyDetail: MsgFamilyDetail, comMethod: ComMethod)
+case class UpdateComMethodReqMsg(comMethod: ComMethod)
 
 case class ComMethodUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, id: String) extends MsgBase
 
@@ -53,12 +53,12 @@ object UpdateComMethodMsgHelper {
 
   private def buildReqMsgFrom_MFV_0_5(implicit amw: AgentMsgWrapper): UpdateComMethodReqMsg = {
     val msg = amw.headAgentMsg.convertTo[UpdateComMethodReqMsg_MFV_0_5]
-    UpdateComMethodReqMsg(amw.headAgentMsgDetail, msg.comMethod)
+    UpdateComMethodReqMsg(msg.comMethod)
   }
 
   private def buildReqMsgFrom_MFV_0_6(implicit amw: AgentMsgWrapper): UpdateComMethodReqMsg = {
     val msg = amw.headAgentMsg.convertTo[UpdateComMethodReqMsg_MFV_0_6]
-    UpdateComMethodReqMsg(amw.headAgentMsgDetail, msg.comMethod)
+    UpdateComMethodReqMsg(msg.comMethod)
   }
 
   def buildReqMsg(implicit amw: AgentMsgWrapper): UpdateComMethodReqMsg = {

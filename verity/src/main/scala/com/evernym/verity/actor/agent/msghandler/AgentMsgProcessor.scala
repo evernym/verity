@@ -240,7 +240,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           recordProtoMsgTrackingEvent(arc.reqId, respMsgId, msgType, None)
       }
     }
-
     //tracking related
     omc.requestMsgId.map(reqMsgId => (reqMsgId, msgRespContext)) match {
       case Some((rmid, Some(MsgRespContext(_, packForVerKey, Some(sar))))) =>
@@ -267,7 +266,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                       toParticipantId: ParticipantId,
                       msgPackFormat: MsgPackFormat,
                       msgSpecificRecipVerKey: Option[KeyParam]=None): Future[OutgoingMsgParam] = {
-    logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey")
+    logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey)")
     val toDID = ParticipantUtil.agentId(toParticipantId)
     val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyParam.fromDID(toDID)))
     msgExtractor.packAsync(msgPackFormat, omp.jsonMsg_!(), recipKeys).map { packedMsg =>
@@ -488,6 +487,9 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param mfr message for relationship
    */
   def handleMsgForRel(mfr: MsgForRelationship): Unit = {
+    if (mfr.domainId != domainId) {
+      throw new UnauthorisedErrorException(Option(s"provided relationship doesn't belong to requested domain"))
+    }
     // flow diagram: ctl + proto, step 13
     logger.debug(s"msg for relationship received : " + mfr)
     val tm = typedMsg(mfr.msgToBeSent)
@@ -641,7 +643,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       validateMsg(imp, msgToBeSent)
       if (forRelationship.isDefined && forRelationship != param.relationshipId) {
         forRelationship.foreach { relId =>
-          val msgForRel = MsgForRelationship(msgToBeSent.msg, threadId, senderPartiId,
+          val msgForRel = MsgForRelationship(domainId, msgToBeSent.msg, threadId, senderPartiId,
             imp.msgPackFormat, imp.msgFormat, respDetail, Option(rmc))
           // flow diagram: ctl.pairwise + proto.pairwise, step 10 -- Handle msg for specific connection.
           agentMsgRouter.forward(InternalMsgRouteParam(relId, msgForRel), sender())

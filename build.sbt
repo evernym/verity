@@ -60,11 +60,11 @@ val indyWrapperVer  = "1.15.0-dev-1618"
 
 val akkaVer         = "2.6.10"
 val akkaHttpVer     = "10.2.2"
-val akkaMgtVer      = "1.0.9"
+val akkaMgtVer      = "1.0.10"
 val alpAkkaVer      = "2.0.2"
 val kamonVer        = "2.1.9"
 val kanelaAgentVer  = "1.0.7"
-val jacksonVer      = "2.11.1"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
+val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
 val sdnotifyVer     = "1.3"
 
@@ -287,7 +287,7 @@ lazy val commonLibraryDependencies = {
     "org.hyperledger" % "indy" % indyWrapperVer,
 
     //logging dependencies
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
@@ -320,6 +320,8 @@ lazy val commonLibraryDependencies = {
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
+
+    "org.iq80.leveldb" % "leveldb" % "0.11",      //used as alternate StorageAPI to S3
   )
 
   //for macro libraries that are compile-time-only
@@ -341,7 +343,6 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
-    "org.iq80.leveldb" % "leveldb" % "0.11",      //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 

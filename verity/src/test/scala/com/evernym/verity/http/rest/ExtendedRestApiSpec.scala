@@ -73,6 +73,14 @@ class ExtendedRestApiSpec
   }
 
   "when enterprise user" - {
+    "tried to send message with someone else's '~for_relationship'" - {
+      "should respond with appropriate error" in {
+        sendMsgWithOthersMsgForRel(mockEntRestEnv, mockUserRestEnv.connRelRoutingDID(connId1))
+      }
+    }
+  }
+
+  "when enterprise user" - {
     "tried to send malicious cred offer" - {
       "should respond with appropriate error" in {
         sendMaliciousCredOffer(mockEntRestEnv)

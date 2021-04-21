@@ -46,6 +46,7 @@ import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -658,17 +659,18 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
   private def validateMsg(imp: IncomingMsgParam, msg: TypedMsg): Unit = {
     getLimitForMsgType(msg.msgType).foreach { limit =>
-      val msgFamily = registeredProtocols.protoDefForMsg_!(msg).msgFamily
-      val valid = msgFamily.validateMessage(imp.givenMsg, limit)
-      if (!valid) { // todo let validation throw exceptions
-        throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Payload size is too big"))
-      }
+      registeredProtocols.protoDefForMsg(msg).foreach(protoDef =>
+        protoDef.msgFamily.validateMessage(imp.givenMsg, limit) match {
+          case Left(errorMsg) => throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option(errorMsg))
+          case Right(_) =>
+        }
+      )
     }
   }
 
-  private def getLimitForMsgType(msgType: MsgType): Option[Int] = {
+  private def getLimitForMsgType(msgType: MsgType): Option[Config] = {
     // Fixme: this method uses config look-up every time message is received
-    appConfig.getConfigIntOption(s"$MSG_LIMITS.${msgType.familyName}")
+    appConfig.getConfigOption(s"$MSG_LIMITS.${msgType.familyName}")
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):

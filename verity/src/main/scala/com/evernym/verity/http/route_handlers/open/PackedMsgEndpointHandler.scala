@@ -79,12 +79,6 @@ trait PackedMsgEndpointHandler
     // flow diagram: fwd + ctl + proto + legacy, step 2 -- Detect binary content.
     import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
     entity(as[Array[Byte]]) { data =>
-      logger.error(s"DATA length: ${data.length}")
-      // Fixme: this size is quick solution to ensure that received data won't exceed 400k limit of Dynamodb messages.
-      //       Number below is selected during testing and not intended to be 100% accurate
-      if (data.length > 400000) {
-        throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Payload size is too big"))
-      }
       complete {
         processPackedMsg(PackedMsgWrapper(data, reqMsgContext)).map[ToResponseMarshallable] {
           handleAgentMsgResponse(_, reqMsgContext)

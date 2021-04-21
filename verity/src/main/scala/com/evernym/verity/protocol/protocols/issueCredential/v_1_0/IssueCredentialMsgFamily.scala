@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessRestMsg
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
@@ -57,6 +59,12 @@ object IssueCredMsgFamily
     classOf[SignalMsg.Ack]                    -> "ack-received",
     classOf[SignalMsg.Invitation]             -> "protocol-invitation",
   )
+
+  override def validateMessage(msg: Any, limit: Int): Boolean = msg match {
+        case amw: AgentMsgWrapper   => amw.agentBundledMsg.msgs.map(it => it.msg.length).sum < limit
+        case rmp: ProcessRestMsg    => rmp.msg.length() < limit
+    }
+
 }
 
 //message objects

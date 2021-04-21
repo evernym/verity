@@ -125,6 +125,10 @@ trait MsgFamily {
     else if (signalMsgs.map(_.swap).contains(msgName)) Option("Sig")
     else None
   }
+
+  def validateMessage(msg: Any, limit: Int) : Boolean = {
+    throw new Exception("Validation is not implemented")
+  }
 }
 
 /** Provides information which is needed during outgoing message flow (during packaging of the message)

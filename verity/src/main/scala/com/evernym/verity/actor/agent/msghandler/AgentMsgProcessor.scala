@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
@@ -28,6 +27,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig.MSG_LIMITS
 import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
@@ -637,7 +637,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         }
 
       val senderPartiId = param.senderParticipantId(imp.senderVerKey)
-
+      validateMsg(imp, msgToBeSent)
       if (forRelationship.isDefined && forRelationship != param.relationshipId) {
         forRelationship.foreach { relId =>
           val msgForRel = MsgForRelationship(msgToBeSent.msg, threadId, senderPartiId,
@@ -654,6 +654,21 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         )
       }
     } catch protoExceptionHandler
+  }
+
+  private def validateMsg(imp: IncomingMsgParam, msg: TypedMsg): Unit = {
+    getLimitForMsgType(msg.msgType).foreach { limit =>
+      val msgFamily = registeredProtocols.protoDefForMsg_!(msg).msgFamily
+      val valid = msgFamily.validateMessage(imp.givenMsg, limit)
+      if (!valid) { // todo let validation throw exceptions
+        throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Payload size is too big"))
+      }
+    }
+  }
+
+  private def getLimitForMsgType(msgType: MsgType): Option[Int] = {
+    // Fixme: this method uses config look-up every time message is received
+    appConfig.getConfigIntOption(s"$MSG_LIMITS.${msgType.familyName}")
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):

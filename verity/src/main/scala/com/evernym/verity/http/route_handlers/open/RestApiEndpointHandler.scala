@@ -37,11 +37,6 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     incrementAgentMsgCount
     logger.info(s"[${reqMsgContext.id}] [incoming request] [POST] rest message ${reqMsgContext.clientIpAddressLogStr}")
     entity(as[String]) { payload =>
-      // Fixme: this size is quick solution to ensure that received data won't exceed 400k limit of Dynamodb messages.
-      //        Number below is selected during testing and not intended to be 100% accurate
-      if (payload.length > 350000) {
-        throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Payload size is too big"))
-      }
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
       val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext)

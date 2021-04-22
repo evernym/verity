@@ -50,6 +50,7 @@ class LimitsFlowSpec
   val limitsCredDefName = "creds_for_limits"
 
   val longAttrList = (1 to 125).map(i => s"attrib$i")
+  val longCredDef = "cred_name1"
 
   runScenario("sdkFlow") {
 
@@ -154,7 +155,7 @@ class LimitsFlowSpec
 
     writeCredDef(
       sdk,
-      "cred_name1",
+      longCredDef,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName1,
@@ -270,7 +271,78 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longString2 = "1234567890" * 16000
+    val longAttrsMap = longAttrList.map( attr => attr -> "someValue" ).toMap
+
+    issueCredential_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      longAttrsMap,
+      longCredDef,
+      "tag"
+    )
+
+    val listWithValues = (longAttrsMap map {case (key, value) => (key, key+"[1]", value)}).toList
+    var listForRequest = List[(String, String, String)]()
+    for (i <- 1 to 14) {
+      listForRequest = listForRequest ++ listWithValues
+    }
+    listForRequest = listForRequest ++ listWithValues.take(116)
+
+    presentProof_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      listForRequest
+    )
+
+    listForRequest = listForRequest ++ listWithValues.take(1)
+
+    presentProof_1_0ExpectingErrorOnRequest(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      listForRequest,
+      "Payload size is too big"
+    )
+
+    val longAttrsValuesMap = longAttrList.map( attr => attr -> "someValue"*150 ).toMap
+
+    issueCredential_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      longAttrsValuesMap,
+      longCredDef,
+      "tag"
+    )
+
+    val listWithLongValues = (longAttrsValuesMap map {case (key, value) => (key, key, value)}).take(58).toList
+    val reslist = listWithLongValues
+
+    presentProof_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      reslist
+    )
+
+    val failing_reslist = reslist ++ listWithLongValues.take(1)
+
+    presentProof_1_0ExpectingErrorOnResponse(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "proof-request-1",
+      failing_reslist,
+      "Payload size is too big"
+    )
+
+
+    val longString2 = "1234567890" * 39000
     committedAnswer(
       apps(verity1),
       apps(cas1),

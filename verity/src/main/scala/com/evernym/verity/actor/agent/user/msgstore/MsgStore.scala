@@ -17,6 +17,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.protocol.protocols.MsgDetail
 import kamon.metric.MeasurementUnit
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ListSet
 
@@ -36,10 +37,12 @@ class MsgStore(appConfig: AppConfig,
   private var refMsgIdToMsgId: Map[RefMsgId, MsgId] = Map.empty
   private var unseenMsgIds: Set[MsgId] = Set.empty
   private var seenMsgIds: Set[MsgId] = Set.empty
+  private val logger = LoggerFactory.getLogger("MsgStore")
 
   private var retainedDeliveredMsgIds: ListSet[MsgId] = ListSet.empty
   private var retainedUndeliveredMsgIds: ListSet[MsgId] = ListSet.empty
   private var removedMsgsCount = 0
+  private val lenLimit = 930000 // TODO: fit the constant
 
   /**
    * mapping between MsgName (message type name, like: connection req, cred etc)
@@ -77,11 +80,22 @@ class MsgStore(appConfig: AppConfig,
         else uidFilteredMsgs
       }
     }
-    filteredMsgs.map { case (uid, msg) =>
+    val (res, len1, len2) = filteredMsgs.map{ case (uid, msg) =>
       val payloadWrapper = if (gmr.excludePayload.contains(YES)) None else msgAndDelivery.msgPayloads.get(uid)
       val payload = payloadWrapper.map(_.msg)
-      MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty)
-    }.toList
+      (MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty), msg.creationTimeInMillis, payload.map(_.size).getOrElse(0))
+    }
+      .toSeq
+      .sortWith(_._2 < _._2)
+      .foldLeft((List.empty[MsgDetail], 0, 0)) { case (acc, next) => {
+        if (acc._2 + next._3 < lenLimit) {
+          (acc._1 :+ next._1, acc._2 + next._3, acc._3 + 1)
+        } else {
+          acc
+        }
+      }}
+    logger.error(s"Length of messages $len1, number of messages $len2")
+    res
   }
 
   def handleMsgCreated(mc: MsgCreated): Unit = {

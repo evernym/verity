@@ -1,16 +1,12 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.actor.agent.msghandler.incoming.ProcessRestMsg
-import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
-import com.evernym.verity.protocol.engine.MsgFamily.{MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
-import com.typesafe.config.Config
 
 
 object IssueCredMsgFamily
@@ -61,28 +57,6 @@ object IssueCredMsgFamily
     classOf[SignalMsg.Ack]                    -> "ack-received",
     classOf[SignalMsg.Invitation]             -> "protocol-invitation",
   )
-
-  override def validateMessage(msg: Any, limitConfig: Config): Either[String, Unit] = {
-    val isValid = msg match {
-      case amw: AgentMsgWrapper =>
-        if (limitConfig.hasPath(MSG_LIMIT)) {
-          val limitMsg = limitConfig.getInt(MSG_LIMIT)
-          amw.agentBundledMsg.msgs.map(it => it.msg.length).sum < limitMsg
-        } else {
-          logMissingConfig(MSG_LIMIT)
-          true
-        }
-      case rmp: ProcessRestMsg =>
-        if (limitConfig.hasPath(REST_LIMIT)) {
-          val limitRest = limitConfig.getInt(REST_LIMIT)
-          rmp.msg.length() < limitRest
-        } else {
-          logMissingConfig(REST_LIMIT)
-          true
-        }
-    }
-    if (isValid) Right(Unit) else Left(PAYLOAD_ERROR)
-  }
 
 }
 

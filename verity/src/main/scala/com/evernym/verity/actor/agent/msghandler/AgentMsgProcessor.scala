@@ -671,7 +671,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   private def getLimitForMsgType(msgType: MsgType): Option[Config] = {
-    // Fixme: this method uses config look-up every time message is received
+    // TODO: this method uses config look-up every time message is received
     appConfig.getConfigOption(s"$MSG_LIMITS.${msgType.familyName}")
   }
 

@@ -80,22 +80,29 @@ class MsgStore(appConfig: AppConfig,
         else uidFilteredMsgs
       }
     }
-    val (res, len1, len2) = filteredMsgs.map{ case (uid, msg) =>
+    val accumulatedMsgs = filteredMsgs.map { case (uid, msg) =>
       val payloadWrapper = if (gmr.excludePayload.contains(YES)) None else msgAndDelivery.msgPayloads.get(uid)
       val payload = payloadWrapper.map(_.msg)
-      (MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty), msg.creationTimeInMillis, payload.map(_.size).getOrElse(0))
+      MsgParam(
+        MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty),
+        msg.creationTimeInMillis
+      )
     }
       .toSeq
-      .sortWith(_._2 < _._2)
-      .foldLeft((List.empty[MsgDetail], 0, 0)) { case (acc, next) => {
-        if (acc._2 + next._3 < lenLimit) {
-          (acc._1 :+ next._1, acc._2 + next._3, acc._3 + 1)
+      .sortWith(_.creationTimeInMillis < _.creationTimeInMillis)    //sorting by creation order
+      .foldLeft(AccumulatedMsgs(msgs = List.empty[MsgDetail], totalPayloadSize = 0)) { case (accumulated, next) =>
+        if (accumulated.totalPayloadSize + next.payloadSize < lenLimit) {
+          accumulated.withNextAdded(next)
         } else {
-          acc
+          accumulated
         }
-      }}
-    logger.error(s"Length of messages $len1, number of messages $len2")
-    res
+      }
+
+    //TODO: change below 'error' before merge
+    logger.error(s"total payload size of messages ${accumulatedMsgs.totalPayloadSize}, " +
+      s"total messages ${accumulatedMsgs.msgs.size}")
+
+    accumulatedMsgs.msgs
   }
 
   def handleMsgCreated(mc: MsgCreated): Unit = {
@@ -374,4 +381,14 @@ trait MsgStateAPIProvider {
     msgAndDeliveryReq.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus
   }
 
+}
+
+case class MsgParam(msgDetail: MsgDetail, creationTimeInMillis: Long) {
+  def payloadSize: Int = msgDetail.payload.map(_.length).getOrElse(0)
+}
+
+case class AccumulatedMsgs(msgs: List[MsgDetail], totalPayloadSize: Int) {
+  def withNextAdded(next: MsgParam): AccumulatedMsgs = {
+    AccumulatedMsgs(msgs :+ next.msgDetail, totalPayloadSize + next.payloadSize)
+  }
 }

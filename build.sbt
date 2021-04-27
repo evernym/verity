@@ -183,10 +183,8 @@ lazy val settings = Seq(
   ),
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
-  resolvers += "MsgPack" at "https://dl.bintray.com/velvia/maven",
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
   resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
-  resolvers += Resolver.bintrayRepo("bfil", "maven"),
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -315,7 +313,7 @@ lazy val commonLibraryDependencies = {
     "commons-net" % "commons-net" % "3.7.2",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
-    "org.velvia" %% "msgpack4s" % "0.6.0",        //used by legacy pack/unpack operations
+    "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "1.18",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls

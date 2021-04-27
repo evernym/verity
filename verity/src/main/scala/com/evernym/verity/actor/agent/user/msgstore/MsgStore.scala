@@ -42,7 +42,6 @@ class MsgStore(appConfig: AppConfig,
   private var retainedDeliveredMsgIds: ListSet[MsgId] = ListSet.empty
   private var retainedUndeliveredMsgIds: ListSet[MsgId] = ListSet.empty
   private var removedMsgsCount = 0
-  private val lenLimit = 930000 // TODO: fit the constant
 
   /**
    * mapping between MsgName (message type name, like: connection req, cred etc)
@@ -91,15 +90,14 @@ class MsgStore(appConfig: AppConfig,
       .toSeq
       .sortWith(_.creationTimeInMillis < _.creationTimeInMillis)    //sorting by creation order
       .foldLeft(AccumulatedMsgs(msgs = List.empty[MsgDetail], totalPayloadSize = 0)) { case (accumulated, next) =>
-        if (accumulated.totalPayloadSize + next.payloadSize < lenLimit) {
+        if (accumulated.totalPayloadSize + next.payloadSize < getMsgsLimit) {
           accumulated.withNextAdded(next)
         } else {
           accumulated
         }
       }
 
-    //TODO: change below 'error' before merge
-    logger.error(s"total payload size of messages ${accumulatedMsgs.totalPayloadSize}, " +
+    logger.debug(s"total payload size of messages ${accumulatedMsgs.totalPayloadSize}, " +
       s"total messages ${accumulatedMsgs.msgs.size}")
 
     accumulatedMsgs.msgs
@@ -288,6 +286,9 @@ class MsgStore(appConfig: AppConfig,
 
   private lazy val isStateMessagesCleanupEnabled: Boolean =
     appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
+
+  private lazy val getMsgsLimit: Integer =
+    appConfig.getConfigIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(92000)
 }
 
 trait MsgStateAPIProvider {

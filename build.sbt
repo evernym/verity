@@ -307,6 +307,7 @@ lazy val commonLibraryDependencies = {
 
     "io.kamon" %% "kamon-bundle" % kamonVer,
     "io.kamon" %% "kamon-prometheus" % kamonVer,
+    "io.kamon" %% "kamon-datadog" % kamonVer,
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
     //other dependencies

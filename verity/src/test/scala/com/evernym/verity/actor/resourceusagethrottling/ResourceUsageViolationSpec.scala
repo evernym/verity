@@ -45,9 +45,9 @@ class ResourceUsageViolationSpec
 
     // Begin resources and helper functions used in the testResourceGetsBlockedWarnedIfExceedsSetLimit test
     val resourceUsageParams: List[ResourceUsageParam] = List(
-      ResourceUsageParam(createMsgConnReq, Option(user1IpAddress), None, Some(3)),
-      ResourceUsageParam(DUMMY_MSG, Option(user2IpAddress), Some(user2DID), Some(2)),
-      ResourceUsageParam(DUMMY_MSG, Option(user4IpAddress), Some(user4DID), Some(2))
+      ResourceUsageParam(createMsgConnReq, user1IpAddress, None, Some(3)),
+      ResourceUsageParam(DUMMY_MSG, user2IpAddress, Some(user2DID), Some(2)),
+      ResourceUsageParam(DUMMY_MSG, user4IpAddress, Some(user4DID), Some(2))
     )
 
     // Reset counters for all resources involved in this test
@@ -66,7 +66,7 @@ class ResourceUsageViolationSpec
         // Clear all buckets in preparation for this test
         // Previous tests may have already added stats to each of the following buckets (300, 600, ..., etc).
         // CREATE_MSG_connReq
-        (Option(ENTITY_ID_GLOBAL) ++ rup.ipAddress ++ rup.userId).foreach { entityId =>
+        (Option(ENTITY_ID_GLOBAL) ++ Option(rup.ipAddress) ++ rup.userId).foreach { entityId =>
           sendToResourceUsageTrackerRegion(entityId,
             UpdateResourcesUsageCounter(List(
               ResourceUsageCounterDetail(rup.resourceName, 300, None),
@@ -328,7 +328,7 @@ class ResourceUsageViolationSpec
           )))
         expectMsg(Done)
 
-        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, Option(user1IpAddress), None)
+        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
         expectNoMessage()
 
         // Expect usageBlockingStatus and usageWarningStatus to continue to be empty
@@ -349,9 +349,9 @@ class ResourceUsageViolationSpec
 
       "when sent AddResourceUsage command for two different IP addresses" - {
         "should succeed and respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", Option(user1IpAddress), Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", Option(user2IpAddress), Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
           expectNoMessage()
         }
       }
@@ -381,9 +381,9 @@ class ResourceUsageViolationSpec
 
       "when sent same AddResourceUsage commands again" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", Option(user1IpAddress), Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", Option(user2IpAddress), Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
           expectNoMessage()
         }
       }
@@ -413,9 +413,9 @@ class ResourceUsageViolationSpec
 
       "when sent same AddResourceUsage command for another resource type" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, Option(user1IpAddress), None)
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, Option(user2IpAddress), Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, user2IpAddress, Some(user2DID))
           expectNoMessage()
         }
       }
@@ -886,7 +886,7 @@ class ResourceUsageViolationSpec
 }
 
 case class ResourceUsageParam(resourceName: String,
-                              ipAddress: Option[IpAddress],
+                              ipAddress: IpAddress,
                               userId: Option[UserId],
                               blockAfterIterationCount: Option[Int])
 

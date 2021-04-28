@@ -339,7 +339,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE,
-        s"${MSG_TYPE_CREATE_MSG}_${createMsgReq.mtype}", reqMsgContext.clientIpAddress, userId)
+        s"${MSG_TYPE_CREATE_MSG}_${createMsgReq.mtype}", reqMsgContext.clientIpAddressReq, userId)
       val msgDetail = amw.tailAgentMsgs.head.convertTo[GeneralCreateMsgDetail_MFV_0_5]
 
       val srm = SendRemoteMsg(amw.headAgentMsgDetail, createMsgReq.uid.getOrElse(getNewMsgUniqueId),
@@ -432,7 +432,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   def handleSendMsgs(sendMsgReq: SendMsgsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_SEND_MSGS, reqMsgContext.clientIpAddress, userId)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_SEND_MSGS, reqMsgContext.clientIpAddressReq, userId)
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg, reqMsgContext.wrapInBundledMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
@@ -624,7 +624,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   def handleUpdateConnStatusMsg(updateConnStatus: UpdateConnStatusReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONN_STATUS, reqMsgContext.clientIpAddress, userId)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONN_STATUS, reqMsgContext.clientIpAddressReq, userId)
     if (updateConnStatus.statusCode != CONN_STATUS_DELETED.statusCode) {
       throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(s"invalid status code value: ${updateConnStatus.statusCode}"))
     }

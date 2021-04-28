@@ -22,19 +22,19 @@ object ResourceUsageRuleHelper {
   val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
   val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
 
-  def isIpAddressInTokenSet(entityId: EntityId, tokens: Set[EntityIdToken]): Boolean = {
+  def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[EntityIdToken]): Boolean = {
     tokens
       .filter(SubnetUtilsExt.isIpAddressOrCidrNotation)
-      .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(entityId))
+      .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
   }
 
-  private def isUserIdInTokenSet(entityId: EntityId, tokens: Set[EntityIdToken]): Boolean = {
+  private def isUserIdInTokenSet(userId: UserId, tokens: Set[EntityIdToken]): Boolean = {
     tokens
       .filterNot(SubnetUtilsExt.isIpAddressOrCidrNotation)
       .exists {
-        case `entityId`               => true
-        case OWNER_ID_PATTERN         => entityId.startsWith(OWNER_ID_PREFIX)
-        case COUNTERPARTY_ID_PATTERN  => entityId.startsWith(COUNTERPARTY_ID_PREFIX)
+        case `userId`               => true
+        case OWNER_ID_PATTERN         => userId.startsWith(OWNER_ID_PREFIX)
+        case COUNTERPARTY_ID_PATTERN  => userId.startsWith(COUNTERPARTY_ID_PREFIX)
         case _                        => false
     }
   }
@@ -60,7 +60,8 @@ object ResourceUsageRuleHelper {
   }
 
   private def getUsageRuleByEntityId(entityId: EntityId): Option[UsageRule] = {
-    resourceUsageRules.usageRules.get(getRuleNameByEntityId(entityId))
+    resourceUsageRules.usageRules.get(getRuleNameByEntityId(entityId)) orElse
+      resourceUsageRules.usageRules.get(DEFAULT_USAGE_RULE_NAME)
   }
 
   private def getResourceTypeUsageRule(ur: UsageRule, resourceTypeName: ResourceTypeName): Option[ResourceTypeUsageRule] = {
@@ -122,20 +123,24 @@ case class ResourceUsageRuleConfig(
 
   /**
    *
-   * @param token token to be checked against whitelisted tokens
+   * @param ipAddress ip address of the request
+   * @param entityId entityId to be checked against whitelisted tokens
    * @return
    */
-  def isWhitelisted(token: EntityIdToken): Boolean = {
-    isTokenPresent(token, whitelistedTokens)
+  def isWhitelisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
+    val tokenToBeChecked = Set(ipAddress, entityId)
+    tokenToBeChecked.exists(isTokenPresent(_, whitelistedTokens))
   }
 
   /**
    *
-   * @param token token to be checked against blacklisted tokens
+   * @param ipAddress ip address of the request
+   * @param entityId entityId to be checked against blacklisted tokens
    * @return
    */
-  def isBlacklisted(token: EntityIdToken): Boolean = {
-    isTokenPresent(token, blacklistedTokens)
+  def isBlacklisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
+    val tokenToBeChecked = Set(ipAddress, entityId)
+    tokenToBeChecked.exists(isTokenPresent(_, blacklistedTokens))
   }
 
   /**

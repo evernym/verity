@@ -17,11 +17,11 @@ trait ResourceUsageCommon {
 
   protected def addUserResourceUsage(resourceType: ResourceType,
                                      resourceName: ResourceName,
-                                     ipAddressOpt: Option[IpAddress],
+                                     ipAddress: IpAddress,
                                      userIdOpt: Option[UserId],
                                      sendBackAck: Boolean=false): Unit = {
-    ResourceUsageTracker.addUserResourceUsage(resourceType,
-      resourceName, ipAddressOpt, userIdOpt, sendBackAck)(resourceUsageTrackerRegion)
+    ResourceUsageTracker.addUserResourceUsage(
+      resourceType, resourceName, ipAddress, userIdOpt, sendBackAck)(resourceUsageTrackerRegion)
   }
 
   protected def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {

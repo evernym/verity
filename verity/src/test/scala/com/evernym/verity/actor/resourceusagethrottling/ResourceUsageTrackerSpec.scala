@@ -6,6 +6,8 @@ class ResourceUsageTrackerSpec
   extends BaseResourceUsageTrackerSpec
     with ResourceUsageCommon {
 
+  val ipAddress = "1.2.3.4"
+
   "ResourceUsageTracker" - {
 
     "when asked to track endpoint usages" - {
@@ -13,7 +15,7 @@ class ResourceUsageTrackerSpec
         addUserResourceUsage(
           RESOURCE_TYPE_ENDPOINT,
           "POST_agency_msg",
-          Option("1.2.3.4"),
+          ipAddress,
           None
         )
         checkUsage(
@@ -30,7 +32,7 @@ class ResourceUsageTrackerSpec
           )
         )
         checkUsage(
-          "1.2.3.4",
+          ipAddress,
           ResourceUsages(
             Map (
               "POST_agency_msg"->
@@ -50,7 +52,7 @@ class ResourceUsageTrackerSpec
         addUserResourceUsage(
           RESOURCE_TYPE_ENDPOINT,
           "POST_agency_msg",
-          Option("1.2.3.4"),
+          ipAddress,
           None
         )
         checkUsage(
@@ -67,7 +69,7 @@ class ResourceUsageTrackerSpec
           )
         )
         checkUsage(
-          "1.2.3.4",
+          ipAddress,
           ResourceUsages(
             Map (
               "POST_agency_msg"->
@@ -87,7 +89,7 @@ class ResourceUsageTrackerSpec
         addUserResourceUsage(
           RESOURCE_TYPE_MESSAGE,
           "request",
-          Option("1.2.3.4"),
+          ipAddress,
           Option("owner-1234")
         )
         checkUsage(
@@ -104,7 +106,7 @@ class ResourceUsageTrackerSpec
           )
         )
         checkUsage(
-          "1.2.3.4",
+          ipAddress,
           ResourceUsages(
             Map (
               "request"->
@@ -137,7 +139,7 @@ class ResourceUsageTrackerSpec
         addUserResourceUsage(
           RESOURCE_TYPE_MESSAGE,
           "response",
-          Option("1.2.3.4"),
+          ipAddress,
           Option("owner-1234")
         )
         checkUsage(
@@ -160,7 +162,7 @@ class ResourceUsageTrackerSpec
           )
         )
         checkUsage(
-          "1.2.3.4",
+          ipAddress,
           ResourceUsages(
             Map (
               "request"->

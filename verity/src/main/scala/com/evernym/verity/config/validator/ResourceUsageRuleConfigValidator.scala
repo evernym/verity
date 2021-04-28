@@ -184,10 +184,10 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
 
   def validateUsageRules(c: ResourceUsageRuleConfig): Unit = {
     val ruleNames = Set(
-      GLOBAL_DEFAULT_RULE_NAME,
-      IP_ADDRESS_DEFAULT_RULE_NAME,
-      USER_ID_OWNER_DEFAULT_RULE_NAME,
-      USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME,
+//      GLOBAL_DEFAULT_RULE_NAME,
+//      IP_ADDRESS_DEFAULT_RULE_NAME,
+//      USER_ID_OWNER_DEFAULT_RULE_NAME,
+//      USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME,
       DEFAULT_USAGE_RULE_NAME
     )
     ruleNames.foreach { rn =>

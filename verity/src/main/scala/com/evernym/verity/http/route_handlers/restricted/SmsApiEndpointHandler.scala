@@ -39,7 +39,7 @@ trait SmsApiEndpointHandler extends ResourceUsageCommon { this: HttpRouteWithPla
                   //TODO: this ip based check is temporarily until we have some better way to control it
                   checkIfSmsServiceApiCalledFromAllowedIPAddresses(clientIpAddress)
                   addUserResourceUsage(RESOURCE_TYPE_ENDPOINT,
-                    "POST_agency_sms", Option(clientIpAddress), None)
+                    "POST_agency_sms", clientIpAddress, None)
                   complete {
                     sendSms(msg).map[ToResponseMarshallable] {
                       case Right(_: String) => OK

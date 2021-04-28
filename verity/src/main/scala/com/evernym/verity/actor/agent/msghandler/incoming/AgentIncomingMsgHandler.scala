@@ -85,7 +85,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     senderVerKey match {
       case Some(svk) =>
         if (myDomainAuthedKeys.contains(svk)) Option(domainId).map(OWNER_ID_PREFIX + _)
-        else Option(COUNTERPARTY_ID_PREFIX + state.theirDid.getOrElse(svk))
+        else Some(COUNTERPARTY_ID_PREFIX + state.theirDid.getOrElse(svk))
       case None => None
     }
   }

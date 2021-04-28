@@ -36,7 +36,7 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
 
     pmw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackFormat))
     addUserResourceUsage(RESOURCE_TYPE_ENDPOINT,
-      "POST_agency_msg", pmw.reqMsgContext.clientIpAddress, None)
+      "POST_agency_msg", pmw.reqMsgContext.clientIpAddressReq, None)
     amw.headAgentMsgDetail match {
       // TODO: we need to support another possible qualifier, "http://didcomm.org/".
       // See https://github.com/hyperledger/aries-rfcs/blob/master/features/0348-transition-msg-type-to-https/README.md.

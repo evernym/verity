@@ -46,7 +46,7 @@ trait EndpointHandlerBase
   }
 
   protected def handleGetAgencyIdentity(withDetail: Boolean)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency", Option(clientIpAddress), None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency", clientIpAddress, None)
     complete {
       sendToAgencyAgent(GetLocalAgencyIdentity(withDetail)).map[ToResponseMarshallable] {
         msgResponseHandler

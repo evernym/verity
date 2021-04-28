@@ -43,11 +43,11 @@ trait BaseResourceUsageTrackerSpec
 
   def sendToResourceUsageTracker(resourceType: ResourceType,
                                  resourceName: ResourceName,
-                                 ipAddress: Option[IpAddress],
+                                 ipAddress: IpAddress,
                                  userIdOpt: Option[UserId],
                                  restartActorBefore: Boolean=false): Unit = {
     if (restartActorBefore) {
-      (ipAddress ++ userIdOpt).foreach { entityId =>
+      (Option(ipAddress) ++ userIdOpt).foreach { entityId =>
         restartResourceUsageTrackerActor(entityId)
       }
     }

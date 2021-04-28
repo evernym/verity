@@ -230,7 +230,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                                                  isSignalMsg: Boolean): Unit = {
     val respMsgId = getNewMsgId
     //tracking related
-    omc.requestMsgId.foreach { rmId =>
+    omc.requestMsgId.foreach { _ =>
       updateAsyncReqContext(respMsgId, Option(msgType.msgName))
       withReqMsgId{ arc =>
         if (isSignalMsg)
@@ -242,7 +242,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
     //tracking related
     omc.requestMsgId.map(reqMsgId => (reqMsgId, msgRespContext)) match {
-      case Some((rmid, Some(MsgRespContext(_, packForVerKey, Some(sar))))) =>
+      case Some((_, Some(MsgRespContext(_, packForVerKey, Some(sar))))) =>
         // pack the message if needed.
         val updatedOmpFut = threadContext.msgPackFormat match {
           case MPF_PLAIN => Future.successful(omp)
@@ -693,7 +693,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
     sendGenericRespOrPrepareForAsyncResponse(msgEnvelope.msgId.get, senderParticipantId, msgRespConfig)
     //tracing/tracking metrics related
-    msgEnvelope.msgId.foreach { rmId =>
+    msgEnvelope.msgId.foreach { _ =>
       storeAsyncReqContext(tmsg.msgType.msgName, rmc.id, rmc.clientIpAddress)
     }
     recordInMsgTrackingEvent(rmc.id, msgEnvelope.msgId.getOrElse(""), tmsg, None, pair.protoDef)
@@ -819,7 +819,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType.msgName), reqMsgContext.clientIpAddress, userId)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType.msgName),
+      reqMsgContext.clientIpAddressReq, userId)
     senderVerKey.foreach { svk =>
       if (!param.allowedUnauthedMsgTypes.contains(msgType)) {
         AgentMsgProcessor.checkIfMsgSentByAuthedMsgSenders(param.allAuthedKeys, svk)

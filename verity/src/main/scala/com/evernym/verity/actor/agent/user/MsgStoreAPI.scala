@@ -34,7 +34,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleGetMsgs", "UserAgentCommon") {
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_GET_MSGS, reqMsgContext.clientIpAddress, userId)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_GET_MSGS, reqMsgContext.clientIpAddressReq, userId)
       val gmr = GetMsgsMsgHelper.buildReqMsg(amw)
       logger.debug("get msgs request: " + gmr)
       val allMsgs = msgStore.getMsgs(gmr)
@@ -74,7 +74,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   def handleUpdateMsgStatus(amw: AgentMsgWrapper)
                            (implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_MSG_STATUS, reqMsgContext.clientIpAddress, userId)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_MSG_STATUS, reqMsgContext.clientIpAddressReq, userId)
     val ums = UpdateMsgStatusMsgHelper.buildReqMsg(amw)
     val updatedMsgIds = handleUpdateMsgStatusBase(ums)
     val msgStatusUpdatedRespMsg = UpdateMsgStatusMsgHelper.buildRespMsg(updatedMsgIds,

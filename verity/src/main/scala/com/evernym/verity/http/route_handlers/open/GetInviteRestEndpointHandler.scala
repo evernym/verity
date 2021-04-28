@@ -97,7 +97,7 @@ trait GetInviteRestEndpointHandler
   }
 
   protected def handleGetInviteByTokenReq(token: String)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", Option(clientIpAddress), None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", clientIpAddress, None)
     complete {
       getInviteDetailByToken(token).map[ToResponseMarshallable] {
         getInviteMsgResponseHandler
@@ -106,7 +106,7 @@ trait GetInviteRestEndpointHandler
   }
 
   protected def handleGetInviteByDIDAndUidReq(DID: DID, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", Option(clientIpAddress), None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", clientIpAddress, None)
     complete {
       getInviteDetailByDIDAndUid(DID, uid).map[ToResponseMarshallable] {
         getInviteMsgResponseHandler
@@ -115,7 +115,7 @@ trait GetInviteRestEndpointHandler
   }
 
   protected def handleGetInvitationAries(base64inv: String)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", Option(clientIpAddress), None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", clientIpAddress, None)
     complete {
         getInviteMsgResponseHandler(decodeAriesInvitation(base64inv))
     }

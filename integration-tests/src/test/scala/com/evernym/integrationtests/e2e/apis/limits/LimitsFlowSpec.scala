@@ -45,6 +45,8 @@ class LimitsFlowSpec
 
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
+  
+  val limitsCredDefName = "creds_for_limits"
 
   val longAttrList = (1 to 125).map(i => s"attrib$i")
 
@@ -169,6 +171,26 @@ class LimitsFlowSpec
       ledgerUtil
     )
 
+    val limitsSchema = "something"+UUID.randomUUID().toString.substring(0, 8)
+
+    writeSchema(
+      sdk,
+      ledgerUtil,
+      limitsSchema,
+      "0.1",
+      (0 to 9).map(i => s"attr$i") : _*
+    )
+
+    writeCredDef(
+      sdk,
+      limitsCredDefName,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      limitsSchema,
+      "0.1",
+      ledgerUtil
+    )
+
     // todo this is error cases
     val schemaName3 = "tooMayAttrs"+UUID.randomUUID().toString.substring(0, 8)
     val attrList3 = (1 to 1000).map(i => s"attrib$i")
@@ -209,6 +231,31 @@ class LimitsFlowSpec
 
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
        GoalCode.ISSUE_VC)
+
+
+    val strBelowLimit ="1234567890"*2200
+    val strAboveLimit ="1234567890"*7000
+
+    issueCredential_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      (0 to 9).map{i=> s"attr$i" -> strBelowLimit}.toMap,
+      limitsCredDefName,
+      "tag"
+    )
+
+    val issuerSdk = apps(verity1).sdks.head
+    val holderSdk = apps(cas1).sdks.head
+    issueCredential_1_0_expectingError(
+      issuerSdk,
+      holderSdk,
+      connectionId,
+      (0 to 9).map{i=> s"attr$i" -> strAboveLimit}.toMap,
+      limitsCredDefName,
+      "tag",
+      "Payload size is too big"
+    )
 
     // large amount of attrs
     val longAttrsMap = longAttrList.map( attr => attr -> "someValue" ).toMap
@@ -288,7 +335,7 @@ class LimitsFlowSpec
       longStringAboveLimit,
       Seq("Ok", "Not ok"),
       requireSig = true,
-      "Payload is too big"
+      "Payload size is too big"
     )
 
     val longSeqAboveLimit = (0 to 5000).map(i => s"answer$i")
@@ -300,7 +347,7 @@ class LimitsFlowSpec
       "Description",
       longSeqAboveLimit,
       requireSig = true,
-      "Payload is too big"
+      "Payload size is too big"
     )
 
     val longAnswerAboveLimit = "1234567890"*25000
@@ -312,7 +359,7 @@ class LimitsFlowSpec
       "Description",
       Seq(longAnswerAboveLimit),
       requireSig = true,
-      "Payload is too big"
+      "Payload size is too big"
     )
 
     /*presentProof_1_0_with_proposal(

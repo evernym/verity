@@ -60,7 +60,7 @@ trait ListeningSdkProvider extends MsgReceiver {
    val logger2: Logger = getLoggerByName("ListeningSdkProvider") // todo temporary logging
 
   def receiveMsg(msg: JSONObject): Unit = {
-    logger2.error ("Got problem msg: " + msg.toString)
+    logger2.error ("Got problem msg: " + msg.toString.take(1000))
     queue.offerFirst(msg)
   }
 

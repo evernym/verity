@@ -20,7 +20,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
-import com.evernym.verity.config.CommonConfig.{USAGE_RULES, VIOLATION_ACTION}
+import com.evernym.verity.config.CommonConfig.USAGE_RULES
 
 import scala.concurrent.Future
 
@@ -147,19 +147,13 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
               val customAllowedCount: Option[Int] = resourceUsageTracker.getCustomLimit(aru.resourceName, bucketId)
               val allowedCount = customAllowedCount.getOrElse(bucketRule.allowedCount)
               if (actualCount >= allowedCount) {
-                val rulePath =
-                  s"""$USAGE_RULES.${
-                    if (customAllowedCount.isDefined) "custom-limit" else ruleName
-                  }.${
-                    ResourceUsageRuleHelper.getHumanReadableResourceType(aru.resourceType)
-                  }.${aru.resourceName}"""
-                val actionPath = VIOLATION_ACTION
-                val vr = ViolatedRule(entityId, aru.resourceName, bucketRule, actualCount, rulePath, bucketId, actionPath)
+                val rulePath = ResourceUsageTracker.violationRulePath(entityId, aru.resourceType, aru.resourceName, customAllowedCount)
+                val vr = ViolatedRule(entityId, aru.resourceName, rulePath, bucketId, bucketRule, actualCount)
                 try {
                   actionExecutor.execute(bucketRule.violationActionId, vr)(self)
                 } catch {
                   case e: Exception =>
-                    logger.info(s"[$entityId] error while executing resource usage violation action: $vr, error: ${e.getMessage}")
+                    logger.warn(s"[$entityId] error while executing resource usage violation action: $vr, error: ${e.getMessage}")
                 }
               }
             }
@@ -181,8 +175,8 @@ object ResourceUsageTracker {
    * @param entityId an entity id being tracked
    * @param resourceName a resource name being tracked
    */
-  private def checkIfUsageIsBlocked(entityId: EntityId,
-                                    resourceName: ResourceName): Unit = {
+  def checkIfUsageIsBlocked(entityId: EntityId,
+                            resourceName: ResourceName): Unit = {
     val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(entityId)
     if (isBlacklisted) {
       throw new BadRequestErrorException(USAGE_BLOCKED.statusCode, Option("usage blocked"))
@@ -232,6 +226,18 @@ object ResourceUsageTracker {
 
   def sendToResourceUsageTracker(entityId: EntityId, cmd: Any)(rut: ActorRef): Unit = {
     rut.tell(ForIdentifier(entityId, cmd), Actor.noSender)
+  }
+
+  def violationRulePath(entityId: EntityId,
+                        resourceType: ResourceType,
+                        resourceName: ResourceName,
+                        customAllowedCount: Option[Int]): String = {
+    val ruleName = getRuleNameByEntityId(entityId)
+    s"""$USAGE_RULES.${
+      if (customAllowedCount.isDefined) "custom-limit" else ruleName
+    }.${
+      ResourceUsageRuleHelper.getHumanReadableResourceType(resourceType)
+    }.${resourceName}"""
   }
 }
 

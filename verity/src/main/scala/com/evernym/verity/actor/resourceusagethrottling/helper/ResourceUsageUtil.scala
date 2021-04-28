@@ -27,9 +27,6 @@ object ResourceUsageUtil {
     else Option(startDateTime.plusSeconds(periodInSeconds))
   }
 
-  val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
-  val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
-
   val USER_ID_OWNER_REGEX: Regex = s"($OWNER_ID_PREFIX)(.+)".r
   val USER_ID_COUNTERPARTY_REGEX: Regex = s"($COUNTERPARTY_ID_PREFIX)(.+)".r
   val USER_ID_REGEX: Regex = s"($OWNER_ID_PREFIX|$COUNTERPARTY_ID_PREFIX)(.+)".r

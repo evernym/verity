@@ -1,8 +1,7 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{WarnCaller, WarnResourceForCaller}
@@ -19,8 +18,19 @@ import com.evernym.verity.util.Util._
 import com.typesafe.scalalogging.Logger
 
 
-case class ViolatedRule(entityId: String, resourceName: String, bucketRule: BucketRule,
-                        actualCount: Int, rulePath: String, bucketId: Int, actionPath: String)
+class UsageViolationActionExecutor(val as: ActorSystem, appConfig: AppConfig)
+  extends UsageViolationActionExecutorBase {
+  //keep adding different supported action here
+  override lazy val singletonParentProxyActor: Option[ActorRef] = Option(getActorRefFromSelection(SINGLETON_PARENT_PROXY, as)(appConfig))
+  override lazy val instructions: Set[Instruction] = buildInstructions()
+}
+
+
+case class ViolatedRule(entityId: String, resourceName: String, rulePath: String,
+                        bucketId: Int, bucketRule: BucketRule, actualCount: Int) {
+
+  val actionPath: String = VIOLATION_ACTION
+}
 
 trait InstructionDetailValidator {
   def instructionName: String
@@ -52,7 +62,7 @@ trait Instruction {
           v.validate(s"$VIOLATION_ACTION.$actionId.${v.instructionName}.${v.keyName}", f)
         case None =>
           if (v.isRequired) {
-            throw new BadRequestErrorException(VALIDATION_FAILED.statusCode, Option(
+            throw new MissingReqFieldException(Option(
               s"$VIOLATION_ACTION.$actionId.${v.instructionName}.${v.keyName} is required key and not configured"))
           }
       }
@@ -95,7 +105,7 @@ object LogLevelValidator extends InstructionDetailValidator {
   def validate(keyPath: String, value: Any): Unit = {
     value match {
       case "trace"| "debug" | "info" | "warn" | "error" =>
-      case _ => throw new BadRequestErrorException(VALIDATION_FAILED.statusCode, Option(
+      case _ => throw new InvalidValueException(Option(
         s"$keyPath has invalid value: $value"))
     }
   }
@@ -109,26 +119,26 @@ class PeriodValidator(val instructionName: String, val required: Boolean = true)
     try {
       value.toString.toInt match {
         case v if v >= -1 =>
-        case _ => throw new BadRequestErrorException(VALIDATION_FAILED.statusCode, Option(
+        case _ => throw new InvalidValueException(Option(
           s"$keyPath contains unsupported value: $value"))
       }
     } catch {
       case _: NumberFormatException =>
-        throw new BadRequestErrorException(VALIDATION_FAILED.statusCode, Option(
+        throw new InvalidValueException(Option(
           s"$keyPath contains non numeric value: $value"))
     }
   }
 }
 
-class TrackByValidator(val instructionName: String, val required: Boolean = true) extends InstructionDetailValidator {
+class EntityTypesValidator(val instructionName: String, val required: Boolean = true) extends InstructionDetailValidator {
   val keyName = "entity-types"
   val _required: Boolean = required
 
   def validate(keyPath: String, value: Any): Unit = {
     value match {
-      case "global" | "ip" | "user" =>
-      case _ => throw new BadRequestErrorException(VALIDATION_FAILED.statusCode, Option(
-        s"$keyPath has invalid value: $value"))
+      case "global" | "ip" | "user" | "user-owner" | "user-counterparty" =>
+      case _ => throw new InvalidValueException(Option(
+        s"$keyPath contains unsupported value: $value"))
     }
   }
 }
@@ -137,7 +147,7 @@ object LogMsgInstruction extends Instruction {
 
   val logger: Logger = getLoggerByName("LogMsgInstruction")
   override val name: String = LOG_MSG_INSTRUCTION
-  override val validators = Set(LogLevelValidator, new TrackByValidator(name, required = false))
+  override val validators = Set(LogLevelValidator, new EntityTypesValidator(name, required = false))
 
   sealed trait LogMsgInstructionMessages
   case class ResourceUsageViolationWarning(entityID: String, resourceName: String) extends LogMsgInstructionMessages
@@ -173,7 +183,7 @@ object LogMsgInstruction extends Instruction {
 class WarnResourceInstruction(val spar: ActorRef) extends Instruction {
   val logger: Logger = getLoggerByName("WarnResourceInstruction")
   override val name: String = WARN_RESOURCE_INSTRUCTION
-  override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
+  override val validators = Set(new PeriodValidator(name), new EntityTypesValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
     val (entityId, warnPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
@@ -186,7 +196,7 @@ class WarnResourceInstruction(val spar: ActorRef) extends Instruction {
 class WarnUserInstruction(val spar: ActorRef) extends Instruction {
   val logger: Logger = getLoggerByName("WarnUserInstruction")
   override val name: String = WARN_ENTITY_INSTRUCTION
-  override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
+  override val validators = Set(new PeriodValidator(name), new EntityTypesValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
     val (entityId, warnPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
@@ -197,7 +207,7 @@ class WarnUserInstruction(val spar: ActorRef) extends Instruction {
 class BlockResourceInstruction(val spar: ActorRef) extends Instruction {
   val logger: Logger = getLoggerByName("BlockResourceInstruction")
   override val name: String = BLOCK_RESOURCE_INSTRUCTION
-  override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
+  override val validators = Set(new PeriodValidator(name), new EntityTypesValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
     val (entityId, blockPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
@@ -210,7 +220,7 @@ class BlockResourceInstruction(val spar: ActorRef) extends Instruction {
 class BlockUserInstruction(val spar: ActorRef) extends Instruction {
   val logger: Logger = getLoggerByName("BlockUserInstruction")
   override val name: String = BLOCK_ENTITY_INSTRUCTION
-  override val validators = Set(new PeriodValidator(name), new TrackByValidator(name))
+  override val validators = Set(new PeriodValidator(name), new EntityTypesValidator(name))
 
   override def execute(violatedRule: ViolatedRule, actionDetail: InstructionDetail)(implicit sender: ActorRef): Unit = {
     val (entityId, blockPeriodInSec) = buildTrackingData(violatedRule, actionDetail)
@@ -252,12 +262,4 @@ trait UsageViolationActionExecutorBase {
 class UsageViolationActionExecutorValidator extends UsageViolationActionExecutorBase {
   override lazy val singletonParentProxyActor: Option[ActorRef] = Some(ActorRef.noSender)
   override lazy val instructions: Set[Instruction] = buildInstructions()
-}
-
-class UsageViolationActionExecutor(val as: ActorSystem, appConfig: AppConfig)
-  extends UsageViolationActionExecutorBase {
-  //keep adding different supported action here
-  override lazy val singletonParentProxyActor: Option[ActorRef] = Option(getActorRefFromSelection(SINGLETON_PARENT_PROXY, as)(appConfig))
-  override lazy val instructions: Set[Instruction] = buildInstructions()
-
 }

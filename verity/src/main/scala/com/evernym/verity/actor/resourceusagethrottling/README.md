@@ -8,8 +8,8 @@
 A tracking item. For now there are four types of entities:
   * global: There will be one instance of this entity in a verity cluster.
   * <ip-address>: There can be many instances (each of one ip address) of this type of entity in a verity cluster.
-  * owner-<userid>: There can be many instances of this type of entity in a verity cluster.
-  * counterparty-<userid>: There can be many instances of this type of entity in a verity cluster.
+  * owner-\<userid>: There can be many instances of this type of entity in a verity cluster.
+  * counterparty-\<userid>: There can be many instances of this type of entity in a verity cluster.
 
 ### Resource
 An item to be tracked. As of now there are two different types of resources being tracked:
@@ -48,14 +48,14 @@ A violation action consists one or many tasks. Here is an example of how a viola
 }
 ```
 
-There are below mentioned supported tasks:
+There are below mentioned supported instruction:
   * **log-msg**: to log a violation message with configured log level
   * **warn-resource**: put an entity for a given resource usage on warning list before it gets blocked.
   * **warn-entity**: put an entity for any resource usage in a warning list
   * **block-resource**: put an entity for a given resource usage on blocking list
   * **block-entity**: put an entity for any resource usage in a blocking list
 
-In each task, there is a field called `entity-types` which can take different comma separated 
+In each instruction, there can be a field called `entity-types` which can take different comma separated 
 entity types ('global', 'ip', 'user', 'user-owner', 'user-counterparty'). If `entity-types` is defined that task will only 
 be executed if the tracked entity's type is one of those defined entity types.
 

@@ -246,17 +246,33 @@ trait UsageViolationActionExecutorBase {
     Set(LogMsgInstruction) ++ singletonDependentInstructions
   }
 
-  def execute(actionId: String, violatedRule: ViolatedRule)(implicit sender: ActorRef): Unit = {
-    ResourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId).foreach { ar =>
-      ar.instructions.foreach { case (instructionName, instructionDetail) =>
-        instructions.find(_.name == instructionName).foreach { i: Instruction =>
-          if (i.isOkToExecuteInstruction(violatedRule.entityId, instructionDetail)) {
-            i.execute(violatedRule, instructionDetail)
-          }
+  private def filterTasksToBeExecuted(actionId: String, violatedRule: ViolatedRule)
+                             (implicit sender: ActorRef): Map[Instruction, InstructionDetail] = {
+    ResourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId) match {
+      case Some (ar) =>
+        ar.instructions.flatMap { case (instructionName, instructionDetail) =>
+          instructions.find(_.name == instructionName).map { i: Instruction =>
+            if (i.isOkToExecuteInstruction(violatedRule.entityId, instructionDetail)) {
+              Map(i -> instructionDetail)
+            } else Map.empty[Instruction, InstructionDetail]
+          }.getOrElse(Map.empty[Instruction, InstructionDetail])
         }
-      }
+      case None =>
+        Map.empty[Instruction, InstructionDetail]
     }
   }
+
+  def execute(actionId: String, violatedRule: ViolatedRule)(implicit sender: ActorRef): TasksExecuted = {
+    val tasksToBeExecuted = filterTasksToBeExecuted(actionId, violatedRule)
+    var executedCount = 0
+    tasksToBeExecuted.foreach { case (i, instructionDetail) =>
+      i.execute(violatedRule, instructionDetail)
+      executedCount += 1
+    }
+    executedCount
+  }
+
+  type TasksExecuted = Int
 }
 
 class UsageViolationActionExecutorValidator extends UsageViolationActionExecutorBase {

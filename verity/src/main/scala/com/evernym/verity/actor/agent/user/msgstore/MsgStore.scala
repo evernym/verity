@@ -287,8 +287,8 @@ class MsgStore(appConfig: AppConfig,
   private lazy val isStateMessagesCleanupEnabled: Boolean =
     appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
 
-  private lazy val getMsgsLimit: Integer =
-    appConfig.getConfigIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(92000)
+  private lazy val getMsgsLimit: Int =
+    appConfig.getConfigIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(920000)
 }
 
 trait MsgStateAPIProvider {

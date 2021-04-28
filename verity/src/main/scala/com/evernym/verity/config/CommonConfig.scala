@@ -25,6 +25,7 @@ trait CommonConfig {
   val KEYSTORE_PASSWORD = s"$KEYSTORE.password"
 
   private val SERVICES = s"$VERITY.services"
+  val MSG_LIMITS = s"$VERITY.messages.limits"
 
   val PUSH_NOTIF = s"$SERVICES.push-notif-service"
   val PUSH_NOTIF_ENABLED = s"$PUSH_NOTIF.enabled"

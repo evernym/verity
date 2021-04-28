@@ -259,7 +259,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                   schemaAttrs: String*)
                  (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
-    s"write schema on $issuerName" - {
+    s"write schema $schemaName on $issuerName" - {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
@@ -674,6 +674,31 @@ trait InteractiveSdkFlow extends MetricsFlow {
           resp shouldBe an[JSONObject]
           resp.getString("@type") should (be (s"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/$expectedSignalMsgName") or be (s"https://didcomm.evernym.com/relationship/1.0/$expectedSignalMsgName"))
         }
+      }
+    }
+  }
+
+  def issueCredential_1_0_expectingError(issuerSdk: VeritySdkProvider, // todo rename
+                                         holderSdk: VeritySdkProvider,
+                                         relationshipId: String,
+                                         credValues: Map[String, String],
+                                         credDefName: String,
+                                         credTag: String,
+                                         errorMessage: String)
+                                        (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    val holderName = holderSdk.sdkConfig.name
+    s"issue credential (1.0) to $holderName from $issuerName on relationship ($relationshipId) expecting error" - {
+
+      s"[$issuerName] send a credential offer expecting error" in {
+        val forRel = issuerSdk.relationship_!(relationshipId).owningDID
+        val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
+
+        val issueCred = issuerSdk.issueCredential_1_0(forRel, credDefId, credValues, "comment-123", "0")
+        val ex = intercept[Exception] {
+          issueCred.offerCredential(issuerSdk.context)
+        }
+        ex.getMessage should include(errorMessage)
       }
     }
   }

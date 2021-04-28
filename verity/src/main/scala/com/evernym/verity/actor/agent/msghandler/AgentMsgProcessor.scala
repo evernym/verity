@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
@@ -28,6 +27,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig.MSG_LIMITS
 import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_MESSAGE, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
@@ -46,6 +46,7 @@ import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -639,7 +640,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         }
 
       val senderPartiId = param.senderParticipantId(imp.senderVerKey)
-
+      validateMsg(imp, msgToBeSent)
       if (forRelationship.isDefined && forRelationship != param.relationshipId) {
         forRelationship.foreach { relId =>
           val msgForRel = MsgForRelationship(domainId, msgToBeSent.msg, threadId, senderPartiId,
@@ -656,6 +657,22 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         )
       }
     } catch protoExceptionHandler
+  }
+
+  private def validateMsg(imp: IncomingMsgParam, msg: TypedMsg): Unit = {
+    getLimitForMsgType(msg.msgType).foreach { limit =>
+      registeredProtocols.protoDefForMsg(msg).foreach(protoDef =>
+        protoDef.msgFamily.validateMessage(imp.givenMsg, limit) match {
+          case Left(errorMsg) => throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option(errorMsg))
+          case Right(_) =>
+        }
+      )
+    }
+  }
+
+  private def getLimitForMsgType(msgType: MsgType): Option[Config] = {
+    // TODO: this method uses config look-up every time message is received
+    appConfig.getConfigOption(s"$MSG_LIMITS.${msgType.familyName}")
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):

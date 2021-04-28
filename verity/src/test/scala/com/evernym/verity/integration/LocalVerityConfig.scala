@@ -24,7 +24,7 @@ object LocalVerityConfig {
       s"""
          |verity.http.port = ${ports.http}
          |akka.remote.artery.canonical.port = ${ports.artery}
-         |akka.cluster.seed-nodes = ["akka://verity@localhost:${ports.artery}"]
+         |akka.cluster.seed-nodes = ["akka://verity@127.0.1.1:${ports.artery}"]
          |akka.management.http.port = ${ports.akka_management}
       """.stripMargin
     )
@@ -55,6 +55,16 @@ object LocalVerityConfig {
     ConfigFactory.parseString(
       s"""
          |$LIB_INDY_LEDGER_POOL_NAME = "verity-pool"
+         |""".stripMargin
+    )
+  }
+
+  private def akkaConfig() = {
+    ConfigFactory.parseString(
+      s"""
+         |akka.actor.provider = cluster
+         |akka.http.server.remote-address-header = on
+         |akka.cluster.jmx.multi-mbeans-in-same-jvm = on
          |""".stripMargin
     )
   }
@@ -98,6 +108,7 @@ object LocalVerityConfig {
       turnOffWarnings(),
       messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),
+      akkaConfig(),
       ConfigFactory.load()
     )
     val t = parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())

@@ -231,6 +231,7 @@ trait UserAgentCommon
   }
 
   override def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
+    // flow diagram: fwd.edge, step 11 -- Queue msg for delivery to edge.
     logger.debug("about to send stored msg to my domain (edge): " + msgId)
     self ! SendStoredMsgToMyDomain(msgId)
   }

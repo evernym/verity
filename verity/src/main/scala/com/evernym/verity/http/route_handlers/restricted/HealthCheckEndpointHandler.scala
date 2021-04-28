@@ -77,43 +77,33 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
             extractRequest { implicit req: HttpRequest =>
               extractClientIP { implicit remoteAddress =>
                 checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-                  path("config") {
+                  path("application-state") {
                     (get & pathEnd) {
-                      parameters('originComments ? "N", 'comments ? "N", 'formatted ? "Y", 'json ? "Y", 'path.?) {
-                        (origComments, comments, formatted, json, pathOpt) =>
-                          complete {
-                            getConfigs(origComments, comments, formatted, json, pathOpt).map[ToResponseMarshallable] { s => s }
+                      parameters('detail.?) { detailOpt =>
+                        complete {
+                          val fut = if (detailOpt.map(_.toUpperCase).contains(YES)) {
+                            askAppStateManager(GetDetailedAppState)
+                          } else {
+                            askAppStateManager(GetEvents)
                           }
+                          fut.map[ToResponseMarshallable] {
+                            case allEvents: AllEvents =>
+                              handleExpectedResponse(allEvents.events.map(x => s"${x.state.toString}"))
+                            case detailedState: AppStateDetailed =>
+                              handleExpectedResponse(detailedState.toResp)
+                            case e => handleUnexpectedResponse(e)
+                          }
+                        }
                       }
-                    }
-                  } ~
-                    path("application-state") {
-                      (get & pathEnd) {
-                        parameters('detail.?) { detailOpt =>
-                          complete {
-                            val fut = if (detailOpt.map(_.toUpperCase).contains(YES)) {
-                              askAppStateManager(GetDetailedAppState)
-                            } else {
-                              askAppStateManager(GetEvents)
-                            }
-                            fut.map[ToResponseMarshallable] {
-                              case allEvents: AllEvents =>
-                                handleExpectedResponse(allEvents.events.map(x => s"${x.state.toString}"))
-                              case detailedState: AppStateDetailed =>
-                                handleExpectedResponse(detailedState.toResp)
-                              case e => handleUnexpectedResponse(e)
-                            }
+                    } ~
+                      (put & pathEnd & optionalEntityAs[UpdateAppStatus]) { uasOpt =>
+                        complete {
+                          updateAppStatus(uasOpt.getOrElse(UpdateAppStatus())).map[ToResponseMarshallable] {
+                            _ => OK
                           }
                         }
-                      } ~
-                        (put & pathEnd & optionalEntityAs[UpdateAppStatus]) { uasOpt =>
-                          complete {
-                            updateAppStatus(uasOpt.getOrElse(UpdateAppStatus())).map[ToResponseMarshallable] {
-                              _ => OK
-                            }
-                          }
-                        }
-                    }
+                      }
+                  }
               }
             }
           }

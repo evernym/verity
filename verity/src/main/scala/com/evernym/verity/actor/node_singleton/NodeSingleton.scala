@@ -11,7 +11,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warnin
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr, NodeAddedToClusterSingleton}
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
@@ -34,10 +34,10 @@ class NodeSingleton(val appConfig: AppConfig)
   def receiveCmd: Receive = {
 
     case NodeAddedToClusterSingleton =>
-      logger.info(s"configuration refresh started...")
+      logger.info(s"sending blocked/warned started...")
       sendGetBlockingList(sender)
       sendGetWarningList(sender)
-      logger.info(s"configuration refresh started...")
+      logger.info(s"sending blocked/warned done !!")
 
     case RefreshNodeConfig =>
       logger.info(s"configuration refresh started...")
@@ -52,8 +52,9 @@ class NodeSingleton(val appConfig: AppConfig)
         appConfig.setConfig(newConfig.withFallback(appConfig.config))
         sender ! NodeConfigRefreshed
         logger.info(s"configuration override done !!")
-      } finally {
-
+      } catch {
+        case e: Throwable =>
+        logger.error("configuration override failed: " + e.getMessage)
       }
 
     case getNodeMetrics: GetNodeMetrics =>

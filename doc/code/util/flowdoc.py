@@ -266,5 +266,5 @@ def generate(flows, path):
 
 
 if __name__ == '__main__':
-    flows = collect('../../verity/src/main/scala/com/evernym/verity/')
-    generate(flows, '../')
+    flows = collect('../../../verity/src/main/scala/com/evernym/verity/')
+    generate(flows, '../flows/')

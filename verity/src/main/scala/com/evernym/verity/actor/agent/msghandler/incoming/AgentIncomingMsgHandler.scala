@@ -21,6 +21,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   def agentIncomingCommonCmdReceiver[A]: Receive = {
 
     //edge agent -> agency routing service -> this actor
+    // flow diagram: fwd + ctl + proto + legacy, step 6 -- Received by agent actor.
     case ppm: ProcessPackedMsg if isReadyToHandleIncomingMsg
                                           => sendToAgentMsgProcessor(ppm)
 
@@ -62,7 +63,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
           dm.forRel match {
             case Some(rel) =>
               val tc = psm.threadContextDetail
-              val msgForRel = MsgForRelationship(dm.msg, psm.threadId, selfParticipantId,
+              val msgForRel = MsgForRelationship(domainId, dm.msg, psm.threadId, selfParticipantId,
                 Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
               agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
             case None =>

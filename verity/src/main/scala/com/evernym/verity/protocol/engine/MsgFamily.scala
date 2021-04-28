@@ -1,7 +1,13 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.actor.agent.msghandler.incoming.ProcessRestMsg
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.{InvalidMsgQualifierException, MsgTypeParsingException, UnrecognizedMsgQualifierException}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.protocol.engine.MsgFamily.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
+import com.typesafe.config.Config
+import com.typesafe.scalalogging.Logger
 
 import scala.util.matching.Regex
 
@@ -17,6 +23,10 @@ object MsgFamily {
 
   val VALID_MESSAGE_TYPE_REG_EX_HTTP: Regex = "(https)://(.*)/(.*)/(.*)/(.*)".r
   val VALID_MESSAGE_TYPE_REG_EX_DID: Regex = "did:(.*):(.*);spec/(.*)/(.*)/(.*)".r
+
+  val PAYLOAD_ERROR = "Payload size is too big"
+  val REST_LIMIT = "rest-limit"
+  val PACKED_MSG_LIMIT = "packed-msg-limit"
 
   def msgQualifierFromQualifierStr(qualifier: String): MsgFamilyQualifier = {
     qualifier match {
@@ -86,6 +96,7 @@ trait MsgFamily {
   protected val signalMsgs: Map[Class[_], MsgName] = Map.empty
 
   lazy val protoRef = ProtoRef(name, version)
+  lazy val logger: Logger = getLoggerByClass(getClass)
 
   private lazy val protocolMsgsReversed: Map[Class[_], MsgName] = protocolMsgs map (_.swap)
   private lazy val controlMsgsReversed: Map[Class[_], MsgName] = controlMsgs map (_.swap)
@@ -125,6 +136,31 @@ trait MsgFamily {
     else if (signalMsgs.map(_.swap).contains(msgName)) Option("Sig")
     else None
   }
+  def validateMessage(msg: Any, limitConfig: Config): Either[String, Unit] = {
+    logger.debug(s"Using default validation for ${this.getClass.getName}")
+    val isValid = msg match {
+      case amw: AgentMsgWrapper =>
+        if (limitConfig.hasPath(PACKED_MSG_LIMIT)) {
+          val limitMsg = limitConfig.getInt(PACKED_MSG_LIMIT)
+          amw.agentBundledMsg.msgs.map(it => it.msg.length).sum < limitMsg
+        } else {
+          logMissingConfig(PACKED_MSG_LIMIT)
+          true
+        }
+      case rmp: ProcessRestMsg =>
+        if (limitConfig.hasPath(REST_LIMIT)) {
+          val limitRest = limitConfig.getInt(REST_LIMIT)
+          rmp.msg.length() < limitRest
+        } else {
+          logMissingConfig(REST_LIMIT)
+          true
+        }
+    }
+    if (isValid) Right(Unit) else Left(PAYLOAD_ERROR)
+  }
+
+  def logMissingConfig(configName: String): Unit = logger.warn(s"'$configName' was not found in limits config.")
+
 }
 
 /** Provides information which is needed during outgoing message flow (during packaging of the message)

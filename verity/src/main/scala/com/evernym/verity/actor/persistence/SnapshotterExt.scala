@@ -129,6 +129,7 @@ trait SnapshotterExt[S <: verity.actor.State] extends Snapshotter { this: BasePe
         case x => throw new RuntimeException("snapshot state type not supported: " + x.getClass)
       }
       receiveSnapshot(state)
+      isAnySnapshotApplied = true
   }
 
   /**

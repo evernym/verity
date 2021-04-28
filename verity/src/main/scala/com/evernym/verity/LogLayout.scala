@@ -1,14 +1,13 @@
 package com.evernym.verity
 
-import java.time.format.DateTimeFormatterBuilder
-import java.time.{Instant, ZoneId, ZonedDateTime}
-
 import ch.qos.logback.classic.PatternLayout
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.CoreConstants.LINE_SEPARATOR
 import ch.qos.logback.core.LayoutBase
 import com.evernym.verity.util.OptionUtil
 
+import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.JavaConverters._
 
 /**
@@ -62,7 +61,7 @@ class LogLayout extends LayoutBase[ILoggingEvent] {
     val timestamp = resolveDateTime(event)
     val threadName = safeGet(event.getThreadName)
     val level = safeGet(event.getLevel)
-    val msg = escapeQuotes(safeGet(event.getFormattedMessage))
+    val msg = cleanValueStr(safeGet(event.getFormattedMessage))
     val logger = resolveLogger(event)
     val source = resolveSource(event)
     val args = resolveArgs(event)
@@ -82,7 +81,7 @@ class DevLogLayout extends LayoutBase[ILoggingEvent] {
 
   val pattern = "[%highlight(%-5le)] [%magenta(%d{HH:mm:ss.SSS})] [%yellow(%10.15t)] [%cyan(%lo{25}:%M:%L)] -- %msg"
 
-  lazy val patternedLayout = {
+  private lazy val patternedLayout = {
     val layout = new PatternLayout()
     layout.setPattern(pattern)
     layout.setContext(this.getContext)
@@ -97,7 +96,8 @@ class DevLogLayout extends LayoutBase[ILoggingEvent] {
       s"[$args]"
     } else ""
 
-    s"${patternedLayout.doLayout(event)} $argsFormatted$LINE_SEPARATOR"
+    val log = removeNewLines(patternedLayout.doLayout(event))
+    s"$log $argsFormatted$LINE_SEPARATOR"
   }
 }
 
@@ -155,9 +155,15 @@ object LogLayout {
     )
   }
 
-  def escapeQuotes(arg: String) = arg.replace("\"", "'")
+  def cleanValueStr(arg: String): String = removeNewLines(arg)
+    .replace("\"", "'")
+
+  def removeNewLines(arg: String): String = arg
+    .replace("\r", "")
+    .replace("\n", "")
+
   def tupleStr(arg1: String, arg2: Any): String = {
-    s"""$arg1="${escapeQuotes(arg2.toString)}""""
+    s"""$arg1="${cleanValueStr(arg2.toString)}""""
   }
 
   def safeGet(f: => Any): String = {
@@ -173,7 +179,7 @@ object LogLayout {
   val LOG_KEY_SOURCE = "src"
   val LOG_KEY_MESSAGE = "msg"
 
-  val dateTimeFormatter = new DateTimeFormatterBuilder()
+  val dateTimeFormatter: DateTimeFormatter = new DateTimeFormatterBuilder()
     .appendInstant(3)
     .appendLiteral('[')
     .appendZoneRegionId()

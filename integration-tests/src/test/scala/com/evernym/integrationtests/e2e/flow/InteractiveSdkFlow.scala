@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.flow
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof}
@@ -14,7 +14,6 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -1274,7 +1273,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                       answer: String,
                       requireSig: Boolean)
                       (implicit scenario: Scenario): Unit = {
-    s"ask committed answer to ${responder.name} from ${questioner.name}" - {
+    s"ask committed answer to ${responder.name} from ${questioner.name} for question '$question'" - {
       val questionerSdk = receivingSdk(questioner)
       val responderSdk = receivingSdk(responder)
 
@@ -1322,6 +1321,30 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       }
 
+    }
+  }
+
+  def committedAnswerWithError(questioner: ApplicationAdminExt,
+                      responder: ApplicationAdminExt,
+                      relationshipId: String,
+                      question: String,
+                      description: String,
+                      answers: Seq[String],
+                      requireSig: Boolean,
+                      expectedError: String)
+                     (implicit scenario: Scenario): Unit = {
+    s"ask committed answer to ${responder.name} from ${questioner.name} awaiting error for question '$question'" - {
+      val questionerSdk = receivingSdk(questioner)
+      val responderSdk = receivingSdk(responder)
+
+      s"[${questioner.name}] ask committed question" in {
+        val forRel = questionerSdk.relationship_!(relationshipId).owningDID
+        val error = intercept[Exception]{
+          questionerSdk.committedAnswer_1_0(forRel, question, description, answers, requireSig)
+            .ask(questionerSdk.context)
+        }
+        error.getMessage should include(expectedError)
+      }
     }
   }
 

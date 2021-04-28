@@ -241,23 +241,86 @@ class LimitsFlowSpec
       largeProofList
     )
 
+    val longString2 = "1234567890"*24000
+    committedAnswer(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Long description",
+      longString2,
+      Seq("Ok", "Not ok"),
+      "Ok",
+      requireSig = true
+    )
+
+    val longSeq = (0 to 4300).map(i => s"answer$i")
+    committedAnswer(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Multiple answers",
+      "Description",
+      longSeq,
+      "answer0",
+      requireSig = true
+    )
+
+    val longAnswer = "1234567890"*15000
+    committedAnswer(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Long answer",
+      "Description",
+      Seq(longAnswer),
+      longAnswer,
+      requireSig = true
+    )
+
+    //todo specify limits in configuration after merging with !260
+
+    val longStringAboveLimit = "1234567890"*27000
+    committedAnswerWithError(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Long description",
+      longStringAboveLimit,
+      Seq("Ok", "Not ok"),
+      requireSig = true,
+      "Payload is too big"
+    )
+
+    val longSeqAboveLimit = (0 to 5000).map(i => s"answer$i")
+    committedAnswerWithError(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Multiple answers",
+      "Description",
+      longSeqAboveLimit,
+      requireSig = true,
+      "Payload is too big"
+    )
+
+    val longAnswerAboveLimit = "1234567890"*25000
+    committedAnswerWithError(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      "Long answer",
+      "Description",
+      Seq(longAnswerAboveLimit),
+      requireSig = true,
+      "Payload is too big"
+    )
+
     /*presentProof_1_0_with_proposal(
       apps(verity1),
       apps(cas1),
       connectionId,
       "proof-request-1",
       Seq("first_name", "last_name", "license_num")
-    )
-
-    committedAnswer(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "To be or to not be?",
-      "The second classic philosophical questions",
-      Seq("be", "not be"),
-      "be",
-      requireSig = true
     )
 
     basicMessage(

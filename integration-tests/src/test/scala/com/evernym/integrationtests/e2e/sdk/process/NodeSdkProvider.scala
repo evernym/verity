@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
-import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject}
+import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject, sdkErrExitCode}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -349,6 +349,10 @@ async function main () {
     // ==== COMMAND ====
     $cmd
     // =================
+    }
+    catch(ex) {
+      console.error(ex.error)
+      process.exitCode = $sdkErrExitCode
     }
     finally {
         context.closeWallet()

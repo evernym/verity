@@ -46,6 +46,7 @@ class SdkFlowSpec
 
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
+  val limitsCredDefName = "creds_for_limits"
 
   runScenario("sdkFlow") {
 
@@ -83,6 +84,10 @@ class SdkFlowSpec
 
       "basic interaction" - {
         sdkBasicInteractions(apps, ledgerUtil)
+      }
+
+      "basic interaction with message limits" - {
+        sdkBasicInteractionsWithLimits(apps)
       }
 
       "oob interaction" - {
@@ -151,6 +156,71 @@ class SdkFlowSpec
       schemaName,
       "0.1",
       ledgerUtil
+    )
+
+    val limitsSchema = "something"+UUID.randomUUID().toString.substring(0, 8)
+
+    writeSchema(
+      sdk,
+      ledgerUtil,
+      limitsSchema,
+      "0.1",
+      "attr0",
+      "attr1",
+      "attr2",
+      "attr3",
+      "attr4",
+      "attr5",
+      "attr6",
+      "attr7",
+      "attr8",
+      "attr9"
+    )
+
+    writeCredDef(
+      sdk,
+      limitsCredDefName,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      limitsSchema,
+      "0.1",
+      ledgerUtil
+    )
+
+  }
+
+  def sdkBasicInteractionsWithLimits(apps: ScenarioAppEnvironment)(implicit scenario: Scenario): Unit = {
+
+
+    val connectionId = UUID.randomUUID().toString
+
+    connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
+
+    out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
+      GoalCode.ISSUE_VC)
+
+    val strBelowLimit ="1234567890"*2200
+    val strAboveLimit ="1234567890"*7000
+
+    issueCredential_1_0(
+      apps(verity1),
+      apps(cas1),
+      connectionId,
+      (0 to 9).map{i=> s"attr$i" -> strBelowLimit}.toMap,
+      limitsCredDefName,
+      "tag"
+    )
+
+    val issuerSdk = apps(verity1).sdks.head
+    val holderSdk = apps(cas1).sdks.head
+    issueCredential_1_0_expectingError(
+      issuerSdk,
+      holderSdk,
+      connectionId,
+      (0 to 9).map{i=> s"attr$i" -> strAboveLimit}.toMap,
+      limitsCredDefName,
+      "tag",
+      "Payload size is too big"
     )
   }
 

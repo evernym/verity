@@ -60,16 +60,16 @@ val indyWrapperVer  = "1.15.0-dev-1618"
 
 val akkaVer         = "2.6.10"
 val akkaHttpVer     = "10.2.2"
-val akkaMgtVer      = "1.0.9"
+val akkaMgtVer      = "1.0.10"
 val alpAkkaVer      = "2.0.2"
 val kamonVer        = "2.1.9"
 val kanelaAgentVer  = "1.0.7"
-val jacksonVer      = "2.11.1"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
+val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.0"
+val scalatestVer    = "3.2.7"
 val mockitoVer      = "1.14.8"
 val veritySdkVer    = "0.4.5-77b158ab"
 val vcxWrapperVer   = "0.10.1.1131"
@@ -183,10 +183,8 @@ lazy val settings = Seq(
   ),
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
-  resolvers += "MsgPack" at "https://dl.bintray.com/velvia/maven",
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
   resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
-  resolvers += Resolver.bintrayRepo("bfil", "maven"),
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -287,7 +285,7 @@ lazy val commonLibraryDependencies = {
     "org.hyperledger" % "indy" % indyWrapperVer,
 
     //logging dependencies
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
@@ -307,6 +305,7 @@ lazy val commonLibraryDependencies = {
 
     "io.kamon" %% "kamon-bundle" % kamonVer,
     "io.kamon" %% "kamon-prometheus" % kamonVer,
+    "io.kamon" %% "kamon-datadog" % kamonVer,
     "io.kamon" %% "kamon-jaeger" % "2.1.2",
 
     //other dependencies
@@ -314,12 +313,14 @@ lazy val commonLibraryDependencies = {
     "commons-net" % "commons-net" % "3.7.2",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
-    "org.velvia" %% "msgpack4s" % "0.6.0",        //used by legacy pack/unpack operations
+    "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "1.18",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
+
+    "org.iq80.leveldb" % "leveldb" % "0.11",      //used as alternate StorageAPI to S3
   )
 
   //for macro libraries that are compile-time-only
@@ -341,7 +342,6 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
-    "org.iq80.leveldb" % "leveldb" % "0.11",      //to be used in E2E tests
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 

@@ -119,6 +119,6 @@ skinparam class {
 if __name__ == '__main__':
     suffix = '_ns' if ns else ''
     items = {}
-    collect('../../verity/src/main/scala/com/evernym/verity/', items)
+    collect('../../../verity/src/main/scala/com/evernym/verity/', items)
     generate(['UserAgent', 'UserAgentPairwise', 'AgencyAgent', 'AgencyAgentPairwise'],
-             items, '../agent_classes%s.puml' % suffix)
+             items, '../classes/agent_classes%s.puml' % suffix)

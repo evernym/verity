@@ -107,6 +107,10 @@ trait ProcessSdkProvider
           printOut(errBuffer.toString, "ERROR")
           executeScript(tries+1, Some(new RuntimeException("Nonzero exit value: " + code)))
         }
+        else if (code == sdkErrExitCode) {
+          val err = errBuffer.toString
+          throw SdkProviderException(err)
+        }
         else if (code != 0) {
           printProcessOutput()
           sys.error("Nonzero exit value: " + code)
@@ -187,6 +191,9 @@ trait ProcessSdkProvider
 }
 
 object ProcessSdkProvider {
+
+  val sdkErrExitCode = 100
+
   sealed trait ToProcessStrategy
 
   case object File extends ToProcessStrategy
@@ -214,4 +221,9 @@ object ProcessSdkProvider {
   def versionToModule(version: String) = {
     "v" + version.replace('.', '_')
   }
+}
+
+
+case class SdkProviderException(errorMessage: String) extends RuntimeException {
+  override def getMessage: String = errorMessage
 }

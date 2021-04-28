@@ -113,7 +113,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   }
 
   private def routePackedMsg(pmrp: PackedMsgRouteParam)(implicit senderOpt: Option[ActorRef]): Future[Any] = {
-    // flow diagram: fwd + ctl + proto + legacy, step 6 -- Find route to relevant actor, send inner msg.
+    // flow diagram: fwd + ctl + proto + legacy, step 5 -- Find route to relevant actor, send inner msg.
     // As far as I can tell, what the next line does is look up the actor for a given toRoute
     // value. That value could be a verkey or an unqualified DID. I'm not sure why the concept
     // of sharding region enters into it; shouldn't this just be an actor ID that has the region

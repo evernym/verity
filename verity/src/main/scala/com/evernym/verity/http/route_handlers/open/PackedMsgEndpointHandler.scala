@@ -5,6 +5,8 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, MediaTypes, RemoteAddress}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler

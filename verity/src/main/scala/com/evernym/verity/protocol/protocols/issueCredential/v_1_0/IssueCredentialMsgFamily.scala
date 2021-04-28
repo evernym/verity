@@ -57,6 +57,7 @@ object IssueCredMsgFamily
     classOf[SignalMsg.Ack]                    -> "ack-received",
     classOf[SignalMsg.Invitation]             -> "protocol-invitation",
   )
+
 }
 
 //message objects

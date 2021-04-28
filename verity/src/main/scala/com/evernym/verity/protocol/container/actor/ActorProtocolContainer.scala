@@ -25,8 +25,8 @@ import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
-import java.util.UUID
 
+import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
@@ -38,6 +38,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.storage_services.StorageAPI
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -333,7 +334,7 @@ class ActorProtocolContainer[
   override lazy val segmentStore =
     new SegmentStoreAccessController(
       new SegmentStoreAccessAPI(
-        agentActorContext.s3API,
+        agentActorContext.storageAPI,
         protoRef,
         segmentedStateName)
     )

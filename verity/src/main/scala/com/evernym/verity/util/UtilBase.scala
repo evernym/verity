@@ -28,9 +28,6 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.codec.digest.DigestUtils
-import org.velvia.MsgPack
-import org.velvia.MsgPackUtils.unpackMap
-
 
 // TODO should not be needed here, should remove utils that use it
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -190,14 +187,6 @@ trait UtilBase extends AsyncToSync {
     //NOTE: This logic should not be changed unless we know its impact
     val salt = appConfig.getConfigStringReq(SALT_EVENT_ENCRYPTION)
     DigestUtils.sha512Hex(secret + salt)
-  }
-
-  def packMsgByMsgPackLib(map: Map[String, Any]): Array[Byte] = {
-    MsgPack.pack(map)
-  }
-
-  def unpackMsgByMsgPackLib(byteArray: Array[Byte]): Map[String, Any] = {
-    unpackMap(byteArray).asInstanceOf[Map[String, Any]]
   }
 
   def isExpired(createdDateTime: ZonedDateTime, expiryTimeInSeconds: Int): Boolean = {

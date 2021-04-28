@@ -65,6 +65,14 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def grantedAccessRights: Set[AccessRight] = protocol.definition.requiredAccess
 
+  //TODO -> RTM:
+  // - Will be worked through in VE-2497
+  // - Does the protocol init set this or does the definition read the config?
+  // - This needs to be better thought out.
+  // - The SegmentedStateContext/ProtocolContext.storeSegments uses this and
+  //   passes it to the SegmentStoreAPI/SegmentStoreApiController.storeSegment
+  def dataRetentionPolicy: Option[String] = None
+
   @deprecated("Use of services is deprecated. Use the instance of " +
     "ProtocolContextApi to access driver and the ability to send " +
     "messages.", PROTOCOL_ENCAPSULATION_FIX_DATE)
@@ -473,7 +481,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def storeSegments(): Unit = {
     pendingSegments.foreach { ps =>
       logger.debug(s"storing pending segment: $ps")
-      segmentStore.storeSegment(ps.segmentAddress, ps.segmentKey, ps.value) {
+      segmentStore.storeSegment(ps.segmentAddress, ps.segmentKey, ps.value, dataRetentionPolicy) {
         case Success(ss: StoredSegment) =>
           logger.debug(s"pending segment stored: $ss")
           removeFromPendingList(ss.segmentAddress)

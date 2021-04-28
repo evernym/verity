@@ -14,6 +14,7 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, COMMUNITY_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -22,7 +23,7 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.RevocationRegistryConf
 import com.evernym.verity.sdk.utils.ContextBuilder
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.util.LedgerUtil
-import com.evernym.verity.util.{Base64Util, OptionUtil}
+import com.evernym.verity.util.{Base58Util, Base64Util, OptionUtil}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
@@ -30,6 +31,7 @@ import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable
@@ -705,6 +707,31 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
+  def issueCredential_1_0_expectingError(issuerSdk: VeritySdkProvider, // todo rename
+                                         holderSdk: VeritySdkProvider,
+                                         relationshipId: String,
+                                         credValues: Map[String, String],
+                                         credDefName: String,
+                                         credTag: String,
+                                         errorMessage: String)
+                                        (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    val holderName = holderSdk.sdkConfig.name
+    s"issue credential (1.0) to $holderName from $issuerName on relationship ($relationshipId) expecting error" - {
+
+      s"[$issuerName] send a credential offer expecting error" in {
+        val forRel = issuerSdk.relationship_!(relationshipId).owningDID
+        val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
+
+        val issueCred = issuerSdk.issueCredential_1_0(forRel, credDefId, credValues, "comment-123", "0")
+        val ex = intercept[Exception] {
+          issueCred.offerCredential(issuerSdk.context)
+        }
+        ex.getMessage should include(errorMessage)
+      }
+    }
+  }
+
   def acceptOobInvite(inviterSdk: VeritySdkProvider,
                       inviterMsgReceiverSdkProvider: VeritySdkProvider,
                       inviteeSdk: VeritySdkProvider,
@@ -1358,6 +1385,17 @@ trait InteractiveSdkFlow extends MetricsFlow {
     s"send message to ${receiver.name} from ${sender.name}" - {
       val senderSdk = receivingSdk(sender)
       val receiverSdk = receivingSdk(receiver)
+
+
+      s"[${sender.name}] send message with huge forRelationship" in {
+        val str = Base58Util.encode(UUID.randomUUID().toString.getBytes())
+        val forRel =  (1 to 1000).foldLeft("")((prev, _) => prev + str)
+        val caught = intercept[Exception] {
+          senderSdk.basicMessage_1_0(forRel, content, sentTime, localization)
+            .message(senderSdk.context)
+        }
+        caught.getMessage should include ("Route value is too long")
+      }
 
       s"[${sender.name}] send message" in {
         val forRel = senderSdk.relationship_!(relationshipId).owningDID

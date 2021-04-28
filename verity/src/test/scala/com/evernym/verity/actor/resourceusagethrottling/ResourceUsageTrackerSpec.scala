@@ -6,7 +6,7 @@ class ResourceUsageTrackerSpec
   extends BaseResourceUsageTrackerSpec
     with ResourceUsageCommon {
 
-  val ipAddress = "1.2.3.4"
+  val ipAddress = "5.6.7.8"
 
   "ResourceUsageTracker" - {
 

@@ -249,14 +249,20 @@ trait UtilBase extends AsyncToSync {
     }
   }
 
-
-  def isDID(token: String): Boolean = {
+  def isDID(value: String): Boolean = {
     // NOTE: This may need to change to conform to https://w3c-ccg.github.io/did-spec/
     try {
-      checkIfDIDIsValid(token)
+      checkIfDIDIsValid(value)
       true
     } catch {
       case _: InvalidValueException => false
+    }
+  }
+
+  def isVerKey(value: String): Boolean = {
+    Base58Util.decode(value) match {
+      case Success(decodedVerKey) => decodedVerKey.length == VALID_VER_KEY_BYTE_LENGTH
+      case Failure(_) => false
     }
   }
 

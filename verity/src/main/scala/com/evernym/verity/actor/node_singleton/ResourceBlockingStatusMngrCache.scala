@@ -31,7 +31,7 @@ object ResourceBlockingStatusMngrCache extends ResourceBlockingStatusMngrCommon 
       isEntityIdBlocked || isResourceBlocked
     }
     if (isBlocked) {
-      throw new BadRequestErrorException(USAGE_BLOCKED.statusCode)
+      throw new BadRequestErrorException(USAGE_BLOCKED.statusCode, Option("usage blocked"))
     }
   }
 

@@ -19,6 +19,7 @@ import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.metrics.CustomMetrics._
@@ -309,7 +310,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, state.myDid)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, reqMsgContext.clientIpAddressReq, userId)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
     val sndr = sender()
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { thisAgentKey =>
@@ -453,7 +455,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, state.myDid)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
     buildAndSendComMethodUpdatedRespMsg(comMethod)

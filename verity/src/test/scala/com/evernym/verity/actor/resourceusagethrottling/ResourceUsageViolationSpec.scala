@@ -1,275 +1,83 @@
-package com.evernym.verity.actor
+package com.evernym.verity.actor.resourceusagethrottling
 
-import java.time.temporal.ChronoUnit
-import java.time.{DateTimeException, ZonedDateTime}
-
-import akka.actor.{ActorRef, ReceiveTimeout}
 import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
 import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
-import com.evernym.verity.actor.resourceusagethrottling.{tracking, _}
-import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
+import com.evernym.verity.actor._
+import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.scalalogging.Logger
-import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
+import java.time.ZonedDateTime
 import scala.concurrent.duration._
 
-class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with Eventually {
+class ResourceUsageViolationSpec
+  extends BaseResourceUsageTrackerSpec {
 
-  val logger: Logger = getLoggerByClass(classOf[ResourceUsageTrackerSpec])
+  val logger: Logger = getLoggerByClass(classOf[ResourceUsageViolationSpec])
 
   val DUMMY_MSG = "DUMMY_MSG"
+
   val globalToken = "global"
+
   val user1IpAddress = "127.1.0.1"
   val user2IpAddress = "127.2.0.2"
   val user3IpAddress = "127.3.0.3"
   val user4IpAddress = "127.4.0.4"
-  val user1DID = "111111111111111111111"
-  val user2DID = "222222222222222222222"
-  val user3DID = "333333333333333333333"
-  val user4DID = "444444444444444444444"
+
+  val user1DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user2DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+
   val createMsgConnReq: String = MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
-
-  lazy val resourceUsageTrackerRegion: ActorRef = platform.resourceUsageTrackerRegion
-
-  def emptyBlockingDetail: BlockingDetail = BlockingDetail(None, None, None, None)
-  def emptyWarningDetail: WarningDetail = WarningDetail(None, None, None, None)
-
-  var bd: BlockingDetail = _
-  var wd: WarningDetail = _
 
   def resourceUsageTrackerSpec() {
 
-    "BlockingDetail" - {
-      "when only blockFrom is set" - {
-        "and tested isBlocked method for few future times" - {
-          "should respond with true" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime))
-            bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe true
-          }
-        }
-      }
-
-      "when blockFrom and blockTill both are set" - {
-        "and tested isBlocked method for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime),
-              blockTill = Some(curDateTime.plusSeconds(10)))
-            bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe false
-          }
-        }
-      }
-
-      "when only unblockFrom is set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            bd = emptyBlockingDetail.copy(unblockFrom = Some(curDateTime))
-            bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe false
-            bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false
-          }
-        }
-      }
-
-      "when unblockFrom and unblockTill both are set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            bd = emptyBlockingDetail.copy(unblockFrom = Some(curDateTime),
-              unblockTill = Option(curDateTime.plusSeconds(10)))
-            bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe false
-            bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false
-            bd.isInBlockingPeriod(curDateTime.plusSeconds(11)) shouldBe false
-            bd.isInUnblockingPeriod(curDateTime.plusSeconds(11)) shouldBe false
-            bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe false
-          }
-        }
-      }
-
-      "when blockFrom and unblockFrom both are set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime), unblockFrom = Some(curDateTime))
-            bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false //unblocking period takes precedence
-          }
-        }
-      }
-
-      "when blockFrom, unblockFrom and unblockTill are set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime), unblockFrom = Some(curDateTime),
-              unblockTill = Some(curDateTime.plusSeconds(10)))
-            bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            bd.isInBlockingPeriod(curDateTime.plusSeconds(11)) shouldBe true
-            bd.isInUnblockingPeriod(curDateTime.plusSeconds(11)) shouldBe false
-            bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe true
-          }
-        }
-      }
-    }
-
-    "WarningDetail" - {
-
-      "when only warnFrom is set" - {
-        "and tested isWarned method for few future times" - {
-          "should respond with true" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            wd = emptyWarningDetail.copy(warnFrom = Some(curDateTime))
-            wd.isWarned(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isWarned(curDateTime.plusSeconds(11)) shouldBe true
-          }
-        }
-      }
-
-      "when warnFrom and warnTill both are set" - {
-        "and tested isWarned method for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            wd = emptyWarningDetail.copy(warnFrom = Some(curDateTime), warnTill = Some(curDateTime.plusSeconds(10)))
-            wd.isWarned(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isWarned(curDateTime.plusSeconds(11)) shouldBe false
-          }
-        }
-      }
-      "when only unwarnFrom is set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            wd = emptyWarningDetail.copy(unwarnFrom = Some(curDateTime))
-            wd.isInWarningPeriod(curDateTime.plusSeconds(1)) shouldBe false
-            wd.isInUnwarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isWarned(curDateTime.plusSeconds(1)) shouldBe false
-          }
-        }
-      }
-
-      "when unwarnFrom and unwarnTill both are set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            wd = emptyWarningDetail.copy(unwarnFrom = Some(curDateTime), unwarnTill = Option(curDateTime.plusSeconds(10)))
-            wd.isInWarningPeriod(curDateTime.plusSeconds(1)) shouldBe false
-            wd.isInUnwarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isWarned(curDateTime.plusSeconds(1)) shouldBe false
-
-            wd.isInWarningPeriod(curDateTime.plusSeconds(11)) shouldBe false
-            wd.isInUnwarningPeriod(curDateTime.plusSeconds(11)) shouldBe false
-            wd.isWarned(curDateTime.plusSeconds(11)) shouldBe false
-          }
-        }
-      }
-
-      "when warnFrom and unwarnFrom both are set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            wd = emptyWarningDetail.copy(warnFrom = Some(curDateTime), unwarnFrom = Some(curDateTime))
-            wd.isInWarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isInUnwarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isWarned(curDateTime.plusSeconds(1)) shouldBe false //unwarning period takes precedence
-          }
-        }
-      }
-
-      "when warnFrom, unwarnFrom and unwarnTill are set" - {
-        "and tested few helper methods for few future times" - {
-          "should respond accordingly" in {
-            val curDateTime = getCurrentUTCZonedDateTime
-            wd = emptyWarningDetail.copy(warnFrom = Some(curDateTime), unwarnFrom = Some(curDateTime),
-              unwarnTill = Some(curDateTime.plusSeconds(10)))
-            wd.isInWarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
-            wd.isInWarningPeriod(curDateTime.plusSeconds(11)) shouldBe true
-            wd.isInUnwarningPeriod(curDateTime.plusSeconds(11)) shouldBe false
-            wd.isWarned(curDateTime.plusSeconds(11)) shouldBe true
-          }
-        }
-      }
-    }
-
-    def restartResourceUsageTrackerActor(to: String): Unit = {
-      resourceUsageTrackerRegion ! ForIdentifier(to, ReceiveTimeout)
-      Thread.sleep(2000)
-    }
-
-    def sendToResourceUsageTrackerRegionAddResourceUsage(to: String, resourceType: ResourceType, resourceName: ResourceName, userIdOpt: Option[UserId], restartActorBefore: Boolean=false): Unit = {
-      if (restartActorBefore) {
-        restartResourceUsageTrackerActor(to)
-      }
-
-      ResourceUsageTracker.addUserResourceUsage(to, resourceType, resourceName, sendBackAck = false, userIdOpt)(resourceUsageTrackerRegion)
-    }
-
-    def sendToResourceUsageTrackerRegion(to: String, cmd: Any, restartActorBefore: Boolean=false): Unit = {
-      if (restartActorBefore) {
-        restartResourceUsageTrackerActor(to)
-      }
-
-      resourceUsageTrackerRegion ! ForIdentifier(to, cmd)
-    }
-
     // Begin resources and helper functions used in the testResourceGetsBlockedWarnedIfExceedsSetLimit test
-    val resourceUsages: List[(String, Option[String], String, Option[Int])] = List(
-      (user1IpAddress, None, createMsgConnReq, Some(3)),
-      (user2IpAddress, Some(user2DID), DUMMY_MSG, Some(2)),
-      (user4IpAddress, Some(user4DID), DUMMY_MSG, Some(2)),
-      (globalToken, None, DUMMY_MSG, None)
+    val resourceUsageParams: List[ResourceUsageParam] = List(
+      ResourceUsageParam(createMsgConnReq, user1IpAddress, None, Some(3)),
+      ResourceUsageParam(DUMMY_MSG, user2IpAddress, Some(user2DID), Some(2)),
+      ResourceUsageParam(DUMMY_MSG, user4IpAddress, Some(user4DID), Some(2))
     )
 
     // Reset counters for all resources involved in this test
-    // Triples of entity Id, resource name, expected used count after looping 6 times above.
-    val resourcesToUnblock: List[(String, String, Int, Int)] = List(
-      (user1IpAddress, createMsgConnReq, 2, 600),
-      (user2IpAddress, DUMMY_MSG, 3, 60),
-      (user2DID, DUMMY_MSG, 3, 120),
-      (user4IpAddress, DUMMY_MSG, 3, 60),
-      (user4DID, DUMMY_MSG, 3, 120),
-      (globalToken, DUMMY_MSG, 4, 180)
+    // expected used count after looping 6 times above.
+    val expectedBlockedResources: List[BlockedResourcesParam] = List(
+      BlockedResourcesParam(user1IpAddress, createMsgConnReq, 2, 600),
+      BlockedResourcesParam(user2IpAddress, DUMMY_MSG, 3, 60),
+      BlockedResourcesParam(user2DID, DUMMY_MSG, 3, 120),
+      BlockedResourcesParam(user4IpAddress, DUMMY_MSG, 3, 60),
+      BlockedResourcesParam(user4DID, DUMMY_MSG, 3, 120),
+      BlockedResourcesParam(globalToken, DUMMY_MSG, 4, 180)
     )
 
     def resetResourceUsage(): Unit = {
-      resourceUsages.foreach { resourceUsage =>
+      resourceUsageParams.foreach { rup =>
         // Clear all buckets in preparation for this test
         // Previous tests may have already added stats to each of the following buckets (300, 600, ..., etc).
         // CREATE_MSG_connReq
-        sendToResourceUsageTrackerRegion(resourceUsage._1,
-          UpdateResourcesUsageCounter(List(
-            ResourceUsageCounterDetail(resourceUsage._3, 300, None),
-            ResourceUsageCounterDetail(resourceUsage._3, 600, None),
-            ResourceUsageCounterDetail(resourceUsage._3, 1200, None),
-            ResourceUsageCounterDetail(resourceUsage._3, 1800, None),
-            ResourceUsageCounterDetail(resourceUsage._3, BUCKET_ID_INDEFINITE_TIME, None)
-          )))
-        expectMsg(Done)
+        (Option(ENTITY_ID_GLOBAL) ++ Option(rup.ipAddress) ++ rup.userId).foreach { entityId =>
+          sendToResourceUsageTrackerRegion(entityId,
+            UpdateResourcesUsageCounter(List(
+              ResourceUsageCounterDetail(rup.resourceName, 300, None),
+              ResourceUsageCounterDetail(rup.resourceName, 600, None),
+              ResourceUsageCounterDetail(rup.resourceName, 1200, None),
+              ResourceUsageCounterDetail(rup.resourceName, 1800, None),
+              ResourceUsageCounterDetail(rup.resourceName, BUCKET_ID_INDEFINITE_TIME, None)
+            )))
+          expectMsg(Done)
+        }
       }
-    }
-
-    def blockDurationInSeconds(status: BlockingDetail): Long = {
-      val from: ZonedDateTime = status.blockFrom.getOrElse(throw new DateTimeException("Must provide a blockFrom ZonedDatetime"))
-      val to: ZonedDateTime = status.blockTill.getOrElse(throw new DateTimeException("Must provide a blockTill ZonedDatetime"))
-      ChronoUnit.SECONDS.between(from, to)
     }
     // End resources and helper functions used in the testResourceGetsBlockedWarnedIfExceedsSetLimit test
 
@@ -277,34 +85,31 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       resetResourceUsage()
       val maxMessages = 6
       (1 to maxMessages).foreach { i =>
-        resourceUsages.foreach { resourceUsage =>
-          // Skip "global" entityId when calling sendToResourceUsageTrackerAddResourceUsage.
-          if(resourceUsage._1 != globalToken) {
-            try {
-              logger.debug(s"Adding resource usage for resourceName: ${resourceUsage._3} and IP/entityId: ${resourceUsage._1} and user DID: ${resourceUsage._2}")
-              sendToResourceUsageTrackerRegionAddResourceUsage(resourceUsage._1, RESOURCE_TYPE_MESSAGE, resourceUsage._3, resourceUsage._2)
-              expectNoMessage()
-            } catch {
-              case e: BadRequestErrorException =>
-                logger.debug(s"Usage blocked resource: ${resourceUsage._2} for IP/entityId: ${resourceUsage._1} and user DID: ${resourceUsage._2}")
-                assert(i >= resourceUsage._4.getOrElse(-1) && e.respCode.equals("GNR-123") && e.getMessage.equals("usage blocked"))
-              case _: Exception =>
-                fail("Unhandled exception encountered while adding resource usage stats: entityId: " +
-                  resourceUsage._1 + " resourceType: " + RESOURCE_TYPE_MESSAGE + " resourceName: " + resourceUsage._3)
-            }
-            // Yield to other threads between calls to sendToResourceUsageTrackerRegionAddResourceUsage.
-            // Don't overwhelm the resource usage tracker during this test so that numbers are predictable. It is
-            // expected for limits to possibly exceeded thresholds, because of async processing and analyzing of
-            // usage counts.
-            Thread.sleep(10)
+        resourceUsageParams.foreach { rup =>
+          try {
+            logger.debug(s"Adding resource usage for resourceName: ${rup.resourceName} and IP: ${rup.ipAddress} and user DID: ${rup.userId}")
+            sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, rup.resourceName, rup.ipAddress, rup.userId)
+            expectNoMessage()
+          } catch {
+            case e: BadRequestErrorException =>
+              logger.warn(s"Usage blocked resource: ${rup.resourceName} for IP: ${rup.ipAddress} and/or user DID: ${rup.userId}")
+              assert(i >= rup.blockAfterIterationCount.getOrElse(-1) && e.respCode.equals("GNR-123") && e.getMessage.equals("usage blocked"))
+            case _: Exception =>
+              fail("Unhandled exception encountered while adding resource usage stats: entityId: " +
+                rup.ipAddress + " resourceType: " + RESOURCE_TYPE_MESSAGE + " resourceName: " + rup.resourceName)
           }
+          // Yield to other threads between calls to sendToResourceUsageTrackerRegionAddResourceUsage.
+          // Don't overwhelm the resource usage tracker during this test so that numbers are predictable. It is
+          // expected for limits to possibly exceeded thresholds, because of async processing and analyzing of
+          // usage counts.
+          Thread.sleep(10)
         }
       }
 
       // Test blocked
       //
       // The following rule in resource-usage-rule-spec.conf (resource-usage-rule.conf file used for tests) causes
-      // violation-action group 70 to call log-msg, warn-user, and block-resource after the second iteration; when
+      // violation-action group 70 to call log-msg, warn-entity, and block-resource after the second iteration; when
       // allowed-counts of 2 is exceeded on bucket -1 (infinite bucket).
       //
       // CREATE_MSG_connReq {
@@ -319,8 +124,8 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       // # log it and block only resource
       // 70 {
       //   log-msg: {"level": "info"}
-      //   warn-user: {"track-by": "ip", "period": -1}
-      //   block-resource: {"track-by": "ip", "period": 600}
+      //   warn-entity: {"entity-types": "ip", "period": -1}
+      //   block-resource: {"entity-types": "ip", "period": 600}
       // }
       //
       // Expect the CREATE_MSG_connReq resource to be blocked for user1IpAddress
@@ -344,30 +149,30 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       //
       // 101 {
       //   # Log only at debug level if and only if entityId is an IP address
-      //   log-msg: {"track-by": "ip", "level": "info"}
+      //   log-msg: {"entity-types": "ip", "level": "info"}
       //   # Block if and only if entityId is an IP address
-      //   block-resource: {"track-by": "ip", "period": 60}
+      //   block-resource: {"entity-types": "ip", "period": 60}
       // }
       //
       // 102 {
       //   # Log only at trace level if and only if entityId is a DID (21 to 23 length)
-      //   log-msg: {"track-by": "user", "level": "debug"}
-      //   block-resource: {"track-by": "user", "period": 120}
+      //   log-msg: {"entity-types": "user", "level": "debug"}
+      //   block-resource: {"entity-types": "user", "period": 120}
       // }
       //
       // 103 {
       //   # Log only at info level if and only if entityId is "global"
-      //   log-msg: {"track-by": "global", "level": "trace"}
+      //   log-msg: {"entity-types": "global", "level": "trace"}
       //   # Block if and only if entityId is "global"
-      //   block-resource: {"track-by": "global", "period": 180}
+      //   block-resource: {"entity-types": "global", "period": 180}
       // }
       //
       // Expect the DUMMY_MSG resource to be blocked for user2IpAddress (action 101), user2DID (action 102),
       // and "global" (action 103)
-      eventually (timeout(Span(10, Seconds))) {
-        // Give time for the system to process all of the AddResourceUsage messages. The sleep causes GetBlockedList
-        // to be called once per second for up to 10 seconds.
-        Thread.sleep(1000)
+
+      // Give time for the system to process all of the AddResourceUsage messages. The sleep causes GetBlockedList
+      // to be called once per second for up to 10 seconds.
+      eventually (timeout(Span(10, Seconds)), interval(Span(1, Seconds))) {
         singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked = false,
           onlyActive = true, inChunks = false))
         expectMsgPF() {
@@ -376,18 +181,18 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
           //       status.blockFrom and status.blockTill are "Empty" the first time
           //       testResourceGetsBlockedWarnedIfExceedsSetLimit is called, but are identical timestamps on
           //       subsequent calls, because blockDuration is set to 0 seconds in the process of clearing user and
-          //       resource blocks on previous calls to testREsourceGetsBlockedWarnedIfExceedsSetLimit.
+          //       resource blocks on previous calls to testResourceGetsBlockedWarnedIfExceedsSetLimit.
           case bl: UsageBlockingStatusChunk =>
-            bl.usageBlockingStatus.size shouldBe 6
-            resourcesToUnblock.foreach { resourceToUnblock =>
-              bl.usageBlockingStatus.contains(resourceToUnblock._1) shouldBe true
-              bl.usageBlockingStatus(resourceToUnblock._1).status.blockFrom.getOrElse(None) shouldBe bl.usageBlockingStatus(
-                resourceToUnblock._1).status.blockTill.getOrElse(None)
-              bl.usageBlockingStatus(resourceToUnblock._1).status.unblockFrom.isEmpty shouldBe true
-              bl.usageBlockingStatus(resourceToUnblock._1).status.unblockTill.isEmpty shouldBe true
-              bl.usageBlockingStatus(resourceToUnblock._1).resourcesStatus.size shouldBe 1
-              bl.usageBlockingStatus(resourceToUnblock._1).resourcesStatus.contains(resourceToUnblock._2) shouldBe true
-              blockDurationInSeconds(bl.usageBlockingStatus(resourceToUnblock._1).resourcesStatus(resourceToUnblock._2)) shouldBe resourceToUnblock._4
+            bl.usageBlockingStatus.size shouldBe expectedBlockedResources.size
+            expectedBlockedResources.foreach { rup =>
+              bl.usageBlockingStatus.contains(rup.entityId) shouldBe true
+              bl.usageBlockingStatus(rup.entityId).status.blockFrom.getOrElse(None) shouldBe bl.usageBlockingStatus(
+                rup.entityId).status.blockTill.getOrElse(None)
+              bl.usageBlockingStatus(rup.entityId).status.unblockFrom.isEmpty shouldBe true
+              bl.usageBlockingStatus(rup.entityId).status.unblockTill.isEmpty shouldBe true
+              bl.usageBlockingStatus(rup.entityId).resourcesStatus.size shouldBe 1
+              bl.usageBlockingStatus(rup.entityId).resourcesStatus.contains(rup.resourceName) shouldBe true
+              blockDurationInSeconds(bl.usageBlockingStatus(rup.entityId).resourcesStatus(rup.resourceName)) shouldBe rup.blockDurInSeconds
             }
         }
       }
@@ -395,14 +200,14 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       logger.debug("All expected blocks are in place! Attempting to remove blocks...")
 
       // Expect counts on all resources to be non-zero
-      resourcesToUnblock.foreach { resourceToUnblock =>
-        sendToResourceUsageTrackerRegion(resourceToUnblock._1, GetAllResourceUsages)
+      expectedBlockedResources.foreach { rup =>
+        sendToResourceUsageTrackerRegion(rup.entityId, GetAllResourceUsages)
         expectMsgPF() {
-          case ru: ResourceUsages if ru.usages.contains(resourceToUnblock._2) =>
-            ru.usages(resourceToUnblock._2).foreach {
+          case ru: ResourceUsages if ru.usages.contains(rup.resourceName) =>
+            ru.usages(rup.resourceName).foreach {
               case (bucket, bucketExt) =>
-                logger.debug(s"Bucket $bucket's usedCount (${bucketExt.usedCount}) should be >= ${resourceToUnblock._3} but always < $maxMessages")
-                bucketExt.usedCount should be >= resourceToUnblock._3
+                logger.debug(s"Bucket $bucket's usedCount (${bucketExt.usedCount}) should be >= ${rup.expectedUsedCount} but always < $maxMessages")
+                bucketExt.usedCount should be >= rup.expectedUsedCount
                 bucketExt.usedCount should be < maxMessages
             }
         }
@@ -411,14 +216,14 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       /* Unblock resources using BlockCaller with a block period of 0 seconds. Expect all resources to be unblocked
        * AND all counts for each resource to be reset/set to 0
        * */
-      resourcesToUnblock.foreach { resourceToUnblock =>
+      expectedBlockedResources.foreach { rup =>
         // Block resource resourceToUnblock._2 for caller resourceToUnblock._1 with a period of 0 to clear/delete the
         // block instead of unblock indefinitely
-        singletonParentProxy ! ForResourceBlockingStatusMngr(BlockCaller(resourceToUnblock._1, blockPeriod=Option(0),
+        singletonParentProxy ! ForResourceBlockingStatusMngr(BlockCaller(rup.entityId, blockPeriod=Option(0),
           allBlockedResources=Option("Y")))
         fishForMessage(10.seconds, hint="Failed to process all response messages from BlockCaller") {
-          case rbl: CallerResourceBlocked if rbl.callerId.equals(resourceToUnblock._1) && rbl.blockPeriod == 0 => false
-          case bl: CallerBlocked if bl.callerId.equals(resourceToUnblock._1) && bl.blockPeriod == 0 => true
+          case rbl: CallerResourceBlocked if rbl.callerId.equals(rup.entityId) && rbl.blockPeriod == 0 => false
+          case bl: CallerBlocked if bl.callerId.equals(rup.entityId) && bl.blockPeriod == 0 => true
           case _ => false
         }
       }
@@ -436,11 +241,11 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       }
 
       // Expect counts on all resources to be zero
-      resourcesToUnblock.foreach { resourceToUnblock =>
-        sendToResourceUsageTrackerRegion(resourceToUnblock._1, GetAllResourceUsages)
+      expectedBlockedResources.foreach { rup =>
+        sendToResourceUsageTrackerRegion(rup.entityId, GetAllResourceUsages)
         expectMsgPF() {
-          case ru: ResourceUsages if ru.usages.contains(resourceToUnblock._2) =>
-            ru.usages(resourceToUnblock._2).foreach {
+          case ru: ResourceUsages if ru.usages.contains(rup.resourceName) =>
+            ru.usages(rup.resourceName).foreach {
               case (_, bucketExt) => bucketExt.usedCount shouldBe 0
             }
         }
@@ -459,11 +264,11 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
       // # suspicious, log it
       // 50 {
       //   log-msg: {"level": "info"}
-      //   warn-resource: {"track-by": "ip", "period": 600}
+      //   warn-resource: {"entity-types": "ip", "period": 600}
       // }
       //
       // Expect both a warning on the CREATE_MSG_connReq resource (warn-resource from violation-action group 50) and a
-      // warning on the caller's IP (warn-user from violation-action group 70 (see "Test blocked" comment above)
+      // warning on the caller's IP (warn-entity from violation-action group 70 (see "Test blocked" comment above)
       eventually {
         singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned = false,
           onlyActive = true, inChunks = false))
@@ -523,7 +328,7 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
           )))
         expectMsg(Done)
 
-        sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_MESSAGE, createMsgConnReq, None)
+        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
         expectNoMessage()
 
         // Expect usageBlockingStatus and usageWarningStatus to continue to be empty
@@ -544,9 +349,9 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
       "when sent AddResourceUsage command for two different IP addresses" - {
         "should succeed and respond with no message (async)" in {
-          sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
           expectNoMessage()
-          sendToResourceUsageTrackerRegionAddResourceUsage(user2IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
           expectNoMessage()
         }
       }
@@ -576,9 +381,9 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
       "when sent same AddResourceUsage commands again" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
           expectNoMessage()
-          sendToResourceUsageTrackerRegionAddResourceUsage(user2IpAddress, RESOURCE_TYPE_ENDPOINT, "resource1", Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
           expectNoMessage()
         }
       }
@@ -608,9 +413,9 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
       "when sent same AddResourceUsage command for another resource type" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTrackerRegionAddResourceUsage(user1IpAddress, RESOURCE_TYPE_MESSAGE, createMsgConnReq, None)
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
           expectNoMessage()
-          sendToResourceUsageTrackerRegionAddResourceUsage(user2IpAddress, RESOURCE_TYPE_MESSAGE, DUMMY_MSG, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, user2IpAddress, Some(user2DID))
           expectNoMessage()
         }
       }
@@ -841,7 +646,7 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
             onlyUnblocked=false, onlyActive=false, inChunks = true))
           expectMsgPF() {
             case rubd: UsageBlockingStatusChunk if
-            rubd.usageBlockingStatus.size == 7 &&
+            rubd.usageBlockingStatus.size == expectedBlockedResources.size + 1 &&
               rubd.usageBlockingStatus(user3IpAddress).resourcesStatus.contains("resource1") =>
           }
         }
@@ -1079,3 +884,13 @@ class ResourceUsageTrackerSpec extends PersistentActorSpec with BasicSpec with E
 
   resourceUsageTrackerSpec()
 }
+
+case class ResourceUsageParam(resourceName: String,
+                              ipAddress: IpAddress,
+                              userId: Option[UserId],
+                              blockAfterIterationCount: Option[Int])
+
+case class BlockedResourcesParam(entityId: EntityId,
+                                 resourceName: ResourceName,
+                                 expectedUsedCount: Int,
+                                 blockDurInSeconds: Int)

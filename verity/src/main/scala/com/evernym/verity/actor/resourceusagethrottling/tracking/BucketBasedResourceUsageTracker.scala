@@ -124,11 +124,11 @@ class BucketBasedResourceUsageTracker extends ResourceUsageProvider {
     }
   }
 
-  def updateResourceUsage(callerToken: ApiToken, resourceType: ResourceType, resourceName: ResourceName):
+  def updateResourceUsage(entityId: EntityId, resourceType: ResourceType, resourceName: ResourceName):
   Option[PersistUpdatedBucketState] = {
     runWithInternalSpan("updateResourceUsage", "BucketBasedResourceUsageTracker") {
       val curDate = getCurrentUTCZonedDateTime
-      ResourceUsageRuleHelper.getResourceUsageRule(callerToken, resourceType, resourceName).map { usageRule =>
+      ResourceUsageRuleHelper.getResourceUsageRule(entityId, resourceType, resourceName).map { usageRule =>
         val curResourceUsages = resourceUsages.get(resourceName).map(_.buckets).getOrElse(Map.empty)
         val updatedBucketsDetail = createUpdatedBuckets(resourceType, resourceName, curDate, curResourceUsages,
           usageRule, ResourceUsageRuleHelper.resourceUsageRules.persistAllBucketUsages)

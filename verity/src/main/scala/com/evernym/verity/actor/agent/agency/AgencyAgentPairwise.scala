@@ -16,6 +16,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.AcceptConnReqMsg_MFV_0_6
 import com.evernym.verity.agentmsg.msgpacker.{AgentBundledMsg, AgentMsgParseUtil, AgentMsgWrapper}
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -127,15 +128,19 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     }
   }
 
-  override def stateDetailsFor: Future[String ?=> Parameter] = {
-    def paramMap(agencyVerKey: VerKey): String ?=> Parameter = {
+  override def stateDetailsFor: Future[ProtoRef => String ?=> Parameter] = {
+
+    def paramMap(agencyVerKey: VerKey, protoRef: ProtoRef): String ?=> Parameter = {
       case SELF_ID     => Parameter(SELF_ID, ParticipantUtil.participantId(state.myDid_!, None))
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
+      case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName))
     }
+
     for (
       agencyDidPair <- agencyDidPairFut()
     ) yield  {
-      paramMap(agencyDidPair.verKey) orElse super.stateDetailsWithAgencyVerKey(agencyDidPair.verKey)
+      p: ProtoRef =>
+        paramMap(agencyDidPair.verKey, p) orElse super.stateDetailsWithAgencyVerKey(agencyDidPair.verKey, p)
     }
   }
 

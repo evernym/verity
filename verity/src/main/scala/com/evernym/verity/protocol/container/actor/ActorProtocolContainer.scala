@@ -16,7 +16,7 @@ import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel}
+import com.evernym.verity.protocol.engine.msg.{GivenDataRetentionPolicy, GivenDomainId, GivenSponsorRel}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.protocols.HasWallet
@@ -29,6 +29,7 @@ import com.typesafe.scalalogging.Logger
 import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
+import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAccessAPI
@@ -102,6 +103,7 @@ class ActorProtocolContainer[
   final def initialBehavior: Receive = {
     case ProtocolCmd(InitProtocol(domainId, parameters, sponsorRelOpt), None)=>
       submit(GivenDomainId(domainId))
+      submit(GivenDataRetentionPolicy(parameters.find(_.name == DATA_RETENTION_POLICY).map(_.value)))
       if(parameters.nonEmpty) {
         logger.debug(s"$protocolIdForLog about to send init msg")
         submitInitMsg(parameters)
@@ -242,7 +244,7 @@ class ActorProtocolContainer[
     logger.debug(s"$protocolIdForLog about to send InitProtocolReq to forwarder: ${msgForwarder.forwarder}")
     val forwarder = msgForwarder.forwarder.getOrElse(throw new RuntimeException("forwarder not set"))
 
-    forwarder ! InitProtocolReq(definition.initParamNames)
+    forwarder ! InitProtocolReq(definition.initParamNames, protoRef)
   }
 
   lazy val driver: Option[Driver] = {
@@ -475,7 +477,7 @@ case class InitProtocol(domainId: DomainId, parameters: Set[Parameter], sponsorR
  * It is sent to the message forwarder (which is available in ProtocolCmd)
  * @param stateKeys - set of keys/names whose value is needed by the protocol.
  */
-case class InitProtocolReq(stateKeys: Set[String]) extends ActorMessage
+case class InitProtocolReq(stateKeys: Set[String], protoRef: ProtoRef) extends ActorMessage
 
 case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends ActorMessage
 

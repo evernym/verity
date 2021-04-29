@@ -16,7 +16,7 @@ object AgentProvisioningDefinition
 
   override val roles: Set[Role] = Set(Requester, Provisioner)
 
-  override lazy val initParamNames: Set[String] = Set(SELF_ID, OTHER_ID)
+  override lazy val initParamNames: Set[String] = Set(SELF_ID, OTHER_ID, DATA_RETENTION_POLICY)
 
   override val requiredAccess: Set[AccessRight] = Set(AccessVerify)
 

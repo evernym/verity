@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocols
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.TimeUtil.{longToDateString, now}
 import com.evernym.verity.util.Base64Util.getBase64Encoded
+import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 
 import scala.concurrent.duration.Duration
 import scala.language.{implicitConversions, reflectiveCalls}
@@ -28,6 +29,10 @@ class AgentProvisioningSpec
     val requester: TestEnvir = s(REQUESTER)
     val provisioner: TestEnvir = s(PROVISIONER)
   }
+
+  override val defaultInitParams = Map(
+    DATA_RETENTION_POLICY -> "30 day"
+  )
 
   "AgentProvisioning 0.7 Protocol Definition" - {
     "should have two roles" in { _ =>

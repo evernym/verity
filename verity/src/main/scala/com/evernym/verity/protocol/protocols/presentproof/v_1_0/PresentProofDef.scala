@@ -26,7 +26,8 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
     NAME,
     LOGO_URL,
     AGENCY_DID_VER_KEY,
-    MY_PUBLIC_DID
+    MY_PUBLIC_DID,
+    DATA_RETENTION_POLICY
   )
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(

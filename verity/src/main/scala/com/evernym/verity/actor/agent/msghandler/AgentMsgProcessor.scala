@@ -37,7 +37,7 @@ import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgFamily, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
+import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgFamily, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtoRef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
@@ -909,7 +909,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   override def domainId: DomainId = param.domainId
 
   override def agentWalletIdReq: String = param.agentWalletId
-  override def stateDetailsFor: Future[PartialFunction[String, Parameter]] = Future(param.protoInitParams)
+  override def stateDetailsFor(p: ProtoRef): Future[PartialFunction[String, Parameter]] = Future(param.protoInitParams(p))
 
   override def trackingIdParam: TrackingIdParam = param.trackingIdParam
 
@@ -931,7 +931,7 @@ case class StateParam(agentActorRef: ActorRef,
                       agentWalletId: String,
                       protoInstances: Option[ProtocolRunningInstances],
                       sponsorRel: Option[SponsorRel],
-                      protoInitParams: PartialFunction[String, Parameter],
+                      protoInitParams: ProtoRef => PartialFunction[String, Parameter],
                       selfParticipantId: ParticipantId,
                       senderParticipantId: Option[VerKey] => ParticipantId,
                       allowedUnauthedMsgTypes: Set[MsgType],

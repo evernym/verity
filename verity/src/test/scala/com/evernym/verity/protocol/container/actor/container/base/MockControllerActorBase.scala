@@ -136,11 +136,12 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
    * this is base implementation which can be overridden by specific controller actor
    * @return
    */
-  override def stateDetailsFor: Future[PartialFunction[String, engine.Parameter]] = Future {
+  override def stateDetailsFor(protoRef: ProtoRef): Future[PartialFunction[String, engine.Parameter]] = Future {
     case SELF_ID                  => Parameter(SELF_ID, domainId)
     case OTHER_ID                 => Parameter(OTHER_ID, controllerData.theirDID)
     case MY_PAIRWISE_DID          => Parameter(MY_PAIRWISE_DID, CommonSpecUtil.generateNewDid().DID)
     case THEIR_PAIRWISE_DID       => Parameter(THEIR_PAIRWISE_DID, CommonSpecUtil.generateNewDid().DID)
+    case DATA_RETENTION_POLICY    => Parameter(DATA_RETENTION_POLICY, "360d")
 
     case NAME                     => Parameter(NAME, "name")
     case LOGO_URL                 => Parameter(LOGO_URL, "logo-url")

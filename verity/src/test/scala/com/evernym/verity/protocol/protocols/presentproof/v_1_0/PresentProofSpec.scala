@@ -1,10 +1,9 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import java.util.UUID
-
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, LOGO_URL, MY_PUBLIC_DID, NAME}
+import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, DATA_RETENTION_POLICY, LOGO_URL, MY_PUBLIC_DID, NAME}
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
@@ -33,7 +32,8 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       NAME -> orgName,
       LOGO_URL -> logoUrl,
       AGENCY_DID_VER_KEY -> agencyVerkey,
-      MY_PUBLIC_DID -> publicDid
+      MY_PUBLIC_DID -> publicDid,
+      DATA_RETENTION_POLICY -> "100 days"
     )
 
 

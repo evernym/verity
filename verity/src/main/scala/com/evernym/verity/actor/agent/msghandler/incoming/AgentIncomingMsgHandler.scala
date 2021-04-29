@@ -78,7 +78,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     }
   }
 
-  def stateDetailsFor: Future[PartialFunction[String, Parameter]]
+  def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]]
   def sponsorRel: Option[SponsorRel] = None
 
   def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[UserId] = {

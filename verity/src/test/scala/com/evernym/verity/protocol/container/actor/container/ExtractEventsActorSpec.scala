@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.WithAdditionalLogs
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.container.actor.container.base.{BaseProtocolActorSpec, MockControllerActorBase, SendControlMsg, SendToProtocolActor}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Propose
@@ -29,6 +29,7 @@ class ExtractEventsActorSpec
 
     "empty event stream should return ExtractionComplete imminently" in {
       EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
+        ConfigUtil.getDataRetentionPolicy(appConfig, "", "")
         system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor))
         expectMsgPF() {
           case ProtocolCmd(e: ExtractionComplete, None) => e

@@ -36,7 +36,8 @@ class IssueCredentialSpec
     NAME -> orgName,
     LOGO_URL -> logoUrl,
     AGENCY_DID_VER_KEY -> agencyVerkey,
-    MY_PUBLIC_DID -> publicDid
+    MY_PUBLIC_DID -> publicDid,
+    DATA_RETENTION_POLICY -> "360 day"
   )
 
   "Credential Protocol Definition" - {

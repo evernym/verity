@@ -931,6 +931,48 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
   }
 
+  def issueCredentialViaOob_1_0_expectingError(issuerSdk: VeritySdkProvider,
+                                issuerMsgReceiverSdkProvider: VeritySdkProvider,
+                                holderSdk: VeritySdkProvider,
+                                holderMsgReceiverSdkProvider: VeritySdkProvider,
+                                relationshipId: String,
+                                credValues: Map[String, String],
+                                credDefName: String,
+                                credTag: String,
+                                errorMessage: String)
+                               (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    val holderName = holderSdk.sdkConfig.name
+
+    var relDid = ""
+    val inviteUrl: AtomicReference[String] = new AtomicReference[String]("")
+
+    val count = iterCount("presentProofViaOob_1_0")
+
+    s"issue credential (1.0) to $holderName from $issuerName via Out-of-band invite$count expecting error" - {
+      val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
+      val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
+
+      s"[$issuerName] start relationship protocol to issue to" in {
+        val relProvisioning = issuerSdk.relationship_1_0("inviter")
+        relProvisioning.create(issuerSdk.context)
+        issuerMsgReceiver.expectMsg("created") { msg =>
+          msg shouldBe an[JSONObject]
+          relDid = msg.getString("did")
+        }
+      }
+
+      s"[$issuerName] start issue-credential using byInvitation" in {
+        val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
+        val issueCred = issuerSdk.issueCredential_1_0(relDid, credDefId, credValues, "comment-123", byInvitation = true)
+        val ex = intercept[Exception] {
+          issueCred.offerCredential(issuerSdk.context)
+        }
+        ex.getMessage should include(errorMessage)
+      }
+    }
+  }
+
   def presentProofViaOob_1_0(verifier: ApplicationAdminExt,
                              prover: ApplicationAdminExt,
                              relationshipId: String,

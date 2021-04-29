@@ -1,6 +1,5 @@
 package com.evernym.integrationtests.e2e.apis.limits
 
-import com.evernym.integrationtests.e2e.apis.SdkFlowSpec.metricKey
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
 import com.evernym.integrationtests.e2e.flow._
@@ -28,24 +27,25 @@ import scala.concurrent.duration.DurationInt
 
 class LimitsFlowSpec
   extends BasicSpec
-  with TempDir
-  with IntegrationEnv
-  with InteractiveSdkFlow
-  with SetupFlow
-  with AdminFlow
-  with MetricsFlow
-  with Eventually {
+    with TempDir
+    with IntegrationEnv
+    with InteractiveSdkFlow
+    with SetupFlow
+    with AdminFlow
+    with MetricsFlow
+    with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)
 
   override def environmentName: String = sys.env.getOrElse("ENVIRONMENT_NAME", StrUtil.classToKebab[LimitsFlowSpec])
 
   def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv = env
+
   def appEnv: IntegrationTestEnv = specifySdkType(testEnv)
 
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
-  
+
   val limitsCredDefName = "creds_for_limits"
 
   val longAttrList = (1 to 125).map(i => s"attrib$i")
@@ -90,14 +90,9 @@ class LimitsFlowSpec
 
 
       //todo implement other cases
-//
-//      "oob interaction" - {
-//        sdkOobInteractions(apps, ledgerUtil)
-//      }
-//
-//      "test metrics" - {
-//        testMetricsForVerityInstances(apps)
-//      }
+      "oob interaction" - {
+        sdkOobInteractions(apps, ledgerUtil)
+      }
 
       "sdk cleanup" - {
         apps.forEachApplication(cleanupSdk)
@@ -118,7 +113,7 @@ class LimitsFlowSpec
 
     setupIssuer(sdk, ledgerUtil)
 
-    val schemaName1 = "multipleAttrs"+UUID.randomUUID().toString.substring(0, 8)
+    val schemaName1 = "multipleAttrs" + UUID.randomUUID().toString.substring(0, 8)
 
     writeIssuerToLedger(sdk, ledgerUtil)
 
@@ -128,7 +123,6 @@ class LimitsFlowSpec
       "name1",
       "/logo_url.ico"
     )
-
 
 
     writeSchema(
@@ -149,8 +143,8 @@ class LimitsFlowSpec
       ledgerUtil
     )
 
-    val schemaName2 = "largeAttrs"+UUID.randomUUID().toString.substring(0, 8)
-    val longString = "0123456789"*24
+    val schemaName2 = "largeAttrs" + UUID.randomUUID().toString.substring(0, 8)
+    val longString = "0123456789" * 24
     val attrList2 = (1 to 10).map(i => s"attrib$i")
 
     writeSchema(
@@ -158,7 +152,7 @@ class LimitsFlowSpec
       ledgerUtil,
       schemaName2,
       "0.2",
-      attrList2 : _*
+      attrList2: _*
     )
 
     writeCredDef(
@@ -171,14 +165,14 @@ class LimitsFlowSpec
       ledgerUtil
     )
 
-    val limitsSchema = "something"+UUID.randomUUID().toString.substring(0, 8)
+    val limitsSchema = "something" + UUID.randomUUID().toString.substring(0, 8)
 
     writeSchema(
       sdk,
       ledgerUtil,
       limitsSchema,
       "0.1",
-      (0 to 9).map(i => s"attr$i") : _*
+      (0 to 9).map(i => s"attr$i"): _*
     )
 
     writeCredDef(
@@ -192,7 +186,7 @@ class LimitsFlowSpec
     )
 
     // todo this is error cases
-    val schemaName3 = "tooMayAttrs"+UUID.randomUUID().toString.substring(0, 8)
+    val schemaName3 = "tooMayAttrs" + UUID.randomUUID().toString.substring(0, 8)
     val attrList3 = (1 to 1000).map(i => s"attrib$i")
 
     writeFailingSchema(
@@ -202,12 +196,12 @@ class LimitsFlowSpec
       schemaName3,
       "0.3",
       "A value being processed is not valid",
-      attrList3 : _*
+      attrList3: _*
     )
 
 
-    val schemaName4 = "tooLongAttrs"+UUID.randomUUID().toString.substring(0, 8)
-    val longString4 = "0123456789"*1000
+    val schemaName4 = "tooLongAttrs" + UUID.randomUUID().toString.substring(0, 8)
+    val longString4 = "0123456789" * 1000
     val attrList4 = (1 to 3).map(i => s"$longString4$i")
 
     writeFailingSchema(
@@ -217,7 +211,7 @@ class LimitsFlowSpec
       schemaName4,
       "0.4",
       "longer than 256 symbols",
-      attrList4 : _*
+      attrList4: _*
     )
 
 
@@ -230,17 +224,17 @@ class LimitsFlowSpec
     connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
 
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
-       GoalCode.ISSUE_VC)
+      GoalCode.ISSUE_VC)
 
 
-    val strBelowLimit ="1234567890"*2200
-    val strAboveLimit ="1234567890"*7000
+    val strBelowLimit = "1234567890" * 2500
+    val strAboveLimit = "1234567890" * 3500
 
     issueCredential_1_0(
       apps(verity1),
       apps(cas1),
       connectionId,
-      (0 to 9).map{i=> s"attr$i" -> strBelowLimit}.toMap,
+      (0 to 9).map { i => s"attr$i" -> strBelowLimit }.toMap,
       limitsCredDefName,
       "tag"
     )
@@ -251,32 +245,10 @@ class LimitsFlowSpec
       issuerSdk,
       holderSdk,
       connectionId,
-      (0 to 9).map{i=> s"attr$i" -> strAboveLimit}.toMap,
+      (0 to 9).map { i => s"attr$i" -> strAboveLimit }.toMap,
       limitsCredDefName,
       "tag",
       "Payload size is too big"
-    )
-
-    // large amount of attrs
-    val longAttrsMap = longAttrList.map( attr => attr -> "someValue" ).toMap
-    issueCredential_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      longAttrsMap,
-      "cred_name1",
-      "tag"
-    )
-
-    val longString = "0123456789"*20000
-    val hugeAttrsMap = (1 to 10).map( i => s"attrib$i" -> longString ).toMap
-    issueCredential_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      hugeAttrsMap,
-      "cred_name2",
-      "tag"
     )
 
     val largeProofList = (1 to 1000).map(i => s"proof$i").toSeq
@@ -288,7 +260,7 @@ class LimitsFlowSpec
       largeProofList
     )
 
-    val longString2 = "1234567890"*24000
+    val longString2 = "1234567890" * 39000
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -312,7 +284,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longAnswer = "1234567890"*15000
+    val longAnswer = "1234567890" * 39000
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -324,9 +296,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    //todo specify limits in configuration after merging with !260
-
-    val longStringAboveLimit = "1234567890"*27000
+    val longStringAboveLimit = "1234567890" * 40000
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),
@@ -338,7 +308,7 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longSeqAboveLimit = (0 to 5000).map(i => s"answer$i")
+    val longSeqAboveLimit = (0 to 8000).map(i => s"answer$i")
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),
@@ -350,7 +320,7 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longAnswerAboveLimit = "1234567890"*25000
+    val longAnswerAboveLimit = "1234567890" * 40000
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),
@@ -377,60 +347,37 @@ class LimitsFlowSpec
       "Hello, World!",
       "2018-1-19T01:24:00-000",
       "en"
-    )
-
-    sdkBasicInteractionsMetricCount(apps)*/
-  }
-
-  private def sdkBasicInteractionsMetricCount(apps: ScenarioAppEnvironment): Unit = {
-    //The 'expectedMetricCount' will change depending how many times the app scenario ran a specific protocol
-    Set(
-      (ConnectionsMsgFamily, 2),
-      (CommittedAnswerMsgFamily, 1),
-      (OutOfBandMsgFamily, 1),
-      (PresentProofMsgFamily, 2),
-      (IssueCredMsgFamily, 1)
-    ).foreach(x => validateProtocolMetrics(apps(verity1), metricKey(x._1), expectedMetricCount=x._2))
+    )*/
   }
 
   def sdkOobInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
-    val connectionId = UUID.randomUUID().toString
+    val connectionId1 = UUID.randomUUID().toString
+    val connectionId2 = UUID.randomUUID().toString
+
+    val strBelowLimit = "1234567890" * 2200
+    val strAboveLimit = "1234567890" * 7000
 
     issueCredentialViaOob_1_0(
       apps(verity1),
       apps(cas1),
-      connectionId,
-      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
-      "cred_name1",
+      connectionId1,
+      (0 to 9).map { i => s"attr$i" -> strBelowLimit }.toMap,
+      limitsCredDefName,
       "tag"
     )
 
-    presentProofViaOob_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "proof-request-1",
-      Seq("first_name", "last_name", "license_num")
-    )
-
-    // Reuse connection from connection
-    presentProofViaOob_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "proof-request-1",
-      Seq("first_name", "last_name", "license_num"),
-      true
-    )
-
-    issueCredentialViaOob_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      Map("license_num" -> "123", "first_name" -> "Bob", "last_name" -> "Marley"),
-      "cred_name1",
+    val issuerSdk = apps(verity1).sdks.head
+    val holderSdk = apps(cas1).sdks.head
+    issueCredentialViaOob_1_0_expectingError(
+      issuerSdk,
+      issuerSdk,
+      holderSdk,
+      holderSdk,
+      connectionId2,
+      (0 to 9).map { i => s"attr$i" -> strAboveLimit }.toMap,
+      limitsCredDefName,
       "tag",
-      true
+      "Payload size is too big"
     )
   }
 
@@ -439,5 +386,6 @@ class LimitsFlowSpec
   }
 
 }
+
 
 

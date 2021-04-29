@@ -5,10 +5,8 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.testkit.listener.Listener
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.scenario.Scenario
-import com.evernym.verity.logging.LoggingUtil.{getLoggerByClass, getLoggerByName}
 import com.evernym.verity.sdk.handlers.Handlers
 import com.evernym.verity.sdk.utils.Context
-import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
@@ -57,12 +55,7 @@ trait ListeningSdkProvider extends MsgReceiver {
   protected var listener: Listener = _
   private val queue: LinkedBlockingDeque[JSONObject] = new LinkedBlockingDeque[JSONObject]()
 
-   val logger2: Logger = getLoggerByName("ListeningSdkProvider") // todo temporary logging
-
-  def receiveMsg(msg: JSONObject): Unit = {
-    logger2.error ("Got problem msg: " + msg.toString.take(1000))
-    queue.offerFirst(msg)
-  }
+  def receiveMsg(msg: JSONObject): Unit = queue.offerFirst(msg)
 
   def expectMsg(max: Duration): JSONObject = {
     val m = Option {

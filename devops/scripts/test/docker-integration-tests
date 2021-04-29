@@ -128,6 +128,12 @@ then
   sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Integration"
 fi
 
+if [[ "$testType" == "Limits" ]]
+then
+    echo "Running $testType integration tests..."
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.*"
+fi
+
 echo "Done running integration tests..."
 popd
 

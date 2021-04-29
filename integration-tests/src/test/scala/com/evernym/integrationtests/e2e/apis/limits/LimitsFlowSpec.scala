@@ -227,7 +227,7 @@ class LimitsFlowSpec
       GoalCode.ISSUE_VC)
 
 
-    val strBelowLimit = "1234567890" * 2500
+    val strBelowLimit = "1234567890" * 2200
     val strAboveLimit = "1234567890" * 3500
 
     issueCredential_1_0(
@@ -260,7 +260,7 @@ class LimitsFlowSpec
       largeProofList
     )
 
-    val longString2 = "1234567890" * 39000
+    val longString2 = "1234567890" * 28000
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -272,7 +272,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longSeq = (0 to 4300).map(i => s"answer$i")
+    val longSeq = (0 to 10000).map(i => s"answer$i")
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -284,7 +284,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longAnswer = "1234567890" * 39000
+    val longAnswer = "1234567890" * 28000
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -296,7 +296,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longStringAboveLimit = "1234567890" * 40000
+    val longStringAboveLimit = "1234567890" * 32000
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),
@@ -308,7 +308,7 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longSeqAboveLimit = (0 to 8000).map(i => s"answer$i")
+    val longSeqAboveLimit = (0 to 25000).map(i => s"answer$i")
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),
@@ -320,7 +320,7 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longAnswerAboveLimit = "1234567890" * 40000
+    val longAnswerAboveLimit = "1234567890" * 32000
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),

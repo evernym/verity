@@ -58,6 +58,7 @@ import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import org.json.JSONObject
 
@@ -275,7 +276,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ), updateDeliveryStatus = false)
   }
 
-  def stateDetailsFor: Future[PartialFunction[String, Parameter]] = {
+  def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]] = {
     val getConnectEndpointDetail: String = {
       val msg = ActorEndpointDetail(userAgentPairwiseRegionName, entityId)
       DefaultMsgCodec.toJson(msg)
@@ -284,7 +285,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       agencyDidPair   <- agencyDidPairFut();
       filteredConfigs <- getConfigs(Set(NAME_KEY, LOGO_URL_KEY))
     ) yield {
-      {
+      p: ProtoRef => {
         case SELF_ID                                => Parameter(SELF_ID, state.myDid_!)
         case OTHER_ID                               => Parameter(OTHER_ID, state.theirDid.getOrElse(UNKNOWN_OTHER_ID))
         case AGENCY_DID                             => Parameter(AGENCY_DID, agencyDIDReq)
@@ -303,6 +304,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+
+        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, p.msgFamilyName))
       }
     }
   }

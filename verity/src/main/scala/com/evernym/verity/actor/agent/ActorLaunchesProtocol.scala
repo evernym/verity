@@ -23,13 +23,13 @@ trait ActorLaunchesProtocol extends LaunchesProtocol {
   protected implicit lazy val protocolRegistry: ProtocolRegistry[ControllerProviderInputType] = registeredProtocols
   implicit val system: ActorSystem = context.system
 
-  def stateDetailsFor: Future[PartialFunction[String, Parameter]]
+  def stateDetailsFor(protoRef: ProtoRef): Future[PartialFunction[String, Parameter]]
 
   def handleInitProtocolReq(ipr: InitProtocolReq, sponsorRel: Option[SponsorRel]): Unit = {
     logger.debug(s"about to get values for init params:" + ipr.stateKeys)
     val sndr = sender()
     try {
-      stateDetailsFor.map { paramMapper =>
+      stateDetailsFor(ipr.protoRef).map { paramMapper =>
         logger.debug(s"init params received")
         val parameters = ipr.stateKeys.map(paramMapper)
         sndr ! ProtocolCmd(InitProtocol(domainId, parameters, sponsorRel), None)

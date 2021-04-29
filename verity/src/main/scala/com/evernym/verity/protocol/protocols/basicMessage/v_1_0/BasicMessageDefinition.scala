@@ -11,7 +11,7 @@ object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p.paramValueRequired(SELF_ID), p.paramValueRequired(OTHER_ID))
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID)
+  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID, DATA_RETENTION_POLICY)
 
   override val roles: Set[Role] = Set(Participator)
 

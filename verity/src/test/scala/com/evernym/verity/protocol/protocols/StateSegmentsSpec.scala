@@ -4,6 +4,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects._
@@ -163,7 +164,10 @@ object TestObjects {
     }
 
     def addPhoneBookEntry(apbe: AddPhoneBookEntry): Unit = {
-      ctx.storeSegment(apbe.entry.key, PhoneBookEntryAdded(apbe.entry.fName, apbe.entry.lName, apbe.entry.phoneNumber))
+      ctx.storeSegment(apbe.entry.key, PhoneBookEntryAdded(apbe.entry.fName, apbe.entry.lName, apbe.entry.phoneNumber)) {
+        case Success(_: StoredSegment) =>
+        case Failure(e) => throw e
+      }
     }
 
     def handleControl: Control ?=> Any = {

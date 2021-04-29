@@ -12,7 +12,7 @@ import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
-import com.evernym.verity.protocol.engine.msg.{GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
+import com.evernym.verity.protocol.engine.msg.{GivenDataRetentionPolicy, GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
@@ -65,13 +65,8 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def grantedAccessRights: Set[AccessRight] = protocol.definition.requiredAccess
 
-  //TODO -> RTM:
-  // - Will be worked through in VE-2497
-  // - Does the protocol init set this or does the definition read the config?
-  // - This needs to be better thought out.
-  // - The SegmentedStateContext/ProtocolContext.storeSegments uses this and
-  //   passes it to the SegmentStoreAPI/SegmentStoreApiController.storeSegment
-  def dataRetentionPolicy: Option[String] = None
+  /* This is set during initialization of the protocol. The policy will not change throughout the protocol.*/
+  def dataRetentionPolicy: Option[String] = backState.dataRetentionPolicy
 
   @deprecated("Use of services is deprecated. Use the instance of " +
     "ProtocolContextApi to access driver and the ability to send " +
@@ -287,6 +282,9 @@ trait ProtocolContext[P,R,M,E,S,I]
     case s: SponsorRel => BackState()
       shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(s))
 
+    case p: SetDataRetentionPolicy => BackState()
+      shadowBackState.getOrElse(BackState()).copy(dataRetentionPolicy = Option(p.policy))
+
     case pcs: PackagingContextSet =>
       val pc = PackagingContext.init(pcs)
       shadowBackState.getOrElse(BackState()).copy(packagingContext = Option(pc))
@@ -322,6 +320,7 @@ trait ProtocolContext[P,R,M,E,S,I]
     sysMsg match {
       case GivenDomainId(id)           => apply(SetDomainId(id))
       case GivenSponsorRel(s)          => apply(s)
+      case GivenDataRetentionPolicy(p) => p.map(x => apply(SetDataRetentionPolicy(x)))
       case stc: StoreThreadContext     =>
         val curPackagingContext = backState.packagingContext
         if (curPackagingContext.isEmpty) {
@@ -361,7 +360,6 @@ trait ProtocolContext[P,R,M,E,S,I]
    */
   def postAllAsyncOpsCompleted(): Unit = {
     if (isAllAsyncOpsCompleted) {
-      storeSegments()
       recordEvents getOrElse finalizeState
     }
   }
@@ -369,7 +367,6 @@ trait ProtocolContext[P,R,M,E,S,I]
   def abortTransaction(): Unit = {
     allBoxes.foreach(_.clear())
     pendingEvents = Vector()
-    pendingSegments = List()
     clearShadowState()
     resetAllAsyncOpCallBackHandlers()
     record("protocol context cleaned up")
@@ -439,7 +436,7 @@ trait ProtocolContext[P,R,M,E,S,I]
    *  2. 'Segmented State' storage
    *  3. 'Event Persistence'
    */
-  def readyToFinalize: Boolean = isAllAsyncOpsCompleted && pendingEvents.isEmpty && pendingSegments.isEmpty
+  def readyToFinalize: Boolean = isAllAsyncOpsCompleted && pendingEvents.isEmpty
 
   /**
    * This is called when the base 'onPersistFailure' or 'onPersistRejected' from akka persistence is invoked
@@ -469,27 +466,6 @@ trait ProtocolContext[P,R,M,E,S,I]
   def clearShadowState(): Unit = {
     shadowState = None
     shadowBackState = None
-  }
-
-  /**
-   * segmentStorageService.storeSegment implementation will store the given segments
-   *  (either to actor based storage or some external storage based on size constraints)
-   * and as with any other async service, the 'segmentStorageService.storeSegment' async op
-   * will be executed with AsyncOpRunner which will make sure to finalize things once
-   * async op is completed
-   */
-  def storeSegments(): Unit = {
-    pendingSegments.foreach { ps =>
-      logger.debug(s"storing pending segment: $ps")
-      segmentStore.storeSegment(ps.segmentAddress, ps.segmentKey, ps.value, dataRetentionPolicy) {
-        case Success(ss: StoredSegment) =>
-          logger.debug(s"pending segment stored: $ss")
-          removeFromPendingList(ss.segmentAddress)
-        case Failure(exception) =>
-          logger.error("error while storing segment: " + exception.getMessage)
-          abortTransaction()
-      }
-    }
   }
 
   /**
@@ -639,7 +615,8 @@ trait ProtocolContext[P,R,M,E,S,I]
                        domainId: Option[DomainId]=None,
                        packagingContext: Option[PackagingContext] = None,
                        msgOrders: Option[MsgOrders] = None,
-                       sponsorRel: Option[SponsorRel]=None) {
+                       sponsorRel: Option[SponsorRel]=None,
+                       dataRetentionPolicy: Option[String]=None) {
     def advanceVersion: BackState = {
       this.copy(stateVersion = this.stateVersion + 1)
     }

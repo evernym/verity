@@ -251,15 +251,6 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val largeProofList = (1 to 1000).map(i => s"proof$i").toSeq
-    presentProof_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "proof-request-1",
-      largeProofList
-    )
-
     val longString2 = "1234567890" * 28000
     committedAnswer(
       apps(verity1),
@@ -272,7 +263,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longSeq = (0 to 10000).map(i => s"answer$i")
+    val longSeq = (0 to 100).map(i => s"answer$i")
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -354,8 +345,8 @@ class LimitsFlowSpec
     val connectionId1 = UUID.randomUUID().toString
     val connectionId2 = UUID.randomUUID().toString
 
-    val strBelowLimit = "1234567890" * 2200
-    val strAboveLimit = "1234567890" * 7000
+    val strBelowLimit = "1234567890" * 200
+    val strAboveLimit = "1234567890" * 3500
 
     issueCredentialViaOob_1_0(
       apps(verity1),
@@ -379,10 +370,6 @@ class LimitsFlowSpec
       "tag",
       "Payload size is too big"
     )
-  }
-
-  def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
-    apps.forEachApplication(testMetrics)
   }
 
 }

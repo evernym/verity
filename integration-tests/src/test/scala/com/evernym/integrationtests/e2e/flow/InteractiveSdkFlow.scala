@@ -298,7 +298,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       s"[$issuerName] use write-schema protocol" in {
         val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
-        logger.error(Instant.now().toString)
         schema.write(issuerSdk.context)
 
 

@@ -6,9 +6,12 @@ import ch.qos.logback.core.CoreConstants.LINE_SEPARATOR
 import ch.qos.logback.core.LayoutBase
 import com.evernym.verity.util.OptionUtil
 
+import java.lang.{Long => JavaLong}
 import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.util.Try
 
 /**
   * Custom Logging Layout to be used by logback.
@@ -135,15 +138,27 @@ object LogLayout {
     }
   }
 
+  def convertKamonId(id: String) = {
+    Try{
+//      BigInt(id, 16).toString() alternative implementation but it is much slower
+      JavaLong.toUnsignedString(
+        JavaLong.parseUnsignedLong(id, 16)
+      )
+    }.getOrElse(id)
+  }
+
   def resolveMdc(event:ILoggingEvent): String = {
     safeGet {
-      OptionUtil.emptyOption(event.getMDCPropertyMap)
+      val mdc = OptionUtil.emptyOption(event.getMDCPropertyMap)
         .map(_.asScala)
+        .getOrElse(mutable.Map.empty)
         .map {
-          _.map { case (arg1, arg2) => tupleStr(arg1, arg2) }
+          case ("kamonSpanId", id)  => tupleStr("kamonSpanId", convertKamonId(id))
+          case ("kamonTraceId", id) => tupleStr("kamonTraceId", convertKamonId(id))
+          case (arg1, arg2) => tupleStr(arg1, arg2)
         }
-        .map(_.mkString("", " ", " "))
-        .getOrElse("")
+      if(mdc.isEmpty) ""
+      else mdc.mkString("", " ", " ")
     }
   }
 
@@ -163,7 +178,8 @@ object LogLayout {
     .replace("\n", "")
 
   def tupleStr(arg1: String, arg2: Any): String = {
-    s"""$arg1="${cleanValueStr(arg2.toString)}""""
+    if (arg1 == null || arg2 == null) ""
+    else s"""$arg1="${cleanValueStr(arg2.toString)}""""
   }
 
   def safeGet(f: => Any): String = {

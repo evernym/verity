@@ -207,5 +207,58 @@ class LogLayout2Spec extends BasicSpec {
 
       out.trim should not include "\n"
     }
+
+
+    "convert kamon traceid and spanid" in {
+      val l = new LogLayout()
+
+      val log = logger.asInstanceOf[Logger]
+
+      val e = new LoggingEvent(
+        "ch.qos.logback.core.ConsoleAppender",
+        log,
+        Level.INFO,
+        "message",
+        null,
+        Array[Object](("arg1", "value1"), ("arg2", UNHANDLED), ("arg3", FORBIDDEN))
+      )
+
+      e.setMDCPropertyMap(
+        Map(
+          "kamonSpanId" -> "4519eea8b9532d0f",
+          "kamonTraceId" -> "c5006a01d4cd6223"
+        ).asJava)
+
+      val out = l.doLayout(e)
+      out should not be null
+      out.trim should include("""kamonSpanId="4979273271465946383"""")
+      out.trim should include("""kamonTraceId="14195462581569544739"""")
+    }
+
+    "handle non-hex or numeric kamon ids" in {
+      val l = new LogLayout()
+
+      val log = logger.asInstanceOf[Logger]
+
+      val e = new LoggingEvent(
+        "ch.qos.logback.core.ConsoleAppender",
+        log,
+        Level.INFO,
+        "message",
+        null,
+        Array[Object](("arg1", "value1"), ("arg2", UNHANDLED), ("arg3", FORBIDDEN))
+      )
+
+      e.setMDCPropertyMap(
+        Map(
+          "kamonSpanId" -> "4979273271465946383",
+          "kamonTraceId" -> "a_non-$-numeric_id"
+        ).asJava)
+
+      val out = l.doLayout(e)
+      out should not be null
+      out.trim should include("""kamonSpanId="4979273271465946383"""")
+      out.trim should include("""kamonTraceId="a_non-$-numeric_id"""")
+    }
   }
 }

@@ -9,7 +9,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
 import com.evernym.verity.protocol.engine.msg.{GivenDataRetentionPolicy, GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
@@ -21,7 +21,7 @@ import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /**
   * Generically holds and manages protocol state.

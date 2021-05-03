@@ -2,10 +2,12 @@ package com.evernym.verity.http.route_handlers.open
 
 import java.util.UUID
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.CustomHeader
 import akka.http.scaladsl.server.Directives.{complete, entity, handleExceptions, logRequestResult, pathPrefix, _}
 import akka.http.scaladsl.server.directives.BasicDirectives.extract
+import akka.http.scaladsl.server.directives.HeaderDirectives.optionalHeaderValueByName
 import akka.http.scaladsl.server.{Directive1, Route}
-import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
+import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_IP_ADDRESS, CLIENT_REQUEST_ID_HTTP_HEADER}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
@@ -13,6 +15,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.config.CommonConfig.REST_API_ENABLED
+import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
@@ -20,6 +23,14 @@ import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
 import com.evernym.verity.{ActorErrorResp, Status}
 import org.json.JSONObject
 
+
+final case class `API-REQUEST-ID`(id: String) extends CustomHeader {
+  override def name(): String = CLIENT_REQUEST_ID_HTTP_HEADER
+  override def value(): String = id
+
+  override def renderInRequests(): Boolean = true
+  override def renderInResponses(): Boolean = true
+}
 
 trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
@@ -32,17 +43,54 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
+  private def logIncoming(route: String,
+                          protoRef:ProtoRef,
+                          thid: Option[String],
+                          method: HttpMethod)
+                         (implicit reqMsgContext: ReqMsgContext): Unit = {
+    logger.whenInfoEnabled {
+      val target = s"REST API at $protoRef ${thid.map(s"on thread:" + _).getOrElse("")}"
+      val buildLogMsg = incomingLogMsg(
+        target,
+        method,
+        Some(route),
+        Some("REST_API")
+      )
+      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+    }
+  }
+
+  private def logOutgoing(route: String,
+                          protoRef:ProtoRef,
+                          thid: Option[String],
+                          status: StatusCode)
+                         (implicit reqMsgContext: ReqMsgContext): Unit = {
+    logger.whenInfoEnabled {
+      val target = s"REST API at $protoRef ${thid.map(s"on thread:" + _).getOrElse("")}"
+      val buildLogMsg = outgoingLogMsg(
+        target,
+        status,
+        Some(route),
+        Some("REST_API")
+      )
+      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+    }
+  }
+
   protected def handleRestMsgReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String])
                       (implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgCount
-    logger.info(s"[${reqMsgContext.id}] [incoming request] [POST] rest message ${reqMsgContext.clientIpAddressLogStr}")
+
+    logIncoming(route, protoRef, thid, HttpMethods.POST)
+
     entity(as[String]) { payload =>
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
       val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext)
 
       complete {
-        platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, payload, restMsgContext)) map responseHandler
+        platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, payload, restMsgContext))
+        .map (responseHandler(route, protoRef, thid))
       }
     }
   }
@@ -50,38 +98,75 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   protected def handleRestGetStatusReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String], params: Map[String, String])
                             (implicit reqMsgContext: ReqMsgContext): Route = {
     incrementAgentMsgCount
-    logger.info(s"[${reqMsgContext.id}] [incoming request] [GET] rest message ${reqMsgContext.clientIpAddressLogStr}")
+
+    logIncoming(route, protoRef, thid, HttpMethods.GET)
+
     val msgType = buildGetStatusMsgType(protoRef, params)
     val msg = buildGetStatusMsg(msgType, params)
     val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext, sync = true)
 
     complete {
-      platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, msg, restMsgContext)) map responseHandler
+      platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, msg, restMsgContext))
+      .map(responseHandler(route, protoRef, thid))
     }
   }
 
-  protected def responseHandler(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, HttpResponse] = {
+  def withClientRequestId(resp: HttpResponse)(implicit reqMsgContext: ReqMsgContext) = {
+    reqMsgContext.clientReqId.map { id =>
+      resp.withHeaders(`API-REQUEST-ID`(id))
+    }.getOrElse(resp)
+  }
+
+  protected def responseHandler(route: String, protoRef: ProtoRef, thid: Option[String])(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, HttpResponse] = {
     case br: ActorErrorResp  =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
-      val errResp = RestExceptionHandler.handleUnexpectedResponse(br)
-      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${errResp.status}]")
-      errResp
+      val resp = RestExceptionHandler.handleUnexpectedResponse(br)
+      logOutgoing(route, protoRef, thid, resp.status)
+      withClientRequestId(resp)
     case Done             =>
       incrementAgentMsgSucceedCount
-      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.Accepted}]")
-      HttpResponse(StatusCodes.Accepted, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestAcceptedResponse())))
-    case resp: String     =>
+      val resp = HttpResponse(
+        StatusCodes.Accepted,
+        entity=HttpEntity(
+          ContentType(MediaTypes.`application/json`),
+          DefaultMsgCodec.toJson(RestAcceptedResponse())
+        )
+      )
+      logOutgoing(route, protoRef, thid, resp.status)
+      withClientRequestId(resp)
+    case respStr: String     =>
       incrementAgentMsgSucceedCount
-      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.OK}] (string to json response)")
-      HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(resp))))
+      val resp = HttpResponse(
+        StatusCodes.OK,
+        entity=HttpEntity(
+          ContentType(MediaTypes.`application/json`),
+          DefaultMsgCodec.toJson(RestOKResponse(respStr))
+        )
+      )
+      logOutgoing(route, protoRef, thid, resp.status)
+      withClientRequestId(resp)
     case jsonMsg: JsonMsg =>
       incrementAgentMsgSucceedCount
-      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.OK}] (json response)")
-      HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(new JSONObject(jsonMsg.msg)))))
+      val resp = HttpResponse(
+        StatusCodes.OK,
+        entity=HttpEntity(
+          ContentType(MediaTypes.`application/json`),
+          DefaultMsgCodec.toJson(RestOKResponse(new JSONObject(jsonMsg.msg)))
+        )
+      )
+      logOutgoing(route, protoRef, thid, resp.status)
+      withClientRequestId(resp)
     case native: Any      =>
       incrementAgentMsgSucceedCount
-      logger.info(s"[${reqMsgContext.id}] [outgoing response] [${StatusCodes.OK}] (native to json response)")
-      HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(RestOKResponse(native))))
+      val resp = HttpResponse(
+        StatusCodes.OK,
+        entity=HttpEntity(
+          ContentType(MediaTypes.`application/json`),
+          DefaultMsgCodec.toJson(RestOKResponse(native))
+        )
+      )
+      logOutgoing(route, protoRef, thid, resp.status)
+      withClientRequestId(resp)
   }
 
   protected def extractMsgType(payload: String): MsgType = {
@@ -120,7 +205,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def extractAuthHeader: Directive1[RestAuthContext] = {
-    val lowerCaseName = "X-API-key".toLowerCase
+    val lowerCaseName = API_KEY_HTTP_HEADER.toLowerCase
     extract(_.request.headers.collectFirst {
       case HttpHeader(`lowerCaseName`, value) => value
     } match {
@@ -141,15 +226,21 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
             extractClientIP { implicit remoteAddress =>
               checkIfRestApiEnabled()
               extractAuthHeader { auth =>
-                path(Segment/Segment/Segment/Segment.?) { (route, protocolFamily, version, threadId) =>
-                  implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
-                  MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)       //tracing related
-                  parameterMap{ params =>
-                    post {
-                      handleRestMsgReq(route, ProtoRef(protocolFamily, version), auth, threadId)
-                    } ~
-                    get {
-                      handleRestGetStatusReq(route, ProtoRef(protocolFamily, version), auth, threadId, params)
+                optionalHeaderValueByName(CLIENT_REQUEST_ID_HTTP_HEADER) { requestId =>
+                  path(Segment/Segment/Segment/Segment.?) { (route, protocolFamily, version, threadId) =>
+                    val protoRef = ProtoRef(protocolFamily, version)
+                    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(
+                      initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress),
+                      clientReqId = requestId
+                    )
+                    MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)       //tracing related
+                    parameterMap{ params =>
+                      post {
+                        handleRestMsgReq(route, protoRef, auth, threadId)
+                      } ~
+                        get {
+                          handleRestGetStatusReq(route, protoRef, auth, threadId, params)
+                        }
                     }
                   }
                 }

@@ -19,7 +19,6 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.protocols.walletBackup.BackupStoredInBlob
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
 
@@ -281,8 +280,9 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     227 -> ChangePairwiseRelIds,
 
     228 -> AuthKeyAdded,
-    229 -> SetDataRetentionPolicy,
-    230 -> walletBackup.BackupStoredInBlob
+    229 -> issueCredential_v10.CredSentState,
+    230 -> SetDataRetentionPolicy,
+    231 -> walletBackup.BackupStoredInBlob
   )
 
 }

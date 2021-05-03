@@ -33,8 +33,11 @@ package object persistence {
     def getDeleteSnapshotCriteria(latestSnapshotSeqNr: Long): Option[SnapshotSelectionCriteria] = {
       (keepNSnapshots, snapshotEveryNEvents) match {
         case (Some(keepNSnapshot), Some(snapshotEveryNEvent)) =>
-          val minSequenceNumber = latestSnapshotSeqNr - (keepNSnapshot * snapshotEveryNEvent)
           val maxSequenceNumber = latestSnapshotSeqNr - ((keepNSnapshot-1) * snapshotEveryNEvent) - 1
+          val tmpMinSequenceNumber = latestSnapshotSeqNr - (keepNSnapshot * snapshotEveryNEvent)
+          val minSequenceNumber =
+            if (maxSequenceNumber == tmpMinSequenceNumber)  tmpMinSequenceNumber/2
+            else tmpMinSequenceNumber
           if (minSequenceNumber > 0 && maxSequenceNumber > 0) {
             Option(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNumber, minSequenceNr = minSequenceNumber))
           } else None

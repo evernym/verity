@@ -5,12 +5,11 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCre
 trait Event
 
 sealed trait State {
-  def status: String
+  def status: String = this.getClass.getSimpleName
 }
+
 object State {
-  case class Uninitialized() extends State {
-    override def status: String = "Uninitialized"
-  }
+  case class Uninitialized() extends State
 
   trait HasMyAndTheirDid extends State {
     def myPwDid: String
@@ -19,70 +18,52 @@ object State {
 
   trait PostInteractionStarted extends HasMyAndTheirDid
 
+  trait PostInteractionSnapshottable extends PostInteractionStarted
+
   case class Initialized(myPwDid: String,
                          theirPwDid: Option[String],
                          agentName: Option[String],
                          logoUrl: Option[String],
                          agencyVerkey: Option[String],
                          publicDid: Option[String]
-                        ) extends HasMyAndTheirDid {
-    override def status: String = "Initialized"
-  }
+                        ) extends HasMyAndTheirDid
 
   case class ProposalSent(myPwDid: String,
                           theirPwDid: Option[String],
-                          credProposed: ProposeCred) extends PostInteractionStarted {
-    override def status: String = "ProposalSent"
-  }
+                          credProposed: ProposeCred) extends PostInteractionStarted
+
   case class ProposalReceived(myPwDid: String,
                               theirPwDid: Option[String],
-                              credProposed: ProposeCred) extends PostInteractionStarted {
-    override def status: String = "ProposalReceived"
-  }
+                              credProposed: ProposeCred) extends PostInteractionStarted
 
   case class OfferSent(myPwDid: String,
                        theirPwDid: Option[String],
                        credOffer: OfferCred,
-                       autoIssue: Boolean) extends PostInteractionStarted {
-    override def status: String = "OfferSent"
-  }
+                       autoIssue: Boolean) extends PostInteractionStarted
 
   case class OfferReceived(myPwDid: String,
                            theirPwDid: Option[String],
-                           credOffer: OfferCred) extends PostInteractionStarted {
-    override def status: String = "OfferReceived"
-  }
+                           credOffer: OfferCred) extends PostInteractionStarted
 
   case class RequestSent(myPwDid: String,
                          theirPwDid: Option[String],
                          credOffer: OfferCred,
-                         credRequest: RequestCred) extends PostInteractionStarted  {
-    override def status: String = "RequestSent"
-  }
+                         credRequest: RequestCred) extends PostInteractionStarted
 
   case class RequestReceived(myPwDid: String,
                              theirPwDid: Option[String],
                              credOffer: OfferCred,
-                             credRequest: RequestCred) extends PostInteractionStarted {
-    override def status: String = "RequestReceived"
-  }
+                             credRequest: RequestCred) extends PostInteractionStarted
 
-  case class IssueCredSent(myPwDid: String,
-                           theirPwDid: Option[String],
-                           credIssued: IssueCred) extends PostInteractionStarted {
-    override def status: String = "CredSent"
-  }
-  case class IssueCredReceived(myPwDid: String,
-                               theirPwDid: Option[String],
-                               credIssued: IssueCred) extends PostInteractionStarted  {
-    override def status: String = "CredReceived"
-  }
+  case class CredSent(myPwDid: String,
+                      theirPwDid: Option[String],
+                      credIssued: IssueCred) extends PostInteractionStarted
 
-  case class Rejected(comment: Option[String]=Some("")) extends State {
-    override def status: String = "Rejected"
-  }
+  case class CredReceived(myPwDid: String,
+                          theirPwDid: Option[String],
+                          credIssued: IssueCred) extends PostInteractionStarted
 
-  case class ProblemReported(description: String) extends State {
-    override def status: String = "ProblemReported"
-  }
+  case class Rejected(comment: Option[String]=Some("")) extends State
+
+  case class ProblemReported(description: String) extends State
 }

@@ -3,22 +3,38 @@ package com.evernym.verity.protocol.container.actor.container.base
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.testkit.TestKitBase
-import com.evernym.verity.actor.agent.ThreadContextDetail
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
-import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
-import com.evernym.verity.protocol.engine.{DID, PinstIdPair, ProtoDef}
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.engine.{DID, PinstIdPair, ThreadId}
+import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.BeforeAndAfterAll
 
-import scala.concurrent.duration.FiniteDuration
+import java.util.UUID
+import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
+/**
+ * a base class to be extended to test actor protocol container
+ */
 trait BaseProtocolActorSpec
   extends PersistentActorSpec
     with BasicSpec
+    with HasTestWalletAPI
+    with BeforeAndAfterAll
     with ShardUtil {
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    agentRouteStoreRegion   //touching it to start the routing agent region actor
+  }
+
+  /**
+   * to be overridden by test for overriding test specific configuration
+   * @return
+   */
   def overrideSpecificConfig: Option[Config] = None
 
   /**
@@ -29,7 +45,10 @@ trait BaseProtocolActorSpec
    */
   final override def overrideConfig: Option[Config] = Option {
     val baseConfig = ConfigFactory parseString {
-      s"akka.actor.serialize-messages = off"
+      """
+         akka.actor.serialize-messages = off
+         verity.metrics.enabled = N
+        """.stripMargin
     }
     overrideSpecificConfig match {
       case Some(sc) => baseConfig.withFallback(sc)
@@ -38,22 +57,20 @@ trait BaseProtocolActorSpec
   }
 
   /**
+   * builds SetupController data to be used to 'setup' a controller who
+   *  * sends 'control' messages to protocol actor and
+   *  * receives 'signal' messages from protocol actor and
+   *  * receives 'protocol' messages sent by other party
    *
    * @param myDID my DID
    * @param theirDIDOpt their DID, needed if protocol is executed between two different domains
-   * @param protoDef protocol def
-   * @param threadContextDetailOpt optional thread context detail
    */
-  def buildSetupController(myDID: DID,
-                           theirDIDOpt: Option[DID],
-                           protoDef: ProtoDef,
-                           threadContextDetailOpt: Option[ThreadContextDetail]=None): SetupController = {
+  def buildSetupController(myDID: DID, theirDIDOpt: Option[DID]): SetupController = {
     SetupController(
       ControllerData(
         myDID,
-        theirDIDOpt,
-        PinstIdPair(myDID, protoDef),
-        threadContextDetailOpt))
+        theirDIDOpt)
+    )
   }
 
   val MOCK_CONTROLLER_REGION_NAME = "MockControllerActor"
@@ -68,62 +85,88 @@ trait BaseProtocolActorSpec
 
   //overriding agent msg routing mapping to make the flow working
   // (from actor protocol container to the 'mock controller')
-  override lazy val mockRouteStoreActorTypeToRegions = Map(
-    ACTOR_TYPE_USER_AGENT_ACTOR -> mockActorRegionActor
+  override val actorTypeToRegions = Map(
+    MOCK_CONTROLLER_ACTOR_TYPE -> createNonPersistentRegion(MOCK_CONTROLLER_REGION_NAME, mockControllerActorProps)
   )
 
-  val mockActorRegionActor: ActorRef = createNonPersistentRegion(MOCK_CONTROLLER_REGION_NAME, mockControllerActorProps)
-  agentRouteStoreRegion
-
+  /**
+   * to be supplied by implementing class to create mock controller actor
+   * @return
+   */
   def mockControllerActorProps: Props
 
-  def buildMockController(protoDef: ProtoDef,
-                          myDID: DID,
+  def buildMockController(myDID: DID,
                           theirDID: DID): MockController = {
-    buildMockController(protoDef, myDID, Option(theirDID), None)
+    buildMockController(myDID, Option(theirDID))
   }
 
-  def buildMockController(protoDef: ProtoDef,
-                          myDID: DID,
-                          theirDIDOpt: Option[DID] = None,
-                          threadContextDetailOpt: Option[ThreadContextDetail]=None): MockController = {
-    MockController(protoDef, myDID, theirDIDOpt, threadContextDetailOpt, mockControllerRegion, this)
+  def buildMockController(myDID: DID,
+                          theirDIDOpt: Option[DID] = None): MockController = {
+    MockController(UUID.randomUUID().toString,
+      myDID, theirDIDOpt, mockControllerRegion, this)
   }
 }
 
-case class MockController(protoDef: ProtoDef,
+case class MockController(walletId: String,
                           myDID: DID,
                           theirDIDOpt: Option[DID] = None,
-                          threadContextDetailOpt: Option[ThreadContextDetail]=None,
                           mockControllerRegion: ActorRef,
                           testKit: TestKitBase) {
 
+  var isSetupCmdSent = false
+
+  /**
+   * setup the mock controller actor
+   * @param sndr
+   */
   def startSetup()(implicit sndr: ActorRef): Unit = {
-    //agentActorContext //to initialize platform
     val cmd = SetupController(
       ControllerData(
+        walletId,
         myDID,
-        theirDIDOpt,
-        PinstIdPair(myDID, protoDef),
-        threadContextDetailOpt))
+        theirDIDOpt))
 
     sendCmd(cmd)
+    isSetupCmdSent = true
+    expectMsg(Done)
   }
 
   def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
 
+  /**
+   * sends given command to mock controller actor
+   * @param cmd
+   * @param sndr
+   */
   def sendCmd(cmd: Any)(implicit sndr: ActorRef): Unit = {
+    cmd match {
+      case _: SendControlMsg => throw new RuntimeException("use 'sendControlCmd' method")
+      case _                 => //nothing to do
+    }
     mockControllerRegion ! ForIdentifier(myDID, cmd)
   }
 
-  def expectMsgType[T](implicit t: ClassTag[T], max: Option[FiniteDuration]=None): T = {
-    val m = max.map(testKit.expectMsgType(_)).getOrElse(testKit.expectMsgType)
+  def sendControlCmd(msg: Control, threadId: ThreadId = "thread-id-1")(implicit sndr: ActorRef): PinstIdPair = {
+    mockControllerRegion ! ForIdentifier(myDID, SendControlMsg(msg, threadId))
+    expectMsgType[PinstIdPair]()
+  }
+
+  def checkIfAlreadySetup(): Unit = {
+    if (!isSetupCmdSent) {
+      throw new RuntimeException(s"controller '$myDID' is not yet setup")
+    }
+  }
+
+  def expectMsgType[T](max: FiniteDuration = Duration(30, SECONDS))(implicit t: ClassTag[T]): T = {
+    checkIfAlreadySetup()
+    val m = testKit.expectMsgType(max)
     assert(testKit.lastSender.toString().contains(myDID), s"msg received from different controller")
     m
   }
 
-  def expectMsg[T](obj: T)(implicit max: Option[FiniteDuration]=None): T = {
-    val m = max.map(_ => testKit.expectMsg(obj)).getOrElse(testKit.expectMsg(obj))
+  def expectMsg[T](obj: T)(implicit max: FiniteDuration = Duration(30, SECONDS)): T = {
+    checkIfAlreadySetup()
+    val m = testKit.expectMsg(max, obj)
     assert(testKit.lastSender.toString().contains(myDID), s"msg received from different controller")
     m
   }

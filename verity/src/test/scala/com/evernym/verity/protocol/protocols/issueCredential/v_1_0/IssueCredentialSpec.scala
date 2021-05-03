@@ -158,13 +158,13 @@ class IssueCredentialSpec
 
         issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
         issuer expect signal[SignalMsg.Sent]
-        val issueCredSent = issuer expect state[State.IssueCredSent]
-        assertStatus[State.IssueCredSent](issuer)
+        val issueCredSent = issuer expect state[State.CredSent]
+        assertStatus[State.CredSent](issuer)
         assertIssueSent(issueCredSent)
 
         holder expect signal[SignalMsg.Received]
-        val issueCredReceived = holder expect state[State.IssueCredReceived]
-        assertStatus[State.IssueCredReceived](holder)
+        val issueCredReceived = holder expect state[State.CredReceived]
+        assertStatus[State.CredReceived](holder)
         assertIssueReceived(issueCredReceived)
 
         issuer expect signal[SignalMsg.Ack]
@@ -189,13 +189,13 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[SignalMsg.Sent]
-      val issueCredSent = issuer expect state[State.IssueCredSent]
-      assertStatus[State.IssueCredSent](issuer)
+      val issueCredSent = issuer expect state[State.CredSent]
+      assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
       holder expect signal[SignalMsg.Received]
-      val issueCredReceived = holder expect state[State.IssueCredReceived]
-      assertStatus[State.IssueCredReceived](holder)
+      val issueCredReceived = holder expect state[State.CredReceived]
+      assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
       issuer expect signal[SignalMsg.Ack]
@@ -219,13 +219,13 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[SignalMsg.Sent]
-      val issueCredSent = issuer expect state[State.IssueCredSent]
-      assertStatus[State.IssueCredSent](issuer)
+      val issueCredSent = issuer expect state[State.CredSent]
+      assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
       holder expect signal[SignalMsg.Received]
-      val issueCredReceived = holder expect state[State.IssueCredReceived]
-      assertStatus[State.IssueCredReceived](holder)
+      val issueCredReceived = holder expect state[State.CredReceived]
+      assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
       issuer expect signal[SignalMsg.Ack]
@@ -247,13 +247,13 @@ class IssueCredentialSpec
       holder expect signal[SignalMsg.Sent]
 
       issuer expect signal[SignalMsg.Sent]
-      val issueCredSent = issuer expect state[State.IssueCredSent]
-      assertStatus[State.IssueCredSent](issuer)
+      val issueCredSent = issuer expect state[State.CredSent]
+      assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
       holder expect signal[SignalMsg.Received]
-      val issueCredReceived = holder expect state[State.IssueCredReceived]
-      assertStatus[State.IssueCredReceived](holder)
+      val issueCredReceived = holder expect state[State.CredReceived]
+      assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
     }
   }
@@ -282,13 +282,13 @@ class IssueCredentialSpec
       // protocol continues to work normally afterwards.
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[SignalMsg.Sent]
-      val issueCredSent = issuer expect state[State.IssueCredSent]
-      assertStatus[State.IssueCredSent](issuer)
+      val issueCredSent = issuer expect state[State.CredSent]
+      assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
       holder expect signal[SignalMsg.Received]
-      val issueCredReceived = holder expect state[State.IssueCredReceived]
-      assertStatus[State.IssueCredReceived](holder)
+      val issueCredReceived = holder expect state[State.CredReceived]
+      assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
       issuer expect signal[SignalMsg.Ack]
@@ -368,13 +368,13 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[SignalMsg.Sent]
-      val issueCredSent = issuer expect state[State.IssueCredSent]
-      assertStatus[State.IssueCredSent](issuer)
+      val issueCredSent = issuer expect state[State.CredSent]
+      assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
       holder expect signal[SignalMsg.Received]
-      val issueCredReceived = holder expect state[State.IssueCredReceived]
-      assertStatus[State.IssueCredReceived](holder)
+      val issueCredReceived = holder expect state[State.CredReceived]
+      assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
       issuer expect signal[SignalMsg.Ack]
@@ -456,13 +456,13 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[SignalMsg.Sent]
-      val issueCredSent = issuer expect state[State.IssueCredSent]
-      assertStatus[State.IssueCredSent](issuer)
+      val issueCredSent = issuer expect state[State.CredSent]
+      assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
       holder expect signal[SignalMsg.Received]
-      val issueCredReceived = holder expect state[State.IssueCredReceived]
-      assertStatus[State.IssueCredReceived](holder)
+      val issueCredReceived = holder expect state[State.CredReceived]
+      assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
       issuer expect signal[SignalMsg.Ack]
@@ -520,11 +520,11 @@ class IssueCredentialSpec
     assertRequest(requestReceived.credRequest)
   }
 
-  def assertIssueSent(issueSent: State.IssueCredSent): Unit = {
+  def assertIssueSent(issueSent: State.CredSent): Unit = {
     assertIssuedCred(issueSent.credIssued)
   }
 
-  def assertIssueReceived(issueReceived: State.IssueCredReceived): Unit = {
+  def assertIssueReceived(issueReceived: State.CredReceived): Unit = {
     assertIssuedCred(issueReceived.credIssued)
   }
 

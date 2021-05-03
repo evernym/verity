@@ -1,7 +1,6 @@
 package com.evernym.verity.http.rest
 
 import java.util.UUID
-
 import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
@@ -10,7 +9,7 @@ import akka.util.ByteString
 import com.evernym.verity.Status
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.rest.base.RestApiBaseSpec
-import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestErrorResponse, RestOKResponse}
+import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestErrorResponse, RestOKResponse, `API-REQUEST-ID`}
 
 /**
  * Purpose of this spec is to test the rest api infrastructure in general
@@ -165,6 +164,24 @@ class BasicRestApiSpec
       ) ~> epRoutes ~> check {
         status shouldBe Accepted
         header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
+        responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
+      }
+    }
+  }
+
+  "when sent API-REQUEST-ID header" - {
+    "should respond with the same API-REQUEST-ID header" taggedAs UNSAFE_IgnoreLog in {
+      val reqId = UUID.randomUUID().toString
+      buildPostReq(s"/api/${mockEntRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
+        HttpEntity.Strict(ContentTypes.`application/json`, createSchemaPayload),
+        Seq(
+          RawHeader("X-API-key", s"${mockEntRestEnv.myDIDApiKey}"),
+          RawHeader("API-REQUEST-ID", reqId)
+        )
+      ) ~> epRoutes ~> check {
+        status shouldBe Accepted
+        header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
+        header("API-REQUEST-ID") shouldEqual Some(`API-REQUEST-ID`(reqId))
         responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
       }
     }

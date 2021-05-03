@@ -72,6 +72,7 @@ class ActorProtocolContainer[
     with ProtocolEngineExceptionHandler
     with AgentIdentity
     with HasWallet
+    with ProtocolSnapshotter[S]
     with HasLogger {
 
   override final val receiveEvent: Receive = {

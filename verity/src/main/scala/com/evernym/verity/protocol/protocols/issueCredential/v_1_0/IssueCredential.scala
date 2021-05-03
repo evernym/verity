@@ -64,7 +64,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
     case (st: State,              _, m: ProblemReport) => handleProblemReport(m, st)
 
-    case (_: State.IssueCredSent, _, m: Ack)           => handleAck(m)
+    case (_: State.CredSent, _, m: Ack)           => handleAck(m)
   }
 
   def handleInit(m: Ctl.Init): Unit = {
@@ -327,11 +327,11 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
     case (st: HasMyAndTheirDid, _, e: IssueCredSent) =>
       val issueCred: IssueCred = buildIssueCred(e.cred)
-      State.IssueCredSent(st.myPwDid, st.theirPwDid, issueCred)
+      State.CredSent(st.myPwDid, st.theirPwDid, issueCred)
 
     case (st: HasMyAndTheirDid, _, e: IssueCredReceived) =>
       val issueCred: IssueCred = buildIssueCred(e.cred)
-      State.IssueCredReceived(st.myPwDid, st.theirPwDid, issueCred)
+      State.CredReceived(st.myPwDid, st.theirPwDid, issueCred)
 
     case (_: PostInteractionStarted, _, e: Rejected) => State.Rejected(e.comment)
 

@@ -107,6 +107,9 @@ object Constants {
   val COM_METHOD_TYPE_FWD_PUSH = 3
   val COM_METHOD_TYPE_SPR_PUSH = 4
 
+  val API_KEY_HTTP_HEADER = "X-API-KEY"
+  val CLIENT_REQUEST_ID_HTTP_HEADER = "API-REQUEST-ID"
+
   val MSG_PACK_VERSION = "msg-pack-version"
 
   val CLIENT_IP_ADDRESS = "client_ip"

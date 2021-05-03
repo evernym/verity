@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.Attributes
 import akka.Done
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.agent.AgentActorContext
@@ -27,7 +26,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
  */
 class MockAgentActorContext(val system: ActorSystem,
                             val appConfig: AppConfig,
-                            mockParam: MockAgentActorContextParam = MockAgentActorContextParam())
+                            mockAgentMsgRouterProvider: () => Option[MockAgentMsgRouter] = { () => None })
   extends AgentActorContext {
 
   override lazy val smsSvc: SMSSender = new MockSMSSender(appConfig)
@@ -35,7 +34,9 @@ class MockAgentActorContext(val system: ActorSystem,
 
   override lazy val msgSendingSvc: MsgSendingSvcType = MockMsgSendingSvc
   override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager()(system.dispatcher)
-  override lazy val agentMsgRouter: AgentMsgRouter = new MockAgentMsgRouter(mockParam.actorTypeToRegions)(appConfig, system)
+  override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouterProvider().getOrElse(
+    new MockAgentMsgRouter(Map.empty)(appConfig, system)
+  )
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig) {

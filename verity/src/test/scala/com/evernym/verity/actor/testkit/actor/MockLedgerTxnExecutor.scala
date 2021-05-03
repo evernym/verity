@@ -7,9 +7,11 @@ import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.{DID, VerKey}
+import org.json.JSONObject
 
 import scala.concurrent.Future
-import scala.util.Left
+import scala.collection.JavaConverters._
+import scala.util.{Left, Random}
 
 //TODO: This is not perfect/exact mock ledger object
 //it doesn't have any privilege checking etc.
@@ -89,7 +91,29 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
 
   def writeSchema(submitterDID: DID,
                   schemaJson: String,
-                  walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = ???
+                  walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
+    val jSONObject = new JSONObject(schemaJson)
+    val id = jSONObject.getString("id")
+    val name = jSONObject.getString("name")
+    val version = jSONObject.getString("version")
+    val ver = jSONObject.getString("ver")
+    val attrNames = jSONObject.getJSONArray("attrNames").asScala.map(_.toString).toSeq
+    val seqNo = Random.nextInt(1000)
+    val txnResp = MockLedgerTxnExecutor.buildTxnResp(submitterDID, None, None, "107", seqNo = Option(seqNo))
+    val schemaResp = GetSchemaResp(
+      txnResp,
+      Some(SchemaV1(
+        id,
+        name,
+        version,
+        attrNames,
+        Some(seqNo),
+        ver
+      ))
+    )
+    schemas += id -> schemaResp
+    Future.successful(Right(txnResp))
+  }
 
   def prepareSchemaForEndorsement(submitterDID: DID,
                                   schemaJson: String,
@@ -97,18 +121,42 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
                                   walletAccess: WalletAccess): Future[LedgerRequest] = ???
 
   def getSchema(submitter: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
-    Future(
+    Future.successful {
       schemas.get(schemaId).map { schema =>
         Right(schema)
       }.getOrElse {
         Left(DATA_NOT_FOUND) //TODO: Replace with correct error
       }
-    )
+    }
   }
 
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
-                   walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = ???
+                   walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
+    val jSONObject = new JSONObject(credDefJson)
+    val id = jSONObject.getString("id")
+    val schemaId = jSONObject.getString("schemaId")
+    val ver = jSONObject.getString("ver")
+    val typ = jSONObject.getString("type")
+    val tag = jSONObject.getString("tag")
+    val value = jSONObject.getJSONObject("value").toMap.asScala.toMap
+
+    val seqNo = Random.nextInt(1000)
+    val txnResp = MockLedgerTxnExecutor.buildTxnResp(submitterDID, None, None, "108", seqNo = Option(seqNo))
+    val getCredDefResp = GetCredDefResp(
+        txnResp,
+        Some(CredDefV1(
+          id,
+          typ,
+          schemaId,
+          tag,
+          ver,
+          value
+        ))
+      )
+    credDefs += id -> getCredDefResp
+    Future.successful(Right(txnResp))
+  }
 
   def prepareCredDefForEndorsement(submitterDID: DID,
                                    credDefJson: String,

@@ -161,6 +161,16 @@ integration:
   variables:
     TEST_TYPE: "Integration"
 
+limits:
+  extends: .integration
+  only:
+    refs:
+      - branches
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Limits"
+
 # I'm disabling these tests. They need maintenance since we dropped 0.6 protocols that I did not have time before_script:
 # since we have coverage else were and for the things we did not have coverage for were for POC features.
 .protocols:

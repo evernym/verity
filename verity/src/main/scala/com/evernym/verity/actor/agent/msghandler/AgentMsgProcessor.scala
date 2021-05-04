@@ -9,6 +9,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.{ActorErrorResp, Status}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
+import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
 import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, HasAgentActivity, MsgPackFormat, PayloadMetadata, ProtocolEngineExceptionHandler, ProtocolRunningInstances, SponsorRel, Thread, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.msghandler.incoming.{IncomingMsgParam, MsgForRelationship, ProcessPackedMsg, ProcessRestMsg, ProcessSignalMsg, STOP_GAP_MsgTypeMapper}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{JsonMsg, OutgoingMsg, OutgoingMsgContext, OutgoingMsgParam, ProtocolSyncRespMsg, SendSignalMsg}
@@ -663,14 +664,33 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   private def validateMsg(imp: IncomingMsgParam, msg: TypedMsg): Unit = {
-    getLimitForMsgType(msg.msgType).foreach { limit =>
-      registeredProtocols.protoDefForMsg(msg).foreach(protoDef =>
-        protoDef.msgFamily.validateMessage(imp.givenMsg, limit) match {
+    getLimitForMsgType(msg.msgType).foreach { limitConfig =>
+        validateMessage(imp.givenMsg, limitConfig) match {
           case Left(errorMsg) => throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option(errorMsg))
           case Right(_) =>
         }
-      )
     }
+  }
+
+  private def validateMessage(msg: Any, limitConfig: Config): Either[String, Unit] = {
+    val isValid = msg match {
+      case amw: AgentMsgWrapper =>
+        if (limitConfig.hasPath(PACKED_MSG_LIMIT)) {
+          val limitMsg = limitConfig.getInt(PACKED_MSG_LIMIT)
+          amw.agentBundledMsg.msgs.map(it => it.msg.length).sum < limitMsg
+        } else {
+          true
+        }
+      case rmp: ProcessRestMsg =>
+        if (limitConfig.hasPath(REST_LIMIT)) {
+          val limitRest = limitConfig.getInt(REST_LIMIT)
+          rmp.msg.length() < limitRest
+        } else {
+          true
+        }
+      case _ => true
+    }
+    if (isValid) Right(Unit) else Left(PAYLOAD_ERROR)
   }
 
   private def getLimitForMsgType(msgType: MsgType): Option[Config] = {
@@ -1021,6 +1041,11 @@ case class InternalPayload(payload: Array[Byte], thread: Option[Thread])
 case class InternalDecryptedMsg(amw: AgentMsgWrapper, msgThread: Option[Thread])
 
 object AgentMsgProcessor {
+
+  val PAYLOAD_ERROR = "Payload size is too big"
+  val REST_LIMIT = "rest-limit"
+  val PACKED_MSG_LIMIT = "packed-msg-limit"
+
   def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKey], msgSenderVerKey: VerKey): Unit = {
     if (allAuthKeys.nonEmpty && ! allAuthKeys.contains(msgSenderVerKey)) {
       throw new UnauthorisedErrorException

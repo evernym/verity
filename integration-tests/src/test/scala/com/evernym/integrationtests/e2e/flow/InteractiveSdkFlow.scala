@@ -30,6 +30,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -278,6 +279,33 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$issuerName] check schema is on ledger" in {
         val (issuerDID, _): (DID, VerKey) = currentIssuerId(issuerSdk, msgReceiverSdk)
         ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+      }
+    }
+  }
+
+  def writeFailingSchema(issuerSdk: VeritySdkProvider,
+                  msgReceiverSdkProvider: VeritySdkProvider,
+                  ledgerUtil: LedgerUtil,
+                  schemaName: String,
+                  schemaVersion: String,
+                  expectedErrorMessage: String,
+                  schemaAttrs: String*)
+                 (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"write schema $schemaName on $issuerName" - {
+
+      val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use write-schema protocol" in {
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        schema.write(issuerSdk.context)
+
+
+        msgReceiverSdk.expectMsg("problem-report") {resp =>
+          resp shouldBe an[JSONObject]
+          val msg = resp.getString("message")
+          msg should include (expectedErrorMessage)
+        }
       }
     }
   }
@@ -618,7 +646,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                      (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
     val holderName = holderSdk.sdkConfig.name
-    s"issue credential (1.0) to $holderName from $issuerName on relationship ($relationshipId)" - {
+    s"issue credential (1.0) '$credDefName' to $holderName from $issuerName on relationship ($relationshipId)" - {
       val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
       val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
       var tid = ""
@@ -900,6 +928,48 @@ trait InteractiveSdkFlow extends MetricsFlow {
       }
     }
 
+  }
+
+  def issueCredentialViaOob_1_0_expectingError(issuerSdk: VeritySdkProvider,
+                                issuerMsgReceiverSdkProvider: VeritySdkProvider,
+                                holderSdk: VeritySdkProvider,
+                                holderMsgReceiverSdkProvider: VeritySdkProvider,
+                                relationshipId: String,
+                                credValues: Map[String, String],
+                                credDefName: String,
+                                credTag: String,
+                                errorMessage: String)
+                               (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    val holderName = holderSdk.sdkConfig.name
+
+    var relDid = ""
+    val inviteUrl: AtomicReference[String] = new AtomicReference[String]("")
+
+    val count = iterCount("presentProofViaOob_1_0")
+
+    s"issue credential (1.0) to $holderName from $issuerName via Out-of-band invite$count expecting error" - {
+      val issuerMsgReceiver = receivingSdk(Option(issuerMsgReceiverSdkProvider))
+      val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
+
+      s"[$issuerName] start relationship protocol to issue to" in {
+        val relProvisioning = issuerSdk.relationship_1_0("inviter")
+        relProvisioning.create(issuerSdk.context)
+        issuerMsgReceiver.expectMsg("created") { msg =>
+          msg shouldBe an[JSONObject]
+          relDid = msg.getString("did")
+        }
+      }
+
+      s"[$issuerName] start issue-credential using byInvitation" in {
+        val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
+        val issueCred = issuerSdk.issueCredential_1_0(relDid, credDefId, credValues, "comment-123", byInvitation = true)
+        val ex = intercept[Exception] {
+          issueCred.offerCredential(issuerSdk.context)
+        }
+        ex.getMessage should include(errorMessage)
+      }
+    }
   }
 
   def presentProofViaOob_1_0(verifier: ApplicationAdminExt,
@@ -1271,7 +1341,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                       answer: String,
                       requireSig: Boolean)
                       (implicit scenario: Scenario): Unit = {
-    s"ask committed answer to ${responder.name} from ${questioner.name}" - {
+    s"ask committed answer to ${responder.name} from ${questioner.name} for question '$question'" - {
       val questionerSdk = receivingSdk(questioner)
       val responderSdk = receivingSdk(responder)
 
@@ -1319,6 +1389,30 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       }
 
+    }
+  }
+
+  def committedAnswerWithError(questioner: ApplicationAdminExt,
+                      responder: ApplicationAdminExt,
+                      relationshipId: String,
+                      question: String,
+                      description: String,
+                      answers: Seq[String],
+                      requireSig: Boolean,
+                      expectedError: String)
+                     (implicit scenario: Scenario): Unit = {
+    s"ask committed answer to ${responder.name} from ${questioner.name} awaiting error for question '$question'" - {
+      val questionerSdk = receivingSdk(questioner)
+      val responderSdk = receivingSdk(responder)
+
+      s"[${questioner.name}] ask committed question" in {
+        val forRel = questionerSdk.relationship_!(relationshipId).owningDID
+        val error = intercept[Exception]{
+          questionerSdk.committedAnswer_1_0(forRel, question, description, answers, requireSig)
+            .ask(questionerSdk.context)
+        }
+        error.getMessage should include(expectedError)
+      }
     }
   }
 

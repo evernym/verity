@@ -251,7 +251,7 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longString2 = "1234567890" * 28000
+    val longString2 = "1234567890" * 16000
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -275,7 +275,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longAnswer = "1234567890" * 28000
+    val longAnswer = "1234567890" * 16000
     committedAnswer(
       apps(verity1),
       apps(cas1),
@@ -287,7 +287,7 @@ class LimitsFlowSpec
       requireSig = true
     )
 
-    val longStringAboveLimit = "1234567890" * 32000
+    val longStringAboveLimit = "1234567890" * 18000
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),
@@ -311,7 +311,7 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
-    val longAnswerAboveLimit = "1234567890" * 32000
+    val longAnswerAboveLimit = "1234567890" * 18000
     committedAnswerWithError(
       apps(verity1),
       apps(cas1),

@@ -308,12 +308,16 @@ class LimitsFlowSpec
       "Payload size is too big"
     )
 
+    val connectionId2 = UUID.randomUUID().toString
+
+    connect_1_0(apps(verity1), apps(cas1), connectionId2, "label")
+
     val longAttrsValuesMap = longAttrList.map( attr => attr -> "someValue"*150 ).toMap
 
     issueCredential_1_0(
       apps(verity1),
       apps(cas1),
-      connectionId,
+      connectionId2,
       longAttrsValuesMap,
       longCredDef,
       "tag"
@@ -325,7 +329,7 @@ class LimitsFlowSpec
     presentProof_1_0(
       apps(verity1),
       apps(cas1),
-      connectionId,
+      connectionId2,
       "proof-request-1",
       reslist
     )
@@ -335,7 +339,7 @@ class LimitsFlowSpec
     presentProof_1_0ExpectingErrorOnResponse(
       apps(verity1),
       apps(cas1),
-      connectionId,
+      connectionId2,
       "proof-request-1",
       failing_reslist,
       "Payload size is too big"

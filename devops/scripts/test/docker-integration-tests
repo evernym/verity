@@ -131,7 +131,7 @@ fi
 if [[ "$testType" == "Limits" ]]
 then
     echo "Running $testType integration tests..."
-  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.*"
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Limits"
 fi
 
 echo "Done running integration tests..."

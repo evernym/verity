@@ -1531,7 +1531,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         for (a <- 1 to numberMsg) {
           senderSdk.basicMessage_1_0(relDID, msg, "2018-1-19T01:24:00-000", "en")
             .message(senderSdk.context)
-          Thread.sleep(400)
+          Thread.sleep(1000)
         }
       }
 

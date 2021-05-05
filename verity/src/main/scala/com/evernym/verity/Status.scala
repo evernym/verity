@@ -2,6 +2,7 @@ package com.evernym.verity
 
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.Exceptions.InternalServerErrorException
+import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
@@ -167,14 +168,16 @@ object Status extends Enumeration {
     }
   }
 
+  def getFromCodeOpt(code: String): Option[StatusDetail] = {
+    allStatusDetails.find(sd => sd.statusCode == code).map(_.statusDetail)
+  }
+
   def getFromCode(code: String): StatusDetail = {
-    val matched = allStatusDetails.find(sd => sd.statusCode == code)
-    val sde = matched.getOrElse {
+    getFromCodeOpt(code).getOrElse {
       val errorMsg = s"status detail not found for code: $code"
       logger.error(errorMsg)
-      throw new InternalServerErrorException(UNHANDLED.statusCode, msgDetail=Option(errorMsg))
+      throw new InternalServerErrorException(UNHANDLED.statusCode, msgDetail = Option(errorMsg))
     }
-    sde.statusDetail
   }
 
   def getStatusMsgFromCode(code: String): String = getFromCode(code).statusMsg

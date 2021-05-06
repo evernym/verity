@@ -284,10 +284,10 @@ class LimitsFlowSpec
 
     val listWithValues = (longAttrsMap map {case (key, value) => (key, key+"[1]", value)}).toList
     var listForRequest = List[(String, String, String)]()
-    for (i <- 1 to 14) {
+    for (i <- 1 to 11) {
       listForRequest = listForRequest ++ listWithValues
     }
-    listForRequest = listForRequest ++ listWithValues.take(116)
+    listForRequest = listForRequest ++ listWithValues.take(45)
 
     presentProof_1_0(
       apps(verity1),
@@ -299,7 +299,7 @@ class LimitsFlowSpec
 
     listForRequest = listForRequest ++ listWithValues.take(1)
 
-    presentProof_1_0ExpectingErrorOnRequest(
+    presentProof_1_0ExpectingErrorOnResponse(
       apps(verity1),
       apps(cas1),
       connectionId,

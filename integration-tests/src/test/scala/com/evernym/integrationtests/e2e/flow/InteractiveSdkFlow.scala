@@ -10,6 +10,7 @@ import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.sdk.vcx.{VcxBasicMessage, VcxIssueCredential, VcxPresentProof, VcxSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.{ListeningSdkProvider, MsgReceiver, RelData, VeritySdkProvider}
 import com.evernym.integrationtests.e2e.util.ProvisionTokenUtil.genTokenOpt
+import com.evernym.sdk.vcx.VcxException
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
@@ -37,7 +38,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import java.util.UUID
 import scala.collection.mutable
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionException}
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 import scala.language.postfixOps
 
@@ -1243,7 +1244,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       val verifierMsgReceiver = receivingSdk(Option(verifierMsgReceiverSdk))
       val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdk))
 
-      s"[$verifierName] request a proof presentation" in {
+      s"[$verifierName] fails to request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
         val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
@@ -1321,10 +1322,11 @@ trait InteractiveSdkFlow extends MetricsFlow {
         val forRel = holderSdk.relationship_!(relationshipId).owningDID
 
         val presentProof= holderSdk.presentProof_1_0(forRel, tid)
-        val ex = intercept[Exception] {
+        val ex = intercept[ExecutionException] {
           presentProof.acceptRequest(holderSdk.context)
         }
-        ex.getMessage should include(errorMessage)
+        val cause = ex.getCause
+        cause.asInstanceOf[VcxException].getSdkFullMessage should include(errorMessage)
 
       }
     }

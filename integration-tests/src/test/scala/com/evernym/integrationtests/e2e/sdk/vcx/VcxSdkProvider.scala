@@ -199,6 +199,18 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
     }
   }
 
+  def getAllMsgsFromConnection(max: Duration, connectionId: String): Seq[VcxMsg] = {
+    Thread.sleep(250)
+    eventually(timeout(max), Interval(Span(1000, Millis))) {
+      val did = relationship_!(connectionId).owningDID
+      val cm = getConnectionMessages(did)
+      cm.foreach { msg =>
+        seenMessage = seenMessage + msg.meta.msgId
+      }
+      cm
+    }
+  }
+
 
   // TODO wanted to use version api but java wrapper did not wrap it.
   override def available(): Unit = {}

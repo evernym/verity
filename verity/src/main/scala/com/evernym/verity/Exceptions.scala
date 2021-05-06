@@ -1,7 +1,6 @@
 package com.evernym.verity
 
 import java.io.{PrintWriter, StringWriter}
-
 import com.evernym.verity.Status._
 
 object Exceptions {
@@ -16,7 +15,7 @@ object Exceptions {
                                    respMsg: Option[String] = None,
                                    respDetail: Option[String] = None,
                                    errorDetail: Option[Any] = None)
-    extends RuntimeException(respMsg.getOrElse(Status.getStatusMsgFromCode(respCode))){
+    extends RuntimeException(respMsg.getOrElse(getMsgFromCode(respCode))){
 
     override def toString: String = {
       s"${getClass.getSimpleName}: respCode: $respCode, respMsg : $respMsg, " +
@@ -159,6 +158,10 @@ object Exceptions {
 
   def getStackTraceAsSingleLineString(e: Throwable): String = {
     getStackTraceAsString(e).replace("\n", "\\n")
+  }
+
+  def getMsgFromCode(code: String): String = {
+    Status.getFromCodeOpt(code).map(_.statusMsg).getOrElse("unknown")
   }
 }
 

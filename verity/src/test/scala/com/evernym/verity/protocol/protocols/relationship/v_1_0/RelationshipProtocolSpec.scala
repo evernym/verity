@@ -34,12 +34,14 @@ class RelationshipProtocolSpec
   val labelStr = "label"
   val label: Option[String] = Option(labelStr)
   val logo: Option[String] = Option("http://example.com/logo.png")
+  val policy = "1 day"
 
   override val defaultInitParams = Map(
     AGENCY_DID_VER_KEY -> defAgencyVerkey,
     NAME -> defLabel,
     LOGO_URL -> defLogo,
-    MY_PUBLIC_DID -> publicDID
+    MY_PUBLIC_DID -> publicDID,
+    DATA_RETENTION_POLICY -> policy
   )
 
   val controllerProvider: SimpleControllerProviderInputType => InteractionController = { i: SimpleControllerProviderInputType =>

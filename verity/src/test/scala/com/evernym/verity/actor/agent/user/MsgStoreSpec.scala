@@ -159,6 +159,20 @@ class MsgStoreSpec
       }
     }
 
+    "when asked to build msg store with some large messages" - {
+      "with config that allows to omit some of those messages on return" - {
+        "and queried back its state" - {
+          "should respond with expected results" in {
+            val config = createConfig(enabled = true, isDeliveryAckRequired = false, 5, 150, getMsgsLimit = 190)
+            val message = ByteString.copyFromUtf8("12345678901234567890")
+            val msgStore = buildMsgStore(config, 0, 0, 10, message)
+            val msgs = msgStore.getMsgs(GetMsgsReqMsg(None))
+            msgs.size shouldBe 9
+          }
+        }
+      }
+    }
+
   }
 
   def checkMessageCleanupMetrics(msgStore: MsgStore,
@@ -187,11 +201,12 @@ class MsgStoreSpec
   def buildMsgStore(config: Config,
                     noOfDeliveredAckMsgs: Int = 0,
                     noOfDeliveredNonAckMsgs: Int = 0,
-                    noOfUnDeliveredMsgs: Int = 0): MsgStore = {
+                    noOfUnDeliveredMsgs: Int = 0,
+                    message: ByteString = ByteString.EMPTY): MsgStore = {
     val msgStore = new MsgStore(new TestAppConfig(Option(config)), new MockMsgStateAPIProvider, None)
     addDeliveredAckMsgs(config, msgStore, noOfDeliveredAckMsgs)
     addDeliveredNonAckMsgs(config, msgStore, noOfDeliveredNonAckMsgs)
-    addUndeliveredMsgs(config, msgStore, noOfUnDeliveredMsgs)
+    addUndeliveredMsgs(config, msgStore, noOfUnDeliveredMsgs, message)
     msgStore
   }
 
@@ -216,26 +231,28 @@ class MsgStoreSpec
 
   def addUndeliveredMsgs(config: Config,
                          msgStore: MsgStore,
-                         count: Int): Unit = {
+                         count: Int,
+                         message: ByteString = ByteString.EMPTY): Unit = {
     (1 to count).reverse.foreach { i =>
       val mc = buildMsgCreated(i, MSG_STATUS_CREATED)
       val md =
         if (i % 2 == 0) List(buildMsgDeliveryDetail(i, mc.uid, "destination", MSG_DELIVERY_STATUS_PENDING))
         else if (i % 3 ==0) List(buildMsgDeliveryDetail(i, mc.uid, "destination", MSG_DELIVERY_STATUS_FAILED))
         else List.empty
-      addMsgAndDeliveryStatus(config, msgStore, mc, md)
+      addMsgAndDeliveryStatus(config, msgStore, mc, md, message)
     }
   }
 
   def addMsgAndDeliveryStatus(config: Config,
                               msgStore: MsgStore,
                               mc: MsgCreated,
-                              md: List[MsgDeliveryStatusUpdated]): Unit = {
+                              md: List[MsgDeliveryStatusUpdated],
+                              message: ByteString = ByteString.EMPTY): Unit = {
     val isCleanupEnabled = config.getBoolean("verity.agent.state.messages.cleanup.enabled")
     val maxAllowedMsgCount = config.getInt("verity.agent.state.messages.cleanup.total-msgs-to-retain")
     msgStore.handleMsgCreated(mc)
     msgStore.handleMsgDetailAdded(MsgDetailAdded(mc.uid, "name", "Enterprise"))
-    msgStore.handleMsgPayloadStored(MsgPayloadStored(mc.uid, ByteString.EMPTY))
+    msgStore.handleMsgPayloadStored(MsgPayloadStored(mc.uid, message))
     if (isCleanupEnabled) msgStore.getMsgs(GetMsgsReqMsg(None)).size <= maxAllowedMsgCount
     md.foreach(msgStore.handleMsgDeliveryStatusUpdated)
     if (isCleanupEnabled) msgStore.getMsgs(GetMsgsReqMsg(None)).size <= maxAllowedMsgCount
@@ -267,7 +284,8 @@ class MsgStoreSpec
   def createConfig(enabled: Boolean,
                    isDeliveryAckRequired: Boolean,
                    daysToRetainDeliveredMsgs: Int,
-                   totalMsgsToRetain: Int): Config = {
+                   totalMsgsToRetain: Int,
+                   getMsgsLimit: Int = 920000): Config = {
 
     val enabledStr = if (enabled) "true" else "false"
     val deliveryAckConfig = if (isDeliveryAckRequired) {
@@ -276,10 +294,13 @@ class MsgStoreSpec
       """akka.sharding-region-name.user-agent = "VerityAgent""""
     }
     ConfigFactory.parseString {
-      s"""verity.agent.state.messages.cleanup {
+      s"""verity.agent.state.messages {
+          get-msgs.limit = $getMsgsLimit
+          cleanup {
             enabled = $enabledStr
             days-to-retain-delivered-msgs = $daysToRetainDeliveredMsgs
             total-msgs-to-retain = $totalMsgsToRetain
+           }
          }
          $deliveryAckConfig
          """

@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.persistence.recovery.latest.verity2.vas
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -108,7 +106,7 @@ class UserAgentPairwiseRecoverySpec
   }
 
   //NOTE: adding snapshotting to be able to get saved snapshot and assert the state
-  override def overrideConfig: Option[Config] = Option(
+  override def overrideSpecificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base {
            UserAgentPairwise.snapshot {
@@ -118,7 +116,5 @@ class UserAgentPairwiseRecoverySpec
            }
          }
       """)
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 }

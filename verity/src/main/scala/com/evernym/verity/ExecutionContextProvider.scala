@@ -35,4 +35,5 @@ object ExecutionContextProvider {
         case _          => futureExecutionContext
       },
       "wallet-thread-executor")
+
 }

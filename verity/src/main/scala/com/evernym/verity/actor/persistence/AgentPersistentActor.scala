@@ -16,4 +16,6 @@ trait AgentPersistentActor
 
   implicit def agentActorContext: AgentActorContext
   implicit def appConfig: AppConfig = agentActorContext.appConfig
+
+  def saveSnapshotStateIfAvailable(): Unit
 }

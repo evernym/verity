@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.testkit
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
+import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessController}
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
@@ -81,15 +82,15 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
 
   def requestInit(): Unit = pce.initProvider.request(this)
 
-  override lazy val wallet: WalletAccess = new WalletAccessController(
-    grantedAccessRights,
-    pce.walletAccessProvider.map(_()).getOrElse(throw new RuntimeException("no wallet access provided to container"))
-  )
+  override lazy val wallet: WalletAccess = pce
+    .walletAccessProvider
+    .map(_())
+    .getOrElse(throw new RuntimeException("no wallet access provided to container"))
 
-  override lazy val ledger: LedgerAccess = new LedgerAccessController(
-    grantedAccessRights,
-    pce.ledgerAccessProvider.map(_()).getOrElse(throw new RuntimeException("no ledger requests access provided to container"))
-  )
+  override lazy val ledger: LedgerAccess = pce
+    .ledgerAccessProvider
+    .map(_())
+    .getOrElse(throw new RuntimeException("no ledger requests access provided to container"))
 
   override def serviceEndpoint: ServiceEndpoint = s"http://www.example.com/$participantId"
 
@@ -118,13 +119,17 @@ class MockStorageService(system: SimpleProtocolSystem) extends SegmentStoreAcces
   val MAX_SEGMENT_SIZE = 400000   //TODO: finalize this
   def isLessThanMaxSegmentSize(data: GeneratedMessage): Boolean = data.serializedSize < MAX_SEGMENT_SIZE
 
-  def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
+  def storeSegment(segmentAddress: SegmentAddress,
+                   segmentKey: SegmentKey,
+                   segment: Any,
+                   retentionPolicy: Option[String]=None)
                   (handler: Try[StoredSegment] => Unit): Unit = {
     segment match {
       case msg: GeneratedMessage =>
         if (isLessThanMaxSegmentSize(msg)) {
           system.storeSegment(segmentAddress, segmentKey, msg)
         } else {
+          //TODO: Add data retention to segmentKey
           S3Mock += segmentKey -> msg.toByteArray
         }
       case other =>
@@ -132,7 +137,8 @@ class MockStorageService(system: SimpleProtocolSystem) extends SegmentStoreAcces
     }
     handler(Try(StoredSegment(segmentAddress, Option(segment))))
   }
-  def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+
+  def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey, retentionPolicy: Option[String]=None)
                     (handler: Try[Option[T]] => Unit): Unit = {
     val data = system.getSegment(segmentAddress, segmentKey) orElse S3Mock.get(segmentKey)
     handler(Try(data.map(_.asInstanceOf[T])))

@@ -19,6 +19,13 @@ case class GivenDomainId(id: DomainId) extends InternalSystemMsg
 case class GivenSponsorRel(sponsorRel: SponsorRel) extends InternalSystemMsg
 
 /**
+ * The sponsorRel given to the protocol
+ *
+ * @param dataRetentionPolicy
+ */
+case class GivenDataRetentionPolicy(policy: Option[String]) extends InternalSystemMsg
+
+/**
   * This message is sent only when an persistence failure happens and `eventPersistenceFailure` is invoked
   * @param cause - the specific throwable exception
   * @param event - the event which cause the persistence failure (this event was not properly persisted)

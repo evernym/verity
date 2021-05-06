@@ -119,8 +119,19 @@ fi
 
 if [[ "$testType" == "Integration" ]]
 then
-    echo "Running $testType e2e API integration tests..."
+  echo "Running AlpakkaS3APISpec integration tests..."
+  # TODO: How to communicate with the correct s3 endpoint using 'access-style' s3 config rules?
+#  export BLOB_S3_ENDPOINT="http://{bucket}.s3server:8000"
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.s3.*"
+
+  echo "Running $testType e2e API integration tests..."
   sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Integration"
+fi
+
+if [[ "$testType" == "Limits" ]]
+then
+    echo "Running $testType integration tests..."
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Limits"
 fi
 
 echo "Done running integration tests..."

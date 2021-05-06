@@ -12,8 +12,8 @@
 export MESSAGE_PROGRESS_TRACKING_ENABLED="true"
 
 # For the integration tests to set up a usable bucket
-export WALLET_BACKUP_BUCKET="evernym-wallet-backup"
-export WALLET_BACKUP_S3_ENDPOINT="http://s3server:8000"
+export BLOB_BUCKET="blob-bucket"
+export BLOB_S3_ENDPOINT="http://s3server:8000"
 
 # These are used by the s3 service in .intergration jobs
 export REMOTE_MANAGEMENT_DISABLE=1

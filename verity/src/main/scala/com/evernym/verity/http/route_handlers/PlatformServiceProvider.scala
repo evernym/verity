@@ -34,7 +34,7 @@ trait PlatformServiceProvider
     publishEvent(event)(agentActorContext.system)
   }
 
-  protected def askAppStateManager(cmd: AppStateRequest): Future[Any] = {
+  def askAppStateManager(cmd: AppStateRequest): Future[Any] = {
     platform.appStateManager ? cmd
   }
 

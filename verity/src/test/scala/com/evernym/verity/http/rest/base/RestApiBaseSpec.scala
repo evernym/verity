@@ -204,6 +204,25 @@ trait RestApiBaseSpec
     processReceivedPackedMsg(lastPayload.get)
   }
 
+  def sendMsgWithOthersMsgForRel(mockRestEnv: MockRestEnv,
+                                 othersForRelDID: DID): Unit = {
+    val jsonObject = new JSONObject()
+    jsonObject.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
+    jsonObject.put("content", s"basic message")
+    jsonObject.put("sent_time", LocalDateTime.now().toString)
+    jsonObject.put("~for_relationship", othersForRelDID)
+
+    val payload = ByteString(jsonObject.toString())
+    buildPostReq(s"/api/${mockRestEnv.myDID}/basicmessage/1.0/${UUID.randomUUID().toString}",
+      HttpEntity.Strict(ContentTypes.`application/json`, payload),
+      Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
+    ) ~> epRoutes ~> check {
+      val resp = responseAs[String]
+      status shouldBe Unauthorized
+      resp shouldBe "{\"errorCode\":\"GNR-108\",\"errorDetails\":\"provided relationship doesn't belong to requested domain\",\"status\":\"Error\"}"
+    }
+  }
+
   def sendMsgWithLargeMsgForRel(mockRestEnv: MockRestEnv): Unit = {
     val str = Base58Util.encode(UUID.randomUUID().toString.getBytes())
     val largeInvalidForRelString =  (1 to 1000).foldLeft("")((prev, _) => prev + str)

@@ -79,9 +79,14 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     }
 
     override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
-      def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
+      def storeSegment(segmentAddress: SegmentAddress,
+                       segmentKey: SegmentKey,
+                       segment: Any,
+                       retentionPolicy: Option[String]=None)
                       (handler: Try[StoredSegment] => Unit): Unit = {}
-      override def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+      override def withSegment[T](segmentAddress: SegmentAddress,
+                                  segmentKey: SegmentKey,
+                                  retentionPolicy: Option[String]=None)
                                  (handler: Try[Option[T]] => Unit): Unit = {}
     }
 

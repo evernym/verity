@@ -33,7 +33,7 @@ license-data-check:
   script: ./cicd/license-date-check.sh
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   tags:
@@ -55,7 +55,7 @@ unit-test:
   extends: .test
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   script:
@@ -65,7 +65,7 @@ unit-test:
   extends: .test
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   artifacts:
@@ -132,7 +132,7 @@ legacy:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -143,7 +143,7 @@ legacy-with-restart:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -155,7 +155,7 @@ integration:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -165,7 +165,7 @@ limits:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -177,7 +177,7 @@ limits:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:

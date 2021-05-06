@@ -776,7 +776,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
       // ignored because InMemoryProtocolContainer does not handle wallet async behavior yet
       "should handle all self attested - real wallet access" ignore { f =>
-        val (verifier, prover) = indyAccessMocks(f, wa=WalletAccessTest.walletAccess())
+        val (verifier, prover) = indyAccessMocks(f, wa=MockableWalletAccess.walletAccess())
 
         var nonce: Option[Nonce] = None
 
@@ -845,7 +845,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
       // ignored because InMemoryProtocolContainer does not handle wallet async behavior yet
       "should fail with unexpected self attested" ignore {f =>
-        val (verifier, prover) = indyAccessMocks(f, wa=WalletAccessTest.walletAccess())
+        val (verifier, prover) = indyAccessMocks(f, wa=MockableWalletAccess.walletAccess())
 
         var nonce: Option[Nonce] = None
 
@@ -1064,7 +1064,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
     }
   }
 
-  def indyAccessMocks(f: FixtureParam, wa: WalletAccess=MockableWalletAccess(), la: LedgerAccess=MockableLedgerAccess()):
+  def indyAccessMocks(f: FixtureParam, wa: WalletAccess=MockableWalletAccess.walletAccess(), la: LedgerAccess=MockableLedgerAccess()):
   (TestEnvir, TestEnvir) = {
     val (verifier, prover) = (f.alice, f.bob)
 

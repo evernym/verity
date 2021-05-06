@@ -1,5 +1,9 @@
 package com.evernym.verity.protocol.testkit
 
+import akka.actor.ActorRef
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningResponse}
 
@@ -20,9 +24,21 @@ object MockableUrlShorteningAccess {
       handler(Success(UrlShortened("http://short.url")))
   }
 }
+
 class MockableUrlShorteningAccess(mockShortening: UrlShorteningAccess = MockableUrlShorteningAccess.defaultUrlShorteningSuccess)
   extends UrlShorteningAccess {
 
   override def shorten(longUrl: String)(handler: Try[UrlShorteningResponse] => Unit): Unit =
     mockShortening.shorten(longUrl)(handler)
+}
+
+object MockableUrlShorteningAPI {
+  implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
+  def failed: UrlShorteningAPI = new UrlShorteningAPI {
+    override def runShorten(longUrl: String): Unit = Failure(throw new Exception)
+  }
+
+  def success: UrlShorteningAPI = new UrlShorteningAPI {
+    override def runShorten(longUrl: String): Unit = Success(UrlShortened(longUrl))
+  }
 }

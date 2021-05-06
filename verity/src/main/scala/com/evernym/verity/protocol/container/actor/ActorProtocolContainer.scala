@@ -32,7 +32,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
-import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAccessAPI
+import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
@@ -331,7 +331,7 @@ class ActorProtocolContainer[
   override lazy val urlShortening =
     new UrlShorteningAccessController(
       grantedAccessRights,
-      new UrlShorteningAccessAPI()
+      new UrlShorteningAPI()
     )
 
   override lazy val segmentStore =

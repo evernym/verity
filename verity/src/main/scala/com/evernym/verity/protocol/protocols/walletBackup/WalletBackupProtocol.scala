@@ -79,7 +79,7 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
   def persistersProtoMsgHandler: (BackupState, BackupMsg) ?=> Any = {
     case (_: S.ReadyToPersistBackupInBlob, BackupInit(_) )  => ctx.send(BackupReady())
     case (s: S.ReadyToPersistBackupInBlob, Backup(w)     )  => backup(s.blobAddress, w)
-    // S.ReadyToPersistBackup is a legacy state
+    // TODO: Remove when Ticket=VE-2605 is ready - S.ReadyToPersistBackup is a legacy state
     case (_: S.ReadyToPersistBackup      , BackupInit(_) )  => ctx.send(BackupReady())
     case (s: S.ReadyToPersistBackup      , Backup(w)     )  => backup(s.vk, w)
     case (_                              , Backup(_)     )  => throw new UnableToPersist
@@ -207,7 +207,7 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
     case (s: S.RecoveryModeRequested      , _ , ReadyToPersist()             ) => S.ReadyToPersistBackupInBlob(s.vk, s.vk)
     case (s: S.ReadyToPersistBackupInBlob , _ , BackupStoredInBlob(b)        ) => S.ReadyToPersistBackupInBlob(s.vk, b)
     case (_: S.ReadyToPersistBackupInBlob , _ , RecoveredBackup()            ) => ctx.getState
-    // S.ReadyToPersistBackup and event BackupStored are legacy
+    //TODO: Remove when Ticket=VE-2605 is ready - S.ReadyToPersistBackup and event BackupStored are legacy
     case (s: S.ReadyToPersistBackup       , _ , BackupStored(w)              ) => S.ReadyToPersistBackup(s.vk, Some(w.toByteArray))
     case (_: S.ReadyToPersistBackup       , _ , RecoveredBackup()            ) => ctx.getState
   }

@@ -2,9 +2,8 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
-import com.evernym.verity.protocol.engine.{VerKey, WalletAccessTest}
+import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{NoSponsor, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{AgentCreated => AgentCreatedState, _}
 import com.evernym.verity.protocol.testkit.DSL.signal
@@ -237,7 +236,6 @@ class AgentProvisioningSpec
 }
 
 object TestingVars extends CommonSpecUtil with HasTestWalletAPI {
-  lazy val walletAccess: WalletAccessAPI = WalletAccessTest.walletAccess()
 
   val REQUESTER = "requester"
   val PROVISIONER = "provisioner"

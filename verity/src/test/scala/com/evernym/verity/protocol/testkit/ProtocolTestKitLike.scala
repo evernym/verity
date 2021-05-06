@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess

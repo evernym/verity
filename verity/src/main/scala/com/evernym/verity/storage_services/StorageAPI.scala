@@ -22,3 +22,8 @@ object StorageAPI {
       .asInstanceOf[StorageAPI]
   }
 }
+
+trait StorageException extends Exception
+case class ServiceNotFound(msg: String) extends StorageException
+case class ObjectExpired(msg: String) extends StorageException
+case class ObjectNotFound(msg: String) extends StorageException

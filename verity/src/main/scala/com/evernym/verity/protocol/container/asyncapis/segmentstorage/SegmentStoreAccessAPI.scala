@@ -8,7 +8,7 @@ import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmente
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAsyncOps, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController}
 import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, ProtoRef}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
@@ -17,14 +17,12 @@ import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 class SegmentStoreAccessAPI(storageAPI: StorageAPI,
                             protoRef: ProtoRef,
                             segmentedStateName: Option[String])
-                           (implicit val asyncAPIContext: AsyncAPIContext,
-                              val asyncOpRunner: AsyncOpRunner)
-  extends SegmentStoreAccess
+                           (implicit val asyncAPIContext: AsyncAPIContext, val asyncOpRunner: AsyncOpRunner)
+  extends SegmentStoreAsyncOps
     with BaseAccessController
     with BaseAsyncOpExecutorImpl {
 
@@ -89,7 +87,6 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
     val fut = segment match {
       case data: GeneratedMessage if isGreaterThanMaxSegmentSize(data) || retentionPolicy.isDefined =>
         logger.debug(s"storing $data in segment storage")
-        //FIXME -> add data retention to segment key because of bucket lifecycles
         storeInBlobStore(BlobSegment(blobStoreBucket, segmentAddress, segmentKey, retentionPolicy), data)
 
       case segmentData: GeneratedMessage if isLessThanMaxSegmentSize(segmentData) && retentionPolicy.isEmpty =>
@@ -104,13 +101,8 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   }
 
   private def readFromBlobStore[T](blob: BlobSegment,
-                                   storageRef: StorageReferenceStored
-                                  )(handler: Try[Option[T]] => Unit)(implicit ec: ExecutionContext): Future[Option[T]] = {
-    //TODO -> RTM (will be done in VE-2498):
-    // Needs to clearly state if the data has
-    //  1. Expired
-    //  2. Never put there (unlikely)
-    //  3. Other 'get' errors
+                                   storageRef: StorageReferenceStored)
+                                  (implicit ec: ExecutionContext): Future[Option[T]] = {
     storageAPI.get(blob.bucketName, blob.key).map { encryptedData: Array[Byte]  =>
       Option(
         SegmentedStateStore
@@ -123,31 +115,33 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   private def readSegmentedState[T](segmentAddress: SegmentAddress,
                                     segmentKey: SegmentKey,
                                     retentionPolicy: Option[String]
-                                   )(handler: Try[Option[T]] => Unit) (implicit ec: ExecutionContext): Future[Any] = {
+                                   ) (implicit ec: ExecutionContext): Future[Any] = {
     val cmd = GetSegmentedState(segmentKey)
     sendToSegmentedRegion(segmentAddress, cmd).flatMap {
       case StoredSegment(segmentAddress, Some(srs: StorageReferenceStored)) =>
-        readFromBlobStore(BlobSegment(blobStoreBucket, segmentAddress, segmentKey, retentionPolicy), srs)(handler)
+        readFromBlobStore(BlobSegment(blobStoreBucket, segmentAddress, segmentKey, retentionPolicy), srs)
       case StoredSegment(_, Some(segment: Any)) => Future.successful(Option(segment))
       case StoredSegment(_, None)               => Future.successful(None)
       case other  => throw new RuntimeException("unexpected response while retrieving segment: " + other)
     }
   }
 
-  override def storeSegment(segmentAddress: SegmentAddress,
-                            segmentKey: SegmentKey,
-                            segment: Any,
-                            retentionPolicy: Option[String]=None) (handler: Try[StoredSegment] => Unit): Unit = {
+  /*the future handler is provided to the SegmentStoreAccessController where it is stashed for the executor to process*/
+  def runStoreSegment(segmentAddress: SegmentAddress,
+                      segmentKey: SegmentKey,
+                      segment: Any,
+                      retentionPolicy: Option[String]=None): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec: ExecutionContext => saveSegmentedState(segmentAddress, segmentKey, segment, retentionPolicy) }
     )
   }
 
-  override def withSegment[T](segmentAddress: SegmentAddress,
-                              segmentKey: SegmentKey,
-                              retentionPolicy: Option[String]=None)(handler: Try[Option[T]] => Unit): Unit = {
+  /*the future handler is provided to the SegmentStoreAccessController where it is stashed for the executor to process*/
+  def runWithSegment[T](segmentAddress: SegmentAddress,
+                        segmentKey: SegmentKey,
+                        retentionPolicy: Option[String]=None): Unit = {
     withAsyncOpExecutorActor(
-      { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey, retentionPolicy)(handler) }
+      { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey, retentionPolicy) }
     )
   }
 

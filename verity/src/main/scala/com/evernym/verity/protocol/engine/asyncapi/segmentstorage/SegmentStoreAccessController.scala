@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 
 import scala.util.Try
 
-class SegmentStoreAccessController(segmentStoreImpl: SegmentStoreAccess)
+class SegmentStoreAccessController(segmentStoreExecutor: SegmentStoreAsyncOps)
                                   (implicit val asyncOpRunner: AsyncOpRunner)
   extends SegmentStoreAccess
     with BaseAccessController {
@@ -20,7 +20,7 @@ class SegmentStoreAccessController(segmentStoreImpl: SegmentStoreAccess)
                             segment: Any,
                             retentionPolicy: Option[String]=None) (handler: Try[StoredSegment] => Unit): Unit =
     withAsyncOpRunner(
-      {segmentStoreImpl.storeSegment(segmentAddress, segmentKey, segment, retentionPolicy)(handler)},
+      {segmentStoreExecutor.runStoreSegment(segmentAddress, segmentKey, segment, retentionPolicy)},
       handler
     )
 
@@ -31,7 +31,7 @@ class SegmentStoreAccessController(segmentStoreImpl: SegmentStoreAccess)
                               segmentKey: SegmentKey,
                               retentionPolicy: Option[String]=None) (handler: Try[Option[T]] => Unit): Unit =
     withAsyncOpRunner(
-      {segmentStoreImpl.withSegment(segmentAddress, segmentKey, retentionPolicy)(handler)},
+      {segmentStoreExecutor.runWithSegment(segmentAddress, segmentKey, retentionPolicy)},
       handler
     )
 }

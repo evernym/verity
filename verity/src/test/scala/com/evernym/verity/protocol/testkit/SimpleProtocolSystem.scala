@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, RelationshipName, SelfRelationship}
+import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess

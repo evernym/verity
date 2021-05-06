@@ -34,3 +34,14 @@ project/plugins/project/
 
 # akka diagnostics
 **/akka-diagnostics/*
+
+# Metals
+.metals/
+.bloop/
+.ammonite/
+metals.sbt
+
+# VS Code
+.devcontainer
+.vscode
+vSCodeDockerfile

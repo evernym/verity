@@ -2,22 +2,20 @@ package com.evernym.verity.integration.with_basic_sdk
 
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.app_launcher.HttpServer
-import com.evernym.verity.integration.base.VerityAppBaseSpec
+import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 
 
 class AgentProvisioningSpec
-  extends VerityAppBaseSpec
+  extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val verityVAS = setupNewVerityApp()
-  lazy val verityCAS = setupNewVerityApp()
+  lazy val issuerVerityApp = setupNewVerityApp()
+  lazy val holderVerityApp = setupNewVerityApp()
 
-  lazy val issuerSDK = setupIssuerSdk(verityVAS.platform)
-  lazy val holderSDK = setupHolderSdk(verityCAS.platform)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
+  lazy val holderSDK = setupHolderSdk(holderVerityApp, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
-  override lazy val allVerityApps: List[HttpServer] = List(verityVAS, verityCAS)
 
   "IssuerSDK" - {
 
@@ -43,7 +41,7 @@ class AgentProvisioningSpec
       }
     }
 
-    "when tried to update config" - {
+    "when sent update (update-config 0.6) message" - {
       "should be successful" in {
         val configResult = issuerSDK.sendUpdateConfig(
           UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url")))

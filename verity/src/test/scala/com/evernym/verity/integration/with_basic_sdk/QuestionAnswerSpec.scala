@@ -2,8 +2,7 @@ package com.evernym.verity.integration.with_basic_sdk
 
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.app_launcher.HttpServer
-import com.evernym.verity.integration.base.VerityAppBaseSpec
+import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
@@ -15,16 +14,14 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitatio
 
 
 class QuestionAnswerSpec
-  extends VerityAppBaseSpec
+  extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val verityVAS = setupNewVerityApp()
-  lazy val verityCAS = setupNewVerityApp()
+  lazy val issuerVerityApp = setupNewVerityApp()
+  lazy val holderVerityApp = setupNewVerityApp()
 
-  lazy val issuerSDK = setupIssuerSdk(verityVAS.platform)
-  lazy val holderSDK = setupHolderSdk(verityCAS.platform)
-
-  lazy val allVerityApps: List[HttpServer] = List(verityVAS, verityCAS)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
+  lazy val holderSDK = setupHolderSdk(holderVerityApp, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -36,23 +33,23 @@ class QuestionAnswerSpec
     issuerSDK.provisionVerityEdgeAgent()
     issuerSDK.registerWebhook()
     issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
-    issuerSDK.sendCreateRelationship(firstConn)
-    firstInvitation = issuerSDK.sendCreateConnectionInvitation(firstConn)
+    val receivedMsg = issuerSDK.sendCreateRelationship(firstConn)
+    firstInvitation = issuerSDK.sendCreateConnectionInvitation(firstConn, receivedMsg.threadIdOpt)
 
     holderSDK.fetchAgencyKey()
     holderSDK.provisionVerityCloudAgent()
     holderSDK.sendCreateNewKey(firstConn)
-    holderSDK.sendConnReqForUnacceptedInvitation(firstConn, firstInvitation)
+    holderSDK.sendConnReqForInvitation(firstConn, firstInvitation)
 
-    issuerSDK.expectMsgOnWebhook[ConnReqReceived]
-    issuerSDK.expectMsgOnWebhook[ConnResponseSent]
-    issuerSDK.expectMsgOnWebhook[Complete]
+    issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
+    issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
+    issuerSDK.expectMsgOnWebhook[Complete]()
   }
 
   "IssuerSDK" - {
-    "when tried to send 'ask-question' message" - {
+    "when tried to send 'ask-question' (questionanswer 1.0) message" - {
       "should be successful" in {
-        issuerSDK.sendControlMsgToConnection(firstConn, AskQuestion("How are you?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None))
+        issuerSDK.sendControlMsgForConn(firstConn, AskQuestion("How are you?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None))
       }
     }
   }
@@ -61,15 +58,16 @@ class QuestionAnswerSpec
 
   "HolderSDK" - {
     "when tried to get newly un viewed messages" - {
-      "should get 'question' message" in {
-        val receivedMsg = holderSDK.expectMsgOnConn[Question](firstConn)
-        lastReceivedMsgThreadId = receivedMsg.threadId
+      "should get 'question' (questionanswer 1.0) message" in {
+        val receivedMsg = holderSDK.expectMsgFromConn[Question](firstConn)
+        lastReceivedMsgThreadId = receivedMsg.threadIdOpt
         val question = receivedMsg.msg
         question.question_text shouldBe "How are you?"
+        holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsg.msgId)
       }
     }
 
-    "when tried to respond with 'answer' message" - {
+    "when tried to respond with 'answer' (questionanswer 1.0) message" - {
       "should be successful" in {
         val answer = Answer("I am fine", None, None)
         holderSDK.sendProtoMsgToTheirAgent(firstConn, answer, lastReceivedMsgThreadId)
@@ -78,9 +76,54 @@ class QuestionAnswerSpec
   }
 
   "IssuerSDK" - {
-    "should receive 'answer' message" in {
-      val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]
+    "should receive 'answer-given' (questionanswer 1.0) message" in {
+      val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]()
       receivedMsg.msg.answer shouldBe "I am fine"
+    }
+  }
+
+  "VerityAdmin" - {
+    "when restarts verity instances" - {
+      "should be successful" in {
+        issuerVerityApp.restart()
+        holderVerityApp.restart()
+        issuerSDK.fetchAgencyKey()
+        holderSDK.fetchAgencyKey()
+      }
+    }
+  }
+
+  "IssuerSDK" - {
+    "when tried to send another 'ask-question' (questionanswer 1.0) message" - {
+      "should be successful" in {
+        val msg = AskQuestion("How are you after restart?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None)
+        issuerSDK.sendControlMsgForConn(firstConn, msg)
+      }
+    }
+  }
+
+  "HolderSDK" - {
+    "when tried to get newly un viewed messages after restart" - {
+      "should get 'question' (questionanswer 1.0) message" in {
+        val receivedMsg = holderSDK.expectMsgFromConn[Question](firstConn)
+        lastReceivedMsgThreadId = receivedMsg.threadIdOpt
+        val question = receivedMsg.msg
+        question.question_text shouldBe "How are you after restart?"
+      }
+    }
+
+    "when tried to respond with 'answer' (questionanswer 1.0) message after restart" - {
+      "should be successful" in {
+        val answer = Answer("I am fine after restart too", None, None)
+        holderSDK.sendProtoMsgToTheirAgent(firstConn, answer, lastReceivedMsgThreadId)
+      }
+    }
+  }
+
+  "IssuerSDK" - {
+    "should receive 'answer' (questionanswer 1.0) message after restart" in {
+      val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]()
+      receivedMsg.msg.answer shouldBe "I am fine after restart too"
     }
   }
 }

@@ -22,7 +22,7 @@ import scala.concurrent.{Await, Future}
 trait HasTestWalletAPI {
   val testAppConfig: AppConfig = new TestAppConfig
   lazy val testWalletAPI: LegacyWalletAPI = {
-    val walletProvider = new LibIndyWalletProvider(testAppConfig)
+    val walletProvider = LibIndyWalletProvider
     new LegacyWalletAPI(testAppConfig, walletProvider, None)
   }
 }

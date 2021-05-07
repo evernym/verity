@@ -21,6 +21,7 @@ import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.typesafe.scalalogging.Logger
 import sun.misc.{Signal, SignalHandler}
 
+import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
@@ -41,7 +42,7 @@ class HttpServer(val platform: Platform, routes: Route)
 
   def stop(): Future[Done] = {
     httpBinding match {
-      case Some(hb) => hb.unbind()
+      case Some(hb) => hb.terminate(Duration(30, SECONDS)).map( _ => Done)
       case None     => Future(Done)
     }
   }

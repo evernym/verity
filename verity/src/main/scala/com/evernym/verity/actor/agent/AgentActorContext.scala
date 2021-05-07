@@ -24,6 +24,7 @@ import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.Util
+import com.evernym.verity.vault.WalletProvider
 import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
 
@@ -58,7 +59,7 @@ trait AgentActorContext extends ActorContext {
 
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig)
-  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
+  lazy val walletProvider: WalletProvider = LibIndyWalletProvider
   lazy val walletService: WalletService = new ActorWalletService(system)
   lazy val walletAPI: WalletAPI = new StandardWalletAPI(walletService)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)

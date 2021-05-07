@@ -217,11 +217,9 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
     val notExpired = isNotExpired(
       s.question.`~timing`.flatMap(t => t.expires_time)
     )
-
     val validResponse = {
       s.question.valid_responses.exists(_.text == m.response)
     }
-
     if (s.question.signature_required) {
       m.`response~sig` match {
         case Some(x) =>

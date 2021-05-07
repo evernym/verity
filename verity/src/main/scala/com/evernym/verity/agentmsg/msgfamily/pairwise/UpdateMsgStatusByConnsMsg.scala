@@ -9,19 +9,17 @@ import com.evernym.verity.protocol.engine.{DID, MsgBase}
 import com.evernym.verity.Status
 
 
-case class UpdateMsgStatusByConnsReqMsg_MFV_0_5(`@type`: TypeDetail, statusCode: String,
+case class UpdateMsgStatusByConnsReqMsg_MFV_0_5(statusCode: String,
                                                 uidsByConns: List[PairwiseMsgUids]) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkRequired("statusCode", statusCode)
     checkRequired("uidsByConns", uidsByConns)
   }
 }
 
-case class UpdateMsgStatusByConnsReqMsg_MFV_0_6(`@type`: String, statusCode: String,
+case class UpdateMsgStatusByConnsReqMsg_MFV_0_6(statusCode: String,
                                                 uidsByConns: List[PairwiseMsgUids]) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkRequired("statusCode", statusCode)
     checkRequired("uidsByConns", uidsByConns)
   }

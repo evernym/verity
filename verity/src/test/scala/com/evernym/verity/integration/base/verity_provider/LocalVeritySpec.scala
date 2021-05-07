@@ -18,7 +18,7 @@ class LocalVeritySpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
       }
 
       "should in memory persistence" in {
-        LocalVerityConfig.standard(tempDir,defaultPorts).getString("akka.persistence.journal.plugin") should include ("inmem")
+        LocalVerityConfig.standard(tempDir,defaultPorts).getString("akka.persistence.journal.plugin") should include ("leveldb")
       }
 
       "should use local snapshot" in {

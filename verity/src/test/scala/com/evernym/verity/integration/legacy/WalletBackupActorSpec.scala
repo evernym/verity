@@ -1,6 +1,4 @@
-package com.evernym.verity.protocol.container.actor.agent
-
-import java.util.UUID
+package com.evernym.verity.integration.legacy
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.DidPair
@@ -23,6 +21,8 @@ import com.evernym.verity.testkit.mock.agent.{MockEdgeAgent, MockEnvUtil}
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
 import com.evernym.verity.util.Base64Util
 import com.typesafe.config.Config
+
+import java.util.UUID
 
 class WalletBackupActorSpec
   extends UserAgentSpecScaffolding {

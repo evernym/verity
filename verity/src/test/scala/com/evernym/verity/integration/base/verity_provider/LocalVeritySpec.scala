@@ -1,10 +1,10 @@
-package com.evernym.verity.integration
+package com.evernym.verity.integration.base.verity_provider
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.base.AgentReqBuilder
+import com.evernym.verity.integration.base.verity_provider.LocalVerityConfig.defaultPorts
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.integration.LocalVerityConfig.defaultPorts
 import com.typesafe.config.Config
 
 

@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.container.actor.container
+package com.evernym.verity.protocol.container.actor
 
 import akka.actor.Props
 import akka.testkit.EventFilter
@@ -7,8 +7,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.actor.testkit.WithAdditionalLogs
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.protocol.container.actor._
-import com.evernym.verity.protocol.container.actor.container.base.{BaseProtocolActorSpec, GetPinstId, MockControllerActorBase, SendToProtocolActor}
+import com.evernym.verity.protocol.container.actor.base.{BaseProtocolActorSpec, GetPinstId, MockControllerActorBase, SendToProtocolActor}
 import com.evernym.verity.protocol.engine.PinstIdPair
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Propose
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef

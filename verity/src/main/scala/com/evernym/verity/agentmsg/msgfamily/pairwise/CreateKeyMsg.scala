@@ -3,27 +3,25 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgBase, VerKey}
 
-case class CreateKeyReqMsg_MFV_0_5(`@type`: TypeDetail, forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_5(forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
   }
 }
 
-case class CreateKeyReqMsg_MFV_0_6(`@type`: String, forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_6(forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
   }
 }
 
-case class CreateKeyReqMsg(msgFamilyDetail: MsgFamilyDetail, forDID: DID, forDIDVerKey: VerKey) {
+case class CreateKeyReqMsg(forDID: DID, forDIDVerKey: VerKey) {
   def didPair: DidPair = DidPair(forDID, forDIDVerKey)
 }
 
@@ -36,12 +34,12 @@ object CreateKeyMsgHelper extends MsgHelper[CreateKeyReqMsg] {
 
   def buildReqMsgFrom_MFV_0_5(implicit amw: AgentMsgWrapper): CreateKeyReqMsg = {
     val msg = amw.headAgentMsg.convertTo[CreateKeyReqMsg_MFV_0_5]
-    CreateKeyReqMsg(amw.headAgentMsgDetail, msg.forDID, msg.forDIDVerKey)
+    CreateKeyReqMsg(msg.forDID, msg.forDIDVerKey)
   }
 
   private def buildReqMsgFrom_MFV_0_6(implicit amw: AgentMsgWrapper): CreateKeyReqMsg = {
     val msg = amw.headAgentMsg.convertTo[CreateKeyReqMsg_MFV_0_6]
-    CreateKeyReqMsg(amw.headAgentMsgDetail, msg.forDID, msg.forDIDVerKey)
+    CreateKeyReqMsg(msg.forDID, msg.forDIDVerKey)
   }
 
   def buildReqMsg(implicit amw: AgentMsgWrapper): CreateKeyReqMsg = {

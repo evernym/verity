@@ -39,7 +39,6 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
-import com.evernym.verity.storage_services.StorageAPI
 
 import scala.concurrent.duration._
 import scala.concurrent.Future

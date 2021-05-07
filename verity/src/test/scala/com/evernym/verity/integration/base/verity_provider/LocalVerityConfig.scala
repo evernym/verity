@@ -1,10 +1,21 @@
-package com.evernym.verity.integration
-
-import java.nio.file.Path
+package com.evernym.verity.integration.base.verity_provider
 
 import com.evernym.verity.config.CommonConfig.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
 import com.typesafe.config.{Config, ConfigFactory}
 
+import java.net.InetAddress
+import java.nio.file.Path
+import scala.util.Random
+
+
+object PortProfile {
+  def random(): PortProfile = {
+    val httpPort = 9000 + Random.nextInt(900) + Random.nextInt(90) + Random.nextInt(9)
+    val arteryPort = 2000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+    val akkaMgmtPort = 8000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+    PortProfile(httpPort, arteryPort, akkaMgmtPort)
+  }
+}
 case class PortProfile(http: Int, artery: Int, akka_management: Int)
 
 object LocalVerityConfig {
@@ -23,8 +34,10 @@ object LocalVerityConfig {
     ConfigFactory.parseString(
       s"""
          |verity.http.port = ${ports.http}
+         |verity.endpoint.port = ${ports.http}
+         |akka.remote.artery.canonical.hostname = ${InetAddress.getLocalHost.getHostAddress}
          |akka.remote.artery.canonical.port = ${ports.artery}
-         |akka.cluster.seed-nodes = ["akka://verity@127.0.1.1:${ports.artery}"]
+         |akka.cluster.seed-nodes = ["akka://verity@${InetAddress.getLocalHost.getHostAddress}:${ports.artery}"]
          |akka.management.http.port = ${ports.akka_management}
       """.stripMargin
     )

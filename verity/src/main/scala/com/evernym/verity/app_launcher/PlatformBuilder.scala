@@ -12,7 +12,6 @@ object PlatformBuilder {
   }
 }
 
-class DefaultAgentActorContext extends AgentActorContext {
-  override implicit lazy val appConfig: AppConfig = AppConfigWrapper
+class DefaultAgentActorContext(val appConfig: AppConfig = AppConfigWrapper) extends AgentActorContext {
   override implicit lazy val system: ActorSystem = createActorSystem()
 }

@@ -105,7 +105,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         protoInitParams,
         selfParticipantId,
         senderParticipantId,
-        allowedUnauthedMsgTypes,
+        allowedUnAuthedMsgTypes,
         allAuthedKeys,
         userIdForResourceUsageTracking,
         trackingIdParam
@@ -173,7 +173,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * (because till that moment, connection is not yet established) sender (cas cloud agent)
    * @return
    */
-  def allowedUnauthedMsgTypes: Set[MsgType] = Set.empty
+  def allowedUnAuthedMsgTypes: Set[MsgType] = Set.empty
 
   /**
    * reads configured authorized key for domainId (self rel id) belonging to this agent

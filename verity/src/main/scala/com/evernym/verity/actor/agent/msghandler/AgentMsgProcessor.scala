@@ -866,7 +866,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         getResourceName(msgType.msgName), ipAddress, userId)
     }
     senderVerKey.foreach { svk =>
-      if (!param.allowedUnauthedMsgTypes.contains(msgType)) {
+      if (! param.allowedUnAuthedMsgTypes.contains(msgType)) {
         AgentMsgProcessor.checkIfMsgSentByAuthedMsgSenders(param.allAuthedKeys, svk)
       }
     }
@@ -954,7 +954,7 @@ case class StateParam(agentActorRef: ActorRef,
                       protoInitParams: ProtoRef => PartialFunction[String, Parameter],
                       selfParticipantId: ParticipantId,
                       senderParticipantId: Option[VerKey] => ParticipantId,
-                      allowedUnauthedMsgTypes: Set[MsgType],
+                      allowedUnAuthedMsgTypes: Set[MsgType],
                       allAuthedKeys: Set[VerKey],
                       userIdForResourceUsageTracking: Option[VerKey] => Option[UserId],
                       trackingIdParam: TrackingIdParam)

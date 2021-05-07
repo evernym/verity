@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions
+import com.evernym.verity.{Exceptions, Status}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
@@ -638,17 +638,19 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     sendRespMsg("ConnStatusUpdatedResp", rp)
   }
 
-  val unAllowedLegacyConnectingMsgNames: Set[String] = Set(
-    CREATE_MSG_TYPE_CONN_REQ_ANSWER,
-    MSG_TYPE_CONN_REQ_ACCEPTED, MSG_TYPE_CONN_REQ_DECLINED,
-    CREATE_MSG_TYPE_CONN_REQ_REDIRECTED, MSG_TYPE_CONN_REQ_REDIRECTED)
+  val allowedUnAuthedLegacyConnectingMsgNames: Set[String] =
+    Set(
+        CREATE_MSG_TYPE_CONN_REQ_ANSWER,
+        MSG_TYPE_CONN_REQ_ACCEPTED, MSG_TYPE_CONN_REQ_DECLINED,
+        CREATE_MSG_TYPE_CONN_REQ_REDIRECTED, MSG_TYPE_CONN_REQ_REDIRECTED)
 
-  val unAllowedConnectionsMsgNames: Set[String] = Set("request")
+  val allowedUnAuthedConnectionsMsgNames: Set[String] = Set("request")
 
-  override def allowedUnauthedMsgTypes: Set[MsgType] =
-    unAllowedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_5.msgType) ++
-      unAllowedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_6.msgType) ++
-      unAllowedConnectionsMsgNames.map(ConnectionsMsgFamily.msgType)
+  override def allowedUnAuthedMsgTypes: Set[MsgType] = if (state.theirDidDoc.isEmpty) {
+    allowedUnAuthedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_5.msgType) ++
+      allowedUnAuthedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_6.msgType) ++
+      allowedUnAuthedConnectionsMsgNames.map(ConnectionsMsgFamily.msgType)
+  } else Set.empty
 
   def handleCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
     val pidEvent = scke.pid.map(pd => ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
@@ -832,16 +834,20 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   def handleUpdateTheirDidDoc(stdd: SetupTheirDidDoc):Future[Option[ControlMsg]] = {
     //TODO: modify this to efficiently route to itself if this is pairwise actor itself
-    updateTheirDidDoc(stdd)
-    for {
-      _   <- setRoute(stdd.myDID)
-      ctlMsg  <-
-        agencyDidPairFut().map { agencyDidPair =>
-          val myVerKey = state.myDidAuthKeyReq.verKey
-          val routingKeys = Vector(agencyDidPair.verKey)
-          Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
-        }
-    } yield ctlMsg
+    if (state.theirDidDoc.isEmpty) {
+      updateTheirDidDoc(stdd)
+      for {
+        _   <- setRoute(stdd.myDID)
+        ctlMsg  <-
+          agencyDidPairFut().map { agencyDidPair =>
+            val myVerKey = state.myDidAuthKeyReq.verKey
+            val routingKeys = Vector(agencyDidPair.verKey)
+            Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
+          }
+      } yield ctlMsg
+    } else {
+      throw new BadRequestErrorException(Status.UNAUTHORIZED.statusCode, Option("unauthorized access"))
+    }
   }
 
   def updateTheirDidDoc(stdd: SetupTheirDidDoc): Unit = {

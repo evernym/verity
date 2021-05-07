@@ -1,14 +1,16 @@
 package com.evernym.verity.app_launcher
 
+import akka.Done
+
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{CauseDetail, StartDraining, ErrorEvent, ListeningSuccessful, SeriousSystemError, SuccessEvent}
+import com.evernym.verity.actor.appStateManager.{CauseDetail, ErrorEvent, ListeningSuccessful, SeriousSystemError, StartDraining, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
@@ -30,9 +32,18 @@ class HttpServer(val platform: Platform, routes: Route)
   implicit lazy val system: ActorSystem = platform.agentActorContext.system
   lazy implicit val executor: ExecutionContextExecutor = system.dispatcher
 
+  var httpBinding: Option[ServerBinding] = None
+
   def start(): Unit = {
     LaunchPreCheck.checkReqDependencies(platform.agentActorContext)
     startService(init _)
+  }
+
+  def stop(): Future[Done] = {
+    httpBinding match {
+      case Some(hb) => hb.unbind()
+      case None     => Future(Done)
+    }
   }
 
   private def init(): (Future[Seq[HttpServerBindResult]]) = {
@@ -53,6 +64,7 @@ class HttpServer(val platform: Platform, routes: Route)
             }
           })
           bindResults.foreach { br =>
+            httpBinding = Option(br.serverBinding)
             publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
               causeDetail = CauseDetail("agent-service-started", "agent-service-started-listening-successfully"),
               msg = Option(br.msg)))

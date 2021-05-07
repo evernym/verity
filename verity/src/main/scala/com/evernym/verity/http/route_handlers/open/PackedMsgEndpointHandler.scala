@@ -17,7 +17,6 @@ import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
-import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
 import scala.concurrent.Future

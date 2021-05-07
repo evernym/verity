@@ -18,28 +18,10 @@ import scala.util.{Left, Random}
 //it is more like data store only
 
 class MockLedgerSvc(val system: ActorSystem) extends LedgerSvc {
-  override val ledgerTxnExecutor: LedgerTxnExecutor = MockLedgerTxnExecutor
+  override val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor()
 }
 
-
-object MockLedgerTxnExecutor extends LedgerTxnExecutor {
-
-  case class NymDetail(verKey: VerKey)
-
-  var taa: Option[LedgerTAA] = None
-  var nyms: Map[String, NymDetail] = Map.empty
-  var schemas: Map[String, GetSchemaResp] = Map.empty
-  var credDefs: Map[String, GetCredDefResp] = Map.empty
-  var attribs: Map[String, Map[String, String]] = Map.empty
-
-  override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
-    throw new NotImplementedError("not yet implemented")
-  }
-
-  override def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = {
-    throw new NotImplementedError("not yet implemented")
-  }
-
+object MockLedgerTxnExecutor {
   def buildTxnResp(from: DID,
                    dest: Option[DID],
                    data: Option[Map[String, Any]],
@@ -49,13 +31,38 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
                    seqNo: Option[Long]=None): TxnResp = {
     TxnResp(from, dest, data, txnType, txnTime, reqId.getOrElse(1), seqNo)
   }
+}
+
+class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
+
+  case class NymDetail(verKey: VerKey)
+
+  var taa: Option[LedgerTAA] = None
+  var nyms: Map[DID, NymDetail] = Map.empty
+  var schemas: Map[SchemaId, GetSchemaResp] = Map.empty
+  var credDefs: Map[CredDefId, GetCredDefResp] = Map.empty
+  var attribs: Map[DID, Map[AttrName, AttrValue]] = Map.empty
+
+  type SchemaId = String
+  type CredDefId = String
+  type DID = String
+  type AttrName = String
+  type AttrValue = String
+
+  override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
+    throw new NotImplementedError("not yet implemented")
+  }
+
+  override def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = {
+    throw new NotImplementedError("not yet implemented")
+  }
 
   override def getTAA(submitter: Submitter): Future[Either[StatusDetail, GetTAAResp]] = {
     Future(
       taa match {
         case Some(t) => Right(
           GetTAAResp(
-            buildTxnResp(
+            MockLedgerTxnExecutor.buildTxnResp(
               submitter.did,
               Some(submitter.did),
               Some(Map("text"->"taa", "version"->"1.0")),
@@ -73,7 +80,7 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
       nyms.get(id).map { nd =>
         Right(
           GetNymResp(
-            buildTxnResp(
+            MockLedgerTxnExecutor.buildTxnResp(
               id,
               Some(id),
               Some(Map("dest" -> id, "verkey" -> nd.verKey)),
@@ -176,7 +183,7 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
   def addNym(submitter: Submitter, targetDid: DidPair): Future[Either[StatusDetail, TxnResp]] = {
     nyms += targetDid.DID -> NymDetail(targetDid.verKey)
     Future(
-      Right(buildTxnResp(targetDid.DID, Some(targetDid.DID), None, "1"))
+      Right(MockLedgerTxnExecutor.buildTxnResp(targetDid.DID, Some(targetDid.DID), None, "1"))
     )
   }
 
@@ -186,7 +193,7 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
         didAttribs.get(attrName).map { attribValue =>
           Right(
             GetAttribResp(
-              buildTxnResp(
+              MockLedgerTxnExecutor.buildTxnResp(
                 did,
                 Some(did),
                 Some(Map(attrName -> attribValue)),
@@ -209,7 +216,7 @@ object MockLedgerTxnExecutor extends LedgerTxnExecutor {
     val newDIDAttribs = oldDIDAttribs ++ Map(attrName -> attrValue)
     attribs += did -> newDIDAttribs
     Future(
-      Right(buildTxnResp(did, Some(did), None, "100"))
+      Right(MockLedgerTxnExecutor.buildTxnResp(did, Some(did), None, "100"))
     )
   }
 

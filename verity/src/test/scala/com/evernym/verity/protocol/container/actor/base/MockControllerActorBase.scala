@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.container.actor.container.base
+package com.evernym.verity.protocol.container.actor.base
 
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext

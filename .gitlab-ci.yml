@@ -5,7 +5,7 @@ variables:
   indyNodeVersion: "1.12.3"
   sovtokenVersion: "1.0.8"
   TRIGGERAPI_URL_VERITY_RELEASE: "https://gitlab.corp.evernym.com/api/v4/projects/688/trigger/pipeline"
-  TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
+  # TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
 
 
 .on-master: # job always runs for 'master', otherwise it manual
@@ -272,8 +272,6 @@ publish-manual:
       $TRIGGERAPI_URL_VERITY_RELEASE
   tags:
     - docker-machine
-  variables:
-    TARGET_ENVIRONMENT: 'dev-rc'
 
 deploy-manually-team1:
   extends: .deploy-common
@@ -290,6 +288,9 @@ deploy-manually-team1:
 deploy-dev-rc:
   extends:
     - .deploy-common
+  variables:
+    TARGET_ENVIRONMENT: 'dev-rc'
+    TRIGGERAPI_REF_VERITY_RELEASE: "dev-rc"
   only:
     refs:
       - master@dev/verity/verity

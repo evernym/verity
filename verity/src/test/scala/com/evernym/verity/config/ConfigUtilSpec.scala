@@ -172,4 +172,91 @@ class ConfigUtilSpec extends BasicSpec {
       }
     }
   }
+
+  "when getting dataRetentionPolicy" - {
+    val domainProtocolPolicy = "7 d"
+    val domainFallback = "1d"
+    val defaultProtocolPolicy = "3 day"
+    val defaultFallback = "365 days"
+    val domainId = "domainId123"
+    val dataRetentionConfig = ConfigFactory.parseString(
+      s"""
+        |verity {
+        |   retention-policy {
+        |     domainId123 {
+        |       basicmessage = $domainProtocolPolicy
+        |       max-proto = "731 d"
+        |       years-proto = "1 years"
+        |       undefined-fallback = $domainFallback
+        |     }
+        |
+        |     default {
+        |       undefined-fallback = $defaultFallback
+        |       relationship = $defaultProtocolPolicy
+        |     }
+        |   }
+        | }
+        |""".stripMargin)
+
+    val missingFallbackConfig = ConfigFactory.parseString(
+      """
+        |verity {
+        |   retention-policy {
+        |     missing-fallback { }
+        |     default { }
+        |   }
+        | }
+        |""".stripMargin)
+
+    val testConfig = new TestAppConfig(Some(dataRetentionConfig), clearValidators=true)
+    val testMissingFallbackConfig = new TestAppConfig(Some(missingFallbackConfig), clearValidators=true)
+
+    "should fail with greater than max value" in {
+      intercept[ConfigException.BadValue] {
+        ConfigUtil.getDataRetentionPolicy(testConfig, domainId, "max-proto")
+      }
+    }
+
+    "should fail with anything different than days" in {
+      intercept[ConfigException.BadValue] {
+        ConfigUtil.getDataRetentionPolicy(testConfig, domainId, "years-proto")
+      }
+    }
+
+    "should find defined policy for domain id" in {
+      assert(ConfigUtil.getDataRetentionPolicy(testConfig, domainId, "basicmessage") == ConfigUtil.dataRetentionTag(domainProtocolPolicy))
+    }
+
+    "should select domain's 'undefined-default' when protocol not defined" in {
+      assert(ConfigUtil.getDataRetentionPolicy(testConfig, domainId, "relationship") == ConfigUtil.dataRetentionTag(domainFallback))// domain's undefined-fallback
+    }
+
+    "should throw exception when domain is registered with no fallback" in {
+      intercept[ConfigException.Missing] {
+        ConfigUtil.getDataRetentionPolicy(testMissingFallbackConfig, "missing-fallback", "relationship")
+      }
+    }
+
+    "should select default's defined protocol policy when domain isn't registered" in {
+      assert(ConfigUtil.getDataRetentionPolicy(testConfig, "not registered", "relationship") == ConfigUtil.dataRetentionTag(defaultProtocolPolicy))
+    }
+
+    "should select default's 'undefined-default' when protocol not defined for domain or default" in {
+      assert(ConfigUtil.getDataRetentionPolicy(testConfig, "not registered", "questionanswer") == ConfigUtil.dataRetentionTag(defaultFallback))
+    }
+
+    "should select default's 'undefined-default' when domain id not provided" in {
+      assert(ConfigUtil.getDataRetentionPolicy(testConfig, "", "questionanswer") == ConfigUtil.dataRetentionTag(defaultFallback))
+    }
+
+    "should select domainId's 'undefined-default' when protoref not provided" in {
+      assert(ConfigUtil.getDataRetentionPolicy(testConfig, domainId, "") == ConfigUtil.dataRetentionTag(domainFallback))
+    }
+
+    "should throw exception with no fallback" in {
+      intercept[ConfigException.Missing] {
+        ConfigUtil.getDataRetentionPolicy(testMissingFallbackConfig, "not registered", "123")
+      }
+    }
+  }
 }

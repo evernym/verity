@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
 import java.util.UUID
-
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.Envelope1
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerProtocol._
@@ -34,6 +34,10 @@ class CommittedAnswerProtocolSpec
     val questioner: TestEnvir = s(QUESTIONER)
     val responder: TestEnvir = s(RESPONDER)
   }
+
+  override val defaultInitParams = Map(
+    DATA_RETENTION_POLICY -> "30 day"
+  )
 
   def checkStatus(envir: TestEnvir, expectedStatus: StatusReport): Unit = {
     envir clear signals

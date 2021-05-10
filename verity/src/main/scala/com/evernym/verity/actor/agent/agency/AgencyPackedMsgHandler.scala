@@ -1,10 +1,11 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, RESOURCE_TYPE_ENDPOINT}
+import com.evernym.verity.constants.Constants.MSG_PACK_VERSION
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_ROUTING, MSG_TYPE_FORWARD, MSG_TYPE_FWD}
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
@@ -34,8 +35,8 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
     }
 
     pmw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackFormat))
-    addUserResourceUsage(pmw.reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_ENDPOINT,
-      "POST_agency_msg", None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT,
+      "POST_agency_msg", pmw.reqMsgContext.clientIpAddressReq, None)
     amw.headAgentMsgDetail match {
       // TODO: we need to support another possible qualifier, "http://didcomm.org/".
       // See https://github.com/hyperledger/aries-rfcs/blob/master/features/0348-transition-msg-type-to-https/README.md.

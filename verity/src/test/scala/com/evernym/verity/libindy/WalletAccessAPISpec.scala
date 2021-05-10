@@ -6,8 +6,8 @@ import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
-import com.evernym.verity.protocol.engine.asyncapi.wallet.InvalidSignType
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessPack, AccessRight, AccessSign, AccessStoreTheirDiD, AccessUnPack, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessController}
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
@@ -23,6 +23,7 @@ class WalletAccessAPISpec
   implicit def asyncAPIContext: AsyncAPIContext =
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
+  implicit def asyncOpRunner: AsyncOpRunner = this
   val selfParticipantId: ParticipantId = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
     val result = ParticipantUtil.participantId(
@@ -31,7 +32,9 @@ class WalletAccessAPISpec
     result
   }
 
-  val walletAccess = new WalletAccessAPI(walletAPI, selfParticipantId)
+  val walletRights: Set[AccessRight] =
+    Set(AccessNewDid, AccessSign, AccessVerify, AccessVerKey, AccessPack, AccessUnPack, AccessStoreTheirDiD, AnonCreds)
+  val walletAccess = new WalletAccessController(walletRights, new WalletAccessAPI(walletAPI, selfParticipantId))
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"

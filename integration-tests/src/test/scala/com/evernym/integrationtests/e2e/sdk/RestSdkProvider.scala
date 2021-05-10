@@ -5,6 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import akka.stream.Materializer
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.SdkProviderException
@@ -71,6 +72,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     */
 
   val system: ActorSystem = ActorSystem.create("rest-integration-test")
+  val materializer: Materializer = Materializer.createMaterializer(system)
   val defaultTimeout: FiniteDuration = FiniteDuration(10, TimeUnit.SECONDS)
   val httpTimeout: FiniteDuration = FiniteDuration(30, TimeUnit.SECONDS)
 
@@ -356,7 +358,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
 
   def receiveMsgFromResponse(httpResponse: HttpResponse): Unit = {
     if (httpResponse.status == OK) {
-      val responseJson = new JSONObject(httpResponse.entity.asInstanceOf[HttpEntity.Strict].getData().utf8String)
+      val str = httpResponse.entity match {
+        case s: HttpEntity.Strict => s.getData().utf8String
+        case d: HttpEntity.Default=> d.toStrict(5000, materializer).toCompletableFuture.get().getData().utf8String
+        case x: Any => throw new RuntimeException(s"Unsupported entity class ${x.getClass}")
+      }
+      val responseJson = new JSONObject(str)
       receiveMsg(responseJson.getJSONObject("result"))
     }
   }

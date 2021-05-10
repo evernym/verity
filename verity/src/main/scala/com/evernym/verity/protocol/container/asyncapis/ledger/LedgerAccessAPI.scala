@@ -1,29 +1,27 @@
 package com.evernym.verity.protocol.container.asyncapis.ledger
 
 import com.evernym.verity.Exceptions.NotFoundErrorException
-import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, DID}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 class LedgerAccessAPI(cache: Cache,
                       ledgerSvc: LedgerSvc,
                       _walletAccess: WalletAccess)
                      (implicit val asyncAPIContext: AsyncAPIContext)
-  extends LedgerAccess with BaseAsyncOpExecutorImpl {
+  extends LedgerAsyncOps
+    with BaseAsyncOpExecutorImpl {
 
-  override def walletAccess: WalletAccess =  _walletAccess
+  override def walletAccess: WalletAccess = _walletAccess
 
-  override def getSchema(schemaId: String)
-                         (handler: Try[GetSchemaResp] => Unit): Unit = {
+  override def runGetSchema(schemaId: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec =>
         getSchemaBase(Set(schemaId)).map { r => r(schemaId) }
@@ -31,13 +29,11 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
-  override def getSchemas(schemaIds: Set[String])
-                         (handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
+  override def runGetSchemas(schemaIds: Set[String]): Unit = {
     withAsyncOpExecutorActor({ implicit ec => getSchemaBase(schemaIds)})
   }
 
-  override def getCredDef(credDefId: String)
-                         (handler: Try[GetCredDefResp] => Unit): Unit = {
+  override def runGetCredDef(credDefId: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec =>
         getCredDefsBase(Set(credDefId)).map { r => r(credDefId) }
@@ -45,35 +41,29 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
-  override def getCredDefs(credDefIds: Set[String])
-                          (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
+  override def runGetCredDefs(credDefIds: Set[String]): Unit = {
     withAsyncOpExecutorActor({ implicit ec => getCredDefsBase(credDefIds)})
   }
 
-  override def writeSchema(submitterDID: String, schemaJson: String)
-                          (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def runWriteSchema(submitterDID: String, schemaJson: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess)}
     )
   }
 
-  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID)
-                                          (handler: Try[LedgerRequest] => Unit): Unit = {
+  override def runPrepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)}
     )
   }
 
-  override def writeCredDef(submitterDID: DID,
-                            credDefJson: String)
-                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def runWriteCredDef(submitterDID: DID, credDefJson: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)}
     )
   }
 
-  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID)
-                                           (handler: Try[LedgerRequest] => Unit): Unit = {
+  override def runPrepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)}
     )

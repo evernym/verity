@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters,
 object ConnectionsDef extends ProtocolDefinition[Connections, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = ConnectionsMsgFamily
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID)
+  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID, DATA_RETENTION_POLICY)
 
   override val roles: Set[Role] = Set(Role.Inviter, Role.Invitee)
 

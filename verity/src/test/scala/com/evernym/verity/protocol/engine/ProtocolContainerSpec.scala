@@ -28,9 +28,14 @@ class ProtocolContainerSpec extends BasicSpec {
           }
 
           override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
-            def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
+            def storeSegment(segmentAddress: SegmentAddress,
+                             segmentKey: SegmentKey,
+                             segment: Any,
+                             retentionPolicy: Option[String]=None)
                             (handler: Try[StoredSegment] => Unit): Unit = {}
-            def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+            def withSegment[T](segmentAddress: SegmentAddress,
+                               segmentKey: SegmentKey,
+                               retentionPolicy: Option[String]=None)
                               (handler: Try[Option[T]] => Unit): Unit = {}
           }
 

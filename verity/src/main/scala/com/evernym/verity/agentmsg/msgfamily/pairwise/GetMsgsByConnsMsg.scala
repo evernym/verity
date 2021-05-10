@@ -8,24 +8,20 @@ import com.evernym.verity.protocol.engine.{DID, MsgBase}
 import com.evernym.verity.protocol.protocols.MsgDetail
 
 
-case class GetMsgsByConnsReqMsg_MFV_0_5(`@type`: TypeDetail,
-                                        pairwiseDIDs: Option[List[DID]] = None,
+case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DID]] = None,
                                         excludePayload: Option[String] = None,
                                         uids: Option[List[String]] = None,
                                         statusCodes: Option[List[String]] = None) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkOptionalNotEmpty("excludePayload", excludePayload)
   }
 }
 
-case class GetMsgsByConnsReqMsg_MFV_0_6(`@type`: String,
-                                        pairwiseDIDs: Option[List[DID]] = None,
+case class GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs: Option[List[DID]] = None,
                                         excludePayload: Option[String] = None,
                                         uids: Option[List[String]] = None,
                                         statusCodes: Option[List[String]] = None) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkOptionalNotEmpty("excludePayload", excludePayload)
   }
 }

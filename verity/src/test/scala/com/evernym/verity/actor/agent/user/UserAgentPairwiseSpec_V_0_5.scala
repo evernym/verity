@@ -388,8 +388,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
       "when sent GetMsgs" - {
         "should respond with available messages" in {
-          val mtd = TypeDetail(MSG_TYPE_GET_MSGS, MTV_1_0)
-          val msg = GetMsgsReqMsg_MFV_0_5(mtd, None)
+          val msg = GetMsgsReqMsg_MFV_0_5(None)
           val pme = MsgEnvelope(msg, msg.typedMsg.msgType, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID)
           connectingRegion ! ForIdentifier(connectingActorId, ProtocolCmd(pme, null))
           val srm = expectMsgType[ProtocolSyncRespMsg]

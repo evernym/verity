@@ -70,7 +70,7 @@ trait HttpRouteBase
     appConfig.getConfigListOfStringReq(SMS_SVC_ALLOWED_CLIENT_IP_ADDRESSES).map(ip => new SubnetUtilsExt(ip))
   }
 
-  protected def optionalEntityAs[T: ClassTag]: Directive1[Option[T]] = {
+  def optionalEntityAs[T: ClassTag]: Directive1[Option[T]] = {
     extractRequest.flatMap { req =>
       if (req.entity.contentLengthOption.contains(0L)) {
         provide(Option.empty[T])

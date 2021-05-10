@@ -2,11 +2,12 @@ package com.evernym.verity.actor.persistence
 
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
+import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.{SECONDS, _}
+import scala.util.Random
 
 /**
  * handles deletion of messages/events in batches
@@ -33,10 +34,11 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
 
   private def deleteEventsInBatches(): Unit = {
     if (deleteMsgProgress.pendingCount > 0) {
-      logger.debug(s"[$persistenceId] => " +
-        s"final/target seqNo: ${deleteMsgProgress.targetSeqNo}, " +
-        s"deleted till seqNo: ${deleteMsgProgress.deletedTillSeqNo}, " +
-        s"nextSeqNoForDeletion: ${deleteMsgProgress.batchSize}")
+      logger.debug(s"[$persistenceId] " +
+        s"(lastSequenceNr: $lastSequenceNr) => " +
+        s"deleteTargetSeqNr: ${deleteMsgProgress.targetSeqNo}, " +
+        s"deletedTillSeqNr: ${deleteMsgProgress.deletedTillSeqNo}, " +
+        s"nextBatchSize: ${deleteMsgProgress.batchSize}")
       MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT)
       deleteMessages(deleteMsgProgress.candidateSeqNoForDeletion)
     } else {
@@ -45,27 +47,46 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
   }
 
   private def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
+    log.debug(s"[$persistenceId] total events deleted: ${dms.toSequenceNr}")
     onDeleteMessageSuccess(dms)
-
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT)
-    logger.debug(s"messages deleted", (LOG_KEY_PERSISTENCE_ID, persistenceId),
-      ("seq_num", dms.toSequenceNr))
+    if (deleteMsgProgress.targetSeqNo == 0) {
+      logger.info(s"[$persistenceId] events deleted (${dms.toSequenceNr})")
+      completeMsgsDeletion()
+    } else {
+      handleBatchedDeleteMsgSuccess(dms)
+    }
+  }
+
+  private def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
+    onDeleteMessageFailure(dmf)
+    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT)
+    if (deleteMsgProgress.targetSeqNo == 0) {
+      //someone tried to just delete events at once (instead of using batched event deletion function)
+      // so lets use the batched one to handle it gracefully
+      logger.info(s"[$persistenceId] event deletion failed (${dmf.toSequenceNr}) " +
+        s"(will fallback to batched event deletion)", (LOG_KEY_ERR_MSG, dmf.cause))
+      deleteMessagesExtended(dmf.toSequenceNr)
+    } else {
+      handleBatchedDeleteMsgFailure(dmf)
+    }
+  }
+
+  private def handleBatchedDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
+    logger.info(s"[$persistenceId] batched event deletion successful (${dms.toSequenceNr}/${deleteMsgProgress.targetSeqNo})")
     deleteMsgProgress = deleteMsgProgress.copy(deletedTillSeqNo = dms.toSequenceNr)
     if (deleteMsgProgress.pendingCount > 0) {
-      increaseBatchSize()
+      adjustBatchParamsPostSuccess()
       scheduleNextDeletion()
     } else {
       completeMsgsDeletion()
     }
   }
 
-  private def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
-    onDeleteMessageFailure(dmf)
-
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT)
-    logger.info(s"could not delete old messages", (LOG_KEY_PERSISTENCE_ID, persistenceId),
-      ("seq_num", dmf.toSequenceNr), (LOG_KEY_ERR_MSG, dmf.cause))
-    decreaseBatchSize()
+  private def handleBatchedDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
+    logger.info(s"[$persistenceId] batched event deletion failed (${deleteMsgProgress.deletedTillSeqNo}/${deleteMsgProgress.targetSeqNo}): ${dmf.toSequenceNr}", (LOG_KEY_ERR_MSG, dmf.cause))
+    adjustBatchParamsPostFailure()
+    adjustReceiveTimeoutIfRequired()
     scheduleNextDeletion()
   }
 
@@ -73,9 +94,12 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
     timers.startSingleTimer("deleteEvents", DeleteEvents, deleteMsgConfig.batchIntervalInSeconds.seconds)
   }
 
-  private def completeMsgsDeletion(): Unit = postAllMsgsDeleted()
+  private def completeMsgsDeletion(): Unit = {
+    context.setReceiveTimeout(originalReceiveTimeout)
+    postAllMsgsDeleted()
+  }
 
-  private def increaseBatchSize(): Unit = {
+  private def adjustBatchParamsPostSuccess(): Unit = {
     if (deleteMsgProgress.batchSize < deleteMsgConfig.maxBatchSize) {
       val newCandidateBatchSize = {
         val newBatchSize = deleteMsgProgress.batchSize * deleteMsgConfig.batchSizeMultiplier
@@ -84,23 +108,53 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
       }
       deleteMsgProgress = deleteMsgProgress.copy(batchSize = newCandidateBatchSize)
     }
+    val newBatchInterval =
+      if (deleteMsgConfig.batchIntervalInSeconds > batchIntervalInSeconds)
+        deleteMsgConfig.batchIntervalInSeconds / 2
+      else batchIntervalInSeconds
+
+    val finalNewBatchInterval =
+      if (newBatchInterval < batchIntervalInSeconds) batchIntervalInSeconds
+      else newBatchInterval
+
+    deleteMsgConfig = deleteMsgConfig.copy(batchIntervalInSeconds = finalNewBatchInterval)
   }
 
-  private def decreaseBatchSize(): Unit = {
+  private def adjustBatchParamsPostFailure(): Unit = {
     val newCandidateBatchSize = deleteMsgProgress.batchSize / deleteMsgConfig.batchSizeMultiplier
-    if (newCandidateBatchSize > 0)
-      deleteMsgProgress = deleteMsgProgress.copy(batchSize = newCandidateBatchSize)
+    val finalNextBatchSize = if (newCandidateBatchSize >= initialBatchSize) newCandidateBatchSize else initialBatchSize
+    deleteMsgProgress = deleteMsgProgress.copy(batchSize = finalNextBatchSize)
+    val finalIntervalInSeconds = (deleteMsgConfig.batchIntervalInSeconds*2) + Random.nextInt(10)
+    deleteMsgConfig = deleteMsgConfig.copy(batchIntervalInSeconds = finalIntervalInSeconds)
   }
 
-  private var deleteMsgProgress: DeleteMsgProgress = DeleteMsgProgress(0, 0, deleteMsgConfig.initialBatchSize)
-
+  private def adjustReceiveTimeoutIfRequired(): Unit = {
+    val nextBatchTimeout = Duration(deleteMsgConfig.batchIntervalInSeconds, SECONDS)
+    if (context.receiveTimeout.lteq(nextBatchTimeout.plus(30.seconds))) {
+      context.setReceiveTimeout(nextBatchTimeout.plus(60.seconds))
+    }
+  }
   //can be overridden by implementing class
+
+  def isDeleteMsgInProgress: Boolean = deleteMsgProgress.pendingCount > 0
 
   def onDeleteMessageSuccess(dms: DeleteMessagesSuccess): Unit = {}
   def onDeleteMessageFailure(dmf: DeleteMessagesFailure): Unit = {}
   def postAllMsgsDeleted(): Unit = {}
 
-  protected lazy val deleteMsgConfig: DeleteMsgConfig = DeleteMsgConfig(50, 2, 1000, 10)
+  protected val initialBatchSize = 100
+  protected val maxBatchSize = 1000
+
+  protected val batchSizeMultiplier = 2
+  protected val batchIntervalInSeconds = 5
+
+  private val originalReceiveTimeout = context.receiveTimeout
+
+  private var deleteMsgConfig: DeleteMsgConfig = DeleteMsgConfig(
+    initialBatchSize, batchSizeMultiplier, maxBatchSize, batchIntervalInSeconds)
+  private var deleteMsgProgress: DeleteMsgProgress = DeleteMsgProgress(
+    0, 0, deleteMsgConfig.initialBatchSize)
+
 }
 
 /**

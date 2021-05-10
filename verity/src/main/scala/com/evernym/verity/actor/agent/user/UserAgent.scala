@@ -19,6 +19,7 @@ import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.metrics.CustomMetrics._
@@ -27,6 +28,7 @@ import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
@@ -309,7 +311,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, state.myDid)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, reqMsgContext.clientIpAddressReq, userId)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
     val sndr = sender()
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { thisAgentKey =>
@@ -453,7 +456,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, state.myDid)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
     buildAndSendComMethodUpdatedRespMsg(comMethod)
@@ -671,7 +675,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
   }
 
-  def stateDetailsFor: Future[String ?=> Parameter]  = {
+  def stateDetailsFor: Future[ProtoRef => String ?=> Parameter]  = {
     val agentActorEntityId = getNewActorId
     val createKeyEndpointSetupDetailJson = DefaultMsgCodec.toJson(
       CreateKeyEndpointDetail(
@@ -682,7 +686,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     )
     val filteredConfs = getFilteredConfigs(Set(NAME_KEY, LOGO_URL_KEY))
 
-    def paramMap(agencyVerKey: VerKey): String ?=> Parameter = {
+    def paramMap(agencyVerKey: VerKey): ProtoRef => String ?=> Parameter = p => {
       case SELF_ID                                  => Parameter(SELF_ID, ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID))
       case OTHER_ID                                 => Parameter(OTHER_ID, ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.myDid))
       case NAME                                     => Parameter(NAME, agentName(filteredConfs))
@@ -696,6 +700,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse(""))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, p.msgFamilyName))
     }
 
     agencyDidPairFut().map(adp => paramMap(adp.verKey))

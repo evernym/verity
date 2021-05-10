@@ -5,7 +5,7 @@ variables:
   indyNodeVersion: "1.12.3"
   sovtokenVersion: "1.0.8"
   TRIGGERAPI_URL_VERITY_RELEASE: "https://gitlab.corp.evernym.com/api/v4/projects/688/trigger/pipeline"
-  TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
+  # TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
 
 
 .on-master: # job always runs for 'master', otherwise it manual
@@ -33,7 +33,7 @@ license-data-check:
   script: ./cicd/license-date-check.sh
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   tags:
@@ -55,7 +55,7 @@ unit-test:
   extends: .test
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   script:
@@ -65,7 +65,7 @@ unit-test:
   extends: .test
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   artifacts:
@@ -83,8 +83,8 @@ unit-test:
     MESSAGE_PROGRESS_TRACKING_ENABLED: "true"
 
     # For the integration tests to set up a usable bucket
-    WALLET_BACKUP_BUCKET: "evernym-wallet-backup"
-    WALLET_BACKUP_S3_ENDPOINT: "http://s3server:8000"
+    BLOB_BUCKET: "blob-bucket"
+    BLOB_S3_ENDPOINT: "http://s3server:8000"
 
     # These are used by the s3 service in .intergration jobs
     REMOTE_MANAGEMENT_DISABLE: 1
@@ -132,7 +132,7 @@ legacy:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -143,7 +143,7 @@ legacy-with-restart:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -155,11 +155,21 @@ integration:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
     TEST_TYPE: "Integration"
+
+limits:
+  extends: .integration
+  only:
+    refs:
+      - master
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Limits"
 
 # I'm disabling these tests. They need maintenance since we dropped 0.6 protocols that I did not have time before_script:
 # since we have coverage else were and for the things we did not have coverage for were for POC features.
@@ -167,7 +177,7 @@ integration:
   extends: .integration
   only:
     refs:
-      - branches
+      - master
       - tags
       - merge_requests
   variables:
@@ -262,8 +272,6 @@ publish-manual:
       $TRIGGERAPI_URL_VERITY_RELEASE
   tags:
     - docker-machine
-  variables:
-    TARGET_ENVIRONMENT: 'dev-rc'
 
 deploy-manually-team1:
   extends: .deploy-common
@@ -280,6 +288,9 @@ deploy-manually-team1:
 deploy-dev-rc:
   extends:
     - .deploy-common
+  variables:
+    TARGET_ENVIRONMENT: 'dev-rc'
+    TRIGGERAPI_REF_VERITY_RELEASE: "dev-rc"
   only:
     refs:
       - master@dev/verity/verity

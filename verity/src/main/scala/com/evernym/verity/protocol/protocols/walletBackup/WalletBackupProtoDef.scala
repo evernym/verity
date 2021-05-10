@@ -19,7 +19,7 @@ object WalletBackupProtoDef extends ProtocolDefinition[WalletBackupProtocol, Rol
 
   override def createInitMsg(params: Parameters) = Init(params)
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID)
+  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID, DATA_RETENTION_POLICY)
 
   override val roles: Set[Role] = Set(Exporter, Persister, Recoverer)
 

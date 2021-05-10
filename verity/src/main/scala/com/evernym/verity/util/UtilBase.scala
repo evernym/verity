@@ -28,9 +28,6 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.codec.digest.DigestUtils
-import org.velvia.MsgPack
-import org.velvia.MsgPackUtils.unpackMap
-
 
 // TODO should not be needed here, should remove utils that use it
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -192,14 +189,6 @@ trait UtilBase extends AsyncToSync {
     DigestUtils.sha512Hex(secret + salt)
   }
 
-  def packMsgByMsgPackLib(map: Map[String, Any]): Array[Byte] = {
-    MsgPack.pack(map)
-  }
-
-  def unpackMsgByMsgPackLib(byteArray: Array[Byte]): Map[String, Any] = {
-    unpackMap(byteArray).asInstanceOf[Map[String, Any]]
-  }
-
   def isExpired(createdDateTime: ZonedDateTime, expiryTimeInSeconds: Int): Boolean = {
     val curTime = getCurrentUTCZonedDateTime
     val expiryTime = createdDateTime.plusSeconds(expiryTimeInSeconds)
@@ -260,14 +249,20 @@ trait UtilBase extends AsyncToSync {
     }
   }
 
-
-  def isDID(token: String): Boolean = {
+  def isDID(value: String): Boolean = {
     // NOTE: This may need to change to conform to https://w3c-ccg.github.io/did-spec/
     try {
-      checkIfDIDIsValid(token)
+      checkIfDIDIsValid(value)
       true
     } catch {
       case _: InvalidValueException => false
+    }
+  }
+
+  def isVerKey(value: String): Boolean = {
+    Base58Util.decode(value) match {
+      case Success(decodedVerKey) => decodedVerKey.length == VALID_VER_KEY_BYTE_LENGTH
+      case Failure(_) => false
     }
   }
 

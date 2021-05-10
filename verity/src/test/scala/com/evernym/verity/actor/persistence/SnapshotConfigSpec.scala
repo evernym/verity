@@ -27,8 +27,8 @@ class SnapshotConfigSpec extends BasicSpec {
           deleteEventsOnSnapshot = false
         )
         pc1.getDeleteSnapshotCriteria(1) shouldBe None
-        pc1.getDeleteSnapshotCriteria(2) shouldBe Some(SnapshotSelectionCriteria(maxSequenceNr = 1, minSequenceNr = 1))
-        pc1.getDeleteSnapshotCriteria(3) shouldBe Some(SnapshotSelectionCriteria(maxSequenceNr = 2, minSequenceNr = 2))
+        pc1.getDeleteSnapshotCriteria(2) shouldBe None
+        pc1.getDeleteSnapshotCriteria(3) shouldBe Some(SnapshotSelectionCriteria(maxSequenceNr = 2, minSequenceNr = 1))
 
         val pc2 = SnapshotConfig(
           snapshotEveryNEvents = Option(2),

@@ -2,6 +2,8 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.{InvalidMsgQualifierException, MsgTypeParsingException, UnrecognizedMsgQualifierException}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.typesafe.scalalogging.Logger
 
 import scala.util.matching.Regex
 
@@ -86,6 +88,7 @@ trait MsgFamily {
   protected val signalMsgs: Map[Class[_], MsgName] = Map.empty
 
   lazy val protoRef = ProtoRef(name, version)
+  lazy val logger: Logger = getLoggerByClass(getClass)
 
   private lazy val protocolMsgsReversed: Map[Class[_], MsgName] = protocolMsgs map (_.swap)
   private lazy val controlMsgsReversed: Map[Class[_], MsgName] = controlMsgs map (_.swap)

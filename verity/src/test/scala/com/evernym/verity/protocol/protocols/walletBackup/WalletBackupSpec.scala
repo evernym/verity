@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.protocol.engine.{DebugProtocols, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily._
@@ -21,10 +22,9 @@ class WalletBackupSpec()
 
   import BackupSpecVars._
 
-  private implicit def EnhancedScenario(s: Scenario) = new {
-    val exporter: TestEnvir = s(EXPORTER)
-    val persister: TestEnvir = s(PERSISTER)
-  }
+  override val defaultInitParams = Map(
+    DATA_RETENTION_POLICY -> "30 day"
+  )
 
   "A wallet backup protocol" - {
 
@@ -52,7 +52,7 @@ class WalletBackupSpec()
           f(EXPORTER).state shouldBe a[State.ReadyToExportBackup]
           f(EXPORTER).role shouldBe Exporter
 
-          f(PERSISTER).state shouldBe a[State.ReadyToPersistBackup]
+          f(PERSISTER).state shouldBe a[State.ReadyToPersistBackupInBlob]
           f(PERSISTER).role shouldBe Persister
         }
       }
@@ -66,7 +66,7 @@ class WalletBackupSpec()
 
           f(EXPORTER).state shouldBe a[State.ReadyToExportBackup]
 
-          f(PERSISTER).state shouldBe a[State.ReadyToPersistBackup]
+          f(PERSISTER).state shouldBe a[State.ReadyToPersistBackupInBlob]
         }
 
         "should store wallet (byte array)" in autoRegisteredVk { f =>
@@ -110,7 +110,7 @@ class WalletBackupSpec()
           f(EXPORTER) ~ ExportBackup(wallet2)
           assertStoreByRecovering(f(EXPORTER), wallet2)
 
-          f(PERSISTER).state.asInstanceOf[State.ReadyToPersistBackup]
+          f(PERSISTER).state.asInstanceOf[State.ReadyToPersistBackupInBlob]
         }
 
         "should fail if backup recovery is in progress" in autoRegisteredVk { f =>
@@ -136,7 +136,7 @@ class WalletBackupSpec()
             f(PERSISTER) expect signal[ProvideRecoveryDetails]
             assertStoreByRecovering(f(EXPORTER), DEFAULT_WALLET)
 
-            f(PERSISTER).state shouldBe a[State.ReadyToPersistBackup]
+            f(PERSISTER).state shouldBe a[State.ReadyToPersistBackupInBlob]
 
           }
 
@@ -153,7 +153,7 @@ class WalletBackupSpec()
 
           interaction(newExporter, f(PERSISTER)) {
 
-            f(PERSISTER).state shouldBe a[State.ReadyToPersistBackup]
+            f(PERSISTER).state shouldBe a[State.ReadyToPersistBackupInBlob]
             f(PERSISTER).role shouldBe Persister
 
             newExporter ~ InitBackup(BACKUP_INIT_PARAMS)
@@ -162,7 +162,7 @@ class WalletBackupSpec()
               newExporter.state shouldBe a[State.ReadyToExportBackup]
             }
 
-            f(PERSISTER).state shouldBe a[State.ReadyToPersistBackup]
+            f(PERSISTER).state shouldBe a[State.ReadyToPersistBackupInBlob]
 
             newExporter ~ RecoverBackup()
 

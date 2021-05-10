@@ -1,7 +1,6 @@
 package com.evernym.verity.http.common
 
 import java.util.UUID
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -9,21 +8,21 @@ import akka.http.scaladsl.model.{HttpEntity, HttpMethod, HttpMethods, HttpReques
 import akka.http.scaladsl.model.StatusCodes.{Accepted, BadRequest, GatewayTimeout, OK}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.scaladsl.{Sink, Source}
-import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_REMOTE_ENDPOINT, LOG_KEY_RESPONSE_CODE}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{BAD_REQUEST, UNHANDLED}
+import com.evernym.verity.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
 import com.evernym.verity.{Exceptions, UrlParam}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
-import scala.util.{Left, Success}
+import scala.util.{Left, Success, Try}
 
 
 class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) extends MsgSendingSvc {
@@ -118,7 +117,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
       case e =>
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         val errMsg = s"connection not established with remote server: ${request.uri}"
-        logger.error(errMsg, (LOG_KEY_REMOTE_ENDPOINT, request.uri))
+        logger.error(errMsg)
         HttpResponse(StatusCodes.custom(GatewayTimeout.intValue, errMsg, errMsg))
     }
   }
@@ -137,24 +136,31 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
   protected def performResponseParsing[T](implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
   PartialFunction[HttpResponse, Future[Either[HandledErrorException, T]]] = {
     case hr: HttpResponse if List(OK, Accepted).contains(hr.status) =>
-      logger.debug(s"successful response ('${hr.status.value}') " +
-        s"received from '${up.toString}'", (LOG_KEY_REMOTE_ENDPOINT, up.toString))
+      logger.debug(s"successful response ('${hr.status.value}') received from '${up.url}'")
       Unmarshal(hr.entity).to[T].map(Right(_))
 
     case hr: HttpResponse if hr.status ==  BadRequest =>
-      val error = s"error response ('${hr.status.value}') received from '${up.url}': (${hr.entity})"
-      logger.warn(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString),
-        (LOG_KEY_RESPONSE_CODE, BadRequest.intValue), (LOG_KEY_ERR_MSG, BadRequest.reason))
-      Unmarshal(hr.entity).to[String].map { _ =>
+      Unmarshal(hr.entity).to[String].map { respMsg =>
+        val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
+        val error = s"error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        logger.warn(error)
         Left(buildHandledError(BAD_REQUEST.withMessage(error))) }
 
     case hr: HttpResponse =>
-      val error = s"error response ('${hr.status.value}') received from '${up.url}': (${hr.entity})"
-      logger.warn(error, (LOG_KEY_REMOTE_ENDPOINT, up.toString), (LOG_KEY_ERR_MSG, hr.status))
-      Unmarshal(hr.entity).to[String].map { _ =>
+      Unmarshal(hr.entity).to[String].map { respMsg =>
+        val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
+        val error = s"error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        logger.warn(error)
         Left(buildHandledError(UNHANDLED.withMessage(error)))
       }
   }
+
+  private def buildStatusDetail(resp: String): Option[StatusDetail] = Try{
+    val sd = DefaultMsgCodec.fromJson[StatusDetail](resp)
+    if (Option(sd.statusCode).isDefined && Option(sd.statusMsg).isDefined) {
+      Option(sd)
+    } else None
+  }.getOrElse(None)
 }
 
 

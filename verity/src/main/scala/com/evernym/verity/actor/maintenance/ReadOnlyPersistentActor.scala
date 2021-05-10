@@ -1,6 +1,9 @@
 package com.evernym.verity.actor.maintenance
 
 import akka.actor.Props
+import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.Status.BAD_REQUEST
+import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
 import com.evernym.verity.actor.{ActorMessage, State}
 import com.evernym.verity.config.AppConfig
@@ -29,7 +32,13 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
     with DefaultPersistenceEncryption {
 
   override def receiveCmd: Receive = {
-    case SendPersistedData => sender ! PersistentDataWrapper(data)
+    case spd: SendPersistedData =>
+      val resp = {
+        if (spd.aggregate) AggregatedDataWrapper(data.groupBy(_.event.getClass.getSimpleName).mapValues(_.size))
+        if (spd.hideData) BasicDataWrapper(data.map(d => d.copy(event = d.event.getClass.getSimpleName)))
+        else BasicDataWrapper(data)
+      }
+      sender ! resp
   }
 
   override def receiveEvent: Receive = {
@@ -70,12 +79,27 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
   context.setReceiveTimeout(5.minutes)
 }
 
-case object SendPersistedData extends ActorMessage
+object SendPersistedData {
+  def apply(aggregate: String, showData: String): SendPersistedData =
+    SendPersistedData(aggregate.toUpperCase == YES, showData.toUpperCase == YES)
+}
+case class SendPersistedData(aggregate: Boolean, showData: Boolean) extends ActorMessage {
+  if (aggregate && showData) {
+    throw new BadRequestErrorException(BAD_REQUEST.statusCode,
+      Option("`aggregate` and `showData` both can't be true"))
+  }
+  def hideData: Boolean = !showData
+}
 
 case class PersistentData(lastSeqNo: Long, event: Any) {
   override def toString: String = s"$lastSeqNo: $event"
 }
-case class PersistentDataWrapper(data: List[PersistentData]) extends ActorMessage
+
+trait PersistentDataResp extends ActorMessage {
+  def data: Iterable[_]
+}
+case class BasicDataWrapper(data: List[PersistentData]) extends PersistentDataResp
+case class AggregatedDataWrapper(data: Map[String, Int]) extends PersistentDataResp
 
 object ReadOnlyPersistentActor {
   def prop(appConfig: AppConfig, actorParam: ActorParam): Props =

@@ -38,4 +38,6 @@ object InitParamConstants {
   val CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON = "createKeyEndpointSetupDetailJson"
 
   val DEFAULT_ENDORSER_DID = "defaultEndorserDid"
+
+  val DATA_RETENTION_POLICY = "dataRetentionPolicy"
 }

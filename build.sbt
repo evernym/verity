@@ -124,7 +124,7 @@ lazy val integrationTests = (project in file("integration-tests"))
     settings,
     protoBufSettings,
     libraryDependencies ++= addDeps(
-      commonLibraryDependencies ++ Seq.apply ("org.iq80.leveldb" % "leveldb" % "0.11" ),
+      commonLibraryDependencies ++ Seq.apply ("org.iq80.leveldb" % "leveldb" % "0.12" ),
       Seq("scalatest_2.12"),
       "test"),
 
@@ -320,7 +320,7 @@ lazy val commonLibraryDependencies = {
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
 
-    "org.iq80.leveldb" % "leveldb" % "0.11",      //used as alternate StorageAPI to S3
+    "org.iq80.leveldb" % "leveldb" % "0.12",      //used as alternate StorageAPI to S3
   )
 
   //for macro libraries that are compile-time-only

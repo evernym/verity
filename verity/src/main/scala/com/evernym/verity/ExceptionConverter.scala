@@ -58,6 +58,7 @@ private object DynamoDBExceptionConverter extends ExceptionConverterBase {
 
   override protected lazy val converter: PartialFunction[Throwable, HandledErrorException] = {
     case ase: AmazonServiceException =>
+      //https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-dynamodb/src/main/java/com/amazonaws/services/dynamodbv2/AmazonDynamoDBClient.java#L106
       ase.getErrorCode match {
         case "ItemCollectionSizeLimitExceededException" => buildHandledException(AEPSS_ITEM_COLLECTION_SIZE_LIMIT_EXCEEDED, ase)
         case "LimitExceededException"                   => buildHandledException(AEPSS_OPERATION_LIMIT_EXCEEDED, ase)

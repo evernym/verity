@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
-
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.resourceusagethrottling._
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserId
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -13,26 +13,55 @@ object ResourceUsageRuleHelper {
 
   loadResourceUsageRules()
 
-  val DEFAULT_USAGE_RULE_NAME = "default"
-
   var resourceUsageRules: ResourceUsageRuleConfig = _
 
   def loadResourceUsageRules(): Unit = {
     resourceUsageRules = new ResourceUsageRuleConfigValidator(AppConfigWrapper.getLoadedConfig).buildResourceUsageRules()
   }
 
-  def getRuleNameByToken(token: ApiToken): UsageRuleName = {
-    val isTokenAnIpAddress = SubnetUtilsExt.isClassfulIpAddress(token)
-    resourceUsageRules.rulesToTokens.find {
-      case (_ , v) =>
-        if (isTokenAnIpAddress)
-          v.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(token))
-        else v.contains(token)
-    }.map(_._1).getOrElse(DEFAULT_USAGE_RULE_NAME)
+  val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
+  val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
+
+  def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[EntityIdToken]): Boolean = {
+    tokens
+      .filter(SubnetUtilsExt.isIpAddressOrCidrNotation)
+      .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
   }
 
-  private def getUsageRuleByToken(token: ApiToken): Option[UsageRule] = {
-    resourceUsageRules.usageRules.get(getRuleNameByToken(token))
+  private def isUserIdInTokenSet(userId: UserId, tokens: Set[EntityIdToken]): Boolean = {
+    tokens
+      .filterNot(SubnetUtilsExt.isIpAddressOrCidrNotation)
+      .exists {
+        case `userId`               => true
+        case OWNER_ID_PATTERN         => userId.startsWith(OWNER_ID_PREFIX)
+        case COUNTERPARTY_ID_PATTERN  => userId.startsWith(COUNTERPARTY_ID_PREFIX)
+        case _                        => false
+    }
+  }
+
+  def getRuleNameByEntityId(entityId: EntityId): UsageRuleName = {
+    resourceUsageRules.rulesToTokens.find {
+      case (_ , v) =>
+        if (SubnetUtilsExt.isClassfulIpAddress(entityId))
+          isIpAddressInTokenSet(entityId, v)
+        else if (isUserId(entityId))
+          isUserIdInTokenSet(entityId, v)
+        else
+          v.contains(entityId)
+    }.map(_._1).getOrElse(getDefaultRuleNameByEntityId(entityId))
+  }
+
+  def getDefaultRuleNameByEntityId(entityId: EntityId): String = {
+    if (entityId == ENTITY_ID_GLOBAL) GLOBAL_DEFAULT_RULE_NAME
+    else if (SubnetUtilsExt.isClassfulIpAddress(entityId)) IP_ADDRESS_DEFAULT_RULE_NAME
+    else if (entityId.startsWith(OWNER_ID_PREFIX)) USER_ID_OWNER_DEFAULT_RULE_NAME
+    else if (entityId.startsWith(COUNTERPARTY_ID_PREFIX)) USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME
+    else DEFAULT_USAGE_RULE_NAME
+  }
+
+  private def getUsageRuleByEntityId(entityId: EntityId): Option[UsageRule] = {
+    resourceUsageRules.usageRules.get(getRuleNameByEntityId(entityId)) orElse
+      resourceUsageRules.usageRules.get(DEFAULT_USAGE_RULE_NAME)
   }
 
   private def getResourceTypeUsageRule(ur: UsageRule, resourceTypeName: ResourceTypeName): Option[ResourceTypeUsageRule] = {
@@ -54,8 +83,10 @@ object ResourceUsageRuleHelper {
     }
   }
 
-  def getResourceUsageRule(token: ApiToken, resourceType: ResourceType, resourceName: ResourceName): Option[ResourceUsageRule] = {
-    getUsageRuleByToken(token).flatMap { ur =>
+  def getResourceUsageRule(entityId: EntityId,
+                           resourceType: ResourceType,
+                           resourceName: ResourceName): Option[ResourceUsageRule] = {
+    getUsageRuleByEntityId(entityId).flatMap { ur =>
       val resourceTypeName = getHumanReadableResourceType(resourceType)
       getResourceTypeUsageRule(ur, resourceTypeName).flatMap { rtur =>
         getResourceUsageRule(rtur, resourceName)
@@ -83,34 +114,32 @@ case class ResourceUsageRuleConfig(
                                     persistAllBucketUsages: Boolean,
                                     snapshotAfterEvents: Int,
                                     usageRules: Map[UsageRuleName, UsageRule],
-                                    rulesToTokens: Map[UsageRuleName, Set[ApiToken]],
-                                    blacklistedTokens: Set[ApiToken],
-                                    whitelistedTokens: Set[ApiToken],
-                                    actionRules: Map[ActionRuleId, ViolationActions],
-                                    tokenCharsetRegex: Option[String] = None,
-                                    ipCheckRegex: Option[String] = None
+                                    rulesToTokens: Map[UsageRuleName, Set[EntityIdToken]],
+                                    blacklistedTokens: Set[EntityIdToken],
+                                    whitelistedTokens: Set[EntityIdToken],
+                                    actionRules: Map[ActionRuleId, ViolationActions]
                                   ){
   val logger: Logger = getLoggerByClass(classOf[ResourceUsageRuleConfig])
 
   /**
    *
-   * @param apiToken a token to help finding which resource usage rules to apply
-   * @param entityId entity id being tracked
+   * @param ipAddress ip address of the request
+   * @param entityId entityId to be checked against whitelisted tokens
    * @return
    */
-  def isWhitelisted(apiToken: ApiToken, entityId: EntityId): Boolean = {
-    val tokenToBeChecked = Set(apiToken, entityId)
+  def isWhitelisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
+    val tokenToBeChecked = Set(ipAddress, entityId)
     tokenToBeChecked.exists(isTokenPresent(_, whitelistedTokens))
   }
 
   /**
    *
-   * @param apiToken a token to help finding which resource usage rules to apply
-   * @param entityId entity id being tracked
+   * @param ipAddress ip address of the request
+   * @param entityId entityId to be checked against blacklisted tokens
    * @return
    */
-  def isBlacklisted(apiToken: ApiToken, entityId: EntityId): Boolean = {
-    val tokenToBeChecked = Set(apiToken, entityId)
+  def isBlacklisted(ipAddress: IpAddress, entityId: EntityId): Boolean = {
+    val tokenToBeChecked = Set(ipAddress, entityId)
     tokenToBeChecked.exists(isTokenPresent(_, blacklistedTokens))
   }
 
@@ -120,9 +149,9 @@ case class ResourceUsageRuleConfig(
    * @param tokens configured tokens used for lookup
    * @return
    */
-  private def isTokenPresent(token: ApiToken, tokens: Set[ApiToken]): Boolean = {
+  private def isTokenPresent(token: EntityIdToken, tokens: Set[EntityIdToken]): Boolean = {
     if (SubnetUtilsExt.isClassfulIpAddress(token))
-      tokens.filter(SubnetUtilsExt.isSupportedIPAddress).exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(token))
+      isIpAddressInTokenSet(token, tokens)
     else
       tokens.contains(token)
   }

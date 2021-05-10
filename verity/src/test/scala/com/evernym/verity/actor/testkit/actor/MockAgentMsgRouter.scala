@@ -8,6 +8,8 @@ class MockAgentMsgRouter(val actorTypeToRegionsMapping: Map[Int, ActorRef]=Map.e
                         (implicit val ac: AppConfig, val s: ActorSystem)
   extends AgentMsgRouter() {
 
+  require(actorTypeToRegionsMapping != null, "actorTypeToRegionsMapping can't be null")
+
   override def getActorTypeToRegions(actorTypeId: Int): ActorRef =
     actorTypeToRegionsMapping.getOrElse(actorTypeId, super.getActorTypeToRegions(actorTypeId))
 }

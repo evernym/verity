@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, handleExceptions, logRequestResult, pathPrefix, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.maintenance.{ActorParam, PersistentDataWrapper, SendPersistedData}
+import com.evernym.verity.actor.maintenance.{ActorParam, PersistentDataResp, SendPersistedData}
 import com.evernym.verity.actor.node_singleton.PersistentActorQueryParam
 import com.evernym.verity.actor.base.Stop
 import com.evernym.verity.constants.Constants._
@@ -19,16 +19,11 @@ trait PersistentActorEndpointHandler
   extends HttpRouteBase
     with PlatformServiceProvider {
 
-  def getPersistentActorEvents(actorTypeName: String,
-                               actorEntityId: String,
-                               reload: String,
-                               recoverFromSnapshot: String,
-                               persEncKeyConfPath: Option[String]): Future[Any] = {
-    val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKeyConfPath)
+  def getPersistentActorEvents(reload: String, actorParam: ActorParam, sendData: SendPersistedData): Future[Any] = {
     if (reload == YES) {
       platform.nodeSingleton ! PersistentActorQueryParam(actorParam, Stop())
     }
-    platform.nodeSingleton ? PersistentActorQueryParam(actorParam, SendPersistedData)
+    platform.nodeSingleton ? PersistentActorQueryParam(actorParam, sendData)
   }
 
   protected val persistentActorMaintenanceRoutes: Route =
@@ -42,21 +37,21 @@ trait PersistentActorEndpointHandler
                 pathPrefix(Segment / Segment) { (actorTypeName, actorEntityId) =>
                   path("data") {
                     (get & pathEnd) {
-                      parameters('asHtml ? "N", 'reload ? "N", 'withData ? "N",
-                        'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
-                        (inHtml, reload, withData, recoverFromSnapshot, persEncKeyConfPath) =>
+                      parameters('asHtml ? "N", 'reload ? "N", 'showData ? "N",
+                        'aggregate ? "N", 'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
+                        (inHtml, reload, showData, aggregate, recoverFromSnapshot, persEncKeyConfPath) =>
                         complete {
-                          getPersistentActorEvents(actorTypeName, actorEntityId, reload, recoverFromSnapshot, persEncKeyConfPath)
+                          val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKeyConfPath)
+                          val sendData = SendPersistedData(aggregate, showData)
+                          getPersistentActorEvents(reload, actorParam, sendData)
                             .map[ToResponseMarshallable] {
-                              case pdw: PersistentDataWrapper =>
-                                val persistentData =
-                                  if (withData == "N")
-                                    pdw.data.map(d => d.copy(event = d.event.getClass.getSimpleName))
-                                  else pdw.data
+                              case resp: PersistentDataResp =>
                                 if (inHtml == YES) {
-                                  val resp = persistentData.map(_.toString).mkString("<br><br>")
-                                  HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
-                                } else handleExpectedResponse(persistentData.map(_.toString))
+                                  val respStr = resp.data.map(_.toString).mkString("<br><br>")
+                                  HttpResponse.apply(StatusCodes.OK, entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, respStr))
+                                } else {
+                                  handleExpectedResponse(resp.data.map(_.toString))
+                                }
                               case e => handleUnexpectedResponse(e)
                             }
                         }

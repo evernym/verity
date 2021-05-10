@@ -22,7 +22,7 @@ then
 
   sudo apt-get update
   echo "Installing xenial dependencies..."
-  sudo apt-get install -y --allow-downgrades libindy=1.15.0~1618-xenial libnullpay=1.15.0~1618-xenial libvcx=0.10.1-xenial~1131
+  sudo apt-get install -y --allow-downgrades libindy=1.15.0~1618-xenial libnullpay=1.15.0~1618-xenial libvcx=0.10.1-xenial~1131 libmysqlstorage=0.1.11
 else
   if ! grep -q "deb https://repo.sovrin.org/sdk/deb bionic master" /etc/apt/sources.list /etc/apt/sources.list.d/*; then
     sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master"
@@ -32,5 +32,5 @@ else
 
   echo "Installing bionic dependencies..."
   # All other debian-based systems get the bionic build
-  sudo apt-get install -y --allow-downgrades libindy=1.15.0~1618-bionic libnullpay=1.15.0~1618-bionic libvcx=0.10.1-bionic~1131
+  sudo apt-get install -y --allow-downgrades libindy=1.15.0~1618-bionic libnullpay=1.15.0~1618-bionic libvcx=0.10.1-bionic~1131 libmysqlstorage=0.1.11
 fi

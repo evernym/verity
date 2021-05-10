@@ -25,6 +25,7 @@ trait CommonConfig {
   val KEYSTORE_PASSWORD = s"$KEYSTORE.password"
 
   private val SERVICES = s"$VERITY.services"
+  val MSG_LIMITS = s"$VERITY.messages.limits"
 
   val PUSH_NOTIF = s"$SERVICES.push-notif-service"
   val PUSH_NOTIF_ENABLED = s"$PUSH_NOTIF.enabled"
@@ -284,10 +285,15 @@ trait CommonConfig {
 
   val VERITY_AGENT = s"$VERITY.agent"
 
-  val AGENT_STATE_MESSAGES_CLEANUP = s"$VERITY_AGENT.state.messages.cleanup"
+  val AGENT_STATE_MESSAGES = s"$VERITY_AGENT.state.messages"
+
+  val AGENT_STATE_MESSAGES_CLEANUP = s"$AGENT_STATE_MESSAGES.cleanup"
   val AGENT_STATE_MESSAGES_CLEANUP_ENABLED = s"$AGENT_STATE_MESSAGES_CLEANUP.enabled"
   val AGENT_STATE_MESSAGES_CLEANUP_DAYS_TO_RETAIN_DELIVERED_MSGS = s"$AGENT_STATE_MESSAGES_CLEANUP.days-to-retain-delivered-msgs"
   val AGENT_STATE_MESSAGES_CLEANUP_TOTAL_MSGS_TO_RETAIN = s"$AGENT_STATE_MESSAGES_CLEANUP.total-msgs-to-retain"
+
+  val AGENT_STATE_MESSAGES_GET_MSGS = s"$AGENT_STATE_MESSAGES.get-msgs"
+  val AGENT_STATE_MESSAGES_GET_MSGS_LIMIT = s"$AGENT_STATE_MESSAGES_GET_MSGS.limit"
 
   val PROVISIONING = s"$VERITY.provisioning"
 

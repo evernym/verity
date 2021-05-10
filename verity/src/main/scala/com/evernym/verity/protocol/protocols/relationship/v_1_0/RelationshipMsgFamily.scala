@@ -7,7 +7,8 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
-import com.evernym.verity.util.MsgIdProvider
+import com.evernym.verity.util.{Base64Util, MsgIdProvider}
+
 
 object RelationshipMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -45,7 +46,17 @@ case class Identity(DID: DID, verKey: VerKey)
 object Signal {
   case class CreatePairwiseKey() extends SignalMsg
   case class Created(did: DID, verKey: VerKey) extends SignalMsg
-  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
+  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg {
+    def ciValueDecoded: Option[String] = {
+      val splitted = inviteURL.split("c_i=")
+      if (splitted.size == 2) {
+        splitted.lastOption.map { ciVal =>
+          Base64Util.urlDecodeToStr(ciVal)
+        }
+      }
+      else None
+    }
+  }
   case class SendSMSInvite(invitationId: String, inviteURL: String, senderName: String, phoneNo: String) extends SignalMsg
   case class SMSInvitationSent(invitationId: String)
   case class ProblemReport(description: ProblemDescription) extends SignalMsg

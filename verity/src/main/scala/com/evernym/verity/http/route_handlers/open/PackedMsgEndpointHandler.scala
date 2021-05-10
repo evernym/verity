@@ -2,7 +2,7 @@ package com.evernym.verity.http.route_handlers.open
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.model.{HttpEntity, HttpRequest, MediaTypes, RemoteAddress}
+import akka.http.scaladsl.model.{HttpEntity, HttpMethod, HttpMethods, HttpRequest, MediaTypes, RemoteAddress, StatusCode}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.agent.DidPair
@@ -16,6 +16,7 @@ import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
+import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
 import scala.concurrent.Future
@@ -27,21 +28,35 @@ trait PackedMsgEndpointHandler
   def getAgencyDidPairFut: Future[DidPair]
   implicit def wap: WalletAPIParam
 
+  private def logOutgoing(status: StatusCode)
+                         (implicit reqMsgContext: ReqMsgContext): Unit = {
+    logger.whenInfoEnabled {
+      val target = s"did comm message handler"
+      val buildLogMsg = outgoingLogMsg(
+        target,
+        status,
+        None,
+        None
+      )
+      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+    }
+  }
+
   protected def handleAgentMsgResponse: PartialFunction[(Any, ReqMsgContext), ToResponseMarshallable] = {
 
     case (pm: PackedMsg, rmc) =>
       incrementAgentMsgSucceedCount
-      logger.info(s"[${rmc.id}] [outgoing response] [$OK] packed message")
+      logOutgoing(OK)(rmc)
       HttpEntity(MediaTypes.`application/octet-stream`, pm.msg)
 
     case (Done, rmc) =>
-      logger.info(s"[${rmc.id}] [outgoing response] [$OK]")
+      logOutgoing(OK)(rmc)
       OK
 
     case (e, rmc) =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
       val errResp = handleUnexpectedResponse(e)
-      logger.info(s"[${rmc.id}] [outgoing response] [${errResp.status}]")
+      logOutgoing(errResp.status)(rmc)
       errResp
   }
 
@@ -85,23 +100,33 @@ trait PackedMsgEndpointHandler
     }
   }
 
-  protected def handleAgentMsgReqForUnsupportedContentType()(implicit reqMsgContext: ReqMsgContext): Route = {
-    incrementAgentMsgFailedCount(Map("class" -> "InvalidContentType"))
-    reject
+  private def logIncoming(method: HttpMethod)
+                         (implicit reqMsgContext: ReqMsgContext): Unit = {
+    logger.whenInfoEnabled {
+      val target = s"did comm message handler"
+      val buildLogMsg = incomingLogMsg(
+        target,
+        method,
+        None,
+        None
+      )
+      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+    }
   }
 
   protected def handleAgentMsgReq(implicit req: HttpRequest, remoteAddress: RemoteAddress): Route = {
     // flow diagram: fwd + ctl + proto + legacy, step 1 -- Packed msg arrives.
     incrementAgentMsgCount
     implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
-    logger.info(s"[${reqMsgContext.id}] [incoming request] [POST] packed message ${reqMsgContext.clientIpAddressLogStr}")
+    logIncoming(HttpMethods.POST)
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
     req.entity.contentType.mediaType match {
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
         handleAgentMsgReqForOctetStreamContentType
-      case x =>
+      case _ =>
         logger.info(s"[${reqMsgContext.id}] [outgoing response] content type not supported")
-        handleAgentMsgReqForUnsupportedContentType()
+        incrementAgentMsgFailedCount(Map("class" -> "InvalidContentType"))
+        reject
     }
   }
 

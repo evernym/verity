@@ -5,6 +5,7 @@ import akka.persistence.dynamodb.journal.{DynamoDBJournalFailure, DynamoDBJourna
 import com.amazonaws.AmazonServiceException
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util.Util
 import org.mockito.scalatest.MockitoSugar
 
 class ExceptionConverterSpec extends BasicSpec with MockitoSugar {
@@ -94,6 +95,11 @@ class ExceptionConverterSpec extends BasicSpec with MockitoSugar {
           Option(s"$amazonCustomMsg (Service: $serviceName; Status Code: " +
             s"${HttpStatusCodes.InternalServerError.intValue}; Error Code: $errorCode; " +
             s"Request ID: $requestId)"))
+      }
+    }
+    "when dynamodb throws ServiceUnavailableException" - {
+      "should generate exception without fail" in {
+        Util.buildHandledError("unknown") shouldBe a[HandledErrorException]
       }
     }
   }

@@ -496,8 +496,8 @@ trait BasePersistentActor
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =
     handleBasePersistenceCmd orElse
-      extendedCoreCommandHandler(actualReceiver) orElse
-      msgDeleteCallbackHandler
+      msgDeleteCallbackHandler orElse
+      extendedCoreCommandHandler(actualReceiver)
 
   override def receiveCommand: Receive =
     basePersistentCmdHandler(cmdHandler) orElse

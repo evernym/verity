@@ -29,7 +29,8 @@ object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role,
     NAME,
     LOGO_URL,
     AGENCY_DID_VER_KEY,
-    MY_PUBLIC_DID
+    MY_PUBLIC_DID,
+    DATA_RETENTION_POLICY
   )
 
   override def createInitMsg(params: Parameters): Control = Ctl.Init(params)

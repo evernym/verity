@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
 import com.evernym.verity.protocol.engine.{DIDDoc, SignalEnvelope}
@@ -14,6 +15,10 @@ import com.evernym.verity.testkit.BasicFixtureSpec
 
 class ConnectionsSpec extends TestsProtocolsImpl(ConnectionsDef)
   with BasicFixtureSpec with CommonSpecUtil {
+
+  override val defaultInitParams = Map(
+    DATA_RETENTION_POLICY -> "30 day"
+  )
 
   "The Connections Protocol" - {
     "has two roles" in { _ =>

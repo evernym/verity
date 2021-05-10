@@ -4,7 +4,7 @@ import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
 import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredRequests
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredAsyncOps, AnonCredRequests}
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil._
@@ -16,9 +16,9 @@ import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
 import scala.util.{Failure, Success, Try}
 
 trait AnonCredRequestsAPI
-  extends AnonCredRequests
-    with FutureConverter
-    with AsyncToSync { this: WalletAccessAPI  =>
+    extends AnonCredAsyncOps
+      with FutureConverter
+      with AsyncToSync { this: WalletAccessAPI  =>
 
   implicit def wap: WalletAPIParam
 
@@ -27,15 +27,14 @@ trait AnonCredRequestsAPI
     val salt = appConfig.getConfigStringReq(SALT_WALLET_NAME)
     val msIdHex = HashUtil.hash(SHA256)(selfParticipantId + salt).hex
     //TODO: may want to optimize this (for now, every time a cred request is sent, it will do below check)
-    Try(DEPRECATED_convertToSyncReq(walletApi.executeAsync[String](CreateMasterSecret(msIdHex)))) match {
-      case Success(msId) if msId == msIdHex => msIdHex
+    Try(DEPRECATED_convertToSyncReq(walletApi.executeAsync[MasterSecretCreated](CreateMasterSecret(msIdHex)))) match {
+      case Success(msc) if msc.ms == msIdHex => msIdHex
       case Failure(_: DuplicateMasterSecretNameException) => msIdHex    //already created
       case Failure(_: RuntimeException) => throw new RuntimeException("error during master secret creation")
     }
   }
 
-  override def createSchema(issuerDID: DID, name:String, version: String, data: String)
-                           (handler: Try[SchemaCreated] => Unit): Unit = {
+  def runCreateSchema(issuerDID: DID, name:String, version: String, data: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec =>
         issuerCreateSchema(issuerDID, name, version, data).map { result =>
@@ -45,53 +44,57 @@ trait AnonCredRequestsAPI
     )
   }
 
-  override def createCredDef(issuerDID: DID,
-                             schemaJson: String,
-                             tag: String,
-                             sigType: Option[String]=None,
-                             revocationDetails: Option[String]=None)
-                            (handler: Try[CredDefCreated] => Unit): Unit =
+  def runCreateCredDef(issuerDID: DID,
+                       schemaJson: String,
+                       tag: String,
+                       sigType: Option[String]=None,
+                       revocationDetails: Option[String]=None): Unit =
     walletApi.tell(CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))
 
-  override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit = {
+  def runCreateCredOffer(credDefId: String): Unit = {
     walletApi.tell(CreateCredOffer(credDefId))
   }
 
-  override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String)
-                            (handler: Try[CredReqCreated] => Unit): Unit =
+  def runCreateCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Unit =
     walletApi.tell(CreateCredReq(credDefId, proverDID,
         credDefJson, credOfferJson, masterSecretId))
 
-  override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
-                          revRegistryId: String, blobStorageReaderHandle: Int)
-                         (handler: Try[CredCreated] => Unit): Unit = {
+  def runCreateCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
+                    revRegistryId: String, blobStorageReaderHandle: Int): Unit = {
     walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson,
         revRegistryId, blobStorageReaderHandle))
   }
 
-  override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
-                         credDefJson: String, revRegDefJson: String)
-                        (handler: Try[CredStored] => Unit): Unit = {
+  def runStoreCred(credId: String,
+                   credReqMetadataJson: String,
+                   credJson: String,
+                   credDefJson: String,
+                   revRegDefJson: String): Unit = {
     walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))
   }
 
-  override def credentialsForProofReq(proofRequest: String)
-                                     (handler: Try[CredForProofReqCreated] => Unit): Unit =
+  def runCredentialsForProofReq(proofRequest: String): Unit =
     walletApi.tell(CredForProofReq(proofRequest))
 
-  override def createProof(proofRequest: String, usedCredentials: String,
-                           schemas: String, credentialDefs: String, revStates: String)
-                          (handler: Try[ProofCreated] => Unit): Unit =
+  def runCreateProof(proofRequest: String,
+                     usedCredentials: String,
+                     schemas: String,
+                     credentialDefs: String,
+                     revStates: String): Unit =
     walletApi.tell(
-        CreateProof(proofRequest, usedCredentials, schemas, credentialDefs,
-          masterSecretId, revStates))
+        CreateProof(proofRequest, usedCredentials, schemas, credentialDefs, masterSecretId, revStates)
+    )
 
-  override def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String,
-                           revocRegDefs: String, revocRegs: String)
-                          (handler: Try[ProofVerifResult] => Unit): Unit = {
+  def runVerifyProof(proofRequest: String,
+                     proof: String,
+                     schemas: String,
+                     credentialDefs: String,
+                     revocRegDefs: String,
+                     revocRegs: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => AnoncredsWalletOpExecutor.verifyProof(
-          proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)}
+          proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
+      }
     )
   }
 

@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions
+import com.evernym.verity.{Exceptions, Status}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
@@ -25,6 +25,7 @@ import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.InternalReqHelperData
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -57,6 +58,7 @@ import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import org.json.JSONObject
 
@@ -274,7 +276,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ), updateDeliveryStatus = false)
   }
 
-  def stateDetailsFor: Future[PartialFunction[String, Parameter]] = {
+  def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]] = {
     val getConnectEndpointDetail: String = {
       val msg = ActorEndpointDetail(userAgentPairwiseRegionName, entityId)
       DefaultMsgCodec.toJson(msg)
@@ -283,7 +285,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       agencyDidPair   <- agencyDidPairFut();
       filteredConfigs <- getConfigs(Set(NAME_KEY, LOGO_URL_KEY))
     ) yield {
-      {
+      p: ProtoRef => {
         case SELF_ID                                => Parameter(SELF_ID, state.myDid_!)
         case OTHER_ID                               => Parameter(OTHER_ID, state.theirDid.getOrElse(UNKNOWN_OTHER_ID))
         case AGENCY_DID                             => Parameter(AGENCY_DID, agencyDIDReq)
@@ -302,6 +304,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
         case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, getConnectEndpointDetail)
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+
+        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, p.msgFamilyName))
       }
     }
   }
@@ -336,9 +340,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   def handleCreateMsgGeneral(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleCreateMsgGeneral", "UserAgentPairwise") {
       val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
-
-      addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE,
-        s"${MSG_TYPE_CREATE_MSG}_${createMsgReq.mtype}", Option(domainId))
+      val userId = userIdForResourceUsageTracking(amw.senderVerKey)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE,
+        s"${MSG_TYPE_CREATE_MSG}_${createMsgReq.mtype}", reqMsgContext.clientIpAddressReq, userId)
       val msgDetail = amw.tailAgentMsgs.head.convertTo[GeneralCreateMsgDetail_MFV_0_5]
 
       val srm = SendRemoteMsg(amw.headAgentMsgDetail, createMsgReq.uid.getOrElse(getNewMsgUniqueId),
@@ -430,8 +434,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleSendMsgs(sendMsgReq: SendMsgsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    addUserResourceUsage(reqMsgContext.clientIpAddressReq,
-      RESOURCE_TYPE_MESSAGE, MSG_TYPE_SEND_MSGS, Option(domainId))
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_SEND_MSGS, reqMsgContext.clientIpAddressReq, userId)
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg, reqMsgContext.wrapInBundledMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
@@ -622,8 +626,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleUpdateConnStatusMsg(updateConnStatus: UpdateConnStatusReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE,
-      MSG_TYPE_UPDATE_CONN_STATUS, Option(domainId))
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONN_STATUS, reqMsgContext.clientIpAddressReq, userId)
     if (updateConnStatus.statusCode != CONN_STATUS_DELETED.statusCode) {
       throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(s"invalid status code value: ${updateConnStatus.statusCode}"))
     }
@@ -634,17 +638,19 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     sendRespMsg("ConnStatusUpdatedResp", rp)
   }
 
-  val unAllowedLegacyConnectingMsgNames: Set[String] = Set(
-    CREATE_MSG_TYPE_CONN_REQ_ANSWER,
-    MSG_TYPE_CONN_REQ_ACCEPTED, MSG_TYPE_CONN_REQ_DECLINED,
-    CREATE_MSG_TYPE_CONN_REQ_REDIRECTED, MSG_TYPE_CONN_REQ_REDIRECTED)
+  val allowedUnAuthedLegacyConnectingMsgNames: Set[String] =
+    Set(
+        CREATE_MSG_TYPE_CONN_REQ_ANSWER,
+        MSG_TYPE_CONN_REQ_ACCEPTED, MSG_TYPE_CONN_REQ_DECLINED,
+        CREATE_MSG_TYPE_CONN_REQ_REDIRECTED, MSG_TYPE_CONN_REQ_REDIRECTED)
 
-  val unAllowedConnectionsMsgNames: Set[String] = Set("request")
+  val allowedUnAuthedConnectionsMsgNames: Set[String] = Set("request")
 
-  override def allowedUnauthedMsgTypes: Set[MsgType] =
-    unAllowedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_5.msgType) ++
-      unAllowedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_6.msgType) ++
-      unAllowedConnectionsMsgNames.map(ConnectionsMsgFamily.msgType)
+  override def allowedUnAuthedMsgTypes: Set[MsgType] = if (state.theirDidDoc.isEmpty) {
+    allowedUnAuthedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_5.msgType) ++
+      allowedUnAuthedLegacyConnectingMsgNames.map(ConnectingMsgFamily_0_6.msgType) ++
+      allowedUnAuthedConnectionsMsgNames.map(ConnectionsMsgFamily.msgType)
+  } else Set.empty
 
   def handleCreateKeyEndpoint(scke: SetupCreateKeyEndpoint): Unit = {
     val pidEvent = scke.pid.map(pd => ProtocolIdDetailSet(pd.protoRef.msgFamilyName, pd.protoRef.msgFamilyVersion, pd.pinstId))
@@ -828,16 +834,20 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   def handleUpdateTheirDidDoc(stdd: SetupTheirDidDoc):Future[Option[ControlMsg]] = {
     //TODO: modify this to efficiently route to itself if this is pairwise actor itself
-    updateTheirDidDoc(stdd)
-    for {
-      _   <- setRoute(stdd.myDID)
-      ctlMsg  <-
-        agencyDidPairFut().map { agencyDidPair =>
-          val myVerKey = state.myDidAuthKeyReq.verKey
-          val routingKeys = Vector(agencyDidPair.verKey)
-          Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
-        }
-    } yield ctlMsg
+    if (state.theirDidDoc.isEmpty) {
+      updateTheirDidDoc(stdd)
+      for {
+        _   <- setRoute(stdd.myDID)
+        ctlMsg  <-
+          agencyDidPairFut().map { agencyDidPair =>
+            val myVerKey = state.myDidAuthKeyReq.verKey
+            val routingKeys = Vector(agencyDidPair.verKey)
+            Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
+          }
+      } yield ctlMsg
+    } else {
+      throw new BadRequestErrorException(Status.UNAUTHORIZED.statusCode, Option("unauthorized access"))
+    }
   }
 
   def updateTheirDidDoc(stdd: SetupTheirDidDoc): Unit = {

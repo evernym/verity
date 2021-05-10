@@ -29,6 +29,8 @@ package object engine {
 
   type Nonce = String
 
+  val DomainIdFieldName = "domain_did"
+
   sealed trait MsgFamilyQualifier
 
   case object EvernymQualifier extends MsgFamilyQualifier

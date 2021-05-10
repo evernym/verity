@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, parameters, path, pathPrefix, put, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset}
+import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
 import com.evernym.verity.actor.cluster_singleton.{ActionStatus, ForActorStateCleanupManager, ForRouteMaintenanceHelper, GetStatus, MaintenanceCmdWrapper, RestartAllActors}
 import com.evernym.verity.actor.base.{AlreadyDone, Done, Stop}
 import com.evernym.verity.constants.Constants._
@@ -40,7 +40,20 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     platform.singletonParentProxy ? ForRouteMaintenanceHelper(MaintenanceCmdWrapper(taskId, cmd))
   }
 
-  protected def resetActorStateCleanupManager: Future[Any] = {
+  protected def stopActorStateCleanupManager(): Future[Any] = {
+    platform.singletonParentProxy ? ForActorStateCleanupManager(StopJob)
+  }
+
+  protected def startActorStateCleanupManager(): Future[Any] = {
+    platform.singletonParentProxy ? ForActorStateCleanupManager(StartJob)
+  }
+
+  protected def restartActorStateCleanupManager(): Future[Any] = {
+    stopActorStateCleanupManager()
+    startActorStateCleanupManager()
+  }
+
+  protected def resetActorStateCleanupManager(): Future[Any] = {
     platform.singletonParentProxy ? ForActorStateCleanupManager(Reset)
   }
 
@@ -122,7 +135,37 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
         path("reset") {
           (post & pathEnd) {
             complete {
-              resetActorStateCleanupManager.map[ToResponseMarshallable] {
+              resetActorStateCleanupManager().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        } ~
+        path("restart") {
+          (post & pathEnd) {
+            complete {
+              restartActorStateCleanupManager().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        } ~
+        path("stop") {
+          (post & pathEnd) {
+            complete {
+              stopActorStateCleanupManager().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        } ~
+        path("start") {
+          (post & pathEnd) {
+            complete {
+              startActorStateCleanupManager().map[ToResponseMarshallable] {
                 case Done => OK
                 case e => handleUnexpectedResponse(e)
               }

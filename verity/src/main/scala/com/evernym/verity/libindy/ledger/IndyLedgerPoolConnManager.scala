@@ -105,9 +105,9 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       // Convert the poolConfig from a mutable Map to an immutable Map and then to a JSON string
       val poolConfigJson = DefaultMsgCodec.toJson(poolConfig.toMap)
 
-      val openFut = toFuture(
+      val openFut = toFuture {
         Pool.openPoolLedger(configName, poolConfigJson)
-      )
+      }
       .flatMap(enableTAA)
 
       // TODO at some point we should consider making this non-blocking. But currently, we only run this on startup

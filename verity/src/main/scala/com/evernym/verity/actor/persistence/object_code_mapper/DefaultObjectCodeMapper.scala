@@ -279,7 +279,10 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     226 -> UserAgentPairwiseState,
     227 -> ChangePairwiseRelIds,
 
-    228 -> AuthKeyAdded
+    228 -> AuthKeyAdded,
+    229 -> issueCredential_v10.CredSentState,
+    230 -> SetDataRetentionPolicy,
+    231 -> walletBackup.BackupStoredInBlob
   )
 
 }

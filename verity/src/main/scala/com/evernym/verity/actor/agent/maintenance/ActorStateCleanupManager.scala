@@ -3,7 +3,6 @@ package com.evernym.verity.actor.agent.maintenance
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter._
 import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.persistence.SingletonChildrenPersistentActor
@@ -13,7 +12,7 @@ import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.protocol.engine.DID
 
-import scala.concurrent.Future
+import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 /**
  * route store manager, orchestrates each route store processing
@@ -29,6 +28,9 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     case c: Completed               => handleCompleted(c)
     case ProcessPending             => processPending()
     case Reset                      => handleReset()
+    case StopJob                    => handleStopJob()
+    case StartJob                   => handleStartJob()
+    case sc: SendCmd                => sc.to ! sc.cmd
 
     //receives from ActorStateCleanupExecutor as part of response of 'ProcessRouteStore' command
     case _: StatusUpdated           => //nothing to do
@@ -72,36 +74,60 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     }
   }
 
+  def handleStartJob(): Unit = {
+    scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
+    sender ! Done
+  }
+
+  def handleStopJob(): Unit = {
+    inProgress.keySet.foreach { executorEntityId =>
+      sendMsgToActorStateCleanupExecutor(executorEntityId, StopJob)
+    }
+    stopAllScheduledJobs()
+    sender ! Done
+  }
+
   def handleReset(): Unit = {
-    if (! resetStatus.isInProgress) {
+    if (! resetStatus.started) {
       val candidates = registered.filter(_._2 > 0).keySet
       if (candidates.nonEmpty) {
-        resetStatus = ResetStatus(isInProgress = true, candidates.map(_ -> false).toMap)
+        resetStatus = ResetStatus(started = true, inProgress = Set.empty, executorStatus = candidates.map(_ -> false).toMap)
       } else {
         completeResetProcess()
       }
     }
-    sendDestroyExecutor()
+    sendDestroyExecutors()
     if (resetStatus.isAllExecutorDestroyed) {
       completeResetProcess()
     }
     sender ! Done
   }
 
-  def sendDestroyExecutor(): Unit = {
-    resetStatus.executorStatus.find(_._2 == false).foreach { case (entityId, _) =>
-      sendMsgToActorStateCleanupExecutor(entityId, Destroy)
+  def sendDestroyExecutors(): Unit = {
+    val maxParallelResetCount = 2  //how many ActorStateCleanupExecutor actor should try to reset parallely
+    val inProgressCount = resetStatus.inProgress.size
+    val nextCandidateCount = maxParallelResetCount - inProgressCount
+    if (nextCandidateCount > 0) {
+      resetStatus
+        .executorStatus
+        .filter(_._2 == false)
+        .take(nextCandidateCount)
+        .foreach { case (entityId, _) =>
+          sendMsgToActorStateCleanupExecutor(entityId, Destroy)
+          resetStatus = resetStatus.copy(inProgress = resetStatus.inProgress + entityId)
+        }
     }
   }
 
   def handleDestroyed(d: Destroyed): Unit = {
+    resetStatus = resetStatus.copy(inProgress = resetStatus.inProgress - d.entityId)
     writeAndApply(ExecutorDeleted(d.entityId))
-    if (resetStatus.isInProgress) {
+    if (resetStatus.started) {
       resetStatus = resetStatus.copy(executorStatus = resetStatus.executorStatus ++ Map(d.entityId -> true))
       if (resetStatus.isAllExecutorDestroyed) {
         completeResetProcess()
       } else {
-        sendDestroyExecutor()
+        sendDestroyExecutors()
       }
     }
   }
@@ -127,14 +153,16 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       .take(processorBatchSize)
 
   def processPending(): Unit = {
-    processRoutes()
-    deleteCompletedExecutors()
+    if (! resetStatus.started) {
+      processRoutes()
+      deleteCompletedExecutors()
+    }
   }
 
   def deleteCompletedExecutors(): Unit = {
-//    (completed.keySet -- executorDestroyed).foreach { eid =>
-//      sendMsgToActorStateCleanupExecutor(eid, Destroy)
-//    }
+    //    (completed.keySet -- executorDestroyed).foreach { eid =>
+    //      sendMsgToActorStateCleanupExecutor(eid, Destroy)
+    //    }
   }
 
   def processRoutes(): Unit = {
@@ -148,11 +176,10 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
         //once all expected agent store actors registration is completed
         //then start processing as per configured batch size
         val candidateRouteStores = pendingBatchedRouteStores
-        Future {
-          candidateRouteStores.foreach { case (agentRouteStoreEntityId, totalRoutes) =>
-            sendMsgToActorStateCleanupExecutor(agentRouteStoreEntityId, ProcessRouteStore(agentRouteStoreEntityId, totalRoutes))
-            Thread.sleep(processorBatchItemSleepIntervalInMillis) //this is to make sure it doesn't hit the database too hard and impact the running system.
-          }
+        candidateRouteStores.zipWithIndex.foreach { case (entry, index) =>
+          val timeout = Duration(processorBatchItemSleepIntervalInMillis*index, MILLISECONDS)
+          val cmd = ForIdentifier(entry._1, ProcessRouteStore(entry._1, entry._2))
+          timers.startSingleTimer(entry._1, SendCmd(actorStateCleanupExecutorRegion, cmd), timeout)
         }
       } else {
         stopAllScheduledJobs()
@@ -211,11 +238,10 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
         candidateEntityIds += entityId
       }
     }
-    Future {
-      candidateEntityIds.foreach { entityId =>
-        agentRouteStoreRegion ! ForIdentifier(entityId, GetRegisteredRouteSummary)
-        Thread.sleep(registrationBatchItemSleepIntervalInMillis) //this is to make sure it doesn't hit the database too hard and impact the running system.
-      }
+    candidateEntityIds.zipWithIndex.foreach { case (entityId, index) =>
+      val timeout = Duration(registrationBatchItemSleepIntervalInMillis*index, MILLISECONDS)
+      val cmd = ForIdentifier(entityId, GetRegisteredRouteSummary)
+      timers.startSingleTimer(entityId, SendCmd(agentRouteStoreRegion, cmd), timeout)
     }
   }
 
@@ -261,7 +287,6 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       .getOrElse(5)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
-
 }
 
 /**
@@ -280,9 +305,9 @@ case class ManagerStatus(registeredRouteStoreActorCount: Int,
                          registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessage
 
 object ResetStatus {
-  def empty: ResetStatus = ResetStatus(isInProgress = false, Map.empty)
+  def empty: ResetStatus = ResetStatus(started = false, inProgress = Set.empty, Map.empty)
 }
-case class ResetStatus(isInProgress: Boolean, executorStatus: Map[EntityId, Boolean]) {
+case class ResetStatus(started: Boolean, inProgress: Set[EntityId], executorStatus: Map[EntityId, Boolean]) {
   def isAllExecutorDestroyed: Boolean = executorStatus.forall(_._2 == true)
 }
 
@@ -290,6 +315,8 @@ case class ResetStatus(isInProgress: Boolean, executorStatus: Map[EntityId, Bool
 case class RegisteredRouteSummary(entityId: EntityId, totalCandidateRoutes: Int) extends ActorMessage
 case class GetManagerStatus(includeDetails: Boolean = false) extends ActorMessage
 case object Reset extends ActorMessage
+case object StartJob extends ActorMessage
+case object StopJob extends ActorMessage
 
 //outgoing messages
 case object AlreadyCompleted extends ActorMessage
@@ -299,3 +326,5 @@ object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER
   def props(appConfig: AppConfig): Props = Props(new ActorStateCleanupManager(appConfig))
 }
+
+case class SendCmd(to: ActorRef, cmd: Any) extends ActorMessage

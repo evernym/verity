@@ -3,19 +3,20 @@ package com.evernym.verity.actor
 package object resourceusagethrottling {
 
   /**
-   * EntityId can be an "ip address" or "user id" or "global"
-   * which is being tracked
+   * EntityId being tracked for resource usages
+   * Possible values are: "global", "<ip-address>", "owner-<user-id>" or "counterparty-<user-id>"
    */
   type EntityId = String
 
   /**
-   * ip address
+   * an ip address
    */
   type IpAddress = String
 
-
   /**
-   * any identifier used to identify a unique user
+   * any identifier used to identify a unique user,
+   * is always started with "owner-" or "counterparty-" prefix
+   * with a DID/verKey being appended to it
    */
   type UserId = String
 
@@ -39,9 +40,10 @@ package object resourceusagethrottling {
   /**
    * a token to look into 'rule-to-tokens' in 'resource-usage-rule.conf'
    * to find out which usage rule is applicable
-   * in "current implementation", api token is 'ip-address' only
+   *
+   * this can be an ip-address, CIDR based ip address or user-id related pattern
    */
-  type ApiToken = String
+  type EntityIdToken = String
 
   /**
    * 'usage-rules' (in resource-usage-rule.conf) allows to define multiple rules
@@ -80,4 +82,22 @@ package object resourceusagethrottling {
    */
   type UsedCount = Int
 
+  val DEFAULT_USAGE_RULE_NAME = "default"
+  val GLOBAL_DEFAULT_RULE_NAME = "global"
+  val IP_ADDRESS_DEFAULT_RULE_NAME = "ip-address"
+  val USER_ID_OWNER_DEFAULT_RULE_NAME = "user-id-owner"
+  val USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME = "user-id-counterparty"
+
+  val ENTITY_ID_GLOBAL = "global"
+
+  val RESOURCE_NAME_ALL = "all"
+
+  val RESOURCE_TYPE_ENDPOINT = 1
+  val RESOURCE_TYPE_MESSAGE = 2
+
+  val RESOURCE_TYPE_NAME_ENDPOINT = "endpoint"
+  val RESOURCE_TYPE_NAME_MESSAGE = "message"
+
+  val OWNER_ID_PREFIX = "owner-"
+  val COUNTERPARTY_ID_PREFIX = "counterparty-"
 }

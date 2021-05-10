@@ -9,7 +9,7 @@ import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.SponsorDetails
 import com.evernym.verity.util.TAAUtil.taaAcceptanceDatePattern
-import com.typesafe.config.ConfigException
+import com.typesafe.config.{Config, ConfigException}
 import com.typesafe.config.ConfigUtil.{joinPath, splitPath}
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.DateTimeFormat
@@ -17,11 +17,12 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.{Duration, DurationInt}
-import scala.util.Try
+import scala.concurrent.duration.{DAYS, Duration, DurationInt}
+import scala.util.{Failure, Success, Try}
 
 object ConfigUtil {
   val logger: Logger = LoggerFactory.getLogger(getClass)
+  val MAX_RETENTION_POLICY: Long = 730
 
   /**
     * Finds the last segment of a fully qualified HOCON path.
@@ -169,6 +170,45 @@ object ConfigUtil {
     a
   }
 
+
+  private def emptyToUndefined(x: String): String = if (x.trim.nonEmpty) x else "undefined"
+
+  private def validateRetentionPolicy(policy: String): String =
+    Try(Duration(policy)) match {
+      case Success(p) if p.toDays <= MAX_RETENTION_POLICY  =>
+        policy
+      case Success(p) if p.toDays > MAX_RETENTION_POLICY =>
+        throw new ConfigException.BadValue(
+          policy, s"Data Retention Policy must be less than $MAX_RETENTION_POLICY, found policy: $policy"
+        )
+      case Failure(e) =>
+        throw new ConfigException.BadValue(policy, s"Couldn't parse $policy with exception: $e")
+    }
+
+  def dataRetentionTag(x: String): String = s"${Duration(x).toDays}d"
+
+  def getDataRetentionPolicy(config: AppConfig, domainId: String, protoref: String): String = {
+    val basePath = "verity.retention-policy"
+    val domainConfig = config.getConfigOption(s"$basePath.${emptyToUndefined(domainId)}")
+    val defaultConfig = config.config.getConfig(s"$basePath.default")
+
+    val policy = domainConfig match {
+      case Some(x) => getPolicy(x, protoref)
+      case None => getPolicy(defaultConfig, protoref)
+    }
+
+    config.logger.debug(s"data retention policy: $policy found for protocol: $protoref - domain: $domainId")
+    dataRetentionTag(validateRetentionPolicy(policy))
+  }
+
+  private def getPolicy(config: Config, protoref: String): String = {
+    AppConfigWrapper.getConfigStringOption(config, emptyToUndefined(protoref)) match {
+      case Some(x) => x
+      case None => AppConfigWrapper
+        .getConfigStringOption(config, "undefined-fallback")
+        .getOrElse(throw new ConfigException.Missing("Must define Data Retention Policy 'undefined-fallback'"))
+    }
+  }
 
 
   /**

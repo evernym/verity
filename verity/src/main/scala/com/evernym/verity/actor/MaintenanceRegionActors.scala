@@ -6,5 +6,5 @@ import com.evernym.verity.constants.ActorNameConstants.ACTOR_STATE_CLEANUP_EXECU
 trait MaintenanceRegionActors { this: Platform =>
   val actorStateCleanupExecutor = createPersistentRegion(
     ACTOR_STATE_CLEANUP_EXECUTOR,
-    ActorStateCleanupExecutor.props(appConfig, agentActorContext.agentMsgRouter))
+    ActorStateCleanupExecutor.props(appConfig, agentActorContext))
 }

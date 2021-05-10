@@ -416,6 +416,7 @@ object QuestionAnswerProtocol {
   def questionToEvt(q: Msg.Question): QuestionUsed = {
     QuestionUsed(
       q.question_text,
+      //TODO: the 'AskQuestion' control message has 'detail' as optional, but it seems it is required here?
       q.question_detail.get,
       q.nonce,
       q.signature_required,

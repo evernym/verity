@@ -53,6 +53,11 @@ message BackupStored {
     bytes wallet = 1;
 }
 
+message BackupStoredInBlob {
+    option (scalapb.message).extends = "BackupEvt";
+    string blobAddress = 1;
+}
+
 message BackupStoredAck {
     option (scalapb.message).extends = "BackupEvt";
 }

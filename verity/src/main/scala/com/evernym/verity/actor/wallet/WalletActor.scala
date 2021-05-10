@@ -1,9 +1,8 @@
 package com.evernym.verity.actor.wallet
 
 import java.util.UUID
-
 import akka.pattern.pipe
-import akka.actor.{ActorRef, Stash}
+import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
@@ -217,9 +216,19 @@ trait WalletCommand extends ActorMessage {
   val id: DID = UUID.randomUUID().toString  //only for logging purposes
 }
 
-case class SetWalletParam(wp: WalletParam) extends WalletCommand
+//NOTE:
+// It has been observed that as part of tests, good amount of time
+// serialization/deserialization check fails for this case class
+// until we find proper solution, lets extend this class from 'NoSerializationVerificationNeeded'
+// to avoid the check during test run
+case class SetWalletParam(wp: WalletParam) extends WalletCommand with NoSerializationVerificationNeeded
 
-case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand {
+//NOTE:
+// It has been observed that as part of tests, good amount of time
+// serialization/deserialization check fails for this case class
+// until we find proper solution, lets extend this class from 'NoSerializationVerificationNeeded'
+// to avoid the check during test run
+case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand with NoSerializationVerificationNeeded {
   override def toString: DID = s"${this.getClass.getSimpleName}(wallet: $wallet)"
 }
 

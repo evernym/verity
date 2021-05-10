@@ -10,6 +10,7 @@ object DefaultConfigValidatorCreator {
     ResourceUsageRuleConfigValidator,
     AkkaMngmntApiConfigValidator,
     RequiredConfigValidator,
-    OptionalConfigValidator
+    OptionalConfigValidator,
+    LimitConfigValidator
   )
 }

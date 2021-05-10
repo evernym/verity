@@ -39,7 +39,12 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   def localAgencyEndpoint: String = "localhost:9000"
 
-  lazy val platform: Platform = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentActorContextParam))
+  def actorTypeToRegions: Map[Int, ActorRef] = Map.empty
+  def mockAgentMsgRouterProvider(): Option[MockAgentMsgRouter] = {
+    Option(new MockAgentMsgRouter(actorTypeToRegions)(appConfig, system))
+  }
+
+  lazy val platform: Platform = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider))
   lazy val agentActorContext: AgentActorContext = platform.agentActorContext
 
   lazy val walletService: WalletService = platform.agentActorContext.walletService
@@ -66,9 +71,6 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
     platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalBinaryMsgsSent
   }
-
-  lazy val mockRouteStoreActorTypeToRegions: Map[Int, ActorRef] = Map.empty
-  lazy val mockAgentActorContextParam: MockAgentActorContextParam = MockAgentActorContextParam(mockRouteStoreActorTypeToRegions)
 }
 
 case class MockPlatformParam(mockAgentActorContextParam: MockAgentActorContextParam=MockAgentActorContextParam())

@@ -17,6 +17,7 @@ import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.protocol.protocols.MsgDetail
 import kamon.metric.MeasurementUnit
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ListSet
 
@@ -36,6 +37,7 @@ class MsgStore(appConfig: AppConfig,
   private var refMsgIdToMsgId: Map[RefMsgId, MsgId] = Map.empty
   private var unseenMsgIds: Set[MsgId] = Set.empty
   private var seenMsgIds: Set[MsgId] = Set.empty
+  private val logger = LoggerFactory.getLogger("MsgStore")
 
   private var retainedDeliveredMsgIds: ListSet[MsgId] = ListSet.empty
   private var retainedUndeliveredMsgIds: ListSet[MsgId] = ListSet.empty
@@ -77,11 +79,28 @@ class MsgStore(appConfig: AppConfig,
         else uidFilteredMsgs
       }
     }
-    filteredMsgs.map { case (uid, msg) =>
+    val accumulatedMsgs = filteredMsgs.map { case (uid, msg) =>
       val payloadWrapper = if (gmr.excludePayload.contains(YES)) None else msgAndDelivery.msgPayloads.get(uid)
       val payload = payloadWrapper.map(_.msg)
-      MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty)
-    }.toList
+      MsgParam(
+        MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty),
+        msg.creationTimeInMillis
+      )
+    }
+      .toSeq
+      .sortWith(_.creationTimeInMillis < _.creationTimeInMillis)    //sorting by creation order
+      .foldLeft(AccumulatedMsgs(msgs = List.empty[MsgDetail], totalPayloadSize = 0)) { case (accumulated, next) =>
+        if (accumulated.totalPayloadSize + next.payloadSize < getMsgsLimit) {
+          accumulated.withNextAdded(next)
+        } else {
+          accumulated
+        }
+      }
+
+    logger.debug(s"total payload size of messages ${accumulatedMsgs.totalPayloadSize}, " +
+      s"total messages ${accumulatedMsgs.msgs.size}")
+
+    accumulatedMsgs.msgs
   }
 
   def handleMsgCreated(mc: MsgCreated): Unit = {
@@ -267,6 +286,9 @@ class MsgStore(appConfig: AppConfig,
 
   private lazy val isStateMessagesCleanupEnabled: Boolean =
     appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
+
+  private lazy val getMsgsLimit: Int =
+    appConfig.getConfigIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(920000)
 }
 
 trait MsgStateAPIProvider {
@@ -360,4 +382,14 @@ trait MsgStateAPIProvider {
     msgAndDeliveryReq.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus
   }
 
+}
+
+case class MsgParam(msgDetail: MsgDetail, creationTimeInMillis: Long) {
+  def payloadSize: Int = msgDetail.payload.map(_.length).getOrElse(0)
+}
+
+case class AccumulatedMsgs(msgs: List[MsgDetail], totalPayloadSize: Int) {
+  def withNextAdded(next: MsgParam): AccumulatedMsgs = {
+    AccumulatedMsgs(msgs :+ next.msgDetail, totalPayloadSize + next.payloadSize)
+  }
 }

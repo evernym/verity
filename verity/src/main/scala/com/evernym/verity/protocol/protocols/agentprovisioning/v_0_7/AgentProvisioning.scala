@@ -1,11 +1,14 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
+import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
+import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, _}
@@ -183,14 +186,9 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
         case Success(vsg) if vsg.verified =>
           if (cacheUsedTokens) {
             ctx.withSegment[AskedForProvisioning](token.sig) {
-              case Success(None)    =>
-                ctx.storeSegment(token.sig, AskedForProvisioning())
-                ctx.logger.debug(s"ask for provisioning (with caching token): $sponsorDetails")
-                askForProvisioning(sig)
-              case Success(Some(_)) =>
-                provisioningFailed(DuplicateProvisionedApp)
-              case Failure(exception) =>
-                provisioningFailed(exception.getMessage, Option(exception.getMessage))
+              case Success(None)    => storeSig(token.sig, sponsorDetails, sig)
+              case Success(Some(_)) => provisioningFailed(DuplicateProvisionedApp)
+              case Failure(exception) => provisioningFailed(exception.getMessage, Option(exception.getMessage))
             }
           } else {
             ctx.logger.debug(s"ask for provisioning (without caching token): $sponsorDetails")
@@ -205,6 +203,14 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     }
   }
 
+  def storeSig(tokenSig: Base64Encoded, sponsorDetails: SponsorDetails, sig: Signal): Unit = {
+    ctx.storeSegment(tokenSig, AskedForProvisioning()) {
+      case Success(_: StoredSegment) =>
+        ctx.logger.debug(s"ask for provisioning (with caching token): $sponsorDetails")
+        askForProvisioning(sig)
+      case Failure(e) => problemReport(e.getMessage, Some(e.getMessage))
+    }
+  }
   def provisioningSignal(requesterState: AwaitsSponsor): Signal = {
     val sponsorRel = requesterState.token.map(t => SponsorRel(t.sponsorId, t.sponseeId))
     requesterState match {

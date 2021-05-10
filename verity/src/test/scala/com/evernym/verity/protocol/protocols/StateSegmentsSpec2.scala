@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects2._
@@ -145,7 +146,10 @@ object TestObjects2 {
         ctx.apply(Initialized(params.initParams.map(p => InitParamEvt(p.name, p.value)).toSeq))
 
       case (_:State.Initialized, add: Add)     =>
-        ctx.storeSegment(add.entry.key, PhoneBookEntryAdded(add.entry.fName, add.entry.lName, add.entry.phoneNumber))
+        ctx.storeSegment(add.entry.key, PhoneBookEntryAdded(add.entry.fName, add.entry.lName, add.entry.phoneNumber)) {
+          case Success(_: StoredSegment) =>
+          case Failure(e) => throw e
+        }
 
       case (_, g: Get)    =>
         ctx.withSegment[PhoneBookEntryAdded](g.key) {

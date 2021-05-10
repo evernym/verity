@@ -2,7 +2,7 @@ package com.evernym.verity.agentmsg.msgfamily.configs
 
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 
@@ -17,7 +17,7 @@ case class UpdateConfigReqMsg_MFV_0_5(configs: Set[ConfigDetail]) extends MsgBas
 abstract class UpdateConfigCommand {
   def configs: Set[ConfigDetail]
 }
-case class UpdateConfigReqMsg(msgFamilyDetail: MsgFamilyDetail, configs: Set[ConfigDetail]) extends UpdateConfigCommand
+case class UpdateConfigReqMsg(configs: Set[ConfigDetail]) extends UpdateConfigCommand
 case class UpdateConfigs(configs: Set[ConfigDetail]) extends UpdateConfigCommand
 
 case class ConfigsUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail)
@@ -26,8 +26,7 @@ object UpdateConfigMsgHelper {
 
   private def buildReqMsgFrom_MFV_0_5(implicit amw: AgentMsgWrapper): UpdateConfigReqMsg = {
     val msg = amw.headAgentMsg.convertTo[UpdateConfigReqMsg_MFV_0_5]
-    UpdateConfigReqMsg(amw.headAgentMsgDetail,
-      msg.configs)
+    UpdateConfigReqMsg(msg.configs)
   }
 
   def buildReqMsg(implicit amw: AgentMsgWrapper): UpdateConfigReqMsg = {

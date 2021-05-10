@@ -118,14 +118,18 @@ trait BasePersistentStore
     persTestKit.persistForRecovery(persistenceId.toString, transformedEvents)
   }
 
+  def addSnapshotToPersistentStorage(persistenceId: PersistenceIdParam,
+                                     snapshot: Any)(implicit pp: PersistParam = PersistParam()): Unit = {
+    addSnapshotsToPersistentStorage(persistenceId, Seq(snapshot))
+  }
   /**
    * adds given events to persistent storage (in memory storage) for given persistence id
    * @param persistenceId persistence id
    * @param snapshots snapshots to be stored in persistent storage
    */
-  def addSnapshotToPersistentStorage(persistenceId: PersistenceIdParam,
-                                     snapshots: scala.collection.immutable.Seq[Any])
-                                    (implicit pp: PersistParam = PersistParam()): Unit = {
+  def addSnapshotsToPersistentStorage(persistenceId: PersistenceIdParam,
+                                      snapshots: Seq[Any])
+                                     (implicit pp: PersistParam = PersistParam()): Unit = {
     val objectCodeMapper = pp.objectCodeMapper.getOrElse(DefaultObjectCodeMapper)
     validateObjectCodeMapping(objectCodeMapper, snapshots)
     val transformer = getStateTransformer(persistenceId.entityId, objectCodeMapper)
@@ -133,11 +137,11 @@ trait BasePersistentStore
       val transformedState = transformer.execute(state)
       (SnapshotMeta(index, index), transformedState)
     }
-    snapTestKit.persistForRecovery(persistenceId.toString, transformedSnapshots)
+    snapTestKit.persistForRecovery(persistenceId.toString, transformedSnapshots.toList)
   }
 
   private def validateObjectCodeMapping(objectCodeMapper: ObjectCodeMapperBase,
-                        events: scala.collection.immutable.Seq[Any])(implicit pp: PersistParam): Unit = {
+                                        events: Seq[Any])(implicit pp: PersistParam): Unit = {
     if (pp.validateEventsCodeMapping) {
       events.foreach (evt => objectCodeMapper.codeFromObject(evt))
     }
@@ -175,11 +179,21 @@ trait BasePersistentStore
 
   type TransformedMsg = DeprecatedEventMsg with DeprecatedStateMsg with PersistentMsg
 
-  override def overrideConfig: Option[Config] = Option(
-    ConfigFactory.empty()
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
-  )
+  /**
+   * to be overridden by test for overriding test specific configuration
+   * @return
+   */
+  def overrideSpecificConfig: Option[Config] = None
+
+  final override def overrideConfig: Option[Config] = Option {
+    val baseConfig = ConfigFactory.empty()
+        .withFallback(EventSourcedBehaviorTestKit.config)
+        .withFallback(PersistenceTestKitSnapshotPlugin.config)
+    overrideSpecificConfig match {
+      case Some(sc) => baseConfig.withFallback(sc)
+      case None     => baseConfig
+    }
+  }
 
   def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey)
 }

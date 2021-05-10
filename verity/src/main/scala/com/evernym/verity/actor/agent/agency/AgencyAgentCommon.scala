@@ -70,31 +70,32 @@ trait AgencyAgentCommon
     }
   }
 
-  def stateDetailsWithAgencyVerKey(agencyVerKey: VerKey): PartialFunction[String, Parameter] = {
+  def stateDetailsWithAgencyVerKey(agencyVerKey: VerKey, protoRef: ProtoRef): PartialFunction[String, Parameter] = {
         def mapper(newActorId: String,
                    keyEndpointJson: String,
                    agentEndpointJson: String
                   ): PartialFunction[String, Parameter] = {
-          case SELF_ID                                  => Parameter(SELF_ID, selfParticipantId)
-          case NAME                                	    => Parameter(NAME, "agency")
-          case LOGO_URL                            	    => Parameter(LOGO_URL, "agency-logo-url")
-          case AGENT_PROVISIONER_PARTICIPANT_ID         => Parameter(AGENT_PROVISIONER_PARTICIPANT_ID, selfParticipantId)
-          case AGENCY_DID                               => Parameter(AGENCY_DID, agencyDIDReq)
-          case AGENCY_DID_VER_KEY                       => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
-          case THIS_AGENT_WALLET_ID                	    => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
-          case NEW_AGENT_WALLET_ID                      => Parameter(NEW_AGENT_WALLET_ID, newActorId)
-          case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON    => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
-          case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON  => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
-          case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
+          case SELF_ID => Parameter(SELF_ID, selfParticipantId)
+          case NAME => Parameter(NAME, "agency")
+          case LOGO_URL => Parameter(LOGO_URL, "agency-logo-url")
+          case AGENT_PROVISIONER_PARTICIPANT_ID => Parameter(AGENT_PROVISIONER_PARTICIPANT_ID, selfParticipantId)
+          case AGENCY_DID => Parameter(AGENCY_DID, agencyDIDReq)
+          case AGENCY_DID_VER_KEY => Parameter(AGENCY_DID_VER_KEY, agencyVerKey)
+          case THIS_AGENT_WALLET_ID => Parameter(THIS_AGENT_WALLET_ID, agentWalletIdReq)
+          case NEW_AGENT_WALLET_ID => Parameter(NEW_AGENT_WALLET_ID, newActorId)
+          case CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON => Parameter(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON, keyEndpointJson)
+          case CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON => Parameter(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON, agentEndpointJson)
+          case DEFAULT_ENDORSER_DID => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
           //TODO: below parameter is required by dead drop protocol (but not used by it if it is running on cloud agency)
-          case OTHER_ID                                 => Parameter(OTHER_ID, "")
+          case OTHER_ID => Parameter(OTHER_ID, "")
 
           //TODO: below parameters are required by connecting protocol based on the context from where it is running
           //if it is running at agency agent level, it doesn't need it, but if it is running at user agent level, it does need it
           //we may have to find better solution for this
-          case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, "")
-          case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, "")
+          case MY_PUBLIC_DID => Parameter(MY_PUBLIC_DID, "")
+          case MY_SELF_REL_DID => Parameter(MY_SELF_REL_DID, "")
+          case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName))
         }
 
     lazy val newActorId = getNewActorId
@@ -111,11 +112,11 @@ trait AgencyAgentCommon
     mapper(newActorId, keyEndpointJson, agentEndpointJson)
   }
 
-  def stateDetailsFor: Future[PartialFunction[String, Parameter]] = {
+  def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]] = {
     for (
       agencyDidPair <- agencyDidPairFut()
     ) yield  {
-      stateDetailsWithAgencyVerKey(agencyDidPair.verKey)
+      p: ProtoRef => stateDetailsWithAgencyVerKey(agencyDidPair.verKey, p)
     }
   }
 

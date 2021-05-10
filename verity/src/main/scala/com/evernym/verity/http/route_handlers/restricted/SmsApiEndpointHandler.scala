@@ -4,7 +4,8 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.constants.Constants.{PHONE_NO, RESOURCE_TYPE_ENDPOINT, TEXT}
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
+import com.evernym.verity.constants.Constants.{PHONE_NO, TEXT}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.http.common.CustomExceptionHandler.{exceptionHandler, handleUnexpectedResponse}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
@@ -37,8 +38,8 @@ trait SmsApiEndpointHandler extends ResourceUsageCommon { this: HttpRouteWithPla
                 extractClientIP { implicit remoteAddress =>
                   //TODO: this ip based check is temporarily until we have some better way to control it
                   checkIfSmsServiceApiCalledFromAllowedIPAddresses(clientIpAddress)
-                  addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
-                    "POST_agency_sms", None)
+                  addUserResourceUsage(RESOURCE_TYPE_ENDPOINT,
+                    "POST_agency_sms", clientIpAddress, None)
                   complete {
                     sendSms(msg).map[ToResponseMarshallable] {
                       case Right(_: String) => OK

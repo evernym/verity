@@ -6,7 +6,7 @@ import akka.testkit.EventFilter
 import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.{ActorMessage, ItemUpdated, TestJournal}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, DeleteMsgConfig}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic, WithAdditionalLogs}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
@@ -105,7 +105,11 @@ class MockPersistentActor(val appConfig: AppConfig)
 
   }
 
-  override lazy val deleteMsgConfig: DeleteMsgConfig = DeleteMsgConfig(50, 2, 1000, 2)
+  override protected val initialBatchSize = 50
+  override protected val maxBatchSize = 1000
+  override protected val batchSizeMultiplier = 2
+  override protected val batchIntervalInSeconds = 2
+
 }
 
 case class PersistEvents(totalEvents: Int) extends ActorMessage

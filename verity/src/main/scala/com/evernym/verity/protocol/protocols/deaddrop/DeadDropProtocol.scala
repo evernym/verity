@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.deaddrop
 
 import com.evernym.verity.protocol._
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{InitParamBase, Protocol, ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.protocols.deaddrop.Role.Empty
@@ -59,10 +60,12 @@ class DeadDropProtocol(val ctx: ProtocolContextApi[DeadDropProtocol, Role, DeadD
   }
 
   def storeData(sd: StoreData): Unit = {
-    ctx.storeSegment(sd.payload.address, Item(sd.payload.address, ByteString.copyFrom(sd.payload.data)))
-
-    //TODO: fix this (how to send back ack msg to the cloud agent)
-    //ctx.send(Ack())
+    ctx.storeSegment(sd.payload.address, Item(sd.payload.address, ByteString.copyFrom(sd.payload.data))) {
+      case Success(s: StoredSegment) =>
+      //TODO: fix this (how to send back ack msg to the cloud agent)
+      //ctx.send(Ack())
+      case Failure(e) => throw e
+    }
   }
 
   override def handleProtoMsg: (DeadDropState, Option[Role], DeadDropProtoMsg) ?=> Any = {

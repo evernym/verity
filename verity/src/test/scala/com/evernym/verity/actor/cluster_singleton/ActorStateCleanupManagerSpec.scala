@@ -1,9 +1,7 @@
 package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
-
 import akka.actor.{ActorRef, PoisonPill, Props}
-import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
@@ -12,10 +10,10 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
-import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -24,7 +22,12 @@ class ActorStateCleanupManagerSpec
   extends PersistentActorSpec
     with BasicSpec
     with ShardUtil
-    with Eventually {
+    with Eventually
+    with BeforeAndAfterAll {
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+  }
 
   //number of total route store actors
   val shardSize = 100         //total possible actors
@@ -107,14 +110,15 @@ class ActorStateCleanupManagerSpec
 
   lazy val routeStoreRegion: ActorRef = platform.agentRouteStoreRegion
 
-  lazy val DUMMY_ACTOR_TYPE_ID: Int = ACTOR_TYPE_USER_AGENT_ACTOR
+  lazy val DUMMY_ACTOR_TYPE_ID: Int = 1
 
-  override lazy val mockRouteStoreActorTypeToRegions = Map(
-    ACTOR_TYPE_USER_AGENT_ACTOR -> {
-      createPersistentRegion("DummyActor", DummyAgentActor.props)
-      ClusterSharding(system).shardRegion("DummyActor")
-    }
-  )
+  override val actorTypeToRegions: Map[Int, ActorRef] = {
+    Map(
+      DUMMY_ACTOR_TYPE_ID -> {
+        createPersistentRegion("DummyActor", DummyAgentActor.props)
+      }
+    )
+  }
 
   override def overrideConfig: Option[Config] = Option {
     ConfigFactory parseString {
@@ -165,8 +169,8 @@ class ActorStateCleanupManagerSpec
 class DummyAgentActor extends CoreActorExtended {
   override def receiveCmd: Receive = {
     case fas: FixActorState             =>
-      fas.senderActorRef ! InitialActorState(fas.actorDID, isRouteSet = true, 1)
-      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 1, 0)
+      fas.senderActorRef ! InitialActorState(fas.actorDID, isRouteSet = true, 0)
+      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 0, 0)
   }
 }
 

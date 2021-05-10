@@ -31,13 +31,12 @@ class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
       }
     }
 
-    "when asked to validate ip address" - {
+    "when asked to validate token" - {
       "should return proper results for it" in {
         val conf = ConfigFactory.load()
         val resourceUsageRuleConfValidator = new ResourceUsageRuleConfigValidator(conf)
-        resourceUsageRuleConfValidator.isValidToken("11111") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.234") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.34") shouldBe true
+
+        resourceUsageRuleConfValidator.isValidToken("global") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("192.168.0.1") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("129.0.0.1") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("1.2.3.4") shouldBe true
@@ -46,48 +45,64 @@ class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
         resourceUsageRuleConfValidator.isValidToken("1.2.3.4/31") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("1.2.3.4/0") shouldBe true // It is valid range
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/asgfajh/1.2.3.4") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd/") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd/xyz") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd/12") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd/abcd") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd/12/abcd/12") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abcd") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("126378abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abc126378") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("126378-abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("abc-126378-abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("123-126378-123") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("-------") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("126378.abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("126378/.abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("/126378/.abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("///abcd") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("192.a.1.3.4") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("xyz/abc") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32/1.2.3.4") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/1.2.3.4/32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32/1.2.3.4/32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("...32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("....32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/1.2.3.4") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("/1.2.3.4") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("/1.2.3.4/32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("32/1.2.3.4") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32/") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/-32") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("122.175.56.232/32") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("122.175.56.232/1") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("122.175.56.232/10") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/32") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/032") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/0") shouldBe true
-        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/000") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/1") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("52.32.27.134/10") shouldBe true
         resourceUsageRuleConfValidator.isValidToken("52.32.27.13/10") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("owner-EMmo7oSqQk1twmgLDRNjzC") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("owner-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("counterparty-EMmo7oSqQk1twmgLDRNjzC") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("counterparty-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("owner-*") shouldBe true
+        resourceUsageRuleConfValidator.isValidToken("counterparty-*") shouldBe true
 
+        resourceUsageRuleConfValidator.isValidToken("local") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("global1") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("global/1") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("global*") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("global-*") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("11111") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.234") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.34") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("301.2.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("301.2.3.4/1") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/032") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("52.32.27.134/000") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/asgfajh/1.2.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd/") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd/xyz") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd/12") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd/abcd") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd/12/abcd/12") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abcd") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("126378abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abc126378") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("126378-abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("abc-126378-abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("123-126378-123") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("-------") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("126378.abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("126378/.abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("/126378/.abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("///abcd") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("192.a.1.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("xyz/abc") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32/1.2.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/1.2.3.4/32") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32/1.2.3.4/32") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("...32") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("....32") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/1.2.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("/1.2.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("/1.2.3.4/32") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("32/1.2.3.4") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/32/") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("1.2.3.4/-32") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("1.2.3.4/abcd") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("%^%&^$$#$#$") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("1.2.3.4/") shouldBe false
@@ -115,6 +130,41 @@ class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
         resourceUsageRuleConfValidator.isValidToken("%%%%%%") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("######") shouldBe false
         resourceUsageRuleConfValidator.isValidToken("(((())))") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("somebody-EMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("somebody-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("EMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("-EMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7K") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-EMmo7oSqQk1twmgLDRNj") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-EMmo7oSqQk1twmgLDRNjzC2k") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-EMmo7oSqQk1twmgLDRNj") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-EMmo7oSqQk1twmgLDRNjzC2k") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7KmY") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-8HH5gYEeNc3z7PYXmd54d4x6qAfCNrqQqEB3nS7Zfu7KmY") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner_EMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty_EMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("ownerEMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterpartyEMmo7oSqQk1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-EMmo7oSq-k1twmgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-8HH5gYEeNc3z7PYXmd5+d4x6qAfCNrqQqEB3nS7Zfu7K") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-EMmo7oSqQk1t_mgLDRNjzC") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-**") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-**") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-?") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-?") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner-?*") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty-*?") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner*") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty*") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("owner_*") shouldBe false
+        resourceUsageRuleConfValidator.isValidToken("counterparty_*") shouldBe false
       }
     }
   }

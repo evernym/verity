@@ -10,10 +10,11 @@ import com.evernym.verity.Exceptions.{BadRequestErrorException, NotImplementedEr
 import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.{ActorItemDetail, ForIdentifier, GetDetail}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
-import com.evernym.verity.constants.Constants.{RESOURCE_TYPE_ENDPOINT, UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
+import com.evernym.verity.constants.Constants.{UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
@@ -96,8 +97,7 @@ trait GetInviteRestEndpointHandler
   }
 
   protected def handleGetInviteByTokenReq(token: String)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
-      "GET_agency_invite", None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", clientIpAddress, None)
     complete {
       getInviteDetailByToken(token).map[ToResponseMarshallable] {
         getInviteMsgResponseHandler
@@ -106,8 +106,7 @@ trait GetInviteRestEndpointHandler
   }
 
   protected def handleGetInviteByDIDAndUidReq(DID: DID, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
-      "GET_agency_invite_did", None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", clientIpAddress, None)
     complete {
       getInviteDetailByDIDAndUid(DID, uid).map[ToResponseMarshallable] {
         getInviteMsgResponseHandler
@@ -116,8 +115,7 @@ trait GetInviteRestEndpointHandler
   }
 
   protected def handleGetInvitationAries(base64inv: String)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(clientIpAddress, RESOURCE_TYPE_ENDPOINT,
-      "GET_agency_invite_aries", None)
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", clientIpAddress, None)
     complete {
         getInviteMsgResponseHandler(decodeAriesInvitation(base64inv))
     }
@@ -127,7 +125,7 @@ trait GetInviteRestEndpointHandler
     try {
       new JSONObject(new String(Base64Util.getBase64UrlDecoded(base64inv)))
     } catch {
-      case e: Exception =>
+      case _: Exception =>
         throw new BadRequestErrorException(VALIDATION_FAILED.statusCode, Option("Invalid payload"))
     }
   }

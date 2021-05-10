@@ -1,10 +1,8 @@
 package com.evernym.verity.actor.resourceusagethrottling.tracking
 
 import java.time.ZonedDateTime
-
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.LoggingReceive
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
@@ -21,7 +19,9 @@ import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
-import com.evernym.verity.config.CommonConfig.{USAGE_RULES, VIOLATION_ACTION}
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
+import com.evernym.verity.config.CommonConfig.USAGE_RULES
+import com.evernym.verity.util.SubnetUtilsExt
 
 import scala.concurrent.Future
 
@@ -94,7 +94,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
       ResourceUsageRuleHelper.loadResourceUsageRules()
       if (ResourceUsageRuleHelper.resourceUsageRules.applyUsageRules) {
         val persistUpdatedBucketEntries =
-          resourceUsageTracker.updateResourceUsage(aru.apiToken, aru.resourceType, aru.resourceName)
+          resourceUsageTracker.updateResourceUsage(entityId, aru.resourceType, aru.resourceName)
         persistUpdatedBucketEntries.foreach { ube =>
           ube.entries.foreach(asyncWriteWithoutApply)
         }
@@ -140,22 +140,21 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   def analyzeUsage(aru: AddResourceUsage): Unit = {
     runWithInternalSpan("analyzeUsage", "ResourceUsageTracker") {
       Future {
-        ResourceUsageRuleHelper.getResourceUsageRule(aru.apiToken, aru.resourceType, aru.resourceName).foreach { usageRule =>
+        ResourceUsageRuleHelper.getResourceUsageRule(entityId, aru.resourceType, aru.resourceName).foreach { usageRule =>
           val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)
           usageRule.bucketRules.foreach { case (bucketId, bucketRule) =>
             actualUsages.usages.get(bucketId).foreach { actualCount =>
               val customAllowedCount: Option[Int] = resourceUsageTracker.getCustomLimit(aru.resourceName, bucketId)
               val allowedCount = customAllowedCount.getOrElse(bucketRule.allowedCount)
               if (actualCount >= allowedCount) {
-                val rulePath =
-                  s"""$USAGE_RULES.${
-                    if (customAllowedCount.isDefined) "custom" else "default"
-                  }.${
-                    ResourceUsageRuleHelper.getHumanReadableResourceType(aru.resourceType)
-                  }.${aru.resourceName}"""
-                val actionPath = VIOLATION_ACTION
-                val vr = ViolatedRule(entityId, aru.resourceName, bucketRule, actualCount, rulePath, bucketId, actionPath)
-                actionExecutor.execute(bucketRule.violationActionId, vr)(self)
+                val rulePath = ResourceUsageTracker.violationRulePath(entityId, aru.resourceType, aru.resourceName, customAllowedCount)
+                val vr = ViolatedRule(entityId, aru.resourceName, rulePath, bucketId, bucketRule, actualCount)
+                try {
+                  actionExecutor.execute(bucketRule.violationActionId, vr)(self)
+                } catch {
+                  case e: Exception =>
+                    logger.error(s"[$entityId] error while executing resource usage violation action: $vr, error: ${e.getMessage}")
+                }
               }
             }
           }
@@ -173,46 +172,66 @@ object ResourceUsageTracker {
 
   /**
    *
+   * @param ipAddress ip address
    * @param entityId an entity id being tracked
    * @param resourceName a resource name being tracked
-   * @param apiToken a token used to find out a specific applicable rule
    */
-  private def checkIfUsageIsBlocked(entityId: EntityId, resourceName: ResourceName, apiToken: ApiToken): Unit = {
-    val isBlacklisted = ResourceUsageRuleHelper.resourceUsageRules.isBlacklisted(apiToken, entityId)
+  def checkIfUsageIsBlocked(ipAddress: IpAddress,
+                            entityId: EntityId,
+                            resourceName: ResourceName): Unit = {
+    checkIfUsageIsBlocked(ipAddress, entityId, resourceName, ResourceUsageRuleHelper.resourceUsageRules)
+  }
+
+  /**
+   *
+   * @param ipAddress ip address
+   * @param entityId an entity id being tracked
+   * @param resourceName a resource name being tracked
+   */
+  def checkIfUsageIsBlocked(ipAddress: IpAddress,
+                            entityId: EntityId,
+                            resourceName: ResourceName,
+                            resourceUsageRuleConfig:  ResourceUsageRuleConfig): Unit = {
+    val isBlacklisted = resourceUsageRuleConfig.isBlacklisted(ipAddress, entityId)
     if (isBlacklisted) {
-      throw new BadRequestErrorException(USAGE_BLOCKED.statusCode)
+      throw new BadRequestErrorException(USAGE_BLOCKED.statusCode, Option("usage blocked"))
     }
-    val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(apiToken, entityId)
+    val isWhitelisted = resourceUsageRuleConfig.isWhitelisted(ipAddress, entityId)
     if (! isWhitelisted) {
       ResourceBlockingStatusMngrCache.checkIfUsageBlocked(entityId, resourceName)
     }
   }
 
   /**
-   *
-   * @param ipAddress ipAddress
    * @param resourceType endpoint or message
    * @param resourceName resource name being tracked
-   * @param sendBackAck
-   * @param userIdOpt
+   * @param sendBackAck shall an ack being sent back
+   * @param ipAddress ipAddress from which request arrived
+   * @param userIdOpt user id being tracked
    * @param rut
    */
-  def addUserResourceUsage(ipAddress: IpAddress, resourceType: ResourceType, resourceName: ResourceName,
-                           sendBackAck: Boolean, userIdOpt: Option[UserId])(rut: ActorRef): Unit = {
-    // Do NOT increment global counter if entityId or userIdOpt is blocked.
-    // global MUST be AFTER entityId and userIdOpt.
-    val trackByEntityIds = Option(ipAddress) ++ userIdOpt ++ Option("global")
-    val resourceNames = Set(RESOURCE_NAME_ALL, resourceName)
+  def addUserResourceUsage(resourceType: ResourceType,
+                           resourceName: ResourceName,
+                           ipAddress: IpAddress,
+                           userIdOpt: Option[UserId],
+                           sendBackAck: Boolean)(rut: ActorRef): Unit = {
+    // Do NOT increment global counter if ipAddressOpt or userIdOpt is blocked.
+    // global MUST be AFTER `ipAddressOpt` and `userIdOpt`.
+    val trackByEntityIds = Option(ipAddress) ++ userIdOpt ++ Option(ENTITY_ID_GLOBAL)
+    val resourceNames = Set(resourceName, RESOURCE_NAME_ALL)
 
     trackByEntityIds.foreach { entityId =>
+      //check if tracked entity is NOT blocked
       resourceNames.foreach { rn =>
-        checkIfUsageIsBlocked(entityId, rn, ipAddress)
+        checkIfUsageIsBlocked(ipAddress, entityId, rn)
       }
-      resourceNames.foreach { rn =>
+
+      //track if neither 'whitelisted' nor in 'UnblockingPeriod'
+      resourceNames.foreach { resourceName =>
         val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
         if (! isWhitelisted) {
-          if (! ResourceBlockingStatusMngrCache.isInUnblockingPeriod(entityId, rn)) {
-            val aru = tracking.AddResourceUsage(resourceType, rn, ipAddress, sendBackAck)
+          if (! ResourceBlockingStatusMngrCache.isInUnblockingPeriod(entityId, resourceName)) {
+            val aru = tracking.AddResourceUsage(resourceType, resourceName, sendBackAck)
             rut.tell(ForIdentifier(entityId, aru), Actor.noSender)
           }
         }
@@ -222,6 +241,18 @@ object ResourceUsageTracker {
 
   def sendToResourceUsageTracker(entityId: EntityId, cmd: Any)(rut: ActorRef): Unit = {
     rut.tell(ForIdentifier(entityId, cmd), Actor.noSender)
+  }
+
+  def violationRulePath(entityId: EntityId,
+                        resourceType: ResourceType,
+                        resourceName: ResourceName,
+                        customAllowedCount: Option[Int]): String = {
+    val ruleName = getRuleNameByEntityId(entityId)
+    s"""$USAGE_RULES.${
+      if (customAllowedCount.isDefined) "custom-limit" else ruleName
+    }.${
+      ResourceUsageRuleHelper.getHumanReadableResourceType(resourceType)
+    }.${resourceName}"""
   }
 }
 
@@ -238,11 +269,15 @@ case class Bucket(usedCount: Int = 0,
   }
 }
 
-case class BucketExt(usedCount: Int = 0, allowedCount: Int,
-                     startDateTime: Option[ZonedDateTime], endDateTime: Option[ZonedDateTime])
+case class BucketExt(usedCount: Int = 0,
+                     allowedCount: Int,
+                     startDateTime: Option[ZonedDateTime],
+                     endDateTime: Option[ZonedDateTime])
 
-case class AddResourceUsage(resourceType: ResourceType, resourceName: ResourceName, apiToken: ApiToken, sendBackAck: Boolean=true) extends ActorMessage
+case class AddResourceUsage(resourceType: ResourceType,
+                            resourceName: ResourceName,
+                            sendBackAck: Boolean=true) extends ActorMessage
 case class GetResourceUsage(resourceName: ResourceName) extends ActorMessage
 case class ResourceUsages(usages: Map[ResourceName, Map[BucketIdStr, BucketExt]]) extends ActorMessage
 
-case object GetAllResourceUsages  extends ActorMessage
+case object GetAllResourceUsages extends ActorMessage

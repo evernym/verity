@@ -1,6 +1,7 @@
 package com.evernym.verity.testkit.mock.ledger
 
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
@@ -14,11 +15,11 @@ class InMemLedgerPoolConnManager(txnExecutor: Option[LedgerTxnExecutor] = None)
 
   def this(initData: InitLedgerData)
           (implicit executor: ExecutionContextExecutor) {
-    this(Some(new MockInMemLedgerTxnExecutor(initData)))
+    this(Some(new MockLedgerTxnExecutor()))
   }
 
   val ledgerTxnExecutor: LedgerTxnExecutor = {
-    txnExecutor.getOrElse(new MockInMemLedgerTxnExecutor(InitLedgerData()))
+    txnExecutor.getOrElse(new MockLedgerTxnExecutor())
   }
 
   override def open(): Unit = ()

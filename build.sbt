@@ -310,7 +310,7 @@ lazy val commonLibraryDependencies = {
 
     //other dependencies
     "com.github.blemale" %% "scaffeine" % "4.0.2",
-    "commons-net" % "commons-net" % "3.7.2",      //used for CIDR based ip address validation/checking/comparision
+    "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations

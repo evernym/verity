@@ -86,10 +86,6 @@ class SdkFlowSpec
         sdkBasicInteractions(apps, ledgerUtil)
       }
 
-      "basic interaction with message limits" - {
-        sdkBasicInteractionsWithLimits(apps)
-      }
-
       "oob interaction" - {
         sdkOobInteractions(apps, ledgerUtil)
       }
@@ -187,41 +183,6 @@ class SdkFlowSpec
       ledgerUtil
     )
 
-  }
-
-  def sdkBasicInteractionsWithLimits(apps: ScenarioAppEnvironment)(implicit scenario: Scenario): Unit = {
-
-
-    val connectionId = UUID.randomUUID().toString
-
-    connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
-
-    out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
-      GoalCode.ISSUE_VC)
-
-    val strBelowLimit ="1234567890"*2200
-    val strAboveLimit ="1234567890"*7000
-
-    issueCredential_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      (0 to 9).map{i=> s"attr$i" -> strBelowLimit}.toMap,
-      limitsCredDefName,
-      "tag"
-    )
-
-    val issuerSdk = apps(verity1).sdks.head
-    val holderSdk = apps(cas1).sdks.head
-    issueCredential_1_0_expectingError(
-      issuerSdk,
-      holderSdk,
-      connectionId,
-      (0 to 9).map{i=> s"attr$i" -> strAboveLimit}.toMap,
-      limitsCredDefName,
-      "tag",
-      "Payload size is too big"
-    )
   }
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {

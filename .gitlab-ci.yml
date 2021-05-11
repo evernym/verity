@@ -277,6 +277,7 @@ deploy-manually-team1:
   extends: .deploy-common
   variables:
     TARGET_ENVIRONMENT: 'team1'
+    TRIGGERAPI_REF_VERITY_RELEASE: "team1"
   when: manual
 
 .deploy-manually-team2:

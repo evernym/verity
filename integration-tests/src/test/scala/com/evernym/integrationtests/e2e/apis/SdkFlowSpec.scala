@@ -247,7 +247,7 @@ class SdkFlowSpec
       apps(cas1),
       connectionId,
       "proof-request-1",
-      Seq("first_name", "last_name", "license_num")
+      List(("first_name", "first_name", "Bob"), ("last_name", "last_name", "Marley"), ("license_num", "license_num", "123"))
     )
 
     presentProof_1_0_with_proposal(

@@ -50,6 +50,7 @@ class LimitsFlowSpec
   val limitsCredDefName = "creds_for_limits"
 
   val longAttrList = (1 to 125).map(i => s"attrib$i")
+  val longCredDef = "cred_name1"
 
   runScenario("sdkFlow") {
 
@@ -154,7 +155,7 @@ class LimitsFlowSpec
 
     writeCredDef(
       sdk,
-      "cred_name1",
+      longCredDef,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName1,
@@ -238,109 +239,155 @@ class LimitsFlowSpec
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
 
-    val connectionId = UUID.randomUUID().toString
+    "proof presentation limits" - {
+      val connectionId = UUID.randomUUID().toString
 
-    connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
+      connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
 
-    out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
-      GoalCode.ISSUE_VC)
+      val longAttrsMap = longAttrList.map(attr => attr -> "someValue").toMap
+
+      issueCredential_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        longAttrsMap,
+        longCredDef,
+        "tag"
+      )
+
+      val listWithValues = (longAttrsMap map { case (key, value) => (key, key + "[1]", value) }).toList
+      var listForRequest = List[(String, String, String)]()
+      for (i <- 1 to 11) {
+        listForRequest = listForRequest ++ listWithValues
+      }
+      listForRequest = listForRequest ++ listWithValues.take(45)
+
+      presentProof_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "proof-request-1",
+        listForRequest
+      )
+
+      listForRequest = listForRequest ++ listWithValues.take(1)
+
+      presentProof_1_0ExpectingErrorOnResponse(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "proof-request-1",
+        listForRequest,
+        "Payload size is too big"
+      )
+    }
+
+    "issue credential limits" - {
+      val connectionId = UUID.randomUUID().toString
+
+      connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
+      val strBelowLimit = "1234567890" * 2200
+      val strAboveLimit = "1234567890" * 3500
+
+      issueCredential_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        (0 to 9).map { i => s"attr$i" -> strBelowLimit }.toMap,
+        limitsCredDefName,
+        "tag"
+      )
+
+      val issuerSdk = apps(verity1).sdks.head
+      val holderSdk = apps(cas1).sdks.head
+      issueCredential_1_0_expectingError(
+        issuerSdk,
+        holderSdk,
+        connectionId,
+        (0 to 9).map { i => s"attr$i" -> strAboveLimit }.toMap,
+        limitsCredDefName,
+        "tag",
+        "Payload size is too big"
+      )
+    }
 
 
-    val strBelowLimit = "1234567890" * 2200
-    val strAboveLimit = "1234567890" * 3500
+    "issue credential limits" - {
+      val connectionId = UUID.randomUUID().toString
 
-    issueCredential_1_0(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      (0 to 9).map { i => s"attr$i" -> strBelowLimit }.toMap,
-      limitsCredDefName,
-      "tag"
-    )
+      connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
+      val longString2 = "1234567890" * 16000
+      committedAnswer(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "Long description",
+        longString2,
+        Seq("Ok", "Not ok"),
+        "Ok",
+        requireSig = true
+      )
 
-    val issuerSdk = apps(verity1).sdks.head
-    val holderSdk = apps(cas1).sdks.head
-    issueCredential_1_0_expectingError(
-      issuerSdk,
-      holderSdk,
-      connectionId,
-      (0 to 9).map { i => s"attr$i" -> strAboveLimit }.toMap,
-      limitsCredDefName,
-      "tag",
-      "Payload size is too big"
-    )
+      val longSeq = (0 to 100).map(i => s"answer$i")
+      committedAnswer(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "Multiple answers",
+        "Description",
+        longSeq,
+        "answer0",
+        requireSig = true
+      )
 
-    val longString2 = "1234567890" * 16000
-    committedAnswer(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Long description",
-      longString2,
-      Seq("Ok", "Not ok"),
-      "Ok",
-      requireSig = true
-    )
+      val longAnswer = "1234567890" * 16000
+      committedAnswer(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "Long answer",
+        "Description",
+        Seq(longAnswer),
+        longAnswer,
+        requireSig = true
+      )
 
-    val longSeq = (0 to 100).map(i => s"answer$i")
-    committedAnswer(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Multiple answers",
-      "Description",
-      longSeq,
-      "answer0",
-      requireSig = true
-    )
+      val longStringAboveLimit = "1234567890" * 18000
+      committedAnswerWithError(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "Long description",
+        longStringAboveLimit,
+        Seq("Ok", "Not ok"),
+        requireSig = true,
+        "Payload size is too big"
+      )
 
-    val longAnswer = "1234567890" * 16000
-    committedAnswer(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Long answer",
-      "Description",
-      Seq(longAnswer),
-      longAnswer,
-      requireSig = true
-    )
+      val longSeqAboveLimit = (0 to 25000).map(i => s"answer$i")
+      committedAnswerWithError(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "Multiple answers",
+        "Description",
+        longSeqAboveLimit,
+        requireSig = true,
+        "Payload size is too big"
+      )
 
-    val longStringAboveLimit = "1234567890" * 18000
-    committedAnswerWithError(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Long description",
-      longStringAboveLimit,
-      Seq("Ok", "Not ok"),
-      requireSig = true,
-      "Payload size is too big"
-    )
-
-    val longSeqAboveLimit = (0 to 25000).map(i => s"answer$i")
-    committedAnswerWithError(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Multiple answers",
-      "Description",
-      longSeqAboveLimit,
-      requireSig = true,
-      "Payload size is too big"
-    )
-
-    val longAnswerAboveLimit = "1234567890" * 18000
-    committedAnswerWithError(
-      apps(verity1),
-      apps(cas1),
-      connectionId,
-      "Long answer",
-      "Description",
-      Seq(longAnswerAboveLimit),
-      requireSig = true,
-      "Payload size is too big"
-    )
+      val longAnswerAboveLimit = "1234567890" * 18000
+      committedAnswerWithError(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        "Long answer",
+        "Description",
+        Seq(longAnswerAboveLimit),
+        requireSig = true,
+        "Payload size is too big"
+      )
+    }
 
     /*presentProof_1_0_with_proposal(
       apps(verity1),

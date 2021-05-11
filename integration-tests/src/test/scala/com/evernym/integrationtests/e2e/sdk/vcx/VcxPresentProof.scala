@@ -126,6 +126,9 @@ trait VcxPresentProof
         payloadMsg
       )
     )
+
+    updateMessageStatus(metaData)
+
     new JSONObject()
       .put("@type", MsgFamily.typeStrFromMsgType(PresentProofMsgFamily, "ask-accept"))
       .put("~thread",

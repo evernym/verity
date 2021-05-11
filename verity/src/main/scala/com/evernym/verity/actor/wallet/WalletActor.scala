@@ -9,11 +9,11 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor.buildErrorDetail
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -193,7 +193,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
 
 
   val logger: Logger = getLoggerByClass(classOf[WalletActor])
-  lazy val walletProvider: WalletProvider = new LibIndyWalletProvider(appConfig)
+  lazy val walletProvider: WalletProvider = LibIndyWalletProvider
 
   var walletExtOpt: Option[WalletExt] = None
   var walletParamOpt: Option[WalletParam] = None

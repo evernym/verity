@@ -7,17 +7,15 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 
-case class UpdateMsgStatusReqMsg_MFV_0_5(`@type`: TypeDetail, statusCode: String, uids: List[String]) extends MsgBase {
+case class UpdateMsgStatusReqMsg_MFV_0_5(statusCode: String, uids: List[String]) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkRequired("statusCode", statusCode)
     checkRequired("uids", uids)
   }
 }
 
-case class UpdateMsgStatusReqMsg_MFV_0_6(`@type`: String, statusCode: String, uids: List[String]) extends MsgBase {
+case class UpdateMsgStatusReqMsg_MFV_0_6(statusCode: String, uids: List[String]) extends MsgBase {
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkRequired("statusCode", statusCode)
     checkRequired("uids", uids)
   }

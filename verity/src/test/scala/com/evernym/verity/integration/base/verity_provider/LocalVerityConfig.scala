@@ -5,14 +5,16 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
 import java.nio.file.Path
+import java.util.UUID
 import scala.util.Random
 
 
 object PortProfile {
   def random(): PortProfile = {
-    val httpPort = 9000 + Random.nextInt(900) + Random.nextInt(90) + Random.nextInt(9)
-    val arteryPort = 2000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
-    val akkaMgmtPort = 8000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+    val random = new Random(UUID.randomUUID().toString.hashCode)
+    val httpPort = 9000 + random.nextInt(900) + random.nextInt(90) + random.nextInt(9)
+    val arteryPort = 2000 + random.nextInt(900)  + random.nextInt(90) + random.nextInt(9)
+    val akkaMgmtPort = 8000 + random.nextInt(900)  + random.nextInt(90) + random.nextInt(9)
     PortProfile(httpPort, arteryPort, akkaMgmtPort)
   }
 }
@@ -47,7 +49,13 @@ object LocalVerityConfig {
   private def useInmemPersistence(tempDir: Path): Config = {
     ConfigFactory.parseString(
       s"""
-         |akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+         |akka.persistence.journal {
+         |  plugin = "akka.persistence.journal.leveldb"
+         |  leveldb {
+         |    dir = "$tempDir/journal"
+         |    native = false
+         |  }
+         |}
          |akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
          |akka.persistence.snapshot-store.local.dir = "${tempDir.resolve("snapshots")}"
          |""".stripMargin

@@ -1,7 +1,6 @@
 package com.evernym.verity.libindy.wallet
 
 import com.evernym.verity.actor.wallet.WalletCreated
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.libindy.wallet.operation_executor.FutureConverter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -16,10 +15,10 @@ import scala.concurrent.Future
 
 class LibIndyWalletExt (val wallet: Wallet) extends WalletExt
 
-class LibIndyWalletProvider(val appConfig: AppConfig)
+object LibIndyWalletProvider
   extends WalletProvider
     with FutureConverter {
-  val logger: Logger = getLoggerByClass(classOf[LibIndyWalletProvider])
+  val logger: Logger = getLoggerByClass(getClass)
 
   //TODO: there are some code duplicate in below methods, see if we can fix it
 

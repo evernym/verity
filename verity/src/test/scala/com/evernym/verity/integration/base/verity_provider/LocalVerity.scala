@@ -10,12 +10,13 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.{AgencyPublicDid, Platform}
 import com.evernym.verity.actor.appStateManager.GetCurrentState
 import com.evernym.verity.actor.appStateManager.state.{AppState, ListeningState}
+import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.app_launcher.{DefaultAgentActorContext, HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
-import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.testkit.mock.ledger.{InMemLedgerPoolConnManager, InitLedgerData}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
+import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.Config
 
 import java.nio.file.Path
@@ -30,25 +31,28 @@ object LocalVerity {
   def apply(tempDir: Path,
             port: PortProfile,
             appSeed: String,
-            initData: InitLedgerData = InitLedgerData(),
-            taaEnabled: Boolean = true,
-            taaAutoAccept: Boolean = true,
+            serviceParam: ServiceParam = ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new MockLedgerTxnExecutor())),
             trackMessageProgress: Boolean = true,
+            bootstrapApp: Boolean = true,
             overriddenConfig: Option[Config] = None): HttpServer = {
 
-    val localConfig = LocalVerityConfig.standard(tempDir, port, taaEnabled, taaAutoAccept)
+    val standardConfig = LocalVerityConfig.standard(
+      tempDir, port, serviceParam.ledgerSvcParam.taaEnabled, serviceParam.ledgerSvcParam.taaAutoAccept)
+
     val finalConfig = overriddenConfig match {
-      case Some(config) => config.withFallback(localConfig)
-      case None         => localConfig
+      case Some(config) => config.withFallback(standardConfig)
+      case None         => standardConfig
     }
-    val appConfig = new AppConfigWrapper(finalConfig)
-    val platform = initializeApp(initData, appConfig)
+
+    val platform = initializeApp(serviceParam, new AppConfigWrapper(finalConfig))
 
     val httpServer = new HttpServer(platform, new HttpRouteHandler(platform).endpointRoutes)
     httpServer.start()
 
     waitTillUp(platform.appStateManager)
-    bootstrapApplication(port.http, atMost, appSeed)(platform.actorSystem)
+
+    if (bootstrapApp) bootstrapApplication(port.http, atMost, appSeed)(platform.actorSystem)
+
     httpServer
   }
 
@@ -56,32 +60,31 @@ object LocalVerity {
     TestKit.awaitCond(isListening(appStateManager), atMost, 2.seconds)
   }
 
-  def isListening(appStateManager: ActorRef): Boolean = {
+  private def isListening(appStateManager: ActorRef): Boolean = {
     implicit lazy val akkActorResponseTimeout: Timeout = Timeout(5.seconds)
     val fut = appStateManager ? GetCurrentState
     Await.result(fut, 3.seconds).asInstanceOf[AppState] == ListeningState
   }
 
-  class Starter(initData: InitLedgerData, appConfig: AppConfig) {
-    class MockDefaultAgentActorContext(initData: InitLedgerData, override val appConfig: AppConfig)
+  class Starter(serviceParam: ServiceParam, appConfig: AppConfig) {
+    class MockDefaultAgentActorContext(serviceParam: ServiceParam, override val appConfig: AppConfig)
       extends DefaultAgentActorContext {
         implicit val executor: ExecutionContextExecutor = system.dispatcher
-        override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(initData)
+        override lazy val poolConnManager: LedgerPoolConnManager =
+          new InMemLedgerPoolConnManager(Option(serviceParam.ledgerSvcParam.ledgerTxnExecutor))
     }
 
-    val platform: Platform = PlatformBuilder.build(Option(new MockDefaultAgentActorContext(initData, appConfig)))
+    val platform: Platform = PlatformBuilder.build(Option(new MockDefaultAgentActorContext(serviceParam, appConfig)))
   }
 
   object Starter {
-    def apply(initData: InitLedgerData, appConfig: AppConfig): Starter = new Starter(initData, appConfig)
+    def apply(serviceParam: ServiceParam, appConfig: AppConfig): Starter = new Starter(serviceParam, appConfig)
   }
 
 
-  private def initializeApp(initData: InitLedgerData, appConfig: AppConfig): Platform = {
-    val s = Starter(initData, appConfig)
-
+  private def initializeApp(serviceParam: ServiceParam, appConfig: AppConfig): Platform = {
+    val s = Starter(serviceParam, appConfig)
     assert(s.platform != null)
-
     s.platform
   }
 
@@ -116,6 +119,7 @@ object LocalVerity {
     )
 
     checkAgencyEndpointSetup(endpointSetupResp)
+
   }
 
   private def checkAgencyKeySetup(httpResp: HttpResponse)(implicit ac: ActorSystem): Unit = {
@@ -154,3 +158,17 @@ object LocalVerity {
 class AppConfigWrapper(config: Config) extends AppConfig {
   DEPRECATED_setConfigWithoutValidation(config)
 }
+
+/**
+ * When we wants to create LocalVerity instance, it will need to use some external services
+ * like (ledger etc). Those services or related parameters will be provided by this case class.
+ * This way, 'verity restart' will retain any changes done in those external services (specially storage)
+ * which will help it run correctly if test wants to restart verity instances in between of the test.
+ *
+ * @param ledgerSvcParam
+ */
+case class ServiceParam(ledgerSvcParam: LedgerSvcParam)
+
+case class LedgerSvcParam(taaEnabled: Boolean = true,
+                          taaAutoAccept: Boolean = true,
+                          ledgerTxnExecutor: LedgerTxnExecutor)

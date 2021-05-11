@@ -5,11 +5,8 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.config.AppConfig
 
-
-class PlainMsgListener(val port: Int)
-                      (implicit val appConfig: AppConfig, val system: ActorSystem)
+class PlainMsgListener(val port: Int)(implicit val actorSystem: ActorSystem)
   extends MsgListenerBase[String] {
 
   private def agentMsgHandler(implicit req: HttpRequest): Route = {

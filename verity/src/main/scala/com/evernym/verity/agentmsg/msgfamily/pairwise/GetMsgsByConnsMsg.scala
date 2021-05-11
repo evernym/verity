@@ -9,8 +9,8 @@ import com.evernym.verity.protocol.protocols.MsgDetail
 
 
 case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DID]] = None,
-                                        excludePayload: Option[String] = None,
                                         uids: Option[List[String]] = None,
+                                        excludePayload: Option[String] = None,
                                         statusCodes: Option[List[String]] = None) extends MsgBase {
   override def validate(): Unit = {
     checkOptionalNotEmpty("excludePayload", excludePayload)
@@ -18,8 +18,8 @@ case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DID]] = None,
 }
 
 case class GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs: Option[List[DID]] = None,
-                                        excludePayload: Option[String] = None,
                                         uids: Option[List[String]] = None,
+                                        excludePayload: Option[String] = None,
                                         statusCodes: Option[List[String]] = None) extends MsgBase {
   override def validate(): Unit = {
     checkOptionalNotEmpty("excludePayload", excludePayload)

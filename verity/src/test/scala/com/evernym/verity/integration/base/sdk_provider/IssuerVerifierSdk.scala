@@ -1,10 +1,11 @@
 package com.evernym.verity.integration.base.sdk_provider
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.{Accepted, OK}
 import akka.http.scaladsl.model.headers.RawHeader
-import com.evernym.verity.actor.{ComMethodUpdated, Platform}
+import com.evernym.verity.actor.ComMethodUpdated
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
@@ -12,7 +13,6 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.integration.base.LocalVerityUtil.platformAgencyRestApiUrl
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{MsgListenerBase, PackedMsgListener, PlainMsgListener}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.{MsgFamily, ThreadId, VerKey}
@@ -32,7 +32,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 import scala.util.Random
 
-abstract class IssuerSdkBase(myVerityPlatform: Platform) extends SdkBase(myVerityPlatform) {
+abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
 
   def provisionVerityEdgeAgent(): AgentCreated = {
     provisionVerityAgentBase(CreateEdgeAgent(localAgentDidPair.verKey, None))
@@ -53,7 +53,7 @@ abstract class IssuerSdkBase(myVerityPlatform: Platform) extends SdkBase(myVerit
     val updateConfigJson = createJsonString(typeStr, updateConfigReq)
     val routedPackedMsg = packForMyVerityAgent(updateConfigJson)
     checkOKResponse(sendPOST(routedPackedMsg))
-    expectMsgOnWebhook[ConfigResult].msg
+    expectMsgOnWebhook[ConfigResult]().msg
   }
 
   protected def addForRel(connId: String, msg: String): String = {
@@ -64,36 +64,36 @@ abstract class IssuerSdkBase(myVerityPlatform: Platform) extends SdkBase(myVerit
   }
 
   def msgListener: MsgListenerBase[_]
-  def expectMsgOnWebhook[T: ClassTag]: ReceivedMsgParam[T]
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(15, SECONDS)): ReceivedMsgParam[T]
 }
 
 /**
  * contains helper methods for issuer sdk side of the operations
  *
- * @param myVerityPlatform edge agent provider platform
+ * @param param sdk parameters
  */
-case class IssuerSdk(myVerityPlatform: Platform) extends IssuerSdkBase(myVerityPlatform) {
+abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
 
   def registerWebhook(): ComMethodUpdated = {
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
     registerWebhookBase(packaging)
   }
 
-  def sendCreateRelationship(connId: String): Created = {
+  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
     val createKey = Create(label = Option(connId), None, None)
     val createKeyJson = createJsonString(createKey, RelationshipMsgFamily)
     val routedPackedMsg = packForMyVerityAgent(createKeyJson)
     checkOKResponse(sendPOST(routedPackedMsg))
-    val unpackedMsg = expectMsgOnWebhook[Created]
-    val created = unpackedMsg.msg
+    val receivedMsg = expectMsgOnWebhook[Created]()
+    val created = receivedMsg.msg
     myPairwiseRelationships += (connId -> PairwiseRel(None, Option(DidPair(created.did, created.verKey))))
-    created
+    receivedMsg
   }
 
-  def sendCreateConnectionInvitation(connId: String): Invitation = {
-    sendControlMsgToConnection(connId, ConnectionInvitation())
-    val unpackedMsg = expectMsgOnWebhook[Invitation]
-    unpackedMsg.msg
+  def sendCreateConnectionInvitation(connId: String, threadId: Option[ThreadId]): Invitation = {
+    sendControlMsgForConn(connId, ConnectionInvitation(), threadId)
+    val receivedMsg = expectMsgOnWebhook[Invitation]()
+    receivedMsg.msg
   }
 
   def sendControlMsg(msg: Any,
@@ -104,16 +104,18 @@ case class IssuerSdk(myVerityPlatform: Platform) extends IssuerSdkBase(myVerityP
     checkResponse(sendPOST(routedPackedMsg), expectedRespStatus)
   }
 
-  def sendControlMsgToConnection(connId: String,
-                                 msg: Any,
-                                 expectedRespStatus: StatusCode = OK): Unit = {
+  def sendControlMsgForConn(connId: String,
+                            msg: Any,
+                            threadIdOpt: Option[ThreadId] = None,
+                            expectedRespStatus: StatusCode = OK): Unit = {
+    val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
     val msgFamily = getMsgFamily(msg)
-    val msgJson = createJsonString(msg, msgFamily)
-    val routedPackedMsg = addForRelAndPackIt(connId, msgJson)
+    val msgJson = withThreadIdAdded(createJsonString(msg, msgFamily), threadId)
+    val routedPackedMsg = addForRelAndPackForConn(connId, msgJson)
     checkResponse(sendPOST(routedPackedMsg), expectedRespStatus)
   }
 
-  private def addForRelAndPackIt(connId: String, msg: String): Array[Byte] = {
+  private def addForRelAndPackForConn(connId: String, msg: String): Array[Byte] = {
     val forRelMsg = addForRel(connId, msg)
     val verityAgentPackedMsg = packFromLocalAgentKey(forRelMsg, Set(KeyParam.fromVerKey(verityAgentDidPair.verKey)))
     prepareFwdMsg(agencyDID, verityAgentDidPair.DID, verityAgentPackedMsg)
@@ -121,19 +123,27 @@ case class IssuerSdk(myVerityPlatform: Platform) extends IssuerSdkBase(myVerityP
 
   /**
    * this webhook expects packed messages
-   * @tparam T
+   * @tparam T expected message type
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag]: ReceivedMsgParam[T] = {
-    val msg = msgListener.expectMsg(Duration(15, SECONDS))
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(15, SECONDS)): ReceivedMsgParam[T] = {
+    val msg = msgListener.expectMsg(timeout)
     unpackMsg(msg)
   }
 
-  lazy val msgListener = new PackedMsgListener(8000 + Random.nextInt(1000))(myVerityPlatform.appConfig, system)
+  lazy val msgListener: PackedMsgListener = {
+    val port = 8000 + Random.nextInt(1000)
+    new PackedMsgListener(port)(ActorSystem(s"listener-$port"))
+  }
 
 }
 
-case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVerityPlatform) {
+case class IssuerSdk(param: SdkParam) extends IssuerVerifierSdk(param)
+
+case class VerifierSdk(param: SdkParam) extends IssuerVerifierSdk(param)
+
+
+case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
   import scala.collection.immutable
 
   def registerWebhook(): ComMethodUpdated = {
@@ -142,26 +152,29 @@ case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVer
   }
 
   def createRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val payload = s"""{"@type":"did:sov:123456789abcdefghi1234;spec/relationship/1.0/create"}"""
-    val resp = sendPostReq(RelationshipMsgFamily, payload)
+    val msg = Create(None, None)
+    val resp = sendRestReq(msg)
     resp.status shouldBe Accepted
-    val rmp = expectMsgOnWebhook[Created]
+    val rmp = expectMsgOnWebhook[Created]()
     myPairwiseRelationships += (connId -> PairwiseRel(None, Option(DidPair(rmp.msg.did, rmp.msg.verKey))))
     rmp
   }
 
-  def sendPostReqForConn(connId: String,
-                         msgFamily: MsgFamily,
-                         payload: String,
-                         threadIdOpt: Option[ThreadId] = None): HttpResponse = {
-    val updatedPayload = addForRel(connId, payload)
-    sendPostReqBase(msgFamily, updatedPayload, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
+  def sendRestReq(msg: Any,
+                  threadIdOpt: Option[ThreadId] = None): HttpResponse = {
+    val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
+    val msgFamily = getMsgFamily(msg)
+    val msgJson = withThreadIdAdded(createJsonString(msg, msgFamily), threadId)
+    sendPostReqBase(msgFamily, msgJson, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
   }
 
-  def sendPostReq(msgFamily: MsgFamily,
-                  payload: String,
-                  threadIdOpt: Option[ThreadId] = None): HttpResponse = {
-    sendPostReqBase(msgFamily, payload, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
+  def sendRestReqForConn(connId: String,
+                         msg: Any,
+                         threadIdOpt: Option[ThreadId] = None): HttpResponse = {
+    val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
+    val msgFamily = getMsgFamily(msg)
+    val updatedPayload = withThreadIdAdded(addForRel(connId, createJsonString(msg, msgFamily)), threadId)
+    sendPostReqBase(msgFamily, updatedPayload, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
   }
 
   private def sendPostReqBase(msgFamily: MsgFamily,
@@ -170,7 +183,7 @@ case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVer
                               routeApiKey: String,
                               threadIdOpt: Option[ThreadId] = None): HttpResponse = {
     val threadId = threadIdOpt.getOrElse(UUID.randomUUID.toString)
-    val url = s"${platformAgencyRestApiUrl(myVerityPlatform)}/$route/${msgFamily.name}/${msgFamily.version}/$threadId"
+    val url = s"${param.verityRestApiUrl}/$route/${msgFamily.name}/${msgFamily.version}/$threadId"
     sendPostJsonReqToUrl(payload, url, routeApiKey)
   }
 
@@ -182,8 +195,8 @@ case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVer
     sendGetReqBase(msgFamily, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt, queryParam)
   }
 
-  def sendGetStatusReq[T: ClassTag](msgFamily: MsgFamily,
-                                    threadIdOpt: Option[ThreadId] = None): RestGetResponse[T] = {
+  def sendGetStatusReq[T: ClassTag](threadIdOpt: Option[ThreadId] = None): RestGetResponse[T] = {
+    val msgFamily = getMsgFamily
     sendGetReqBase(msgFamily, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
   }
 
@@ -193,7 +206,7 @@ case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVer
                                           threadIdOpt: Option[ThreadId] = None,
                                           queryParamOpt: Option[String]=None): RestGetResponse[T] = {
     val threadId = threadIdOpt.getOrElse(UUID.randomUUID.toString)
-    val url = s"${platformAgencyRestApiUrl(myVerityPlatform)}/$route/${msgFamily.name}/${msgFamily.version}/$threadId" +
+    val url = s"${param.verityRestApiUrl}/$route/${msgFamily.name}/${msgFamily.version}/$threadId" +
       queryParamOpt.map(qp => s"?$qp").getOrElse("")
     val resp = parseHttpResponse(sendGetJsonReqToUrl(url, routeApiKey))
     val jsonObject = new JSONObject(resp)
@@ -230,12 +243,12 @@ case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVer
     )
   }
 
-  lazy val myDIDApiKey: String = {
+  private lazy val myDIDApiKey: String = {
     val myDIDSignature = computeSignature(myLocalAgentVerKey)
     s"$myLocalAgentVerKey:$myDIDSignature"
   }
 
-  def computeSignature(verKey: VerKey): String = {
+  private def computeSignature(verKey: VerKey): String = {
     val signedMsg = testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(walletAPIParam)
     Base58Util.encode(signedMsg.msg)
@@ -247,14 +260,15 @@ case class IssuerRestSDK(myVerityPlatform: Platform) extends IssuerSdkBase(myVer
    * @tparam T
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag]: ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(15, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(Duration(15, SECONDS))
     ReceivedMsgParam(msg)
   }
 
-  lazy val msgListener = new PlainMsgListener(
-    7000 + Random.nextInt(1000)
-  )(myVerityPlatform.appConfig, system)
+  lazy val msgListener: PlainMsgListener = {
+    val port = 7000 + Random.nextInt(1000)
+    new PlainMsgListener(port)(ActorSystem(s"listener-$port"))
+  }
 }
 
 case class RestGetResponse[T](result: T, status: String)

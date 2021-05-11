@@ -3,7 +3,6 @@ package com.evernym.verity.libindy
 import java.util.UUID
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
-import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.libindy.wallet.{LibIndyWalletExt, LibIndyWalletProvider}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault.{WalletAlreadyExist, WalletAlreadyOpened}
@@ -13,8 +12,8 @@ import org.hyperledger.indy.sdk.did._
 
 class LibIndyWalletProviderSpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {
   
-  lazy val lip1 = new LibIndyWalletProvider(AppConfigWrapper)
-  lazy val lip2 = new LibIndyWalletProvider(AppConfigWrapper)
+  lazy val lip1 = LibIndyWalletProvider
+  lazy val lip2 = LibIndyWalletProvider
   lazy val wn1: String = UUID.randomUUID().toString
   lazy val wn2: String = UUID.randomUUID().toString
 

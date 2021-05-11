@@ -8,11 +8,10 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.actor.{AgencyPublicDid, Platform}
+import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
-import com.evernym.verity.integration.base.LocalVerityUtil.{platformAgencyMsgUrl, platformAgencyUrl}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine.{MsgFamily, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -20,10 +19,21 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.ConnResponse
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
+import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
+import com.evernym.verity.integration.base.VerityRuntimeEnv
+import com.evernym.verity.ledger.LedgerTxnExecutor
+import com.evernym.verity.protocol.protocols
+import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
+import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import org.json.JSONObject
 
 import java.nio.charset.StandardCharsets
@@ -34,21 +44,76 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 import scala.util.Try
 
+
 trait SdkProvider {
-  def setupIssuerSdk(platform: Platform): IssuerSdk = IssuerSdk(platform)
-  def setupHolderSdk(platform: Platform): HolderSdk = HolderSdk(platform)
-  def setupIssuerRestSdk(platform: Platform): IssuerRestSDK = IssuerRestSDK(platform)
+  def setupIssuerSdk(verityRuntimeEnv: VerityRuntimeEnv): IssuerSdk = IssuerSdk(buildSdkParam(verityRuntimeEnv))
+  def setupVerifierSdk(verityRuntimeEnv: VerityRuntimeEnv): VerifierSdk = VerifierSdk(buildSdkParam(verityRuntimeEnv))
+  def setupIssuerRestSdk(verityRuntimeEnv: VerityRuntimeEnv): IssuerRestSDK = IssuerRestSDK(buildSdkParam(verityRuntimeEnv))
+
+  def setupHolderSdk(verityRuntimeEnv: VerityRuntimeEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
+    HolderSdk(buildSdkParam(verityRuntimeEnv), ledgerTxnExecutor)
+
+  def buildSdkParam(verityRuntimeEnv: VerityRuntimeEnv): SdkParam = {
+    val httpPort = verityRuntimeEnv.platform.appConfig.getConfigIntReq("verity.http.port")
+    val verityBaseUrl = s"http://localhost:$httpPort"
+    SdkParam(verityBaseUrl)
+  }
+
+  def provisionEdgeAgent(sdk: IssuerVerifierSdk): Unit = {
+    sdk.fetchAgencyKey()
+    sdk.provisionVerityEdgeAgent()
+    sdk.registerWebhook()
+    sdk.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
+  }
+
+  def provisionCloudAgent(holderSDK: HolderSdk): Unit = {
+    holderSDK.fetchAgencyKey()
+    holderSDK.provisionVerityCloudAgent()
+  }
+
+  def establishConnection(connId: String, issuerSDK: IssuerVerifierSdk, holderSDK: HolderSdk): Unit = {
+    val receivedMsg = issuerSDK.sendCreateRelationship(connId)
+    val lastReceivedThreadId = receivedMsg.threadIdOpt
+    val firstInvitation = issuerSDK.sendCreateConnectionInvitation(connId, lastReceivedThreadId)
+
+    holderSDK.sendCreateNewKey(connId)
+    holderSDK.sendConnReqForInvitation(connId, firstInvitation)
+
+    issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
+    issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
+    issuerSDK.expectMsgOnWebhook[Complete]()
+  }
+
+  def setupIssuer(issuerSDK: IssuerVerifierSdk): Unit = {
+    issuerSDK.sendControlMsg(Create())
+    issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
+  }
+
+  def writeSchema(issuerSDK: IssuerVerifierSdk, write: writeSchema0_6.Write): SchemaId = {
+    issuerSDK.sendControlMsg(write)
+    val receivedMsg = issuerSDK.expectMsgOnWebhook[writeSchema0_6.StatusReport]()
+    receivedMsg.msg.schemaId
+  }
+
+  def writeCredDef(issuerSDK: IssuerVerifierSdk, write: writeCredDef0_6.Write): CredDefId = {
+    issuerSDK.sendControlMsg(write)
+    val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport](Duration(30, SECONDS))
+    receivedMsg.msg.credDefId
+  }
+
+  type SchemaId = String
+  type CredDefId = String
 }
 
 
 /**
  * a base sdk class for issuer/holder sdk
- * @param myVerityPlatform edge/cloud agent provider platform
+ * @param param sdk parameters
  */
-abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
+abstract class SdkBase(param: SdkParam) {
 
   def fetchAgencyKey(): AgencyPublicDid = {
-    val resp = sendGET("")
+    val resp = sendGET("agency")
     val json = parseHttpResponse(resp)
     val apd = JacksonMsgCodec.fromJson[AgencyPublicDid](json)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
@@ -100,7 +165,7 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
     pm.msg
   }
 
-  override def unpackMsg[T: ClassTag](msg: Array[Byte]): ReceivedMsgParam[T] = {
+  def unpackMsg[T: ClassTag](msg: Array[Byte]): ReceivedMsgParam[T] = {
     val json = testWalletAPI.executeSync[UnpackedMsg](UnpackMsg(msg)).msgString
     val jsonObject = new JSONObject(json)
     ReceivedMsgParam(jsonObject.getString("message"))
@@ -145,6 +210,13 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
     getMsgFamilyOpt(clazz)
   }
 
+  protected def getMsgFamily[T: ClassTag]: MsgFamily = {
+    val clazz = implicitly[ClassTag[T]].runtimeClass
+    getMsgFamilyOpt.getOrElse(
+      throw new RuntimeException("message family not found for given message: " + clazz.getSimpleName)
+    )
+  }
+
   protected def getMsgFamily(msg: Any): MsgFamily = {
     getMsgFamilyOpt(msg.getClass).getOrElse(
       throw new RuntimeException("message family not found for given message: " + msg.getClass.getSimpleName)
@@ -152,12 +224,12 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
   }
 
   protected def getMsgFamilyOpt(clazz: Class[_]): Option[MsgFamily] = {
-    val protoEntry = myVerityPlatform
-      .agentActorContext
-      .protocolRegistry.entries.find{ entry =>
-      Try (entry.protoDef.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
-    }
-    protoEntry.map(_.protoDef.msgFamily)
+    val protoDefOpt =
+      protoDefs
+        .find { pd =>
+          Try (pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
+        }
+    protoDefOpt.map(_.msgFamily)
   }
 
   protected def checkOKResponse(resp: HttpResponse): HttpResponse = {
@@ -171,7 +243,7 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
   }
 
   protected def sendPOST(payload: Array[Byte]): HttpResponse =
-    sendBinaryReqToUrl(payload, platformAgencyMsgUrl(myVerityPlatform))
+    sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
 
   protected def sendBinaryReqToUrl(payload: Array[Byte], url: String): HttpResponse = {
     awaitFut(
@@ -189,7 +261,7 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
   }
 
   protected def sendGET(pathSuffix: String): HttpResponse = {
-    val actualPath = platformAgencyUrl(myVerityPlatform) + s"/$pathSuffix"
+    val actualPath = param.myVerityBaseUrl + s"/$pathSuffix"
     awaitFut(
       Http().singleRequest(
         HttpRequest(
@@ -217,10 +289,12 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
   def randomUUID(): String = UUID.randomUUID().toString
   def randomSeed(): String = randomUUID().replace("-", "")
 
+  val protoDefs = protocols.protocolRegistry.entries.map(_.protoDef).toList
+
   type ConnId = String
 
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
-  implicit val system: ActorSystem = myVerityPlatform.actorSystem
+  implicit val system: ActorSystem = ActorSystem(randomUUID())
 
   var agencyPublicDidOpt: Option[AgencyPublicDid] = None
 
@@ -251,15 +325,11 @@ abstract class SdkBase(myVerityPlatform: Platform) extends Unpacker {
   def myLocalAgentVerKey: VerKey = localAgentDidPair.verKey
 
   protected lazy val testWalletAPI: LegacyWalletAPI = {
-    val walletProvider = new LibIndyWalletProvider(myVerityPlatform.appConfig)
-    val walletAPI = new LegacyWalletAPI(myVerityPlatform.appConfig, walletProvider, None)
+    val walletProvider = LibIndyWalletProvider
+    val walletAPI = new LegacyWalletAPI(new TestAppConfig(), walletProvider, None)
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
   }
-}
-
-trait Unpacker {
-  def unpackMsg[T: ClassTag](msg: Array[Byte]): ReceivedMsgParam[T]
 }
 
 case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
@@ -304,6 +374,7 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
 }
 
 object ReceivedMsgParam {
+
   def apply[T: ClassTag](msg: String): ReceivedMsgParam[T] = {
     val message = new JSONObject(msg)
     val threadId = Try {
@@ -311,8 +382,27 @@ object ReceivedMsgParam {
       Option(thread.getString("thid"))
     }.getOrElse(None)
     val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
-    ReceivedMsgParam(message.toString, expMsg, threadId)
+    ReceivedMsgParam(expMsg, msg, None, threadId)
   }
 }
 
-case class ReceivedMsgParam[T: ClassTag](actualMsgString: String, msg: T, threadId: Option[ThreadId]=None)
+/**
+ *
+ * @param msg the received message
+ * @param msgIdOpt message id used by verity agent to uniquely identify a message
+ *                 (this will be only available for messages retrieved from CAS/EAS)
+ * @param threadIdOpt received message's thread id
+ * @tparam T
+ */
+case class ReceivedMsgParam[T: ClassTag](msg: T,
+                                         jsonMsgStr: String,
+                                         msgIdOpt: Option[MsgId] = None,
+                                         threadIdOpt: Option[ThreadId]=None) {
+  def msgId: MsgId = msgIdOpt.getOrElse(throw new RuntimeException("msgId not available in received message"))
+}
+
+
+case class SdkParam(myVerityBaseUrl: String) {
+  def verityPackedMsgUrl: String = s"$myVerityBaseUrl/agency/msg"
+  def verityRestApiUrl: String = s"$myVerityBaseUrl/api"
+}

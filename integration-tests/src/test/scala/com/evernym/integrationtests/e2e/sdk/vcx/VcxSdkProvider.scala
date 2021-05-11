@@ -43,6 +43,22 @@ protected trait VcxHolds {
     injectedMsg = None
     rtn
   }
+
+  def updateMessageStatus(metaData: VcxMsgMetaData) : Unit = {
+    val data = prepareUpdateMessageRequest(metaData.did.get, metaData.msgId)
+    UtilsApi.vcxUpdateMessages("MS-106", data).get()
+  }
+
+  private def prepareUpdateMessageRequest(pwDid: String, messageUid: String): String = {
+    val jsonArray = new JSONArray()
+    val request = new JSONObject()
+    val uids = new JSONArray()
+    uids.put(messageUid)
+    request.put("pairwiseDID", pwDid)
+    request.put("uids", uids)
+    jsonArray.put(request)
+    jsonArray.toString
+  }
 }
 
 case class VcxMsgMetaData(did: Option[DID], senderDid: DID, msgType: String, msgId: String)

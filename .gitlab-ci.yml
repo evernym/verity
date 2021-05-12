@@ -279,6 +279,9 @@ deploy-manually-team1:
     TARGET_ENVIRONMENT: 'team1'
     TRIGGERAPI_REF_VERITY_RELEASE: "team1"
   when: manual
+  only:
+    refs:
+      - master@dev/verity/verity
 
 .deploy-manually-team2:
   extends: .deploy-common

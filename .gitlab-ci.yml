@@ -269,8 +269,8 @@ publish-manual:
       --form "variables[TARGET_ENV]=$TARGET_ENVIRONMENT"
       --form "variables[CI_PROJECT_ID_SOURCE]=$CI_PROJECT_ID"
       --form "variables[UPSTREAM_BRANCH]=$CI_COMMIT_REF_NAME"
-      --form "variables[MERGE_FORK_PROJECT_ID]=$MERGE_FORK_PROJECT_ID" # control-repo fork with special changes to be deployed
-      --form "variables[MERGE_FORK_BRANCH]=$MERGE_FORK_BRANCH" # control-repo fork branch with special changes to be deployed
+      --form "variables[MERGE_FORK_PROJECT_ID]=$MERGE_FORK_PROJECT_ID"
+      --form "variables[MERGE_FORK_BRANCH]=$MERGE_FORK_BRANCH"
       $TRIGGERAPI_URL_VERITY_RELEASE
   tags:
     - docker-machine

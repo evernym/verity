@@ -8,7 +8,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
-import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.testkit.actor.MockAppConfig
+import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
@@ -18,7 +19,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED255
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
+import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -27,8 +28,8 @@ import com.typesafe.config.{Config, ConfigFactory}
  * common/base code to store events and adding data to wallet store
  */
 trait BasePersistentStore
-  extends ActorSpec
-    with BasicSpec
+  extends HasTestActorSystem
+    with MockAppConfig
     with HasTestWalletAPI {
 
   lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)

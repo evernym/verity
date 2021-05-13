@@ -6,12 +6,12 @@ import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AG
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.user.UserAgentPairwiseState
 import com.evernym.verity.actor.agent.ConnectionStatus
-import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.typesafe.config.{Config, ConfigFactory}
 
 class UserAgentPairwiseRecoverySpec
-  extends BaseRecoverySpec
+  extends BaseRecoveryActorSpec
     with AgencyAgentEventSetter
     with UserAgentEventSetter
     with UserAgentPairwiseEventSetter {

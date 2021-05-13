@@ -24,11 +24,11 @@ class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityApp = setupNewVerityApp(overriddenConfig = VAS_OVERRIDE_CONFIG)
-  lazy val holderVerityApp = setupNewVerityApp()
+  lazy val issuerVerityEnv = setupNewVerityEnv(overriddenConfig = VAS_OVERRIDE_CONFIG)
+  lazy val holderVerityEnv = setupNewVerityEnv()
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityApp)
-  lazy val holderSDK = setupHolderSdk(holderVerityApp, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

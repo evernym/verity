@@ -27,17 +27,21 @@ import scala.language.postfixOps
 
 object LocalVerity {
   lazy val atMost: FiniteDuration = 25 seconds
+  lazy val defaultSvcParam: ServiceParam = ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new MockLedgerTxnExecutor()))
 
   def apply(tempDir: Path,
-            port: PortProfile,
             appSeed: String,
-            serviceParam: ServiceParam = ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new MockLedgerTxnExecutor())),
+            portProfile: PortProfile,
+            otherNodeArteryPorts: List[Int] = List.empty,
+            serviceParam: ServiceParam = defaultSvcParam,
+            overriddenConfig: Option[Config] = None,
             trackMessageProgress: Boolean = true,
-            bootstrapApp: Boolean = true,
-            overriddenConfig: Option[Config] = None): HttpServer = {
+            bootstrapApp: Boolean = true): HttpServer = {
 
     val standardConfig = LocalVerityConfig.standard(
-      tempDir, port, serviceParam.ledgerSvcParam.taaEnabled, serviceParam.ledgerSvcParam.taaAutoAccept)
+      tempDir, portProfile, otherNodeArteryPorts,
+      serviceParam.ledgerSvcParam.taaEnabled,
+      serviceParam.ledgerSvcParam.taaAutoAccept)
 
     val finalConfig = overriddenConfig match {
       case Some(config) => config.withFallback(standardConfig)
@@ -50,8 +54,7 @@ object LocalVerity {
     httpServer.start()
 
     waitTillUp(platform.appStateManager)
-
-    if (bootstrapApp) bootstrapApplication(port.http, atMost, appSeed)(platform.actorSystem)
+    if (bootstrapApp) bootstrapApplication(portProfile.http, appSeed)(platform.actorSystem)
 
     httpServer
   }
@@ -88,7 +91,7 @@ object LocalVerity {
     s.platform
   }
 
-  private def bootstrapApplication(port: Int, atMost: Duration, appSeed: String)(implicit ac: ActorSystem): Unit = {
+  def bootstrapApplication(port: Int, appSeed: String, atMost: Duration = atMost)(implicit ac: ActorSystem): Unit = {
     if (appSeed.length != 32) throw new Exception("Seeds must be exactly 32 characters long")
 
     val keySetupResp = Await.result(

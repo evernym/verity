@@ -3,14 +3,14 @@ package com.evernym.verity.actor.persistence.recovery.mixed
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoverySpec, PersistParam, PersistenceIdParam}
+import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoveryActorSpec, PersistParam, PersistenceIdParam}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.RecordingAgentActivityV0
 import com.evernym.verity.constants.ActorNameConstants._
 import scalapb.GeneratedMessageCompanion
 
 class ActivityTrackerRecoverySpec
-  extends BaseRecoverySpec {
+  extends BaseRecoveryActorSpec {
 
   def at: agentRegion = agentRegion(entityId, activityTrackerRegionActor)
 

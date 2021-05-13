@@ -1,12 +1,10 @@
 package com.evernym.verity.actor.maintenance
 
 import akka.actor.Props
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.BAD_REQUEST
-import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
 import com.evernym.verity.actor.{ActorMessage, State}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.Constants.YES
 
 import scala.concurrent.duration._
 
@@ -32,11 +30,14 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
     with DefaultPersistenceEncryption {
 
   override def receiveCmd: Receive = {
-    case spd: SendPersistedData =>
+    case SendSummary =>
+      sender ! SummaryData(data.exists(_.isSnapshot), data.count(!_.isSnapshot))
+    case SendAggregated =>
+      sender ! AggregatedData(data.groupBy(_.message.getClass.getSimpleName).mapValues(_.size))
+    case sa: SendAll =>
       val resp = {
-        if (spd.aggregate) AggregatedDataWrapper(data.groupBy(_.event.getClass.getSimpleName).mapValues(_.size))
-        if (spd.hideData) BasicDataWrapper(data.map(d => d.copy(event = d.event.getClass.getSimpleName)))
-        else BasicDataWrapper(data)
+        if (sa.withData) AllData(data)
+        else AllData(data.map(d => d.copy(message = d.message.getClass.getSimpleName)))
       }
       sender ! resp
   }
@@ -46,7 +47,7 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
   }
 
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
-    case state => data = data :+ PersistentData(lastSequenceNr, state)
+    case state => data = data :+ PersistentData(lastSequenceNr, state, isSnapshot = true)
   }
 
   var data: List[PersistentData] = List.empty
@@ -76,30 +77,53 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
     throw new UnsupportedOperationException("read only actor doesn't support persistence")
   override def snapshotState: Option[State] = None
 
-  context.setReceiveTimeout(5.minutes)
-}
-
-object SendPersistedData {
-  def apply(aggregate: String, showData: String): SendPersistedData =
-    SendPersistedData(aggregate.toUpperCase == YES, showData.toUpperCase == YES)
-}
-case class SendPersistedData(aggregate: Boolean, showData: Boolean) extends ActorMessage {
-  if (aggregate && showData) {
-    throw new BadRequestErrorException(BAD_REQUEST.statusCode,
-      Option("`aggregate` and `showData` both can't be true"))
+  var _lastEventRecoverLoggedAtSeqNr: Long = -1L
+  override def postEventHandlerApplied(): Unit = {
+    super.postEventHandlerApplied()
+    if (lastSequenceNr == 1 || lastSequenceNr == (_lastEventRecoverLoggedAtSeqNr * 10)) {
+      logger.info(s"[ROP: $actorId]: postEventHandlerApplied (lastSequenceNr: $lastSequenceNr)")
+      _lastEventRecoverLoggedAtSeqNr = lastSequenceNr
+    }
   }
-  def hideData: Boolean = !showData
+
+  override def postRecoveryCompleted(): Unit = {
+    logger.info(s"[ROP: $actorId]: postRecoveryCompleted (lastSequenceNr: $lastSequenceNr)")
+    super.postRecoveryCompleted()
+  }
+
+  override def postSuccessfulActorRecovery(): Unit = {
+    logger.info(s"[ROP: $actorId]: postSuccessfulActorRecovery (lastSequenceNr: $lastSequenceNr)")
+    super.postSuccessfulActorRecovery()
+    context.setReceiveTimeout(5.minutes)
+  }
 }
 
-case class PersistentData(lastSeqNo: Long, event: Any) {
-  override def toString: String = s"$lastSeqNo: $event"
+case object SendSummary extends ActorMessage
+case object SendAggregated extends ActorMessage
+object SendAll {
+  def apply(withData: String): SendAll = SendAll(withData == YES)
+}
+case class SendAll(withData: Boolean) extends ActorMessage
+
+/**
+ *
+ * @param lastSeqNo last sequence number
+ * @param message recovered event or snapshot
+ */
+case class PersistentData(lastSeqNo: Long, message: Any, isSnapshot: Boolean = false) {
+  override def toString: String = s"$lastSeqNo: $message"
 }
 
 trait PersistentDataResp extends ActorMessage {
-  def data: Iterable[_]
+  def toRecords: List[String]
 }
-case class BasicDataWrapper(data: List[PersistentData]) extends PersistentDataResp
-case class AggregatedDataWrapper(data: Map[String, Int]) extends PersistentDataResp
+case class AllData(data: List[PersistentData]) extends PersistentDataResp {
+  override def toRecords: List[String] = data.map(_.toString)
+}
+case class AggregatedData(data: Map[String, Int]) extends PersistentDataResp {
+  override def toRecords: List[String] = data.map(r => s"${r._1} -> ${r._2}").toList
+}
+case class SummaryData(recoveredSnapshot: Boolean, recoveredEvents: Int) extends ActorMessage
 
 object ReadOnlyPersistentActor {
   def prop(appConfig: AppConfig, actorParam: ActorParam): Props =

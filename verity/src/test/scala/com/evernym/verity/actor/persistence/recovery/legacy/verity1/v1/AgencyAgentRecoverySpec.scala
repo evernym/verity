@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.ANYWISE_
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
-import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.recovery.legacy.verity1.AgencyAgentEventSetter
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
@@ -14,7 +14,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 //this tests legacy agency agent actor's recovery
 class AgencyAgentRecoverySpec
-  extends BaseRecoverySpec
+  extends BaseRecoveryActorSpec
     with AgencyAgentEventSetter {
 
   override def beforeAll(): Unit = {

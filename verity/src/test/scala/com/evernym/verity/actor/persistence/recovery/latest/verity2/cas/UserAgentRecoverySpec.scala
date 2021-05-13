@@ -5,13 +5,13 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.SELF_REL
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.user.UserAgentState
-import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.typesafe.config.{Config, ConfigFactory}
 
 
 class UserAgentRecoverySpec
-  extends BaseRecoverySpec
+  extends BaseRecoveryActorSpec
     with AgencyAgentEventSetter
     with UserAgentEventSetter {
 

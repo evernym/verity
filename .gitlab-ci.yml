@@ -279,7 +279,9 @@ deploy-manually-team1:
   extends: .deploy-common
   variables:
     TARGET_ENVIRONMENT: 'team1'
-    TRIGGERAPI_REF_VERITY_RELEASE: "team1"
+    TRIGGERAPI_REF_VERITY_RELEASE: $TARGET_ENVIRONMENT
+    MERGE_FORK_PROJECT_ID: "766"
+    MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
   when: manual
   only:
     refs:
@@ -296,7 +298,9 @@ deploy-dev-rc: # default branch for automatic deployment verity master to dev-rc
     - .deploy-common
   variables:
     TARGET_ENVIRONMENT: 'dev-rc'
-    TRIGGERAPI_REF_VERITY_RELEASE: "dev-rc"
+    TRIGGERAPI_REF_VERITY_RELEASE: $TARGET_ENVIRONMENT
+    MERGE_FORK_PROJECT_ID: "766"
+    MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
   only:
     refs:
       - master@dev/verity/verity
@@ -306,7 +310,9 @@ deploy-manually-dev-rc: # special branch for manual deployment verity master wit
     - .deploy-common
   variables:
     TARGET_ENVIRONMENT: 'dev-rc'
-    TRIGGERAPI_REF_VERITY_RELEASE: "dev-rc"
+    TRIGGERAPI_REF_VERITY_RELEASE: $TARGET_ENVIRONMENT
+    MERGE_FORK_PROJECT_ID: "766"
+    MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
   when: manual
   only:
     refs:

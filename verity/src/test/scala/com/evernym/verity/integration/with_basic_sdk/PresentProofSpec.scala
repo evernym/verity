@@ -18,13 +18,13 @@ class PresentProofSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
 
-  lazy val issuerVerityApp = setupNewVerityApp()
-  lazy val verifierVerityApp = setupNewVerityApp()
-  lazy val holderVerityApp = setupNewVerityApp()
+  lazy val issuerVerityEnv = setupNewVerityEnv()
+  lazy val verifierVerityEnv = setupNewVerityEnv()
+  lazy val holderVerityEnv = setupNewVerityEnv()
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityApp)
-  lazy val holderSDK = setupHolderSdk(holderVerityApp, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
+  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"

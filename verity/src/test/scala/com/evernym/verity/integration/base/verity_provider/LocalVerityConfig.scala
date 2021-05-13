@@ -22,9 +22,9 @@ case class PortProfile(http: Int, artery: Int, akka_management: Int)
 
 object LocalVerityConfig {
 
-  val defaultPorts = PortProfile(9002, 2552, 8552)
+  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552)
 
-  private def messageSerialization = {
+  private def messageSerialization: Config = {
     ConfigFactory.parseString(
       """akka.actor.serialize-messages = on
         |akka.actor.allow-java-serialization = off
@@ -32,21 +32,31 @@ object LocalVerityConfig {
     )
   }
 
-  private def useCustomPort(ports: PortProfile) = {
+  /**
+   * @param ports port profile of the this/current node of the cluster
+   * @param otherNodeArteryPorts other node's (of the same cluster) artery port
+   *                             to be used to populate seed-nodes
+   * @return
+   */
+  private def useCustomPort(ports: PortProfile, otherNodeArteryPorts: List[Int]): Config = {
     ConfigFactory.parseString(
       s"""
          |verity.http.port = ${ports.http}
          |verity.endpoint.port = ${ports.http}
          |akka.remote.artery.canonical.hostname = ${InetAddress.getLocalHost.getHostAddress}
          |akka.remote.artery.canonical.port = ${ports.artery}
-         |akka.cluster.seed-nodes = ["akka://verity@${InetAddress.getLocalHost.getHostAddress}:${ports.artery}"]
          |akka.management.http.port = ${ports.akka_management}
-      """.stripMargin
+      """.stripMargin +
+        "akka.cluster.seed-nodes = [" + "\n" +
+          (ports.artery +: otherNodeArteryPorts).map { port =>
+            s"""  \"akka://verity@${InetAddress.getLocalHost.getHostAddress}:$port\""""
+          }.mkString(",\n") + "\n" +
+        "]".stripMargin
     )
   }
 
-  //Use local and in-memory persistence instead of a remote service
-  private def useInmemPersistence(tempDir: Path): Config = {
+  //Use local leveldb persistence instead of a remote service
+  private def useLevelDBPersistence(tempDir: Path): Config = {
     ConfigFactory.parseString(
       s"""
          |akka.persistence.journal {
@@ -86,6 +96,8 @@ object LocalVerityConfig {
          |akka.actor.provider = cluster
          |akka.http.server.remote-address-header = on
          |akka.cluster.jmx.multi-mbeans-in-same-jvm = on
+         |akka.cluster.sharding.waiting-for-state-timeout = 15000
+         |akka.cluster.sharding.updating-state-timeout = 15000
          |""".stripMargin
     )
   }
@@ -119,13 +131,16 @@ object LocalVerityConfig {
     )
   }
 
-  def standard(tempDir: Path, port: PortProfile, taaEnabled: Boolean = true,
+  def standard(tempDir: Path,
+               port: PortProfile,
+               otherNodeArteryPorts: List[Int] = List.empty,
+               taaEnabled: Boolean = true,
                taaAutoAccept: Boolean = true): Config = {
     val parts = Seq(
-      useInmemPersistence(tempDir),
+      useLevelDBPersistence(tempDir),
       useDefaultWallet(tempDir),
       changePoolName(),
-      useCustomPort(port),
+      useCustomPort(port, otherNodeArteryPorts),
       turnOffWarnings(),
       messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),

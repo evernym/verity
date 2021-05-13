@@ -9,6 +9,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import org.json.JSONObject
 
+import java.time.LocalDateTime
 import scala.concurrent.Future
 import scala.collection.JavaConverters._
 import scala.util.{Left, Random}

@@ -11,7 +11,7 @@ import com.evernym.verity.config.CommonConfig._
 
 trait ConfiguredApiRoutes
   extends UrlMapperEndpointHandler
-    with PersistentActorEndpointHandler {
+    with ReadOnlyActorEndpointHandler {
 
   protected def configuredApiRoutes: Route =
     routeIfConfigEnabled(INTERNAL_API_URL_MAPPER_ENABLED, urlMapperRoute) ~

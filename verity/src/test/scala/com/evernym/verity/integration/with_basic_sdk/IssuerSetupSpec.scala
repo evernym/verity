@@ -8,17 +8,15 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6._
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 
-
 class IssuerSetupSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  lazy val issuerVerityApp = setupNewVerityApp()
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
+  lazy val issuerVerityEnv = setupNewVerityEnv()
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionVerityEdgeAgent()
     issuerSDK.registerWebhook()
@@ -70,7 +68,7 @@ class IssuerSetupSpec
   "Verity Admin" - {
     "when restarted verity apps" - {
       "should be successful" in {
-        issuerVerityApp.restart()
+        issuerVerityEnv.restartAllNodes()
         issuerSDK.fetchAgencyKey()
       }
     }

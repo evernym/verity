@@ -28,7 +28,7 @@ import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.integration.base.VerityRuntimeEnv
+import com.evernym.verity.integration.base.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
@@ -46,17 +46,17 @@ import scala.util.Try
 
 
 trait SdkProvider {
-  def setupIssuerSdk(verityRuntimeEnv: VerityRuntimeEnv): IssuerSdk = IssuerSdk(buildSdkParam(verityRuntimeEnv))
-  def setupVerifierSdk(verityRuntimeEnv: VerityRuntimeEnv): VerifierSdk = VerifierSdk(buildSdkParam(verityRuntimeEnv))
-  def setupIssuerRestSdk(verityRuntimeEnv: VerityRuntimeEnv): IssuerRestSDK = IssuerRestSDK(buildSdkParam(verityRuntimeEnv))
+  def setupIssuerSdk(verityEnv: VerityEnv): IssuerSdk =
+    IssuerSdk(buildSdkParam(verityEnv))
+  def setupIssuerRestSdk(verityEnv: VerityEnv): IssuerRestSDK =
+    IssuerRestSDK(buildSdkParam(verityEnv))
+  def setupVerifierSdk(verityEnv: VerityEnv): VerifierSdk =
+    VerifierSdk(buildSdkParam(verityEnv))
+  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor)
 
-  def setupHolderSdk(verityRuntimeEnv: VerityRuntimeEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
-    HolderSdk(buildSdkParam(verityRuntimeEnv), ledgerTxnExecutor)
-
-  def buildSdkParam(verityRuntimeEnv: VerityRuntimeEnv): SdkParam = {
-    val httpPort = verityRuntimeEnv.platform.appConfig.getConfigIntReq("verity.http.port")
-    val verityBaseUrl = s"http://localhost:$httpPort"
-    SdkParam(verityBaseUrl)
+  private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
+    SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
   }
 
   def provisionEdgeAgent(sdk: IssuerVerifierSdk): Unit = {
@@ -97,7 +97,7 @@ trait SdkProvider {
 
   def writeCredDef(issuerSDK: IssuerVerifierSdk, write: writeCredDef0_6.Write): CredDefId = {
     issuerSDK.sendControlMsg(write)
-    val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport](Duration(30, SECONDS))
+    val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport]()
     receivedMsg.msg.credDefId
   }
 
@@ -113,7 +113,7 @@ trait SdkProvider {
 abstract class SdkBase(param: SdkParam) {
 
   def fetchAgencyKey(): AgencyPublicDid = {
-    val resp = sendGET("agency")
+    val resp = checkOKResponse(sendGET("agency"))
     val json = parseHttpResponse(resp)
     val apd = JacksonMsgCodec.fromJson[AgencyPublicDid](json)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
@@ -261,7 +261,7 @@ abstract class SdkBase(param: SdkParam) {
   }
 
   protected def sendGET(pathSuffix: String): HttpResponse = {
-    val actualPath = param.myVerityBaseUrl + s"/$pathSuffix"
+    val actualPath = param.verityBaseUrl + s"/$pathSuffix"
     awaitFut(
       Http().singleRequest(
         HttpRequest(
@@ -402,7 +402,25 @@ case class ReceivedMsgParam[T: ClassTag](msg: T,
 }
 
 
-case class SdkParam(myVerityBaseUrl: String) {
-  def verityPackedMsgUrl: String = s"$myVerityBaseUrl/agency/msg"
-  def verityRestApiUrl: String = s"$myVerityBaseUrl/api"
+case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
+
+  /**
+   * will provide verity url of one of the available (started) nodes
+   * in round robin fashion
+   * @return
+   */
+  private def verityUrl: String = {
+    val verityUrls = verityEnvUrlProvider.availableNodeUrls
+
+    lastVerityUrlUsedIndex = {
+      if (lastVerityUrlUsedIndex == verityUrls.size - 1) 0
+      else lastVerityUrlUsedIndex + 1
+    }
+    verityUrls(lastVerityUrlUsedIndex)
+  }
+  var lastVerityUrlUsedIndex: Int = -1
+
+  def verityBaseUrl: String = s"$verityUrl"
+  def verityPackedMsgUrl: String = s"$verityUrl/agency/msg"
+  def verityRestApiUrl: String = s"$verityUrl/api"
 }

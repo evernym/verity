@@ -10,11 +10,11 @@ class AgentProvisioningSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityApp = setupNewVerityApp()
-  lazy val holderVerityApp = setupNewVerityApp()
+  lazy val issuerVerityEnv = setupNewVerityEnv()
+  lazy val holderVerityEnv = setupNewVerityEnv()
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
-  lazy val holderSDK = setupHolderSdk(holderVerityApp, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
 
   "IssuerSDK" - {

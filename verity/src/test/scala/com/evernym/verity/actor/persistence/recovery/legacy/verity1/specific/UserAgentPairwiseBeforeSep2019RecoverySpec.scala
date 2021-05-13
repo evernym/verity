@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.legacy.verity1.specific
 
-import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.recovery.legacy.verity1.{AgencyAgentEventSetter, UserAgentEventSetter, UserAgentPairwiseEventSetter}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 
@@ -13,7 +13,7 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
  *
  */
 class UserAgentPairwiseBeforeSep2019RecoverySpec
-   extends BaseRecoverySpec
+   extends BaseRecoveryActorSpec
      with AgencyAgentEventSetter
      with UserAgentEventSetter
      with UserAgentPairwiseEventSetter {

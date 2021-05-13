@@ -17,11 +17,11 @@ class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityApp = setupNewVerityApp()
-  lazy val holderVerityApp = setupNewVerityApp()
+  lazy val issuerVerityEnv = setupNewVerityEnv()
+  lazy val holderVerityEnv = setupNewVerityEnv()
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
-  lazy val holderSDK = setupHolderSdk(holderVerityApp, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -85,8 +85,8 @@ class QuestionAnswerSpec
   "VerityAdmin" - {
     "when restarts verity instances" - {
       "should be successful" in {
-        issuerVerityApp.restart()
-        holderVerityApp.restart()
+        issuerVerityEnv.restartAllNodes()
+        holderVerityEnv.restartAllNodes()
         issuerSDK.fetchAgencyKey()
         holderSDK.fetchAgencyKey()
       }

@@ -2,11 +2,12 @@ package com.evernym.verity.actor.persistence.recovery.legacy.verity1
 
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.recovery.base.{AgentIdentifiers, BasePersistentStore}
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_AGENCY_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR}
 
 //base traits for different type of agent actor setup
 
-trait AgencyAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore =>
+trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore { this: ActorSpec =>
 
   def aaRegion: agentRegion = agentRegion(myAgencyAgentEntityId, agencyAgentRegion)
 
@@ -30,7 +31,7 @@ trait AgencyAgentEventSetter extends AgentIdentifiers { this: BasePersistentStor
   )
 }
 
-trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore =>
+trait UserAgentEventSetter extends AgentIdentifiers with BasePersistentStore { this: ActorSpec =>
 
   def uaRegion: agentRegion = agentRegion(mySelfRelAgentEntityId, userAgentRegionActor)
 
@@ -60,7 +61,7 @@ trait UserAgentEventSetter extends AgentIdentifiers { this: BasePersistentStore 
   }
 }
 
-trait UserAgentPairwiseEventSetter extends AgentIdentifiers { this: BasePersistentStore =>
+trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentStore { this: ActorSpec =>
 
   val addTheirPairwiseKeyInWallet: Boolean = true
 

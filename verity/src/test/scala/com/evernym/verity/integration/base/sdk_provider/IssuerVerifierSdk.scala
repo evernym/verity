@@ -126,7 +126,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
    * @tparam T expected message type
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(15, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     unpackMsg(msg)
   }

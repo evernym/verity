@@ -1,16 +1,39 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
+import akka.testkit.TestKitBase
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.{Ping, Stop}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT
-import com.evernym.verity.testkit.AddMetricsReporter
+import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
+import org.scalatest.concurrent.Eventually
 
+trait BaseRecoveryActorSpec
+  extends BaseRecoverySpecLike
+    with ActorSpec
+    with BasicSpec
+    with Eventually { this: TestKitBase with BasicSpec =>
 
-trait BaseRecoverySpec
+  def restartActor(ar: agentRegion, times: Int = 3): Unit = {
+    (1 to times).foreach { _ =>
+      restartActor(ar)
+    }
+  }
+
+  private def restartActor(ar: agentRegion): Unit = {
+    ar ! Stop(sendBackConfirmation = true)
+    expectMsgType[Done.type]
+    Thread.sleep(2000)
+    ar ! Ping(sendBackConfirmation = true)
+    expectMsgType[Done.type]
+  }
+}
+
+trait BaseRecoverySpecLike
   extends BasePersistentStore
-    with AddMetricsReporter {
+    with AddMetricsReporter { this: BasicSpec =>
 
   def getWalletAPICallCount: Double = {
     Thread.sleep(3000)  //waiting sufficient time so that metrics data gets stabilized
@@ -26,20 +49,6 @@ trait BaseRecoverySpec
     walletIds.foreach { walletId =>
       closeWallet(walletId)
     }
-  }
-
-  def restartActor(ar: agentRegion, times: Int = 3): Unit = {
-    (1 to times).foreach { _ =>
-      restartActor(ar)
-    }
-  }
-
-  private def restartActor(ar: agentRegion): Unit = {
-    ar ! Stop(sendBackConfirmation = true)
-    expectMsgType[Done.type]
-    Thread.sleep(2000)
-    ar ! Ping(sendBackConfirmation = true)
-    expectMsgType[Done.type]
   }
 
   def assertPersistentActorDetail(pad: PersistentActorDetail,

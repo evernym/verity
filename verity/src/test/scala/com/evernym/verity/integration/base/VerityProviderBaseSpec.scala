@@ -27,32 +27,40 @@ trait VerityProviderBaseSpec
 
   //default service param to be used for all verity instances
   // implementing class can override it or send specific one for specific verity instance as well
+  // but for external storage type of services (like ledger) we should make sure
+  // it is the same instance across the all verity environments
   val defaultSvcParam: ServiceParam = ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new MockLedgerTxnExecutor()))
 
-  def setupNewVerityApp(svcParam: ServiceParam = defaultSvcParam,
-                        portProfile: PortProfile = PortProfile.random(),
-                        overriddenConfig: Option[Config] = None): VerityRuntimeEnv = {
-    val param = VerityAppParam(randomChar().toString*32, portProfile, randomTmpDirPath, svcParam, overriddenConfig)
-    val vre = VerityRuntimeEnv(param)
-    allVerityApps = allVerityApps :+ vre
-    vre
+  def setupNewVerityEnv(nodeCount: Int = 1,
+                        serviceParam: ServiceParam = defaultSvcParam,
+                        overriddenConfig: Option[Config] = None): VerityEnv = {
+    val tmpDir = randomTmpDirPath()
+    val appSeed = randomChar().toString*32
+    val portProfiles = (1 to nodeCount).map( _ => PortProfile.random()).zipWithIndex
+    val verityNodes = portProfiles.map { case (portProfile, index) =>
+      val otherNodesArteryPorts = portProfiles.filter(_._2 != index).map(_._1).map(_.artery).toList
+      VerityNode(tmpDir, appSeed, serviceParam, portProfile, otherNodesArteryPorts, overriddenConfig)
+    }.toList
+    val verityEnv = VerityEnv(appSeed, verityNodes)
+    allVerityEnvs = allVerityEnvs :+ verityEnv
+    verityEnv
   }
 
-  private def randomTmpDirPath: Path = {
+  private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)
-    Files.createTempDirectory(tmpDir, "local-verity").toAbsolutePath
+    Files.createTempDirectory(tmpDir, s"local-verity-").toAbsolutePath
   }
 
   /**
-   * list of verity app created by implementing class
+   * list of verity environments created by implementing class,
    * to be teared down at the end of the spec
    * @return
    */
-  private var allVerityApps: List[VerityRuntimeEnv] = List.empty
+  private var allVerityEnvs: List[VerityEnv] = List.empty
 
   override def afterAll(): Unit = {
     super.afterAll()
-    allVerityApps.foreach(_.stop())
+    allVerityEnvs.foreach(_.nodes.foreach(_.stop()))
   }
 
   private def randomChar(): Char = {
@@ -62,9 +70,48 @@ trait VerityProviderBaseSpec
   }
 }
 
-case class VerityRuntimeEnv(param: VerityAppParam) {
+//TODO: global singleton objects which may/will cause issues sooner or later
+// if try to use multi node cluster in single JVM (like what this VerityEnv does)
+//    1. AppConfigWrapper
+//    2. ResourceBlockingStatusMngrCache
+//    3. ResourceWarningStatusMngrCache
+//    4. AppStateUpdateAPI
 
-  private var _httpServer = startVerityInstance(param.serviceParam)
+case class VerityEnv(seed: String,
+                     nodes: List[VerityNode]) {
+
+  def stopNode(httpPort: Int): Unit = {
+    nodes.find(_.thisNodePortProfile.http == httpPort).foreach(_.stop())
+  }
+
+  def restartNode(httpPort: Int): Unit = {
+    nodes.find(_.thisNodePortProfile.http == httpPort).foreach(_.restart())
+  }
+
+  def stopAllNodes(): Unit = {
+    nodes.foreach(_.stop())
+  }
+
+  def restartAllNodes(): Unit = {
+    nodes.foreach(_.restart())
+  }
+
+  def init(): Unit = {
+    nodes.head.bootstrapAgencyAgent()
+  }
+
+  init()
+}
+
+case class VerityNode(tmpDirPath: Path,
+                      appSeed: String,
+                      serviceParam: ServiceParam,
+                      thisNodePortProfile: PortProfile,
+                      otherNodeArteryPorts: List[Int],
+                      overriddenConfig: Option[Config]) {
+
+  var isAvailable: Boolean = false
+  var _httpServer: HttpServer = startVerityInstance(serviceParam)
 
   def httpServer: HttpServer = _httpServer
 
@@ -72,7 +119,11 @@ case class VerityRuntimeEnv(param: VerityAppParam) {
 
   def restart():Unit = {
     stop()
-    _httpServer = startVerityInstance(param.serviceParam, bootStrapApp = false)
+    start()
+  }
+
+  def start(): Unit = {
+    _httpServer = startVerityInstance(serviceParam)
   }
 
   def stop(): Unit = {
@@ -84,22 +135,30 @@ case class VerityRuntimeEnv(param: VerityAppParam) {
 
   private def stopHttpServer(): Unit = {
     val httpStopFut = httpServer.stop()
-    Await.result(httpStopFut, 15.seconds)
+    Await.result(httpStopFut, 30.seconds)
   }
 
   private def stopActorSystem(): Unit = {
     val platformStopFut = platform.actorSystem.terminate()
-    Await.result(platformStopFut, 15.seconds)
+    Await.result(platformStopFut, 30.seconds)
   }
 
-  private def startVerityInstance(serviceParam: ServiceParam, bootStrapApp: Boolean = true): HttpServer = {
-    LocalVerity(param.randomTmpDirPath, param.portProfile, param.seed, serviceParam,
-      bootstrapApp = bootStrapApp, overriddenConfig=param.overriddenConfig)
+  private def startVerityInstance(serviceParam: ServiceParam): HttpServer = {
+    val httpServer = LocalVerity(tmpDirPath, appSeed, thisNodePortProfile, otherNodeArteryPorts, serviceParam,
+      overriddenConfig=overriddenConfig, bootstrapApp = false)
+    isAvailable = true
+    httpServer
+  }
+
+  def bootstrapAgencyAgent(): Unit = {
+    LocalVerity.bootstrapApplication(thisNodePortProfile.http, appSeed)(httpServer.platform.actorSystem)
   }
 }
 
-case class VerityAppParam(seed: String,
-                          portProfile: PortProfile,
-                          randomTmpDirPath: Path,
-                          serviceParam: ServiceParam,
-                          overriddenConfig: Option[Config])
+case class VerityEnvUrlProvider(private val _nodes: List[VerityNode]) {
+  def availableNodeUrls: List[String] = {
+    _nodes.filter(_.isAvailable).map { np =>
+      s"http://localhost:${np.thisNodePortProfile.http}"
+    }
+  }
+}

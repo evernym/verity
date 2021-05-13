@@ -3,7 +3,7 @@ package com.evernym.verity.actor.persistence.recovery.legacy.verity1.specific
 import akka.testkit.EventFilter
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.base.{Done, Ping}
-import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoverySpec, PersistenceIdParam}
+import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoveryActorSpec, PersistenceIdParam}
 import com.evernym.verity.actor.testkit.WithAdditionalLogs
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.CredSentState
 import com.typesafe.config.{Config, ConfigFactory}
@@ -11,7 +11,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import java.util.UUID
 
 class IssueCredSnapshotRecovery
-  extends BaseRecoverySpec
+  extends BaseRecoveryActorSpec
   with WithAdditionalLogs {
 
   val persIdParam = PersistenceIdParam("issue-credential-1.0-protocol", UUID.randomUUID().toString)

@@ -136,9 +136,22 @@ class EntityTypesValidator(val instructionName: String, val required: Boolean = 
 
   def validate(keyPath: String, value: Any): Unit = {
     value match {
-      case "global" | "ip" | "user" | "user-owner" | "user-counterparty" =>
+      case str: String =>
+        str.split(",") match {
+          case Array() => throw new InvalidValueException(Option(
+            s"$keyPath value treated as a comma-separated values list contains no values: $str"))
+          case arr: Array[String] => arr.foreach(validateElement(keyPath, _))
+        }
       case _ => throw new InvalidValueException(Option(
         s"$keyPath contains unsupported value: $value"))
+    }
+  }
+
+  def validateElement(keyPath: String, valueElement: String) {
+    valueElement match {
+      case "global" | "ip" | "user" | "user-owner" | "user-counterparty" =>
+      case _ => throw new InvalidValueException(Option(
+        s"$keyPath value contains unsupported element: $valueElement"))
     }
   }
 }

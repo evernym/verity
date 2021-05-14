@@ -69,25 +69,59 @@ class InstructionValidationSpec
 
   "EntityTypesValidator" - {
 
-    "when asked to validate correct entity types" - {
+    "when asked to validate correct entity-types" - {
       "should be successful" in {
         val entityTypesValidator = new EntityTypesValidator(WARN_RESOURCE_INSTRUCTION)
         val keyPath = s"$VIOLATION_ACTION.50.warn-resource.entity-types"
-        List("global", "ip", "user", "user-owner", "user-counterparty").foreach { entityType =>
-          entityTypesValidator.validate(keyPath, entityType)
+        List("global", "ip", "user", "user-owner", "user-counterparty", "ip,user-owner,user-counterparty").foreach { entityTypes =>
+          entityTypesValidator.validate(keyPath, entityTypes)
         }
       }
     }
 
-    "when asked to validate invalid entity types" - {
+    "when asked to validate invalid entity-types" - {
       "should throw exception" in {
         val entityTypesValidator = new EntityTypesValidator(WARN_RESOURCE_INSTRUCTION)
         val keyPath = s"$VIOLATION_ACTION.50.warn-resource.entity-types"
-        List("invalid").foreach { entityType =>
+        List(100, true).foreach { entityTypes =>
           val ex = intercept[InvalidValueException] {
-            entityTypesValidator.validate(keyPath, entityType)
+            entityTypesValidator.validate(keyPath, entityTypes)
           }
-          ex.getMessage shouldBe s"$keyPath contains unsupported value: $entityType"
+          ex.getMessage shouldBe s"$keyPath contains unsupported value: $entityTypes"
+        }
+      }
+    }
+
+    "when asked to validate entity-types containing no elements" - {
+      "should throw exception" in {
+        val entityTypesValidator = new EntityTypesValidator(WARN_RESOURCE_INSTRUCTION)
+        val keyPath = s"$VIOLATION_ACTION.50.warn-resource.entity-types"
+        List(",").foreach { entityTypes =>
+          val ex = intercept[InvalidValueException] {
+            entityTypesValidator.validate(keyPath, entityTypes)
+          }
+          ex.getMessage shouldBe s"$keyPath value treated as a comma-separated values list contains no values: $entityTypes"
+        }
+      }
+    }
+
+    "when asked to validate entity-types containing invalid elements" - {
+      "should throw exception" in {
+        val entityTypesValidator = new EntityTypesValidator(WARN_RESOURCE_INSTRUCTION)
+        val keyPath = s"$VIOLATION_ACTION.50.warn-resource.entity-types"
+
+        List("", "invalid").foreach { entityTypes =>
+          val ex = intercept[InvalidValueException] {
+            entityTypesValidator.validate(keyPath, entityTypes)
+          }
+          ex.getMessage shouldBe s"$keyPath value contains unsupported element: $entityTypes"
+        }
+
+        {
+          val ex = intercept[InvalidValueException] {
+            entityTypesValidator.validate(keyPath, "ip,invalid")
+          }
+          ex.getMessage shouldBe s"$keyPath value contains unsupported element: invalid"
         }
       }
     }

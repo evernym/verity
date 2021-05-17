@@ -89,8 +89,8 @@ object Msg {
   }
 
   case class OutOfBandInvitation(label: String,
-                                 goal_code: String,
-                                 goal: String,
+                                 goal_code: Option[String],
+                                 goal: Option[String],
                                  handshake_protocols: Vector[String],
                                  `request~attach`: Vector[String],
                                  service: Vector[ServiceFormatted],
@@ -120,17 +120,7 @@ object Ctl {
 
   trait CreateInvitation extends Ctl
   case class ConnectionInvitation(shortInvite: Option[Boolean]=None) extends CreateInvitation
-  case class OutOfBandInvitation(goalCode: String, goal: String, shortInvite: Option[Boolean]=None) extends CreateInvitation {
-    override def validate(): Unit = {
-      checkRequired("goalCode", goalCode)
-      checkRequired("goal", goal)
-    }
-  }
+  case class OutOfBandInvitation(goalCode: Option[String]=None, goal: Option[String]=None, shortInvite: Option[Boolean]=None) extends CreateInvitation
   case class SMSConnectionInvitation() extends CreateInvitation
-  case class SMSOutOfBandInvitation(goalCode: String, goal: String) extends CreateInvitation {
-    override def validate(): Unit = {
-      checkRequired("goalCode", goalCode)
-      checkRequired("goal", goal)
-    }
-  }
+  case class SMSOutOfBandInvitation(goalCode: Option[String], goal: Option[String]) extends CreateInvitation
 }

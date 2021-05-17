@@ -34,25 +34,6 @@ object InviteUtil {
     }
   }
 
-  def buildInvite(agentName: Option[String],
-                  logoUrl: Option[String],
-                  publicDid: Option[DID],
-                  service: Try[Vector[ServiceFormatted]],
-                  attachment: Try[AttachmentDescriptor]): Try[OutOfBandInvitation] = {
-    for(
-      service         <- service;
-      offerAttachment <- attachment
-    ) yield OutOfBandInvitation(
-      agentName.getOrElse(""),
-      "issue-vc",
-      "To issue a credential",
-      Vector(offerAttachment),
-      service,
-      logoUrl,
-      publicDid.map("did:sov:"+_)
-    )
-  }
-
   def buildInviteWithThreadedId(protoRef: ProtoRef,
                                 relationshipId: DID,
                                 threadId: ThreadId,
@@ -60,12 +41,14 @@ object InviteUtil {
                                 logoUrl: Option[String],
                                 publicDid: Option[DID],
                                 service: Vector[ServiceFormatted],
-                                attachment: AttachmentDescriptor): OutOfBandInvitation = {
+                                attachment: AttachmentDescriptor,
+                                goalCode: Option[String],
+                                goal: Option[String]): OutOfBandInvitation = {
     val id = buildThreadedInviteId(protoRef, relationshipId, threadId)
     OutOfBandInvitation(
       agentName.getOrElse(""),
-      "issue-vc",
-      "To issue a credential",
+      goalCode,
+      goal,
       Vector(attachment),
       service,
       logoUrl,

@@ -65,8 +65,8 @@ object Msg {
   }
 
   case class OutOfBandInvitation(label: String,
-                                 goal_code: String,
-                                 goal: String,
+                                 goal_code: Option[String],
+                                 goal: Option[String],
                                  `request~attach`: Vector[AttachmentDescriptor],
                                  service: Vector[ServiceFormatted],
                                  profileUrl: Option[String],

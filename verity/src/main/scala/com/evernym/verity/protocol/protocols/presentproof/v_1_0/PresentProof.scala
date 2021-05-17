@@ -453,7 +453,9 @@ object PresentProof {
           stateData.logoUrl,
           stateData.publicDid,
           service,
-          attachement
+          attachement,
+          goalCode = Some("request-proof"),
+          goal = Some("To request a proof"),
         )
 
         handler(Success(

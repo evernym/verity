@@ -28,8 +28,8 @@ class RelationshipProtocolSpec
   val defAgencyVerkey = "verkey"
   val defLogo = "defaultLogoUrl"
 
-  val defGoal = "some goal"
-  val defGoalCode = "some-goal-code"
+  val defGoal: Option[String] = Some("some goal")
+  val defGoalCode: Option[String] = Some("some-goal-code")
   val publicDID = "publicDID"
   val labelStr = "label"
   val label: Option[String] = Option(labelStr)
@@ -507,6 +507,33 @@ class RelationshipProtocolSpec
       val invitationAgain = requester expect state[State.InvitationCreated]
       invitationAgain shouldBe invitation
       checkInvitationState(invitationAgain.invitation, profileUrl = specificProfileUrl)
+    }
+  }
+
+  "Requester asking to prepare OOB invitation without goal code" - {
+    implicit val system: TestSystem = new TestSystem()
+
+    val requester = setup("requester", odg = controllerProvider)
+    val provisioner = setup("provisioner")
+
+    "protocol transitioning to InvitationCreated state" in { _ =>
+      (requester engage provisioner) ~ Create(label, None)
+      requester expect signal[Signal.Created]
+      requester.state shouldBe a[State.Created]
+
+      requester ~ OutOfBandInvitation(None, None, None)
+      val inviteMsg = requester expect signal[Signal.Invitation]
+      checkOOBInvitationData(inviteMsg, goal = None, goalCode = None)
+      inviteMsg.shortInviteURL shouldBe None
+      val invitation = requester expect state[State.InvitationCreated]
+      checkInvitationState(invitation.invitation)
+
+      requester ~ OutOfBandInvitation(None, None, None)
+      val inviteMsg2 = requester expect signal[Signal.Invitation]
+      checkOOBInvitationData(inviteMsg2, goal = None, goalCode = None)
+      inviteMsg2.shortInviteURL shouldBe None
+      val invitationAgain = requester expect state[State.InvitationCreated]
+      checkInvitationState(invitationAgain.invitation)
     }
   }
 
@@ -1047,8 +1074,8 @@ class RelationshipProtocolSpec
   def checkOOBInvitationData(invitation: Signal.Invitation,
                              label: String = labelStr,
                              profileUrl: Option[String] = Option(defLogo),
-                             goal: String = defGoal,
-                             goalCode: String = defGoalCode,
+                             goal: Option[String] = defGoal,
+                             goalCode: Option[String] = defGoalCode,
                              hasPublicDid: Boolean = true
                             ): Unit =
     checkOOBInvitationUrlData(
@@ -1065,8 +1092,8 @@ class RelationshipProtocolSpec
                                 invitationId: String,
                                 label: String = labelStr,
                                 profileUrl: Option[String] = Option(defLogo),
-                                goal: String = defGoal,
-                                goalCode: String = defGoalCode,
+                                goal: Option[String] = defGoal,
+                                goalCode: Option[String] = defGoalCode,
                                 hasPublicDid: Boolean = true
                                ): Unit = {
     val json = getInvitationJsonFromUrl(inviteURL, "oob")
@@ -1077,8 +1104,14 @@ class RelationshipProtocolSpec
       case Some(value) => json.getString("profileUrl") shouldBe value
       case None => json.has("profileUrl") shouldBe false
     }
-    json.getString("goal") shouldBe goal
-    json.getString("goal_code") shouldBe goalCode
+    goal match {
+      case Some(goal) => json.getString("goal") shouldBe goal
+      case None => json.has("goal") shouldBe false
+    }
+    goalCode match {
+      case Some(goalCode) => json.getString("goal_code") shouldBe goalCode
+      case None => json.has("goal_code") shouldBe false
+    }
 
     // check public did
     if (hasPublicDid)

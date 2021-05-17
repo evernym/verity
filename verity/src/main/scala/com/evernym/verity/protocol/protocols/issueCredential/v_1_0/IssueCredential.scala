@@ -464,7 +464,9 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           s.logoUrl,
           s.publicDid,
           service,
-          offerAttachment
+          offerAttachment,
+          goalCode = Some("issue-vc"),
+          goal = Some("To issue a credential"),
         )
 
         handler(Success(

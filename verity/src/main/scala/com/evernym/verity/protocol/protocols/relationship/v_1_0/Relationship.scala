@@ -217,7 +217,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     }
   }
 
-  def genOutOfBandInvitation(label: String, goalCode: String, goal: String, requestAttach: Vector[String], did: DID,
+  def genOutOfBandInvitation(label: String, goalCode: Option[String], goal: Option[String],
+                             requestAttach: Vector[String], did: DID,
                              verKey: VerKey, agencyVerKey: String, profileUrl: Option[String],
                              publicDid: Option[DID]): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)

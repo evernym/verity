@@ -50,6 +50,7 @@ trait BasePersistentActor
 
   var totalPersistedEvents: Int = 0
   var totalRecoveredEvents: Int = 0
+  var isAnySnapshotApplied: Boolean = false
 
   def incrementTotalPersistedEvents(by: Int = 1): Unit = {
     totalPersistedEvents = totalPersistedEvents + by
@@ -129,16 +130,19 @@ trait BasePersistentActor
       publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_PERSIST))
     }
 
-    incrementTotalPersistedEvents()
-
     try {
-      val tes = events.map(transformedEvent)
-      tes.foreach(te => PersistenceSerializerValidator.validate(te, appConfig))
+      val eventBatch = events.map(transformedEvent)
+      eventBatch.foreach(te => PersistenceSerializerValidator.validate(te, appConfig))
+      //NOTE: in below if/else block, we are using `persist` and `persistAsync`
+      // DON'T use `persistAll` or `persistAllAsync` as it has a bug (see details in VE-2396)
+      // which causes event overwrite and off course that will mostly
+      // break the functionality provided by the actor.
       if (sync) {
-        super.persistAll(tes)(successHandler)
+        eventBatch.foreach(super.persist(_)(successHandler))
       } else {
-        super.persistAllAsync(tes)(successHandler)
+        eventBatch.foreach(super.persistAsync(_)(successHandler))
       }
+      incrementTotalPersistedEvents(eventBatch.size)
     } catch {
       case e: Exception =>
         val allEventNames = events.map(_.getClass.getSimpleName).mkString(", ")
@@ -302,8 +306,11 @@ trait BasePersistentActor
     runWithInternalSpan("handleRecoveryCompleted", "BasePersistentActor") {
       val curTime = LocalDateTime.now
       val millis = ChronoUnit.MILLIS.between(preStartTime, curTime)
-      val actorRecoveryMsg = s"[$actorId] long actor recovery completed (total events: ${lastSequenceNr+1}, time taken (in millis): $millis"
-
+      val actorRecoveryMsg = s"[$actorId] actor recovery completed (" +
+        s"lastSequenceNr: $lastSequenceNr, " +
+        s"isAnySnapshotApplied: $isAnySnapshotApplied, " +
+        s"totalRecoveredEvents: $totalRecoveredEvents, " +
+        s"timeTakenInMillis: $millis)"
       if (millis > warnRecoveryTime) logger.warn(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
       else logger.debug(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
 
@@ -489,8 +496,8 @@ trait BasePersistentActor
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =
     handleBasePersistenceCmd orElse
-      extendedCoreCommandHandler(actualReceiver) orElse
-      msgDeleteCallbackHandler
+      msgDeleteCallbackHandler orElse
+      extendedCoreCommandHandler(actualReceiver)
 
   override def receiveCommand: Receive =
     basePersistentCmdHandler(cmdHandler) orElse

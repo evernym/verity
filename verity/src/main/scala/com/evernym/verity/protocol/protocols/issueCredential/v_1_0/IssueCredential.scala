@@ -64,7 +64,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
     case (st: State,              _, m: ProblemReport) => handleProblemReport(m, st)
 
-    case (_: State.IssueCredSent, _, m: Ack)           => handleAck(m)
+    case (_: State.CredSent, _, m: Ack)           => handleAck(m)
   }
 
   def handleInit(m: Ctl.Init): Unit = {
@@ -166,7 +166,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.wallet.createCredReq(m.cred_def_id, st.myPwDid, credDefJson, credOfferJson) {
       case Success(credRequest: CredReqCreated) =>
         val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
-        val attachmentEventObject = toEvent(attachment)
+        val attachmentEventObject = toAttachmentObject(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
         //TODO: store cred req metadata to be used later on
         // (at least libindy Anoncreds.proverStoreCredential api expects it)?
@@ -205,7 +205,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId.orNull, -1) {
       case Success(createdCred: CredCreated) =>
         val attachment = buildAttachment(Some("libindy-cred-0"), payload=createdCred.cred)
-        val attachmentEventObject = toEvent(attachment)
+        val attachmentEventObject = toAttachmentObject(attachment)
         val credIssued = CredIssued(Seq(attachmentEventObject), commentReq(comment))
         ctx.apply(IssueCredSent(Option(credIssued)))
         val issueCred = IssueCred(Vector(attachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
@@ -251,14 +251,14 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   def handleOfferCredReceived(m: OfferCred, senderId: String): Unit = {
     val credPreviewObject = buildEventCredPreview(m.credential_preview)
-    val attachmentObject = m.`offers~attach`.map(toEvent)
+    val attachmentObject = m.`offers~attach`.map(toAttachmentObject)
     val offer = CredOffered(Option(credPreviewObject), attachmentObject, commentReq(m.comment), m.price)
     ctx.apply(OfferReceived(senderId, Option(offer)))
     ctx.signal(SignalMsg.AcceptOffer(m))
   }
 
   def handleRequestCredReceived(m: RequestCred, st: State.OfferSent, senderId: String): Unit = {
-    val req = CredRequested(m.`requests~attach`.map(toEvent), commentReq(m.comment))
+    val req = CredRequested(m.`requests~attach`.map(toAttachmentObject), commentReq(m.comment))
     ctx.apply(RequestReceived(senderId, Option(req)))
     if (st.autoIssue) {
       doIssueCredential(st.credOffer, buildRequestCred(Option(req)))
@@ -268,7 +268,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   }
 
   def handleIssueCredReceived(m: IssueCred): Unit = {
-    val cred = CredIssued(m.`credentials~attach`.map(toEvent), commentReq(m.comment))
+    val cred = CredIssued(m.`credentials~attach`.map(toAttachmentObject), commentReq(m.comment))
     //TODO: we purposefully are not storing the received credential in the wallet
     // as we are not sure yet if that is the right way to proceed or we want it to
     // store it in persistent store and make it available to the state for further uses
@@ -327,11 +327,11 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
     case (st: HasMyAndTheirDid, _, e: IssueCredSent) =>
       val issueCred: IssueCred = buildIssueCred(e.cred)
-      State.IssueCredSent(st.myPwDid, st.theirPwDid, issueCred)
+      State.CredSent(st.myPwDid, st.theirPwDid, issueCred)
 
     case (st: HasMyAndTheirDid, _, e: IssueCredReceived) =>
       val issueCred: IssueCred = buildIssueCred(e.cred)
-      State.IssueCredReceived(st.myPwDid, st.theirPwDid, issueCred)
+      State.CredReceived(st.myPwDid, st.theirPwDid, issueCred)
 
     case (_: PostInteractionStarted, _, e: Rejected) => State.Rejected(e.comment)
 
@@ -341,31 +341,13 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
   //helper methods
 
-  def extractCredOfferJson(offerCred: OfferCred): String = {
-    val attachment = offerCred.`offers~attach`.head
-    extractString(attachment)
-  }
-
-  def extractCredReqJson(requestCred: RequestCred): String = {
-    val attachment = requestCred.`requests~attach`.head
-    extractString(attachment)
-  }
-
-  def getCredentialDataFromMessage(credentialValues: Map[String, String]): String = {
-    val jsonObject: JSONObject = new JSONObject()
-    for ((key, value) <- credentialValues) {
-      jsonObject.put(key, value)
-    }
-    jsonObject.toString()
-  }
-
   def buildOffer(m: Ctl.Offer)(handler: Try[(OfferSent, OfferCred)] => Unit): Unit = {
     ctx.wallet.createCredOffer(m.cred_def_id) {
       case Success(coc: CredOfferCreated) =>
         val credPreview = buildCredPreview(m.credential_values)
         val credPreviewEventObject = credPreview.toOption.map(buildEventCredPreview)
         val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload = coc.offer)
-        val attachmentEventObject = toEvent(attachment)
+        val attachmentEventObject = toAttachmentObject(attachment)
 
         val credOffered = CredOffered(
           credPreviewEventObject,
@@ -399,10 +381,6 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       CredPreviewAttribute(a.name, a.value, a.mimeType)
     }
     CredPreview(cpo.`type`, cpa.toVector)
-  }
-
-  def toEvent(a: AttachmentDescriptor): AttachmentObject = {
-    AttachmentObject(a.`@id`.getOrElse(""), a.`mime-type`.getOrElse(""), a.data.base64)
   }
 
   def fromEvent(ao: AttachmentObject): AttachmentDescriptor = {
@@ -464,7 +442,9 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           s.logoUrl,
           s.publicDid,
           service,
-          offerAttachment
+          offerAttachment,
+          goalCode = Some("issue-vc"),
+          goal = Some("To issue a credential"),
         )
 
         handler(Success(
@@ -488,6 +468,28 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 case class EncodedCredAttribute(raw: String, encoded: String)
 
 object IssueCredential {
+
+  def toAttachmentObject(a: AttachmentDescriptor): AttachmentObject = {
+    AttachmentObject(a.`@id`.getOrElse(""), a.`mime-type`.getOrElse(""), a.data.base64)
+  }
+  
+  def extractCredOfferJson(offerCred: OfferCred): String = {
+    val attachment = offerCred.`offers~attach`.head
+    extractString(attachment)
+  }
+
+  def extractCredReqJson(requestCred: RequestCred): String = {
+    val attachment = requestCred.`requests~attach`.head
+    extractString(attachment)
+  }
+
+  def getCredentialDataFromMessage(credentialValues: Map[String, String]): String = {
+    val jsonObject: JSONObject = new JSONObject()
+    for ((key, value) <- credentialValues) {
+      jsonObject.put(key, value)
+    }
+    jsonObject.toString()
+  }
 
   def setSenderRole(senderId: String, senderRole: Role, roster: Roster[Role]): Roster[Role] = {
     val r = roster.withParticipant(senderId)

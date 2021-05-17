@@ -30,6 +30,8 @@ trait VcxIssueCredential
       )
     )
 
+    updateMessageStatus(metaData)
+
     new JSONObject()
       .put("@type", MsgFamily.typeStrFromMsgType(IssueCredMsgFamily, "ask-accept"))
       .put("~thread",

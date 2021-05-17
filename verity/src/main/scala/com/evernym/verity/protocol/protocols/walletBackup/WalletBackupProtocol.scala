@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.walletBackup
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.BAD_REQUEST
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.msg.PersistenceFailure
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.walletBackup.State.ReadyToPersistBackup
@@ -36,7 +37,7 @@ trait Error
 //TODO: In new version of protocol, send a problem report to the other participant rather than just throwing an error
 class WalletBackupNotInitialized extends BadRequestErrorException(BAD_REQUEST.statusCode, Option("wallet backup not initialized"))
 class UnableToPersist extends BadRequestErrorException(BAD_REQUEST.statusCode, Option("Unable to backup wallet - persister state not READY_TO_PERSIST_WALLET"))
-class UnableToBackup extends BadRequestErrorException(BAD_REQUEST.statusCode, Option("Unable to backup wallet - exporter state not READY_TO_EXPORT_WALLET"))
+class UnableToBackup(x: Option[String]=None) extends BadRequestErrorException(BAD_REQUEST.statusCode, Option(s"Unable to backup wallet - ${x.getOrElse("exporter state not READY_TO_EXPORT_WALLET")}"))
 class UnableToRecoverBackup extends BadRequestErrorException(BAD_REQUEST.statusCode, Option("Unable to recover wallet backup - exporter state not READY_TO_EXPORT_WALLET"))
 class UnexpectedProtoMsg extends BadRequestErrorException(BAD_REQUEST.statusCode, Option("Protocol message received in unexpected state"))
 class NoBackupAvailable extends BadRequestErrorException(BAD_REQUEST.statusCode, Option("No Wallet Backup available to download"))
@@ -65,19 +66,23 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
     * @return
     */
   override def handleProtoMsg: (BackupState, Option[Role], BackupMsg) ?=> Any = {
-    case (_: S.Uninitialized      , _               , _             ) => throw new WalletBackupNotInitialized
-    case (_: S.Initialized        , None            , b: BackupInit ) => provisionPersister(b.params)
-    case (s: ReadyToPersistBackup , Some(r)         , _: Restore    ) => recoverBackup(s.vk, s.lastWallet, r)
-    case (_: S.RecoveringBackup   , Some(Persister) , r: Restored   ) => ctx.apply(RecoveredBackup()); ctx.signal(r)
-    case (s                       , Some(Recoverer) , m             ) => persistersProtoMsgHandler(s, m)
-    case (s                       , Some(Exporter)  , m             ) => persistersProtoMsgHandler(s, m)
-    case (s                       , Some(Persister) , m             ) => exportersProtoMsgHandler(s, m)
+    case (_: S.Uninitialized              , _               , _             ) => throw new WalletBackupNotInitialized
+    case (_: S.Initialized                , None            , b: BackupInit ) => provisionPersister(b.params)
+    case (s: ReadyToPersistBackup         , Some(r)         , _: Restore    ) => recoverBackup(s.vk, r, s.lastWallet)
+    case (s: S.ReadyToPersistBackupInBlob , Some(r)         , _: Restore    ) => recoverBackup(s.blobAddress, r)
+    case (_: S.RecoveringBackup           , Some(Persister) , r: Restored   ) => ctx.apply(RecoveredBackup()); ctx.signal(r)
+    case (s                               , Some(Recoverer) , m             ) => persistersProtoMsgHandler(s, m)
+    case (s                               , Some(Exporter)  , m             ) => persistersProtoMsgHandler(s, m)
+    case (s                               , Some(Persister) , m             ) => exportersProtoMsgHandler(s, m)
   }
 
   def persistersProtoMsgHandler: (BackupState, BackupMsg) ?=> Any = {
-    case (_: S.ReadyToPersistBackup  , BackupInit(_) )  => ctx.send(BackupReady())
-    case (s: S.ReadyToPersistBackup  , Backup(w)     )  => backup(s.vk, w)
-    case (_                          , Backup(_)     )  => throw new UnableToPersist
+    case (_: S.ReadyToPersistBackupInBlob, BackupInit(_) )  => ctx.send(BackupReady())
+    case (s: S.ReadyToPersistBackupInBlob, Backup(w)     )  => backup(s.blobAddress, w)
+    // TODO: Remove when Ticket=VE-2605 is ready - S.ReadyToPersistBackup is a legacy state
+    case (_: S.ReadyToPersistBackup      , BackupInit(_) )  => ctx.send(BackupReady())
+    case (s: S.ReadyToPersistBackup      , Backup(w)     )  => backup(s.vk, w)
+    case (_                              , Backup(_)     )  => throw new UnableToPersist
   }
 
   def exportersProtoMsgHandler: (BackupState, BackupMsg) ?=> Any = {
@@ -147,7 +152,7 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
       case w: WalletBackup => ctx.logger.debug("byte array received - newer expectation is base64 encoded str"); w
       case w: WalletBackupEncoded => ctx.logger.debug("received base64 encoded string"); getBase64Decoded(w)
       case w: List[_] =>
-        ctx.logger.debug("Int list received - newer expectation is base64 encoded str");
+        ctx.logger.debug("Int list received - newer expectation is base64 encoded str")
         // Can't test for List[Int] but that is what is expected
         // So we will cast to List[Int] even though we don't know for sure it is of that type
         val l = w.asInstanceOf[List[Int]]
@@ -155,14 +160,18 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
       case _ => throw new UnsupportedBackupType
     }
 
-    ctx.storeSegment(vk, BackupStored(ByteString.copyFrom(w)))
-    ctx.send(BackupAck())
+    ctx.storeSegment(vk, BackupStored(ByteString.copyFrom(w))) {
+      case Success(_: StoredSegment) =>
+        ctx.apply(BackupStoredInBlob(vk))
+        ctx.send(BackupAck())
+      case Failure(e) =>  throw new UnableToBackup(Some(e.getMessage))
+    }
   }
 
-  def recoverBackup(recoveryVk: VerKey, w: Option[WalletBackup], r: Role): Unit = {
+  def recoverBackup(blobAddress: VerKey, r: Role, w: Option[WalletBackup]=None): Unit = {
     def restored(b: WalletBackup): Restored = Restored(getBase64Encoded(b))
 
-    ctx.withSegment[BackupStored](recoveryVk) {
+    ctx.withSegment[BackupStored](blobAddress) {
       case Success(storedBackup: Option[BackupStored]) =>
         val backup = storedBackup
           .map(bs => restored(bs.wallet.toByteArray))
@@ -194,10 +203,13 @@ class WalletBackupProtocol(val ctx: ProtocolContextApi[WalletBackupProtocol, Rol
   }
 
   def applyPersistersEvt: ApplyEvent = {
-    case (_: S.Initialized            , _ , RequestedRecoveryKeySetup(Some(s)) ) => (S.RecoveryModeRequested(s.recovererVk), setRoles(s))
-    case (s: S.RecoveryModeRequested  , _ , ReadyToPersist()             ) => S.ReadyToPersistBackup(s.vk, None)
-    case (s: S.ReadyToPersistBackup   , _ , BackupStored(w)              ) => S.ReadyToPersistBackup(s.vk, Some(w.toByteArray))
-    case (_: S.ReadyToPersistBackup   , _ , RecoveredBackup()            ) => ctx.getState
+    case (_: S.Initialized                , _ , RequestedRecoveryKeySetup(Some(s)) ) => (S.RecoveryModeRequested(s.recovererVk), setRoles(s))
+    case (s: S.RecoveryModeRequested      , _ , ReadyToPersist()             ) => S.ReadyToPersistBackupInBlob(s.vk, s.vk)
+    case (s: S.ReadyToPersistBackupInBlob , _ , BackupStoredInBlob(b)        ) => S.ReadyToPersistBackupInBlob(s.vk, b)
+    case (_: S.ReadyToPersistBackupInBlob , _ , RecoveredBackup()            ) => ctx.getState
+    //TODO: Remove when Ticket=VE-2605 is ready - S.ReadyToPersistBackup and event BackupStored are legacy
+    case (s: S.ReadyToPersistBackup       , _ , BackupStored(w)              ) => S.ReadyToPersistBackup(s.vk, Some(w.toByteArray))
+    case (_: S.ReadyToPersistBackup       , _ , RecoveredBackup()            ) => ctx.getState
   }
 
   def applyRecovererEvt: ApplyEvent = {

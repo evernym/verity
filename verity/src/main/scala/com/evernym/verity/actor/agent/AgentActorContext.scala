@@ -12,7 +12,7 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
@@ -21,9 +21,10 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
-import com.evernym.verity.storage_services.aws_s3.{S3AlpakkaApi, StorageAPI}
+import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
 import com.evernym.verity.util.Util
+import com.evernym.verity.vault.WalletProvider
 import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
 
@@ -58,12 +59,12 @@ trait AgentActorContext extends ActorContext {
 
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig)
-  lazy val walletProvider: LibIndyWalletProvider = new LibIndyWalletProvider(appConfig)
+  lazy val walletProvider: WalletProvider = LibIndyWalletProvider
   lazy val walletService: WalletService = new ActorWalletService(system)
   lazy val walletAPI: WalletAPI = new StandardWalletAPI(walletService)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
-  lazy val s3API: StorageAPI = new S3AlpakkaApi(appConfig.config)
+  lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig)
 
   def createActorSystem(): ActorSystem = {
     ActorSystem("verity", appConfig.getLoadedConfig)

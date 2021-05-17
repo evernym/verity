@@ -18,7 +18,7 @@ class AgentMsgUtilSpec extends BasicSpec {
 
   implicit val protoReg = engine.ProtocolRegistry(ConnectingProtoDef_V_0_6 -> PinstIdResolution.DEPRECATED_V0_1)
 
-  val createKeyJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1","@type":"$MSG_TYPE_DETAIL_CREATE_KEY"}"""
+  val createKeyJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1"}"""
 
   "NativeJsonConverterUtil" - {
 
@@ -33,7 +33,7 @@ class AgentMsgUtilSpec extends BasicSpec {
 
     "when called toJson method for 0.5 native msg (with `@type` at the end)" - {
       "should be able to get json string" in {
-        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6(MSG_TYPE_DETAIL_CREATE_KEY, "did1", "didverkey1")) shouldBe createKeyJson
+        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6("did1", "didverkey1")) shouldBe createKeyJson
       }
     }
 
@@ -47,9 +47,8 @@ class AgentMsgUtilSpec extends BasicSpec {
 
     "when called toJson method for 0.6 native msg (with `@type` at the end)" - {
       "should be able to get json string" in {
-        val expectedJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1","@type":"did:sov:123456;spec/$MSG_FAMILY_CONNECTING/$MFV_0_6/$MSG_TYPE_CREATE_KEY"}"""
-        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6(
-          s"did:sov:123456;spec/$MSG_FAMILY_CONNECTING/$MFV_0_6/$MSG_TYPE_CREATE_KEY", "did1", "didverkey1")) shouldBe expectedJson
+        val expectedJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1"}"""
+        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6("did1", "didverkey1")) shouldBe expectedJson
       }
     }
 
@@ -57,7 +56,6 @@ class AgentMsgUtilSpec extends BasicSpec {
       "should be able to get json string" in {
         val jsonStr = s"""{"@type":"did:sov:123456;spec/$MSG_FAMILY_CONNECTING/$MFV_0_6/$MSG_TYPE_CREATE_KEY","forDID":"3ksdisdak4","forDIDVerKey":"49dkdkr0r"}"""
         val ckam = DefaultMsgCodec.fromJson[CreateKeyReqMsg_MFV_0_6](jsonStr)
-        ckam.`@type` shouldBe s"did:sov:123456;spec/$MSG_FAMILY_CONNECTING/$MFV_0_6/$MSG_TYPE_CREATE_KEY"
         ckam.forDID shouldBe "3ksdisdak4"
         ckam.forDIDVerKey shouldBe "49dkdkr0r"
       }

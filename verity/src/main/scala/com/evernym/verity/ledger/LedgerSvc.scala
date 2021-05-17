@@ -200,11 +200,11 @@ trait LedgerSvc {
       ledgerTxnExecutor.writeSchema(submitterDID, schemaJson, walletAccess)
     } catch {
       case e: LedgerSvcException =>
-        Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to add schema with DID $submitterDID: " + e.getMessage)))
-      case e: Exception =>
-        Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to add schema with DID $submitterDID: " + e.getMessage)))
+        logger.info(s"error while trying to add schema with DID $submitterDID: " + e.getMessage)
+        Future.failed(e)
+      case e: Throwable =>
+        logger.info(s"error while trying to add schema with DID $submitterDID: " + e.getMessage)
+        Future.failed(e)
     }
   }
 
@@ -227,11 +227,11 @@ trait LedgerSvc {
       ledgerTxnExecutor.writeCredDef(submitterDID, credDefJson, walletAccess)
     } catch {
       case e: LedgerSvcException =>
-        Future.successful(Left(UNHANDLED.withMessage(
-          s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)))
-      case e: Exception =>
-        Future.successful(Left(UNHANDLED.withMessage(
-          s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)))
+        logger.info(s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)
+        Future.failed(e)
+      case e: Throwable =>
+        logger.info(s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)
+        Future.failed(e)
     }
   }
 

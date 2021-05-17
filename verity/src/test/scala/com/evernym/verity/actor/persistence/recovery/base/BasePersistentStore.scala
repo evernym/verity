@@ -8,7 +8,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
-import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.testkit.actor.MockAppConfig
+import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
@@ -18,7 +19,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED255
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
+import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -27,8 +28,8 @@ import com.typesafe.config.{Config, ConfigFactory}
  * common/base code to store events and adding data to wallet store
  */
 trait BasePersistentStore
-  extends ActorSpec
-    with BasicSpec
+  extends HasTestActorSystem
+    with MockAppConfig
     with HasTestWalletAPI {
 
   lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)
@@ -118,14 +119,18 @@ trait BasePersistentStore
     persTestKit.persistForRecovery(persistenceId.toString, transformedEvents)
   }
 
+  def addSnapshotToPersistentStorage(persistenceId: PersistenceIdParam,
+                                     snapshot: Any)(implicit pp: PersistParam = PersistParam()): Unit = {
+    addSnapshotsToPersistentStorage(persistenceId, Seq(snapshot))
+  }
   /**
    * adds given events to persistent storage (in memory storage) for given persistence id
    * @param persistenceId persistence id
    * @param snapshots snapshots to be stored in persistent storage
    */
-  def addSnapshotToPersistentStorage(persistenceId: PersistenceIdParam,
-                                     snapshots: scala.collection.immutable.Seq[Any])
-                                    (implicit pp: PersistParam = PersistParam()): Unit = {
+  def addSnapshotsToPersistentStorage(persistenceId: PersistenceIdParam,
+                                      snapshots: Seq[Any])
+                                     (implicit pp: PersistParam = PersistParam()): Unit = {
     val objectCodeMapper = pp.objectCodeMapper.getOrElse(DefaultObjectCodeMapper)
     validateObjectCodeMapping(objectCodeMapper, snapshots)
     val transformer = getStateTransformer(persistenceId.entityId, objectCodeMapper)
@@ -133,11 +138,11 @@ trait BasePersistentStore
       val transformedState = transformer.execute(state)
       (SnapshotMeta(index, index), transformedState)
     }
-    snapTestKit.persistForRecovery(persistenceId.toString, transformedSnapshots)
+    snapTestKit.persistForRecovery(persistenceId.toString, transformedSnapshots.toList)
   }
 
   private def validateObjectCodeMapping(objectCodeMapper: ObjectCodeMapperBase,
-                        events: scala.collection.immutable.Seq[Any])(implicit pp: PersistParam): Unit = {
+                                        events: Seq[Any])(implicit pp: PersistParam): Unit = {
     if (pp.validateEventsCodeMapping) {
       events.foreach (evt => objectCodeMapper.codeFromObject(evt))
     }
@@ -175,11 +180,21 @@ trait BasePersistentStore
 
   type TransformedMsg = DeprecatedEventMsg with DeprecatedStateMsg with PersistentMsg
 
-  override def overrideConfig: Option[Config] = Option(
-    ConfigFactory.empty()
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
-  )
+  /**
+   * to be overridden by test for overriding test specific configuration
+   * @return
+   */
+  def overrideSpecificConfig: Option[Config] = None
+
+  final override def overrideConfig: Option[Config] = Option {
+    val baseConfig = ConfigFactory.empty()
+        .withFallback(EventSourcedBehaviorTestKit.config)
+        .withFallback(PersistenceTestKitSnapshotPlugin.config)
+    overrideSpecificConfig match {
+      case Some(sc) => baseConfig.withFallback(sc)
+      case None     => baseConfig
+    }
+  }
 
   def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey)
 }

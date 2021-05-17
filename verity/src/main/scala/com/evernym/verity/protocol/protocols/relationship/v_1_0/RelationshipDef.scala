@@ -18,7 +18,9 @@ object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, Relat
 
   override val roles: Set[Role] = Set(Role.Provisioner, Role.Requester)
 
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID, AGENCY_DID_VER_KEY, NAME, LOGO_URL, MY_PUBLIC_DID)
+  override val initParamNames: Set[ParameterName] = Set(
+    SELF_ID, OTHER_ID, AGENCY_DID_VER_KEY, NAME, LOGO_URL, MY_PUBLIC_DID, DATA_RETENTION_POLICY
+  )
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p)
 

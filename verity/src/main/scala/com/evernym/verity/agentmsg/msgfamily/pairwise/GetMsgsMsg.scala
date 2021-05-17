@@ -21,8 +21,7 @@ trait GetMsgsBaseMsg extends ProtoMsg with HasMsgType with ActorMessage {
   def prepareGenericGetMsgs: GetMsgsReqMsg = GetMsgsReqMsg(excludePayload, uids, statusCodes)
 }
 
-case class GetMsgsReqMsg_MFV_0_5(`@type`: TypeDetail,
-                                 excludePayload: Option[String],
+case class GetMsgsReqMsg_MFV_0_5(excludePayload: Option[String],
                                  uids: Option[List[String]] = None,
                                  statusCodes: Option[List[String]] = None) extends GetMsgsBaseMsg {
 
@@ -30,14 +29,12 @@ case class GetMsgsReqMsg_MFV_0_5(`@type`: TypeDetail,
   def msgFamily: MsgFamily = ConnectingMsgFamily_0_5
 
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkOptionalNotEmpty("excludePayload", excludePayload)
   }
 
 }
 
-case class GetMsgsReqMsg_MFV_0_6(`@type`: String,
-                                 excludePayload: Option[String],
+case class GetMsgsReqMsg_MFV_0_6(excludePayload: Option[String],
                                  uids: Option[List[String]] = None,
                                  statusCodes: Option[List[String]] = None) extends GetMsgsBaseMsg {
 
@@ -45,7 +42,6 @@ case class GetMsgsReqMsg_MFV_0_6(`@type`: String,
   def msgFamily: MsgFamily = ConnectingMsgFamily_0_6
 
   override def validate(): Unit = {
-    checkRequired("@type", `@type`)
     checkOptionalNotEmpty("excludePayload", excludePayload)
   }
 }

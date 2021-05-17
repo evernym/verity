@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 
 import scala.util.Try
 
-class SegmentStoreAccessController(segmentStoreImpl: SegmentStoreAccess)
+class SegmentStoreAccessController(segmentStoreExecutor: SegmentStoreAsyncOps)
                                   (implicit val asyncOpRunner: AsyncOpRunner)
   extends SegmentStoreAccess
     with BaseAccessController {
@@ -15,20 +15,23 @@ class SegmentStoreAccessController(segmentStoreImpl: SegmentStoreAccess)
   //NOTE: we have 'access rights' mechanisms for other such/similar async apis,
   // but that is not the case with this api (so far) and hence in below method implementation
   // instead of calling 'runIfAllowed', we are directly calling 'withAsyncOpRunner'
-  override def storeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Any)
-                           (handler: Try[StoredSegment] => Unit): Unit =
+  override def storeSegment(segmentAddress: SegmentAddress,
+                            segmentKey: SegmentKey,
+                            segment: Any,
+                            retentionPolicy: Option[String]=None) (handler: Try[StoredSegment] => Unit): Unit =
     withAsyncOpRunner(
-      {segmentStoreImpl.storeSegment(segmentAddress, segmentKey, segment)(handler)},
+      {segmentStoreExecutor.runStoreSegment(segmentAddress, segmentKey, segment, retentionPolicy)},
       handler
     )
 
   //NOTE: we have 'access rights' mechanisms for other such/similar async apis,
   // but that is not the case with this api (so far) and hence in below method implementation
   // instead of calling 'runIfAllowed', we are directly calling 'withAsyncOpRunner'
-  override def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey)
-                             (handler: Try[Option[T]] => Unit): Unit =
+  override def withSegment[T](segmentAddress: SegmentAddress,
+                              segmentKey: SegmentKey,
+                              retentionPolicy: Option[String]=None) (handler: Try[Option[T]] => Unit): Unit =
     withAsyncOpRunner(
-      {segmentStoreImpl.withSegment(segmentAddress, segmentKey)(handler)},
+      {segmentStoreExecutor.runWithSegment(segmentAddress, segmentKey, retentionPolicy)},
       handler
     )
 }

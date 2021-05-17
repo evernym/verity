@@ -1,17 +1,15 @@
 package com.evernym.verity.actor.persistence.recovery.latest.verity1
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.SELF_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY}
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.user.UserAgentState
-import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpec
+import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.typesafe.config.{Config, ConfigFactory}
 
 class UserAgentRecoverySpec
-  extends BaseRecoverySpec
+  extends BaseRecoveryActorSpec
     with AgencyAgentEventSetter
     with UserAgentEventSetter {
 
@@ -91,7 +89,7 @@ class UserAgentRecoverySpec
   }
 
   //NOTE: adding snapshotting to be able to get saved snapshot and assert the state
-  override def overrideConfig: Option[Config] = Option(
+  override def overrideSpecificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base {
            UserAgent.snapshot {
@@ -101,7 +99,5 @@ class UserAgentRecoverySpec
            }
          }
       """)
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 }

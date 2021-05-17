@@ -8,7 +8,6 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.base.open._
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
@@ -87,10 +86,13 @@ trait EdgeEndpointBaseSpec
   def responseTo[T: ClassTag]: T = DefaultMsgCodec.fromJson(responseAs[String])
   lazy val util: UtilBase = TestUtil
 
-  override protected def createActorSystem(): ActorSystem = AkkaTestBasic.system()
+  override protected def createActorSystem(): ActorSystem = {
+    val port = appConfig.getConfigIntReq("akka.remote.artery.canonical.port")
+    val systemName = AkkaTestBasic.systemNameForPort(port)
+    ActorSystem(systemName, appConfig.config)
+  }
 
   def epRoutes: Route = endpointRoutes
-  def appConfig: AppConfig
 
   def sendToAppStateManager[T](cmd: Any): T = {
     val fut = platform.appStateManager ? cmd

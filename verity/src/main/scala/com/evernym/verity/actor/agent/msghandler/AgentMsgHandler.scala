@@ -12,7 +12,6 @@ import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault.KeyParam
 
-import scala.concurrent.Future
 import scala.util.Left
 
 /**
@@ -84,20 +83,19 @@ trait AgentMsgHandler
                        msgName: MsgName,
                        senderDID: DID,
                        threadOpt: Option[Thread]): Unit = {
-    Future.successful("default implementation of storeOutgoingMsg")
+    logger.debug("default implementation of storeOutgoingMsg")
   }
 
   def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
-    // flow diagram: fwd.edge, step 10 -- Queue msg for delivery to edge.
-    Future.successful("default implementation of sendStoredMsgToMyDomain")
+    logger.debug("default implementation of sendStoredMsgToMyDomain")
   }
 
   def sendStoredMsgToTheirDomain(omp: OutgoingMsgParam, msgId: MsgId,
                                  msgName: MsgName, thread: Option[Thread]=None): Unit = {
-    Future.successful("default implementation of sendStoredMsgToTheirDomain")
+    logger.debug("default implementation of sendStoredMsgToTheirDomain")
   }
 
   def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Unit = {
-    Future.successful("default implementation of sendUnStoredMsgToMyDomain")
+    logger.debug("default implementation of sendUnStoredMsgToMyDomain")
   }
 }

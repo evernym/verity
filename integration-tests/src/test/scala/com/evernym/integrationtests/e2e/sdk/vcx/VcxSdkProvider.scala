@@ -43,6 +43,22 @@ protected trait VcxHolds {
     injectedMsg = None
     rtn
   }
+
+  def updateMessageStatus(metaData: VcxMsgMetaData) : Unit = {
+    val data = prepareUpdateMessageRequest(metaData.did.get, metaData.msgId)
+    UtilsApi.vcxUpdateMessages("MS-106", data).get()
+  }
+
+  private def prepareUpdateMessageRequest(pwDid: String, messageUid: String): String = {
+    val jsonArray = new JSONArray()
+    val request = new JSONObject()
+    val uids = new JSONArray()
+    uids.put(messageUid)
+    request.put("pairwiseDID", pwDid)
+    request.put("uids", uids)
+    jsonArray.put(request)
+    jsonArray.toString
+  }
 }
 
 case class VcxMsgMetaData(did: Option[DID], senderDid: DID, msgType: String, msgId: String)
@@ -196,6 +212,18 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
           assert(msg.isDefined)
           interaction(msg.get)
         }
+    }
+  }
+
+  def getAllMsgsFromConnection(max: Duration, connectionId: String): Seq[VcxMsg] = {
+    Thread.sleep(250)
+    eventually(timeout(max), Interval(Span(1000, Millis))) {
+      val did = relationship_!(connectionId).owningDID
+      val cm = getConnectionMessages(did)
+      cm.foreach { msg =>
+        seenMessage = seenMessage + msg.meta.msgId
+      }
+      cm
     }
   }
 

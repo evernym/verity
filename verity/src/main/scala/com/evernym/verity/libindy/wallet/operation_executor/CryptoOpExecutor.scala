@@ -69,7 +69,6 @@ object CryptoOpExecutor extends OpExecutorBase {
     // Question: Should JSON validation for msg happen here or is it left to libindy?
     // Question: Since libindy expects bytes, should msg be bytes and not string. This will
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
-
     val result = for (
       recipKeys     <- verKeyFuture(pm.recipVerKeyParams, ledgerPoolManager);
       senderVerKeyResp  <- verKeyFuture(pm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)

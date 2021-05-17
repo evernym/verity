@@ -46,6 +46,7 @@ class SdkFlowSpec
 
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
+  val limitsCredDefName = "creds_for_limits"
 
   runScenario("sdkFlow") {
 
@@ -152,6 +153,36 @@ class SdkFlowSpec
       "0.1",
       ledgerUtil
     )
+
+    val limitsSchema = "something"+UUID.randomUUID().toString.substring(0, 8)
+
+    writeSchema(
+      sdk,
+      ledgerUtil,
+      limitsSchema,
+      "0.1",
+      "attr0",
+      "attr1",
+      "attr2",
+      "attr3",
+      "attr4",
+      "attr5",
+      "attr6",
+      "attr7",
+      "attr8",
+      "attr9"
+    )
+
+    writeCredDef(
+      sdk,
+      limitsCredDefName,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      limitsSchema,
+      "0.1",
+      ledgerUtil
+    )
+
   }
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -177,7 +208,7 @@ class SdkFlowSpec
       apps(cas1),
       connectionId,
       "proof-request-1",
-      Seq("first_name", "last_name", "license_num")
+      List(("first_name", "first_name", "Bob"), ("last_name", "last_name", "Marley"), ("license_num", "license_num", "123"))
     )
 
     presentProof_1_0_with_proposal(

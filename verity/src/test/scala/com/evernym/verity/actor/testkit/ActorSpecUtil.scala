@@ -98,7 +98,7 @@ trait HasTestActorSystem extends HasActorSystem {
   lazy val snapTestKit: SnapshotTestKit = SnapshotTestKit(system)
 }
 
-trait HasBasicActorSystem extends OverrideConfig with MockAppConfig{
+trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )

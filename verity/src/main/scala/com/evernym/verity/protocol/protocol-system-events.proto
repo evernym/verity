@@ -10,6 +10,11 @@ message SetDomainId {
     string domainId = 1;
 }
 
+message SetDataRetentionPolicy {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string policy = 1;
+}
+
 message ChangePairwiseRelIds {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string newSelfId = 1;

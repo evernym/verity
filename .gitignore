@@ -30,7 +30,18 @@ project/plugins/project/
 
 # Mac OS
 .DS_Store
-/doc/mxgraph-parse/.vscode/
+/doc/code/mxgraph-parse/.vscode/
 
 # akka diagnostics
 **/akka-diagnostics/*
+
+# Metals
+.metals/
+.bloop/
+.ammonite/
+metals.sbt
+
+# VS Code
+.devcontainer
+.vscode
+vSCodeDockerfile

@@ -30,9 +30,10 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
 import com.evernym.verity.vault._
-import java.time.ZonedDateTime
 
+import java.time.ZonedDateTime
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateAPIProvider, MsgStore}
+import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
 
 import scala.concurrent.Future
@@ -163,8 +164,8 @@ trait UserAgentCommon
 
   def handleUpdateConfigPackedReq(tupdateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
-      addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE,
-        MSG_TYPE_UPDATE_CONFIGS, ownerDID)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
       handleUpdateConfig(tupdateConf)
       postUpdateConfig(tupdateConf, reqMsgContext.latestDecryptedMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
@@ -188,7 +189,8 @@ trait UserAgentCommon
 
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleRemoveConfigMsg", "UserAgentCommon") {
-      addUserResourceUsage(reqMsgContext.clientIpAddressReq, RESOURCE_TYPE_MESSAGE, MSG_TYPE_REMOVE_CONFIGS, ownerDID)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_REMOVE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
       removeConf.configs.foreach { cn =>
         if (state.isConfigExists(cn))
           writeAndApply(ConfigRemoved(cn))
@@ -229,6 +231,7 @@ trait UserAgentCommon
   }
 
   override def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
+    // flow diagram: fwd.edge, step 11 -- Queue msg for delivery to edge.
     logger.debug("about to send stored msg to my domain (edge): " + msgId)
     self ! SendStoredMsgToMyDomain(msgId)
   }

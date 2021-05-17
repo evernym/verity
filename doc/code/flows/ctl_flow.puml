@@ -1,0 +1,49 @@
+@startuml
+
+title Calls in the "ctl" Flow
+
+autonumber 1
+note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReq( ) -- Packed msg\narrives.
+PackedMsgEndpointHandler --> PackedMsgEndpointHandler
+note over PackedMsgEndpointHandler #ffffff: handleAgentMsgReqForOctetStreamContentType( )\n-- Detect binary content.
+PackedMsgEndpointHandler --> PackedMsgEndpointHandler
+note over PackedMsgEndpointHandler #ffffff: processPackedMsg( ) -- Decrypt and check\nmessage type.
+PackedMsgEndpointHandler -> AgencyPackedMsgHandler
+note over AgencyPackedMsgHandler #ffffff: handleFwdMsg( ) -- Called after seeing\n"Forward" in plaintext.
+AgencyPackedMsgHandler -> AgentMsgRouter
+note over AgentMsgRouter #ffffff: routePackedMsg( ) -- Find route to\nrelevant actor, send inner msg.
+AgentMsgRouter -> AgentIncomingMsgHandler
+note over AgentIncomingMsgHandler #ffffff: agentIncomingCommonCmdReceiver( ) --\nReceived by agent actor.
+AgentIncomingMsgHandler -> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: handleProcessPackedMsg( ) -- Receive and\ndecrypt.
+AgentMsgProcessor --> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: extractMsgAndSendToProtocol( ) -- add\ncontext to actor if sender expects sync\nresponse.
+
+group 100: pairwise
+autonumber 101
+AgentMsgProcessor --> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: extractMsgAndSendToProtocol( ) -- Handle\nmsg for specific connection.
+AgentMsgProcessor -> AgentMsgRouter
+end
+
+group 200: self
+autonumber 201
+AgentMsgProcessor --> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: extractMsgAndSendToProtocol( ) -- Handle\nmsg for self relationship.
+AgentMsgProcessor -> AgentMsgRouter
+end
+
+autonumber 9
+note over AgentMsgRouter #ffffff: executeCmd( ) -- trigger routing for\ninternal message.
+AgentMsgRouter --> AgentMsgRouter
+note over AgentMsgRouter #ffffff: routeInternalMsg( )
+AgentMsgRouter -> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: handleMsgForRel( )
+AgentMsgProcessor --> AgentMsgProcessor
+note over AgentMsgProcessor #ffffff: sendTypedMsgToProtocol( )
+AgentMsgProcessor -> ProtocolContext
+note over ProtocolContext #ffffff: submit( )
+ProtocolContext --> ProtocolContext
+note over ProtocolContext #ffffff: processNextInboxMsg( )
+
+@enduml

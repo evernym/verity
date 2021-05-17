@@ -102,11 +102,11 @@ class UtilSpec extends BasicSpec with CommonSpecUtil {
 
     "when asked to test if given string is an CIDR address" - {
       "should be able to check it" in {
-        SubnetUtilsExt.isClasslessIPAddress("127.0.0.1/32") shouldBe true
-        SubnetUtilsExt.isClasslessIPAddress("127.0.0.1") shouldBe false
-        SubnetUtilsExt.isClasslessIPAddress("randomStr") shouldBe false
-        SubnetUtilsExt.isClasslessIPAddress("127.0.0.1/") shouldBe false
-        SubnetUtilsExt.isClasslessIPAddress("127.0.0.1/str") shouldBe false
+        SubnetUtilsExt.isClasslessIpAddress("127.0.0.1/32") shouldBe true
+        SubnetUtilsExt.isClasslessIpAddress("127.0.0.1") shouldBe false
+        SubnetUtilsExt.isClasslessIpAddress("randomStr") shouldBe false
+        SubnetUtilsExt.isClasslessIpAddress("127.0.0.1/") shouldBe false
+        SubnetUtilsExt.isClasslessIpAddress("127.0.0.1/str") shouldBe false
       }
     }
 

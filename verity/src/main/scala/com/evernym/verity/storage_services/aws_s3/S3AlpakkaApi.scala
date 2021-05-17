@@ -11,50 +11,63 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.S3_FAILURE
 import com.evernym.verity.actor.StorageInfo
-import com.typesafe.config.Config
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.storage_services.StorageAPI
 
 import scala.concurrent.Future
+import scala.language.postfixOps
 
-trait StorageAPI {
-  def upload(id: String, data: Array[Byte]): Future[StorageInfo]
-  def download(id: String): Future[Array[Byte]]
-}
+class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends StorageAPI(config) {
 
-//TODO: need to review this class and fix issues mentioned in VE-2454
-class S3AlpakkaApi(config: Config)(implicit val as: ActorSystem) extends StorageAPI {
-  implicit val s3Attributes: Attributes = S3Attributes.settings(S3Settings(config.getConfig("alpakka.s3")))
+  def s3Settings: S3Settings = S3Settings(config.config.getConfig("alpakka.s3"))
+  lazy val s3Attrs: Attributes = S3Attributes.settings(s3Settings)
 
-  //TODO: the class name seems to be generic but the below bucket configuration seem to be tightly coupled with wallet bucket???
-  lazy val bucketName: String = config.getConfig("wallet.backup").getString("s3-bucket-name")
+  def createBucket(bucketName: String): Future[Done] =  S3.makeBucket(bucketName)
 
-  def createBucket(bucketName: String): Future[Done] = {
-    S3.makeBucket(bucketName)
-  }
+  def checkIfBucketExists(bucketName: String): Future[BucketAccess] = S3 checkIfBucketExists bucketName
 
-  def checkIfBucketExists(bucketName: String): Future[BucketAccess] = {
-    S3.checkIfBucketExists(bucketName)
-  }
-
-  def upload(id: String, data: Array[Byte]): Future[StorageInfo] = {
+  /**
+   * @param id needs to be unique or data can be overwritten
+   */
+  def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
     val file: Source[ByteString, NotUsed] = Source.single(ByteString(data))
 
     val s3Sink: Sink[ByteString, Future[MultipartUploadResult]] =
-      S3 multipartUpload(bucketName, id) withAttributes s3Attributes
+      S3 multipartUpload(bucketName, id) withAttributes s3Attrs
 
     file.runWith(s3Sink).map(x => StorageInfo(x.location.toString(), "S3"))
   }
 
-  def download(id: String): Future[Array[Byte]] = {
+  def get(bucketName: String, id: String): Future[Array[Byte]] = {
     val s3File: Source[Option[(Source[ByteString, NotUsed], ObjectMetadata)], NotUsed] =
-      S3 download(bucketName, id) withAttributes s3Attributes
+      S3 download(bucketName, id) withAttributes s3Attrs
 
     s3File.runWith(Sink.head) flatMap {
       case Some((data: Source[ByteString, _], _)) =>
         data.map(_.toByteBuffer.array())
           .runWith(Sink.seq)
           .map(_.flatten.toArray)
-      case None => throw new S3Failure(S3_FAILURE.statusCode)
+      case None => throw new S3Failure(S3_FAILURE.statusCode, Some(s"No object for id: $id in bucket: $bucketName"))
     }
+
+  }
+
+  def getObjectMetadata(bucketName: String, id: String): Future[Map[String, String]] = {
+    val s3Meta: Source[Option[ObjectMetadata], NotUsed] =
+      S3 getObjectMetadata(bucketName, id) withAttributes s3Attrs
+
+    s3Meta.runWith(Sink.head) flatMap {
+      case Some(data: ObjectMetadata) =>
+        Future(data.metadata.map {x => x.name() -> x.value()} toMap)
+      case None => throw new S3Failure(S3_FAILURE.statusCode, Some(s"No object for id: $id in bucket: $bucketName"))
+    }
+  }
+
+  def delete(bucketName: String, id: String): Future[Done] = {
+      S3 deleteObject(bucketName, id) withAttributes s3Attrs runWith Sink.head flatMap {
+        case x: Done => Future(x)
+        case _ => throw new S3Failure(S3_FAILURE.statusCode, Some(s"Failed deleting object for id: $id in bucket: $bucketName"))
+      }
   }
 
   class S3Failure(statusCode: String, statusMsg: Option[String] = None,

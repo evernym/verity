@@ -1,10 +1,13 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import java.time.{ZoneId, ZonedDateTime}
-
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX}
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
+import com.evernym.verity.util.Util.{isDID, isVerKey}
+
+import scala.util.matching.Regex
 
 object ResourceUsageUtil {
 
@@ -22,6 +25,38 @@ object ResourceUsageUtil {
   def getZonedDateTimeFromPeriod(startDateTime: ZonedDateTime, periodInSeconds: Long): Option[ZonedDateTime] = {
     if (periodInSeconds == -1) None
     else Option(startDateTime.plusSeconds(periodInSeconds))
+  }
+
+  val USER_ID_OWNER_REGEX: Regex = s"($OWNER_ID_PREFIX)(.+)".r
+  val USER_ID_COUNTERPARTY_REGEX: Regex = s"($COUNTERPARTY_ID_PREFIX)(.+)".r
+  val USER_ID_REGEX: Regex = s"($OWNER_ID_PREFIX|$COUNTERPARTY_ID_PREFIX)(.+)".r
+
+  def isUserId(value: String): Boolean = {
+    value match {
+      case USER_ID_REGEX(_, rawId) => isDID(rawId) || isVerKey(rawId)
+      case _ => false
+    }
+  }
+
+  def isUserIdOwner(value: String): Boolean = {
+    value match {
+      case USER_ID_OWNER_REGEX(_, rawId) => isDID(rawId) || isVerKey(rawId)
+      case _ => false
+    }
+  }
+
+  def isUserIdCounterparty(value: String): Boolean = {
+    value match {
+      case USER_ID_COUNTERPARTY_REGEX(_, rawId) => isDID(rawId) || isVerKey(rawId)
+      case _ => false
+    }
+  }
+
+  def isUserIdOrPattern(value: String): Boolean = {
+    value match {
+      case USER_ID_REGEX(_, rawId) => rawId == "*" || isDID(rawId) || isVerKey(rawId)
+      case _ => false
+    }
   }
 
 }

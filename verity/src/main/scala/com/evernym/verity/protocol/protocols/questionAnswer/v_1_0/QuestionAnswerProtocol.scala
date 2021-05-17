@@ -217,11 +217,9 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
     val notExpired = isNotExpired(
       s.question.`~timing`.flatMap(t => t.expires_time)
     )
-
     val validResponse = {
       s.question.valid_responses.exists(_.text == m.response)
     }
-
     if (s.question.signature_required) {
       m.`response~sig` match {
         case Some(x) =>
@@ -416,6 +414,7 @@ object QuestionAnswerProtocol {
   def questionToEvt(q: Msg.Question): QuestionUsed = {
     QuestionUsed(
       q.question_text,
+      //TODO: the 'AskQuestion' control message has 'detail' as optional, but it seems it is required here?
       q.question_detail.get,
       q.nonce,
       q.signature_required,

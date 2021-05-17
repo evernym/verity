@@ -29,7 +29,9 @@ case object ReqMsgContext {
  * @param id unique request id (UUID string)
  * @param initData initial data
  */
-case class ReqMsgContext(id: String = UUID.randomUUID().toString, initData: Map[String, Any] = Map.empty) {
+case class ReqMsgContext(id: String = UUID.randomUUID().toString,
+                         initData: Map[String, Any] = Map.empty,
+                         clientReqId: Option[String] = None) {
 
   val startTime: LocalDateTime = LocalDateTime.now()
 

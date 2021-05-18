@@ -199,4 +199,8 @@ object Status extends Enumeration {
   }
 
   implicit def convert(value: Value): StatusDetailEnum = value.asInstanceOf[StatusDetailEnum]
+
+  case class StatusDetailException(statusDetail: StatusDetail) extends Exception {
+    override def toString: String = statusDetail.statusMsg
+  }
 }

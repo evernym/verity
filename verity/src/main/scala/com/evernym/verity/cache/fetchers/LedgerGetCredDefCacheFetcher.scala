@@ -6,6 +6,7 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.ledger.LedgerSvc
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status.StatusDetailException
 
 import scala.concurrent.Future
 
@@ -28,9 +29,10 @@ class LedgerGetCredDefCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppC
 
   override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
     val getCredDef = kd.keyAs[GetCredDef]
-    ledgerSvc.getCreDef(getCredDef.credDefId).map {
-      case Right(resp) => Map(getCredDef.credDefId -> resp)
-      case Left(d)     => throw buildUnexpectedResponse(d)
+    ledgerSvc.getCreDef(getCredDef.credDefId).map { resp =>
+      Map(getCredDef.credDefId -> resp)
+    }.recover {
+      case StatusDetailException(sd) => throw buildUnexpectedResponse(sd)
     }
   }
 }

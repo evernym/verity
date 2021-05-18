@@ -102,14 +102,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     // pattern occurs, the state might be modified, and that would be bad.
     val addUrlFutResp = agentActorContext.ledgerSvc.addAttrib(ledgerReqSubmitter, state.myDid_!,
       agentActorContext.ledgerSvc.URL, url.toString)
-    addUrlFutResp.map {
-      case Right(tr: TxnResp) =>
-        logger.debug("url added", (LOG_KEY_SRC_DID, state.myDid_!), ("transaction", tr))
-        sndr ! EndpointSet(url.toString)
-      case Left(statusDetail: StatusDetail) =>
+    addUrlFutResp.map { tr =>
+      logger.debug("url added", (LOG_KEY_SRC_DID, state.myDid_!), ("transaction", tr))
+      sndr ! EndpointSet(url.toString)
+    }.recover {
+      case StatusDetailException(statusDetail) =>
         logger.error("could not add url", (LOG_KEY_SRC_DID, agencyDIDReq), (LOG_KEY_STATUS_DETAIL, statusDetail))
         sndr ! statusDetail
-    }.recover {
       case e: Exception => handleException(e, sndr)
     }
   }

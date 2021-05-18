@@ -1,8 +1,8 @@
 package com.evernym.verity.ledger
 
 import java.time.ZonedDateTime
-
 import akka.actor.ActorSystem
+import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.DidPair
@@ -101,110 +101,80 @@ trait LedgerSvc {
   implicit val executor: ExecutionContextExecutor = system.dispatcher
 
   //get taa
-  private def _getTAA(submitterDetail: Submitter, version: Option[String]=None): Future[Either[StatusDetail, GetTAAResp]] = {
+  private def _getTAA(submitterDetail: Submitter, version: Option[String]=None): Future[GetTAAResp] = {
     _getTAAFromLedger(submitterDetail)
   }
 
-  private def _getTAAFromLedger(submitterDetail: Submitter):
-  Future[Either[StatusDetail, GetTAAResp]] = {
-    try {
-      ledgerTxnExecutor.getTAA(submitterDetail)
-    } catch {
-      case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get taa from the ledger: ${e.getMessage}")))
-      case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get taa from the ledger: ${e.getMessage}")))
+  private def _getTAAFromLedger(submitterDetail: Submitter): Future[GetTAAResp] = {
+    ledgerTxnExecutor.getTAA(submitterDetail) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to get taa from the ledger: ${e.getMessage}"))
     }
   }
 
   //get nym
-  private def _getNym(submitterDetail: Submitter, id: String): Future[Either[StatusDetail, GetNymResp]] = {
+  private def _getNym(submitterDetail: Submitter, id: String): Future[GetNymResp] = {
     _getNymFromLedger(submitterDetail, id)
   }
 
-  private def _getNymFromLedger(submitterDetail: Submitter, id: String):
-  Future[Either[StatusDetail, GetNymResp]] = {
-    try {
-      ledgerTxnExecutor.getNym(submitterDetail, id)
-    } catch {
-      case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get nym for id $id: " + e.getMessage)))
-      case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get nym for id $id:" + e.getMessage)))
+  private def _getNymFromLedger(submitterDetail: Submitter, id: String): Future[GetNymResp] = {
+    ledgerTxnExecutor.getNym(submitterDetail, id) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to get nym for id $id: " + e.getMessage))
     }
   }
 
-  private def _getSchema(schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
+  private def _getSchema(schemaId: String): Future[GetSchemaResp] = {
     _getSchemaFromLedger(Submitter(), schemaId)
   }
 
-  private def _getSchemaFromLedger(submitterDetail: Submitter, schemaId: String):
-  Future[Either[StatusDetail, GetSchemaResp]] = {
-    try {
-      ledgerTxnExecutor.getSchema(submitterDetail, schemaId)
-    } catch {
-      case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get schema for $schemaId: " + e.getMessage)))
-      case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get schema for $schemaId:" + e.getMessage)))
+  private def _getSchemaFromLedger(submitterDetail: Submitter, schemaId: String): Future[GetSchemaResp] = {
+    ledgerTxnExecutor.getSchema(submitterDetail, schemaId) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to get schema for $schemaId: " + e.getMessage))
     }
   }
 
-  private def _getCredDef(credDefId: String): Future[Either[StatusDetail, GetCredDefResp]] = {
+  private def _getCredDef(credDefId: String): Future[GetCredDefResp] = {
     _getCredDefFromLedger(Submitter(), credDefId)
   }
 
-  private def _getCredDefFromLedger(submitterDetail: Submitter, credDefId: String):
-  Future[Either[StatusDetail, GetCredDefResp]] = {
-    try {
-      ledgerTxnExecutor.getCredDef(submitterDetail, credDefId)
-    } catch {
-      case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get credDef for $credDefId: " + e.getMessage)))
-      case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get credDef for $credDefId:" + e.getMessage)))
+  private def _getCredDefFromLedger(submitterDetail: Submitter, credDefId: String): Future[GetCredDefResp] = {
+    ledgerTxnExecutor.getCredDef(submitterDetail, credDefId) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to get credDef for $credDefId: " + e.getMessage))
     }
   }
 
   //get attrib
   private def _getAttrib(submitterDetail: Submitter, id: String,
-                         attribName: String): Future[Either[StatusDetail, GetAttribResp]] = {
+                         attribName: String): Future[GetAttribResp] = {
     _getAttribFromLedger(submitterDetail, id, attribName)
   }
 
   private def _getAttribFromLedger(submitterDetail: Submitter, id: String, attribName: String):
-  Future[Either[StatusDetail, GetAttribResp]] = {
-    try {
-      ledgerTxnExecutor.getAttrib(submitterDetail, id, attribName)
-    } catch {
-      case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get attribute with id $id and name $attribName: " + e.getMessage)))
-      case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to get attribute with id $id and name $attribName: " + e.getMessage)))
+  Future[GetAttribResp] = {
+    ledgerTxnExecutor.getAttrib(submitterDetail, id, attribName).recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to get attribute with id $id and name $attribName: " + e.getMessage))
     }
   }
 
   //get TAA
-  final def getTAA(submitterDetail: Submitter, version: Option[String]=None): Future[Either[StatusDetail, GetTAAResp]] = {
+  final def getTAA(submitterDetail: Submitter, version: Option[String]=None): Future[GetTAAResp] = {
     _getTAA(submitterDetail, version)
   }
 
-  final def getSchema(schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
+  final def getSchema(schemaId: String): Future[GetSchemaResp] = {
     _getSchema(schemaId)
   }
 
   final def writeSchema(submitterDID: DID,
                         schemaJson: String,
-                        walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
-    try {
-      ledgerTxnExecutor.writeSchema(submitterDID, schemaJson, walletAccess)
-    } catch {
-      case e: LedgerSvcException =>
-        logger.info(s"error while trying to add schema with DID $submitterDID: " + e.getMessage)
-        Future.failed(e)
-      case e: Throwable =>
-        logger.info(s"error while trying to add schema with DID $submitterDID: " + e.getMessage)
-        Future.failed(e)
+                        walletAccess: WalletAccess): Future[TxnResp] = {
+    ledgerTxnExecutor.writeSchema(submitterDID, schemaJson, walletAccess) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to add schema with DID $submitterDID: " + e.getMessage))
     }
   }
 
@@ -212,26 +182,15 @@ trait LedgerSvc {
                                         schemaJson: String,
                                         endorserDID: DID,
                                         walletAccess: WalletAccess): Future[LedgerRequest] = {
-    try {
-      ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
-    } catch {
-      case e: Throwable =>
-        Future.failed(e)
-    }
+    ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
   }
 
   final def writeCredDef(submitterDID: DID,
                          credDefJson: String,
-                         walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
-    try {
-      ledgerTxnExecutor.writeCredDef(submitterDID, credDefJson, walletAccess)
-    } catch {
-      case e: LedgerSvcException =>
-        logger.info(s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)
-        Future.failed(e)
-      case e: Throwable =>
-        logger.info(s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage)
-        Future.failed(e)
+                         walletAccess: WalletAccess): Future[TxnResp] = {
+    ledgerTxnExecutor.writeCredDef(submitterDID, credDefJson, walletAccess) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage))
     }
   }
 
@@ -247,69 +206,56 @@ trait LedgerSvc {
     }
   }
 
-  final def getCreDef(credDefId: String): Future[Either[StatusDetail, GetCredDefResp]] = {
+  final def getCreDef(credDefId: String): Future[GetCredDefResp] = {
     _getCredDef(credDefId)
   }
 
-  final def getNym(submitterDetail: Submitter, id: String): Future[Either[StatusDetail, GetNymResp]] = {
+  final def getNym(submitterDetail: Submitter, id: String): Future[GetNymResp] = {
     _getNym(submitterDetail, id)
   }
 
-  final def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[Either[StatusDetail, TxnResp]] = {
-    try {
-      ledgerTxnExecutor.addNym(submitterDetail, targetDid)
-    } catch {
-      case e: LedgerSvcException => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to add nym with DID ${targetDid.DID}: " + e.getMessage)))
-      case e: Exception => Future.successful(Left(UNHANDLED.withMessage(
-        s"error while trying to add nym with DID ${targetDid.DID}: " + e.getMessage)))
+  final def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
+    ledgerTxnExecutor.addNym(submitterDetail, targetDid) recover {
+      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+        s"error while trying to add nym with DID ${targetDid.DID}: " + e.getMessage))
     }
   }
 
-  final def getAttrib(submitterDetail: Submitter, id: String, attrName: String):
-  Future[Either[StatusDetail, GetAttribResp]] = {
+  final def getAttrib(submitterDetail: Submitter, id: String, attrName: String): Future[GetAttribResp] = {
     _getAttrib(submitterDetail, id, attrName)
   }
 
-  final def addAttrib(submitterDetail: Submitter, id: String, attrName: String, attrValue: String):
-  Future[Either[StatusDetail, TxnResp]] = {
+  final def addAttrib(submitterDetail: Submitter, id: String, attrName: String, attrValue: String): Future[TxnResp] = {
     ledgerTxnExecutor.addAttrib(submitterDetail, id, attrName, attrValue)
   }
 
-  def getNymDataFut(submitterDetail: Submitter, destId: String, key: String):
-  Future[Either[StatusDetail, String]] = {
+  def getNymDataFut(submitterDetail: Submitter, destId: String, key: String): Future[String] = {
     getNym(submitterDetail, destId).map {
-      case Right(gnr) =>
-        gnr.txnResp.data.map { data =>
-          val nymData = data
-          val keyValueOpt = nymData.get(key).flatMap{
-            case str: String => Some(str)
-            case _ => None
+      _.txnResp.data match {
+        case Some(nymData) =>
+          nymData.get(key) match {
+            case Some(str: String) => str
+            case _ => throw StatusDetailException(DATA_NOT_FOUND.withMessage(s"no $key found for the identifier: $destId"))
           }
-          if (keyValueOpt.isDefined) Right(keyValueOpt.orNull)
-          else Left(DATA_NOT_FOUND.withMessage(s"no $key found for the identifier: $destId"))
-        }.getOrElse(Left(DATA_NOT_FOUND.withMessage(s"no data found for the identifier: $destId")))
-      case Left(err: StatusDetail) => Left(err)
+        case None => throw StatusDetailException(DATA_NOT_FOUND.withMessage(s"no data found for the identifier: $destId"))
+      }
     }
   }
 
-  def getAttribFut(submitterDetail: Submitter, destId: String, attribName: String):
-  Future[AttribResult] = {
+  def getAttribFut(submitterDetail: Submitter, destId: String, attribName: String): Future[AttribResult] = {
     getAttrib(submitterDetail, destId, attribName).map {
-      case Right(gar) =>
-        gar.txnResp.data.map { data =>
-          val attribData = data
-          val attribValueOpt = attribData
-            .get(attribName)
-          if (attribValueOpt.isDefined)
-            AttribResult(attribName, value = attribValueOpt)
-          else
-            AttribResult(attribName, error = Option(DATA_NOT_FOUND.withMessage(
-              s"attribute '$attribName' not found for identifier: $destId")))
-        }.getOrElse(AttribResult(attribName, error = Option(DATA_NOT_FOUND.withMessage(
-          s"attribute '$attribName' not found for identifier: $destId"))))
-      case Left(err: StatusDetail) =>
-        AttribResult(attribName, error = Option(err))
+      _.txnResp.data.map { attribData: Map[String, Any] =>
+        attribData.get(attribName) match {
+          case Some(value) => AttribResult(attribName, value = Some(value))
+          case None => AttribResult(attribName, error = Option(DATA_NOT_FOUND.withMessage(
+            s"attribute '$attribName' not found for identifier: $destId")))
+        }
+      }.getOrElse(
+        AttribResult(attribName, error = Option(DATA_NOT_FOUND.withMessage(
+        s"attribute '$attribName' not found for identifier: $destId")))
+      )
+    }.recover {
+      case e: StatusDetailException => AttribResult(attribName, error = Option(e.statusDetail))
     }
   }
 

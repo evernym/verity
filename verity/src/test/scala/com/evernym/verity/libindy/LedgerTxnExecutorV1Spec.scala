@@ -2,7 +2,7 @@ package com.evernym.verity.libindy
 
 import com.evernym.verity.Exceptions.InvalidValueException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.Status.{StatusDetail, StatusDetailException}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
@@ -21,6 +21,7 @@ import org.mockito.scalatest.MockitoSugar
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success}
 
 
 class LedgerTxnExecutorV1Spec
@@ -64,11 +65,11 @@ class LedgerTxnExecutorV1Spec
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
           when(mockWalletAPI.executeAsync[LedgerRequest](any[SignLedgerRequest])(any[WalletAPIParam]))
             .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).request))
-          val response = Await.result(
+          val response = Await.ready(
             ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime
-          )
+          ).value.get
           response match {
-            case Right(resp) => resp shouldBe a[TxnResp]
+            case Success(resp) => resp shouldBe a[TxnResp]
             case x => x should not be x
           }
         }
@@ -82,11 +83,11 @@ class LedgerTxnExecutorV1Spec
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(
+            val response = Await.ready(
               ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime
-            )
+            ).value.get
             response match {
-              case Left(resp) => resp shouldBe a[StatusDetail]
+              case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
             }
           }
@@ -97,11 +98,11 @@ class LedgerTxnExecutorV1Spec
         "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
           doReturn(Future.failed(IndyException.fromSdkError(PoolLedgerTimeout.value)))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-          val response = Await.result(
+          val response = Await.ready(
             ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime
-          )
+          ).value.get
           response match {
-            case Left(resp) => resp shouldBe a[StatusDetail]
+            case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x
           }
         }
@@ -115,16 +116,16 @@ class LedgerTxnExecutorV1Spec
             """{"result":{"type":"100","reqId":1530159819906096868,"rootHash":"3QqkXDa3T35oDUtKiX9nfYZuJLzGXxcA7Bqyt2Hb4nJd","raw":"{\"url\":\"testvalue\"}","txnTime":1530159820,"signature":"pdC1yghHd4dUmm6WDE9k85Aw73qaxBYZRJWe5oyf1cYCSBiMbkn5pW68a57TaENnWGedcu5y35QzHW89DVuM864","auditPath":["75RMSGKTRdknTSWkSVtGTuLiNBXVUn4pZGdMqFo3vVVi","37tAEcNxXHSnNhZR21YgsCrXbxhnFwjkHyhdFf7qB8Kz","HXMqv1xpDt4xMbHdSUFPUyLsC8LVKeFj4oTWC5jMuRHH","7WNdgAkQzhnV2LcHPynDc6NPSrqipiZr2vP4zYDGzWKR"],"signatures":null,"identifier":"YYBAxNYvjR1D9aL6GMr3vK","seqNo":3589,"dest":"YYBAxNYvjR1D9aL6GMr3vK"},"op":"REPLY"}""".stripMargin
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-          val response = Await.result(
+          val response = Await.ready(
             ledgerTxnExecutor.addAttrib(
               submitter,
               "VFN92wTpay26L64XnEQsfR",
               "url",
               "http:test"
             ), maxWaitTime
-          )
+          ).value.get
           response match {
-            case Right(resp) => resp shouldBe a[TxnResp]
+            case Success(resp) => resp shouldBe a[TxnResp]
             case x => x should not be x
           }
         }
@@ -141,11 +142,11 @@ class LedgerTxnExecutorV1Spec
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(
+            val response = Await.ready(
               ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime
-            )
+            ).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetNymResp]
+              case Success(resp) => resp shouldBe a[GetNymResp]
               case x => x should not be x
             }
           }
@@ -175,11 +176,11 @@ class LedgerTxnExecutorV1Spec
           validResponsesWithNoData.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response =  Await.result(
+            val response =  Await.ready(
               ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime
-            )
+            ).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetNymResp]
+              case Success(resp) => resp shouldBe a[GetNymResp]
               case x => x should not be x
             }
           }
@@ -192,11 +193,11 @@ class LedgerTxnExecutorV1Spec
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(
+            val response = Await.ready(
               ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime
-            )
+            ).value.get
             response match {
-              case Left(resp) => resp shouldBe a[StatusDetail]
+              case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
             }
           }
@@ -205,11 +206,11 @@ class LedgerTxnExecutorV1Spec
 
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
-          val response = Await.result(
+          val response = Await.ready(
             ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime
-          )
+          ).value.get
           response match {
-            case Left(resp) => resp shouldBe a[StatusDetail]
+            case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x
           }
         }
@@ -226,9 +227,9 @@ class LedgerTxnExecutorV1Spec
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getAttrib(submitter, "4ZhauNeFr1Sv8qtGBvjjxH", "url"), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getAttrib(submitter, "4ZhauNeFr1Sv8qtGBvjjxH", "url"), maxWaitTime).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetAttribResp]
+              case Success(resp) => resp shouldBe a[GetAttribResp]
               case x => x should not be x
             }
           }

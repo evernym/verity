@@ -3,6 +3,7 @@ package com.evernym.verity.libindy.ledger
 import akka.actor.ActorSystem
 import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
@@ -140,43 +141,41 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
     if (ConfigUtil.isTAAConfigEnabled(appConfig)) {
       createTxnExecutor(None, Some(p), None).getTAA(
         Submitter("9mDREAANbTWQqbmrdZYjQz", None) // Using a hard coded random DID. This is not ideal.
-      )
-        .map {
-          case Right(taaResp: GetTAAResp) => taaResp.taa
-          case Left(s) => throw OpenConnException(s"Unable to retrieve TAA from ledger -- ${s.statusCode} - ${s.statusMsg}")
-        }
-        .map { ledgerTaa: LedgerTAA =>
-          val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
+      ).map {
+        _.taa
+      }.recover {
+        case StatusDetailException(s) => throw OpenConnException(s"Unable to retrieve TAA from ledger -- ${s.statusCode} - ${s.statusMsg}")
+      }.map { ledgerTaa: LedgerTAA =>
+        val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
 
-          val autoAccept = appConfig.getConfigBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
-          val configuredTaa:Option[TransactionAuthorAgreement] = if(!autoAccept) {
-            findTAAConfig(appConfig, ledgerTaa.version)
-          }
-          else {
-            // This for demo, testing or otherwise when connecting to a ledger that don't have a legally binding TAA
-            Some(TransactionAuthorAgreement(
-              ledgerTaa.version,
-              expectedDigest,
-              "on_file",
-              nowTimeOfAcceptance()
-            ))
-          }
+        val autoAccept = appConfig.getConfigBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
+        val configuredTaa:Option[TransactionAuthorAgreement] = if(!autoAccept) {
+          findTAAConfig(appConfig, ledgerTaa.version)
+        }
+        else {
+          // This for demo, testing or otherwise when connecting to a ledger that don't have a legally binding TAA
+          Some(TransactionAuthorAgreement(
+            ledgerTaa.version,
+            expectedDigest,
+            "on_file",
+            nowTimeOfAcceptance()
+          ))
+        }
 
-          configuredTaa match {
-            case Some(taa) =>
-              if (expectedDigest.toLowerCase() != taa.digest.toLowerCase()) {
-                throw OpenConnException("Configured TAA Digest doesn't match ledger TAA")
-              } else {
-                configuredTaa
-              }
-            case None =>
-              throw OpenConnException("TAA is not configured")
-          }
+        configuredTaa match {
+          case Some(taa) =>
+            if (expectedDigest.toLowerCase() != taa.digest.toLowerCase()) {
+              throw OpenConnException("Configured TAA Digest doesn't match ledger TAA")
+            } else {
+              configuredTaa
+            }
+          case None =>
+            throw OpenConnException("TAA is not configured")
         }
-        .map { configuredTaa =>
-          currentTAA = configuredTaa
-          p
-        }
+      }.map { configuredTaa =>
+        currentTAA = configuredTaa
+        p
+      }
     }
     else {
       currentTAA = None

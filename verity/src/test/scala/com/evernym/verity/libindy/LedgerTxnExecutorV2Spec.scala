@@ -2,7 +2,7 @@ package com.evernym.verity.libindy
 
 import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{StatusDetail, TAA_NOT_SET_ON_THE_LEDGER}
+import com.evernym.verity.Status.{StatusDetail, StatusDetailException, TAA_NOT_SET_ON_THE_LEDGER}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -20,6 +20,7 @@ import org.mockito.scalatest.MockitoSugar
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success}
 
 
 class LedgerTxnExecutorV2Spec extends ActorSpec
@@ -55,12 +56,12 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
           when(mockWalletAPI.executeAsync[LedgerRequest](any[SignLedgerRequest])(any[WalletAPIParam]))
             .thenAnswer ((i: InvocationOnMock) => Future(i.getArgument[SignLedgerRequest](0).request))
-          val response = Await.result(
+          val response = Await.ready(
             ledgerTxnExecutor.addNym(submitter, targetDidPair),
             maxWaitTime
-          )
+          ).value.get
           response match {
-            case Right(resp) => resp shouldBe a[TxnResp]
+            case Success(resp) => resp shouldBe a[TxnResp]
             case x => x should not be x
           }
         }
@@ -87,9 +88,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime).value.get
             response match {
-              case Left(resp) => resp shouldBe a[StatusDetail]
+              case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
             }
           }
@@ -98,9 +99,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
 
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
-          val response = Await.result(ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime)
+          val response = Await.ready(ledgerTxnExecutor.addNym(submitter, targetDidPair), maxWaitTime).value.get
           response match {
-            case Left(resp) => resp shouldBe a[StatusDetail]
+            case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x
           }
         }
@@ -114,9 +115,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
             """{"result":{"txnMetadata":{"seqNo":12,"txnTime":1530159597},"reqSignature":{"type":"ED25519","values":[{"value":"59Z4PdmsgP7NUxDfJ1ZgtNPHMGhSkcqo8u5vtwoc6khAekVRgVrnYnon76yxs4wTvnbAQphvMHLjAx2Pyeoc6yn5","from":"PJwbFcdVdjbKVJ2q7N9dJn"}]},"rootHash":"7DCA8vGLifZogvvEuUgdv3TsPGo2a5d6Xr2GubpuwS2p","txn":{"type":"100","protocolVersion":2,"data":{"raw":"{\"url\":\"testvalue\"}","dest":"PJwbFcdVdjbKVJ2q7N9dJn"},"metadata":{"from":"PJwbFcdVdjbKVJ2q7N9dJn","digest":"bc29ec50c53c5fab35a46b257594cbb22449d26645455d18b799f83749e2e0df","reqId":1530159597177549776}},"ver":"1","auditPath":["8Aa3aYzhpbWPMum76tT252D145frVd39SiGkCEYbyqyQ","EsY4hbw8MPXuyQTiq43pvwJqak6pGzfKwJKMXoi6uYS7","DNHM372JZJoGcxdHdmsj3QSSiomyeZux6ssJXxAJqyvd"]},"op":"REPLY"}""".stripMargin
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-          val response = Await.result(ledgerTxnExecutor.addAttrib(submitter, "VFN92wTpay26L64XnEQsfR", "url", "http:test"), maxWaitTime)
+          val response = Await.ready(ledgerTxnExecutor.addAttrib(submitter, "VFN92wTpay26L64XnEQsfR", "url", "http:test"), maxWaitTime).value.get
           response match {
-            case Right(resp) => resp shouldBe a[TxnResp]
+            case Success(resp) => resp shouldBe a[TxnResp]
             case x => x should not be x
           }
         }
@@ -146,9 +147,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetNymResp]
+              case Success(resp) => resp shouldBe a[GetNymResp]
               case x => x should not be x
             }
           }
@@ -163,9 +164,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
           validResponsesWithNullData.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime).value.get
             response match {
-              case Right(resp) =>
+              case Success(resp) =>
                 resp shouldBe a[GetNymResp]
                 resp.txnResp should not be(None)
                 resp.nym should be(None)
@@ -184,9 +185,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
           validResponsesWithNoData.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetNymResp]
+              case Success(resp) => resp shouldBe a[GetNymResp]
               case x => x should not be x
             }
           }
@@ -199,9 +200,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime).value.get
             response match {
-              case Left(resp) => resp shouldBe a[StatusDetail]
+              case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
             }
           }
@@ -210,9 +211,9 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
 
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
-          val response = Await.result(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime)
+          val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime).value.get
           response match {
-            case Left(resp) => resp shouldBe a[StatusDetail]
+            case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x
           }
         }
@@ -231,9 +232,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getSchema(submitter, schemaId), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getSchema(submitter, schemaId), maxWaitTime).value.get
             response match {
-              case Right(resp) =>
+              case Success(resp) =>
                 resp.schema.get.name shouldBe "license"
                 resp.schema.get.version shouldBe "0.1"
               case x => x should not be x
@@ -248,9 +249,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getSchema(submitter, schemaId), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getSchema(submitter, schemaId), maxWaitTime).value.get
             response match {
-              case Right(resp) =>
+              case Success(resp) =>
                 resp.schema shouldBe None
               case x => x should not be x
             }
@@ -269,9 +270,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getCredDef(submitter, schemaId), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getCredDef(submitter, schemaId), maxWaitTime).value.get
             response match {
-              case Right(resp) =>
+              case Success(resp) =>
                 resp.credDef should not be None
                 resp.credDef.get.schemaId shouldBe "30"
                 resp.credDef.get.id shouldBe "Pc1XHPzCQmGwnCGLSG8N94:3:CL:30:tag"
@@ -287,9 +288,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getCredDef(submitter, schemaId), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getCredDef(submitter, schemaId), maxWaitTime).value.get
             response match {
-              case Right(resp) =>
+              case Success(resp) =>
                 resp.credDef shouldBe None
               case x => x should not be x
             }
@@ -308,9 +309,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getAttrib(submitter, "4ZhauNeFr1Sv8qtGBvjjxH", "url"), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getAttrib(submitter, "4ZhauNeFr1Sv8qtGBvjjxH", "url"), maxWaitTime).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetAttribResp]
+              case Success(resp) => resp shouldBe a[GetAttribResp]
               case x => x should not be x
             }
           }
@@ -371,9 +372,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponses.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getTAA(submitter), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getTAA(submitter), maxWaitTime).value.get
             response match {
-              case Right(resp) => resp shouldBe a[GetTAAResp]
+              case Success(resp) => resp shouldBe a[GetTAAResp]
               case x => x should not be x
             }
           }
@@ -388,9 +389,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponsesWithNullData.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getTAA(submitter), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getTAA(submitter), maxWaitTime).value.get
             response match {
-              case Left(status) => status shouldBe TAA_NOT_SET_ON_THE_LEDGER
+              case Failure(StatusDetailException(status)) => status shouldBe TAA_NOT_SET_ON_THE_LEDGER
               case x => x should not be x
             }
           }
@@ -406,9 +407,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           validResponsesWithNoData.foreach { vr =>
             doReturn(Future(vr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getTAA(submitter), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getTAA(submitter), maxWaitTime).value.get
             response match {
-              case Left(status) => status shouldBe TAA_NOT_SET_ON_THE_LEDGER
+              case Failure(StatusDetailException(status)) => status shouldBe TAA_NOT_SET_ON_THE_LEDGER
               case x => x should not be x
             }
           }
@@ -421,9 +422,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.result(ledgerTxnExecutor.getTAA(submitter), maxWaitTime)
+            val response = Await.ready(ledgerTxnExecutor.getTAA(submitter), maxWaitTime).value.get
             response match {
-              case Left(resp) => resp shouldBe a[StatusDetail]
+              case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
             }
           }
@@ -432,9 +433,9 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
 
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreLog)  in {
-          val response = Await.result(ledgerTxnExecutor.getTAA(submitter), maxWaitTime)
+          val response = Await.ready(ledgerTxnExecutor.getTAA(submitter), maxWaitTime).value.get
           response match {
-            case Left(resp) => resp shouldBe a[StatusDetail]
+            case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x
           }
         }

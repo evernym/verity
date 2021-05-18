@@ -2,7 +2,7 @@ package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail}
+import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail, StatusDetailException}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -58,10 +58,10 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
     throw new NotImplementedError("not yet implemented")
   }
 
-  override def getTAA(submitter: Submitter): Future[Either[StatusDetail, GetTAAResp]] = {
+  override def getTAA(submitter: Submitter): Future[GetTAAResp] = {
     Future(
       taa match {
-        case Some(t) => Right(
+        case Some(t) =>
           GetTAAResp(
             MockLedgerTxnExecutor.buildTxnResp(
               submitter.did,
@@ -70,16 +70,15 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
               "6"),
             t
           )
-        )
-        case None => Left(DATA_NOT_FOUND) //TODO: Replace with correct error
+        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
       }
     )
   }
 
-  def getNym(submitter: Submitter, id: String): Future[Either[StatusDetail, GetNymResp]] = {
+  def getNym(submitter: Submitter, id: String): Future[GetNymResp] = {
     Future(
-      nyms.get(id).map { nd =>
-        Right(
+      nyms.get(id) match {
+        case Some(nd) =>
           GetNymResp(
             MockLedgerTxnExecutor.buildTxnResp(
               id,
@@ -90,16 +89,15 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
             Some(id),
             Some(nd.verKey)
           )
-        )
-      }.getOrElse {
-        Left(DATA_NOT_FOUND) //TODO: Replace with correct error
+        case None =>
+          throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
       }
     )
   }
 
   def writeSchema(submitterDID: DID,
                   schemaJson: String,
-                  walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
+                  walletAccess: WalletAccess): Future[TxnResp] = {
     val jSONObject = new JSONObject(schemaJson)
     val id = jSONObject.getString("id")
     val name = jSONObject.getString("name")
@@ -120,7 +118,7 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
       ))
     )
     schemas += id -> schemaResp
-    Future.successful(Right(txnResp))
+    Future.successful(txnResp)
   }
 
   def prepareSchemaForEndorsement(submitterDID: DID,
@@ -128,19 +126,18 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
                                   endorserDID: DID,
                                   walletAccess: WalletAccess): Future[LedgerRequest] = ???
 
-  def getSchema(submitter: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
-    Future.successful {
-      schemas.get(schemaId).map { schema =>
-        Right(schema)
-      }.getOrElse {
-        Left(DATA_NOT_FOUND) //TODO: Replace with correct error
+  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp] = {
+    Future {
+      schemas.get(schemaId) match {
+        case Some(schema) => schema
+        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
       }
     }
   }
 
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
-                   walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
+                   walletAccess: WalletAccess): Future[TxnResp] = {
     val jSONObject = new JSONObject(credDefJson)
     val id = jSONObject.getString("id")
     val schemaId = jSONObject.getString("schemaId")
@@ -163,7 +160,7 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
         ))
       )
     credDefs += id -> getCredDefResp
-    Future.successful(Right(txnResp))
+    Future.successful(txnResp)
   }
 
   def prepareCredDefForEndorsement(submitterDID: DID,
@@ -171,56 +168,52 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
                                    endorserDID: DID,
                                    walletAccess: WalletAccess): Future[LedgerRequest] = ???
 
-  def getCredDef(submitter: Submitter, credDefId: String): Future[Either[StatusDetail, GetCredDefResp]] = {
+  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp] = {
     Future(
-      credDefs.get(credDefId).map { d =>
-        Right(d)
-      }.getOrElse {
-        Left(DATA_NOT_FOUND) //TODO: Replace with correct error
+      credDefs.get(credDefId) match {
+        case Some(value) => value
+        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
       }
     )
   }
 
-  def addNym(submitter: Submitter, targetDid: DidPair): Future[Either[StatusDetail, TxnResp]] = {
+  def addNym(submitter: Submitter, targetDid: DidPair): Future[TxnResp] = {
     nyms += targetDid.DID -> NymDetail(targetDid.verKey)
     Future(
-      Right(MockLedgerTxnExecutor.buildTxnResp(targetDid.DID, Some(targetDid.DID), None, "1"))
+      MockLedgerTxnExecutor.buildTxnResp(targetDid.DID, Some(targetDid.DID), None, "1")
     )
   }
 
-  def getAttrib(submitter: Submitter, did: DID, attrName: String): Future[Either[StatusDetail, GetAttribResp]] = {
+  def getAttrib(submitter: Submitter, did: DID, attrName: String): Future[GetAttribResp] = {
     Future(
-      attribs.get(did).map { didAttribs =>
-        didAttribs.get(attrName).map { attribValue =>
-          Right(
-            GetAttribResp(
-              MockLedgerTxnExecutor.buildTxnResp(
-                did,
-                Some(did),
-                Some(Map(attrName -> attribValue)),
-                "104"
+      attribs.get(did) match {
+        case Some(didAttribs) =>
+          didAttribs.get(attrName) match {
+            case Some(attribValue) =>
+              GetAttribResp(
+                MockLedgerTxnExecutor.buildTxnResp(
+                  did,
+                  Some(did),
+                  Some(Map(attrName -> attribValue)),
+                  "104"
+                )
               )
-            )
-          )
-        }.getOrElse {
-          Left(DATA_NOT_FOUND) //TODO: Replace with correct error
-        }
-      }.getOrElse {
-        Left(DATA_NOT_FOUND) //TODO: Replace with correct error
+            case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
+          }
+        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
       }
     )
   }
 
-  def addAttrib(submitter: Submitter, did: DID, attrName: String, attrValue: String):
-  Future[Either[StatusDetail, TxnResp]] = {
+  def addAttrib(submitter: Submitter, did: DID, attrName: String, attrValue: String): Future[TxnResp] = {
     val oldDIDAttribs = attribs.getOrElse(did, Map.empty)
     val newDIDAttribs = oldDIDAttribs ++ Map(attrName -> attrValue)
     attribs += did -> newDIDAttribs
     Future(
-      Right(MockLedgerTxnExecutor.buildTxnResp(did, Some(did), None, "100"))
+      MockLedgerTxnExecutor.buildTxnResp(did, Some(did), None, "100")
     )
   }
 
-  override def completeRequest(submitter: Submitter, req: LedgerRequest): Future[Either[StatusDetail, Map[String, Any]]] = ???
+  override def completeRequest(submitter: Submitter, req: LedgerRequest): Future[Map[String, Any]] = ???
 
 }

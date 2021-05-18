@@ -1,6 +1,7 @@
 package com.evernym.verity.cache.fetchers
 
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.cache.base.{KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
@@ -28,9 +29,10 @@ class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfi
   override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
     val gvkp = kd.keyAs[GetVerKeyParam]
     val gvkpFut = ledgerSvc.getNymDataFut(gvkp.submitterDetail, gvkp.did, ledgerSvc.VER_KEY)
-    gvkpFut.map {
-      case Right(vk: String) => Map(gvkp.did -> vk)
-      case x => throw buildUnexpectedResponse(x)
+    gvkpFut.map { vk =>
+      Map(gvkp.did -> vk)
+    }.recover {
+      case StatusDetailException(sd) => throw buildUnexpectedResponse(sd)
     }
   }
 

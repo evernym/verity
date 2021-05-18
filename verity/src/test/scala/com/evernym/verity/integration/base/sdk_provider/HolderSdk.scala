@@ -3,7 +3,7 @@ package com.evernym.verity.integration.base.sdk_provider
 import akka.http.scaladsl.model.{HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.OK
 import com.evernym.verity.Status
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
@@ -33,7 +33,7 @@ import java.util.UUID
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
  * contains helper methods for holder sdk side of the operations
@@ -183,11 +183,13 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
     testWalletAPI.executeSync[MasterSecretCreated](CreateMasterSecret(masterSecretId))
   }
 
-  private def awaitLedgerReq[T](fut: Future[Either[StatusDetail, T]]): T = {
-    val result = Await.result(fut, 5.seconds)
+  private def awaitLedgerReq[T](fut: Future[T]): T = {
+    val result = Await.ready(fut, 5.seconds).value.get
     result match {
-      case Right(r) => r
-      case Left(sd)  => throw new RuntimeException("error while executing ledger operation: " + sd)
+      case Success(r) => r
+      case Failure(StatusDetailException(sd)) =>
+        throw new RuntimeException("error while executing ledger operation: " + sd)
+      case Failure(exception) => throw exception
     }
   }
 

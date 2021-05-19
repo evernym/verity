@@ -172,11 +172,31 @@ message MappingAdded {
 
 //RoutingAgentBase Events
 
-message RouteSet {
+message LegacyRouteSet {
     option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     string forDID = 1;
     int32 actorTypeId = 2;
     string address = 3;
+}
+
+message RouteSet {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
+    int32 actorTypeId = 1;
+    string address = 2;
+}
+
+message RoutesMigrated {
+    repeated string routes = 1;
+}
+
+message MigrationCandidatesRecorded {
+    string entityId = 1;
+    int32 totalCandidates = 2;
+}
+
+message MigrationStatusRecorded {
+    string entityId = 1;
+    int32 totalMigrated = 2;
 }
 
 //UserAgentBase Events

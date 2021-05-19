@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.ThreadContextDetail
-import com.evernym.verity.actor.agent.maintenance.{InitialActorState, SendCmd}
+import com.evernym.verity.actor.agent.maintenance.InitialActorState
 import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.CommonConfig
@@ -213,7 +213,7 @@ trait AgentStateCleanupHelper {
       state.myDid.foreach { myDID =>
         if (! isRouteSet) {
           setRoute(myDID).map {
-            case _: RouteSet | _: RouteAlreadySet =>
+            case _: RouteSet | _:RouteAlreadySet =>
               self ! RouteSetStatus(did, isSet = true)
           }
         }

@@ -11,7 +11,7 @@ import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
-import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, MappingAdded, PersistentMsg, RouteSet}
+import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
@@ -62,11 +62,21 @@ trait BasePersistentStore
 
   def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
                      (implicit pp: PersistParam = PersistParam()): Unit = {
-    val entityId = RoutingAgentUtil.getBucketEntityId(agentDID)
-    val persistenceId = PersistenceIdParam(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, entityId)
+    val persistenceId = PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, agentDID)
     addEventsToPersistentStorage(persistenceId,
       scala.collection.immutable.Seq(
-        RouteSet(agentDID, actorTypeId, address)
+        RouteSet(actorTypeId, address)
+      )
+    )(pp.copy(encryptionKey = Option(agentRouteStoreEncKey)))
+  }
+
+  def storeLegacyAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
+                           (implicit pp: PersistParam = PersistParam()): Unit = {
+    val entityId = RoutingAgentUtil.getBucketEntityId(agentDID)
+    val persistenceId = PersistenceIdParam(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME, entityId)
+    addEventsToPersistentStorage(persistenceId,
+      scala.collection.immutable.Seq(
+        LegacyRouteSet(agentDID, actorTypeId, address)
       )
     )(pp.copy(encryptionKey = Option(agentRouteStoreEncKey)))
   }

@@ -4,7 +4,7 @@ import akka.util.Timeout
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail, getUnhandledError}
-import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.cache.providers.MaxWeightParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
@@ -21,7 +21,7 @@ trait CacheValueFetcher {
   def appConfig: AppConfig
 
   val logger: Logger = getLoggerByName("CacheValueFetcher")
-  def id: Int
+  def fetcherParam: FetcherParam
 
   //config path for the given cache fetcher
   def cacheConfigPath: Option[String]
@@ -106,3 +106,4 @@ trait AsyncCacheValueFetcher extends CacheValueFetcher {
     }
   }
 }
+

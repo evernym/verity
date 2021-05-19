@@ -1,6 +1,8 @@
 package com.evernym.verity.integration.base.verity_provider
 
+import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import com.evernym.verity.config.CommonConfig.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
+import com.evernym.verity.integration.base.SharedEventStore
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
@@ -48,17 +50,33 @@ object LocalVerityConfig {
          |akka.management.http.port = ${ports.akka_management}
       """.stripMargin +
         "akka.cluster.seed-nodes = [" + "\n" +
-          (ports.artery +: otherNodeArteryPorts).map { port =>
+          (ports.artery +: otherNodeArteryPorts).sorted.map { port =>
             s"""  \"akka://verity@${InetAddress.getLocalHost.getHostAddress}:$port\""""
           }.mkString(",\n") + "\n" +
         "]".stripMargin
     )
   }
 
-  //Use local leveldb persistence instead of a remote service
-  private def useLevelDBPersistence(tempDir: Path): Config = {
-    ConfigFactory.parseString(
-      s"""
+  //Use local/shared leveldb persistence
+  private def useLevelDBPersistence(tempDir: Path, sharedEventStore: Option[SharedEventStore]=None): Config = {
+    sharedEventStore match {
+      case Some(ses) =>
+        ConfigFactory.parseString(s"""
+         |akka.actor.allow-java-serialization = on
+         |akka.extensions = ["akka.persistence.Persistence"]
+         |akka.persistence.journal.auto-start-journals = [""]
+         |akka.persistence.journal.proxy.target-journal-address = "${ses.address}"
+         |akka.persistence.snapshot-store.proxy.target-snapshot-store-address = "${ses.address}"
+         |akka.persistence.journal {
+         |  plugin = "akka.persistence.journal.proxy"
+         |  proxy.target-journal-plugin = "akka.persistence.journal.leveldb"
+         |}
+         |akka.persistence.snapshot-store {
+         |  plugin = "akka.persistence.snapshot-store.proxy"
+         |  proxy.target-snapshot-store-plugin = "akka.persistence.snapshot-store.local"
+         |}""".stripMargin).withFallback(SharedLeveldbJournal.configToEnableJavaSerializationForTest)
+      case None      =>
+        ConfigFactory.parseString(s"""
          |akka.persistence.journal {
          |  plugin = "akka.persistence.journal.leveldb"
          |  leveldb {
@@ -66,12 +84,16 @@ object LocalVerityConfig {
          |    native = false
          |  }
          |}
-         |akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
-         |akka.persistence.snapshot-store.local.dir = "${tempDir.resolve("snapshots")}"
+         |akka.persistence.snapshot-store {
+         |  plugin = "akka.persistence.snapshot-store.local"
+         |  local = {
+         |    dir = "${tempDir.resolve("snapshots")}"
+         |  }
+         |}
          |""".stripMargin
-    )
+        )
+    }
   }
-
 
   private def useDefaultWallet(tempDir: Path): Config = {
     ConfigFactory.parseString(
@@ -96,8 +118,6 @@ object LocalVerityConfig {
          |akka.actor.provider = cluster
          |akka.http.server.remote-address-header = on
          |akka.cluster.jmx.multi-mbeans-in-same-jvm = on
-         |akka.cluster.sharding.waiting-for-state-timeout = 15000
-         |akka.cluster.sharding.updating-state-timeout = 15000
          |""".stripMargin
     )
   }
@@ -135,9 +155,10 @@ object LocalVerityConfig {
                port: PortProfile,
                otherNodeArteryPorts: List[Int] = List.empty,
                taaEnabled: Boolean = true,
-               taaAutoAccept: Boolean = true): Config = {
+               taaAutoAccept: Boolean = true,
+               sharedEventStore: Option[SharedEventStore]=None): Config = {
     val parts = Seq(
-      useLevelDBPersistence(tempDir),
+      useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
       changePoolName(),
       useCustomPort(port, otherNodeArteryPorts),

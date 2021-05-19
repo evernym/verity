@@ -1,15 +1,14 @@
 package com.evernym.verity.actor.agent.state
 
 import java.time.ZonedDateTime
-
 import com.evernym.verity.Exceptions.InternalServerErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.getUnhandledError
 import com.evernym.verity.actor.agent.user.{AgentConfig, AgentConfigs, GetConfigDetail, GetConfigs}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetConfigCacheParam
-import com.evernym.verity.constants.Constants.AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.HasAppConfig
 
@@ -50,7 +49,7 @@ trait UsesConfigs extends HasAppConfig {
   }
 
   def getCachedConfigDetails: Map[String, AgentConfig] = {
-    agentCache.getCachedObjectsByFetcherId(AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID).
+    agentCache.getCachedObjectsByFetcherId(AGENT_ACTOR_CONFIG_CACHE_FETCHER).
       map(co => co._1 -> AgentConfig(co._2.toString, ZonedDateTime.now()))
   }
 
@@ -65,7 +64,7 @@ trait UsesConfigs extends HasAppConfig {
     val reqsKds = buildKeyDetails(reqs, req = true)
     val nonReqsKds = buildKeyDetails(nonReqs, req = false)
     val allKeyDetails = reqsKds ++ nonReqsKds
-    val gcp = GetCachedObjectParam(allKeyDetails, AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID)
+    val gcp = GetCachedObjectParam(allKeyDetails, AGENT_ACTOR_CONFIG_CACHE_FETCHER)
     agentCache.getByParamAsync(gcp).map { cqr =>
       cqr.getConfigs
     }

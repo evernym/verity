@@ -59,7 +59,7 @@ trait SdkProvider {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
   }
 
-  def provisionEdgeAgent(sdk: IssuerVerifierSdk): Unit = {
+  def provisionEdgeAgent(sdk: VeritySdkBase): Unit = {
     sdk.fetchAgencyKey()
     sdk.provisionVerityEdgeAgent()
     sdk.registerWebhook()
@@ -71,7 +71,7 @@ trait SdkProvider {
     holderSDK.provisionVerityCloudAgent()
   }
 
-  def establishConnection(connId: String, issuerSDK: IssuerVerifierSdk, holderSDK: HolderSdk): Unit = {
+  def establishConnection(connId: String, issuerSDK: VeritySdkBase, holderSDK: HolderSdk): Unit = {
     val receivedMsg = issuerSDK.sendCreateRelationship(connId)
     val lastReceivedThreadId = receivedMsg.threadIdOpt
     val firstInvitation = issuerSDK.sendCreateConnectionInvitation(connId, lastReceivedThreadId)
@@ -84,19 +84,19 @@ trait SdkProvider {
     issuerSDK.expectMsgOnWebhook[Complete]()
   }
 
-  def setupIssuer(issuerSDK: IssuerVerifierSdk): Unit = {
-    issuerSDK.sendControlMsg(Create())
+  def setupIssuer(issuerSDK: VeritySdkBase): Unit = {
+    issuerSDK.sendMsg(Create())
     issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
   }
 
-  def writeSchema(issuerSDK: IssuerVerifierSdk, write: writeSchema0_6.Write): SchemaId = {
-    issuerSDK.sendControlMsg(write)
+  def writeSchema(issuerSDK: VeritySdkBase, write: writeSchema0_6.Write): SchemaId = {
+    issuerSDK.sendMsg(write)
     val receivedMsg = issuerSDK.expectMsgOnWebhook[writeSchema0_6.StatusReport]()
     receivedMsg.msg.schemaId
   }
 
-  def writeCredDef(issuerSDK: IssuerVerifierSdk, write: writeCredDef0_6.Write): CredDefId = {
-    issuerSDK.sendControlMsg(write)
+  def writeCredDef(issuerSDK: VeritySdkBase, write: writeCredDef0_6.Write): CredDefId = {
+    issuerSDK.sendMsg(write)
     val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport]()
     receivedMsg.msg.credDefId
   }
@@ -171,17 +171,17 @@ abstract class SdkBase(param: SdkParam) {
     ReceivedMsgParam(jsonObject.getString("message"))
   }
 
-  protected def createJsonString(msg: Any, msgFamily: MsgFamily): String = {
+  def createJsonString(msg: Any, msgFamily: MsgFamily): String = {
     val msgType = msgFamily.msgType(msg.getClass)
     val typeStr = MsgFamily.typeStrFromMsgType(msgType)
     createJsonString(typeStr, msg)
   }
 
-  protected def withNewThreadIdAdded(msg: String): String = {
+  def withNewThreadIdAdded(msg: String): String = {
     withThreadIdAdded(msg, UUID.randomUUID().toString)
   }
 
-  protected def withThreadIdAdded(msg: String, threadId: ThreadId): String = {
+  def withThreadIdAdded(msg: String, threadId: ThreadId): String = {
     val coreJson = new JSONObject(msg)
     val threadJSON = new JSONObject()
     threadJSON.put("thid", threadId)
@@ -237,8 +237,9 @@ abstract class SdkBase(param: SdkParam) {
   }
 
   protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
+    val json = parseHttpResponse(resp)
     require(resp.status.intValue() == expected.intValue,
-      s"http response was not ${expected.value}: ${resp.status}")
+      s"http response was not ${expected.value}: $json")
     resp
   }
 
@@ -413,7 +414,7 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
     val verityUrls = verityEnvUrlProvider.availableNodeUrls
 
     lastVerityUrlUsedIndex = {
-      if (lastVerityUrlUsedIndex == verityUrls.size - 1) 0
+      if (lastVerityUrlUsedIndex >= verityUrls.size - 1) 0
       else lastVerityUrlUsedIndex + 1
     }
     verityUrls(lastVerityUrlUsedIndex)

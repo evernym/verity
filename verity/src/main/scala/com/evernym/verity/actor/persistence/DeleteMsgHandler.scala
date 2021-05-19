@@ -20,6 +20,12 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
     case dmf: DeleteMessagesFailure  => handleDeleteMsgFailure(dmf)
   }
 
+  def msgDeleteCallbackWithStash: Receive = {
+    case cmd                           =>
+      logger.info(s"[$actorId] event deletion is in progress, commands will be stashed: " + cmd.getClass.getSimpleName)
+      stash()
+  }
+
   /**
    * an extended version of 'deleteMessages'
    * this takes care of deleting messages in batches
@@ -27,7 +33,9 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
    * and will make sure it does delete messages eventually
    * @param toSeqNo sequence number till which events needs to be deleted
    */
-  def deleteMessagesExtended(toSeqNo: Long): Unit = {
+  def deleteMessagesExtended(toSeqNo: Long, receiveDuringDelete: Option[Receive]=None): Unit = {
+    val receiverToSet = receiveDuringDelete.getOrElse(msgDeleteCallbackWithStash)
+    setNewReceiveBehaviour(receiverToSet, discardOld = false)
     deleteMsgProgress = deleteMsgProgress.copy(targetSeqNo = toSeqNo)
     deleteEventsInBatches()
   }
@@ -50,30 +58,31 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
     log.debug(s"[$persistenceId] total events deleted: ${dms.toSequenceNr}")
     onDeleteMessageSuccess(dms)
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT)
-    if (deleteMsgProgress.targetSeqNo == 0) {
+    if (deleteMsgProgress.isBatchedDeletion) {
+      handleBatchedDeleteMsgSuccess(dms)
+    } else {
       logger.info(s"[$persistenceId] events deleted (${dms.toSequenceNr})")
       completeMsgsDeletion()
-    } else {
-      handleBatchedDeleteMsgSuccess(dms)
     }
   }
 
   private def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
     onDeleteMessageFailure(dmf)
     MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT)
-    if (deleteMsgProgress.targetSeqNo == 0) {
+    if (deleteMsgProgress.isBatchedDeletion) {
+      handleBatchedDeleteMsgFailure(dmf)
+    } else {
       //someone tried to just delete events at once (instead of using batched event deletion function)
       // so lets use the batched one to handle it gracefully
       logger.info(s"[$persistenceId] event deletion failed (${dmf.toSequenceNr}) " +
         s"(will fallback to batched event deletion)", (LOG_KEY_ERR_MSG, dmf.cause))
       deleteMessagesExtended(dmf.toSequenceNr)
-    } else {
-      handleBatchedDeleteMsgFailure(dmf)
     }
   }
 
   private def handleBatchedDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
-    logger.info(s"[$persistenceId] batched event deletion successful (${dms.toSequenceNr}/${deleteMsgProgress.targetSeqNo})")
+    logger.info(s"[$persistenceId] batched event deletion successful " +
+      s"(${dms.toSequenceNr}/${deleteMsgProgress.targetSeqNo})")
     deleteMsgProgress = deleteMsgProgress.copy(deletedTillSeqNo = dms.toSequenceNr)
     if (deleteMsgProgress.pendingCount > 0) {
       adjustBatchParamsPostSuccess()
@@ -84,7 +93,8 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
   }
 
   private def handleBatchedDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
-    logger.info(s"[$persistenceId] batched event deletion failed (${deleteMsgProgress.deletedTillSeqNo}/${deleteMsgProgress.targetSeqNo}): ${dmf.toSequenceNr}", (LOG_KEY_ERR_MSG, dmf.cause))
+    logger.info(s"[$persistenceId] batched event deletion failed " +
+      s"(${deleteMsgProgress.deletedTillSeqNo}/${deleteMsgProgress.targetSeqNo}): ${dmf.toSequenceNr}", (LOG_KEY_ERR_MSG, dmf.cause))
     adjustBatchParamsPostFailure()
     adjustReceiveTimeoutIfRequired()
     scheduleNextDeletion()
@@ -97,6 +107,10 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
   private def completeMsgsDeletion(): Unit = {
     context.setReceiveTimeout(originalReceiveTimeout)
     postAllMsgsDeleted()
+    if (deleteMsgProgress.isBatchedDeletion) {
+      context.unbecome()
+      unstashAll()
+    }
   }
 
   private def adjustBatchParamsPostSuccess(): Unit = {
@@ -180,6 +194,8 @@ case class DeleteMsgConfig(initialBatchSize: Int,
 case class DeleteMsgProgress(targetSeqNo: Long,
                              deletedTillSeqNo: Long,
                              batchSize: Long) {
+
+  def isBatchedDeletion: Boolean = targetSeqNo != 0
 
   def pendingCount: Long = targetSeqNo - deletedTillSeqNo
 

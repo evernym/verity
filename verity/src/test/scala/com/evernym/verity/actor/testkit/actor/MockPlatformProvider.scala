@@ -52,7 +52,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   lazy val singletonParentProxy: ActorRef = platform.singletonParentProxy
 
-  lazy val agentRouteStoreRegion: ActorRef = platform.agentRouteStoreRegion
+  lazy val routeRegion: ActorRef = platform.routeRegion
 
   lazy val agencyAgentRegion: ActorRef = platform.agencyAgentRegion
   lazy val agencyAgentPairwiseRegion : ActorRef = platform.agencyAgentPairwiseRegion

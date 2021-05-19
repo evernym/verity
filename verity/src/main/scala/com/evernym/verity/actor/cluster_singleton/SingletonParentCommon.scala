@@ -16,9 +16,10 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocki
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.WatcherManager
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.cluster_singleton.maintenance.{AgentRoutesMigrator, RouteMaintenanceHelper}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.constants.ActorNameConstants._
+import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -78,12 +79,13 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
       ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig),
-      RouteMaintenanceHelper.name -> RouteMaintenanceHelper.props(appConfig, agentActorContext.agentMsgRouter)
+      RouteMaintenanceHelper.name -> RouteMaintenanceHelper.props(appConfig, agentActorContext.agentMsgRouter),
+      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig)
     )
 
   implicit def appConfig: AppConfig = agentActorContext.appConfig
 
-  implicit override def actorSystem: ActorSystem = agentActorContext.system
+  implicit override def system: ActorSystem = agentActorContext.system
 
   implicit val timeout: Timeout = buildTimeout(agentActorContext.appConfig,
     TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
@@ -228,6 +230,9 @@ case class ForResourceWarningStatusMngr(override val cmd: Any) extends ForSingle
 }
 case class ForActorStateCleanupManager(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = ACTOR_STATE_CLEANUP_MANAGER
+}
+case class ForAgentRoutesMigrator(override val cmd: Any) extends ForSingletonChild {
+  def getActorName: String = AGENT_ROUTES_MIGRATOR
 }
 trait ForWatcherManager extends ForSingletonChild
 

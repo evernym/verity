@@ -3,23 +3,19 @@ package com.evernym.verity.cache.fetchers
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.cache.base.{KeyDetail, KeyMapping}
+import com.evernym.verity.cache.LEDGER_GET_ENDPOINT_CACHE_FETCHER
+import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{AttribResult, LedgerSvc, Submitter}
 import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
 
+class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig)
+  extends AsyncCacheValueFetcher {
 
-case class GetEndpointParam(did: DID, submitterDetail: Submitter) {
-  override def toString: String = s"DID: $did, SubmitterDetail: $Submitter"
-}
-
-class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
-
-  lazy val id: Int = LEDGER_GET_ENDPOINT_CACHE_FETCHER_ID
+  lazy val fetcherParam: FetcherParam = LEDGER_GET_ENDPOINT_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(LEDGER_GET_ENDPOINT_CACHE)
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
@@ -43,4 +39,8 @@ class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig) 
     }
   }
 
+}
+
+case class GetEndpointParam(did: DID, submitterDetail: Submitter) {
+  override def toString: String = s"DID: $did, SubmitterDetail: $Submitter"
 }

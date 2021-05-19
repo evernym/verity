@@ -49,7 +49,7 @@ class QuestionAnswerSpec
   "IssuerSDK" - {
     "when tried to send 'ask-question' (questionanswer 1.0) message" - {
       "should be successful" in {
-        issuerSDK.sendControlMsgForConn(firstConn, AskQuestion("How are you?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None))
+        issuerSDK.sendMsgForConn(firstConn, AskQuestion("How are you?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None))
       }
     }
   }
@@ -97,7 +97,7 @@ class QuestionAnswerSpec
     "when tried to send another 'ask-question' (questionanswer 1.0) message" - {
       "should be successful" in {
         val msg = AskQuestion("How are you after restart?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None)
-        issuerSDK.sendControlMsgForConn(firstConn, msg)
+        issuerSDK.sendMsgForConn(firstConn, msg)
       }
     }
   }

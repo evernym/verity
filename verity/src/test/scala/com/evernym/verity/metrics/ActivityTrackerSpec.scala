@@ -2,7 +2,6 @@ package com.evernym.verity.metrics
 
 import java.time.{Duration => JavaDuration}
 
-import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, SponsorRel}
 import com.evernym.verity.actor.metrics._
@@ -267,9 +266,6 @@ class ActivityTrackerSpec
                       relId: Option[String]=None): Double =
     Try(metrics(window.activityType.metricBase)).map(_.tag(window, id, relId)).getOrElse(Some(0.0)).getOrElse(0.0)
 
-
-
-  override def actorSystem: ActorSystem = system
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory parseString {

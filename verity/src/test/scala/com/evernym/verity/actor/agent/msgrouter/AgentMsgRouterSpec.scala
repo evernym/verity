@@ -14,7 +14,6 @@ class AgentMsgRouterSpec extends PersistentActorSpec with AgentMsgRouteSpecValue
         val setRoute = SetRoute(did1, ActorAddressDetail(actorTypeId, address))
         val futResp = agentMsgRouter.execute(setRoute)
         futResp.mapTo[RouteSet].map { rs =>
-          rs.forDID shouldBe did1
           rs.actorTypeId shouldBe actorTypeId
           rs.address shouldBe address
         }

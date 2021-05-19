@@ -5,7 +5,8 @@ import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
-import com.evernym.verity.actor.agent.msgrouter.{GetRouteBatchResult, _}
+import com.evernym.verity.actor.agent.msgrouter._
+import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRouteBatch, GetRouteBatchResult}
 import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.persistence.BasePersistentActor
@@ -166,7 +167,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
       case _ => (routeStoreStatusReq.totalProcessed/batchSizeToBeUsed)*batchSizeToBeUsed
     }
     val cmd = GetRouteBatch(routeStoreStatusReq.totalCandidates, fromIndex, batchSizeToBeUsed)
-    agentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
+    legacyAgentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
   }
 
   def handleDestroy(): Unit = {
@@ -284,7 +285,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
       .getOrElse(5)
 
-  val agentRouteStoreRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
+  val legacyAgentRouteStoreRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
   lazy val singletonParentProxyActor: ActorRef =
     getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)

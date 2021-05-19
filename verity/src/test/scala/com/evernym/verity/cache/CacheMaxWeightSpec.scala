@@ -1,7 +1,7 @@
 package com.evernym.verity.cache
 
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail, KeyMapping}
 import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
@@ -22,7 +22,7 @@ class CacheMaxWeightSpec
     "when asked for object 1" - {
       "should respond with appropriate value" in {
         val value = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("1", Right(value)), required = true), mockFetcherId)
+        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("1", Right(value)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("1")
           cache.allCacheHitCount shouldBe 0
@@ -34,7 +34,7 @@ class CacheMaxWeightSpec
     "when asked for object 2" - {
       "should respond with appropriate value" in {
         val value = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("2", Right(value)), required = true), mockFetcherId)
+        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("2", Right(value)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("1", "2")
           cache.allCacheHitCount shouldBe 0
@@ -46,7 +46,7 @@ class CacheMaxWeightSpec
     "when asked for object 3" - {
       "should respond with appropriate value" in {
         val value = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("3", Right(value)), required = true), mockFetcherId)
+        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("3", Right(value)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("1", "2", "3")
           cache.allCacheHitCount shouldBe 0
@@ -60,7 +60,7 @@ class CacheMaxWeightSpec
         //1MB is the total weight for the cache, so anything which makes
         // total cache size to cross ~1MB should result in eviction
         val largerObject = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right(largerObject)), required = true), mockFetcherId)
+        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right(largerObject)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
             cache.allKeys shouldBe Set("2", "3", "larger")
@@ -73,7 +73,7 @@ class CacheMaxWeightSpec
 
     "when asked for a larger object again" - {
       "should be responded from the cache itself" in {
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right("test")), required = true), mockFetcherId)
+        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right("test")), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("2", "3", "larger")
           cache.allCacheHitCount shouldBe 1
@@ -83,11 +83,11 @@ class CacheMaxWeightSpec
     }
   }
 
-  lazy val mockFetcherId: Int = -1
+  lazy val mockFetcher: FetcherParam = FetcherParam(-1, "mock-cache")
   lazy val mockMaxWeightObjectFetcher = new MockMaxWeightCacheFetcher(appConfig)
-  lazy val fetchers: Map[Int, AsyncCacheValueFetcher] = Map(mockFetcherId -> mockMaxWeightObjectFetcher)
+  lazy val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(mockFetcher -> mockMaxWeightObjectFetcher)
 
-  def buildCache(name: String = "MockCache", fetchers: Map[Int, CacheValueFetcher] = fetchers): Cache = {
+  def buildCache(name: String = "MockCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
     new Cache(name, fetchers)
   }
 }
@@ -97,7 +97,7 @@ class MockMaxWeightCacheFetcher(val appConfig: AppConfig)
 
   import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
-  override def id: Int = -1
+  lazy val fetcherParam: FetcherParam = FetcherParam(-1, "mock-cache")
   lazy val cacheConfigPath: Option[String] = None
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source

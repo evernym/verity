@@ -4,12 +4,13 @@ import java.util.UUID
 import akka.actor.{ActorRef, PoisonPill, Props}
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil, SetRoute}
+import com.evernym.verity.actor.agent.msgrouter.legacy.LegacySetRoute
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
-import com.evernym.verity.actor.{ForIdentifier, RouteSet, ShardUtil}
+import com.evernym.verity.actor.{ForIdentifier, LegacyRouteSet, RouteSet, ShardUtil}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
@@ -36,7 +37,7 @@ class ActorStateCleanupManagerSpec
   "Platform" - {
     "during launch" - {
       "should start required region and other actors" in {
-        val _ = platform.agentRouteStoreRegion
+        val _ = platform.routeRegion
         platform.singletonParentProxy
       }
     }
@@ -91,9 +92,9 @@ class ActorStateCleanupManagerSpec
     entityIdsToRoutes.values.map(_.size).sum shouldBe totalRouteEntries
     entityIdsToRoutes.foreach { case (entityId, routeDIDs) =>
       routeDIDs.foreach { routeDID =>
-        val setRouteMsg = SetRoute(routeDID, ActorAddressDetail(DUMMY_ACTOR_TYPE_ID, routeDID))
+        val setRouteMsg = LegacySetRoute(routeDID, ActorAddressDetail(DUMMY_ACTOR_TYPE_ID, routeDID))
         sendMsgToAgentRouteStore(entityId, setRouteMsg)
-        expectMsgType[RouteSet]
+        expectMsgType[LegacyRouteSet]
       }
       //just to make sure previous persist events are successfully recorded
       sendMsgToAgentRouteStore(entityId, GetPersistentActorDetail)
@@ -108,7 +109,7 @@ class ActorStateCleanupManagerSpec
     routeStoreRegion ! ForIdentifier(entityId, msg)
   }
 
-  lazy val routeStoreRegion: ActorRef = platform.agentRouteStoreRegion
+  lazy val routeStoreRegion: ActorRef = platform.legacyAgentRouteStoreRegion
 
   lazy val DUMMY_ACTOR_TYPE_ID: Int = 1
 

@@ -4,9 +4,10 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.agent.msgrouter._
+import com.evernym.verity.actor.agent.msgrouter.legacy.GetRegisteredRouteSummary
 import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.persistence.SingletonChildrenPersistentActor
-import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForIdentifier, Registered, StatusUpdated}
+import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForIdentifier, Registered, SendCmd, StatusUpdated}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
@@ -241,7 +242,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
     candidateEntityIds.zipWithIndex.foreach { case (entityId, index) =>
       val timeout = Duration(registrationBatchItemSleepIntervalInMillis*index, MILLISECONDS)
       val cmd = ForIdentifier(entityId, GetRegisteredRouteSummary)
-      timers.startSingleTimer(entityId, SendCmd(agentRouteStoreRegion, cmd), timeout)
+      timers.startSingleTimer(entityId, SendCmd(legacyAgentRouteStoreRegion, cmd), timeout)
     }
   }
 
@@ -264,8 +265,8 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
   var lastRequestedBucketId = -1
 
-  lazy val agentRouteStoreRegion: ActorRef =
-    ClusterSharding.get(context.system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
+  lazy val legacyAgentRouteStoreRegion: ActorRef =
+    ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
   lazy val scheduledJobInterval: Int =
     appConfig
@@ -326,5 +327,3 @@ object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER
   def props(appConfig: AppConfig): Props = Props(new ActorStateCleanupManager(appConfig))
 }
-
-case class SendCmd(to: ActorRef, cmd: Any) extends ActorMessage

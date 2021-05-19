@@ -4,12 +4,13 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, pathPrefix, post, put, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.constants.Constants.{AGENCY_DID_KEY, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID}
+import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
 import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, StatusDetail, getUnhandledError}
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint, UpdateEndpoint}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
+import com.evernym.verity.cache.KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
 import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
@@ -40,7 +41,7 @@ trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def getAgencyDIDOptFut: Future[Option[String]] = {
-    val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER)
     platform.agentActorContext.generalCache.getByParamAsync(gcop).map { cqr =>
       cqr.getAgencyDIDOpt
     }

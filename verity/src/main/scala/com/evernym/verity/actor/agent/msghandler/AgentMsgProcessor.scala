@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -925,7 +925,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
     param.protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))
   override def contextualId: Option[String] = Option(param.thisAgentAuthKey.keyId)
-  override def actorSystem: ActorSystem = context.system
   override def domainId: DomainId = param.domainId
 
   override def agentWalletIdReq: String = param.agentWalletId

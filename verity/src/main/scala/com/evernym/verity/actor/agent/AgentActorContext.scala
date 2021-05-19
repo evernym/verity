@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.{ActorContext, TokenToActorItemMapperProvider}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
-import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.cache.base.{Cache, FetcherParam}
 import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.AppConfig
@@ -38,14 +38,14 @@ trait AgentActorContext extends ActorContext {
 
   type MsgSendingSvcType = MsgSendingSvc
 
-  lazy val generalCacheFetchers: Map[Int, CacheValueFetcher] = List (
+  lazy val generalCacheFetchers: Map[FetcherParam, CacheValueFetcher] = List (
     new KeyValueMapperFetcher(system, appConfig),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
     new EndpointCacheFetcher(ledgerSvc, appConfig),
     new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig),
     new LedgerGetSchemaCacheFetcher(ledgerSvc, appConfig),
     new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig)
-  ).map(f => f.id -> f).toMap
+  ).map(f => f.fetcherParam -> f).toMap
 
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
   lazy val actionExecutor: UsageViolationActionExecutor = new UsageViolationActionExecutor(system, appConfig)

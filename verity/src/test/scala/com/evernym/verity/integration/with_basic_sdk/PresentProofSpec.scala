@@ -60,7 +60,7 @@ class PresentProofSpec
           credDefId,
           Map("name" -> "Alice", "age" -> "20")
         )
-        issuerSDK.sendControlMsgForConn(issuerHolderConn, offerMsg)
+        issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
         issuerSDK.expectMsgOnWebhook[Sent]()
       }
     }
@@ -92,7 +92,7 @@ class PresentProofSpec
     "when sent 'issue' (issue-credential 1.0) message" - {
       "should be successful" in {
         val issueMsg = Issue()
-        issuerSDK.sendControlMsgForConn(issuerHolderConn, issueMsg, lastReceivedThreadId)
+        issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThreadId)
         issuerSDK.expectMsgOnWebhook[Sent]()
       }
     }
@@ -122,7 +122,7 @@ class PresentProofSpec
           None,
           None
         )
-        verifierSDK.sendControlMsgForConn(verifierHolderConn, msg)
+        verifierSDK.sendMsgForConn(verifierHolderConn, msg)
       }
     }
   }

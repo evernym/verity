@@ -21,6 +21,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.States.Complete
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
+import com.evernym.verity.config.CommonConfig._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -452,7 +453,7 @@ object PresentProof {
           stateData.agentName,
           stateData.logoUrl,
           stateData.publicDid,
-          for (s <- service) yield FormatServiceToDidKey(s).getService(),
+          if (SERVICE_KEY_DID_FORMAT == "true") for (s <- service) yield FormatServiceToDidKey(s).getService() else service,
           attachement,
           goalCode = Some("request-proof"),
           goal = Some("To request a proof"),

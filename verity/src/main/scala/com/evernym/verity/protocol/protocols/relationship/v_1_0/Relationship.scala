@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import akka.http.scaladsl.model.Uri
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.CommonConfig.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -223,7 +224,11 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
                              publicDid: Option[DID]): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)
     val handshakeProtocols = Vector(s"${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/")
-    val service = for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield FormatServiceToDidKey(service).getService()
+    val service = if (SERVICE_KEY_DID_FORMAT == "true") {
+      for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield FormatServiceToDidKey(service).getService()
+    } else {
+      DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service
+    };
 
     //TODO: use inviteutil from out-of-band protocol for this
     OutOfBandInvitation(

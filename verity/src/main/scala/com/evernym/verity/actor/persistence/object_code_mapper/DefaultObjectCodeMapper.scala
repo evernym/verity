@@ -187,7 +187,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     153 -> relationship_10.Initialized,
     154 -> relationship_10.CreatingPairwiseKey,
     155 -> relationship_10.PairwiseKeyCreated,
-    156 -> relationship_10.InvitationCreated,
+    156 -> relationship_10.InvitationCreated_DEPRECATED,
 
     157 -> issueCredential_v10.Initialized,
     158 -> issueCredential_v10.ProposalSent,

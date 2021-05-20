@@ -1,21 +1,29 @@
 package com.evernym.verity.protocol.engine
 
-class EmptyValueForOptionalFieldProtocolEngineException(statusMsg: Option[String] = None)
-  extends ProtocolEngineException(statusMsg.get)
+class EmptyValueForOptionalFieldProtocolEngineException(statusMsg: String)
+  extends ProtocolEngineException(statusMsg)
 
-class MissingReqFieldProtocolEngineException(statusMsg: Option[String] = None)
-  extends ProtocolEngineException(statusMsg.get)
+class MissingReqFieldProtocolEngineException(statusMsg: String)
+  extends ProtocolEngineException(statusMsg)
+
+class InvalidReqFieldProtocolEngineException(statusMsg: String)
+  extends ProtocolEngineException(statusMsg)
 
 trait MsgBase {
 
   def validate(): Unit = {}
 
   def throwMissingReqFieldException(fieldName: String): Unit = {
-    throw new MissingReqFieldProtocolEngineException(Option(s"required attribute not found (missing/empty/null): '$fieldName'"))
+    throw new MissingReqFieldProtocolEngineException(s"required attribute not found (missing/empty/null): '$fieldName'")
   }
 
   def throwOptionalFieldValueAsEmptyException(fieldName: String): Unit = {
-    throw new EmptyValueForOptionalFieldProtocolEngineException(Option(s"empty value given for optional field: '$fieldName'"))
+    throw new EmptyValueForOptionalFieldProtocolEngineException(s"empty value given for optional field: '$fieldName'")
+  }
+
+  def throwInvalidReqFieldProtocolEngineException(fieldName: String, explanation: Option[String] = None): Unit = {
+    val exp: String = explanation.map(e => s" ($e)").getOrElse("")
+    throw new InvalidReqFieldProtocolEngineException(s"invalid value given for field: '$fieldName'$exp")
   }
 
   def checkRequired(fieldName: String, fieldValue: Any, allowEmpty: Boolean = false): Unit = {

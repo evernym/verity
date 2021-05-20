@@ -80,7 +80,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val createKey = Create(label = Option(connId), None, None)
+    val createKey = Create(label = Option(connId), None)
     val createKeyJson = createJsonString(createKey, RelationshipMsgFamily)
     val routedPackedMsg = packForMyVerityAgent(createKeyJson)
     checkOKResponse(sendPOST(routedPackedMsg))
@@ -97,7 +97,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
   }
 
   def sendControlMsg(msg: Any,
-                     expectedRespStatus: StatusCode = OK): Unit = {
+                     expectedRespStatus: StatusCode = OK): HttpResponse = {
     val msgFamily = getMsgFamily(msg)
     val msgJson = createJsonString(msg, msgFamily)
     val routedPackedMsg = packForMyVerityAgent(msgJson)

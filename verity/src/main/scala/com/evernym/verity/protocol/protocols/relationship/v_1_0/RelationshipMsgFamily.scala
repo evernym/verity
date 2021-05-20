@@ -7,6 +7,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
+import com.evernym.verity.util.Util.isPhoneNumberInValidFormat
 import com.evernym.verity.util.{Base64Util, MsgIdProvider}
 
 
@@ -104,16 +105,15 @@ sealed trait State
 object State {
   case class Uninitialized() extends State
   case class Initialized(agencyVerKey: String, label: String, logoUrl: String, publicDid: DID) extends State
-  case class KeyCreationInProgress(label: String, agencyVerKey: String, profileUrl: String, publicDid: DID, phoneNumber: Option[String]) extends State
-  case class Created(label: String, did: DID, verKey: VerKey, agencyVerKey: String, profileUrl: String, publicDid: DID, phoneNumber: Option[String]) extends State
-  case class InvitationCreated(invitation: Msg.Invitation, label: String, did: DID, verKey: VerKey, agencyVerKey: String, publicDid: DID, phoneNumber: Option[String]) extends State
+  case class KeyCreationInProgress(label: String, agencyVerKey: String, profileUrl: String, publicDid: DID) extends State
+  case class Created(label: String, did: DID, verKey: VerKey, agencyVerKey: String, profileUrl: String, publicDid: DID) extends State
 }
 
 sealed trait Ctl extends Control with MsgBase
 
 object Ctl {
   case class Init(params: Parameters) extends Ctl
-  case class Create(label: Option[String], logoUrl: Option[String], phoneNumber: Option[String]=None) extends Ctl
+  case class Create(label: Option[String], logoUrl: Option[String]) extends Ctl
   case class KeyCreated(did: DID, verKey: VerKey) extends Ctl
   case class SMSSent(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl
   case class SMSSendingFailed(invitationId: String, reason: String) extends Ctl
@@ -121,6 +121,24 @@ object Ctl {
   trait CreateInvitation extends Ctl
   case class ConnectionInvitation(shortInvite: Option[Boolean]=None) extends CreateInvitation
   case class OutOfBandInvitation(goalCode: Option[String]=None, goal: Option[String]=None, shortInvite: Option[Boolean]=None) extends CreateInvitation
-  case class SMSConnectionInvitation() extends CreateInvitation
-  case class SMSOutOfBandInvitation(goalCode: Option[String], goal: Option[String]) extends CreateInvitation
+  case class SMSConnectionInvitation(phoneNumber: String) extends CreateInvitation {
+    override def validate() {
+      checkRequired("phoneNumber", phoneNumber)
+      if (!isPhoneNumberInValidFormat(phoneNumber))
+        throwInvalidReqFieldProtocolEngineException(
+          "phoneNumber",
+          Some("Phone number provided is not in valid international format.")
+        )
+    }
+  }
+  case class SMSOutOfBandInvitation(phoneNumber: String, goalCode: Option[String], goal: Option[String]) extends CreateInvitation {
+    override def validate() {
+      checkRequired("phoneNumber", phoneNumber)
+      if (!isPhoneNumberInValidFormat(phoneNumber))
+        throwInvalidReqFieldProtocolEngineException(
+          "phoneNumber",
+          Some("Phone number provided is not in valid international format.")
+        )
+    }
+  }
 }

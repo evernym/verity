@@ -59,6 +59,8 @@ trait VcxBasicMessage
       )
     )
 
+    updateMessageStatus(metaData)
+
     new JSONObject()
       .put("@type", MsgFamily.typeStrFromMsgType(BasicMessageMsgFamily, "received-message"))
       .put("~thread",

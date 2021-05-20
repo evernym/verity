@@ -93,8 +93,11 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
 
         /** This will be sent synchronously in the http response*/
         ctx.send(token)
-        /** Will be sent via push notification */
-        ctx.send(PushToken(token, m.pushId))
+
+        //NOTE: This optional push notification feature is going away sooner.
+        /** Optionally will be sent via push notification */
+        m.pushId.foreach(pid => ctx.send(PushToken(token, pid)))
+
       case Failure(ex) =>
         ctx.logger.error(ex.toString)
         problemReport(SigningTokenErr.err)

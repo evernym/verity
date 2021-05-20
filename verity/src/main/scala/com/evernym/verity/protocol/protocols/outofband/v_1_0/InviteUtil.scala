@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
+import com.evernym.verity.config.CommonConfig._
 
 import scala.util.{Failure, Success, Try}
 
@@ -40,7 +41,7 @@ object InviteUtil {
                                 agentName: Option[String],
                                 logoUrl: Option[String],
                                 publicDid: Option[DID],
-                                service: Vector[ServiceFormatted],
+                                service: Vector[ServiceBlock],
                                 attachment: AttachmentDescriptor,
                                 goalCode: Option[String],
                                 goal: Option[String]): OutOfBandInvitation = {

@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.{FormatServiceToDidKey, ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
@@ -452,7 +452,7 @@ object PresentProof {
           stateData.agentName,
           stateData.logoUrl,
           stateData.publicDid,
-          service,
+          for (s <- service) yield FormatServiceToDidKey(s).getService(),
           attachement,
           goalCode = Some("request-proof"),
           goal = Some("To request a proof"),

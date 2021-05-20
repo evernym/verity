@@ -222,9 +222,10 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
                              verKey: VerKey, agencyVerKey: String, profileUrl: Option[String],
                              publicDid: Option[DID]): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)
-    val handshakeProtocols = Vector("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/")
-    val service = DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service
+    val handshakeProtocols = Vector(s"${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/")
+    val service = for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield FormatServiceToDidKey(service).getService()
 
+    //TODO: use inviteutil from out-of-band protocol for this
     OutOfBandInvitation(
       label,
       goalCode,

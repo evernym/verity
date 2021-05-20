@@ -68,7 +68,7 @@ object Msg {
                                  goal_code: Option[String],
                                  goal: Option[String],
                                  `request~attach`: Vector[AttachmentDescriptor],
-                                 service: Vector[ServiceFormatted],
+                                 service: Vector[ServiceBlock],
                                  profileUrl: Option[String],
                                  public_did: Option[String],
                                  `@id`: String = MsgIdProvider.getNewMsgId

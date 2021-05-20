@@ -441,7 +441,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           s.agentName,
           s.logoUrl,
           s.publicDid,
-          service,
+          for (s <- service) yield FormatServiceToDidKey(s).getService(),
           offerAttachment,
           goalCode = Some("issue-vc"),
           goal = Some("To issue a credential"),

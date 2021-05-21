@@ -103,6 +103,8 @@ object Ctl {
     override def validate(): Unit = {
       checkRequired("cred_def_id", cred_def_id)
       checkRequired("credential_values", credential_values)
+      checkIfValidBooleanData("auto_issue", auto_issue)
+      checkIfValidBooleanData("by_invitation", by_invitation)
     }
   }
 

@@ -5,11 +5,11 @@ Notes:
 * The 'LocalVerity' used in these specs uses:
   * leveldb for 
     * event journal
-    * storage storage (mock for S3)  
+    * segment storage (mock for S3)  
   * local storage for snapshot  
   * file based wallet storage
-  * 'in-memory' mocked ledger
-
+  * 'in-memory' mocked ledger  
+<br/>
 
 * It may not suppose these services (unless we add some mocked support or something):
   * SMS service 

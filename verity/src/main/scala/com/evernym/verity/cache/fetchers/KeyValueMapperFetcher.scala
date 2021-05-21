@@ -4,18 +4,18 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
-import com.evernym.verity.cache.base.{KeyDetail, KeyMapping}
+import com.evernym.verity.cache.KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
+import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util.Util._
 
 import scala.concurrent.Future
 
 class KeyValueMapperFetcher(val as: ActorSystem, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
 
-  lazy val id: Int = KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID
+  lazy val fetcherParam: FetcherParam = KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(KEY_VALUE_MAPPER_CACHE)
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source

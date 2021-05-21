@@ -34,6 +34,44 @@ import scala.util.Random
 
 abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
 
+  def registerWebhook(): ComMethodUpdated
+  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
+  def sendCreateConnectionInvitation(connId: String, threadId: Option[ThreadId]): Invitation
+
+  /**
+   *
+   * @param msg the message to be sent
+   * @param threadIdOpt the thread id to be used
+   * @param applyToJsonMsg function to apply to message json before gets packed,
+   *                       mostly useful to test failure/negative scenarios
+   *                       where we want to modify the final json string to test
+   *                       how verity process/responds it.
+   * @param expectedRespStatus expected http response status
+   * @return
+   */
+  def sendMsg(msg: Any,
+              threadIdOpt: Option[ThreadId] = None,
+              applyToJsonMsg: String => String = { msg => msg},
+              expectedRespStatus: StatusCode = OK): HttpResponse
+
+  /**
+   *
+   * @param connId connection for which the message needs to be packed
+   * @param msg the message to be sent
+   * @param threadIdOpt the thread id to be used
+   * @param applyToJsonMsg function to apply to message json before gets packed,
+   *                       mostly useful to test failure/negative scenarios
+   *                       where we want to modify the final json string to test
+   *                       how verity process/responds it.
+   * @param expectedRespStatus expected http response status
+   * @return
+   */
+  def sendMsgForConn(connId: String,
+                     msg: Any,
+                     threadIdOpt: Option[ThreadId] = None,
+                     applyToJsonMsg: String => String = { msg => msg},
+                     expectedRespStatus: StatusCode = OK): HttpResponse
+
   def provisionVerityEdgeAgent(): AgentCreated = {
     provisionVerityAgentBase(CreateEdgeAgent(localAgentDidPair.verKey, None))
   }
@@ -64,7 +102,7 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
   }
 
   def msgListener: MsgListenerBase[_]
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(15, SECONDS)): ReceivedMsgParam[T]
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T]
 }
 
 /**
@@ -91,26 +129,30 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
   }
 
   def sendCreateConnectionInvitation(connId: String, threadId: Option[ThreadId]): Invitation = {
-    sendControlMsgForConn(connId, ConnectionInvitation(), threadId)
+    sendMsgForConn(connId, ConnectionInvitation(), threadId)
     val receivedMsg = expectMsgOnWebhook[Invitation]()
     receivedMsg.msg
   }
 
-  def sendControlMsg(msg: Any,
-                     expectedRespStatus: StatusCode = OK): HttpResponse = {
+  def sendMsg(msg: Any,
+              threadIdOpt: Option[ThreadId] = None,
+              applyToJsonMsg: String => String = { msg => msg},
+              expectedRespStatus: StatusCode = OK): HttpResponse = {
+    val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
     val msgFamily = getMsgFamily(msg)
-    val msgJson = createJsonString(msg, msgFamily)
+    val msgJson = applyToJsonMsg(withThreadIdAdded(createJsonString(msg, msgFamily), threadId))
     val routedPackedMsg = packForMyVerityAgent(msgJson)
     checkResponse(sendPOST(routedPackedMsg), expectedRespStatus)
   }
 
-  def sendControlMsgForConn(connId: String,
-                            msg: Any,
-                            threadIdOpt: Option[ThreadId] = None,
-                            expectedRespStatus: StatusCode = OK): Unit = {
+  def sendMsgForConn(connId: String,
+                     msg: Any,
+                     threadIdOpt: Option[ThreadId] = None,
+                     applyToJsonMsg: String => String = { msg => msg},
+                     expectedRespStatus: StatusCode = OK): HttpResponse = {
     val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
     val msgFamily = getMsgFamily(msg)
-    val msgJson = withThreadIdAdded(createJsonString(msg, msgFamily), threadId)
+    val msgJson = applyToJsonMsg(withThreadIdAdded(createJsonString(msg, msgFamily), threadId))
     val routedPackedMsg = addForRelAndPackForConn(connId, msgJson)
     checkResponse(sendPOST(routedPackedMsg), expectedRespStatus)
   }
@@ -151,30 +193,40 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
     registerWebhookBase(packaging)
   }
 
-  def createRelationship(connId: String): ReceivedMsgParam[Created] = {
+  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
     val msg = Create(None, None)
-    val resp = sendRestReq(msg)
+    val resp = sendMsg(msg)
     resp.status shouldBe Accepted
     val rmp = expectMsgOnWebhook[Created]()
     myPairwiseRelationships += (connId -> PairwiseRel(None, Option(DidPair(rmp.msg.did, rmp.msg.verKey))))
     rmp
   }
 
-  def sendRestReq(msg: Any,
-                  threadIdOpt: Option[ThreadId] = None): HttpResponse = {
-    val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
-    val msgFamily = getMsgFamily(msg)
-    val msgJson = withThreadIdAdded(createJsonString(msg, msgFamily), threadId)
-    sendPostReqBase(msgFamily, msgJson, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
+  def sendCreateConnectionInvitation(connId: String, threadId: Option[ThreadId]): Invitation = {
+    sendMsgForConn(connId, ConnectionInvitation(), threadId)
+    val receivedMsg = expectMsgOnWebhook[Invitation]()
+    receivedMsg.msg
   }
 
-  def sendRestReqForConn(connId: String,
-                         msg: Any,
-                         threadIdOpt: Option[ThreadId] = None): HttpResponse = {
+  def sendMsg(msg: Any,
+              threadIdOpt: Option[ThreadId] = None,
+              applyToJsonMsg: String => String = { msg => msg},
+              expectedRespStatus: StatusCode = OK): HttpResponse = {
     val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
     val msgFamily = getMsgFamily(msg)
-    val updatedPayload = withThreadIdAdded(addForRel(connId, createJsonString(msg, msgFamily)), threadId)
-    sendPostReqBase(msgFamily, updatedPayload, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt)
+    val msgJson = applyToJsonMsg(withThreadIdAdded(createJsonString(msg, msgFamily), threadId))
+    checkResponse(sendPostReqBase(msgFamily, msgJson, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt), Accepted)
+  }
+
+  def sendMsgForConn(connId: String,
+                     msg: Any,
+                     threadIdOpt: Option[ThreadId] = None,
+                     applyToJsonMsg: String => String = { msg => msg},
+                     expectedRespStatus: StatusCode = OK): HttpResponse = {
+    val threadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
+    val msgFamily = getMsgFamily(msg)
+    val updatedPayload = applyToJsonMsg(withThreadIdAdded(addForRel(connId, createJsonString(msg, msgFamily)), threadId))
+    checkResponse(sendPostReqBase(msgFamily, updatedPayload, verityAgentDidPair.DID, myDIDApiKey, threadIdOpt), Accepted)
   }
 
   private def sendPostReqBase(msgFamily: MsgFamily,
@@ -254,14 +306,13 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
     Base58Util.encode(signedMsg.msg)
   }
 
-
   /**
    * this webhook expects plain (json) messages
    * @tparam T
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(15, SECONDS)): ReceivedMsgParam[T] = {
-    val msg = msgListener.expectMsg(Duration(15, SECONDS))
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T] = {
+    val msg = msgListener.expectMsg(timeout)
     ReceivedMsgParam(msg)
   }
 

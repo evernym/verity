@@ -17,13 +17,13 @@ object TokenizerMsgFamily extends MsgFamily {
   override val version: MsgFamilyVersion = MFV_0_1
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
-    "get-token"  -> classOf[GetToken],
-    "send-token"  -> classOf[Token],
-    "problem-report" -> classOf[ProblemReport],
-    "push-token" -> classOf[PushToken]
+    "get-token"       -> classOf[GetToken],
+    "send-token"      -> classOf[Token],
+    "problem-report"  -> classOf[ProblemReport],
+    "push-token"      -> classOf[PushToken]
   )
   override val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map (
-    "ask-for-token"                  -> classOf[AskForToken],
+    "ask-for-token"   -> classOf[AskForToken],
   )
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
   )
@@ -46,7 +46,7 @@ object TokenizerMsgFamily extends MsgFamily {
   // somewhere in the engine or in the container the decorator will be handled - probably engine
   case class PushToken(msg: Token, deliveryMethod: ComMethodDetail) extends ServiceDecorator with Msg
 
-  case class GetToken(sponseeId: String, sponsorId: String, pushId: ComMethodDetail) extends Msg
+  case class GetToken(sponseeId: String, sponsorId: String, pushId: Option[ComMethodDetail]=None) extends Msg
 
   case class Token(sponseeId: String,
                    sponsorId: String,
@@ -70,7 +70,7 @@ object TokenizerMsgFamily extends MsgFamily {
     * Control messages
     */
   sealed trait Ctl extends Control with MsgBase
-  case class AskForToken(sponseeId: String, sponsorId: String, pushId: ComMethodDetail) extends Ctl {
+  case class AskForToken(sponseeId: String, sponsorId: String, pushId: Option[ComMethodDetail]=None) extends Ctl {
     def asGetToken(): GetToken = GetToken(sponseeId, sponsorId, pushId)
   }
 

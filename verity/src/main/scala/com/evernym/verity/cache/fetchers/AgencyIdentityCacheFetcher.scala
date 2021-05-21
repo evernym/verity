@@ -3,10 +3,10 @@ package com.evernym.verity.cache.fetchers
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter._
-import com.evernym.verity.cache.base.{KeyDetail, KeyMapping}
+import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
+import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
@@ -14,7 +14,8 @@ import scala.concurrent.Future
 //this cache saves an actor round trip
 class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
 
-  lazy val id: Int = AGENCY_IDENTITY_CACHE_FETCHER_ID
+  lazy val fetcherParam: FetcherParam = AGENCY_IDENTITY_CACHE_FETCHER
+
   lazy val cacheConfigPath: Option[String] = Option(AGENCY_DETAIL_CACHE)
 
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source

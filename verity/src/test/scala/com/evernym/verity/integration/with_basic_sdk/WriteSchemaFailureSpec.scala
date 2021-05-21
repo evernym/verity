@@ -29,9 +29,9 @@ class WriteSchemaFailureSpec
     issuerSDK.provisionVerityEdgeAgent()
     issuerSDK.registerWebhook()
     issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
-    issuerSDK.sendControlMsg(Create())
+    issuerSDK.sendMsg(Create())
     issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
-    issuerSDK.sendControlMsg(CurrentPublicIdentifier())
+    issuerSDK.sendMsg(CurrentPublicIdentifier())
     issuerSDK.expectMsgOnWebhook[PublicIdentifier]()
   }
 
@@ -39,7 +39,7 @@ class WriteSchemaFailureSpec
 
     "when sent 'write' (write-schema 0.6) message and ledger returns error" - {
       "should receive 'problem-report'" in {
-        issuerSDK.sendControlMsg(Write("name", "1.0", Seq("name", "age")))
+        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age")))
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ProblemReport]()
         receivedMsg.msg.message.contains("invalid TAA") shouldBe true
       }

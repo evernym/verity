@@ -1,12 +1,13 @@
-package com.evernym.verity.actor.cluster_singleton
+package com.evernym.verity.actor.cluster_singleton.maintenance
 
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.agent.maintenance.{ProcessPending, RegisteredRouteSummary}
-import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, GetRegisteredRouteSummary, GetRouteBatch, GetRouteBatchResult, InternalMsgRouteParam, RoutingAgentBucketMapperV1}
-import com.evernym.verity.actor.base.{AlreadyDone, CoreActorExtended, DoNotRecordLifeCycleMetrics, Done, Ping, Stop}
+import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRegisteredRouteSummary, GetRouteBatch, GetRouteBatchResult}
+import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam, RoutingAgentBucketMapperV1}
+import com.evernym.verity.actor.base._
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 
@@ -74,7 +75,7 @@ class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsg
       .filter(r => ! r._2.isRegistered)
       .take(routeRegistrationBatchSize)
       .foreach { case (entityId, _) =>
-        agentRouteStoreRegion ! ForIdentifier(entityId, GetRegisteredRouteSummary)
+        legacyAgentRouteStoreRegion ! ForIdentifier(entityId, GetRegisteredRouteSummary)
         java.lang.Thread.sleep(2000)
       }
   }
@@ -88,7 +89,7 @@ class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsg
         .take(routeProcessingBatchSize)
         .foreach { case (entityId, rs) =>
           val grb = GetRouteBatch(rs.candidateRoutes, rs.processedRoutes, fetchRouteBatchSize, actorTypeIds)
-          agentRouteStoreRegion ! ForIdentifier(entityId, grb)
+          legacyAgentRouteStoreRegion ! ForIdentifier(entityId, grb)
           routeStatus += (entityId -> rs.copy(isBatchInProgress = true))
           java.lang.Thread.sleep(2000)
         }
@@ -125,8 +126,8 @@ class RouteActionExecutor(val appConfig: AppConfig, val agentMsgRouter: AgentMsg
 
   self ! Init
 
-  lazy val agentRouteStoreRegion: ActorRef =
-    ClusterSharding.get(context.system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
+  lazy val legacyAgentRouteStoreRegion: ActorRef =
+    ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
   /**
    * number of routes for which 'registration' requests would be sent in one schedule job iteration

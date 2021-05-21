@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency.agent_provisioning
 
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.protocol.engine.DID
@@ -33,8 +33,7 @@ trait AgencyAgentPairwiseSpecBase
 
   def setPairwiseEntityId(agentPairwiseDID: DID): Unit = {
     agencyAgentPairwiseDID = agentPairwiseDID
-    val bucketId = RoutingAgentUtil.getBucketEntityId(agentPairwiseDID)
-    agentRouteStoreRegion ! ForIdentifier(bucketId, GetRoute(agentPairwiseDID))
+    routeRegion ! ForIdentifier(agentPairwiseDID, GetStoredRoute)
     val addressDetail = expectMsgType[Option[ActorAddressDetail]]
     addressDetail.isDefined shouldBe true
     agencyAgentPairwiseEntityId = addressDetail.get.address

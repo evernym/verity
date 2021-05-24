@@ -14,7 +14,6 @@ import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine.{MsgFamily, _}
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.ConnResponse
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
@@ -114,8 +113,7 @@ abstract class SdkBase(param: SdkParam) {
 
   def fetchAgencyKey(): AgencyPublicDid = {
     val resp = checkOKResponse(sendGET("agency"))
-    val json = parseHttpResponse(resp)
-    val apd = JacksonMsgCodec.fromJson[AgencyPublicDid](json)
+    val apd = parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
     storeTheirKey(apd.didPair)
@@ -124,8 +122,8 @@ abstract class SdkBase(param: SdkParam) {
   }
 
   protected def provisionVerityAgentBase(createAgentMsg: Any): AgentCreated = {
-    val createAgentJsonMsg = withNewThreadIdAdded(createJsonString(createAgentMsg, AgentProvisioningMsgFamily))
-    val packedMsg = packFromLocalAgentKey(createAgentJsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
+    val jsonMsgBuilder = JsonMsgBuilder(createAgentMsg)
+    val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, agencyDID, packedMsg)
     val unpackedMsg = parseAndUnpackResponse[AgentCreated](sendPOST(routedPackedMsg))
     val verityAgent = unpackedMsg.msg
@@ -171,73 +169,12 @@ abstract class SdkBase(param: SdkParam) {
     ReceivedMsgParam(jsonObject.getString("message"))
   }
 
-  def createJsonString(msg: Any, msgFamily: MsgFamily): String = {
-    val msgType = msgFamily.msgType(msg.getClass)
-    val typeStr = MsgFamily.typeStrFromMsgType(msgType)
-    createJsonString(typeStr, msg)
-  }
-
-  def withNewThreadIdAdded(msg: String): String = {
-    withThreadIdAdded(msg, UUID.randomUUID().toString)
-  }
-
-  def withThreadIdAdded(msg: String, threadId: ThreadId): String = {
-    val coreJson = new JSONObject(msg)
-    val threadJSON = new JSONObject()
-    threadJSON.put("thid", threadId)
-    coreJson.put("~thread", threadJSON).toString
-  }
-
-  protected def createJsonString(typeStr: String, msg: Any): String = {
-    val coreJson = createJSONObject(msg)
-    coreJson.put("@type", typeStr).toString
-  }
-
-  protected def createJSONObject(msg: Any): JSONObject = {
-    val coreJson = DefaultMsgCodec.toJson(msg)
-    new JSONObject(coreJson)
-  }
-
-//  protected def legacyType(name: String, ver: String): JSONObject = {
-//    val jsonObj = new JSONObject()
-//    jsonObj.put("name", name)
-//    jsonObj.put("ver", ver)
-//    jsonObj
-//  }
-
-  protected def getMsgFamilyOpt[T: ClassTag]: Option[MsgFamily] = {
-    val clazz = implicitly[ClassTag[T]].runtimeClass
-    getMsgFamilyOpt(clazz)
-  }
-
-  protected def getMsgFamily[T: ClassTag]: MsgFamily = {
-    val clazz = implicitly[ClassTag[T]].runtimeClass
-    getMsgFamilyOpt.getOrElse(
-      throw new RuntimeException("message family not found for given message: " + clazz.getSimpleName)
-    )
-  }
-
-  protected def getMsgFamily(msg: Any): MsgFamily = {
-    getMsgFamilyOpt(msg.getClass).getOrElse(
-      throw new RuntimeException("message family not found for given message: " + msg.getClass.getSimpleName)
-    )
-  }
-
-  protected def getMsgFamilyOpt(clazz: Class[_]): Option[MsgFamily] = {
-    val protoDefOpt =
-      protoDefs
-        .find { pd =>
-          Try (pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
-        }
-    protoDefOpt.map(_.msgFamily)
-  }
-
   protected def checkOKResponse(resp: HttpResponse): HttpResponse = {
     checkResponse(resp, OK)
   }
 
   protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
-    val json = parseHttpResponse(resp)
+    val json = parseHttpResponseAsString(resp)
     require(resp.status.intValue() == expected.intValue,
       s"http response was not ${expected.value}: $json")
     resp
@@ -275,11 +212,16 @@ abstract class SdkBase(param: SdkParam) {
   }
 
   protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse): ReceivedMsgParam[T] = {
-    val packedMsg = parseHttpResponse(resp)
+    val packedMsg = parseHttpResponseAsString(resp)
     unpackMsg[T](packedMsg.getBytes)
   }
 
-  protected def parseHttpResponse(resp: HttpResponse): String = {
+  def parseHttpResponseAs[T: ClassTag](resp: HttpResponse): T = {
+    val respString = parseHttpResponseAsString(resp)
+    JacksonMsgCodec.fromJson[T](respString)
+  }
+
+  def parseHttpResponseAsString(resp: HttpResponse): String = {
     awaitFut(resp.entity.dataBytes.runReduce(_ ++ _).map(_.utf8String))
   }
 
@@ -289,8 +231,6 @@ abstract class SdkBase(param: SdkParam) {
 
   def randomUUID(): String = UUID.randomUUID().toString
   def randomSeed(): String = randomUUID().replace("-", "")
-
-  val protoDefs = protocols.protocolRegistry.entries.map(_.protoDef).toList
 
   type ConnId = String
 
@@ -424,4 +364,111 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
   def verityBaseUrl: String = s"$verityUrl"
   def verityPackedMsgUrl: String = s"$verityUrl/agency/msg"
   def verityRestApiUrl: String = s"$verityUrl/api"
+}
+
+object JsonMsgBuilder {
+
+  private val defaultJsonApply: String => String = { msg => msg }
+
+  def apply(givenMsg: Any): JsonMsgBuilder =
+    JsonMsgBuilder(givenMsg, None, None, defaultJsonApply)
+
+  def apply(givenMsg: Any, threadIdOpt: Option[ThreadId]): JsonMsgBuilder =
+    JsonMsgBuilder(givenMsg, threadIdOpt, None, defaultJsonApply)
+
+  def apply(givenMsg: Any,
+            threadIdOpt: Option[ThreadId],
+            applyToJsonMsg: String => String): JsonMsgBuilder =
+    JsonMsgBuilder(givenMsg, threadIdOpt, None, applyToJsonMsg)
+}
+
+case class JsonMsgBuilder(private val givenMsg: Any,
+                          private val threadIdOpt: Option[ThreadId],
+                          private val forRelId: Option[DID],
+                          private val applyToJsonMsg: String => String = { msg => msg}) {
+
+  lazy val threadId: ThreadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
+  lazy val msgFamily: MsgFamily = getMsgFamily(givenMsg)
+  lazy val jsonMsg: String = {
+    val basicMsg = createJsonString(givenMsg, msgFamily)
+    val threadedMsg = withThreadIdAdded(basicMsg, threadId)
+    val relationshipMsg = forRelId match {
+      case Some(did)  => addForRel(did, threadedMsg)
+      case None       => threadedMsg
+    }
+    applyToJsonMsg(relationshipMsg)
+  }
+
+  def forRelDID(did: DID): JsonMsgBuilder = copy(forRelId = Option(did))
+
+  private def createJsonString(msg: Any, msgFamily: MsgFamily): String = {
+    val msgType = msgFamily.msgType(msg.getClass)
+    val typeStr = MsgFamily.typeStrFromMsgType(msgType)
+    JsonMsgUtil.createJsonString(typeStr, msg)
+  }
+
+  private def withThreadIdAdded(msg: String, threadId: ThreadId): String = {
+    val coreJson = new JSONObject(msg)
+    val threadJSON = new JSONObject()
+    threadJSON.put("thid", threadId)
+    coreJson.put("~thread", threadJSON).toString
+  }
+
+  private def addForRel(did: DID, jsonMsg: String): String = {
+    val jsonObject = new JSONObject(jsonMsg)
+    jsonObject.put("~for_relationship", did)
+    jsonObject.toString
+  }
+
+  protected def getMsgFamily(msg: Any): MsgFamily = {
+    MsgFamilyHelper.getMsgFamilyOpt(msg.getClass).getOrElse(
+      throw new RuntimeException("message family not found for given message: " + msg.getClass.getSimpleName)
+    )
+  }
+
+  //  protected def legacyType(name: String, ver: String): JSONObject = {
+  //    val jsonObj = new JSONObject()
+  //    jsonObj.put("name", name)
+  //    jsonObj.put("ver", ver)
+  //    jsonObj
+  //  }
+}
+
+object JsonMsgUtil {
+  def createJsonString(typeStr: String, msg: Any): String = {
+    val coreJson = createJSONObject(msg)
+    coreJson.put("@type", typeStr).toString
+  }
+
+  def createJSONObject(msg: Any): JSONObject = {
+    val coreJson = DefaultMsgCodec.toJson(msg)
+    new JSONObject(coreJson)
+  }
+
+}
+
+object MsgFamilyHelper {
+
+  val protoDefs: Seq[ProtoDef] = protocols.protocolRegistry.entries.map(_.protoDef)
+
+  def getMsgFamilyOpt[T: ClassTag]: Option[MsgFamily] = {
+    val clazz = implicitly[ClassTag[T]].runtimeClass
+    getMsgFamilyOpt(clazz)
+  }
+
+  def getMsgFamily[T: ClassTag]: MsgFamily = {
+    val clazz = implicitly[ClassTag[T]].runtimeClass
+    getMsgFamilyOpt.getOrElse(
+      throw new RuntimeException("message family not found for given message: " + clazz.getSimpleName)
+    )
+  }
+
+  def getMsgFamilyOpt(clazz: Class[_]): Option[MsgFamily] = {
+    val protoDefOpt =
+      protoDefs
+        .find { pd =>
+          Try (pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
+        }
+    protoDefOpt.map(_.msgFamily)
+  }
 }

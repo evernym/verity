@@ -7,7 +7,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DebugProtocols, InvalidReqFieldProtocolEngineException, MissingReqFieldProtocolEngineException, ServiceFormatted, SignalEnvelope}
+import com.evernym.verity.protocol.engine.{DebugProtocols, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, ServiceFormatted, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
@@ -77,11 +77,11 @@ class RelationshipProtocolSpec
       "validation should fail" in { _ =>
         val invalidPhone = "4045943696"
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSConnectionInvitation(invalidPhone).validate()
         }
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSOutOfBandInvitation(invalidPhone, None, None).validate()
         }
       }
@@ -91,11 +91,11 @@ class RelationshipProtocolSpec
       "validation should fail" in { _ =>
         val invalidPhone = "+140459"
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSConnectionInvitation(invalidPhone).validate()
         }
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSOutOfBandInvitation(invalidPhone, None, None).validate()
         }
       }
@@ -105,11 +105,11 @@ class RelationshipProtocolSpec
       "validation should fail" in { _ =>
         val invalidPhone = "+1 404 5943696"
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSConnectionInvitation(invalidPhone).validate()
         }
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSOutOfBandInvitation(invalidPhone, None, None).validate()
         }
       }
@@ -119,11 +119,11 @@ class RelationshipProtocolSpec
       "validation should fail" in { _ =>
         val invalidPhone = "+1-404-5943696"
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSConnectionInvitation(invalidPhone).validate()
         }
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSOutOfBandInvitation(invalidPhone, None, None).validate()
         }
       }
@@ -133,11 +133,11 @@ class RelationshipProtocolSpec
       "validation should fail" in { _ =>
         val invalidPhone = "+1(404)5943696"
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSConnectionInvitation(invalidPhone).validate()
         }
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSOutOfBandInvitation(invalidPhone, None, None).validate()
         }
       }
@@ -147,11 +147,11 @@ class RelationshipProtocolSpec
       "validation should fail" in { _ =>
         val invalidPhone = "+1404myPhone"
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSConnectionInvitation(invalidPhone).validate()
         }
 
-        assertThrows[InvalidReqFieldProtocolEngineException] {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
           SMSOutOfBandInvitation(invalidPhone, None, None).validate()
         }
       }

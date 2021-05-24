@@ -81,7 +81,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -95,7 +95,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -109,7 +109,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -123,7 +123,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -137,7 +137,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -151,7 +151,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -195,7 +195,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -209,7 +209,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -223,7 +223,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -237,7 +237,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -251,7 +251,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }
@@ -265,7 +265,7 @@ class RelationshipFailureSpec
           )
           resp shouldBe StatusDetailResp(
             INVALID_VALUE.statusCode,
-            "invalid value given for field: 'phoneNumber' (Phone number provided is not in valid international format.)",
+            "field 'phoneNumber' has invalid value: Phone number provided is not in valid international format.",
             None
           )
         }

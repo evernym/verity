@@ -1,12 +1,16 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.Exceptions.InvalidValueException
+
+import scala.util.Try
+
 class EmptyValueForOptionalFieldProtocolEngineException(statusMsg: String)
   extends ProtocolEngineException(statusMsg)
 
 class MissingReqFieldProtocolEngineException(statusMsg: String)
   extends ProtocolEngineException(statusMsg)
 
-class InvalidReqFieldProtocolEngineException(statusMsg: String)
+class InvalidFieldValueProtocolEngineException(statusMsg: String)
   extends ProtocolEngineException(statusMsg)
 
 trait MsgBase {
@@ -22,8 +26,14 @@ trait MsgBase {
   }
 
   def throwInvalidReqFieldProtocolEngineException(fieldName: String, explanation: Option[String] = None): Unit = {
-    val exp: String = explanation.map(e => s" ($e)").getOrElse("")
-    throw new InvalidReqFieldProtocolEngineException(s"invalid value given for field: '$fieldName'$exp")
+    val exp: String = explanation.map(e => s": $e").getOrElse("")
+    throw new InvalidFieldValueProtocolEngineException(s"field '$fieldName' has invalid value$exp")
+  }
+
+  def checkIfValidBooleanData(fieldName: String, fieldValue: Option[Boolean]): Unit = {
+    Try(fieldValue.getOrElse(false)).getOrElse(
+      throwInvalidReqFieldProtocolEngineException(fieldName)
+    )
   }
 
   def checkRequired(fieldName: String, fieldValue: Any, allowEmpty: Boolean = false): Unit = {

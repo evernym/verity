@@ -151,6 +151,7 @@ case class VerityEnv(seed: String,
 
   /**
    * checks if given nodes are up and other node's status is also up for each of them
+   *
    * @param targetNodes
    * @return
    */
@@ -174,16 +175,17 @@ case class VerityEnv(seed: String,
    */
   private def checkIfNodeIsUp(node: VerityNode,
                               otherNodesStatus: Map[VerityNode, List[MemberStatus]] = Map.empty): Boolean = {
-    require(! otherNodesStatus.contains(node),
-      "node expected to be up can't be expected to be down at the same time")
+    require(! otherNodesStatus.contains(node), "node expected to be up can't be in otherNodesStatus")
 
     val cluster = Cluster(node.platform.actorSystem)
     cluster.selfMember.status == Up &&
       otherNodesStatus.forall { case (node, expectedStatus) =>
         cluster.state.members.exists { m =>
-          ! m.address.toString.contains(node.thisNodePortProfile.artery.toString) ||
-            (m.address.toString.contains(node.thisNodePortProfile.artery.toString) &&
-              expectedStatus.contains(m.status))
+          //either the node is expected to be down/removed and is not present in the members
+          (! m.address.toString.contains(node.thisNodePortProfile.artery.toString)
+            && (expectedStatus.contains(Down) || expectedStatus.contains(Removed)))||
+          //or its status is in one of the expectedStatus
+            expectedStatus.contains(m.status)
         }
       }
   }
@@ -219,7 +221,7 @@ case class VerityNode(tmpDirPath: Path,
                       overriddenConfig: Option[Config]) {
 
   var isAvailable: Boolean = false
-  var _httpServer: HttpServer = start()
+  private var _httpServer: HttpServer = start()
 
   def httpServer: HttpServer = _httpServer
 
@@ -300,7 +302,7 @@ case class VerityEnvUrlProvider(private val _nodes: List[VerityNode]) {
  */
 class SharedEventStore(tempDir: Path) {
 
-  val arteryPort = 2000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+  val arteryPort: Int = 2000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
 
   val actorSystem: ActorSystem = {
     val parts = Seq(

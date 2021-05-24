@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent
 import com.evernym.verity.Exceptions.{EmptyValueForOptionalFieldException, InvalidValueException, MissingReqFieldException, NotFoundErrorException}
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.protocol.engine.util.{?=>, getErrorMsg}
-import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidReqFieldProtocolEngineException, MissingReqFieldProtocolEngineException, UnsupportedMessageFamily, UnsupportedMessageType}
+import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, UnsupportedMessageFamily, UnsupportedMessageType}
 
 trait ProtocolEngineExceptionHandler {
 
@@ -22,7 +22,7 @@ trait ProtocolEngineExceptionHandler {
       new EmptyValueForOptionalFieldException(Option(getErrorMsg(e)))
     case e: MissingReqFieldProtocolEngineException =>
       new MissingReqFieldException(Option(getErrorMsg(e)))
-    case e: InvalidReqFieldProtocolEngineException =>
+    case e: InvalidFieldValueProtocolEngineException =>
       new InvalidValueException(Option(getErrorMsg(e)))
     case e: Exception => e //TODO should probably wrap this in a generic protocol engine exception
   }

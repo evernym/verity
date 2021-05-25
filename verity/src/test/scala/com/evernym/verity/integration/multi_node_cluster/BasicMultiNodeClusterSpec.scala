@@ -5,8 +5,6 @@ import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
-import scala.util.Random
-
 
 class BasicMultiNodeClusterSpec
   extends VerityProviderBaseSpec
@@ -24,6 +22,7 @@ class BasicMultiNodeClusterSpec
         "should be successful" in {
           eventually(timeout(Span(20, Seconds)), interval(Span(3, Seconds))) {
             verityEnv.checkIfNodesAreUp() shouldBe true
+            verityEnv.availableNodes.size shouldBe 3
           }
         }
       }
@@ -38,7 +37,8 @@ class BasicMultiNodeClusterSpec
 
       "when try to stop one of the node" - {
         "should be successful" in {
-          verityEnv.stopNodeAtIndex(Random.nextInt(verityEnv.availableNodes.size-1))
+          verityEnv.stopNodeAtIndex(1)
+          verityEnv.availableNodes.size shouldBe 2
         }
       }
 
@@ -48,11 +48,45 @@ class BasicMultiNodeClusterSpec
         }
       }
 
-      "when checked if all available nodes are still up" - {
+      "when try to stop one more node" - {
         "should be successful" in {
-          Thread.sleep(5000)
-          verityEnv.availableNodes.size shouldBe 2
-          verityEnv.checkIfNodesAreUp(verityEnv.availableNodes) shouldBe true
+          verityEnv.stopNodeAtIndex(0)
+          verityEnv.availableNodes.size shouldBe 1
+        }
+      }
+
+      "when tried to fetch agency key after two node stop" - {
+        "should be still successful" in {
+          issuerSDK.fetchAgencyKey()
+        }
+      }
+
+      "when try to stop the last node" - {
+        "should be successful" in {
+          verityEnv.stopNodeAtIndex(2)
+          verityEnv.availableNodes.size shouldBe 0
+        }
+      }
+
+      "when tried to fetch agency key after all node stop" - {
+        "should be still successful" in {
+          val ex = intercept[RuntimeException] {
+            issuerSDK.fetchAgencyKey()
+          }
+          ex.getMessage shouldBe "no verity node available"
+        }
+      }
+
+      "when started first seed node" - {
+        "should be successful" in {
+          verityEnv.startNodeAtIndex(0)
+          verityEnv.availableNodes.size shouldBe 1
+        }
+      }
+
+      "when tried to fetch agency key after only first node is up" - {
+        "should be successful" in {
+          issuerSDK.fetchAgencyKey()
         }
       }
     }

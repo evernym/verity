@@ -352,7 +352,7 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
    */
   private def verityUrl: String = {
     val verityUrls = verityEnvUrlProvider.availableNodeUrls
-
+    if (verityUrls.isEmpty) throw new RuntimeException("no verity node available")
     lastVerityUrlUsedIndex = {
       if (lastVerityUrlUsedIndex >= verityUrls.size - 1) 0
       else lastVerityUrlUsedIndex + 1

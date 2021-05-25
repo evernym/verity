@@ -72,7 +72,7 @@ object LaunchPreCheck {
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
       implicit val timeout: Timeout = Timeout(Duration.create(10, TimeUnit.SECONDS))
-      val actorId = "dummy-actor" + UUID.randomUUID().toString
+      val actorId = "dummy-actor-" + UUID.randomUUID().toString
       val keyValueMapper = aac.system.actorOf(KeyValueMapper.props(aac), actorId)
       val fut = (keyValueMapper ? GetValue("dummy-key")).mapTo[Option[String]]
       Await.result(fut, timeout.duration)
@@ -96,7 +96,7 @@ object LaunchPreCheck {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
-      val walletId = "dummy-wallet" + UUID.randomUUID().toString
+      val walletId = "dummy-wallet-" + UUID.randomUUID().toString
       val wap = generateWalletParamSync(walletId, aac.appConfig, aac.walletProvider)
       aac.walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
     } catch {

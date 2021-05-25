@@ -1,10 +1,11 @@
 package com.evernym.verity.integration.base
 
-import akka.actor.{ActorSystem, ExtendedActorSystem}
+import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem}
 import akka.cluster.{Cluster, MemberStatus}
 import akka.cluster.MemberStatus._
 import akka.testkit.TestKit
 import com.evernym.verity.actor.Platform
+import com.evernym.verity.actor.node_singleton.DrainNode
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.app_launcher.HttpServer
 import com.evernym.verity.fixture.TempDir
@@ -60,7 +61,8 @@ trait VerityProviderBaseSpec
     } else serviceParam
     val multiNodeClusterConfig = buildMultiNodeClusterConfig(overriddenConfig)
     val appSeed = randomChar().toString*32
-    val portProfiles = (1 to nodeCount).map( _ => getRandomPortProfile).zipWithIndex
+    val portProfiles = (1 to nodeCount).map( _ => getRandomPortProfile).sortBy(_.artery).zipWithIndex
+
     val verityNodes = portProfiles.map { case (portProfile, index) =>
       val otherNodesArteryPorts = portProfiles.filter(_._2 != index).map(_._1).map(_.artery).toList
       VerityNode(
@@ -95,7 +97,7 @@ trait VerityProviderBaseSpec
 
   override def afterAll(): Unit = {
     super.afterAll()
-    allVerityEnvs.foreach(_.nodes.foreach(_.stopUngracefully()))
+    allVerityEnvs.foreach(_.nodes.foreach(_.stop()))
   }
 
   private def randomChar(): Char = {
@@ -115,6 +117,11 @@ trait VerityProviderBaseSpec
 
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
+      |verity.app-state-manager.state.draining {
+      |  delay-before-leave = 5
+      |  delay-between-status-checks = 1
+      |  max-status-check-count = 20
+      |}
       |""".stripMargin
   )
 }
@@ -134,13 +141,14 @@ case class VerityEnv(seed: String,
     val (targetNodes, remainingNodes) = {
       val (targetNodes, otherNodes) =
         nodes.zipWithIndex.partition { case (_, index) => indexes.contains(index) }
-      (targetNodes.map(_._1), otherNodes.map(_._1))
+      (targetNodes.map(_._1), otherNodes.filter(_._1.isAvailable).map(_._1))
     }
-    targetNodes.foreach(_.stopUngracefully())
+
+    targetNodes.foreach(_.stop())
 
     val nodesToBeChecked = remainingNodes.map { curNode =>
       val excludeArteryPorts = (targetNodes :+ curNode).map(_.thisNodePortProfile.artery)
-      val otherNodes = nodes.filter { n => ! excludeArteryPorts.contains(n.thisNodePortProfile.artery)}
+      val otherNodes = remainingNodes.filter { n => ! excludeArteryPorts.contains(n.thisNodePortProfile.artery)}
       val otherNodeStatus: Map[VerityNode, List[MemberStatus]] =
         otherNodes.map(_ -> List(Up)).toMap ++ targetNodes.map(_ -> List(Removed, Down)).toMap
       (curNode, otherNodeStatus)
@@ -169,8 +177,8 @@ case class VerityEnv(seed: String,
    * check if given node is up and
    * it's cluster state to conform with otherNodesStatus (if given)
    *
-   * @param node
-   * @param otherNodesStatus
+   * @param node the node expected to be up
+   * @param otherNodesStatus other nodes and their expected status
    * @return
    */
   private def checkIfNodeIsUp(node: VerityNode,
@@ -179,13 +187,12 @@ case class VerityEnv(seed: String,
 
     val cluster = Cluster(node.platform.actorSystem)
     cluster.selfMember.status == Up &&
-      otherNodesStatus.forall { case (node, expectedStatus) =>
-        cluster.state.members.exists { m =>
-          //either the node is expected to be down/removed and is not present in the members
-          (! m.address.toString.contains(node.thisNodePortProfile.artery.toString)
-            && (expectedStatus.contains(Down) || expectedStatus.contains(Removed)))||
-          //or its status is in one of the expectedStatus
-            expectedStatus.contains(m.status)
+      otherNodesStatus.forall { case (otherNode, expectedStatus) =>
+        val otherMember = cluster.state.members.find(_.address.toString.contains(otherNode.thisNodePortProfile.artery.toString))
+        otherMember match {
+          case None if expectedStatus.contains(Down) || expectedStatus.contains(Removed) => true
+          case None     => false
+          case Some(om) => expectedStatus.contains(om.status)
         }
       }
   }
@@ -194,12 +201,16 @@ case class VerityEnv(seed: String,
     require(index >=0 && index < nodes.size, s"invalid index: $index")
   }
 
+  def startNodeAtIndex(index: Int): Unit = {
+    nodes(index).start()
+  }
+
   def restartNodeAtIndex(index: Int): Unit = {
     nodes(index).restart()
   }
 
   def stopAllNodes(): Unit = {
-    nodes.foreach(_.stopUngracefully())
+    nodes.foreach(_.stop())
   }
 
   def restartAllNodes(): Unit = {
@@ -228,7 +239,7 @@ case class VerityNode(tmpDirPath: Path,
   def platform: Platform = httpServer.platform
 
   def restart():Unit = {
-    stopUngracefully()
+    stop()
     start()
   }
 
@@ -240,36 +251,39 @@ case class VerityNode(tmpDirPath: Path,
     _httpServer
   }
 
-  def stopUngracefully(): Unit = {
-    isAvailable = false
-    stopHttpServer()
-    stopActorSystem()
-    //TODO: at this stage, sometimes actor system logs 'java.lang.IllegalStateException: Pool shutdown unexpectedly' exception,
-    // it doesn't impact the test in any way but should try to find and fix the root cause
+  def stop(): Unit = {
+    stopGracefully()
   }
 
-  //TODO: we should use 'stopGracefully' wherever we are using 'stopUngracefully'
-  // in the tests, but as of now this 'stopGracefully' causes some issues to be solved.
-//  def stopGracefully(): Unit = {
+  //is this really ungraceful shutdown?
+//  def stopUngracefully(): Unit = {
 //    isAvailable = false
-//    val cluster = Cluster(platform.actorSystem)
-//    platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
-//    TestKit.awaitCond(isNodeShutdown(cluster), atMost)
+//    stopHttpServer()
+//    stopActorSystem()
+//    //TODO: at this stage, sometimes actor system logs 'java.lang.IllegalStateException: Pool shutdown unexpectedly' exception,
+//    // it doesn't impact the test in any way but should try to find and fix the root cause
 //  }
 
-  def isNodeShutdown(cluster: Cluster): Boolean = {
-    cluster.selfMember.status == Removed
+  private def stopGracefully(): Unit = {
+    isAvailable = false
+    val cluster = Cluster(platform.actorSystem)
+    platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
+    TestKit.awaitCond(isNodeShutdown(cluster), atMost, 3.seconds)
   }
 
-  private def stopHttpServer(): Unit = {
-    val httpStopFut = httpServer.stop()
-    Await.result(httpStopFut, 30.seconds)
+  private def isNodeShutdown(cluster: Cluster): Boolean = {
+    List(Removed, Down).contains(cluster.selfMember.status)
   }
 
-  private def stopActorSystem(): Unit = {
-    val platformStopFut = platform.actorSystem.terminate()
-    Await.result(platformStopFut, 30.seconds)
-  }
+//  private def stopHttpServer(): Unit = {
+//    val httpStopFut = httpServer.stop()
+//    Await.result(httpStopFut, 30.seconds)
+//  }
+//
+//  private def stopActorSystem(): Unit = {
+//    val platformStopFut = platform.actorSystem.terminate()
+//    Await.result(platformStopFut, 30.seconds)
+//  }
 
   private def startVerityInstance(serviceParam: ServiceParam): HttpServer = {
     val httpServer = LocalVerity(tmpDirPath, appSeed, thisNodePortProfile, otherNodeArteryPorts, serviceParam,

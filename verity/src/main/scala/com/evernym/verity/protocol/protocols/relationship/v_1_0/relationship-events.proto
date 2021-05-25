@@ -30,7 +30,7 @@ message PairwiseKeyCreated {
     string profileUrl = 4;
 }
 
-message InvitationCreated {
+message InvitationCreated_DEPRECATED {
     option (scalapb.message).extends = "RelationshipEvent";
     string label = 1;
     string serviceEndpoint = 2;

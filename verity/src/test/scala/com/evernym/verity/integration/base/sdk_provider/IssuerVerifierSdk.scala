@@ -114,7 +114,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val jsonMsgBuilder = JsonMsgBuilder(Create(label = Option(connId), None, None))
+    val jsonMsgBuilder = JsonMsgBuilder(Create(label = Option(connId), None))
     val routedPackedMsg = packForMyVerityAgent(jsonMsgBuilder.jsonMsg)
     checkOKResponse(sendPOST(routedPackedMsg))
     val receivedMsg = expectMsgOnWebhook[Created]()

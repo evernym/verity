@@ -54,7 +54,7 @@ class IncorrectPayloadSpec
         }
         val httpResp = issuerRestSDK.sendMsgForConn(issuerHolderConn, credOffer, applyToJsonMsg = jsonModifier, expectedRespStatus = BadRequest)
         val restErrorResp = issuerRestSDK.parseHttpResponseAs[RestErrorResponse](httpResp)
-        restErrorResp shouldBe RestErrorResponse(INVALID_VALUE.statusCode, "field 'auto_issue' has invalid value: Some(true)")
+        restErrorResp shouldBe RestErrorResponse(INVALID_VALUE.statusCode, "field 'auto_issue' has invalid value")
       }
     }
   }

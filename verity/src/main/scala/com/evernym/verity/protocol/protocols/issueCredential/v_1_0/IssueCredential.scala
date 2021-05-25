@@ -24,6 +24,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 
 import scala.util.{Failure, Success, Try}
 
@@ -442,7 +443,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           s.agentName,
           s.logoUrl,
           s.publicDid,
-          if (SERVICE_KEY_DID_FORMAT == "true") for (s <- service) yield FormatServiceToDidKey(s).getService() else service,
+          if (AppConfigWrapper.getConfigBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
           offerAttachment,
           goalCode = Some("issue-vc"),
           goal = Some("To issue a credential"),

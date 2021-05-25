@@ -26,6 +26,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
     val orgName = "Acme Corp"
     val logoUrl = "https://robohash.org/234"
     val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
+    val agencyDidkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
     val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
 
     override val defaultInitParams = Map(
@@ -244,7 +245,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         inviteObj.getJSONArray("service")
           .getJSONObject(0)
           .getJSONArray("routingKeys")
-          .getString(1) shouldBe agencyVerkey
+          .getString(1) should (be (agencyVerkey) or be (agencyDidkey))
 
         val attachmentBase64 = inviteObj
           .getJSONArray("request~attach")
@@ -360,7 +361,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         inviteObj.getJSONArray("service")
           .getJSONObject(0)
           .getJSONArray("routingKeys")
-          .getString(1) shouldBe agencyVerkey
+          .getString(1) should (be (agencyVerkey) or be (agencyDidkey))
 
         val attachmentBase64 = inviteObj
           .getJSONArray("request~attach")

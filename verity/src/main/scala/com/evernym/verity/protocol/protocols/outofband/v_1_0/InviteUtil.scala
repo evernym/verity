@@ -41,7 +41,7 @@ object InviteUtil {
                                 agentName: Option[String],
                                 logoUrl: Option[String],
                                 publicDid: Option[DID],
-                                service: Vector[ServiceBlock],
+                                service: Vector[ServiceFormatted],
                                 attachment: AttachmentDescriptor,
                                 goalCode: Option[String],
                                 goal: Option[String]): OutOfBandInvitation = {

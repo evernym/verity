@@ -93,7 +93,7 @@ object Msg {
                                  goal: Option[String],
                                  handshake_protocols: Vector[String],
                                  `request~attach`: Vector[String],
-                                 service: Vector[ServiceBlock],
+                                 service: Vector[ServiceFormatted],
                                  profileUrl: Option[String],
                                  public_did: Option[String],
                                  `@type`: String = MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, OutOfBandMsgFamily.name, OutOfBandMsgFamily.version, "invitation"),

@@ -1,6 +1,5 @@
 package com.evernym.integrationtests.e2e.apis.limits
 
-import com.evernym.integrationtests.e2e.apis.SdkFlowSpec.metricKey
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv}
 import com.evernym.integrationtests.e2e.flow._
@@ -8,12 +7,6 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerMsgFamily
-import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
-import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
-import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil

@@ -3,9 +3,8 @@ package com.evernym.verity.vault.wallet_api.base
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.{CoreActor, Done}
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Minutes, Seconds, Span}
 
@@ -13,29 +12,21 @@ trait ActorClientWalletAPISpecBase
   extends ClientWalletAPISpecBase
     with Eventually {
 
-  lazy val walletSetupManager: ActorRef = system.actorOf(Props(new WalletSetupManager(appConfig, testWalletAPI)))
-
-  override def startUserWalletSetupWithSyncAPI(): Unit = {
-    walletSetupManager ! StartAgentCreation(totalUsers, useSyncWalletAPI = true)
-    expectMsg(Done)
-  }
+  lazy val walletSetupManager: ActorRef = system.actorOf(Props(new WalletSetupManager(walletAPI)))
 
   override def startUserWalletSetupWithAsyncAPI(): Unit = {
-    walletSetupManager ! StartAgentCreation(totalUsers, useSyncWalletAPI = false)
+    walletSetupManager ! StartAgentCreation(totalUsers)
     expectMsg(Done)
   }
 
   override def waitForAllResponses(): Unit =  {
-    eventually(timeout(Span(10, Minutes)), interval(Span(10, Seconds))) {
+    eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
       walletSetupManager ! GetStatus
       val status = expectMsgType[Status]
       successResp = status.successResp
       failedResp = status.failedResp
-      println(s"[current-progress] success: $successResp, failed: $failedResp")
-      failedResp shouldBe 0
       status.totalRespCount shouldBe totalUsers
     }
-    println(s"[final-status] success: $successResp, failed: $failedResp")
     failedResp shouldBe 0
   }
 }
@@ -43,7 +34,7 @@ trait ActorClientWalletAPISpecBase
 //this is little bit like a region actor which receives a request
 // and it creates actual mock agent actors
 // and sends a command to those actors which starts wallet activity
-class WalletSetupManager(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
+class WalletSetupManager(walletAPI: WalletAPI)
   extends CoreActor {
 
   var successResponse = 0
@@ -52,8 +43,8 @@ class WalletSetupManager(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
   override def receiveCmd: Receive = {
     case sws: StartAgentCreation =>
       (1 to sws.totalUser).foreach { id =>
-        val ar = context.actorOf(Props(new MockAgentActor(appConfig, walletAPI)), id.toString)
-        ar ! StartWalletSetup(sws.useSyncWalletAPI)
+        val ar = context.actorOf(Props(new MockAgentActor(walletAPI)), id.toString)
+        ar ! StartWalletSetup()
       }
       sender ! Done
 
@@ -65,7 +56,7 @@ class WalletSetupManager(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
   }
 }
 
-case class StartAgentCreation(totalUser: Int, useSyncWalletAPI: Boolean) extends ActorMessage
+case class StartAgentCreation(totalUser: Int) extends ActorMessage
 case object GetStatus extends ActorMessage
 case class Status(successResp: Int, failedResp: Int) extends ActorMessage {
   def totalRespCount: Int = successResp + failedResp
@@ -73,14 +64,14 @@ case class Status(successResp: Int, failedResp: Int) extends ActorMessage {
 
 //this is mocking agent actor which when receive 'StartWalletSetup' command
 //it start exercises wallet sync apis
-class MockAgentActor(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
+class MockAgentActor(walletAPI: WalletAPI)
   extends CoreActor
     with UserWalletSetupHelper {
 
   import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 
   override def receiveCmd: Receive = {
-    case StartWalletSetup(sync) => setupUser(sync)
+    case _: StartWalletSetup => setupUser()
   }
 
   implicit val wap: WalletAPIParam = WalletAPIParam(entityId)
@@ -88,31 +79,18 @@ class MockAgentActor(appConfig: AppConfig, walletAPI: LegacyWalletAPI)
   /**
    * purpose of this method is to setup a new user wallet (and execute 3-4 wallet operations against it)
    **/
-  def setupUser(useSyncWalletAPI: Boolean): Unit = {
-    val userId = entityId.replace("WalletActor-", "").toInt
-    if (useSyncWalletAPI) {
-      try {
-        _baseWalletSetupWithSyncAPI(userId, walletAPI)
-        sender ! WalletSetupCompleted
-      } catch {
-        case e: RuntimeException =>
-          e.printStackTrace()
-          sender ! WalletSetupFailed
-
-      }
-    } else {
-      val sndr = sender()
-      _baseWalletSetupWithAsyncAPI(userId, walletAPI).map { _ =>
-        sndr ! WalletSetupCompleted
-      }.recover {
-        case e: RuntimeException =>
-          e.printStackTrace()
-          sndr ! WalletSetupFailed
-      }
+  def setupUser(): Unit = {
+    val sndr = sender()
+    _baseWalletSetupWithAsyncAPI(walletAPI).map { _ =>
+      sndr ! WalletSetupCompleted
+    }.recover {
+      case e: RuntimeException =>
+        e.printStackTrace()
+        sndr ! WalletSetupFailed
     }
   }
 }
 
-case class StartWalletSetup(useSyncWalletAPI: Boolean) extends ActorMessage
+case class StartWalletSetup() extends ActorMessage
 case object WalletSetupCompleted extends ActorMessage
 case object WalletSetupFailed extends ActorMessage

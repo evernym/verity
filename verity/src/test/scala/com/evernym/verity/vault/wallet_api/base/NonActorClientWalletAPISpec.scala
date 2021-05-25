@@ -1,40 +1,20 @@
 package com.evernym.verity.vault.wallet_api.base
 
-import java.util.concurrent.Executors
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Minutes, Seconds, Span}
 
-import scala.concurrent.{ExecutionContext, Future}
 
 trait NonActorClientWalletAPISpec
-  extends ClientWalletAPISpecBase {
-
-  override implicit def testCodeExecutionContext: ExecutionContext = {
-    //com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-    //comment above and uncomment/modify below to use custom thread pool
-    ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
-  }
-
-  def startUserWalletSetupWithSyncAPI(): Unit = {
-    (1 to totalUsers).foreach { userId =>
-      Future {
-        try {
-          _baseWalletSetupWithSyncAPI(userId, testWalletAPI)
-          successResp += 1
-        } catch {
-          case e: RuntimeException =>
-            e.printStackTrace()
-            failedResp +=1
-        }
-      }
-    }
-  }
+  extends ClientWalletAPISpecBase
+    with Eventually {
 
   def startUserWalletSetupWithAsyncAPI(): Unit = {
-    (1 to totalUsers).foreach { userId =>
-      _baseWalletSetupWithAsyncAPI(userId, walletAPI)
+    (1 to totalUsers).foreach { _ =>
+      _baseWalletSetupWithAsyncAPI(walletAPI)
         .map { _ =>
           successResp += 1
         }.recover {
-          case e: RuntimeException =>
+          case e: Throwable =>
             e.printStackTrace()
             failedResp += 1
         }
@@ -43,13 +23,9 @@ trait NonActorClientWalletAPISpec
 
   def waitForAllResponses(): Unit = {
     //wait until all user wallet setup is completed
-    while (totalRespCount < totalUsers) {
-      printExecutorMetrics()
-      println(s"[current-progress] success: $successResp, failed: $failedResp")
-      failedResp shouldBe 0
-      Thread.sleep(5000)
+    eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
+      totalRespCount shouldBe totalUsers
     }
-    println(s"[final-status] success: $successResp, failed: $failedResp")
     failedResp shouldBe 0
   }
 }

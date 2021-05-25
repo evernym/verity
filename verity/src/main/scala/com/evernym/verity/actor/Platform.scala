@@ -54,7 +54,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //start prometheus reporter
   // intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is validated as well
-  MetricsReader
+  MetricsReader.initialize(appConfig)
 
   //initialize app state manager
   val appStateManager: ActorRef = agentActorContext.system.actorOf(

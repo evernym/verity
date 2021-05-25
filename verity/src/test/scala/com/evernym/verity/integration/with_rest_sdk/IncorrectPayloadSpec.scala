@@ -50,7 +50,7 @@ class IncorrectPayloadSpec
         )
         val jsonModifier: (String => String) = { msg =>
           val jsonObject = new JSONObject(msg)
-          jsonObject.put("auto_issue", "true").toString
+          jsonObject.put("auto_issue", "true").toString   //sending string "true" instead of boolean true
         }
         val httpResp = issuerRestSDK.sendMsgForConn(issuerHolderConn, credOffer, applyToJsonMsg = jsonModifier, expectedRespStatus = BadRequest)
         val restErrorResp = issuerRestSDK.parseHttpResponseAs[RestErrorResponse](httpResp)

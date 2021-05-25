@@ -212,8 +212,8 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
 trait WalletCommand extends ActorMessage {
   //overridden to make sure if this codebase is logging this wallet command anywhere
   // it doesn't log any critical/private information
-  override def toString: DID = this.getClass.getSimpleName
-  val id: DID = UUID.randomUUID().toString  //only for logging purposes
+  val name: String = getClass.getSimpleName
+  val id: String = UUID.randomUUID().toString  //only for logging purposes
 }
 
 //NOTE:
@@ -228,9 +228,7 @@ case class SetWalletParam(wp: WalletParam) extends WalletCommand with NoSerializ
 // serialization/deserialization check fails for this case class
 // until we find proper solution, lets extend this class from 'NoSerializationVerificationNeeded'
 // to avoid the check during test run
-case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand with NoSerializationVerificationNeeded {
-  override def toString: DID = s"${this.getClass.getSimpleName}(wallet: $wallet)"
-}
+case class SetWallet(wallet: Option[WalletExt]) extends WalletCommand with NoSerializationVerificationNeeded
 
 case class CreateWallet() extends WalletCommand
 

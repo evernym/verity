@@ -6,12 +6,13 @@ Notes:
   * leveldb for 
     * event journal
     * segment storage (mock for S3)  
-  * local storage for snapshot  
+  * local storage for snapshot store  
   * file based wallet storage
   * 'in-memory' mocked ledger  
 <br/>
 
-* It may not suppose these services (unless we add some mocked support or something):
+
+* It does not support below mentioned services (unless we add some mocked support or something):
   * SMS service 
   * UrlShortening service  
 <br/>
@@ -22,17 +23,13 @@ Notes:
 <br/>
 
 To be aware of:
-  * **For multi node cluster**
+  * **For multi node cluster testing (more than 1 node)**
     * load balancing of sdk requests to different available verity nodes is handled on 
-      sdk side to choose verity url in a way that each time it has to send request, 
-      it selects a new available verity node url
+      sdk side to choose verity url in a way that each time it has to send a request 
+      it selects a new available verity node url.
     * when more than one actor system tries to use same 
-      leveldb storage, it causes few issues (like file locking etc). 
+      leveldb/snapshot storage, it causes few issues (like file locking etc). 
         * To avoid those, we are using _PersistencePluginProxy_ to share the leveldb journal/snapshot storage across multiple nodes.
         * At this point, we don't know any known issues around it which may create issues in writing tests against it in the future.
-        
-  * There is a support (in _VerityProviderBaseSpec_) to spin up multi node cluster (more than one node), 
-    although so far we don't have tests to prove that `graceful shutdown of a node` and/or 
-    `restart of a node` doesn't make the cluster unresponsive.
-      
+    * there are few global singleton objects which may/will cause some issues sooner or later.
     

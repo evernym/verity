@@ -82,8 +82,8 @@ object UpdateComMethodMsgHelper {
     ComMethodUpdatedRespMsg_MFV_0_6(typeStr, id)
   }
 
-  def buildRespMsg(id: String)(implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+  def buildRespMsg(id: String)(implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildComMethodUpdatedResp_MFV_0_5(id))
       case MFV_0_6 => List(buildComMethodUpdatedResp_MFV_0_6(id))
       case MFV_1_0 => List(buildComMethodUpdatedResp_MFV_1_0(id))

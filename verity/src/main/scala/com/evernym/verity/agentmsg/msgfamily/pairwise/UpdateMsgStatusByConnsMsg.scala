@@ -96,8 +96,8 @@ object UpdateMsgStatusByConnsMsgHelper {
 
 
   def buildRespMsg(successful: Map[String, List[String]], failed:  Map[String, HandledErrorException])
-                  (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+                  (implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildMsgStatusUpdatedByConnsResp_MFV_0_5(successful, failed))
       case MFV_0_6 => List(buildMsgStatusUpdatedByConnsResp_MFV_0_6(successful, failed))
       case x => throw new RuntimeException("update msg status by conns response builder failed: " + x)

@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Directives.{complete, entity, handleExceptions,
 import akka.http.scaladsl.server.directives.BasicDirectives.extract
 import akka.http.scaladsl.server.directives.HeaderDirectives.optionalHeaderValueByName
 import akka.http.scaladsl.server.{Directive1, Route}
-import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_IP_ADDRESS, CLIENT_REQUEST_ID_HTTP_HEADER}
+import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_REQUEST_ID_HTTP_HEADER}
 import com.evernym.verity.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
@@ -229,10 +229,9 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
                 optionalHeaderValueByName(CLIENT_REQUEST_ID_HTTP_HEADER) { requestId =>
                   path(Segment/Segment/Segment/Segment.?) { (route, protocolFamily, version, threadId) =>
                     val protoRef = ProtoRef(protocolFamily, version)
-                    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(
-                      initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress),
-                      clientReqId = requestId
-                    )
+                    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext.empty
+                      .withClientIpAddress(clientIpAddress)
+                      .withClientReqId(requestId)
                     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)       //tracing related
                     parameterMap{ params =>
                       post {

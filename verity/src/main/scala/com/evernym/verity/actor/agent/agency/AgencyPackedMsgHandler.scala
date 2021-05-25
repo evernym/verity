@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.constants.Constants.MSG_PACK_VERSION
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor.agent.AgentActorContext
@@ -34,22 +33,23 @@ trait AgencyPackedMsgHandler extends ResourceUsageCommon {
         PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext))
     }
 
-    pmw.reqMsgContext.append(Map(MSG_PACK_VERSION -> amw.msgPackFormat))
+    implicit val rmc: ReqMsgContext = pmw.reqMsgContext.withMsgPackFormat(amw.msgPackFormat)
+
     addUserResourceUsage(RESOURCE_TYPE_ENDPOINT,
-      "POST_agency_msg", pmw.reqMsgContext.clientIpAddressReq, None)
+      "POST_agency_msg", rmc.clientIpAddressReq, None)
     amw.headAgentMsgDetail match {
       // TODO: we need to support another possible qualifier, "http://didcomm.org/".
       // See https://github.com/hyperledger/aries-rfcs/blob/master/features/0348-transition-msg-type-to-https/README.md.
       // This is a tech debt that will quickly make us fail to be interoperable with
       // the community; they are poised to begin step 2 as of July 2020.
       case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(MTV_1_0), _) =>
-        handleFwdMsg(FwdMsgHelper.buildReqMsg)(pmw.reqMsgContext)
+        handleFwdMsg(FwdMsgHelper.buildReqMsg)
       // TODO: It looks to me like we may be routing incorrectly here. We are expecting an exact
       // match for a message family version (the string "1.0"), instead of using semantic versioning
       // rules where we route to the nearest handler with a semantically compatible version less than
       // or equal to the one we support.
       case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD | MSG_TYPE_FORWARD, _, _) =>
-        handleFwdMsg(FwdMsgHelper.buildReqMsg)(pmw.reqMsgContext)
+        handleFwdMsg(FwdMsgHelper.buildReqMsg)
 
       case MsgFamilyDetail(EVERNYM_QUALIFIER | COMMUNITY_QUALIFIER, MSG_FAMILY_NAME_0_5, MFV_0_5, MSG_TYPE_FWD, Some(_), _) =>
         Future.failed(Util.handleUnsupportedMsgType(amw.headAgentMsgDetail.getTypeDetail.toString))

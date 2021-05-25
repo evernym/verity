@@ -4,7 +4,6 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, PoisonPill}
 import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
@@ -51,11 +50,7 @@ trait AgentSpecHelper
 
   def wrapAsPackedMsgParam(packedMsg: PackedMsg): ProcessPackedMsg = ProcessPackedMsg(packedMsg, reqMsgContext)
 
-  def reqMsgContext: ReqMsgContext = {
-    val rmi = ReqMsgContext()
-    rmi.append(Map(CLIENT_IP_ADDRESS -> "1.2.3.4"))
-    rmi
-  }
+  def reqMsgContext: ReqMsgContext = ReqMsgContext.empty.withClientIpAddress("1.2.3.4")
 
   private def expectedUnsupportedVersionMsg(typ: String,
                                             unsupportedVersion: String,

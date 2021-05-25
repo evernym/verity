@@ -83,8 +83,8 @@ object GetMsgsMsgHelper {
     GetMsgsRespMsg_MFV_0_6(MSG_TYPE_DETAIL_MSGS, msgs)
   }
 
-  def buildRespMsg(msgs: List[MsgDetail])(implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+  def buildRespMsg(msgs: List[MsgDetail])(implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildMsgsResp_MFV_0_5(msgs))
       case MFV_0_6 => List(buildMsgsResp_MFV_0_6(msgs))
       case x => throw new RuntimeException("get msgs response builder failed: " + x)

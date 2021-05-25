@@ -306,12 +306,12 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     implicit val reqMsgContext: ReqMsgContext = pd.reqMsgContext
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pd.agentDID, pd.agentDIDVerKey)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, keyCreatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
     sendRespMsg("CreateNewPairwiseKeyResp", rp, sndr)
   }
 
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, reqMsgContext.clientIpAddressReq, userId)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
     val sndr = sender()
@@ -380,7 +380,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def buildAndSendComMethodUpdatedRespMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val comMethodUpdatedRespMsg = UpdateComMethodMsgHelper.buildRespMsg(comMethod.id)(reqMsgContext.agentMsgContext)
-    reqMsgContext.msgPackFormat match {
+    reqMsgContext.msgPackFormatReq match {
       case MPF_PLAIN =>
         sender ! comMethodUpdatedRespMsg.head
 
@@ -401,7 +401,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         }
       case MPF_INDY_PACK | MPF_MSG_PACK =>
         val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormat, param) (agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormatReq, param) (agentMsgTransformer, wap)
         sendRespMsg("ComMethodUpdatedResp", rp)
       case Unrecognized(_) =>
         throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
@@ -456,7 +456,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
@@ -511,8 +511,6 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
     Future.traverse(pairwiseTargetKeys) { case (pmu, ad) =>
       val updateMsgStatusReq = UpdateMsgStatusReqMsg(updateMsgStatusByConnsReq.statusCode, pmu.uids)
-      val rmi = reqMsgContext.copy()
-      rmi.data = reqMsgContext.data.filter(kv => Set(CLIENT_IP_ADDRESS).contains(kv._1))
       val fut = agentActorContext.agentMsgRouter.execute(
         InternalMsgRouteParam(ad.agentKeyDID, updateMsgStatusReq))
       fut.map(f => (ad.forDID, f))
@@ -553,7 +551,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       val msgStatusUpdatedByConnsRespMsg =
         UpdateMsgStatusByConnsMsgHelper.buildRespMsg(successResult, errorResult)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgStatusUpdatedByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg(respMsgType, rp, sndr)
     }
   }
@@ -612,7 +610,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(pairwiseResults)(reqMsgContext.agentMsgContext)
         val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
           getMsgsByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
         sendRespMsg("GetMsgsByConnsResp", rp, sndr)
       case Failure(e) =>
         handleException(e, sndr)

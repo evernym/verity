@@ -40,8 +40,8 @@ object UpdateConfigMsgHelper {
     ConfigsUpdatedRespMsg_MFV_0_5(TypeDetail(MSG_TYPE_CONFIGS_UPDATED, MTV_1_0))
   }
 
-  def buildRespMsg(implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+  def buildRespMsg(implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildConfigUpdatedResp_MFV_0_5)
       case x => throw new RuntimeException("update config resp builder failed: " + x)
     }

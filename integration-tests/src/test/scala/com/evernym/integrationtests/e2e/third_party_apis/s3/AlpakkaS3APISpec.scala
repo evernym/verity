@@ -9,6 +9,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
 import com.evernym.verity.testkit.BasicAsyncSpec
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -18,7 +19,9 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-class AlpakkaS3APISpec extends BasicAsyncSpec with BeforeAndAfterAll {
+class AlpakkaS3APISpec
+  extends BasicAsyncSpec
+    with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     Await.ready(alpAkkaS3API.createBucket(DEV_S3_BUCKET), 5 second)
@@ -28,6 +31,7 @@ class AlpakkaS3APISpec extends BasicAsyncSpec with BeforeAndAfterAll {
 
   val appConfig = new TestAppConfig
   lazy implicit val system: ActorSystem = ActorSystem("alp-akka-s3", appConfig.config)
+
   val DEV_S3_BUCKET: String = appConfig.config.getConfig("verity.blob-store").getString("bucket-name")
 
   val alpAkkaS3API: S3AlpakkaApi = StorageAPI.loadFromConfig(appConfig).asInstanceOf[S3AlpakkaApi]

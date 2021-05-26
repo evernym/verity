@@ -14,7 +14,7 @@ trait MySqlWalletAPISpec {
         |verity.lib-indy.wallet.type = "mysql"
         |""".stripMargin
     ).withFallback(
-      ConfigFactory.parseFile(new File("verity/src/main/resources/wallet-storage.conf"))
+      ConfigFactory.parseFile(new File("integration-tests/src/test/resources/common/wallet-storage.conf"))
       .resolve()
     )
   }

@@ -50,7 +50,8 @@ trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
       "libindy_wallet_count"
     ).map(MetricsReader.convertToProviderName)
     val nameSet = metrics.map(_.name).toSet
-    nameSet should contain allElementsOf expectedMetrics
+    val notFound = expectedMetrics.diff(nameSet)
+    notFound shouldBe empty
     nameSet should not contain("libindy_command_duration_ms_count") // If this fails, add above entries back in
   }
 

@@ -9,7 +9,22 @@ import kamon.util.Filter.SingleMatcher
 
 class MetricsFilterSpec extends BasicSpec {
 
-  lazy val config: Config = ConfigFactory.load("metrics-for-spec")
+  lazy val config: Config = {
+    ConfigFactory.load("metrics")
+      .withFallback(ConfigFactory.parseString(
+        """
+          |verity.metrics.util.filters {
+          | "general" {
+          |   excludes = [
+          |     {"name": "akka_system_active_actors_count*"},
+          |     {"value": 0},
+          |     {"tags": {"name":"consumer-system"}}
+          |   ]
+          | }
+          |}
+          |""".stripMargin
+      ))
+  }
 
   val metricsFilter: MetricsFilter = new MetricsFilter {
     override def metricsConfig: Config = config

@@ -16,6 +16,7 @@ import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future, TimeoutException}
@@ -97,8 +98,8 @@ object LaunchPreCheck {
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
       val walletId = "dummy-wallet-" + UUID.randomUUID().toString
-      val wap = generateWalletParamSync(walletId, aac.appConfig, aac.walletProvider)
-      aac.walletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
+      val wap = generateWalletParamSync(walletId, aac.appConfig, LibIndyWalletProvider)
+      LibIndyWalletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
     } catch {
       //TODO: this logic doesn't seem to be working, should come back to this and fix it
       case _ @ (_ : WalletDoesNotExist) =>

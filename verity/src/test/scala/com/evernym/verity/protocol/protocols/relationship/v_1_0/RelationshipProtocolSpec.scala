@@ -7,7 +7,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DebugProtocols, ServiceFormatted, ServiceFormatted, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, ServiceFormatted, SignalEnvelope}
+import com.evernym.verity.protocol.engine.{DebugProtocols, ServiceFormatted, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}

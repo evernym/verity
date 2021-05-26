@@ -4,7 +4,7 @@ import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.{ForIdentifier, KeyCreated}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.agent.user.{UserAgentPairwiseSpecScaffolding, UserAgentPairwiseState}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
@@ -74,8 +74,7 @@ class UserAgentPairwiseSnapshotSpec
   }
 
   def updateUserAgentPairwiseEntityId(): Unit = {
-    val bucketId = RoutingAgentUtil.getBucketEntityId(pairwiseDID)
-    agentRouteStoreRegion ! ForIdentifier(bucketId, GetRoute(pairwiseDID))
+    routeRegion ! ForIdentifier(pairwiseDID, GetStoredRoute)
     val addressDetail = expectMsgType[Option[ActorAddressDetail]]
     addressDetail.isDefined shouldBe true
     userAgentPairwiseEntityId = addressDetail.get.address

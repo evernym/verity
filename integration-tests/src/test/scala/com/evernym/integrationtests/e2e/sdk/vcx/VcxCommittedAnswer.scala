@@ -83,6 +83,8 @@ protected trait VcxCommittedAnswer
       )
     )
 
+    updateMessageStatus(metaData)
+
     new JSONObject()
       .put("@type", MsgFamily.typeStrFromMsgType(CommittedAnswerMsgFamily, "answer-needed"))
       .put("~thread",

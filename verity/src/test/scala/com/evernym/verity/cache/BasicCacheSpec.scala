@@ -1,15 +1,13 @@
 package com.evernym.verity.cache
 
 import java.util.concurrent.TimeUnit
-
 import akka.pattern.ask
 import akka.util.Timeout
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, KeyValueMapperFetcher}
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.testkit.{BasicAsyncSpec, CancelGloballyAfterFailure}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -132,12 +130,12 @@ class BasicCacheSpec
     }
   }
 
-  val keyValueMapperFetcherId: Int = KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID
+  val keyValueMapperFetcher: FetcherParam = KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
   val keyValueFetcher = new KeyValueMapperFetcher(system, appConfig)
-  val fetchers: Map[Int, AsyncCacheValueFetcher] = Map(
-    keyValueMapperFetcherId -> keyValueFetcher)
+  val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(
+    keyValueMapperFetcher -> keyValueFetcher)
 
-  def buildCache(name: String = "TestCache", fetchers: Map[Int, CacheValueFetcher] = fetchers): Cache = {
+  def buildCache(name: String = "TestCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
     new Cache(name, fetchers)
   }
 
@@ -156,6 +154,6 @@ class BasicCacheSpec
   }
 
   def getFromCache(cache: Cache, keyDetails: Set[KeyDetail]): Future[CacheQueryResponse] = {
-    cache.getByParamAsync(GetCachedObjectParam(keyDetails, keyValueMapperFetcherId))
+    cache.getByParamAsync(GetCachedObjectParam(keyDetails, keyValueMapperFetcher))
   }
 }

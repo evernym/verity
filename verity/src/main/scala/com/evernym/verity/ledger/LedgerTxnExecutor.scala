@@ -12,27 +12,21 @@ case class LedgerExecutorException(message: String,
 
 trait LedgerTxnExecutor {
 
-  def completeRequest(submitter: Submitter, req: LedgerRequest):
-  Future[Either[StatusDetail, Map[String, Any]]]
+  def completeRequest(submitter: Submitter, req: LedgerRequest): Future[Map[String, Any]]
 
-  def addNym(submitter: Submitter, targetDid: DidPair):
-    Future[Either[StatusDetail, TxnResp]]
+  def addNym(submitter: Submitter, targetDid: DidPair): Future[TxnResp]
 
-  def addAttrib(submitter: Submitter, did: DID, attrName: String, attrValue: String):
-    Future[Either[StatusDetail, TxnResp]]
+  def addAttrib(submitter: Submitter, did: DID, attrName: String, attrValue: String): Future[TxnResp]
 
-  def getTAA(submitter: Submitter):
-    Future[Either[StatusDetail, GetTAAResp]]
+  def getTAA(submitter: Submitter): Future[GetTAAResp]
 
-  def getNym(submitter: Submitter, id: String):
-    Future[Either[StatusDetail, GetNymResp]]
+  def getNym(submitter: Submitter, id: String): Future[GetNymResp]
 
-  def getSchema(submitter: Submitter, schemaId: String):
-    Future[Either[StatusDetail, GetSchemaResp]]
+  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp]
 
   def writeSchema(submitterDID: DID,
                   schemaJson: String,
-                  walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]]
+                  walletAccess: WalletAccess): Future[TxnResp]
 
   def prepareSchemaForEndorsement(submitterDID: DID,
                                   schemaJson: String,
@@ -41,18 +35,16 @@ trait LedgerTxnExecutor {
 
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
-                   walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]]
+                   walletAccess: WalletAccess): Future[TxnResp]
 
   def prepareCredDefForEndorsement(submitterDID: DID,
                                    credDefJson: String,
                                    endorserDID: DID,
                                    walletAccess: WalletAccess): Future[LedgerRequest]
 
-  def getCredDef(submitter: Submitter, credDefId: String):
-  Future[Either[StatusDetail, GetCredDefResp]]
+  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp]
 
-  def getAttrib(submitter: Submitter, did: DID, attrName: String):
-    Future[Either[StatusDetail, GetAttribResp]]
+  def getAttrib(submitter: Submitter, did: DID, attrName: String): Future[GetAttribResp]
 
   def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp
 

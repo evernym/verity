@@ -28,7 +28,7 @@ trait BaseProtocolActorSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    agentRouteStoreRegion   //touching it to start the routing agent region actor
+    routeRegion   //touching it to start the routing agent region actor
   }
 
   /**

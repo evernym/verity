@@ -1,6 +1,7 @@
 package com.evernym.verity.testkit.util
 
 import akka.actor.ActorSystem
+import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.config.AppConfig
@@ -21,6 +22,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.util.{Failure, Success}
 
 
 class LedgerUtil (val appConfig: AppConfig,
@@ -64,12 +66,13 @@ class LedgerUtil (val appConfig: AppConfig,
     val fut = poolConnManager
       .txnExecutor(Some(testWalletAPI))
       .completeRequest(Submitter(submitterDID, Some(wap)), LedgerRequest(req, taa = poolConnManager.currentTAA))
-    val status = Await.result(fut, respWaitTime)
+    val status = Await.ready(fut, respWaitTime).value.get
     status match {
-      case Right(s: Any) =>
+      case Success(s: Any) =>
         poolConnManager.close()
         LedgerResponse(s)
-      case e => throw new Exception(s"Unable to execute ledger request. Reason: $e")
+      case Failure(StatusDetailException(sd)) => throw new Exception(s"Unable to execute ledger request. Reason: $sd")
+      case Failure(e) => throw new Exception(s"Unable to execute ledger request. Reason: $e")
     }
   }
 

@@ -91,35 +91,33 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   def currentTAA: Option[TransactionAuthorAgreement]
 
   def retryRecovery(submitter: Submitter,
-                    reqWithoutTaa: LedgerRequest):
-  PartialFunction[Throwable, Future[Either[StatusDetail, LedgerResult]]] = {
+                    reqWithoutTaa: LedgerRequest): PartialFunction[Throwable, Future[LedgerResult]] = {
     case taaFailure: InvalidClientTaaAcceptanceError =>
       if(ConfigUtil.isTAAConfigEnabled(appConfig)) {
-        getTAA(submitter).flatMap {
-          case Right(taaResp: GetTAAResp) =>
-            val currentVersion = reqWithoutTaa.taa.map(_.version).getOrElse("-1")
-            val newVersion = taaResp.taa.version
-            val newTaa = findTAAConfig(appConfig, newVersion)
+        getTAA(submitter).flatMap { taaResp =>
+          val currentVersion = reqWithoutTaa.taa.map(_.version).getOrElse("-1")
+          val newVersion = taaResp.taa.version
+          val newTaa = findTAAConfig(appConfig, newVersion)
 
-            newTaa match {
-              case Some(t) if t.version != currentVersion =>
-                logger.warn(s"Current TAA has expired -- New TAA is available with restart")
-                logger.debug(s"Retrying write to ledger with active TAA: $newTaa")
-                completeRequest(submitter, reqWithoutTaa.copy(taa = newTaa))
-              case Some(_) =>
-                val errorMsg = s"Invalid TAA -- Current configured TAA for version $currentVersion is not valid."
-                throw new TaaConfiguredVersionInvalidError(errorMsg + " Error details: " + taaFailure.getMessage)
-              case None =>
-                val errorMsg = s"No Valid TAA -- TAA version $currentVersion is not configured. You must add " +
-                  s"the digest, mechanism, and time-of-acceptance to ${CommonConfig.LIB_INDY_LEDGER_TAA_AGREEMENTS} " +
-                  s"for TAA version $currentVersion AND enable ${CommonConfig.LIB_INDY_LEDGER_TAA}."
-                throw new TaaConfigurationForVersionNotFoundError(errorMsg + " Error details: " + taaFailure.getMessage)
-            }
-          case Left(_) =>
-            throw new TaaFailedToGetCurrentVersionError(taaFailure.getMessage)
+          newTaa match {
+            case Some(t) if t.version != currentVersion =>
+              logger.warn(s"Current TAA has expired -- New TAA is available with restart")
+              logger.debug(s"Retrying write to ledger with active TAA: $newTaa")
+              completeRequest(submitter, reqWithoutTaa.copy(taa = newTaa))
+            case Some(_) =>
+              val errorMsg = s"Invalid TAA -- Current configured TAA for version $currentVersion is not valid."
+              throw new TaaConfiguredVersionInvalidError(errorMsg + " Error details: " + taaFailure.getMessage)
+            case None =>
+              val errorMsg = s"No Valid TAA -- TAA version $currentVersion is not configured. You must add " +
+                s"the digest, mechanism, and time-of-acceptance to ${CommonConfig.LIB_INDY_LEDGER_TAA_AGREEMENTS} " +
+                s"for TAA version $currentVersion AND enable ${CommonConfig.LIB_INDY_LEDGER_TAA}."
+              throw new TaaConfigurationForVersionNotFoundError(errorMsg + " Error details: " + taaFailure.getMessage)
+          }
+        }.recover {
+          case StatusDetailException(_) => throw new TaaFailedToGetCurrentVersionError(taaFailure.getMessage)
         }
       } else if (taaFailure.getMessage.contains("Txn Author Agreement acceptance has not been set yet and not allowed in requests")) {
-        Future.successful(Left(Status.TAA_NOT_REQUIRED_BUT_INCLUDED))
+        Future.failed(StatusDetailException(Status.TAA_NOT_REQUIRED_BUT_INCLUDED))
       } else {
         throw new TaaRequiredButDisabledError(taaFailure.getMessage)
       }
@@ -130,25 +128,31 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     case e => Future.failed(e)
   }
 
-  def appendTAAToRequest(ledgerRequest: LedgerRequest, taa: Option[TransactionAuthorAgreement]): LedgerRequest =
+  def appendTAAToRequest(ledgerRequest: LedgerRequest, taa: Option[TransactionAuthorAgreement]): Future[LedgerRequest] = {
   // IMPORTANT - Either use (text and version) OR (digest). Sending text or version with digest will result
   //             in an IndyException - Error: Invalid structure Caused by: Invalid combination of params:
   //             `text` and `version` should be passed or skipped together.
-    taa.map { taa =>
-      ledgerRequest.prepared(appendTxnAuthorAgreementAcceptanceToRequest(
-        ledgerRequest.req,
-        null,
-        null,
-        taa.digest,
-        taa.mechanism,
-        TAAUtil.taaAcceptanceEpochDateTime(taa.timeOfAcceptance)).get)
-    }.getOrElse(ledgerRequest)
+    taa match {
+      case Some(taa) =>
+        toFuture(appendTxnAuthorAgreementAcceptanceToRequest(
+          ledgerRequest.req,
+          null,
+          null,
+          taa.digest,
+          taa.mechanism,
+          TAAUtil.taaAcceptanceEpochDateTime(taa.timeOfAcceptance)
+        )) map { req =>
+          ledgerRequest.prepared(newRequest = req)
+        }
+      case None => Future.successful(ledgerRequest)
+    }
+  }
 
 
   def prepareRequest(submitterDetail: Submitter,
                      request:         LedgerRequest): Future[LedgerRequest] = {
     Future.successful(request)
-      .flatMap { r => Future(appendTAAToRequest(r, r.taa)) }
+      .flatMap { r => appendTAAToRequest(r, r.taa) }
       .flatMap{ r =>
         if(r.needsSigning)
           walletAPI
@@ -167,12 +171,12 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  def parseResponse(response: RawLedgerResponse): Either[StatusDetail, LedgerResult] = {
+  def parseResponse(response: RawLedgerResponse): LedgerResult = {
     val pr = getResultFromJson(response)
     pr.get(OP) match {
       case Some(op) if op.equals(REPLY) =>
         publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
-        Right(pr)
+        pr
       case Some(op) if op.equals(REJECT) || op.equals(REQNACK) =>
         // TODO: get REASON_CODE/STATUS_CODE (whatever indy folks end up calling it) instead of REASON and change
         //       if conditions in each flatMap case to use the code instead of substring matching.
@@ -192,56 +196,56 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
           }
         err match {
           case Some(e) => throw e
-          case None    => Right(pr)
+          case None    => pr
         }
-      case _ =>
-        Right(pr)
+      case _ => pr
     }
   }
 
-  def handleError: Throwable ?=> Either[StatusDetail, LedgerResult] = {
+  def handleError: Throwable ?=> LedgerResult = {
+    case e: StatusDetailException => throw e
     case e: TimeoutException =>
       val errorMsg = "no response from ledger pool: " + e.toString
       publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION,
         new NoResponseFromLedgerPoolServiceException(Option(errorMsg)), Option(errorMsg)))
-      Left(TIMEOUT.withMessage(e.getMessage))
+      throw StatusDetailException(TIMEOUT.withMessage(e.getMessage))
     case e: TaaConfiguredVersionInvalidError =>
       publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_CONFIGURED_VERSION_INVALID Details: ${e.getMessage}")))
-      Left(TAA_CONFIGURED_VERSION_INVALID)
+      throw StatusDetailException(TAA_CONFIGURED_VERSION_INVALID)
     case e: TaaConfigurationForVersionNotFoundError =>
       publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND Details: ${e.getMessage}")))
-      Left(TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND)
+      throw StatusDetailException(TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND)
     case e: TaaFailedToGetCurrentVersionError =>
       publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_FAILED_TO_GET_CURRENT_VERSION Details: ${e.getMessage}")))
-      Left(TAA_FAILED_TO_GET_CURRENT_VERSION)
+      throw StatusDetailException(TAA_FAILED_TO_GET_CURRENT_VERSION)
     case e: TaaRequiredButDisabledError =>
       publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_REQUIRED_BUT_DISABLED Details: ${e.getMessage}")))
-      Left(TAA_REQUIRED_BUT_DISABLED)
+      throw StatusDetailException(TAA_REQUIRED_BUT_DISABLED)
     case e: UnknownTxnRejectReasonError =>
       publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$LEDGER_UNKNOWN_REJECT_ERROR Details: ${e.getMessage}")))
-      Left(LEDGER_UNKNOWN_REJECT_ERROR )
+      throw StatusDetailException(LEDGER_UNKNOWN_REJECT_ERROR )
     case e: UnhandledIndySdkException =>
       publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$INDY_SDK_UNHANDLED_EXCEPTION Details: ${e.getMessage}")))
-      Left(INDY_SDK_UNHANDLED_EXCEPTION)
+      throw StatusDetailException(INDY_SDK_UNHANDLED_EXCEPTION)
     case e: Exception =>
       val errorMsg = "unhandled error/response while interacting with ledger: " + e.toString
       publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
-      Left(UNHANDLED.withMessage( e.getMessage))
+      throw StatusDetailException(UNHANDLED.withMessage( e.getMessage))
     case e =>
       logger.warn(e.getMessage)
-      Left(LEDGER_UNKNOWN_ERROR)
+      throw StatusDetailException(LEDGER_UNKNOWN_ERROR)
   }
 
   def completeRequest(submitterDetail: Submitter,
-                      request:         LedgerRequest): Future[Either[StatusDetail, LedgerResult]] = {
+                      request:         LedgerRequest): Future[LedgerResult] = {
       if(pool.isEmpty) {
-        Future.successful(Left(LEDGER_NOT_CONNECTED))
+        Future.failed(StatusDetailException(LEDGER_NOT_CONNECTED))
       } else {
         prepareRequest(submitterDetail, request)
           .flatMap(submitRequest(_, pool.get))
@@ -258,228 +262,213 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
 
   private def submitGetRequest(submitter: Submitter,
                                req: String,
-                               needsSigning: Boolean): Future[Either[StatusDetail, LedgerResult]] = {
-    completeRequest(submitter, LedgerRequest(req, needsSigning)).map {
-      case Right(resp) => Right(resp)
-      case Left(sd: StatusDetail) => Left(sd)
-      case e => Left(UNHANDLED.withMessage(e.toString))
+                               needsSigning: Boolean): Future[LedgerResult] = {
+    completeRequest(submitter, LedgerRequest(req, needsSigning)).recover {
+      case e: StatusDetailException => throw e
     }
   }
 
   private def submitWriteRequest(submitterDetail: Submitter,
-                                 reqDetail: LedgerRequest):Future[Either[StatusDetail, TxnResp]] ={
-    completeRequest(submitterDetail, reqDetail).map {
-      case Right(resp) =>
-        publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
-        Right(buildTxnRespForWriteOp(resp))
-      case Left(sd: StatusDetail) => Left(sd)
-      case e => Left(UNHANDLED.withMessage(e.toString))
+                                 reqDetail: LedgerRequest):Future[TxnResp] ={
+    completeRequest(submitterDetail, reqDetail).map { resp =>
+      publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+      buildTxnRespForWriteOp(resp)
+    }.recover {
+      case e: StatusDetailException => throw e
     }
   }
 
   override def getAttrib(submitter: Submitter,
                          did: DID,
-                         attrName: String): Future[Either[StatusDetail, GetAttribResp]] = {
-    val req = buildGetAttribRequest(submitter.did, did, attrName, null, null).get
-    submitGetRequest(submitter, req, needsSigning=true).map{
-      case Right(r) =>
+                         attrName: String): Future[GetAttribResp] = {
+    toFuture(buildGetAttribRequest(submitter.did, did, attrName, null, null)) flatMap { req =>
+      submitGetRequest(submitter, req, needsSigning=true).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
         val data = getOptFieldFromResult(r, DATA).map(_.toString)
-        Right(GetAttribResp(txnResp))
-      case Left(sd: StatusDetail) =>  Left(sd)
+        GetAttribResp(txnResp)
+      }
     }
   }
 
-  override def getTAA(submitter: Submitter): Future[Either[StatusDetail, GetTAAResp]] = {
-    val req = buildGetTxnAuthorAgreementRequest(submitter.did, null).get
-    submitGetRequest(submitter, req, needsSigning=false).map{
-      case Right(r) =>
+  override def getTAA(submitter: Submitter): Future[GetTAAResp] = {
+    toFuture(buildGetTxnAuthorAgreementRequest(submitter.did, null)) flatMap { req =>
+      submitGetRequest(submitter, req, needsSigning=false).map{ r =>
         try {
           val txnResp = buildTxnRespForReadOp(r)
 
-          val data = txnResp.data
-            .flatMap{ m =>
-              try {
-                val version = m.get("version").map(_.asInstanceOf[String])
-                val text = m.get("text").map(_.asInstanceOf[String])
-                version.zip(text).headOption
-              }
-              catch {
-                case _: ClassCastException => None
-              }
+          val data = txnResp.data.flatMap{ m =>
+            try {
+              val version = m.get("version").map(_.asInstanceOf[String])
+              val text = m.get("text").map(_.asInstanceOf[String])
+              version.zip(text).headOption
+            } catch {
+              case _: ClassCastException => None
             }
-            .map(x=> LedgerTAA(x._1, x._2))
+          }.map(x => LedgerTAA(x._1, x._2))
 
           data match {
-            case Some(d) => Right(GetTAAResp(txnResp, d))
+            case Some(d) => GetTAAResp(txnResp, d)
             case None =>
-              if(txnResp.data.isEmpty) Left(TAA_NOT_SET_ON_THE_LEDGER)
-              else Left(TAA_INVALID_JSON)
+              if(txnResp.data.isEmpty) throw StatusDetailException(TAA_NOT_SET_ON_THE_LEDGER)
+              else throw StatusDetailException(TAA_INVALID_JSON)
           }
         } catch {
-          case _:InvalidValueException => Left(TAA_NOT_SET_ON_THE_LEDGER)
+          case _:InvalidValueException => throw StatusDetailException(TAA_NOT_SET_ON_THE_LEDGER)
         }
-      case Left(sd: StatusDetail) =>  Left(sd)
+      }
     }
   }
 
-  override def getNym(submitterDetail: Submitter, did: DID): Future[Either[StatusDetail, GetNymResp]] = {
-    val req = buildGetNymRequest(submitterDetail.did, did).get
-    submitGetRequest(submitterDetail, req, needsSigning=false).map{
-      case Right(r) =>
+  override def getNym(submitterDetail: Submitter, did: DID): Future[GetNymResp] = {
+    toFuture(buildGetNymRequest(submitterDetail.did, did)) flatMap { req =>
+      submitGetRequest(submitterDetail, req, needsSigning=false).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
         txnResp.data.map{ d =>
           val nym = d.get("dest").flatMap(orNone[String])
           val verkey = d.get("verkey").flatMap(orNone[String])
           val role = d.get("role").flatMap(orNone[String])
 
-          nym.zip(verkey)
-            .headOption
-            .map {x =>
-              Right(GetNymResp(txnResp, Some(x._1), Some(x._2), role))
-            }
-            .getOrElse(Left(LEDGER_DATA_INVALID))
-        }
-        .getOrElse(Right(GetNymResp(txnResp, None, None))) // Ledger did not have nym
-      case Left(sd: StatusDetail) =>  Left(sd)
+          nym.zip(verkey).headOption match {
+            case Some(x) => GetNymResp(txnResp, Some(x._1), Some(x._2), role)
+            case None => throw StatusDetailException(LEDGER_DATA_INVALID)
+          }
+        }.getOrElse(GetNymResp(txnResp, None, None)) // Ledger did not have nym
+      }
     }
   }
 
   override def writeSchema(submitterDID: DID,
                            schemaJson: String,
-                           walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
-    val schemaReq = LedgerRequest(buildSchemaRequest(submitterDID, schemaJson).get, needsSigning=false, taa=None)
-    val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
-    val promise = Promise[Either[StatusDetail, TxnResp]]()
-    walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
-      case Success(signedRequest) =>
-        promise.completeWith(
-        submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
-      )
-      case Failure(ex) =>
-        promise.failure(ex)
+                           walletAccess: WalletAccess): Future[TxnResp] = {
+    toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
+      val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
+      appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
+        val promise = Promise[TxnResp]()
+        walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
+          case Success(signedRequest) =>
+            promise.completeWith(
+              submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
+            )
+          case Failure(ex) => promise.failure(ex)
+        }
+        promise.future
+      }
     }
-    promise.future
   }
 
   override def prepareSchemaForEndorsement(submitterDID: DID,
                                            schemaJson: String,
                                            endorserDID: DID,
                                            walletAccess: WalletAccess): Future[LedgerRequest] = {
-    val schemaReq = LedgerRequest(buildSchemaRequest(submitterDID, schemaJson).get, needsSigning=false, taa=None)
-    val reqWithOptTAA = appendTAAToRequest(schemaReq, currentTAA)
-    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID).get
-
-    val promise = Promise[LedgerRequest]()
-    walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
-    promise.future
+    toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
+      val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
+      appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
+        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap { reqWithEndorser =>
+          val promise = Promise[LedgerRequest]()
+          walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
+          promise.future
+        }
+      }
+    }
   }
 
   def writeCredDef(submitterDID: DID,
                    credDefJson: String,
-                   walletAccess: WalletAccess): Future[Either[StatusDetail, TxnResp]] = {
-    val credDefReq = LedgerRequest(buildCredDefRequest(submitterDID, credDefJson).get, needsSigning=false, taa=None)
-    val reqWithOptTAA = appendTAAToRequest(credDefReq, currentTAA)
-    val promise = Promise[Either[StatusDetail, TxnResp]]()
+                   walletAccess: WalletAccess): Future[TxnResp] = {
+    toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
+      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
+      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
+        val promise = Promise[TxnResp]()
 
-    walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
-      case Success(signedRequest) => promise.completeWith(
-        submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
-      )
-      case Failure(ex) => promise.failure(ex)
+        walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
+          case Success(signedRequest) => promise.completeWith(
+            submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
+          )
+          case Failure(ex) => promise.failure(ex)
+        }
+        promise.future
+      }
     }
-    promise.future
   }
 
   override def prepareCredDefForEndorsement(submitterDID: DID,
                                             credDefJson: String,
                                             endorserDID: DID,
                                             walletAccess: WalletAccess): Future[LedgerRequest] = {
-    val credDefReq = LedgerRequest(buildCredDefRequest(submitterDID, credDefJson).get, needsSigning=false, taa=None)
-    val reqWithOptTAA = appendTAAToRequest(credDefReq, currentTAA)
-    val reqWithEndorser = appendRequestEndorser(reqWithOptTAA.req, endorserDID).get
-
-    val promise = Promise[LedgerRequest]()
-    walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
-    promise.future
-  }
-
-  override def getSchema(submitterDetail: Submitter, schemaId: String): Future[Either[StatusDetail, GetSchemaResp]] = {
-    val req = buildGetSchemaRequest(submitterDetail.did, schemaId).get
-    submitGetRequest(submitterDetail, req, needsSigning=false).flatMap{
-      case Right(value) =>
-        toFuture(Ledger.parseGetSchemaResponse(getJsonStringFromMap(value)))
-          .map( x =>
-            Right(
-              value,
-              Option(DefaultMsgCodec.fromJson[SchemaV1](x.getObjectJson))
-            )
-          )
-          .recover {
-            case _: LedgerNotFoundException =>
-              Right(value, None)
-            case NonFatal(_) =>
-              Left(LEDGER_DATA_INVALID)
-          }
-
-      case Left(sd) => Future.successful(Left(sd))
-    }
-    .map {
-        case Right((r, obj)) =>
-          Right(GetSchemaResp(buildTxnRespForReadOp(r), obj))
-        case Left(sd: StatusDetail) =>  Left(sd)
-    }
-  }
-
-  override def getCredDef(submitterDetail: Submitter, credDefId: String): Future[Either[StatusDetail, GetCredDefResp]] = {
-    val req = buildGetCredDefRequest(submitterDetail.did, credDefId).get
-    submitGetRequest(submitterDetail, req, needsSigning=false).flatMap {
-      case Right(value) =>
-        toFuture(Ledger.parseGetCredDefResponse(getJsonStringFromMap(value)))
-          .map( x =>
-            Right(
-              value,
-              Option(DefaultMsgCodec.fromJson[CredDefV1](x.getObjectJson))
-            )
-          )
-          .recover {
-            case _: LedgerNotFoundException =>
-              Right(value, None)
-            case NonFatal(_) =>
-              Left(LEDGER_DATA_INVALID)
-          }
-
-      case Left(sd) => Future.successful(Left(sd))
-    }
-      .map {
-        case Right((r, obj)) =>
-          Right(GetCredDefResp(buildTxnRespForReadOp(r), obj))
-        case Left(sd: StatusDetail) =>  Left(sd)
+    toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
+      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
+      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
+        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap{ reqWithEndorser =>
+          val promise = Promise[LedgerRequest]()
+          walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
+          promise.future
+        }
       }
+    }
   }
 
-  override def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[Either[StatusDetail, TxnResp]] = {
-    val req = buildNymRequest(
+  override def getSchema(submitterDetail: Submitter, schemaId: String): Future[GetSchemaResp] = {
+    toFuture(buildGetSchemaRequest(submitterDetail.did, schemaId)) flatMap { req =>
+      submitGetRequest(submitterDetail, req, needsSigning=false).flatMap{ value =>
+        toFuture(Ledger.parseGetSchemaResponse(getJsonStringFromMap(value))).map( x =>
+          (
+            value,
+            Option(DefaultMsgCodec.fromJson[SchemaV1](x.getObjectJson))
+          )
+        ).recover {
+          case _: LedgerNotFoundException => (value, None)
+          case NonFatal(_) => throw StatusDetailException(LEDGER_DATA_INVALID)
+        }
+      }.map { r =>
+        GetSchemaResp(buildTxnRespForReadOp(r._1), r._2)
+      }
+    }
+  }
+
+  override def getCredDef(submitterDetail: Submitter, credDefId: String): Future[GetCredDefResp] = {
+    toFuture(buildGetCredDefRequest(submitterDetail.did, credDefId)) flatMap { req =>
+      submitGetRequest(submitterDetail, req, needsSigning=false).flatMap { value =>
+        toFuture(Ledger.parseGetCredDefResponse(getJsonStringFromMap(value))).map( x =>
+          (
+            value,
+            Option(DefaultMsgCodec.fromJson[CredDefV1](x.getObjectJson))
+          )
+        ).recover {
+          case _: LedgerNotFoundException => (value, None)
+          case NonFatal(_) => throw StatusDetailException(LEDGER_DATA_INVALID)
+        }
+      }.map { r =>
+        GetCredDefResp(buildTxnRespForReadOp(r._1), r._2)
+      }
+    }
+  }
+
+  override def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
+    toFuture(buildNymRequest(
       submitterDetail.did,
       targetDid.DID,
       targetDid.verKey,
       null,
       null
-    ).get
-    submitWriteRequest(submitterDetail, LedgerRequest(req, taa = currentTAA))
+    )) flatMap { req =>
+      submitWriteRequest(submitterDetail, LedgerRequest(req, taa = currentTAA))
+    }
   }
 
-  override def addAttrib(submitterDetail: Submitter, did: DID, attrName: String,
-                         attrValue: String): Future[Either[StatusDetail, TxnResp]] = {
+  override def addAttrib(submitterDetail: Submitter,
+                         did: DID,
+                         attrName: String,
+                         attrValue: String): Future[TxnResp] = {
     val raw = getJsonStringFromMap (Map(attrName -> attrValue))
-    val req = buildAttribRequest(
+    toFuture(buildAttribRequest(
       submitterDetail.did,
       did,
       null,
       raw,
       null
-    ).get
-    submitWriteRequest(submitterDetail, LedgerRequest(req, taa = currentTAA))
+    )) flatMap { req =>
+      submitWriteRequest(submitterDetail, LedgerRequest(req, taa = currentTAA))
+    }
   }
 
   def extractReqValue(resp: LedgerResult, fieldToExtract: String): Any = {

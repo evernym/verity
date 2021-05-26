@@ -8,7 +8,8 @@ object ActorNameConstants {
   val CLUSTER_SINGLETON_MANAGER_PROXY = "singleton-parent-proxy"
   val TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME = "TokenToActorItemMapper"
   val URL_STORE_REGION_ACTOR_NAME=  "UrlMapper"
-  val AGENT_ROUTE_STORE_REGION_ACTOR_NAME = "RoutingAgent"
+  val LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME = "RoutingAgent"
+  val ROUTE_REGION_ACTOR_NAME = "Route"
   val SEGMENTED_STATE_REGION_ACTOR_NAME = "SegmentedState"
   val SYNC_MSG_RESPONDER_REGION_ACTOR_NAME = "SyncMsgResponder"
   val AGENCY_AGENT_REGION_ACTOR_NAME = "AgencyAgent"
@@ -36,6 +37,7 @@ object ActorNameConstants {
   val WATCHER_MANAGER = "watcher-manager"
   val ACTOR_STATE_CLEANUP_MANAGER = "actor-state-cleanup-manager"
   val ROUTE_MAINTENANCE_HELPER = "route-maintenance-helper"
+  val AGENT_ROUTES_MIGRATOR = "agent-routes-migrator"
 
   //actor path/name related
   val SHARDED_ACTOR_PATH_PREFIX = "/system/sharding"

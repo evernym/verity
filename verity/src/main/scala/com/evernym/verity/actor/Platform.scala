@@ -8,7 +8,7 @@ import com.evernym.verity._
 import com.evernym.verity.actor.ShardUtil._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}
-import com.evernym.verity.actor.agent.msgrouter.AgentRouteStore
+import com.evernym.verity.actor.agent.msgrouter.Route
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
@@ -26,9 +26,10 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.container.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
-import java.time.ZoneId
 
+import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
+import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.libs.Libraries
 import com.evernym.verity.metrics.MetricsReader
 
@@ -54,7 +55,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //start prometheus reporter
   // intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is validated as well
-  MetricsReader
+  MetricsReader.initialize(appConfig)
 
   //initialize app state manager
   val appStateManager: ActorRef = agentActorContext.system.actorOf(
@@ -165,13 +166,18 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   }
 
   //resource usage tracker region actor
-  val resourceUsageTrackerRegion: ActorRef = createPersistentRegion(
-    RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME,
-    ResourceUsageTracker.props(agentActorContext.appConfig, agentActorContext.actionExecutor))
+  val resourceUsageTrackerRegion: ActorRef = {
+    val actionExecutor = new UsageViolationActionExecutor(actorSystem, appConfig)
+    createPersistentRegion(
+      RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME,
+      ResourceUsageTracker.props(agentActorContext.appConfig, actionExecutor))
+  }
 
   //other region actors
-  val agentRouteStoreRegion: ActorRef =
-    createPersistentRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME, AgentRouteStore.props)
+
+  val routeRegion: ActorRef =
+    createPersistentRegion(ROUTE_REGION_ACTOR_NAME, Route.props)
+
   val itemManagerRegion: ActorRef =
     createPersistentRegion(ITEM_MANAGER_REGION_ACTOR_NAME, ItemManager.props)
   val itemContainerRegion: ActorRef =

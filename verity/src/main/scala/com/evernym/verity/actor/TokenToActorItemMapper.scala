@@ -1,19 +1,24 @@
 package com.evernym.verity.actor
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
+import akka.util.Timeout
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.actor.persistence.{BasePersistentActor, HasActorResponseTimeout}
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.util.TokenProvider
 
 import scala.concurrent.Future
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.util.Util.buildDuration
+
+import scala.concurrent.duration.FiniteDuration
 
 /**
  * this actor is used on inviter side
@@ -24,19 +29,16 @@ import com.evernym.verity.protocol.engine.MsgId
  * which contains the invitation details, so that it can be queried to get full invitation detail.
 
  * this actor stores that mapping of "token" to "agent pairwise actor"
- * @param system
- * @param appConfig
  */
 
-class TokenToActorItemMapperProvider(system: ActorSystem, val appConfig: AppConfig)
-    extends HasActorResponseTimeout
-    with HasAppConfig {
+object TokenToActorItemMapperProvider {
 
-  lazy val tokenToActorItemMapperRegion: ActorRef =
-    ClusterSharding(system).shardRegion(TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME)
-
-  def createToken(regionTypeName: String, entityId: String, uid: MsgId):
+  def createToken(regionTypeName: String, entityId: String, uid: MsgId)(appConfig: AppConfig, system: ActorSystem):
   Future[Either[HandledErrorException, String]] = {
+    val duration: FiniteDuration =
+      buildDuration(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
+    implicit lazy val responseTimeout: Timeout = Timeout(duration)
+    val tokenToActorItemMapperRegion = ClusterSharding(system).shardRegion(TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME)
     val token = TokenProvider.getNewToken
     val fut = tokenToActorItemMapperRegion ? ForToken(token, AddDetail(regionTypeName, entityId, uid))
     fut.map { _ =>

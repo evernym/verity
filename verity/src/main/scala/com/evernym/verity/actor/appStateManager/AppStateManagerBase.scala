@@ -253,10 +253,8 @@ trait AppStateManagerBase { this: Actor =>
       }
 
       f onComplete {
-        case Success(_) =>
-          logger.info(
-            "Akka node has left the cluster"
-          )
+        case Success(true) =>
+          logger.info("Akka node has left the cluster")
 
           logger.info(s"""Akka node ${cluster.selfAddress} is being marked as 'down' as well in the event of network
                             failures while 'leaving' the cluster...""")
@@ -272,7 +270,8 @@ trait AppStateManagerBase { this: Actor =>
             ),
             msg = Option("Akka node is about to shutdown.")
           )
-
+        case Success(false) =>
+          logger.error("node timed out while attempting to 'leave' the cluster")
         case Failure(error) =>
           logger.error(
             "node encountered a failure while attempting to 'leave' the cluster.", (LOG_KEY_ERR_MSG, error)

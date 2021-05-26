@@ -6,7 +6,7 @@ import akka.testkit.EventFilter
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -133,8 +133,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
         "when sent get route to routing agent" - {
           "should be able to get persistence id of newly created pairwise actor" in {
-            val bucketId = RoutingAgentUtil.getBucketEntityId(pairwiseDID)
-            agentRouteStoreRegion ! ForIdentifier(bucketId, GetRoute(pairwiseDID))
+            routeRegion ! ForIdentifier(pairwiseDID, GetStoredRoute)
             val addressDetail = expectMsgType[Option[ActorAddressDetail]]
             addressDetail.isDefined shouldBe true
             userAgentPairwiseEntityId = addressDetail.get.address

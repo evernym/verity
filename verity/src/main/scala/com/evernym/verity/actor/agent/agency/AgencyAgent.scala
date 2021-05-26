@@ -15,13 +15,14 @@ import com.evernym.verity.actor.agent.state.base.{AgentStateImplBase, AgentState
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
+import com.evernym.verity.cache.{LEDGER_GET_ENDPOINT_CACHE_FETCHER, LEDGER_GET_VER_KEY_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetEndpointParam, GetVerKeyParam}
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.ledger.{LedgerPoolConnManager, Submitter, TxnResp}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, Submitter}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
@@ -102,14 +103,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     // pattern occurs, the state might be modified, and that would be bad.
     val addUrlFutResp = agentActorContext.ledgerSvc.addAttrib(ledgerReqSubmitter, state.myDid_!,
       agentActorContext.ledgerSvc.URL, url.toString)
-    addUrlFutResp.map {
-      case Right(tr: TxnResp) =>
-        logger.debug("url added", (LOG_KEY_SRC_DID, state.myDid_!), ("transaction", tr))
-        sndr ! EndpointSet(url.toString)
-      case Left(statusDetail: StatusDetail) =>
+    addUrlFutResp.map { tr =>
+      logger.debug("url added", (LOG_KEY_SRC_DID, state.myDid_!), ("transaction", tr))
+      sndr ! EndpointSet(url.toString)
+    }.recover {
+      case StatusDetailException(statusDetail) =>
         logger.error("could not add url", (LOG_KEY_SRC_DID, agencyDIDReq), (LOG_KEY_STATUS_DETAIL, statusDetail))
         sndr ! statusDetail
-    }.recover {
       case e: Exception => handleException(e, sndr)
     }
   }
@@ -206,13 +206,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   //dhh Same note about caching as above.
   def getCachedEndpointFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gep = GetEndpointParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(KeyDetail(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER)
     getCachedStringValue(did, gcop)
   }
 
   def getCachedVerKeyFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gvkp = GetVerKeyParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(KeyDetail(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER_ID)
+    val gcop = GetCachedObjectParam(KeyDetail(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER)
     getCachedStringValue(did, gcop)
   }
 

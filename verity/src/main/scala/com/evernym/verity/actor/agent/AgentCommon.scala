@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent
 
 import java.time.ZonedDateTime
-
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import com.evernym.verity.Exceptions.InternalServerErrorException
@@ -25,7 +24,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
-import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONFIG_CACHE_FETCHER, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER}
+import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.CommonConfig.VERITY_ENDORSER_DEFAULT_DID
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
@@ -128,7 +128,6 @@ trait AgentCommon
   override lazy val logger: Logger = getAgentIdentityLoggerByClass(this, getClass)(context.system)
 
   def agentActorContext: AgentActorContext
-  def system: ActorSystem = agentActorContext.system
   def walletAPI: WalletAPI = agentActorContext.walletAPI
   def agentWalletId: Option[String] = state.agentWalletId
   def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
@@ -144,8 +143,8 @@ trait AgentCommon
   //tracking ids
   def trackingIdParam: TrackingIdParam = TrackingIdParam(domainId, state.myDid, state.theirDid)
 
-  lazy val cacheFetchers: Map[Int, CacheValueFetcher] = Map (
-    AGENT_ACTOR_CONFIG_CACHE_FETCHER_ID -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
+  lazy val cacheFetchers: Map[FetcherParam, CacheValueFetcher] = Map (
+    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
   )
   /**
    * per agent actor cache
@@ -190,7 +189,7 @@ trait AgentCommon
       case (Some(adp), Some(ak)) if adp.DID.nonEmpty => Future.successful(adp.copy(verKey = ak.verKey))
       case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.isEmpty => agencyDidPairFutByCache(adp.DID)
       case _ =>
-        val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER_ID)
+        val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER)
         generalCache.getByParamAsync(gcop).flatMap { cqr =>
           agencyDidPairFutByCache(cqr.getAgencyDIDReq)
         }
@@ -199,7 +198,7 @@ trait AgentCommon
 
   def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
     val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
-    val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER_ID)
+    val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
     generalCache.getByParamAsync(gadfcParam)
       .map(cqr => DidPair(agencyDID, cqr.getAgencyInfoReq(agencyDID).verKeyReq))
   }

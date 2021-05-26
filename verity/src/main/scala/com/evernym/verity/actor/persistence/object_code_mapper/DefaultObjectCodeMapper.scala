@@ -48,7 +48,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     16 -> MsgDeliveryStatusUpdated,
     17 -> EndpointSet,
     18 -> MappingAdded,
-    19 -> RouteSet,
+    19 -> LegacyRouteSet,
     20 -> UrlAdded,
     21 -> OwnerDIDSet,
     22 -> ConfigUpdated,
@@ -187,7 +187,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     153 -> relationship_10.Initialized,
     154 -> relationship_10.CreatingPairwiseKey,
     155 -> relationship_10.PairwiseKeyCreated,
-    156 -> relationship_10.InvitationCreated,
+    156 -> relationship_10.InvitationCreated_DEPRECATED,
 
     157 -> issueCredential_v10.Initialized,
     158 -> issueCredential_v10.ProposalSent,
@@ -282,7 +282,12 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     228 -> AuthKeyAdded,
     229 -> issueCredential_v10.CredSentState,
     230 -> SetDataRetentionPolicy,
-    231 -> walletBackup.BackupStoredInBlob
+    231 -> walletBackup.BackupStoredInBlob,
+
+    232 -> RouteSet,
+    233 -> RoutesMigrated,
+    234 -> MigrationCandidatesRecorded,
+    235 -> MigrationStatusRecorded
   )
 
 }

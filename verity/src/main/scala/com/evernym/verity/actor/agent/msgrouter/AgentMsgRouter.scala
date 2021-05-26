@@ -11,13 +11,14 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.RouteTo
+import com.evernym.verity.RouteId
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.ROUTING_DETAIL_CACHE_FETCHER
+import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{CacheValueFetcher, RoutingDetailCacheFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
@@ -41,61 +42,56 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   extends ShardRegionNameFromActorSystem
    with HasLegacyRegionNames {
 
-  //TODO: need to remove this actorSystem if we can just use the system parameter supplied in constructor
-  override def actorSystem: ActorSystem = system
-
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
 
   val logger: Logger = getLoggerByClass(classOf[AgentMsgRouter])
 
-  lazy val fetchers: Map[Int, CacheValueFetcher] = Map (
-    ROUTING_DETAIL_CACHE_FETCHER_ID -> new RoutingDetailCacheFetcher(system, appConfig)
+  lazy val fetchers: Map[FetcherParam, CacheValueFetcher] = Map (
+    ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig)
   )
   lazy val routingCache: Cache = new Cache("RC", fetchers)
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)
-  lazy val routingAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
+  lazy val routeRegion: ActorRef = ClusterSharding(system).shardRegion(ROUTE_REGION_ACTOR_NAME)
 
   private def setRoute(sr: SetRoute): Future[AskResp] = {
-    val entityId = RoutingAgentUtil.getBucketEntityId(sr.forDID)
-    val fut = routingAgentRegion ? ForIdentifier(entityId, sr)
+    val fut = routeRegion ? ForIdentifier(sr.routeDID, StoreRoute(sr.actorAddressDetail))
     Future(AskResp(fut, Option(s"setting route: $sr")))
   }
 
-  private def getRouteInfo(route: RouteTo): Future[AskResp] = {
-    val forDID = AgentMsgRouter.getDIDForRoute(route) match {
+  private def getRouteInfo(route: RouteId): Future[AskResp] = {
+    val routeDID = AgentMsgRouter.getDIDForRoute(route) match {
       case Success(did) => did
       case Failure(e) =>
         logger.error(s"Could not extract DID for route: $route")
         throw e
     }
     val startTime = LocalDateTime.now
-    logger.debug("get route info started", (LOG_KEY_SRC_DID, forDID))
-    val gr = GetRoute(forDID, RoutingAgentUtil.oldBucketMapperVersionIds)
+    logger.debug("get route info started", (LOG_KEY_SRC_DID, routeDID))
     val futResp =
-      getRouteInfoViaCache(gr)
+      getRouteInfoViaCache(routeDID)
       .map {
         case Some(aa: ActorAddressDetail) => Some(aa)
         case None => None
       } map { r =>
         val curTime = LocalDateTime.now
         val millis = ChronoUnit.MILLIS.between(startTime, curTime)
-        logger.debug(s"get route info finished, time taken (in millis): $millis", (LOG_KEY_SRC_DID, forDID))
+        logger.debug(s"get route info finished, time taken (in millis): $millis", (LOG_KEY_SRC_DID, routeDID))
         r
       }
-    Future(AskResp(futResp, Option(s"getting route info: $gr")))
+    Future(AskResp(futResp, Option(s"getting route info: $routeDID")))
   }
 
-  private def getRouteInfoViaCache(gr: GetRoute): Future[Option[ActorAddressDetail]] = {
-    val gcop = GetCachedObjectParam(KeyDetail(gr, required = false), ROUTING_DETAIL_CACHE_FETCHER_ID)
+  private def getRouteInfoViaCache(routeId: RouteId): Future[Option[ActorAddressDetail]] = {
+    val gcop = GetCachedObjectParam(KeyDetail(routeId, required = false), ROUTING_DETAIL_CACHE_FETCHER)
     routingCache.getByParamAsync(gcop).map { cqr =>
-      cqr.getActorAddressDetailOpt(gr.forDID)
+      cqr.getActorAddressDetailOpt(routeId)
     }
   }
 
-  def getRouteRegionActor(route: RouteTo): Future[RouteInfo] = {
+  def getRouteRegionActor(route: RouteId): Future[RouteInfo] = {
     getRouteInfo(route).flatMap(_.actualFut).map {
       case Some(ad: ActorAddressDetail) =>
         val regionActor: ActorRef = getActorTypeToRegions(ad.actorTypeId)
@@ -152,7 +148,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
     case (cmd, senderOpt) =>
       cmd match {
         case sr: SetRoute               => setRoute(sr)
-        case gr: GetRoute               => getRouteInfo(gr.forDID)
+        case gr: GetRoute               => getRouteInfo(gr.routeDID)
         // flow diagram: fwd, step 5 -- trigger routing for packed messages.
         case efw: PackedMsgRouteParam   => routePackedMsg(efw)(senderOpt)
         // flow diagram: ctl + proto, step 11; SIG, step 6 -- trigger routing for internal message.
@@ -187,11 +183,11 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
 
   protected def getActorTypeToRegions(actorTypeId: Int): ActorRef = actorTypeToRegions(actorTypeId)
 
-  private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, actorSystem)
+  private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, system)
 }
 
 object AgentMsgRouter {
-  def getDIDForRoute(route: RouteTo): Try[DID] = {
+  def getDIDForRoute(route: RouteId): Try[DID] = {
     // We support DID based routing but to support community routing we are allowing a temporary
     // hack to support verkey based routing.
     // Assumption:
@@ -229,8 +225,11 @@ object AgentMsgRouter {
   type AskTimeoutErrorMsg = String
 }
 
-case class InternalMsgRouteParam(toRoute: RouteTo, msg: Any)
-case class PackedMsgRouteParam(toRoute: RouteTo, packedMsg: PackedMsg, reqMsgContext: ReqMsgContext)
-case class RestMsgRouteParam(toRoute: RouteTo, msg: String, restMsgContext: RestMsgContext)
+case class InternalMsgRouteParam(toRoute: RouteId, msg: Any)
+case class PackedMsgRouteParam(toRoute: RouteId, packedMsg: PackedMsg, reqMsgContext: ReqMsgContext)
+case class RestMsgRouteParam(toRoute: RouteId, msg: String, restMsgContext: RestMsgContext)
 
 case class AskResp(actualFut: Future[Any], reason: Option[String]=None)
+
+case class SetRoute(routeDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessage
+case class GetRoute(routeDID: DID) extends ActorMessage

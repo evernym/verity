@@ -7,8 +7,9 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
-import com.evernym.verity.actor.cluster_singleton.{ActionStatus, ForActorStateCleanupManager, ForRouteMaintenanceHelper, GetStatus, MaintenanceCmdWrapper, RestartAllActors}
+import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, ForRouteMaintenanceHelper, maintenance}
 import com.evernym.verity.actor.base.{AlreadyDone, Done, Stop}
+import com.evernym.verity.actor.cluster_singleton.maintenance.{ActionStatus, GetMigrationStatus, GetStatus, MaintenanceCmdWrapper, MigrationStatusDetail, RestartAllActors}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.{ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.common.CustomExceptionHandler._
@@ -76,6 +77,27 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     platform.actorStateCleanupExecutor ? ForIdentifier(entityId, getStatusCmd)
   }
 
+  protected def getAgentRouteStoreMigrationStatus(detailOpt: Option[String]): Future[Any] = {
+    platform.singletonParentProxy ? ForAgentRoutesMigrator(GetMigrationStatus(detailOpt))
+  }
+
+  protected def resetAgentRoutesMigrator(): Future[Any] = {
+    platform.singletonParentProxy ? ForAgentRoutesMigrator(maintenance.Reset)
+  }
+
+  protected def stopAgentRoutesMigrator(): Future[Any] = {
+    platform.singletonParentProxy ? ForAgentRoutesMigrator(maintenance.StopJob)
+  }
+
+  protected def startAgentRoutesMigrator(): Future[Any] = {
+    platform.singletonParentProxy ? ForAgentRoutesMigrator(maintenance.StartJob)
+  }
+
+  protected def restartAgentRoutesMigrator(): Future[Any] = {
+    stopAgentRoutesMigrator()
+    startAgentRoutesMigrator()
+  }
+
   private val routeMaintenanceRoutes: Route =
     pathPrefix("route" / "task") {
       pathPrefix(Segment) { taskId =>
@@ -113,6 +135,62 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
             }
           }
       }
+    }
+
+  private val routeMigrationRoutes: Route =
+    pathPrefix("route-migration") {
+      path("status") {
+        (get & pathEnd) {
+          parameters('detail.?) { detailOpt =>
+            complete {
+              getAgentRouteStoreMigrationStatus(detailOpt).map[ToResponseMarshallable] {
+                case msd: MigrationStatusDetail => handleExpectedResponse(msd)
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        }
+      } ~
+          path("restart") {
+            (post & pathEnd) {
+              complete {
+                restartAgentRoutesMigrator().map[ToResponseMarshallable] {
+                  case Done => OK
+                  case e => handleUnexpectedResponse(e)
+                }
+              }
+            }
+          } ~
+            path("stop") {
+              (post & pathEnd) {
+                complete {
+                  stopAgentRoutesMigrator().map[ToResponseMarshallable] {
+                    case Done => OK
+                    case e => handleUnexpectedResponse(e)
+                  }
+                }
+              }
+            } ~
+              path("start") {
+                (post & pathEnd) {
+                  complete {
+                    startAgentRoutesMigrator().map[ToResponseMarshallable] {
+                      case Done => OK
+                      case e => handleUnexpectedResponse(e)
+                    }
+                  }
+                }
+              } ~
+              path("reset") {
+                (post & pathEnd) {
+                  complete {
+                    resetAgentRoutesMigrator().map[ToResponseMarshallable] {
+                      case Done => OK
+                      case e => handleUnexpectedResponse(e)
+                    }
+                  }
+                }
+              }
     }
 
   private val actorStateCleanupMaintenanceRoutes: Route =
@@ -227,7 +305,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
               checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-              routeMaintenanceRoutes ~ actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes
+              routeMaintenanceRoutes ~ actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes ~ routeMigrationRoutes
             }
           }
         }

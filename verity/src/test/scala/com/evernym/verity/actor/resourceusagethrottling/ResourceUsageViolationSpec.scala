@@ -108,7 +108,7 @@ class ResourceUsageViolationSpec
 
       // Test blocked
       //
-      // The following rule in resource-usage-rule-spec.conf (resource-usage-rule.conf file used for tests) causes
+      // The following rule in resource-usage-rule.conf (resource-usage-rule.conf file used for tests) causes
       // violation-action group 70 to call log-msg, warn-entity, and block-resource after the second iteration; when
       // allowed-counts of 2 is exceeded on bucket -1 (infinite bucket).
       //
@@ -130,7 +130,7 @@ class ResourceUsageViolationSpec
       //
       // Expect the CREATE_MSG_connReq resource to be blocked for user1IpAddress
       //
-      // The following rules in resource-usage-rule-spec.conf causes violation-action groups 100 - 103 to fire after
+      // The following rules in resource-usage-rule.conf causes violation-action groups 100 - 103 to fire after
       // the third iteration (100-102 on the 4th iteration and 103 on the 5th iteration)
       //
       // DUMMY_MSG {
@@ -253,7 +253,7 @@ class ResourceUsageViolationSpec
 
       // Test warned
       //
-      // The following rule in resource-usage-rule-spec.conf (resource-usage-rule.conf file used for tests) causes
+      // The following rule in resource-usage-rule.conf (resource-usage-rule.conf file used for tests) causes
       // violation-action group 50 to call log-msg and warn-resource after the fifth iteration, when
       // allowed-counts of 5 is exceeded on bucket 300 (5 CREATE_MSG_connReq allowed within 300 seconds).
       //

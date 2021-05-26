@@ -154,5 +154,5 @@ trait SMSSender {
 }
 
 object DefaultSMSSender {
-  def props(config: AppConfig) = Props(classOf[DefaultSMSSender], config)
+  def props(config: AppConfig): Props = Props(new DefaultSMSSender(config))
 }

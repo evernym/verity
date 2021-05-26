@@ -6,7 +6,6 @@ import com.evernym.verity.actor.persistence.stdPersistenceId
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
 import com.evernym.verity.transformations.transformers.v1.createPersistenceTransformerV1
 import com.evernym.verity.util.Util

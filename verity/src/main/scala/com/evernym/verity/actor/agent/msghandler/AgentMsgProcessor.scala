@@ -640,7 +640,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
             val msgRespConfig = if (imp.isSync(false)) Option(MsgRespConfig(isSyncReq = true)) else None
             extract(imp, msgRespConfig, msgThread)
 
-          case _ => throw new UnsupportedMessageType(imp, List.empty)
+          case _ => throw new UnsupportedMessageType(imp.msgType.toString, List.empty)
         }
 
       val senderPartiId = param.senderParticipantId(imp.senderVerKey)

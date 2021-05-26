@@ -36,7 +36,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
 
   def getNativeClassType(amt: MsgType): Class[_] = {
     find_!(amt.protoRef).protoDef.msgFamily.lookupClassOrElse(amt.msgName, {
-      throw new UnsupportedMessageType(amt, registeredProtocols.keys)
+      throw new UnsupportedMessageType(amt.toString, registeredProtocols.keys)
     })
   }
 
@@ -64,7 +64,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
 
   def entryForMsg_![B](tmsg: TypedMsgLike): Entry[A] = {
     entryForMsg[B](tmsg) getOrElse {
-      throw new UnsupportedMessageType(tmsg.msg, registeredProtocols.keys)
+      throw new UnsupportedMessageType(tmsg.msgType.toString, registeredProtocols.keys)
     }
   }
 
@@ -78,7 +78,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
 
   def protoDefForMsg_![B](tmsg: TypedMsgLike): ProtoDef = {
     protoDefForMsg(tmsg).getOrElse(
-      throw new UnsupportedMessageType(tmsg.msg, registeredProtocols.keys)
+      throw new UnsupportedMessageType(tmsg.msgType.toString, registeredProtocols.keys)
     )
   }
 
@@ -113,7 +113,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
 
   def `entryForUntypedMsg_!`(msg: Any): Entry[A] = {
     entryForUntypedMsg(msg).getOrElse(
-      throw new UnsupportedMessageType(msg, registeredProtocols.keys)
+      throw new UnsupportedMessageType(msg.getClass.getSimpleName, registeredProtocols.keys)
     )
   }
 }
@@ -147,7 +147,7 @@ object ProtocolRegistry {
 
 }
 
-class UnsupportedMessageType( msg: Any,
+class UnsupportedMessageType( msg: String,
                               registered: Iterable[ProtoRef])
   extends ProtocolEngineException(s"no support for msg $msg in registered protocols: ${registered.mkString(", ")}")
 

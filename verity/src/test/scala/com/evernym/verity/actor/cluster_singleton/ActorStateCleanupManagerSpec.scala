@@ -2,6 +2,7 @@ package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
 import akka.actor.{ActorRef, PoisonPill, Props}
+import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.legacy.LegacySetRoute
@@ -10,7 +11,7 @@ import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
-import com.evernym.verity.actor.{ForIdentifier, LegacyRouteSet, RouteSet, ShardUtil}
+import com.evernym.verity.actor.{ForIdentifier, LegacyRouteSet, ShardUtil}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
@@ -66,7 +67,7 @@ class ActorStateCleanupManagerSpec
 
     "after some time" - {
       "should have processed all state cleanup" taggedAs (UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
-        eventually(timeout(Span(30, Seconds)), interval(Span(4, Seconds))) {
+        eventually(timeout(Span(35, Seconds)), interval(Span(4, Seconds))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
@@ -78,11 +79,11 @@ class ActorStateCleanupManagerSpec
     }
   }
 
-
-  val entityIdsToRoutes: Map[String, Set[DID]] = (1 to totalRouteEntries).map { i =>
+  //route store actor entity id and its stored route mapping
+  val entityIdsToRoutes: Map[EntityId, Set[DID]] = (1 to totalRouteEntries).map { i =>
     val routeDID = generateDID(i.toString)
-    val entityId = RoutingAgentUtil.getBucketEntityId(routeDID)
-    (entityId, routeDID)
+    val routeStoreActorEntityId = RoutingAgentUtil.getBucketEntityId(routeDID)
+    (routeStoreActorEntityId, routeDID)
   }.groupBy(_._1).mapValues(_.map(_._2).toSet)
 
   def generateDID(seed: String): DID =
@@ -168,10 +169,18 @@ class ActorStateCleanupManagerSpec
 }
 
 class DummyAgentActor extends CoreActorExtended {
+
+  //this is to create/test scenario wherein some agent actor doesn't recover successfully
+  // (or in other words they never responds to the 'FixActorState' command)
+  // then also the whole actor state cleanup process should still be working fine.
+  val notRespondEntityIds = List("2LsdxuRArjHNvKYngrunpn", "Hcn6Wipq2YVvnUE4rvApZx")
+
   override def receiveCmd: Receive = {
     case fas: FixActorState             =>
-      fas.senderActorRef ! InitialActorState(fas.actorDID, isRouteSet = true, 0)
-      fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 0, 0)
+      if (! notRespondEntityIds.contains(entityId)) {
+        fas.senderActorRef ! InitialActorState(fas.actorDID, isRouteSet = true, 0)
+        fas.senderActorRef ! ActorStateCleanupStatus(fas.actorDID, isRouteFixed = true, 0, 0, 0)
+      }
   }
 }
 

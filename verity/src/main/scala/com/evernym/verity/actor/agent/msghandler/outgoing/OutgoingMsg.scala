@@ -111,10 +111,11 @@ case class OutgoingMsgParam(givenMsg: Any, metadata: Option[PayloadMetadata]=Non
   def msgToBeProcessed: Array[Byte] = givenMsg match {
     case pm: PackedMsg   => pm.msg
     case jm: JsonMsg     => jm.msg.getBytes()
+    case other           => throw new RuntimeException("Unsupported outgoing msg: " + other.getClass.getSimpleName)
   }
 
   def jsonMsg_!(): String = givenMsg match {
-    case _: PackedMsg    => throw new RuntimeException("Getting JSON from packed msg")
     case jm: JsonMsg     => jm.msg
+    case other           => throw new RuntimeException("Unsupported outgoing json message: " + other.getClass.getSimpleName)
   }
 }

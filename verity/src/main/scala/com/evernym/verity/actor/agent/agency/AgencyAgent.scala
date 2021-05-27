@@ -22,7 +22,7 @@ import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.ledger.{LedgerPoolConnManager, Submitter, TxnResp}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, Submitter}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
@@ -186,7 +186,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
         List()
     }
     val taaEnabledOnLedger: Boolean = try {
-      agentActorContext.poolConnManager.asInstanceOf[LedgerPoolConnManager].currentTAA match {
+      agentActorContext.poolConnManager.currentTAA match {
         case Some(_) => true
         case None => false
       }

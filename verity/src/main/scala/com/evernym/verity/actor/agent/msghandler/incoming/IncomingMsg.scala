@@ -66,7 +66,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
     throw new RuntimeException("message pack version required, but not available")
   )
 
-  def unsupportedMsgTypeException = new UnsupportedMessageType(givenMsg,
+  def unsupportedMsgTypeException = new UnsupportedMessageType(givenMsg.getClass.getSimpleName,
     protocolRegistry.entries.map(_.protoDef.msgFamily.protoRef))
 }
 

@@ -20,8 +20,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceSimpleName, getResourceTypeName}
 import com.evernym.verity.config.CommonConfig.USAGE_RULES
-import com.evernym.verity.util.SubnetUtilsExt
 
 import scala.concurrent.Future
 
@@ -70,7 +70,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
     appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
 
   def getResourceUsages: ResourceUsages = try {
-    val allResourceUsages = resourceUsageTracker.getAllResources.map { case (resourceName, resourceBuckets) =>
+    val allResourceUsages = resourceUsageTracker.getAllResourceBuckets.map { case (resourceName, resourceBuckets) =>
       val rur = ResourceUsageRuleHelper.getResourceUsageRule(entityId, resourceBuckets.`type`, resourceName).getOrElse(
         throw new RuntimeException("resource usage rule not found"))
       resourceName -> resourceBuckets.buckets.map { case (bucketId, bucket) =>
@@ -218,7 +218,12 @@ object ResourceUsageTracker {
     // Do NOT increment global counter if ipAddressOpt or userIdOpt is blocked.
     // global MUST be AFTER `ipAddressOpt` and `userIdOpt`.
     val trackByEntityIds = Option(ipAddress) ++ userIdOpt ++ Option(ENTITY_ID_GLOBAL)
-    val resourceNames = Set(resourceName, RESOURCE_NAME_ALL)
+
+    val resourceNameAll = resourceType match {
+      case RESOURCE_TYPE_ENDPOINT => RESOURCE_NAME_ENDPOINT_ALL
+      case RESOURCE_TYPE_MESSAGE => RESOURCE_NAME_MESSAGE_ALL
+    }
+    val resourceNames = Set(resourceName, resourceNameAll)
 
     trackByEntityIds.foreach { entityId =>
       //check if tracked entity is NOT blocked
@@ -251,8 +256,10 @@ object ResourceUsageTracker {
     s"""$USAGE_RULES.${
       if (customAllowedCount.isDefined) "custom-limit" else ruleName
     }.${
-      ResourceUsageRuleHelper.getHumanReadableResourceType(resourceType)
-    }.${resourceName}"""
+      getResourceTypeName(resourceType)
+    }.${
+      getResourceSimpleName(resourceName)
+    }"""
   }
 }
 

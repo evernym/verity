@@ -6,7 +6,7 @@ import com.evernym.verity.actor.resourceusagethrottling.{BucketId, ResourceName,
 //interface for ResourceUsageProvider
 trait ResourceUsageProvider {
   def getResourceUsageByBuckets(resourceName: ResourceName): ResourceUsagesByBuckets
-  def getAllResources: Map[ResourceName, ResourceBuckets]
+  def getAllResourceBuckets: Map[ResourceName, ResourceBuckets]
 }
 
 case class ResourceBuckets(`type`: ResourceType, buckets: Map[BucketId, Bucket])

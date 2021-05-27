@@ -1,9 +1,6 @@
 package com.evernym.verity.config
 
 import java.io.{File, PrintWriter}
-
-import com.typesafe.config.ConfigValueFactory
-
 import scala.io.Source
 
 trait ConfigUtilBaseSpec {
@@ -55,11 +52,6 @@ trait ConfigUtilBaseSpec {
     val w = new PrintWriter(file)
     lines.foreach(x => w.println(x))
     w.close()
-  }
-
-  def modifyConfigWrapperBase(appConfig: AppConfig, keyPath: String, newValue: Any): Unit = {
-    val newConfig = appConfig.config.withValue(keyPath, ConfigValueFactory.fromAnyRef(newValue))
-    AppConfigWrapper.setConfig(newConfig)
   }
 }
 

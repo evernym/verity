@@ -159,7 +159,7 @@ class BucketBasedResourceUsageTracker extends ResourceUsageProvider {
       getOrElse(Map.empty).map(b => b._1 -> b._2.usedCount))
   }
 
-  def getAllResources: Map[ResourceName, ResourceBuckets] = resourceUsages
+  def getAllResourceBuckets: Map[ResourceName, ResourceBuckets] = resourceUsages
 
 }
 

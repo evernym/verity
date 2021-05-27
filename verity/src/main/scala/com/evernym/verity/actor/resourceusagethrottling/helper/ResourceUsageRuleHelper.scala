@@ -2,7 +2,7 @@ package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
-import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserId
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceTypeName, isUserId}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -48,7 +48,10 @@ object ResourceUsageRuleHelper {
           isUserIdInTokenSet(entityId, v)
         else
           v.contains(entityId)
-    }.map(_._1).getOrElse(getDefaultRuleNameByEntityId(entityId))
+    }.map(_._1).getOrElse {
+      val defaultByEntityId = getDefaultRuleNameByEntityId(entityId)
+      if (resourceUsageRules.usageRules.contains(defaultByEntityId)) defaultByEntityId else DEFAULT_USAGE_RULE_NAME
+    }
   }
 
   def getDefaultRuleNameByEntityId(entityId: EntityId): String = {
@@ -59,9 +62,8 @@ object ResourceUsageRuleHelper {
     else DEFAULT_USAGE_RULE_NAME
   }
 
-  private def getUsageRuleByEntityId(entityId: EntityId): Option[UsageRule] = {
-    resourceUsageRules.usageRules.get(getRuleNameByEntityId(entityId)) orElse
-      resourceUsageRules.usageRules.get(DEFAULT_USAGE_RULE_NAME)
+  private def getUsageRuleByEntityId(entityId: EntityId): UsageRule = {
+    resourceUsageRules.usageRules(getRuleNameByEntityId(entityId))
   }
 
   private def getResourceTypeUsageRule(ur: UsageRule, resourceTypeName: ResourceTypeName): Option[ResourceTypeUsageRule] = {
@@ -71,31 +73,21 @@ object ResourceUsageRuleHelper {
   private def getResourceUsageRule(rtur: ResourceTypeUsageRule, resourceName: ResourceName):
   Option[ResourceUsageRule] = {
     val rur = rtur.resourceUsageRules.get(resourceName)
-    if (resourceName == RESOURCE_NAME_ALL) rur
-    else rur orElse rtur.resourceUsageRules.get(DEFAULT_USAGE_RULE_NAME)
-  }
-
-  def getHumanReadableResourceType(resourceType: ResourceType): ResourceTypeName = {
-    resourceType match {
-      case 1 => RESOURCE_TYPE_NAME_ENDPOINT
-      case 2 => RESOURCE_TYPE_NAME_MESSAGE
-      case _ => "unknown"
-    }
+    if (resourceName == RESOURCE_NAME_ENDPOINT_ALL || resourceName == RESOURCE_NAME_MESSAGE_ALL) rur
+    else rur orElse rtur.resourceUsageRules.get(DEFAULT_RESOURCE_USAGE_RULE_NAME)
   }
 
   def getResourceUsageRule(entityId: EntityId,
                            resourceType: ResourceType,
                            resourceName: ResourceName): Option[ResourceUsageRule] = {
-    getUsageRuleByEntityId(entityId).flatMap { ur =>
-      val resourceTypeName = getHumanReadableResourceType(resourceType)
-      getResourceTypeUsageRule(ur, resourceTypeName).flatMap { rtur =>
-        getResourceUsageRule(rtur, resourceName)
-      }
+    val ur = getUsageRuleByEntityId(entityId)
+    val resourceTypeName = getResourceTypeName(resourceType)
+    getResourceTypeUsageRule(ur, resourceTypeName).flatMap { rtur =>
+      getResourceUsageRule(rtur, resourceName)
     }
   }
 
 }
-
 
 case class InstructionDetail(detail: Map[String, Any])
 

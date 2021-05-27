@@ -3,7 +3,7 @@ package com.evernym.verity.actor.resourceusagethrottling.helper
 import java.time.{ZoneId, ZonedDateTime}
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.VALIDATION_FAILED
-import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX}
+import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, RESOURCE_NAME_ALL, RESOURCE_NAME_ENDPOINT_ALL, RESOURCE_NAME_MESSAGE_ALL, RESOURCE_TYPE_ENDPOINT, RESOURCE_TYPE_MESSAGE, RESOURCE_TYPE_NAME_ENDPOINT, RESOURCE_TYPE_NAME_MESSAGE, ResourceName, ResourceType, ResourceTypeName}
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util.{isDID, isVerKey}
 
@@ -56,6 +56,27 @@ object ResourceUsageUtil {
     value match {
       case USER_ID_REGEX(_, rawId) => rawId == "*" || isDID(rawId) || isVerKey(rawId)
       case _ => false
+    }
+  }
+
+  def getResourceTypeName(resourceType: ResourceType): ResourceTypeName = {
+    resourceType match {
+      case RESOURCE_TYPE_ENDPOINT => RESOURCE_TYPE_NAME_ENDPOINT
+      case RESOURCE_TYPE_MESSAGE => RESOURCE_TYPE_NAME_MESSAGE
+    }
+  }
+
+  def getResourceUniqueName(resourceTypeName: ResourceTypeName, resourceName: ResourceName): ResourceName = {
+    resourceName match {
+      case RESOURCE_NAME_ALL => s"$resourceTypeName.$resourceName"
+      case _ => resourceName
+    }
+  }
+
+  def getResourceSimpleName(resourceUniqueName: ResourceName): ResourceName = {
+    resourceUniqueName match {
+      case RESOURCE_NAME_ENDPOINT_ALL | RESOURCE_NAME_MESSAGE_ALL => RESOURCE_NAME_ALL
+      case _ => resourceUniqueName
     }
   }
 

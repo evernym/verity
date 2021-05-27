@@ -15,4 +15,8 @@
         <LoggerNameContains>DynamoDBClient, DynamoDBJournal</LoggerNameContains>
     </turboFilter>
 
+    <turboFilter class='com.evernym.verity.logging.PurposefulErrorsFilter'>
+        <LoggerNameContains>DynamoDBClient, DynamoDBJournal</LoggerNameContains>
+    </turboFilter>
+
 </configuration>

@@ -51,21 +51,19 @@ class VcxOnlySpec
 
   val cas1 = testEnv.instance_!(APP_NAME_CAS_1).appInstance
 
-  runScenario("vcxOnlyFlow") {
+  runScenario("vcxOnlyFlow") (Scenario(
+    "VCX only work-flows",
+    List(cas1),
+    suiteTempDir,
+    projectDir,
+    defaultTimeout = Some(10 minute))) { implicit scenario =>
+
     lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
       appEnv.config,
       Option(appEnv.ledgerConfig.submitterDID),
       Option(appEnv.ledgerConfig.submitterSeed),
       appEnv.ledgerConfig.submitterRole,
       genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
-    )
-
-    implicit val scenario: Scenario = Scenario(
-      "VCX only work-flows",
-      List(cas1),
-      suiteTempDir,
-      projectDir,
-      defaultTimeout = Some(10 minute)
     )
 
     val apps = ScenarioAppEnvironment(scenario, testEnv)

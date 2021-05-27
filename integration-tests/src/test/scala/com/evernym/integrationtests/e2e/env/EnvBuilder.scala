@@ -461,7 +461,6 @@ case class VerityInstance(name: String,
 
       EnvVar("VERITY_ENDPOINT_HOST", endpoint.host),
       EnvVar("VERITY_ENDPOINT_PORT", endpoint.port),
-      EnvVar("VERITY_DOMAIN_URL_PREFIX", endpoint, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),

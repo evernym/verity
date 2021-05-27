@@ -34,7 +34,7 @@ object LocalVerity {
   def apply(tempDir: Path,
             appSeed: String,
             portProfile: PortProfile,
-            otherNodeArteryPorts: List[Int] = List.empty,
+            otherNodeArteryPorts: Seq[Int] = Seq.empty,
             serviceParam: ServiceParam = defaultSvcParam,
             overriddenConfig: Option[Config] = None,
             trackMessageProgress: Boolean = true,

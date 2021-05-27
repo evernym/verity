@@ -1,10 +1,11 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
-import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{ALREADY_EXISTS, DATA_NOT_FOUND, MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_PENDING, MSG_DELIVERY_STATUS_SENT}
+import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.actor.{AgentKeyDlgProofSet, MsgDetailAdded}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
@@ -12,17 +13,16 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqMsg, ConnReqMsgHel
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
-import com.evernym.verity.util.Util.{encodedUrl, getJsonStringFromMap, getNormalizedPhoneNumber, replaceVariables}
+import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
-import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
-import com.evernym.verity.actor.wallet.PackedMsg
 
 import scala.concurrent.Future
 import scala.util.Left
@@ -93,8 +93,8 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def getInviteUrl(uid: MsgId): String = {
-    val baseUrl = appConfig.getConfigStringReq(VERITY_DOMAIN_URL_PREFIX)
-    baseUrl + "/agency/invite/" + ctx.getState.myPairwiseDIDReq + "?uid=" + uid
+    val baseUrl = buildAgencyUrl(appConfig, Some("agency/invite/"))
+    baseUrl.toString + ctx.getState.myPairwiseDIDReq + "?uid=" + uid
   }
 
   private def updateParentAboutConnReqProcessed(id: InviteDetail): Unit = {
@@ -229,8 +229,8 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   private def buildActualInviteUrl(token: String): String = {
     val url = appConfig.getConfigStringReq(SMS_MSG_TEMPLATE_INVITE_URL)
-    val baseUrl = appConfig.getConfigStringReq(VERITY_DOMAIN_URL_PREFIX)
-    replaceVariables(url, Map(BASE_URL -> baseUrl, TOKEN -> token))
+    val baseUrl = buildAgencyUrl(appConfig, None)
+    replaceVariables(url, Map(BASE_URL -> baseUrl.toString, TOKEN -> token))
   }
 
   val MAX_BUILD_AND_SEND_SMS_TRY_COUNT = 5

@@ -1,6 +1,5 @@
 package com.evernym.verity.integration.base.sdk_provider
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.{Accepted, OK}
@@ -165,7 +164,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
 
   lazy val msgListener: PackedMsgListener = {
     val port = 8000 + Random.nextInt(1000)
-    new PackedMsgListener(port)(ActorSystem(s"listener-$port"))
+    new PackedMsgListener(port)(system)
   }
 
 }
@@ -300,7 +299,7 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
 
   lazy val msgListener: PlainMsgListener = {
     val port = 7000 + Random.nextInt(1000)
-    new PlainMsgListener(port)(ActorSystem(s"listener-$port"))
+    new PlainMsgListener(port)(system)
   }
 }
 

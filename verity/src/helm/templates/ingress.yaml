@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  annotations:
+spec:
+  rules:
+  - host: {{ .Values.vars.VERITY__ENDPOINT__HOST }}
+    http:
+      paths:
+      - path: "/"
+        pathType: Prefix
+        backend:
+          serviceName: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+          servicePort: {{ .Values.ingress.port }}
+

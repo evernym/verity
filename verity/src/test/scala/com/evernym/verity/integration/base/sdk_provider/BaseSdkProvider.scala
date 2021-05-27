@@ -25,6 +25,7 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{VerityEnv, VerityEnvUrlProvider}
@@ -235,7 +236,7 @@ abstract class SdkBase(param: SdkParam) {
   type ConnId = String
 
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
-  implicit val system: ActorSystem = ActorSystem(randomUUID())
+  implicit val system: ActorSystem = ActorSystemVanilla(randomUUID())
 
   var agencyPublicDidOpt: Option[AgencyPublicDid] = None
 

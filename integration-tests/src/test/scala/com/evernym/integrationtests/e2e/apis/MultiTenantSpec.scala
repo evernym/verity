@@ -38,15 +38,12 @@ class MultiTenantSpec
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
 
 
-  runScenario("multiTenant") {
-
-    implicit val scenario: Scenario = Scenario(
-      "Multi Tenant Workflow test for 0.6 Protocols",
-      List(cas1, verity1),
-      suiteTempDir,
-      projectDir,
-      defaultTimeout = testEnv.timeout
-    )
+  runScenario("multiTenant") ( Scenario(
+    "Multi Tenant Workflow test for 0.6 Protocols",
+    List(cas1, verity1),
+    suiteTempDir,
+    projectDir,
+    defaultTimeout = testEnv.timeout) ){implicit scenario =>
 
     val apps = ScenarioAppEnvironment(scenario, appEnv)
 

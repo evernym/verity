@@ -1,6 +1,5 @@
 package com.evernym.integrationtests.e2e.flow
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
 import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
@@ -48,8 +47,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
   val logger: Logger = getLoggerByName(getClass.getName)
 
   import InteractiveSdkFlow._
-
-  val system: ActorSystem = ActorSystem.create("InteractiveSdkFlow")
 
   var iterationCountMap: mutable.Map[String, Int] = mutable.Map()
 
@@ -235,8 +232,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
     assert(result.contains(logoUrl))
   }
 
-  def resolveShortInviteUrl(shortInviteUrl: String): String = {
-    val fut = Http()(system).singleRequest(
+  def resolveShortInviteUrl(shortInviteUrl: String)(implicit scenario: Scenario): String = {
+    val fut = Http()(scenario.actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
         uri = shortInviteUrl,

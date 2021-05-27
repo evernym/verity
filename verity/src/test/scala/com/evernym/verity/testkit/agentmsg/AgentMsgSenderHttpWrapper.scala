@@ -35,12 +35,11 @@ import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
-import java.net.InetAddress
-import java.util.UUID
-
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
+import java.net.InetAddress
+import java.util.UUID
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, Future}
 import scala.util.Left
@@ -62,7 +61,7 @@ trait AgentMsgSenderHttpWrapper
   def mockClientAgent: AgentWithMsgHelper
   implicit def walletAPIParam: WalletAPIParam = mockClientAgent.wap
 
-  implicit val system: ActorSystem = AkkaTestBasic.system()
+  implicit lazy val system: ActorSystem = AkkaTestBasic.system()
   def appConfig: AppConfig = new TestAppConfig()
   implicit val url: UrlParam = urlParam
 

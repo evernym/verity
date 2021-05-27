@@ -5,16 +5,19 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, path, post, reject}
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.UrlParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.HttpServerUtil
-import com.evernym.verity.UrlParam
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.immutable.Queue
 
 
-class HttpListener(val appConfig: AppConfig, val listeningPort: Int, endpoint: UrlParam) extends HttpServerUtil {
+class HttpListener(val appConfig: AppConfig,
+                   val listeningPort: Int,
+                   endpoint: UrlParam,
+                   override implicit val system: ActorSystem) extends HttpServerUtil {
   import akka.http.scaladsl.model.StatusCodes._
 
   val logger: Logger = getLoggerByClass(classOf[HttpListener])
@@ -75,7 +78,6 @@ class HttpListener(val appConfig: AppConfig, val listeningPort: Int, endpoint: U
 
   val url = endpoint.url + "msg"
   val bindFuture = Http().newServerAt("localhost", listeningPort).bind(corsHandler(route))
-  override lazy implicit val system: ActorSystem = ActorSystem("http-listener", appConfig.getLoadedConfig)
 
   def stopHttpListener(): Unit = {
     import com.evernym.verity.ExecutionContextProvider.futureExecutionContext

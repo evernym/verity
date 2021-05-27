@@ -30,6 +30,7 @@ stages:
 
 license-data-check:
   stage: check
+  image: $EVERNYM_REGISTRY_HOST/dev/containers/ssh-git:latest
   script: ./cicd/license-date-check.sh
   only:
     refs:
@@ -76,7 +77,7 @@ unit-test:
     - devops/scripts/test/docker-static-code-analysis $CI_PROJECT_DIR
   allow_failure: true # Eventually this will be removed and we will have a zero error/warning policy
 
-.integration:
+.integration-common:
   extends: .test
   variables:
     # General vars
@@ -129,7 +130,7 @@ unit-test:
       alias: yourls
 
 legacy:
-  extends: .integration
+  extends: .integration-common
   only:
     refs:
       - master
@@ -140,7 +141,7 @@ legacy:
     TEST_SCENARIOS: "scenario1, scenario2"
 
 legacy-with-restart:
-  extends: .integration
+  extends: .integration-common
   only:
     refs:
       - master
@@ -152,7 +153,7 @@ legacy-with-restart:
     TEST_RESTART_VERITY_RANDOMLY: "true"
 
 integration:
-  extends: .integration
+  extends: .integration-common
   only:
     refs:
       - master
@@ -162,7 +163,7 @@ integration:
     TEST_TYPE: "Integration"
 
 limits:
-  extends: .integration
+  extends: .integration-common
   only:
     refs:
       - master
@@ -171,23 +172,13 @@ limits:
   variables:
     TEST_TYPE: "Limits"
 
-# I'm disabling these tests. They need maintenance since we dropped 0.6 protocols that I did not have time before_script:
-# since we have coverage else were and for the things we did not have coverage for were for POC features.
-.protocols:
-  extends: .integration
-  only:
-    refs:
-      - master
-      - tags
-      - merge_requests
-  variables:
-    TEST_TYPE: "Protocols"
-
 .package-common:
   stage: package
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
     paths:
+      - verity/target/docker
+      - verity/target/scala-2.12/verity-assembly-*.jar
       - verity/target/*.deb
     when: always
   cache:
@@ -197,10 +188,11 @@ limits:
   script:
     - cd $CI_PROJECT_DIR
     - sbt assembly
+    - sbt verity/k8sDockerPackage
     - sbt debian:packageBin
   tags:
     - docker-machine
-    - general-xlarge
+    - large
 
 package:
   extends: .package-common
@@ -223,23 +215,87 @@ package-manual:
     paths:
       - $CI_PROJECT_DIR/.sbt/
       - $CI_PROJECT_DIR/.ivy2/
+  tags:
+    - docker-machine
+
+.publish-common-debian:
   script:
     - cd $CI_PROJECT_DIR
     - export debianPackage=`ls verity/target/verity-application_*.deb`
     - curl -u $KRK_USERNAME:$KRK_PASSWORD --fail -X POST https://$KRK_HOST/repo/$KRK_DEV_REPO/upload -F file=@$debianPackage --cacert "$EVERNYM_CERTIFICATE"
-  tags:
-    - docker-machine
 
-publish:
-  extends: .publish-common
+publish-deb:
+  extends:
+    - .publish-common
+    - .publish-common-debian
   dependencies:
     - package
   only:
     refs:
       - master@dev/verity/verity
 
-publish-manual:
-  extends: .publish-common
+publish-deb-manual:
+  extends:
+    - .publish-common
+    - .publish-common-debian
+  dependencies:
+    - package-manual
+  only:
+    refs:
+      - master
+      - tags
+      - merge_requests
+  when: manual
+
+.publish-common-docker:
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    # Make Kaniko trust Evernym's internal CA
+    - cat "$EVERNYM_CERTIFICATE" >> /kaniko/ssl/certs/ca-certificates.crt
+    # Move to pre-packaged docker directory
+    - cd $CI_PROJECT_DIR/verity/target/docker
+    - ls -lR
+    # source args for container build
+    - source ./args.env
+    # establish kaniko's config file from gitlab-runner environment variables
+    - >
+      printf
+      '{"auths":{"%s":{"username":"%s","password":"%s"}},"credHelpers":{"%s":"ecr-login"}}'
+      $CI_REGISTRY
+      $CI_REGISTRY_USER
+      $CI_REGISTRY_PASSWORD
+      $AWS_DEV_ECR_REGISTRY
+      > /kaniko/.docker/config.json
+    #- if [ "$CI_COMMIT_REF_NAME" == "master" ]; then DRY_RUN=""; else DRY_RUN="--no-push"; fi
+    - >
+      /kaniko/executor
+      --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
+      --build-arg LIBMYSQLSTORAGE_VERSION=$LIBMYSQLSTORAGE_VERSION
+      --build-arg EVERNYM_CERTIFICATE=$EVERNYM_CERTIFICATE
+      --context .
+      --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION
+      --destination $CI_REGISTRY_IMAGE:latest
+      --destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
+      --destination $AWS_DEV_ECR_REGISTRY/verity:latest $DRY_RUN
+  tags:
+    - large
+
+publish-docker:
+  extends:
+    - .publish-common
+    - .publish-common-docker
+  dependencies:
+    - package
+  only:
+    refs:
+      - master@dev/verity/verity
+
+publish-docker-manual:
+  extends:
+    - .publish-common
+    - .publish-common-docker
   dependencies:
     - package-manual
   only:

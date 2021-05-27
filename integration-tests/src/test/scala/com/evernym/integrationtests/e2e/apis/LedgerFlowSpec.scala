@@ -4,6 +4,7 @@ import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
 import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
@@ -20,10 +21,8 @@ import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
+
 import java.util.UUID
-
-import akka.actor.ActorSystem
-
 import scala.collection.JavaConverters._
 
 @Integration
@@ -55,7 +54,7 @@ class LedgerFlowSpec extends BasicSpec
 
   def newPoolConnManager(taaEnabled: Boolean): LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(
-      ActorSystem("test"),
+      ActorSystemVanilla("test"),
       appConfig,
       genesisFile = Some(testEnv.ledgerConfig.genesisFilePath)
     )

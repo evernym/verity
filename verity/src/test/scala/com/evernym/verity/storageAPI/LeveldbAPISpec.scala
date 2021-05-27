@@ -4,16 +4,25 @@ import java.util.UUID
 import akka.Done
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.leveldb.LeveldbAPI
 import com.evernym.verity.testkit.BasicAsyncSpec
 import com.typesafe.config.{Config, ConfigValueFactory}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.ScalaFutures
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class LeveldbAPISpec extends BasicAsyncSpec {
+class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    Await.result(system.terminate(), 10 seconds)
+  }
 
   private def blobConfig(): Config = (new TestAppConfig)
     .config
@@ -21,7 +30,7 @@ class LeveldbAPISpec extends BasicAsyncSpec {
     .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef("/tmp/verity/leveldb"))
 
   val appConfig: AppConfig = new TestAppConfig(Some(blobConfig()))
-  lazy implicit val system: ActorSystem = ActorSystem("leveldb-test-system", appConfig.config)
+  lazy implicit val system: ActorSystem = ActorSystemVanilla("leveldb-test-system", appConfig.config)
   val BUCKET: String = "leveldb-bucket"
 
   val leveldbAPI: LeveldbAPI = StorageAPI.loadFromConfig(appConfig).asInstanceOf[LeveldbAPI]

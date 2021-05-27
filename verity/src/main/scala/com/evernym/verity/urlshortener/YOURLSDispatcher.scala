@@ -8,9 +8,10 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.URL_SHORTENING_FAILED
-import com.evernym.verity.config.CommonConfig.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_URL, YOURLS_API_USERNAME, YOURLS_API_TIMEOUT_SECONDS}
+import com.evernym.verity.config.CommonConfig.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_TIMEOUT_SECONDS, YOURLS_API_URL, YOURLS_API_USERNAME}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_YOURLS
 import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util.{buildHandledError, logger}
 import org.json.JSONObject
 
@@ -24,7 +25,7 @@ trait YOURLSDispatcher extends URLShortenerServiceProvider with ConfigSvc {
   lazy val timeout: Duration = appConfig.getConfigIntOption(YOURLS_API_TIMEOUT_SECONDS).getOrElse(10).seconds
 
   lazy val apiUrl: String = appConfig.getConfigStringReq(YOURLS_API_URL)
-  lazy val apiSignature: Option[String] = appConfig.getConfigStringOption(YOURLS_API_SIGNATURE)
+  lazy val apiSignature: Option[String] = OptionUtil.blankFlattenOption(appConfig.getConfigStringOption(YOURLS_API_SIGNATURE))
   lazy val apiUsername: String = appConfig.getConfigStringReq(YOURLS_API_USERNAME)
   lazy val apiPassword: String = appConfig.getConfigStringReq(YOURLS_API_PASSWORD)
   lazy val formData: Map[String, String] = Map(

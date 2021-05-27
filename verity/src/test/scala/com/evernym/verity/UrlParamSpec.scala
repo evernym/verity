@@ -66,7 +66,7 @@ class UrlParamSpec
         UrlParam("https://localhost/agent/callback1?k1=v1") shouldBe UrlParam("https", "localhost", 443, Option("agent/callback1"), Option("k1=v1"))
         UrlParam("https://localhost.com/agent/callback1") shouldBe UrlParam("https", "localhost.com", 443, Option("agent/callback1"))
         UrlParam("https://localhost.com/agent/callback1") shouldBe UrlParam("https", "localhost.com", 443, Option("agent/callback1"))
-        UrlParam("https://localhost.com/agent/callback1").url shouldBe "https://localhost.com:443/agent/callback1"
+        UrlParam("https://localhost.com/agent/callback1").url shouldBe "https://localhost.com/agent/callback1"
         UrlParam("https://localhost.com/agent/callback1").path shouldBe "agent/callback1"
         UrlParam("https://api.enym.com/agency/msg") shouldBe UrlParam("api.enym.com", 443, Some("agency/msg"))
       }

@@ -20,7 +20,6 @@ import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 
 import java.io.IOException
-import java.nio.file.Path
 import java.util.UUID
 
 import scala.util.Random
@@ -46,14 +45,11 @@ class MultiSdkFlowSpec
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
 
-  runScenario("multiSdkFlow") {
-
-    implicit val scenario: Scenario = Scenario(
-      "SDK Workflow test for 0.6 Protocols",
-      List(cas1, verity1),
-      suiteTempDir,
-      projectDir
-    )
+  runScenario("multiSdkFlow") (Scenario(
+    "SDK Workflow test for 0.6 Protocols",
+    List(cas1, verity1),
+    suiteTempDir,
+    projectDir)) { implicit scenario =>
 
     val apps = ScenarioAppEnvironment(scenario, appEnv)
 
@@ -96,7 +92,7 @@ class MultiSdkFlowSpec
     connectingInteraction(apps, apps(verity1).sdk_!, "base admin sdk is authorized")
 
     //individual sdk gets setup
-    val additionalSdks = setupNonAdminSdks(2, apps(verity1).sdk_!, scenario.testDir)
+    val additionalSdks = setupNonAdminSdks(2, apps(verity1).sdk_!)
     val sdk2 = additionalSdks.head
     val sdk3 = additionalSdks.tail.head
 
@@ -128,7 +124,7 @@ class MultiSdkFlowSpec
       "should be able to do successful message exchanges" - {
 
         val issuerMsgReceiverSdk = apps(verity1).sdk_!
-        val additionalSdks = setupNonAdminSdks(2, apps(verity1).sdk_!, scenario.testDir)
+        val additionalSdks = setupNonAdminSdks(2, apps(verity1).sdk_!)
         val issuerSdk2 = additionalSdks.head
         val issuerSdk3 = additionalSdks.tail.head
 
@@ -191,14 +187,16 @@ class MultiSdkFlowSpec
     }
   }
 
-  def setupNonAdminSdks(count: Int, provisionedSdk: VeritySdkProvider, testDir: Path): List[VeritySdkProvider] = {
+  def setupNonAdminSdks(count: Int,
+                        provisionedSdk: VeritySdkProvider)
+                       (implicit scenario: Scenario): List[VeritySdkProvider] = {
     (1 to count)
       .toList
       .map{ i =>
         val newName = provisionedSdk.sdkConfig.name + "_" + i
         val newSdk = VeritySdkProvider.fromSdkConfig(
           provisionedSdk.sdkConfig.copy(name = newName),
-          testDir
+          scenario
         )
         s"setup non admin sdk (${newSdk.sdkConfig.name})" in {
           prepareSdkContextWithoutProvisioning(provisionedSdk, newSdk)

@@ -9,7 +9,6 @@ trait CommonConfig {
   val VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.default-future.size"
   val VERITY_WALLET_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.wallet-future.size"
 
-  val VERITY_DOMAIN_URL_PREFIX = s"$VERITY.domain-url-prefix"
   val VERITY_ENDPOINT = s"$VERITY.endpoint"
   val VERITY_ENDPOINT_HOST = s"$VERITY_ENDPOINT.host"
   val VERITY_ENDPOINT_PORT = s"$VERITY_ENDPOINT.port"
@@ -47,11 +46,6 @@ trait CommonConfig {
   val PUSH_NOTIF_INVALID_TOKEN_ERROR_CODES = s"$PUSH_NOTIF.invalid-token-error-codes"
   val PUSH_NOTIF_WARN_ON_ERROR_LIST = s"$PUSH_NOTIF.warn-on-error-list"
 
-  private val VAULT = s"$SERVICES.vault"
-  val VAULT_HOST = s"$VAULT.host"
-  val VAULT_PORT = s"$VAULT.port"
-  val VAULT_TLS = s"$VAULT.tls"
-
   val URL_MAPPER_SVC = s"$SERVICES.url-mapper-service"
   val URL_MAPPER_SVC_ENDPOINT = s"$URL_MAPPER_SVC.endpoint"
   val URL_MAPPER_SVC_ENDPOINT_HOST = s"$URL_MAPPER_SVC_ENDPOINT.host"
@@ -72,12 +66,6 @@ trait CommonConfig {
   val YOURLS_API_TIMEOUT_SECONDS = s"$YOURLS.timeout-seconds"
 
   private val SMS_SVC = s"$SERVICES.sms-service"
-  val SMS_SVC_SEND_VIA_LOCAL_AGENCY = s"$SMS_SVC.send-via-local-agency"
-  val SMS_SVC_ENDPOINT = s"$SMS_SVC.endpoint"
-  val SMS_SVC_ENDPOINT_HOST = s"$SMS_SVC_ENDPOINT.host"
-  val SMS_SVC_ENDPOINT_PORT = s"$SMS_SVC_ENDPOINT.port"
-  val SMS_SVC_ENDPOINT_PATH_PREFIX = s"$SMS_SVC_ENDPOINT.path-prefix"
-  val SMS_SVC_ALLOWED_CLIENT_IP_ADDRESSES = s"$SMS_SVC.allowed-client-ip-addresses"
 
   private val SMS_EXTERNAL_SVC = s"$SMS_SVC.external-services"
   val SMS_EXTERNAL_SVC_PREFERRED_ORDER = s"$SMS_EXTERNAL_SVC.preferred-order"
@@ -166,8 +154,8 @@ trait CommonConfig {
   val KEY_VALUE_MAPPER_CACHE = s"$CACHE.key-value-mapper"
   val AGENT_CONFIG_CACHE = s"$CACHE.agent-config"
   val AGENCY_DETAIL_CACHE = s"$CACHE.agency-detail"
-  val LEDGER_GET_VER_KEY_CACHE = s"$CACHE.ledger-get-ver-key"
   val LEDGER_GET_ENDPOINT_CACHE = s"$CACHE.ledger-get-endpoint"
+  val LEDGER_GET_VER_KEY_CACHE = s"$CACHE.ledger-get-ver-key"
   val ROUTING_DETAIL_CACHE = s"$CACHE.routing-detail"
   val WALLET_GET_VER_KEY_CACHE = s"$CACHE.wallet-get-ver-key"
   val LEDGER_GET_SCHEMA_CACHE = s"$CACHE.ledger-get-schema"
@@ -229,7 +217,9 @@ trait CommonConfig {
   val AKKA_MNGMNT_HTTP_ENABLED = s"$AKKA_MNGMNT_HTTP.enabled"
   val AKKA_MNGMNT_HTTP_HOSTNAME = s"$AKKA_MNGMNT_HTTP.hostname"
   val AKKA_MNGMNT_HTTP_PORT = s"$AKKA_MNGMNT_HTTP.port"
-  val AKKA_MNGMNT_HTTP_API_CREDS = s"$AKKA_MNGMNT_HTTP.api-creds"
+
+  val AKKA_MNGMNT_CLUSTER_BOOTSTRAP = "akka.management.cluster.bootstrap"
+  val AKKA_MNGMNT_CLUSTER_BOOTSTRAP_ENABLED = s"$AKKA_MNGMNT_CLUSTER_BOOTSTRAP.enabled"
 
   val AKKA_SHARDING_REGION_NAME = "akka.sharding-region-name"
   val AKKA_SHARDING_REGION_NAME_USER_AGENT = "akka.sharding-region-name.user-agent"

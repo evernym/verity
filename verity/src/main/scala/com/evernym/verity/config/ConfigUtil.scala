@@ -290,6 +290,7 @@ object ConfigUtil {
           safeGetAppConfigStringOption(s"$entityCategory.$entityType.$entityId.$confName", appConfig)
         case _ => None
       }
+
     val entityTypeConfValue: Option[String] =
       normalizedEntityTypeOpt match {
         case Some(entityType) => safeGetAppConfigStringOption(s"$entityCategory.$entityType.$confName", appConfig)

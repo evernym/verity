@@ -1,8 +1,8 @@
 package com.evernym.verity.testkit.util
 
-import akka.actor.ActorSystem
 import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
@@ -44,7 +44,12 @@ class LedgerUtil (val appConfig: AppConfig,
   }
 
   lazy val poolConnManager: LedgerPoolConnManager = {
-    val pc = new IndyLedgerPoolConnManager(ActorSystem("ledger-pool"), appConfig, poolConfigName, genesisTxnPath)
+    val pc = new IndyLedgerPoolConnManager(
+      ActorSystemVanilla("ledger-pool"),
+      appConfig,
+      poolConfigName,
+      genesisTxnPath
+    )
     pc.open()
     pc
   }

@@ -60,15 +60,24 @@ trait VerityProviderBaseSpec
       serviceParam.copy(sharedEventStore = Option(new SharedEventStore(tmpDir)))
     } else serviceParam
     val multiNodeClusterConfig = buildMultiNodeClusterConfig(overriddenConfig)
-    val appSeed = randomChar().toString*32
-    val portProfiles = (1 to nodeCount).map( _ => getRandomPortProfile).sortBy(_.artery).zipWithIndex
+    val appSeed = (0 to 31).map(_ => randomChar()).mkString("")
+    val portProfiles = (1 to nodeCount)
+      .map( _ => getRandomPortProfile)
+      .sortBy(_.artery)
 
-    val verityNodes = portProfiles.map { case (portProfile, index) =>
-      val otherNodesArteryPorts = portProfiles.filter(_._2 != index).map(_._1).map(_.artery).toList
+    val arteryPorts = portProfiles.map(_.artery)
+
+    val verityNodes = portProfiles.map { portProfile =>
+      val otherNodesArteryPorts = arteryPorts.filterNot(_ == portProfile.artery)
       VerityNode(
-        tmpDir, appSeed, multiNodeServiceParam,
-        portProfile, otherNodesArteryPorts, multiNodeClusterConfig)
-    }.toList
+        tmpDir,
+        appSeed,
+        multiNodeServiceParam,
+        portProfile,
+        otherNodesArteryPorts,
+        multiNodeClusterConfig
+      )
+    }
     val verityEnv = VerityEnv(appSeed, verityNodes)
     allVerityEnvs = allVerityEnvs :+ verityEnv
     verityEnv
@@ -127,9 +136,9 @@ trait VerityProviderBaseSpec
 }
 
 case class VerityEnv(seed: String,
-                     nodes: List[VerityNode]) {
+                     nodes: Seq[VerityNode]) {
 
-  def availableNodes: List[VerityNode] = nodes.filter(_.isAvailable)
+  def availableNodes: Seq[VerityNode] = nodes.filter(_.isAvailable)
 
   def stopNodeAtIndex(index: Int): Unit = {
     stopNodeAtIndexes(List(index))
@@ -163,12 +172,11 @@ case class VerityEnv(seed: String,
    * @param targetNodes
    * @return
    */
-  def checkIfNodesAreUp(targetNodes: List[VerityNode] = nodes): Boolean = {
+  def checkIfNodesAreUp(targetNodes: Seq[VerityNode] = nodes): Boolean = {
     targetNodes.forall { tNode =>
-      val otherNodesStatus =
-        nodes
-          .filterNot(_.thisNodePortProfile.http == tNode.thisNodePortProfile.http)
-          .map(_ -> List(Up)).toMap
+      val otherNodesStatus = nodes
+        .filterNot(_.thisNodePortProfile.http == tNode.thisNodePortProfile.http)
+        .map(_ -> List(Up)).toMap
       checkIfNodeIsUp(tNode, otherNodesStatus)
     }
   }
@@ -228,7 +236,7 @@ case class VerityNode(tmpDirPath: Path,
                       appSeed: String,
                       serviceParam: ServiceParam,
                       thisNodePortProfile: PortProfile,
-                      otherNodeArteryPorts: List[Int],
+                      otherNodeArteryPorts: Seq[Int],
                       overriddenConfig: Option[Config]) {
 
   var isAvailable: Boolean = false
@@ -252,19 +260,30 @@ case class VerityNode(tmpDirPath: Path,
   }
 
   def stop(): Unit = {
-    stopGracefully()
+    //TODO: at this stage, sometimes actor system logs 'java.lang.IllegalStateException: Pool shutdown unexpectedly' exception,
+    // it doesn't impact the test in any way but should try to find and fix the root cause
+    stopUngracefully()
   }
 
   //is this really ungraceful shutdown?
-//  def stopUngracefully(): Unit = {
-//    isAvailable = false
-//    stopHttpServer()
-//    stopActorSystem()
-//    //TODO: at this stage, sometimes actor system logs 'java.lang.IllegalStateException: Pool shutdown unexpectedly' exception,
-//    // it doesn't impact the test in any way but should try to find and fix the root cause
-//  }
+  private def stopUngracefully(): Unit = {
+    isAvailable = false
+    stopHttpServer()
+    stopActorSystem()
+  }
+
+  private def stopHttpServer(): Unit = {
+    val httpStopFut = httpServer.stop()
+    Await.result(httpStopFut, 30.seconds)
+  }
+
+  private def stopActorSystem(): Unit = {
+    val platformStopFut = platform.actorSystem.terminate()
+    Await.result(platformStopFut, 30.seconds)
+  }
 
   private def stopGracefully(): Unit = {
+    //TODO: to find out why this one fails intermittently
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
     platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
@@ -274,16 +293,6 @@ case class VerityNode(tmpDirPath: Path,
   private def isNodeShutdown(cluster: Cluster): Boolean = {
     List(Removed, Down).contains(cluster.selfMember.status)
   }
-
-//  private def stopHttpServer(): Unit = {
-//    val httpStopFut = httpServer.stop()
-//    Await.result(httpStopFut, 30.seconds)
-//  }
-//
-//  private def stopActorSystem(): Unit = {
-//    val platformStopFut = platform.actorSystem.terminate()
-//    Await.result(platformStopFut, 30.seconds)
-//  }
 
   private def startVerityInstance(serviceParam: ServiceParam): HttpServer = {
     val httpServer = LocalVerity(tmpDirPath, appSeed, thisNodePortProfile, otherNodeArteryPorts, serviceParam,
@@ -296,8 +305,8 @@ case class VerityNode(tmpDirPath: Path,
   }
 }
 
-case class VerityEnvUrlProvider(private val _nodes: List[VerityNode]) {
-  def availableNodeUrls: List[String] = {
+case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
+  def availableNodeUrls: Seq[String] = {
     _nodes.filter(_.isAvailable).map { np =>
       s"http://localhost:${np.thisNodePortProfile.http}"
     }
@@ -324,7 +333,7 @@ class SharedEventStore(tempDir: Path) {
       otherAkkaConfig(arteryPort)
     )
     val config = parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())
-    ActorSystem("verity", config)
+    ActorSystem("shared-event-store", config)
   }
 
   //address used by other nodes to point to this system as a journal/snapshot storage

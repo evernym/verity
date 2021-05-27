@@ -14,17 +14,20 @@ import org.slf4j.Marker
  */
 class IgnoreLoggerFilter extends TurboFilter {
 
-  lazy val configReadHelper = new ConfigReadHelper(ConfigFactory.load())
-  lazy val defaultIgnoreLoggerNames: Option[String] =
-    configReadHelper.getConfigStringOption(LOGGING_IGNORE_FILTER_NAMES)
+  override def start(): Unit = {
+    loggerNameContainsSet = loggerNameContainsSet ++ defaultIgnoreLoggerNames
+    super.start()
+  }
 
+  lazy val configReadHelper = new ConfigReadHelper(ConfigFactory.load())
+  lazy val defaultIgnoreLoggerNames: Set[String] =
+    configReadHelper.getConfigListOfStringOption(LOGGING_IGNORE_FILTER_NAMES).getOrElse(Seq.empty).toSet
 
   private var loggerNameContainsSet: Set[String] = Set.empty[String]
 
   def setLoggerNameContains(loggerNameContains: String): Unit = {
-    val defaultNames = defaultIgnoreLoggerNames.map(_.split(",").map(_.trim).toSet).getOrElse(Set.empty)
     val fromLogbackXmlFile = loggerNameContains.split(",").map(_.trim).toSet
-    loggerNameContainsSet = defaultNames ++ fromLogbackXmlFile
+    loggerNameContainsSet = defaultIgnoreLoggerNames ++ fromLogbackXmlFile
   }
 
   def decide (marker: Marker, logger: Logger, level: Level, format: String,

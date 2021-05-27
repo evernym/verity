@@ -40,7 +40,7 @@ object LocalVerityConfig {
    *                             to be used to populate seed-nodes
    * @return
    */
-  private def useCustomPort(ports: PortProfile, otherNodeArteryPorts: List[Int]): Config = {
+  private def useCustomPort(ports: PortProfile, otherNodeArteryPorts: Seq[Int]): Config = {
     ConfigFactory.parseString(
       s"""
          |verity.http.port = ${ports.http}
@@ -153,7 +153,7 @@ object LocalVerityConfig {
 
   def standard(tempDir: Path,
                port: PortProfile,
-               otherNodeArteryPorts: List[Int] = List.empty,
+               otherNodeArteryPorts: Seq[Int] = Seq.empty,
                taaEnabled: Boolean = true,
                taaAutoAccept: Boolean = true,
                sharedEventStore: Option[SharedEventStore]=None): Config = {

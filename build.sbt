@@ -13,7 +13,7 @@ import DevEnvironment.DebianRepo
 import DevEnvironmentTasks.{envRepos, jdkExpectedVersion}
 import SharedLibrary.{NonMatchingDistLib, NonMatchingLib}
 import SharedLibraryTasks.{sharedLibraries, updateSharedLibraries}
-import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
+import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, referenceConfMerge, searchForAdditionalJars}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
@@ -49,6 +49,10 @@ val sharedLibDeps = Seq(
   NonMatchingDistLib("libnullpay", libIndyVer, "libnullpay.so"),
   NonMatchingLib("libmysqlstorage", libMysqlStorageVer, "libmysqlstorage.so"),
   NonMatchingLib("libvcx", "0.10.1-bionic~1131", "libvcx.so"), // For integration testing ONLY
+)
+
+val additionalJars: Seq[String] = Seq(
+  "kanela-agent"
 )
 
 //deb package dependencies versions
@@ -101,6 +105,8 @@ ThisBuild / envRepos := Seq(evernymDevRepo, evernymUbuntuRepo)
 SharedLibraryTasks.init
 DevEnvironmentTasks.init
 
+val jars = taskKey[Seq[File]]("List of Jars to package")
+
 lazy val root = (project in file("."))
   .aggregate(verity)
 
@@ -115,7 +121,8 @@ lazy val verity = (project in file("verity"))
     protoBufSettings,
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
     // Conditionally download an unpack shared libraries
-    update := update.dependsOn(updateSharedLibraries).value
+    update := update.dependsOn(updateSharedLibraries).value,
+    K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion, debPkgDepLibMySqlStorageVersion)
   )
 
 lazy val integrationTests = (project in file("integration-tests"))
@@ -231,13 +238,14 @@ lazy val packageSettings = Seq (
       baseDirectory.value / "src" / "debian" / "empty"
         -> s"/etc/verity/${packageName.value}"
     )
-    val additionalJars = findAdditionalJars(
+    val jars = searchForAdditionalJars(
       (assembly / externalDependencyClasspath).value,
-      s"/usr/lib/${packageName.value}",
-      Seq("kanela-agent")
+      additionalJars
     )
+    .map(x => x.copy(_2 = s"/usr/lib/${packageName.value}/${x._2}"))
+
     println(basePackageMapping)
-    packageMapping(basePackageMapping ++ additionalJars: _*)
+    packageMapping(basePackageMapping ++ jars: _*)
   },
   linuxPackageMappings += {
     buildPackageMappings(s"verity/src/main/resources/debian-package-resources",
@@ -275,8 +283,15 @@ lazy val commonLibraryDependencies = {
 
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,
-    "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,                //not using as such
-    "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,   //not using as such
+
+    "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,
+    "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,
+    "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaMgtVer,
+
+    "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % akkaMgtVer,
+
+    "com.typesafe.akka" %% "akka-discovery" % akkaVer,
+    "com.typesafe.akka" %% "akka-actor" % akkaVer,
 
     //other akka dependencies
     "com.twitter" %% "chill-akka" % "0.9.5",    //serialization/deserialization for akka remoting
@@ -392,7 +407,6 @@ lazy val confFiles = Set (
   "logback.xml",
   "salt.conf",
   "secret.conf",
-  "sms-client.conf",
   "sms-server.conf",
   "url-mapper-client.conf",
   "metrics.conf",

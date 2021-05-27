@@ -48,15 +48,12 @@ class SdkFlowSpec
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
   val limitsCredDefName = "creds_for_limits"
 
-  runScenario("sdkFlow") {
-
-    implicit val scenario: Scenario = Scenario(
-      "SDK Workflow test for 0.6 Protocols",
-      List(cas1, verity1),
-      suiteTempDir,
-      projectDir,
-      defaultTimeout = testEnv.timeout
-    )
+  runScenario("sdkFlow") ( Scenario(
+    "SDK Workflow to test protocols",
+    List(cas1, verity1),
+    suiteTempDir,
+    projectDir,
+    defaultTimeout = testEnv.timeout) ) { implicit scenario =>
 
     val apps = ScenarioAppEnvironment(scenario, appEnv)
 

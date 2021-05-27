@@ -45,15 +45,15 @@ class LimitsFlowSpec
   val longAttrList = (1 to 125).map(i => s"attrib$i")
   val longCredDef = "cred_name1"
 
-  runScenario("sdkFlow") {
-
-    implicit val scenario: Scenario = Scenario(
+  runScenario("sdkFlow")( Scenario(
       "SDK Workflow limits test for 0.6 Protocols",
       List(cas1, verity1),
       suiteTempDir,
       projectDir,
       defaultTimeout = Some(30.seconds)
     )
+  ) { implicit scenario =>
+
 
     val apps = ScenarioAppEnvironment(scenario, appEnv)
 

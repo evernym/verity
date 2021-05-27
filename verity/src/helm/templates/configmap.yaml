@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vars-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+data:
+{{ toYaml .Values.vars | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: file-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+data:
+  customers.conf: |
+    {{- if .Values.customers }}
+    "verity" : {
+      {{- range .Values.customers }}
+      #************************
+      # {{ .domainDid }}
+      #************************
+        {{- if .templates }}
+      msg-template.agent-specific {
+        {{ .domainDid }} {
+          {{ if .templates.inviteUrl }}sms-msg-template-invite-url = {{.templates.inviteUrl | quote }}{{- end }}
+          {{ if .templates.offerConnMsg }}sms-msg-template-offer-conn-msg = {{.templates.offerConnMsg | quote }}{{- end }}
+          {{ if .templates.deeplinkUrl }}sms-offer-template-deeplink-url = {{.templates.deeplinkUrl | quote }}{{- end }}
+        }
+      }
+        {{- end }}
+
+        {{- if .authorizedKeys }}
+      agent.authentication.keys {
+        {{ .domainDid }}: [{{ join ", " .authorizedKeys }}]
+      }
+        {{- end }}
+
+        {{- if .retentionPolicies }}
+      retention-policy {
+        {{ .domainDid }} {
+          {{ if .retentionPolicies.fallback }}undefined-fallback = {{.retentionPolicies.fallback | quote }}{{- end }}
+          {{- if .retentionPolicies.protocols }}
+            {{- range .retentionPolicies.protocols }}
+          {{ .ref | quote }} = {{ .time | quote }}
+            {{- end }}
+          {{- end }}
+        }
+      }
+        {{- end }}
+      {{- end }}
+    }
+    {{- end }}
+  sponsors.conf: |
+    {{- if .Values.sponsors }}
+    {
+      "verity": {
+        "provisioning": {
+          "sponsors":
+{{ toPrettyJson .Values.sponsors | indent 10 }}
+        }
+      }
+    }
+    {{- end }}
+  metrics.conf: |
+    {{- if .Values.tracking }}
+    {
+    "verity": {
+      "metrics":
+{{ toPrettyJson .Values.tracking | indent 8 }}
+      }
+    }
+    {{- end }}
+  logback.xml: |
+    <?xml version='1.0' encoding='UTF-8'?>
+    <configuration scan="true" scanPeriod="60 seconds">
+      <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class='ch.qos.logback.core.encoder.LayoutWrappingEncoder'>
+          <layout class='com.evernym.verity.LogLayout' />
+        </encoder>
+      </appender>
+
+      <root level="{{ .Values.vars.VERITY_LOGGING_LEVEL | default "INFO" }}">
+        <appender-ref ref="STDOUT" />
+      </root>
+
+      <turboFilter class="com.evernym.verity.IgnoreLoggerFilter" />
+    </configuration>
+  ledgers.conf: |
+    {{- if .Values.taa }}
+    verity.lib-indy.ledger.transaction_author_agreement.agreements = {
+      {{- range .Values.taa }}
+      "{{ .version }}" {
+          "digest" = "{{ .digest }}"
+          "mechanism" = "{{ .mechanism }}"
+          "time-of-acceptance" = "{{ .timeOfAcceptance }}"
+      }
+      {{- end }}
+    }
+    {{- end }}
+  custom.conf: |
+{{ .Values.customConfig | default "" | indent 4 }}

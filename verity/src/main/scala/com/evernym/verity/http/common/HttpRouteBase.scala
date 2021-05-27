@@ -12,7 +12,7 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.{INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES, SMS_SVC_ALLOWED_CLIENT_IP_ADDRESSES}
+import com.evernym.verity.config.CommonConfig.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter
@@ -66,10 +66,6 @@ trait HttpRouteBase
     allowedIPs.map(ip => new SubnetUtilsExt(ip))
   }
 
-  protected lazy val smsApiAllowedClientIpAddresses: List[SubnetUtilsExt] = {
-    appConfig.getConfigListOfStringReq(SMS_SVC_ALLOWED_CLIENT_IP_ADDRESSES).map(ip => new SubnetUtilsExt(ip))
-  }
-
   def optionalEntityAs[T: ClassTag]: Directive1[Option[T]] = {
     extractRequest.flatMap { req =>
       if (req.entity.contentLengthOption.contains(0L)) {
@@ -109,11 +105,6 @@ trait HttpRouteBase
   def checkIfInternalApiCalledFromAllowedIPAddresses(callerIpAddress: String)
                                                     (implicit req: HttpRequest): Unit = {
     checkIfApiCalledFromAllowedIPAddresses(callerIpAddress, internalApiAllowedFromIpAddresses)
-  }
-
-  def checkIfSmsServiceApiCalledFromAllowedIPAddresses(callerIpAddress: String)
-                                                      (implicit req: HttpRequest): Unit = {
-    checkIfApiCalledFromAllowedIPAddresses(callerIpAddress, smsApiAllowedClientIpAddresses)
   }
 
   def clientIpAddress(implicit remoteAddress: RemoteAddress): String =

@@ -3,9 +3,10 @@ package com.evernym.verity.testkit.util.http_listener
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.http.common.HttpServerUtil
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.UrlParam
 import com.typesafe.scalalogging.Logger
 
 trait BaseHttpListener[T] extends HttpServerUtil {
@@ -23,7 +24,8 @@ trait BaseHttpListener[T] extends HttpServerUtil {
   def msgCount: Int = allMsgs.size
 
   val logger: Logger = getLoggerByName("edge-http")
-  override lazy implicit val system: ActorSystem = ActorSystem("edge-json-msg", appConfig.getLoadedConfig)
+
+  override lazy implicit val system: ActorSystem = ActorSystemVanilla("edge-json-msg")
 
   protected def listeningEndpoint: UrlParam
 

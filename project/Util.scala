@@ -93,13 +93,13 @@ object Util {
     }
   }
 
-  def findAdditionalJars(dependencies: Classpath, packagedPathPrefix: String, jarNames: Seq[String]): Seq[(File, String)] = {
+  def searchForAdditionalJars(dependencies: Classpath, jarNames: Seq[String]): Seq[(File, String)] = {
     val depLibs = dependencies.map(_.data).filter(f => ClasspathUtil.isArchive(f.toPath))
     jarNames
       .map { jarName =>
         depLibs.find(_.getName.contains(jarName))
           .map{ foundJar =>
-            (foundJar, s"$packagedPathPrefix/$jarName.jar")
+            (foundJar, s"$jarName.jar")
           }
           .getOrElse(throw new Exception(s"Unable to find requested additional jar: '$jarName'"))
       }

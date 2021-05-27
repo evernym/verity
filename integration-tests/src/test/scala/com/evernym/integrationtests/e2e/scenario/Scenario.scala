@@ -1,9 +1,6 @@
 package com.evernym.integrationtests.e2e.scenario
 
-import java.nio.file.Path
-
-import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
+import akka.actor.ActorSystem
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.AdminClient
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
@@ -11,8 +8,12 @@ import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, Veri
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
 import com.evernym.verity.UrlParam
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
+import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
+import java.nio.file.Path
 import scala.concurrent.duration.Duration
 
 class ApplicationAdminExt(val scenario: Scenario,
@@ -21,11 +22,14 @@ class ApplicationAdminExt(val scenario: Scenario,
   extends AgentMsgSenderHttpWrapper
     with AdminClient {
 
+
+  override implicit lazy val system: ActorSystem = scenario.actorSystem
+
   override def urlParam: UrlParam = instance.endpoint
 
   override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
 
-  val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario.testDir))
+  val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario))
 
   val sdk: Option[VeritySdkProvider] = sdks.headOption
 
@@ -78,6 +82,8 @@ case class Scenario(name: String,
                     defaultTimeout: Option[Duration] = None,
                     restartMsgWait: Option[Long] = Option(TestConstants.defaultWaitTime)) {
 
+  val actorSystem: ActorSystem = ActorSystemVanilla("TestingActorSystem")
+
   val timeout:Duration = {
     defaultTimeout
       .getOrElse(TestConstants.defaultTimeout)
@@ -112,12 +118,15 @@ object Scenario {
     }
   }
 
-  def runScenario(name: String, noEnvVar: Boolean=true, map:Map[String, String] = sys.env)(scenario: =>Unit): Unit = {
+  def runScenario(name: String, noEnvVar: Boolean=true, map:Map[String, String] = sys.env)
+                 (scenario: =>Scenario)
+                 (test: Scenario=>Unit): Unit = {
     if(isRunScenario(name, noEnvVar, map)) {
-      scenario
+      val s = scenario
+      test(s)
+
     }
   }
-
 }
 
 object Interactive {

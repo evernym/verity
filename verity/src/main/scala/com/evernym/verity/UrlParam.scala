@@ -1,8 +1,8 @@
 package com.evernym.verity
 
-import java.net.{MalformedURLException, URL}
-
 import com.evernym.verity.Exceptions.InvalidComMethodException
+
+import java.net.{MalformedURLException, URL}
 
 object UrlParam {
   val HTTP_PROTOCOL     = "http"
@@ -60,7 +60,11 @@ case class UrlParam(protocol: String, host: String, port: Int, private val pathO
   def isHttps: Boolean = protocol == HTTPS_PROTOCOL
   def isLocalhost: Boolean = host == "localhost"
 
-  private def hostAndPort: String = host + ":" + port
+  private def hostAndPort: String = {
+    if (isHttp && port == 80) host
+    else if (isHttps && port == 443) host
+    else host + ":" + port
+  }
   private def api: String =
     hostAndPort +
       pathOpt.filterNot(_.isEmpty).map("/" + _).getOrElse("") +

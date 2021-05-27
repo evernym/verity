@@ -17,7 +17,7 @@ trait StaleConfigValidatorBase extends ConfigValidator {
 
   private def staleConfigs: Set[StaleConfig] = removedConfig ++ renamedConfig
 
-  private def removedConfig: Set[RemovedConfig] = Set (
+  private def removedConfig: Set[StaleConfig] = Set (
     RemovedConfig("agency.config"),
     RemovedConfig("agency.routing"),
     RemovedConfig("agency.services.sms-service.external-services.twilio.endpoint"),
@@ -29,10 +29,14 @@ trait StaleConfigValidatorBase extends ConfigValidator {
 
     RemovedConfig("verity.timeout.sms-service-ask-timeout-in-seconds"),
     RemovedConfig("verity.timeout.service-shutdown-timeout-in-seconds"),
-    RemovedConfig("verity.user-agent-pairwise-watcher")
+    RemovedConfig("verity.user-agent-pairwise-watcher"),
+
+    RemovedConfig("verity.services.sms-service.send-via-local-agency"),
+    RemovedConfig("verity.services.sms-service.endpoint"),
+    RemovedConfig("verity.services.sms-service.allowed-client-ip-addresses"),
   )
 
-  private def renamedConfig: Set[RenamedConfig] = Set (
+  private def renamedConfig: Set[StaleConfig] = Set (
     RenamedConfig("verity.cache.key-value-mapper-cache-expiration-time-in-seconds", "verity.cache.key-value-mapper.expiration-time-in-seconds"),
     RenamedConfig("verity.cache.agent-config-cache-expiration-time-in-seconds", "verity.cache.agent-config.expiration-time-in-seconds"),
     RenamedConfig("verity.cache.agency-detail-cache-expiration-time-in-seconds", "verity.cache.agency-detail.expiration-time-in-seconds"),

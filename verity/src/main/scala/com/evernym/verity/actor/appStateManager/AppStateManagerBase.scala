@@ -8,8 +8,8 @@ import akka.cluster.MemberStatus.{Down, Removed}
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.appStateManager.state.{AppState, DegradedState, DrainingState, InitializingState, ListeningState, ShutdownState, ShutdownWithErrors, SickState}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.appStateManager.state._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
@@ -228,8 +228,9 @@ trait AppStateManagerBase { this: Actor =>
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS).getOrElse(1)
         val maxStatusCheckCount = appConfig.getConfigIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT).getOrElse(20)
-        logger.info(s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before
-                          starting the Coordinated Shutdown...""")
+        logger.info(
+          s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""
+        )
         // Sleep a while to give the load balancers time to get a sufficient number of non-200 http response codes
         // from agency/heartbeat AFTER application state transition to 'Draining'.
         Thread.sleep(delayBeforeLeavingCluster * 1000) // seconds converted to milliseconds
@@ -244,8 +245,7 @@ trait AppStateManagerBase { this: Actor =>
           if (cluster.isTerminated || cluster.selfMember.status == Removed || cluster.selfMember.status == Down) {
             return true
           }
-          logger.debug(s"""Cluster is NOT terminated AND status is NOT set to Removed or Down. Sleep $delay
-                             milliseconds and try again up to $tries more time(s).""")
+          logger.debug(s"""Cluster is NOT terminated AND status is NOT set to Removed or Down. Sleep $delay milliseconds and try again up to $tries more time(s).""")
           Thread.sleep(delay * 1000) // sleep one second and check again
           checkIfNodeHasLeftCluster(delay, tries - 1)
         }
@@ -256,8 +256,9 @@ trait AppStateManagerBase { this: Actor =>
         case Success(true) =>
           logger.info("Akka node has left the cluster")
 
-          logger.info(s"""Akka node ${cluster.selfAddress} is being marked as 'down' as well in the event of network
-                            failures while 'leaving' the cluster...""")
+          logger.info(
+            s"""Akka node ${cluster.selfAddress} is being marked as 'down' as well in the event of network failures while 'leaving' the cluster..."""
+          )
           // NOTE: In case of network failures during this process (leaving) it might still be necessary to set the
           //       node’s status to Down in order to complete the removal.
           cluster.down(cluster.selfAddress)

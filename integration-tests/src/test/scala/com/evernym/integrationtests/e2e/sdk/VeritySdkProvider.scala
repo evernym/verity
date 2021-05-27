@@ -1,6 +1,7 @@
 package com.evernym.integrationtests.e2e.sdk
 
 import com.evernym.integrationtests.e2e.env.{SdkConfig, SdkType}
+import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.integrationtests.e2e.sdk.process.{DotNetSdkProvider, NodeSdkProvider, PythonSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
 import com.evernym.verity.protocol.engine.DID
@@ -22,7 +23,6 @@ import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.{DefaultWalletConfig, WalletConfig}
 import org.json.JSONObject
 
-import java.nio.file.Path
 import java.util.UUID
 
 
@@ -196,15 +196,15 @@ abstract class BaseSdkProvider
      with WalletedSdkProvider
 
 object VeritySdkProvider {
-  def fromSdkConfig(c: SdkConfig, testDir: Path): VeritySdkProvider = {
+  def fromSdkConfig(c: SdkConfig, scenario: Scenario): VeritySdkProvider = {
     c.sdkType match {
-      case SdkType.Java   => new JavaSdkProvider(c, Option(testDir))
+      case SdkType.Java   => new JavaSdkProvider(c, Option(scenario.testDir))
       case SdkType.Vcx    => new VcxSdkProvider(c)
-      case SdkType.Python => new PythonSdkProvider(c, testDir)
-      case SdkType.Node   => new NodeSdkProvider(c, testDir)
+      case SdkType.Python => new PythonSdkProvider(c, scenario.testDir)
+      case SdkType.Node   => new NodeSdkProvider(c, scenario.testDir)
       case SdkType.Manual => new ManualSdkProvider(c)
-      case SdkType.Rest   => new RestSdkProvider(c)
-      case SdkType.DotNet => new DotNetSdkProvider(c, testDir)
+      case SdkType.Rest   => new RestSdkProvider(c, scenario.actorSystem)
+      case SdkType.DotNet => new DotNetSdkProvider(c, scenario.testDir)
       case _ => throw new Exception("Unknown SDK type, must by a known type")
     }
   }

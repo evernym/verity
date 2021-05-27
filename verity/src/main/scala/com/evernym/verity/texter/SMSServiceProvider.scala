@@ -104,7 +104,6 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
   }
 
   val logger: Logger = getLoggerByClass(classOf[DefaultSMSSender])
-  lazy val isSmsSendingSupportedLocally: String = config.getConfigStringReq(SMS_SVC_SEND_VIA_LOCAL_AGENCY)
 
   lazy val allServices: List[SMSServiceProvider] =
     List(
@@ -118,10 +117,8 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
    * @return
    */
   def servicesToBeUsedInOrder: List[SMSServiceProvider] = {
-    if (isSmsSendingSupportedLocally.toUpperCase == YES) {
-      val preferredOrder = config.getConfigListOfStringReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
-      preferredOrder.flatMap(id => allServices.find(s => s.providerId == id))
-    } else List.empty
+    val preferredOrder = config.getConfigListOfStringReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
+    preferredOrder.flatMap(id => allServices.find(s => s.providerId == id))
   }
 
 }

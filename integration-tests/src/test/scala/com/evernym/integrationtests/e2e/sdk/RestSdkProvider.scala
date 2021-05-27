@@ -5,7 +5,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.stream.Materializer
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.SdkProviderException
@@ -61,18 +60,16 @@ class HandlersForBothResponseTypes(handler: JSONObject => Unit){
   }
 }
 
-class RestSdkProvider(val sdkConfig: SdkConfig)
+class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
   val logger: Logger = getLoggerByClass(getClass)
-  
+
   /**
     * Check that the sdk is available (ex. on class path, installed or whatever)
     */
 
-  val system: ActorSystem = ActorSystem.create("rest-integration-test")
-  val materializer: Materializer = Materializer.createMaterializer(system)
   val defaultTimeout: FiniteDuration = FiniteDuration(10, TimeUnit.SECONDS)
   val httpTimeout: FiniteDuration = FiniteDuration(30, TimeUnit.SECONDS)
 
@@ -310,7 +307,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     val restApiUrl: String = restApiUrlPrefix + restApiUrlThreadSuffix
     logger.debug("# POST rest api url: " + restApiUrl)
     logger.debug(s"# JSON msg sent: $jsonMsg")
-    val result = Http()(system).singleRequest(
+    val result = Http()(actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.POST,
         uri = restApiUrl,
@@ -328,7 +325,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     val restApiUrlThreadSuffix = threadId.map(tid => s"/$tid").getOrElse("")
     val restApiUrl = restApiUrlPrefix + restApiUrlThreadSuffix + encodeGetParameters(parameters)
     logger.debug("# GET rest api url: " + restApiUrl)
-    val result = Http()(system).singleRequest(
+    val result = Http()(actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
         uri = restApiUrl,
@@ -360,7 +357,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig)
     if (httpResponse.status == OK) {
       val str = httpResponse.entity match {
         case s: HttpEntity.Strict => s.getData().utf8String
-        case d: HttpEntity.Default=> d.toStrict(5000, materializer).toCompletableFuture.get().getData().utf8String
+        case d: HttpEntity.Default=> d.toStrict(5000, actorSystem).toCompletableFuture.get().getData().utf8String
         case x: Any => throw new RuntimeException(s"Unsupported entity class ${x.getClass}")
       }
       val responseJson = new JSONObject(str)

@@ -148,7 +148,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def available(): Unit = {
     val out =
       s"""#! "netstandard2.0"
-    #r "nuget: Evernym.Verity.SDK, $sdkVersion"
+    #r "nuget: Evernym.Verity.SDK, [$sdkVersion]"
     using VeritySDK;
     Console.WriteLine();""".execute()
     logger.debug(s"available script output: $out")
@@ -493,7 +493,7 @@ object DotNetSdkProvider {
 
   def buildScript(imports: String, context: String, cmd: String, sdkVersion: String): String = {
     s"""#! "netstandard2.0"
-    #r "nuget: Evernym.Verity.SDK, $sdkVersion"
+    #r "nuget: Evernym.Verity.SDK, [$sdkVersion]"
 
     using System.Text;
     using System.Text.Json;

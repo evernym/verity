@@ -192,9 +192,10 @@ object ItemCommonConstants {
 
   def getStatusString(status: Int): String = {
     status match {
-      case ITEM_STATUS_REMOVED => "removed"
-      case ITEM_STATUS_ACTIVE => "active"
+      case ITEM_STATUS_REMOVED  => "removed"
+      case ITEM_STATUS_ACTIVE   => "active"
       case ITEM_STATUS_MIGRATED => "migrated"
+      case other                => throw new RuntimeException("unsupported item status: " + other)
     }
   }
 }

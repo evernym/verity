@@ -8,6 +8,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper}
 import com.evernym.verity.protocol.engine.MsgFamily._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.protocols.protocolRegistry
 import com.evernym.verity.util.{ReqMsgContext, RestMsgContext}
 
 /**
@@ -22,41 +23,51 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
   def senderVerKey: Option[VerKey] = givenMsg match {
     case amw: AgentMsgWrapper   => amw.senderVerKey
     case rmp: ProcessRestMsg    => Option(rmp.restMsgContext.auth.verKey)
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def msgToBeProcessed: AgentMsgWrapper = givenMsg match {
     case amw: AgentMsgWrapper   => amw
     case rmp: ProcessRestMsg    => AgentMessageWrapper(rmp.msg, MPF_PLAIN, Option(rmp.restMsgContext.auth.verKey))
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def msgPackFormat: Option[MsgPackFormat] = givenMsg match {
     case amw: AgentMsgWrapper   => Option(amw.msgPackFormat)
     case _: ProcessRestMsg      => Option(MPF_PLAIN)
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def msgFormat: Option[TypeFormat] = givenMsg match {
     case amw: AgentMsgWrapper   => Option(amw.headAgentMsg.msgTypeFormat)
     case _: ProcessRestMsg      => Option(TypeFormat.STANDARD_TYPE_FORMAT)
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def usesLegacyGenMsgWrapper: Boolean = givenMsg match {
     case amw: AgentMsgWrapper   => amw.usesLegacyGenMsgWrapper
     case _: ProcessRestMsg      => false
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def usesLegacyBundledMsgWrapper: Boolean = givenMsg match {
     case amw: AgentMsgWrapper   => amw.usesLegacyBundledMsgWrapper
     case _: ProcessRestMsg      => false
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def isSync(default: Boolean): Boolean = givenMsg match {
     case _: AgentMsgWrapper     => default
     case rmp: ProcessRestMsg    => rmp.restMsgContext.sync
+    case _                      => throw unsupportedMsgTypeException
   }
 
   def msgPackFormatReq: MsgPackFormat = msgPackFormat.getOrElse(
     throw new RuntimeException("message pack version required, but not available")
   )
+
+  def unsupportedMsgTypeException = new UnsupportedMessageType(givenMsg,
+    protocolRegistry.entries.map(_.protoDef.msgFamily.protoRef))
 }
 
 /**
@@ -171,3 +182,4 @@ object STOP_GAP_MsgTypeMapper {
     case _ => None
   }
 }
+

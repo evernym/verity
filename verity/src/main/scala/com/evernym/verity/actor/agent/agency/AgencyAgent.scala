@@ -186,7 +186,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
         List()
     }
     val taaEnabledOnLedger: Boolean = try {
-      agentActorContext.poolConnManager.asInstanceOf[LedgerPoolConnManager].currentTAA match {
+      agentActorContext.poolConnManager.currentTAA match {
         case Some(_) => true
         case None => false
       }

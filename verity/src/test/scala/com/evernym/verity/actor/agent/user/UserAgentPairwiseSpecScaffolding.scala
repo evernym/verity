@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.PoisonPill
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, RoutingAgentUtil}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, agentRegion}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -86,8 +86,7 @@ trait UserAgentPairwiseSpecScaffolding
   }
 
   def setPairwiseEntityId(agentPairwiseDID: DID): Unit = {
-    val bucketId = RoutingAgentUtil.getBucketEntityId(agentPairwiseDID)
-    agentRouteStoreRegion ! ForIdentifier(bucketId, GetRoute(agentPairwiseDID))
+    routeRegion ! ForIdentifier(agentPairwiseDID, GetStoredRoute)
     val addressDetail = expectMsgType[Option[ActorAddressDetail]]
     addressDetail.isDefined shouldBe true
     userAgentPairwiseEntityId = addressDetail.get.address

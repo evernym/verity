@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.container.asyncapis.ledger
 
 import com.evernym.verity.Exceptions.NotFoundErrorException
+import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
 import com.evernym.verity.constants.Constants._
@@ -74,7 +75,7 @@ class LedgerAccessAPI(cache: Cache,
     val keyDetails = schemaIds.map { sId =>
       KeyDetail(GetSchema(sId), required = true)
     }
-    val gcop = GetCachedObjectParam(keyDetails, LEDGER_GET_SCHEMA_FETCHER_ID)
+    val gcop = GetCachedObjectParam(keyDetails, LEDGER_GET_SCHEMA_FETCHER)
     cache.getByParamAsync(gcop).map { cqr =>
       val result = schemaIds.map { sId => sId -> cqr.getReq[GetSchemaResp](sId) }.toMap
       if (result.keySet == schemaIds) result
@@ -89,7 +90,7 @@ class LedgerAccessAPI(cache: Cache,
     val keyDetails = credDefIds.map { cId =>
       KeyDetail(GetCredDef(cId), required = true)
     }
-    val gcop = GetCachedObjectParam(keyDetails, LEDGER_GET_CRED_DEF_FETCHER_ID)
+    val gcop = GetCachedObjectParam(keyDetails, LEDGER_GET_CRED_DEF_FETCHER)
     cache.getByParamAsync(gcop).map { cqr =>
       val result = credDefIds.map { cId => cId -> cqr.getReq[GetCredDefResp](cId) }.toMap
       if (result.keySet == credDefIds) result

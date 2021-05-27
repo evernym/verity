@@ -46,7 +46,7 @@ class RestIssuerSdkSpec
       "should be successful" in {
         val lastThreadId = Option(UUID.randomUUID().toString)
         val msg = Update(Set(AgentConfig("name", "env-name"), AgentConfig("logoUrl", "env-logo-url")))
-        val response = issuerRestSDK.sendRestReq(msg, lastThreadId)
+        val response = issuerRestSDK.sendMsg(msg, lastThreadId)
         response.status shouldBe Accepted
         val receivedMsgParam = issuerRestSDK.expectMsgOnWebhook[ConfigResult]()
         receivedMsgParam.msg.configs.size shouldBe 2
@@ -64,7 +64,7 @@ class RestIssuerSdkSpec
     "when sent POST create (issuer-setup 0.6) message" - {
       "should be successful" in {
         val msg = Create()
-        val response = issuerRestSDK.sendRestReq(msg)
+        val response = issuerRestSDK.sendMsg(msg)
         response.status shouldBe Accepted
 
         val receivedMsgParam = issuerRestSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
@@ -76,7 +76,7 @@ class RestIssuerSdkSpec
     "when sent POST write (write-schema 0.6) message" - {
       "should be successful" in {
         val msg = Write("schema-name", "1.0", Seq("firstName","lastName"))
-        val response = issuerRestSDK.sendRestReq(msg)
+        val response = issuerRestSDK.sendMsg(msg)
         response.status shouldBe Accepted
         val receivedMsgParam = issuerRestSDK.expectMsgOnWebhook[WSStatusReport]()
         receivedMsgParam.msg.schemaId.nonEmpty shouldBe true
@@ -85,7 +85,7 @@ class RestIssuerSdkSpec
 
     "when sent POST create (relationship 1.0) message" - {
       "should be successful" in {
-        val receivedMsgParam = issuerRestSDK.createRelationship(firstConn)
+        val receivedMsgParam = issuerRestSDK.sendCreateRelationship(firstConn)
         lastThreadId = receivedMsgParam.threadIdOpt
         receivedMsgParam.msg.did.nonEmpty shouldBe true
         receivedMsgParam.msg.verKey.nonEmpty shouldBe true
@@ -95,7 +95,7 @@ class RestIssuerSdkSpec
     "when sent POST connection-invitation (relationship 1.0) message" - {
       "should be successful" in {
         val msg = ConnectionInvitation()
-        val response = issuerRestSDK.sendRestReq(msg, lastThreadId)
+        val response = issuerRestSDK.sendMsg(msg, lastThreadId)
         response.status shouldBe Accepted
         val receivedMsgParam = issuerRestSDK.expectMsgOnWebhook[Invitation]()
         receivedMsgParam.msg.inviteURL.nonEmpty shouldBe true
@@ -137,7 +137,7 @@ class RestIssuerSdkSpec
       "should be successful" in {
         val msg = AskQuestion("How are you?", Option("question-detail"),
           Vector("I am fine","I am not fine"), signature_required = false, None)
-        val response = issuerRestSDK.sendRestReqForConn(firstConn, msg)
+        val response = issuerRestSDK.sendMsgForConn(firstConn, msg)
         response.status shouldBe Accepted
       }
     }

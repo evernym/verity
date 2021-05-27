@@ -39,14 +39,14 @@ trait WalletService {
   def executeAsync[T: ClassTag](walletId: String, cmd: WalletCommand): Future[T] = {
     //TODO: find a better way to record metrics around future/async code block
     val startTime = Instant.now()
-    logger.debug(s"[$walletId] [${cmd.id}] wallet service about to start execution of wallet cmd: ${cmd.getClass.getSimpleName}")
+    logger.debug(s"[$walletId] [${cmd.id}] wallet service about to start execution of wallet cmd: ${cmd.name}")
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
         MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         if (BAD_REQ_ERRORS.map(_.statusCode).contains(wer.sd.statusCode)) {
           throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         } else {
-          logger.error(s"[$walletId] [${cmd.id}] error while executing wallet command: ${cmd.getClass.getSimpleName}, error msg: ${wer.sd.statusMsg}",
+          logger.error(s"[$walletId] [${cmd.id}] error while executing wallet command: ${cmd.name}, error msg: ${wer.sd.statusMsg}",
             (LOG_KEY_ERR_MSG, wer.sd.statusMsg))
           throw HandledErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         }
@@ -58,7 +58,7 @@ trait WalletService {
       val seconds = ChronoUnit.SECONDS.between(startTime, endTime)
       Kamon
         .histogram("span_processing_time_seconds", MeasurementUnit.time.seconds)
-        .withTag("operation", s"${cmd.getClass.getSimpleName}")
+        .withTag("operation", s"${cmd.name}")
         .withTag("component", "WalletService")
         .record(seconds)
       MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)

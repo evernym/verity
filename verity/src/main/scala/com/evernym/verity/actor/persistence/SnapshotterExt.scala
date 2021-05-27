@@ -66,7 +66,7 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
    * can be overridden by implementing class if any change is required
    * @return
    */
-  def snapshotCallbackHandler: Receive = {
+  private def snapshotCallbackHandler: Receive = {
 
     case SaveSnapshotSuccess(metadata) =>
       MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT)

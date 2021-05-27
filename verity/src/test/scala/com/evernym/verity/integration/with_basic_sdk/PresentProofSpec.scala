@@ -43,14 +43,12 @@ class PresentProofSpec
     provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)
 
-    establishConnection(issuerHolderConn, issuerSDK, holderSDK)
-    establishConnection(verifierHolderConn, verifierSDK, holderSDK)
-
     setupIssuer(issuerSDK)
-
     schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
     credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
+    establishConnection(issuerHolderConn, issuerSDK, holderSDK)
+    establishConnection(verifierHolderConn, verifierSDK, holderSDK)
   }
 
   "IssuerSDK" - {
@@ -60,7 +58,7 @@ class PresentProofSpec
           credDefId,
           Map("name" -> "Alice", "age" -> "20")
         )
-        issuerSDK.sendControlMsgForConn(issuerHolderConn, offerMsg)
+        issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
         issuerSDK.expectMsgOnWebhook[Sent]()
       }
     }
@@ -92,7 +90,7 @@ class PresentProofSpec
     "when sent 'issue' (issue-credential 1.0) message" - {
       "should be successful" in {
         val issueMsg = Issue()
-        issuerSDK.sendControlMsgForConn(issuerHolderConn, issueMsg, lastReceivedThreadId)
+        issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThreadId)
         issuerSDK.expectMsgOnWebhook[Sent]()
       }
     }
@@ -122,7 +120,7 @@ class PresentProofSpec
           None,
           None
         )
-        verifierSDK.sendControlMsgForConn(verifierHolderConn, msg)
+        verifierSDK.sendMsgForConn(verifierHolderConn, msg)
       }
     }
   }

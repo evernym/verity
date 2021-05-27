@@ -15,6 +15,7 @@ import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.app_launcher.{DefaultAgentActorContext, HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
+import com.evernym.verity.integration.base.SharedEventStore
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.Config
@@ -27,7 +28,8 @@ import scala.language.postfixOps
 
 object LocalVerity {
   lazy val atMost: FiniteDuration = 25 seconds
-  lazy val defaultSvcParam: ServiceParam = ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new MockLedgerTxnExecutor()))
+  lazy val defaultSvcParam: ServiceParam =
+    ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new MockLedgerTxnExecutor()))
 
   def apply(tempDir: Path,
             appSeed: String,
@@ -41,7 +43,8 @@ object LocalVerity {
     val standardConfig = LocalVerityConfig.standard(
       tempDir, portProfile, otherNodeArteryPorts,
       serviceParam.ledgerSvcParam.taaEnabled,
-      serviceParam.ledgerSvcParam.taaAutoAccept)
+      serviceParam.ledgerSvcParam.taaAutoAccept,
+      serviceParam.sharedEventStore)
 
     val finalConfig = overriddenConfig match {
       case Some(config) => config.withFallback(standardConfig)
@@ -169,8 +172,9 @@ class AppConfigWrapper(config: Config) extends AppConfig {
  * which will help it run correctly if test wants to restart verity instances in between of the test.
  *
  * @param ledgerSvcParam
+ * @param sharedEventStore
  */
-case class ServiceParam(ledgerSvcParam: LedgerSvcParam)
+case class ServiceParam(ledgerSvcParam: LedgerSvcParam, sharedEventStore: Option[SharedEventStore]=None)
 
 case class LedgerSvcParam(taaEnabled: Boolean = true,
                           taaAutoAccept: Boolean = true,

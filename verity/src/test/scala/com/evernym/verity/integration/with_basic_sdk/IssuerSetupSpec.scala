@@ -29,7 +29,7 @@ class IssuerSetupSpec
 
     "when sent 'current-public-identifier' (issuer-setup 0.6) message" - {
       "should receive 'problem-report'" in {
-        issuerSDK.sendControlMsg(CurrentPublicIdentifier())
+        issuerSDK.sendMsg(CurrentPublicIdentifier())
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ProblemReport]()
         receivedMsg.msg.message shouldBe "Issuer Identifier has not been created yet"
       }
@@ -37,7 +37,7 @@ class IssuerSetupSpec
 
     "when sent 'create' (issuer-setup 0.6) message" - {
       "should respond with 'public-identifier-created'" in {
-        issuerSDK.sendControlMsg(Create())
+        issuerSDK.sendMsg(Create())
         val receivedMsg = issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
         val pic = receivedMsg.msg
         pic.identifier.did.isEmpty shouldBe false
@@ -47,7 +47,7 @@ class IssuerSetupSpec
 
     "when sent 'current-public-identifier' (issuer-setup 0.6) message" - {
       "should receive 'public-identifier'" in {
-        issuerSDK.sendControlMsg(CurrentPublicIdentifier())
+        issuerSDK.sendMsg(CurrentPublicIdentifier())
         val receivedMsg = issuerSDK.expectMsgOnWebhook[PublicIdentifier]()
         val pi = receivedMsg.msg
         pi.did.isEmpty shouldBe false
@@ -57,7 +57,7 @@ class IssuerSetupSpec
 
     "when sent 'write' (write-schema 0.6) message" - {
       "should receive 'status-report'" in {
-        issuerSDK.sendControlMsg(writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
+        issuerSDK.sendMsg(writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
         val receivedMsg = issuerSDK.expectMsgOnWebhook[writeSchema0_6.StatusReport]()
         receivedMsg.msg.schemaId.nonEmpty shouldBe true
         schemaId = receivedMsg.msg.schemaId
@@ -77,7 +77,7 @@ class IssuerSetupSpec
   "IssuerSdk" - {
     "when tried to sent 'write (write-cred-def 0.6) message" - {
       "should be successful" in {
-        issuerSDK.sendControlMsg(writeCredDef0_6.Write("name", schemaId, None, None))
+        issuerSDK.sendMsg(writeCredDef0_6.Write("name", schemaId, None, None))
         val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport]()
         receivedMsg.msg.credDefId.nonEmpty shouldBe true
       }

@@ -15,7 +15,7 @@ export MESSAGE_PROGRESS_TRACKING_ENABLED="true"
 export BLOB_BUCKET="blob-bucket"
 export BLOB_S3_ENDPOINT="http://s3server:8000"
 
-# These are used by the s3 service in .intergration jobs
+# These are used by the s3 service in .integration jobs
 export REMOTE_MANAGEMENT_DISABLE=1
 export ENDPOINT="s3server"
 

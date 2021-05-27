@@ -15,6 +15,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
 import com.evernym.verity.{Exceptions, UrlParam}
@@ -37,7 +38,7 @@ trait AgentMsgSender
   private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity): Future[CacheQueryResponse] = {
     runWithInternalSpan("getAgencyIdentityFut", "AgentMsgSender") {
       val gadp = GetAgencyIdentityCacheParam(localAgencyDID, gad)
-      val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER_ID)
+      val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
       generalCache.getByParamAsync(gadfcParam)
     }
   }

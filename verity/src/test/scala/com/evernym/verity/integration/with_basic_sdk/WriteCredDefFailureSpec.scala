@@ -31,11 +31,11 @@ class WriteCredDefFailureSpec
     issuerSDK.provisionVerityEdgeAgent()
     issuerSDK.registerWebhook()
     issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
-    issuerSDK.sendControlMsg(Create())
+    issuerSDK.sendMsg(Create())
     issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
-    issuerSDK.sendControlMsg(CurrentPublicIdentifier())
+    issuerSDK.sendMsg(CurrentPublicIdentifier())
     issuerSDK.expectMsgOnWebhook[PublicIdentifier]()
-    issuerSDK.sendControlMsg(WriteSchema("name", "1.0", Seq("name", "age")))
+    issuerSDK.sendMsg(WriteSchema("name", "1.0", Seq("name", "age")))
     val sr = issuerSDK.expectMsgOnWebhook[WriteSchemaStatusReport]()
     schemaId = sr.msg.schemaId
   }
@@ -44,7 +44,7 @@ class WriteCredDefFailureSpec
 
     "when sent 'write' (write-cred-def 0.6) message and ledger returns error" - {
       "should receive 'status-report'" in {
-        issuerSDK.sendControlMsg(WriteCredDef("name", schemaId, None, None))
+        issuerSDK.sendMsg(WriteCredDef("name", schemaId, None, None))
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ProblemReport]()
         receivedMsg.msg.message.contains("invalid TAA") shouldBe true
       }

@@ -1,14 +1,11 @@
 package com.evernym.verity.protocol.container.actor
 
 import akka.pattern.ask
-import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.{ActorResponse, Status}
+import com.evernym.verity.Status
 import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, TokenToActorItemMapperProvider}
 import com.evernym.verity.actor.agent.{DidPair, SetupAgentEndpoint, SetupCreateKeyEndpoint}
-import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
@@ -17,7 +14,6 @@ import com.evernym.verity.protocol.legacy.services.{AgentEndpointServiceProvider
 import com.github.ghik.silencer.silent
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 /**
  * this trait contains support for legacy protocols (connecting 0.5/0.6 and agent provisioning 0.5/0.6)
@@ -85,7 +81,7 @@ extends TokenToActorMappingProvider
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
-    agentActorContext.tokenToActorItemMapperProvider.createToken(entityType, entityId, uid)
+    TokenToActorItemMapperProvider.createToken(entityType, entityId, uid)(appConfig, agentActorContext.system)
   }
 }
 

@@ -1,6 +1,6 @@
 package com.evernym.verity
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
@@ -27,4 +27,6 @@ package object actor {
       }
     }
   }
+
+  case class SendCmd(to: ActorRef, cmd: Any) extends ActorMessage
 }

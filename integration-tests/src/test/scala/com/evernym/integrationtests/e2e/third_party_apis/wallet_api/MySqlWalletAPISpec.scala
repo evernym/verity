@@ -1,20 +1,21 @@
 package com.evernym.integrationtests.e2e.third_party_apis.wallet_api
 
-import java.io.File
-
 import com.evernym.verity.vault.wallet_api.base.ClientWalletAPISpecBase
 import com.typesafe.config.{Config, ConfigFactory}
 
-trait MySqlWalletAPISpec { this: ClientWalletAPISpecBase =>
+import java.io.File
 
-  override def walletAPIConfig: Config = ConfigFactory parseString {
-    """
-      verity.wallet-api = "standard"                   # use "legacy" to test 'legacy wallet api'
-      verity.lib-indy.wallet.type = "mysql"
+trait MySqlWalletAPISpec {
+  this: ClientWalletAPISpecBase =>
+
+  override def walletStorageConfig: Config = {
+    ConfigFactory.parseString(
       """
-  }
-
-  override def walletStorageConfig: Config =
-    ConfigFactory.parseFile(new File("verity/src/main/resources/wallet-storage.conf"))
+        |verity.lib-indy.wallet.type = "mysql"
+        |""".stripMargin
+    ).withFallback(
+      ConfigFactory.parseFile(new File("integration-tests/src/test/resources/common/wallet-storage.conf"))
       .resolve()
+    )
+  }
 }

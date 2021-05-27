@@ -19,7 +19,7 @@ class AgentProvisioningSpec
 
   "IssuerSDK" - {
 
-    "when tried to fetch CAS agency agent keys" - {
+    "when tried to fetch agency agent keys" - {
       "should be successful" in {
         issuerSDK.fetchAgencyKey()
         issuerSDK.agencyPublicDidOpt.isDefined shouldBe true
@@ -54,7 +54,7 @@ class AgentProvisioningSpec
 
   "HolderSDK" - {
 
-    "when tried to fetch VAS agency agent keys" - {
+    "when tried to fetch agency agent keys" - {
       "should be successful" in {
         holderSDK.fetchAgencyKey()
         holderSDK.agencyPublicDidOpt.isDefined shouldBe true

@@ -20,7 +20,7 @@ package object verity {
   type Signature = Array[Byte]
   type Base64Encoded = String
 
-  type RouteTo = String
+  type RouteId = String
 
   type ReqId = String
   type ReqMsgId = MsgId

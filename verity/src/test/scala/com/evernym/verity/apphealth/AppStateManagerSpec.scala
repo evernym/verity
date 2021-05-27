@@ -1,16 +1,21 @@
 package com.evernym.verity.apphealth
 
+import akka.cluster.Cluster
+import akka.cluster.MemberStatus.{Down, Removed}
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
 import com.evernym.verity.actor.testkit.{ActorSpec, AppStateManagerTestKit}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.state.{DegradedState, DrainingState, InitializingState, ListeningState, ShutdownState, ShutdownWithErrors, SickState}
+import com.evernym.verity.actor.appStateManager.state.{DegradedState, DrainingState, InitializingState, ListeningState, ShutdownWithErrors, SickState}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.testkit.{BasicFixtureSpec, CancelGloballyAfterFailure}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.Outcome
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
+
+import scala.util.Try
 
 
 class AppStateManagerSpec
@@ -250,22 +255,9 @@ class AppStateManagerSpec
       }
     }
 
-    eventually(timeout(Span(7, Seconds)), interval(Span(1, Seconds))) {
-      withLatestAppState { implicit las =>
-        las.currentState shouldBe ShutdownState
-
-        assertEvents(las.stateEvents, 4)
-        assertCausesByState(las.causesByState,
-          Map(
-            STATUS_LISTENING -> List(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-            STATUS_DRAINING -> List(CAUSE_DETAIL_DRAINING_STARTED),
-            STATUS_SHUTDOWN -> List(CAUSE_DETAIL_SHUTDOWN)))
-        assertCausesByContext(las.causesByContext,
-          Map(
-            CONTEXT_GENERAL -> Set(CAUSE_DETAIL_LISTENING_SUCCESSFULLY),
-            CONTEXT_AGENT_SERVICE_DRAIN -> Set(CAUSE_DETAIL_DRAINING_STARTED),
-            CONTEXT_AGENT_SERVICE_SHUTDOWN -> Set(CAUSE_DETAIL_SHUTDOWN)))
-      }
+    val cluster = Cluster(system)
+    eventually(timeout(Span(7, Seconds)), interval(Span(2, Seconds))) {
+      List(Down, Removed).contains(cluster.selfMember.status) shouldBe true
     }
   }
 
@@ -333,9 +325,18 @@ class AppStateManagerSpec
   def withFixture(test: OneArgTest): Outcome = {
     val fixture = new AppStateManagerTestKit(this, appConfig)
     val r = super.withFixture(test.toNoArgTest(fixture))
-    fixture.stop()
+    Try(fixture.stop())   //best effort to stop the app state manager actor
     Thread.sleep(1000)  //just to make sure the app state manager actor gets stopped
     r
   }
 
+  override def overrideConfig: Option[Config] = Option(
+    ConfigFactory.parseString(
+      """
+        |verity.app-state-manager.state.draining {
+        |  delay-before-leave = 2
+        |  delay-between-status-checks = 1
+        |}""".stripMargin
+    )
+  )
 }

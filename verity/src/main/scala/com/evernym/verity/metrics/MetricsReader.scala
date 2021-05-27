@@ -3,7 +3,7 @@ package com.evernym.verity.metrics
 import com.evernym.verity.Exceptions.FeatureNotEnabledException
 import com.evernym.verity.Status._
 import com.evernym.verity.actor.{ActorMessage, MetricsFilterCriteria}
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.metrics.reporter.{KamonPrometheusMetricsReporter, MetricDetail, MetricsReporter}
@@ -18,12 +18,13 @@ object MetricsReader {
   private val lastResetTimestamp: String = getCurrentTimestamp
   private val hostName: String = AppConfigWrapper.getConfigStringReq(KAMON_ENV_HOST)
 
-  Kamon.loadModules()   //for system/jvm related metrics
+  private var metricsReporter: Option[MetricsReporter] = None
 
-  private val metricsReporter: Option[MetricsReporter] = {
-    if (AppConfigWrapper.getConfigStringOption(METRICS_ENABLED).forall(_ == YES))
-      Some(KamonPrometheusMetricsReporter)
-    else None
+  def initialize(appConfig: AppConfig): Unit = {
+    if (appConfig.getConfigStringOption(METRICS_ENABLED).forall(_ == YES)) {
+      Kamon.loadModules()   //for system/jvm related metrics
+      metricsReporter = Some(KamonPrometheusMetricsReporter)
+    }
   }
 
   private def getCurrentTimestamp: String = new DateTime(new DateTime()).withZone(DateTimeZone.UTC).toString()

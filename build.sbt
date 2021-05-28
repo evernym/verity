@@ -42,7 +42,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1353"
+val libIndyVer = "1.95.0~1577"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
   NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),

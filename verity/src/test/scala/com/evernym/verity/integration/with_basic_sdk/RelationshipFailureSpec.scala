@@ -9,7 +9,8 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.integration.base.{VerityEnv, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
-import com.evernym.verity.protocol.engine.{DID, ThreadId}
+import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{CurrentPublicIdentifier, PublicIdentifier, PublicIdentifierCreated, Create => CreatePublicIdentifier}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSConnectionInvitation, SMSOutOfBandInvitation}
 
@@ -23,7 +24,7 @@ class RelationshipFailureSpec
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp)
   val connId = "connId1"
 
-  var threadId: Option[ThreadId] = None
+  var thread: Option[MsgThread] = None
   var pairwiseDID: DID = ""
 
   override def beforeAll(): Unit = {
@@ -39,7 +40,7 @@ class RelationshipFailureSpec
     issuerSDK.expectMsgOnWebhook[PublicIdentifier]()
     issuerSDK.sendCreateRelationship(connId)
     val resp = issuerSDK.sendCreateRelationship(connId)
-    threadId = resp.threadIdOpt
+    thread = resp.threadOpt
     pairwiseDID = resp.msg.did
   }
 
@@ -48,7 +49,7 @@ class RelationshipFailureSpec
       "with null phone number" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation(null), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation(null), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -62,7 +63,7 @@ class RelationshipFailureSpec
       "with empty phone number" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation(""), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation(""), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -76,7 +77,7 @@ class RelationshipFailureSpec
       "with phone number in national format" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("4045943696"), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("4045943696"), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -90,7 +91,7 @@ class RelationshipFailureSpec
       "with too short phone number in international format" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+140459"), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+140459"), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -104,7 +105,7 @@ class RelationshipFailureSpec
       "with phone number with spaces" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1 404 5943696"), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1 404 5943696"), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -118,7 +119,7 @@ class RelationshipFailureSpec
       "with phone number with dashes" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1-404-5943696"), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1-404-5943696"), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -132,7 +133,7 @@ class RelationshipFailureSpec
       "with phone number with parentheses" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1(404)5943696"), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1(404)5943696"), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -146,7 +147,7 @@ class RelationshipFailureSpec
       "with phone number with letters" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1404myPhone"), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSConnectionInvitation("+1404myPhone"), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -162,7 +163,7 @@ class RelationshipFailureSpec
       "with null phone number" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation(null, None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation(null, None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -176,7 +177,7 @@ class RelationshipFailureSpec
       "with empty phone number" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -190,7 +191,7 @@ class RelationshipFailureSpec
       "with phone number in national format" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("4045943696", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("4045943696", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -204,7 +205,7 @@ class RelationshipFailureSpec
       "with too short phone number in international format" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+140459", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+140459", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -218,7 +219,7 @@ class RelationshipFailureSpec
       "with phone number with spaces" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1 404 5943696", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1 404 5943696", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -232,7 +233,7 @@ class RelationshipFailureSpec
       "with phone number with dashes" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1-404-5943696", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1-404-5943696", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -246,7 +247,7 @@ class RelationshipFailureSpec
       "with phone number with parentheses" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1(404)5943696", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1(404)5943696", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(
@@ -260,7 +261,7 @@ class RelationshipFailureSpec
       "with phone number with letters" - {
         "should receive BadRequest response" in {
           val resp = DefaultMsgCodec.fromJson[StatusDetailResp](
-            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1404myPhone", None, None), threadId, expectedRespStatus=BadRequest)
+            issuerSDK.sendMsgForConn(connId, SMSOutOfBandInvitation("+1404myPhone", None, None), thread, expectedRespStatus=BadRequest)
               .entity.asInstanceOf[HttpEntity.Strict].getData().decodeString(Charset.defaultCharset())
           )
           resp shouldBe StatusDetailResp(

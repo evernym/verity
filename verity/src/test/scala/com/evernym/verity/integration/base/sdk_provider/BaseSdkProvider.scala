@@ -8,7 +8,8 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.actor.{AgencyPublicDid, agent}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
@@ -73,11 +74,11 @@ trait SdkProvider {
 
   def establishConnection(connId: String, issuerSDK: VeritySdkBase, holderSDK: HolderSdk): Unit = {
     val receivedMsg = issuerSDK.sendCreateRelationship(connId)
-    val lastReceivedThreadId = receivedMsg.threadIdOpt
-    val firstInvitation = issuerSDK.sendCreateConnectionInvitation(connId, lastReceivedThreadId)
+    val lastReceivedThread = receivedMsg.threadOpt
+    val invitation = issuerSDK.sendCreateConnectionInvitation(connId, lastReceivedThread)
 
     holderSDK.sendCreateNewKey(connId)
-    holderSDK.sendConnReqForInvitation(connId, firstInvitation)
+    holderSDK.sendConnReqForInvitation(connId, invitation)
 
     issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
     issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
@@ -177,7 +178,7 @@ abstract class SdkBase(param: SdkParam) {
   protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
     val json = parseHttpResponseAsString(resp)
     require(resp.status.intValue() == expected.intValue,
-      s"http response was not ${expected.value}: $json")
+      s"http response ${resp.status.intValue()} was not ${expected.value}: $json")
     resp
   }
 
@@ -319,12 +320,11 @@ object ReceivedMsgParam {
 
   def apply[T: ClassTag](msg: String): ReceivedMsgParam[T] = {
     val message = new JSONObject(msg)
-    val threadId = Try {
-      val thread = message.getJSONObject("~thread")
-      Option(thread.getString("thid"))
+    val threadOpt = Try {
+      Option(DefaultMsgCodec.fromJson[agent.Thread](message.getJSONObject("~thread").toString))
     }.getOrElse(None)
     val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
-    ReceivedMsgParam(expMsg, msg, None, threadId)
+    ReceivedMsgParam(expMsg, msg, None, threadOpt)
   }
 }
 
@@ -333,14 +333,15 @@ object ReceivedMsgParam {
  * @param msg the received message
  * @param msgIdOpt message id used by verity agent to uniquely identify a message
  *                 (this will be only available for messages retrieved from CAS/EAS)
- * @param threadIdOpt received message's thread id
+ * @param threadOpt received message's thread
  * @tparam T
  */
 case class ReceivedMsgParam[T: ClassTag](msg: T,
                                          jsonMsgStr: String,
                                          msgIdOpt: Option[MsgId] = None,
-                                         threadIdOpt: Option[ThreadId]=None) {
+                                         threadOpt: Option[agent.Thread]=None) {
   def msgId: MsgId = msgIdOpt.getOrElse(throw new RuntimeException("msgId not available in received message"))
+  def threadIdOpt: Option[ThreadId] = threadOpt.flatMap(_.thid)
 }
 
 
@@ -374,25 +375,26 @@ object JsonMsgBuilder {
   def apply(givenMsg: Any): JsonMsgBuilder =
     JsonMsgBuilder(givenMsg, None, None, defaultJsonApply)
 
-  def apply(givenMsg: Any, threadIdOpt: Option[ThreadId]): JsonMsgBuilder =
-    JsonMsgBuilder(givenMsg, threadIdOpt, None, defaultJsonApply)
+  def apply(givenMsg: Any, threadOpt: Option[MsgThread]): JsonMsgBuilder =
+    JsonMsgBuilder(givenMsg, threadOpt, None, defaultJsonApply)
 
   def apply(givenMsg: Any,
-            threadIdOpt: Option[ThreadId],
+            threadOpt: Option[MsgThread],
             applyToJsonMsg: String => String): JsonMsgBuilder =
-    JsonMsgBuilder(givenMsg, threadIdOpt, None, applyToJsonMsg)
+    JsonMsgBuilder(givenMsg, threadOpt, None, applyToJsonMsg)
 }
 
 case class JsonMsgBuilder(private val givenMsg: Any,
-                          private val threadIdOpt: Option[ThreadId],
+                          private val threadOpt: Option[MsgThread],
                           private val forRelId: Option[DID],
                           private val applyToJsonMsg: String => String = { msg => msg}) {
 
-  lazy val threadId: ThreadId = threadIdOpt.getOrElse(UUID.randomUUID().toString)
+  lazy val thread: MsgThread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
+  def threadId: ThreadId = thread.thid.getOrElse(throw new RuntimeException("thread id not available"))
   lazy val msgFamily: MsgFamily = getMsgFamily(givenMsg)
   lazy val jsonMsg: String = {
     val basicMsg = createJsonString(givenMsg, msgFamily)
-    val threadedMsg = withThreadIdAdded(basicMsg, threadId)
+    val threadedMsg = withThreadIdAdded(basicMsg, thread)
     val relationshipMsg = forRelId match {
       case Some(did)  => addForRel(did, threadedMsg)
       case None       => threadedMsg
@@ -408,17 +410,17 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     JsonMsgUtil.createJsonString(typeStr, msg)
   }
 
-  private def withThreadIdAdded(msg: String, threadId: ThreadId): String = {
+  private def withThreadIdAdded(msg: String, thread: MsgThread): String = {
     val coreJson = new JSONObject(msg)
     val threadJSON = new JSONObject()
-    threadJSON.put("thid", threadId)
+    thread.thid.foreach(threadJSON.put("thid", _))
+    thread.pthid.foreach(threadJSON.put("pthid", _))
     coreJson.put("~thread", threadJSON).toString
   }
 
   private def addForRel(did: DID, jsonMsg: String): String = {
     val jsonObject = new JSONObject(jsonMsg)
-    jsonObject.put("~for_relationship", did)
-    jsonObject.toString
+    jsonObject.put("~for_relationship", did).toString()
   }
 
   protected def getMsgFamily(msg: Any): MsgFamily = {

@@ -3,7 +3,7 @@ package com.evernym.verity.integration.with_rest_sdk
 import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.protocol.engine.ThreadId
+import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
@@ -37,14 +37,14 @@ class RestIssuerSdkSpec
     issuerRestSDK.registerWebhook()             //this sends a packed message (not REST api call)
   }
 
-  var lastThreadId: Option[ThreadId] = None
+  var lastReceivedThread: Option[MsgThread] = None
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
 
   "IssuerRestSdk" - {
     "when sent POST update (update config 0.6) message" - {
       "should be successful" in {
-        val lastThreadId = Option(UUID.randomUUID().toString)
+        val lastThreadId = Option(MsgThread(Option(UUID.randomUUID().toString)))
         val msg = Update(Set(AgentConfig("name", "env-name"), AgentConfig("logoUrl", "env-logo-url")))
         val response = issuerRestSDK.sendMsg(msg, lastThreadId)
         response.status shouldBe Accepted
@@ -55,7 +55,7 @@ class RestIssuerSdkSpec
 
     "when sent GET status (update config 0.6) message" - {
       "should be successful" in {
-        val configResult = issuerRestSDK.sendGetStatusReq[ConfigResult](lastThreadId)
+        val configResult = issuerRestSDK.sendGetStatusReq[ConfigResult](lastReceivedThread)
         configResult.status shouldBe "OK"
         configResult.result.configs.size shouldBe 2
       }
@@ -86,7 +86,7 @@ class RestIssuerSdkSpec
     "when sent POST create (relationship 1.0) message" - {
       "should be successful" in {
         val receivedMsgParam = issuerRestSDK.sendCreateRelationship(firstConn)
-        lastThreadId = receivedMsgParam.threadIdOpt
+        lastReceivedThread = receivedMsgParam.threadOpt
         receivedMsgParam.msg.did.nonEmpty shouldBe true
         receivedMsgParam.msg.verKey.nonEmpty shouldBe true
       }
@@ -95,7 +95,7 @@ class RestIssuerSdkSpec
     "when sent POST connection-invitation (relationship 1.0) message" - {
       "should be successful" in {
         val msg = ConnectionInvitation()
-        val response = issuerRestSDK.sendMsg(msg, lastThreadId)
+        val response = issuerRestSDK.sendMsg(msg, lastReceivedThread)
         response.status shouldBe Accepted
         val receivedMsgParam = issuerRestSDK.expectMsgOnWebhook[Invitation]()
         receivedMsgParam.msg.inviteURL.nonEmpty shouldBe true
@@ -147,7 +147,7 @@ class RestIssuerSdkSpec
     "when tried to get newly un viewed messages" - {
       "should get 'question' (questionanswer 1.0) message" in {
         val receivedMsgParam = holderSDK.expectMsgFromConn[Question](firstConn)
-        lastThreadId = receivedMsgParam.threadIdOpt
+        lastReceivedThread = receivedMsgParam.threadOpt
         val question = receivedMsgParam.msg
         question.question_text shouldBe "How are you?"
       }
@@ -156,7 +156,7 @@ class RestIssuerSdkSpec
     "when sent 'answer' (questionanswer 1.0) message" - {
       "should be successful" in {
         val answer = Answer("I am fine", None, None)
-        holderSDK.sendProtoMsgToTheirAgent(firstConn, answer, lastThreadId)
+        holderSDK.sendProtoMsgToTheirAgent(firstConn, answer, lastReceivedThread)
       }
     }
   }
@@ -171,7 +171,7 @@ class RestIssuerSdkSpec
 
     "when sent GET status (questionanswer 1.0)" - {
       "should be successful" in {
-        val restOkResp = issuerRestSDK.sendGetStatusReqForConn[QAStatusReport](firstConn, QuestionAnswerMsgFamily, lastThreadId)
+        val restOkResp = issuerRestSDK.sendGetStatusReqForConn[QAStatusReport](firstConn, QuestionAnswerMsgFamily, lastReceivedThread)
         restOkResp.status shouldBe "OK"
       }
     }

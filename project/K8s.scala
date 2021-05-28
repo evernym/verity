@@ -12,7 +12,7 @@ import java.nio.file.Path
 import scala.collection.JavaConverters._
 
 object K8sTasks {
-  def init(addedJars: Seq[String], libindyVer: Stringg) = {
+  def init(addedJars: Seq[String], libindyVer: String) = {
     Seq(
       k8sDockerPackageDir := { target.value / "docker" },
       k8sConfigGenDir := { k8sDockerPackageDir.value / "configuration" },

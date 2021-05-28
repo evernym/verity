@@ -374,11 +374,11 @@ trait MsgStateAPIProvider {
   def getMsgPayload(msgId: MsgId): Option[PayloadWrapper] =
     msgAndDeliveryReq.msgPayloads.get(msgId)
 
-  def getMsgDetails(msgId: MsgId): Map[String, String] = {
+  def getMsgDetails(msgId: MsgId): Map[MsgId, String] = {
     msgAndDeliveryReq.msgDetails.getOrElse(msgId, MsgAttribs()).attribs
   }
 
-  def getMsgDeliveryStatus(msgId: MsgId): Map[String, MsgDeliveryDetail] = {
+  def getMsgDeliveryStatus(msgId: MsgId): Map[MsgId, MsgDeliveryDetail] = {
     msgAndDeliveryReq.msgDeliveryStatus.getOrElse(msgId, MsgDeliveryByDest()).msgDeliveryStatus
   }
 

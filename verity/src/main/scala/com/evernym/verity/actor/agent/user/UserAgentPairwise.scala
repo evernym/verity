@@ -269,11 +269,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleMsgSentSuccessfully(mss: MsgSentSuccessfully): Unit = {
-    notifyUserForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ), updateDeliveryStatus = false)
+    notifyUserForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ))
   }
 
   def handleMsgSendingFailed(msf: MsgSendingFailed): Unit = {
-    notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ), updateDeliveryStatus = false)
+    notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ))
   }
 
   def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]] = {
@@ -616,7 +616,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   private def sendToMyRegisteredComMethods(uid: MsgId): Future[Any] = {
     if (! state.isConnectionStatusEqualTo(CONN_STATUS_DELETED.statusCode)) {
       val msg = getMsgReq(uid)
-      notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType), updateDeliveryStatus = true)
+      val payloadWrapper = getMsgPayload(uid)
+      notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType, payloadWrapper))
     } else {
       val errorMsg = s"connection is marked as DELETED, user won't be notified about this msg: $uid"
       logger.warn("user agent pairwise", "notify user",
@@ -705,11 +706,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     senderParticipantId
   }
 
-  override def sendStoredMsgToTheirDomain(omp: OutgoingMsgParam,
-                                          msgId: MsgId,
-                                          msgName: MsgName,
-                                          thread: Option[Thread]=None): Unit = {
-    logger.debug("about to send stored msg to other entity: " + msgId)
+  override def sendMsgToTheirDomain(omp: OutgoingMsgParam,
+                                    msgId: MsgId,
+                                    msgName: MsgName,
+                                    thread: Option[Thread]=None): Unit = {
+    logger.debug("about to send msg to other entity: " + msgId)
     omp.givenMsg match {
       case pm: PackedMsg =>
         val sendMsgParam: SendMsgParam = buildSendMsgParam(msgId, msgName, pm.msg, isItARetryAttempt=false)

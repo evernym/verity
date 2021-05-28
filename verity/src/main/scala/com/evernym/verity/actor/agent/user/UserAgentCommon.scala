@@ -9,7 +9,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
-import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam, SendStoredMsgToMyDomain}
+import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, MsgAndDelivery, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -149,9 +149,7 @@ trait UserAgentCommon
 
   def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
 
-  def notifyUser(nu: NotifyUserViaPushNotif): Unit = {
-    sendPushNotif(nu.pushNotifData, updateDeliveryStatus = false, None)
-  }
+  def notifyUser(nu: NotifyUserViaPushNotif): Unit = sendPushNotif(nu.pushNotifData, None)
 
   def validateConfigValues(cds: Set[ConfigDetail]): Unit = {
     cds.find(_.name == PUSH_COM_METHOD).foreach { pcmConfig =>
@@ -217,7 +215,7 @@ trait UserAgentCommon
   }
 
   def sendAgentMsgToRegisteredEndpoint(srm: SendMsgToRegisteredEndpoint): Future[Option[ControlMsg]] = {
-    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown"), PayloadWrapper(srm.msg, srm.metadata), None)
+    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown", Option(PayloadWrapper(srm.msg, srm.metadata))), None)
     Future.successful(None) // [DEVIN] WHY?? Seems like we are ignoring the real future sendMsgToRegisteredEndpoint
   }
 
@@ -230,17 +228,14 @@ trait UserAgentCommon
     logger.debug("packed msg stored")
   }
 
-  override def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
-    // flow diagram: fwd.edge, step 11 -- Queue msg for delivery to edge.
-    logger.debug("about to send stored msg to my domain (edge): " + msgId)
-    self ! SendStoredMsgToMyDomain(msgId)
-  }
-
-  override def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Unit = {
+  override def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String): Unit = {
     logger.debug("about to send un stored msg to my domain (edge): " + omp.givenMsg)
-    sendMsgToRegisteredEndpoint(
-      NotifyMsgDetail.withTrackingId(omp.givenMsg.getClass.getSimpleName),
-      PayloadWrapper(omp.msgToBeProcessed, omp.metadata), None)
+    notifyUserForNewMsg(
+      NotifyMsgDetail(
+        msgId,
+        msgName,
+        Option(PayloadWrapper(omp.msgToBeProcessed, omp.metadata)))
+    )
   }
 
   def agentName(configs: Set[ConfigDetail]): String = {

@@ -290,11 +290,11 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       msgType match {
         // These signals should not be stored because of legacy reasons.
         case mt: MsgType if isLegacySignalMsgNotToBeStored(mt) =>
-          sendToAgentActor(SendUnStoredMsgToMyDomain(omp))
+          sendToAgentActor(SendUnStoredMsgToMyDomain(omp, msgId, msgType.msgName))
         // Other signals go regularly.
         case _ =>
           recordOutMsgDeliveryEvent(msgId)
-          sendToAgentActor(StoreAndSendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
+          sendToAgentActor(SendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
       }
       NEXT_HOP_MY_EDGE_AGENT
     } else {
@@ -308,7 +308,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       packOutgoingMsg(omp, omc.to, msgPackFormat).map { outgoingMsg =>
         logger.debug(s"outgoing msg will be stored and sent ...")
         recordOutMsgDeliveryEvent(msgId)
-        sendToAgentActor(StoreAndSendMsgToTheirDomain(
+        sendToAgentActor(SendMsgToTheirDomain(
           outgoingMsg, msgId, MsgFamily.typeStrFromMsgType(msgType), ParticipantUtil.DID(omc.from), thread))
       }
       NEXT_HOP_THEIR_ROUTING_SERVICE
@@ -800,7 +800,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           val msgId = MsgUtil.newMsgId
           recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.msgFamilyDetail.msgType.toString))
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
-          sendToAgentActor(StoreAndSendMsgToMyDomain(
+          sendToAgentActor(SendMsgToMyDomain(
             OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
             msgId, fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN), ParticipantUtil.DID(param.selfParticipantId), None))
           recordOutMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
@@ -975,19 +975,19 @@ case class SendPushNotif(pcms: Set[ComMethodDetail],
                          pnData: PushNotifData,
                          sponsorId: Option[String]) extends ActorMessage
 
-case class StoreAndSendMsgToMyDomain(om: OutgoingMsgParam,
-                                     msgId: MsgId,
-                                     msgName: MsgName,
-                                     senderDID: DID,
-                                     threadOpt: Option[Thread]) extends ActorMessage
+case class SendMsgToMyDomain(om: OutgoingMsgParam,
+                             msgId: MsgId,
+                             msgName: MsgName,
+                             senderDID: DID,
+                             threadOpt: Option[Thread]) extends ActorMessage
 
-case class StoreAndSendMsgToTheirDomain(om: OutgoingMsgParam,
-                                        msgId: MsgId,
-                                        msgName: MsgName,
-                                        senderDID: DID,
-                                        threadOpt: Option[Thread]) extends ActorMessage
+case class SendMsgToTheirDomain(om: OutgoingMsgParam,
+                                msgId: MsgId,
+                                msgName: MsgName,
+                                senderDID: DID,
+                                threadOpt: Option[Thread]) extends ActorMessage
 
-case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam) extends ActorMessage
+case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String) extends ActorMessage
 
 /**
  * this is used during incoming message processing to specify request/response context information

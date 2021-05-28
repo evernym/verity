@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.agent.msgsender
 
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._

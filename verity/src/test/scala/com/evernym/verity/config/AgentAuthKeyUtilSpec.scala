@@ -1,6 +1,8 @@
 package com.evernym.verity.config
 
+import com.evernym.verity.config.CommonConfig.AGENT_AUTHENTICATION_ENABLED
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.config.ConfigValueFactory
 
 class AgentAuthKeyUtilSpec extends BasicSpec with ConfigUtilBaseSpec {
 
@@ -11,7 +13,10 @@ class AgentAuthKeyUtilSpec extends BasicSpec with ConfigUtilBaseSpec {
     "when feature is disabled" - {
       "asked to load keys for any given id" - {
         "should respond with empty list" in {
-          modifyConfigWrapperBase(appConfig, CommonConfig.AGENT_AUTHENTICATION_ENABLED, false)
+          appConfig.setConfig(
+            appConfig.config.withValue(
+              AGENT_AUTHENTICATION_ENABLED,
+              ConfigValueFactory.fromAnyRef(false)))
           val authedKeys = AgentAuthKeyUtil.keysForSelfRelDID(appConfig, "test-id")
           authedKeys shouldBe Set.empty
         }
@@ -21,7 +26,10 @@ class AgentAuthKeyUtilSpec extends BasicSpec with ConfigUtilBaseSpec {
     "when feature is enabled" - {
       "asked to load keys for non configured key" - {
         "should respond with empty list" in {
-          modifyConfigWrapperBase(appConfig, CommonConfig.AGENT_AUTHENTICATION_ENABLED, true)
+          appConfig.setConfig(
+            appConfig.config.withValue(
+              AGENT_AUTHENTICATION_ENABLED,
+              ConfigValueFactory.fromAnyRef(true)))
           val authedKeys = AgentAuthKeyUtil.keysForSelfRelDID(appConfig, "test-id")
           authedKeys shouldBe Set.empty
         }
@@ -29,7 +37,10 @@ class AgentAuthKeyUtilSpec extends BasicSpec with ConfigUtilBaseSpec {
 
       "asked to load keys for configured key" - {
         "should respond with set of the configured keys" in {
-          modifyConfigWrapperBase(appConfig, CommonConfig.AGENT_AUTHENTICATION_ENABLED, true)
+          appConfig.setConfig(
+            appConfig.config.withValue(
+              AGENT_AUTHENTICATION_ENABLED,
+              ConfigValueFactory.fromAnyRef(true)))
           val authedKeys = AgentAuthKeyUtil.keysForSelfRelDID(appConfig, "domain-id-1")
           authedKeys shouldBe Set("key1", "key2")
         }

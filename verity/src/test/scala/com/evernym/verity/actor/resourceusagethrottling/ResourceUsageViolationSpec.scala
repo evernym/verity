@@ -66,7 +66,7 @@ class ResourceUsageViolationSpec
         // Clear all buckets in preparation for this test
         // Previous tests may have already added stats to each of the following buckets (300, 600, ..., etc).
         // CREATE_MSG_connReq
-        (Option(ENTITY_ID_GLOBAL) ++ Option(rup.ipAddress) ++ rup.userId).foreach { entityId =>
+        (Option(rup.ipAddress) ++ rup.userId ++ Option(ENTITY_ID_GLOBAL)).foreach { entityId =>
           sendToResourceUsageTrackerRegion(entityId,
             UpdateResourcesUsageCounter(List(
               ResourceUsageCounterDetail(rup.resourceName, 300, None),
@@ -98,7 +98,7 @@ class ResourceUsageViolationSpec
               fail("Unhandled exception encountered while adding resource usage stats: entityId: " +
                 rup.ipAddress + " resourceType: " + RESOURCE_TYPE_MESSAGE + " resourceName: " + rup.resourceName)
           }
-          // Yield to other threads between calls to sendToResourceUsageTrackerRegionAddResourceUsage.
+          // Yield to other threads between calls to sendToResourceUsageTracker.
           // Don't overwhelm the resource usage tracker during this test so that numbers are predictable. It is
           // expected for limits to possibly exceeded thresholds, because of async processing and analyzing of
           // usage counts.
@@ -236,7 +236,7 @@ class ResourceUsageViolationSpec
         singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked = false,
           onlyActive = true, inChunks = false))
         expectMsgPF() {
-          case bl: UsageBlockingStatusChunk if bl.usageBlockingStatus.isEmpty =>
+          case bl: UsageBlockingStatusChunk => bl.usageBlockingStatus.isEmpty shouldBe true
         }
       }
 

@@ -2,10 +2,11 @@ package com.evernym.verity.config.validator
 
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.Status.VALIDATION_FAILED
-import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.isUserIdOrPattern
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceUniqueName, isUserIdOrPattern}
 import com.evernym.verity.actor.resourceusagethrottling.{DEFAULT_USAGE_RULE_NAME, ENTITY_ID_GLOBAL, GLOBAL_DEFAULT_RULE_NAME, IP_ADDRESS_DEFAULT_RULE_NAME, USER_ID_COUNTERPARTY_DEFAULT_RULE_NAME, USER_ID_OWNER_DEFAULT_RULE_NAME}
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, Instruction, InstructionDetail, ResourceTypeUsageRule, ResourceUsageRule, ResourceUsageRuleConfig, UsageRule, UsageViolationActionExecutorValidator, ViolationActions}
 import com.evernym.verity.config.CommonConfig.{BLACKLISTED_TOKENS, RESOURCE_USAGE_RULES, RULE_TO_TOKENS, USAGE_RULES, VIOLATION_ACTION, WHITELISTED_TOKENS}
+import com.evernym.verity.config.ConfigUtil.lastKeySegment
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
 import com.evernym.verity.util.SubnetUtilsExt.{getSubnetUtilsExt, isIpAddressOrCidrNotation}
 import com.typesafe.config.ConfigException.Missing
@@ -49,8 +50,10 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
   }
 
   private def getResourceUsageRules(c: Config, key: String): Map[String, ResourceUsageRule] = {
-    c.getObject(key).asScala.map { case (k, _) =>
-      k -> ResourceUsageRule(getResourceUsageBucketRules(c, s"$key.$k"))
+    val resourceTypeName = lastKeySegment(key)
+    c.getObject(key).asScala.map { case (resourceName, _) =>
+      getResourceUniqueName(resourceTypeName, resourceName) ->
+        ResourceUsageRule(getResourceUsageBucketRules(c, s"$key.$resourceName"))
     }.toMap
   }
 

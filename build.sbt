@@ -119,7 +119,7 @@ lazy val verity = (project in file("verity"))
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
     // Conditionally download an unpack shared libraries
     update := update.dependsOn(updateSharedLibraries).value,
-    K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion, debPkgDepLibMySqlStorageVersion)
+    K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion)
   )
 
 lazy val integrationTests = (project in file("integration-tests"))

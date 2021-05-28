@@ -6,6 +6,7 @@ import com.evernym.verity.Status
 import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
+import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS}
@@ -72,32 +73,32 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
     sendConnRespReceivedAck(connId, threadId)
   }
 
-  private def sendConnRespReceivedAck(connId: String, threadId: ThreadId): Unit = {
+  private def sendConnRespReceivedAck(connId: String, thread: MsgThread): Unit = {
     val ack = Msg.Ack(status = true)
-    sendProtoMsgToTheirAgent(connId, ack, Option(threadId))
+    sendProtoMsgToTheirAgent(connId, ack, Option(thread))
   }
 
   def sendConnReqForAcceptedInvitation(connId: String, invitation: Invitation): HttpResponse = {
     sendConnReqBase(connId, invitation)._1
   }
 
-  private def sendConnReqBase(connId: String, invitation: Invitation): (HttpResponse, ThreadId) = {
+  private def sendConnReqBase(connId: String, invitation: Invitation): (HttpResponse, MsgThread) = {
     val updatedPairwiseRel = updateTheirDidDoc(connId, invitation)
     val connReq = ConnRequest(label = connId, createConnectionObject(updatedPairwiseRel))
     val jsonMsgBuilder = JsonMsgBuilder(connReq)
     val packedMsg = packForTheirVerityAgent(connId, jsonMsgBuilder.jsonMsg, "conn-req")
     val httpResp = sendBinaryReqToUrl(packedMsg, updatedPairwiseRel.theirServiceEndpoint)
-    (httpResp, jsonMsgBuilder.threadId)
+    (httpResp, jsonMsgBuilder.thread)
   }
 
   //the packed message will be directly sent to 'their' agent (on EAS/VAS)
   // this doesn't have to do anything with holder cloud agent (on CAS)
   def sendProtoMsgToTheirAgent(connId: String,
                                msg: Any,
-                               threadIdOpt: Option[ThreadId] = None,
+                               threadOpt: Option[MsgThread] = None,
                                expectedRespStatus: StatusCode = OK): Unit = {
     val myPairwiseRel = myPairwiseRelationships(connId)
-    val jsonMsgBuilder = JsonMsgBuilder(msg, threadIdOpt)
+    val jsonMsgBuilder = JsonMsgBuilder(msg, threadOpt)
     val msgType = jsonMsgBuilder.msgFamily.msgType(msg.getClass)
     val packedMsg = packForTheirVerityAgent(connId: String, jsonMsgBuilder.jsonMsg, msgType.msgName)
     checkResponse(sendBinaryReqToUrl(packedMsg, myPairwiseRel.theirServiceEndpoint), expectedRespStatus)
@@ -106,7 +107,7 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
   def sendCredRequest(connId: String,
                       credDefId: String,
                       offerCred: OfferCred,
-                      threadId: Option[ThreadId]): Unit = {
+                      thread: Option[MsgThread]): Unit = {
     val credDefJson = getCredDefJson(credDefId)
     val credOfferJson = IssueCredential.extractCredOfferJson(offerCred)
     val credReqCreated = createCredRequest(connId, credDefId, credDefJson, credOfferJson)
@@ -114,13 +115,13 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
     val attachmentEventObject = IssueCredential.toAttachmentObject(attachment)
     val credRequested = CredRequested(Seq(attachmentEventObject))
     val rc = RequestCred(Vector(attachment), Option(credRequested.comment))
-    credExchangeStatus += threadId.get -> CredExchangeStatus(connId, credDefId, credDefJson, offerCred, credReqCreated)
-    sendProtoMsgToTheirAgent(connId, rc, threadId)
+    credExchangeStatus += thread.flatMap(_.thid).get -> CredExchangeStatus(connId, credDefId, credDefJson, offerCred, credReqCreated)
+    sendProtoMsgToTheirAgent(connId, rc, thread)
   }
 
   def storeCred(issueCred: IssueCred,
-                threadId: Option[ThreadId]): CredStored = {
-    val exchangeStatus = credExchangeStatus(threadId.get)
+                thread: Option[MsgThread]): CredStored = {
+    val exchangeStatus = credExchangeStatus(thread.flatMap(_.thid).get)
     val attachedCred = new JSONObject(Base64Util.decodeToStr(issueCred.`credentials~attach`.head.data.base64))
     val revRegDefJson: String = null
 
@@ -135,7 +136,7 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
   def acceptProofReq(connId: String,
                      proofReq: RequestPresentation,
                      selfAttestedAttrs: Map[String, String],
-                     threadId: Option[ThreadId]): Unit = {
+                     thread: Option[MsgThread]): Unit = {
     val proofRequestJson = extractAttachment(AttIds.request0, proofReq.`request_presentations~attach`).get
     val credCreated = Try(testWalletAPI.executeSync[CredForProofReqCreated](CredForProofReq(proofRequestJson)))
     val credentialsNeeded = credCreated.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
@@ -150,7 +151,7 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
     )
     val payload = buildAttachment(Some(AttIds.presentation0), proofCreated.proof)
     val msg = Presentation("", Seq(payload))
-    sendProtoMsgToTheirAgent(connId, msg, threadId)
+    sendProtoMsgToTheirAgent(connId, msg, thread)
   }
 
   private def crateProof(proofReq: String,

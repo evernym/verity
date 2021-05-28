@@ -151,6 +151,14 @@ object LocalVerityConfig {
     )
   }
 
+  private def identityUrlShortener(): Config = {
+    ConfigFactory.parseString(
+      s"""
+         |verity.services.url-shortener-service.selected = IDENTITY
+         |""".stripMargin
+    )
+  }
+
   def standard(tempDir: Path,
                port: PortProfile,
                otherNodeArteryPorts: List[Int] = List.empty,
@@ -166,6 +174,7 @@ object LocalVerityConfig {
       messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),
       akkaConfig(),
+      identityUrlShortener(),
       ConfigFactory.load()
     )
     val t = parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())

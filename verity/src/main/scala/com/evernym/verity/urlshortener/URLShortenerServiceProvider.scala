@@ -51,6 +51,7 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
   lazy val allServices: List[URLShortenerServiceProvider] =
     List(
       new YOURLSSvc(config),
+      new IdentityUrlShortener(config)
     )
 
   def shortenerSvc(): Option[URLShortenerServiceProvider] = {
@@ -62,5 +63,5 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
 class YOURLSSvc(val appConfig: AppConfig) extends YOURLSDispatcher
 
 object DefaultURLShortener {
-  def props(config: AppConfig) = Props(classOf[DefaultURLShortener], config)
+  def props(config: AppConfig): Props = Props(new DefaultURLShortener(config))
 }

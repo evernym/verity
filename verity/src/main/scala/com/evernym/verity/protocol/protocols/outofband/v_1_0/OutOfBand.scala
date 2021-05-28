@@ -41,9 +41,7 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
       val resp = Msg.HandshakeReuseAccepted(m.`~thread`)
       ctx.send(resp)
       ctx.signal(Signal.ConnectionReused(m.`~thread`, ctx.getRoster.selfId_!))
-
       handleThreadInviteId(m.`~thread`.pthid)
-
       ctx.apply(ConnectionReused())
     }
   }

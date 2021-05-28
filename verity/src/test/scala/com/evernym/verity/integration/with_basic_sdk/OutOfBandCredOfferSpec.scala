@@ -1,46 +1,43 @@
 package com.evernym.verity.integration.with_basic_sdk
 
+import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{AcceptRequest, Sent}
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{AcceptRequest, Invitation, Sent}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{HandshakeReuse, HandshakeReuseAccepted, OutOfBandInvitation}
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.ConnectionReused
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.util.Base64Util
+import org.json.JSONObject
 
 
-class PresentProofSpec
+class OutOfBandCredOfferSpec
   extends VerityProviderBaseSpec
-  with SdkProvider {
+    with SdkProvider {
 
   lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val verifierVerityEnv = setupNewVerityEnv()
   lazy val holderVerityEnv = setupNewVerityEnv()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
 
   val issuerHolderConn = "connId1"
-  val verifierHolderConn = "connId2"
+  val oobIssuerHolderConn = "connId2"
 
   var schemaId: SchemaId = _
   var credDefId: CredDefId = _
   var offerCred: OfferCred = _
 
-  var proofReq: RequestPresentation = _
-
   var lastReceivedThread: Option[MsgThread] = None
+  var oobInvitation: Option[OutOfBandInvitation] = None
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     provisionEdgeAgent(issuerSDK)
-    provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)
 
     setupIssuer(issuerSDK)
@@ -48,7 +45,6 @@ class PresentProofSpec
     credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
     establishConnection(issuerHolderConn, issuerSDK, holderSDK)
-    establishConnection(verifierHolderConn, verifierSDK, holderSDK)
   }
 
   "IssuerSDK" - {
@@ -105,49 +101,54 @@ class PresentProofSpec
     }
   }
 
-  "VerifierSDK" - {
-    "sent 'request' (present-proof 1.0) message" - {
+  "IssuerSDK" - {
+    "when created new relationship" - {
       "should be successful" in {
-        val msg = Request("name-age",
-          Option(List(
-            ProofAttribute(
-              None,
-              Option(List("name", "age")),
-              None,
-              None,
-              self_attest_allowed = false)
-          )),
-          None,
-          None
+        val receivedMsg = issuerSDK.sendCreateRelationship(oobIssuerHolderConn)
+        lastReceivedThread = receivedMsg.threadOpt
+      }
+    }
+
+    "sends 'offer' (issue-credential 1.0) via oob invitation" - {
+      "should be successful" in {
+        val offerMsg = Offer(
+          credDefId,
+          Map("name" -> "Alice", "age" -> "20"),
+          by_invitation = Option(true)
         )
-        verifierSDK.sendMsgForConn(verifierHolderConn, msg)
+        issuerSDK.sendMsgForConn(oobIssuerHolderConn, offerMsg)
+        val invitation = issuerSDK.expectMsgOnWebhook[Invitation]().msg
+        val oobValue = invitation.inviteURL.split("\\?oob=").last
+        oobInvitation = Option(JacksonMsgCodec.fromJson[OutOfBandInvitation](new String(Base64Util.getBase64UrlDecoded(oobValue))))
       }
     }
   }
 
   "HolderSDK" - {
-    "when tried to get un viewed messages" - {
-      "should get 'request-presentation' (present-proof 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[RequestPresentation](verifierHolderConn)
-        lastReceivedThread = receivedMsg.threadOpt
-        proofReq = receivedMsg.msg
-      }
-    }
 
-    "when tried to send 'presentation' (present-proof 1.0) message" - {
+    "when try to send 'handshake-reuse' (out-of-band 1.0) message" - {
       "should be successful" in {
-        holderSDK.acceptProofReq(verifierHolderConn, proofReq, Map.empty, lastReceivedThread)
+        val oobInvite = oobInvitation.get
+        val handshakeReuse = HandshakeReuse(MsgThread(pthid = Option(oobInvite.`@id`)))
+        val msgThread = Option(MsgThread(pthid = Option(oobInvite.`@id`)))
+        holderSDK.sendProtoMsgToTheirAgent(issuerHolderConn, handshakeReuse, msgThread)
+        holderSDK.expectMsgFromConn[HandshakeReuseAccepted](issuerHolderConn)
+        val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
+        receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
+        java.lang.Thread.sleep(5000)  //time to get move protocol finish
+      }
+    }
+
+    "when tried to 'request-credential' (issue-credential 1.0) message" - {
+      "should be successful" in {
+        val oobInvite = oobInvitation.get
+        val oobOfferCredAttachment = new String(Base64Util.getBase64Decoded(oobInvite.`request~attach`.head.data.base64))
+        val attachmentJsonObj = new JSONObject(oobOfferCredAttachment)
+        offerCred = JacksonMsgCodec.fromJson[OfferCred](attachmentJsonObj.toString())
+        lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
+        holderSDK.sendCredRequest(issuerHolderConn, credDefId, offerCred, lastReceivedThread)
       }
     }
   }
 
-  "VerifierSDK" - {
-    "should receive 'presentation-result' (present-proof 1.0) message on webhook" in {
-      val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
-      val requestPresentation = receivedMsgParam.msg.requested_presentation
-      requestPresentation.revealed_attrs.size shouldBe 2
-      requestPresentation.unrevealed_attrs.size shouldBe 0
-      requestPresentation.self_attested_attrs.size shouldBe 0
-    }
-  }
 }

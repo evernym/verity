@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.flow
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
@@ -16,7 +16,6 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -32,8 +31,6 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import java.util.UUID

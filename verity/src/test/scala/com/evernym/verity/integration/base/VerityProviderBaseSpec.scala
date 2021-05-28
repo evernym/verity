@@ -53,13 +53,15 @@ trait VerityProviderBaseSpec
     val tmpDir = randomTmpDirPath()
 
     val multiNodeServiceParam = if (nodeCount > 1) {
-      //if more than one node has to be part of the cluster and
-      // we are using 'leveldb' for journal which is not usable by multiple actor system at once
-      // (because of file locking etc)
-      // hence to overcome that we use shared event store
+      //if cluster is being created for more than one node and because we are using 'leveldb'
+      // for journal which is not usable by multiple actor system at the same time (because of file locking etc)
+      // hence to overcome that we need to use "shared event store"
       serviceParam.copy(sharedEventStore = Option(new SharedEventStore(tmpDir)))
     } else serviceParam
+
+    //adding fallback common config (unless overridden) to be needed for multi node testing
     val multiNodeClusterConfig = buildMultiNodeClusterConfig(overriddenConfig)
+
     val appSeed = (0 to 31).map(_ => randomChar()).mkString("")
     val portProfiles = (1 to nodeCount)
       .map( _ => getRandomPortProfile)
@@ -72,9 +74,9 @@ trait VerityProviderBaseSpec
       VerityNode(
         tmpDir,
         appSeed,
-        multiNodeServiceParam,
         portProfile,
         otherNodesArteryPorts,
+        multiNodeServiceParam,
         multiNodeClusterConfig
       )
     }
@@ -98,7 +100,7 @@ trait VerityProviderBaseSpec
   private def getRandomPortProfile: PortProfile = {
     val randomPortProfiles = Stream.continually(PortProfile.random()).take(10)
     val availableProfile = randomPortProfiles find { portProfile ⇒
-      val usedPortProfiles = allVerityEnvs.flatMap(_.nodes).map(_.thisNodePortProfile)
+      val usedPortProfiles = allVerityEnvs.flatMap(_.nodes).map(_.portProfile)
       if (! usedPortProfiles.contains(portProfile)) true else false
     } getOrElse sys.error(s"could not create unused port profile after 10 attempts")
     availableProfile
@@ -156,8 +158,8 @@ case class VerityEnv(seed: String,
     targetNodes.foreach(_.stop())
 
     val nodesToBeChecked = remainingNodes.map { curNode =>
-      val excludeArteryPorts = (targetNodes :+ curNode).map(_.thisNodePortProfile.artery)
-      val otherNodes = remainingNodes.filter { n => ! excludeArteryPorts.contains(n.thisNodePortProfile.artery)}
+      val excludeArteryPorts = (targetNodes :+ curNode).map(_.portProfile.artery)
+      val otherNodes = remainingNodes.filter { n => ! excludeArteryPorts.contains(n.portProfile.artery)}
       val otherNodeStatus: Map[VerityNode, List[MemberStatus]] =
         otherNodes.map(_ -> List(Up)).toMap ++ targetNodes.map(_ -> List(Removed, Down)).toMap
       (curNode, otherNodeStatus)
@@ -175,7 +177,7 @@ case class VerityEnv(seed: String,
   def checkIfNodesAreUp(targetNodes: Seq[VerityNode] = nodes): Boolean = {
     targetNodes.forall { tNode =>
       val otherNodesStatus = nodes
-        .filterNot(_.thisNodePortProfile.http == tNode.thisNodePortProfile.http)
+        .filterNot(_.portProfile.http == tNode.portProfile.http)
         .map(_ -> List(Up)).toMap
       checkIfNodeIsUp(tNode, otherNodesStatus)
     }
@@ -196,7 +198,7 @@ case class VerityEnv(seed: String,
     val cluster = Cluster(node.platform.actorSystem)
     cluster.selfMember.status == Up &&
       otherNodesStatus.forall { case (otherNode, expectedStatus) =>
-        val otherMember = cluster.state.members.find(_.address.toString.contains(otherNode.thisNodePortProfile.artery.toString))
+        val otherMember = cluster.state.members.find(_.address.toString.contains(otherNode.portProfile.artery.toString))
         otherMember match {
           case None if expectedStatus.contains(Down) || expectedStatus.contains(Removed) => true
           case None     => false
@@ -234,9 +236,9 @@ case class VerityEnv(seed: String,
 
 case class VerityNode(tmpDirPath: Path,
                       appSeed: String,
-                      serviceParam: ServiceParam,
-                      thisNodePortProfile: PortProfile,
+                      portProfile: PortProfile,
                       otherNodeArteryPorts: Seq[Int],
+                      serviceParam: ServiceParam,
                       overriddenConfig: Option[Config]) {
 
   var isAvailable: Boolean = false
@@ -295,20 +297,20 @@ case class VerityNode(tmpDirPath: Path,
   }
 
   private def startVerityInstance(serviceParam: ServiceParam): HttpServer = {
-    val httpServer = LocalVerity(tmpDirPath, appSeed, thisNodePortProfile, otherNodeArteryPorts, serviceParam,
+    val httpServer = LocalVerity(tmpDirPath, appSeed, portProfile, otherNodeArteryPorts, serviceParam,
       overriddenConfig=overriddenConfig, bootstrapApp = false)
     httpServer
   }
 
   def bootstrapAgencyAgent(): Unit = {
-    LocalVerity.bootstrapApplication(thisNodePortProfile.http, appSeed)(httpServer.platform.actorSystem)
+    LocalVerity.bootstrapApplication(portProfile.http, appSeed)(httpServer.platform.actorSystem)
   }
 }
 
 case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
   def availableNodeUrls: Seq[String] = {
     _nodes.filter(_.isAvailable).map { np =>
-      s"http://localhost:${np.thisNodePortProfile.http}"
+      s"http://localhost:${np.portProfile.http}"
     }
   }
 }

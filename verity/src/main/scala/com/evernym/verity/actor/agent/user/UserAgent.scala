@@ -390,10 +390,13 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
             case resp: ComMethodUpdatedRespMsg_MFV_0_6 =>
               val jsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(comMethodUpdatedRespMsg, wrapInBundledMsgs = false)
               sendMsgToRegisteredEndpoint(
-                NotifyMsgDetail.withTrackingId("ComMethodUpdated"),
-                PayloadWrapper(
-                  jsonMsg.getBytes,
-                  Option(PayloadMetadata(resp.`@type`, MPF_PLAIN))),
+                NotifyMsgDetail.withTrackingId(
+                  "ComMethodUpdated",
+                  Option(PayloadWrapper(
+                    jsonMsg.getBytes,
+                    Option(PayloadMetadata(resp.`@type`, MPF_PLAIN)))
+                  )
+                ),
                 None
               )
             case _ =>

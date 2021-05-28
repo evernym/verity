@@ -205,15 +205,17 @@ trait MsgStoreAPI { this: UserAgentCommon =>
    * @param umds update msg delivery status
    */
   def updateMsgDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit = {
-    val msgDeliveryStatuses = getMsgDeliveryStatus(umds.uid)
-    val deliveryStatusByDestination = msgDeliveryStatuses.get(umds.to)
-    val existingFailedAttemptCount = deliveryStatusByDestination.map(_.failedAttemptCount).getOrElse(0)
-    val newFailedAttemptCount =
-      if (umds.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode) existingFailedAttemptCount + 1
-      else existingFailedAttemptCount
-    writeAndApply(MsgDeliveryStatusUpdated(umds.uid, umds.to, umds.statusCode,
-      umds.statusDetail.getOrElse(Evt.defaultUnknownValueForStringType),
-      getMillisForCurrentUTCZonedDateTime, newFailedAttemptCount))
+    msgStore.getMsgOpt(umds.uid).foreach { _ =>
+      val msgDeliveryStatuses = getMsgDeliveryStatus(umds.uid)
+      val deliveryStatusByDestination = msgDeliveryStatuses.get(umds.to)
+      val existingFailedAttemptCount = deliveryStatusByDestination.map(_.failedAttemptCount).getOrElse(0)
+      val newFailedAttemptCount =
+        if (umds.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode) existingFailedAttemptCount + 1
+        else existingFailedAttemptCount
+      writeAndApply(MsgDeliveryStatusUpdated(umds.uid, umds.to, umds.statusCode,
+        umds.statusDetail.getOrElse(Evt.defaultUnknownValueForStringType),
+        getMillisForCurrentUTCZonedDateTime, newFailedAttemptCount))
+    }
   }
 }
 

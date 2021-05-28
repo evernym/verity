@@ -69,6 +69,7 @@ case class ProtocolSyncRespMsg(msg: Any, requestMsgId: Option[MsgId]) extends Re
  * interface to send messages (implemented by various traits in MsgNotifier.scala)
  */
 trait SendOutgoingMsg {
+
   /**
    * responsible to send stored message to self's edge agent
    * (for example by using push notification and/or http endpoint etc)

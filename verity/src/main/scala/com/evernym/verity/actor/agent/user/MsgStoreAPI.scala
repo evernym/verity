@@ -54,14 +54,14 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       val getMsgsRespMsg = GetMsgsMsgHelper.buildRespMsg(filteredMsgs)(reqMsgContext.agentMsgContext)
 
       val encParam = EncryptParam(
-        Set(KeyParam(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
+        Set(KeyParam(Left(reqMsgContext.msgSenderVerKeyReq))),
         Option(KeyParam(Left(state.thisAgentVerKeyReq)))
       )
       val logPrefix = "\n  => "
       logger.debug(s"filtered get msgs: $logPrefix" + filteredMsgs.mkString(logPrefix))
       logger.debug("get msgs response: " + getMsgsRespMsg)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg("GetMsgsResp", rp, sndr)
     }
   }
@@ -80,11 +80,11 @@ trait MsgStoreAPI { this: UserAgentCommon =>
     val msgStatusUpdatedRespMsg = UpdateMsgStatusMsgHelper.buildRespMsg(updatedMsgIds,
       ums.statusCode)(reqMsgContext.agentMsgContext)
     val encParam = EncryptParam(
-      Set(KeyParam(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
+      Set(KeyParam(Left(reqMsgContext.msgSenderVerKeyReq))),
       Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
     sendRespMsg("MsgStatusUpdatedResp", rp)
   }
 

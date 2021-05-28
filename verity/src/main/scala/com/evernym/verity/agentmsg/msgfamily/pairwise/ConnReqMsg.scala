@@ -109,8 +109,8 @@ object ConnReqMsgHelper {
                    urlToInviteDetail: String,
                    urlToInviteDetailEncoded: String,
                    sourceId: Option[String]=None)
-                  (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    (respMsgParam.msgPackFormat, respMsgParam.familyVersion) match {
+                  (implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    (agentMsgContext.msgPackFormat, agentMsgContext.familyVersion) match {
       case (MPF_MSG_PACK, MFV_0_5) => List(
         buildMsgCreatedResp_MFV_0_5(`@id`),
         buildInviteDetailMsgResp_MFV_0_5(inviteDetail, urlToInviteDetail, urlToInviteDetailEncoded))

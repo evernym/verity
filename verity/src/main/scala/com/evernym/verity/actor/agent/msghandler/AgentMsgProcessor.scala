@@ -31,7 +31,7 @@ import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.MSG_LIMITS
-import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, UNKNOWN_SENDER_PARTICIPANT_ID}
+import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
@@ -893,27 +893,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   private def buildReqMsgContext(amw: AgentMsgWrapper, rmc: ReqMsgContext): ReqMsgContext = {
-    rmc.append(buildReqContextData(amw))
-    rmc
-  }
-
-  /**
-   * builds request message context data for the incoming message
-   * @param amw agent message wrapper
-   * @return
-   */
-  private def buildReqContextData(amw: AgentMsgWrapper): Map[String, Any] = {
-    import ReqMsgContext._
-
-    val map1 = amw.senderVerKey.map { sk =>
-      Map(LATEST_DECRYPTED_MSG_SENDER_VER_KEY -> sk)
-    }.getOrElse(Map.empty)
-
-    val map2 = Map(
-      MSG_PACK_VERSION -> amw.msgPackFormat,
-      MSG_TYPE_DETAIL -> amw.headAgentMsg.msgFamilyDetail)
-
-    map1 ++ map2
+    rmc.withAgentMsgWrapper(amw)
   }
 
   /**

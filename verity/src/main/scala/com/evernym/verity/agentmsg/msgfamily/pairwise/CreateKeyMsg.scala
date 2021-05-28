@@ -59,8 +59,8 @@ object CreateKeyMsgHelper extends MsgHelper[CreateKeyReqMsg] {
   }
 
   def buildRespMsg(pairwiseDID: DID, pairwiseDIDVerKey: VerKey)
-                  (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+                  (implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildKeyCreatedResp_MFV_0_5(pairwiseDID, pairwiseDIDVerKey))
       case MFV_0_6 => List(buildKeyCreatedResp_MFV_0_6(pairwiseDID, pairwiseDIDVerKey))
       case x => throw new RuntimeException("create agent response builder failed: " + x)

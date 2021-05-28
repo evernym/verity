@@ -59,8 +59,8 @@ object UpdateMsgStatusMsgHelper {
     MsgStatusUpdatedRespMsg_MFV_0_6(MSG_TYPE_DETAIL_MSG_STATUS_UPDATED, uids, statusCode)
   }
 
-  def buildRespMsg(uids: List[String], statusCode: String)(implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+  def buildRespMsg(uids: List[String], statusCode: String)(implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildMsgStatusUpdatedResp_MFV_0_5(uids, statusCode))
       case MFV_0_6 => List(buildMsgStatusUpdatedResp_MFV_0_6(uids, statusCode))
       case x => throw new RuntimeException("update msg status response builder failed: " + x)

@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, MSG_TYPE_UPDATE_MSG_STATUS}
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, GetMsgsReqMsg, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
@@ -34,7 +34,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleGetMsgs", "UserAgentCommon") {
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_GET_MSGS, reqMsgContext.clientIpAddressReq, userId)
+      val resourceName = ResourceUsageUtil.getMessageResourceName(amw.headAgentMsgDetail)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       val gmr = GetMsgsMsgHelper.buildReqMsg(amw)
       logger.debug("get msgs request: " + gmr)
       val allMsgs = msgStore.getMsgs(gmr)
@@ -74,7 +75,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   def handleUpdateMsgStatus(amw: AgentMsgWrapper)
                            (implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_MSG_STATUS, reqMsgContext.clientIpAddressReq, userId)
+    val resourceName = ResourceUsageUtil.getMessageResourceName(amw.headAgentMsgDetail)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val ums = UpdateMsgStatusMsgHelper.buildReqMsg(amw)
     val updatedMsgIds = handleUpdateMsgStatusBase(ums)
     val msgStatusUpdatedRespMsg = UpdateMsgStatusMsgHelper.buildRespMsg(updatedMsgIds,

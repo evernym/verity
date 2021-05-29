@@ -1,0 +1,11 @@
+license-data-check:
+  stage: check
+  image: $CI_REGISTRY/dev/containers/ssh-git:latest
+  script: ./cicd/scripts/license-date-check.sh
+  only:
+    refs:
+      - master
+      - tags
+      - merge_requests
+  tags:
+    - docker-machine

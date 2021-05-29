@@ -18,10 +18,8 @@ import scala.concurrent.Future
 //tests how deletion of events (messages) handled in batches
 class DeleteMsgHandlerSpec
   extends BasicSpec
-    with ActorSpec
-    with WithAdditionalLogs {
+    with ActorSpec {
 
-  override def toLevel: Level = Level.INFO
   lazy val mockActor: ActorRef = system.actorOf(MockPersistentActor.props(appConfig))
 
   "PersistentActor" - {
@@ -49,6 +47,7 @@ class DeleteMsgHandlerSpec
       """
          akka.loglevel = INFO
          akka.test.filter-leeway = 20s   # to make the event filter run for longer time
+         akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
         """
     }.withFallback(configForDeleteEventFailure)
   }

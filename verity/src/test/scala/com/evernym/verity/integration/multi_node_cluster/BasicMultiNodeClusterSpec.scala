@@ -20,7 +20,7 @@ class BasicMultiNodeClusterSpec
 
       "when checked if all nodes are up" - {
         "should be successful" in {
-          eventually(timeout(Span(20, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(20, Seconds)), interval(Span(1, Seconds))) {
             verityEnv.checkIfNodesAreUp() shouldBe true
             verityEnv.availableNodes.size shouldBe 3
           }

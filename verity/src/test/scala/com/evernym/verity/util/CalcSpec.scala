@@ -52,17 +52,19 @@ class CalcSpec extends BasicSpec with Inspectors {
       Calc.atleast(100,10) shouldBe
         BigDecimal("0.9999999999999999983389755102731735583619969419502127581152878") +- tinyTolerance
 
-      //probability that at least 300 heads out of 1000 coin tosses:
-      Calc.atleast(1000,300) shouldBe
-        BigDecimal("0.9999999999999999999999999999999998231661826631705794575100489") +- tinyTolerance
-
-      //probability that at least 350 heads out of 1000 coin tosses:
-      Calc.atleast(1000,350) shouldBe
-        BigDecimal("0.9999999999999999999995678518467394020705494985503602244048159") +- tinyTolerance
-
-      //probability that at least 400 heads out of 1000 coin tosses:
-      Calc.atleast(1000,400) shouldBe
-        BigDecimal("0.9999999999099158729371964177080493295909200883971555206120766") +- tinyTolerance
+      //These tests take 10+ seconds and we don't currently use this funciton. We can turn these back-on when
+      //we use this function.
+//      //probability that at least 300 heads out of 1000 coin tosses:
+//      Calc.atleast(1000,300) shouldBe
+//        BigDecimal("0.9999999999999999999999999999999998231661826631705794575100489") +- tinyTolerance
+//
+//      //probability that at least 350 heads out of 1000 coin tosses:
+//      Calc.atleast(1000,350) shouldBe
+//        BigDecimal("0.9999999999999999999995678518467394020705494985503602244048159") +- tinyTolerance
+//
+//      //probability that at least 400 heads out of 1000 coin tosses:
+//      Calc.atleast(1000,400) shouldBe
+//        BigDecimal("0.9999999999099158729371964177080493295909200883971555206120766") +- tinyTolerance
 
     }
   }

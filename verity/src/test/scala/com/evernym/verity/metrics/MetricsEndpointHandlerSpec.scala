@@ -146,7 +146,7 @@ class TestEndpointHandler extends EndpointHandlerBase {
   override def processPackedMsg(pmw: PackedMsgWrapper): Future[Any] = {
     Future {
       if (throwsException) {
-        new RuntimeException("Testing Exception")
+        new RuntimeException("purposefully throwing exception 'Testing Exception'")
       } else {
         PackedMsg(Array[Byte]())
       }

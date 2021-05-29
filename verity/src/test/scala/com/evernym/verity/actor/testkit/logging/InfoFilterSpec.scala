@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.testkit.custom_logging_filter
+package com.evernym.verity.actor.testkit.logging
 
 import akka.actor.ActorRef
 import akka.event.Logging._
@@ -10,7 +10,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
 
-class CustomErrorLoggingFilterSpec
+class InfoFilterSpec
   extends ActorSpec
     with BasicSpec
     with ImplicitSender
@@ -18,7 +18,7 @@ class CustomErrorLoggingFilterSpec
 
   lazy val actor: ActorRef = system.actorOf(MockLoggerActor.props)
 
-  "With akka log level set as ERROR" - {
+  "With akka log level set as INFO" - {
 
     "when tried to log message at DEBUG level" - {
       "should NOT be able to caught by EventFilter" in {
@@ -33,10 +33,10 @@ class CustomErrorLoggingFilterSpec
     }
 
     "when tried to log message at INFO level" - {
-      "should NOT be able to caught by EventFilter" in {
+      "should be able to caught by EventFilter" in {
         val logMsgCmd = LogMsg("info level test", InfoLevel)
         EventFilter.info(pattern = s"$SCALA_LOGGER_MSG_PREFIX${logMsgCmd.msg}", occurrences = 0) intercept {
-          EventFilter.info(pattern = s"${logMsgCmd.msg}", occurrences = 0) intercept {
+          EventFilter.info(pattern = s"${logMsgCmd.msg}", occurrences = 1) intercept {
             actor ! logMsgCmd
             expectMsg(Done)
           }
@@ -45,10 +45,10 @@ class CustomErrorLoggingFilterSpec
     }
 
     "when tried to log message at WARNING level" - {
-      "should NOT be able to caught by EventFilter" in {
+      "should be able to caught by EventFilter" in {
         val logMsgCmd = LogMsg("warning level test", WarningLevel)
         EventFilter.warning(pattern = s"$SCALA_LOGGER_MSG_PREFIX${logMsgCmd.msg}", occurrences = 0) intercept {
-          EventFilter.warning(pattern = s"${logMsgCmd.msg}", occurrences = 0) intercept {
+          EventFilter.warning(pattern = s"${logMsgCmd.msg}", occurrences = 1) intercept {
             actor ! logMsgCmd
             expectMsg(Done)
           }
@@ -73,8 +73,8 @@ class CustomErrorLoggingFilterSpec
     ConfigFactory.parseString {
       """
         |akka.test.filter-leeway = 10s   # to make the event filter run for little longer time
-        |akka.loglevel = ERROR
-        |akka.logging-filter = "com.evernym.verity.actor.testkit.custom_logging_filter.CustomLoggingFilter"
+        |akka.loglevel = INFO
+        |akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
         |""".stripMargin
     }
   }

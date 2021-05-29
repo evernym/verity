@@ -29,11 +29,9 @@ class FailedMsgRetrierSpec
   extends ActorSpec
     with BasicSpec
     with ShardUtil
-    with WithAdditionalLogs
     with Eventually
     with BeforeAndAfterAll {
 
-  override def toLevel: Level = Level.DEBUG
   lazy val mockAgentRegion: ActorRef = createPersistentRegion(MockAgentActor.name, MockAgentActor.props(appConfig))
 
   override def beforeAll(): Unit = {
@@ -121,6 +119,7 @@ class FailedMsgRetrierSpec
 
          akka.loglevel = DEBUG
          akka.test.filter-leeway = 20s   # to make the event filter run for longer time
+         akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
       """
     )
   }

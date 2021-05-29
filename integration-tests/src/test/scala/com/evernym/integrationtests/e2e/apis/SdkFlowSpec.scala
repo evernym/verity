@@ -17,7 +17,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
@@ -35,6 +35,7 @@ class SdkFlowSpec
   with SetupFlow
   with AdminFlow
   with MetricsFlow
+  with CancelGloballyAfterFailure
   with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)

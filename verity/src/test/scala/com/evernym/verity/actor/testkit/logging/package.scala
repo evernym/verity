@@ -7,7 +7,7 @@ import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
-package object custom_logging_filter {
+package object logging {
 
   val SCALA_LOGGER_MSG_PREFIX = "FROM SCALA LOGGER: "
 

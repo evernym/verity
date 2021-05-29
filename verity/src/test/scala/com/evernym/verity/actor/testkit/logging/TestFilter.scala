@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.testkit.custom_logging_filter
+package com.evernym.verity.actor.testkit.logging
 
 import akka.actor.ActorSystem
 import akka.event.Logging._
@@ -10,12 +10,12 @@ import akka.event.{EventStream, LoggingFilterWithMarker}
  * the logging backend's (logback etc) log level which may print some other
  * unnecessary logs and may clutter console
  *
- * see 'CustomLoggingFilterSpec' how it can be used
+ * see spec for how it can be used
  *
  * @param settings
  * @param eventStream
  */
-class CustomLoggingFilter(settings: ActorSystem.Settings, eventStream: EventStream)
+class TestFilter(settings: ActorSystem.Settings, eventStream: EventStream)
   extends LoggingFilterWithMarker {
 
   override def isErrorEnabled(logClass: Class[_], logSource: String): Boolean =

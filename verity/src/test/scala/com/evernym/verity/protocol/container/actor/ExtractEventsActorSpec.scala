@@ -19,8 +19,7 @@ import scala.language.postfixOps
 
 
 class ExtractEventsActorSpec
-  extends BaseProtocolActorSpec
-    with WithAdditionalLogs {
+  extends BaseProtocolActorSpec {
 
     val credDefId = "1"
     val credValue = Map("name" -> "Alice")
@@ -122,7 +121,11 @@ class ExtractEventsActorSpec
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory.parseString {
-      "akka.loglevel = DEBUG"
+      """
+        |akka.loglevel = DEBUG
+        |akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
+      |""".stripMargin
+
     }
   }
 }

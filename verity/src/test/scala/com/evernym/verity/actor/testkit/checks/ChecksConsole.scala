@@ -63,6 +63,8 @@ class ConsoleChecker extends Checker {
   override def teardown(i: Inspectors): Unit = {
     i.out.reset()
     i.err.reset()
+    System.setOut(i.existingOut)
+    System.setErr(i.existingErr)
   }
 
   def removeColorCodes(str: String): String = str.replaceAll("\u001B\\[[;\\d]*m", "")

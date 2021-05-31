@@ -23,7 +23,7 @@ trait NonActorClientWalletAPISpec
 
   def waitForAllResponses(): Unit = {
     //wait until all user wallet setup is completed
-    eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
+    eventually(timeout(Span(10, Minutes)), interval(Span(30, Seconds))) {
       totalRespCount shouldBe totalUsers
     }
     failedResp shouldBe 0

@@ -12,14 +12,14 @@ import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Bas
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, _}
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.StatusReport
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.StatusReport
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyAndTheirDid, PostInteractionStarted}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
@@ -29,9 +29,10 @@ import scala.util.{Failure, Success, Try}
 //protocol document:
 // https://github.com/hyperledger/aries-rfcs/blob/527849e/features/0036-issue-credential/README.md
 
-class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role, Msg, Event, State, String])
-  extends Protocol[IssueCredential, Role, Msg, Event, State, String](IssueCredentialProtoDef)
-    with ProtocolHelpers[IssueCredential, Role, Msg, Event, State, String] {
+class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, State, String])
+  extends Protocol[IssueCredential, Role, ProtoMsg, Event, State, String](IssueCredentialProtoDef)
+    with ProtocolHelpers[IssueCredential, Role, ProtoMsg, Event, State, String] {
+
   import IssueCredential._
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
@@ -45,26 +46,20 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 
     case (st: State                                           , _, _: Ctl.Status         ) => handleStatus(st)
     case (st: State.PostInteractionStarted                    , _, m: Ctl.Reject         ) => handleReject(m, st)
-    case (st: State                                           , _, m: Ctl                ) =>
-      ctx.signal(SignalMsg.buildProblemReport(
-        s"Unexpected '${IssueCredMsgFamily.msgType(m.getClass).msgName}' message in current state '${st.status}",
-        unexpectedMessage
-      ))
+    case (st: State                                           , _, m: CtlMsg             ) => invalidControlState(st, m)
   }
 
-  override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
+  override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
     case (_: State.Initialized,   _, m: ProposeCred)   => handleProposeCredReceived(m, ctx.getInFlight.sender.id_!)
-
-    case (_ @ (_: State.Initialized | _: State.ProposalSent),
+    case (_ @ (_: State.Initialized |
+               _: State.ProposalSent),
                                   _, m: OfferCred)     => handleOfferCredReceived(m, ctx.getInFlight.sender.id_!)
-
     case (st: State.OfferSent,    _, m: RequestCred)   => handleRequestCredReceived(m, st, ctx.getInFlight.sender.id_!)
-
     case (_: State.RequestSent,   _, m: IssueCred)     => handleIssueCredReceived(m)
+    case (_: State.CredSent,      _, m: Ack)           => handleAck(m)
 
     case (st: State,              _, m: ProblemReport) => handleProblemReport(m, st)
-
-    case (_: State.CredSent, _, m: Ack)           => handleAck(m)
+    case (_: State,               _, m: ProtoMsg)      => invalidMessageState(m)
   }
 
   def handleInit(m: Ctl.Init): Unit = {
@@ -81,24 +76,24 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val proposedCred = ProposeCred(m.cred_def_id, buildCredPreview(m.credential_values).toOption, Option(credProposed.comment))
     ctx.apply(ProposalSent(ctx.getInFlight.sender.id_!, Option(credProposed)))
     ctx.send(proposedCred)
-    ctx.signal(SignalMsg.Sent(proposedCred))
+    ctx.signal(Sig.Sent(proposedCred))
   }
 
   def sendInvite(offer: OfferCred, s: State.Initialized): Unit = {
     buildOobInvite(offer, s) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
-          case Success(us: UrlShortened) => ctx.signal(SignalMsg.Invitation(invite.inviteURL, Option(us.shortUrl), invite.invitationId))
+          case Success(us: UrlShortened) => ctx.signal(Sig.Invitation(invite.inviteURL, Option(us.shortUrl), invite.invitationId))
           case Success(usf: UrlShorteningFailed) =>
-            ctx.signal(SignalMsg.buildProblemReport(usf.errorMsg, usf.errorCode))
+            ctx.signal(Sig.buildProblemReport(usf.errorMsg, usf.errorCode))
             ctx.apply(ProblemReportReceived("Shortening failed"))
           case _ =>
-            ctx.signal(SignalMsg.buildProblemReport("Shortening failed", shorteningFailed))
+            ctx.signal(Sig.buildProblemReport("Shortening failed", shorteningFailed))
             ctx.apply(ProblemReportReceived("Shortening failed"))
         }
       case Failure(e) =>
         ctx.logger.warn(s"Unable to create out-of-band invitation -- ${e.getMessage}")
-        SignalMsg.buildProblemReport(
+        Sig.buildProblemReport(
           "unable to create out-of-band invitation",
           credentialOfferCreation
         )
@@ -111,12 +106,12 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         ctx.apply(event)
         if(!m.by_invitation.getOrElse(false)) {
           ctx.send(offer)
-          ctx.signal(SignalMsg.Sent(offer))
+          ctx.signal(Sig.Sent(offer))
         }
         else sendInvite(offer, s)
       case Failure(_) =>
         ctx.signal(
-          SignalMsg.buildProblemReport(
+          Sig.buildProblemReport(
             "unable to create credential offer",
             credentialOfferCreation
           )
@@ -129,10 +124,10 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       case Success((event, offer)) =>
         ctx.apply(event)
         ctx.send(offer)
-        ctx.signal(SignalMsg.Sent(offer))
+        ctx.signal(Sig.Sent(offer))
       case Failure(_) =>
         ctx.signal(
-          SignalMsg.buildProblemReport(
+          Sig.buildProblemReport(
             "unable to create credential offer",
             credentialOfferCreation
           )
@@ -146,14 +141,14 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
       case Success(GetCredDefResp(_, Some(cdj))) => sendCredRequest(m, st, DefaultMsgCodec.toJson(cdj))
 
       case Success(GetCredDefResp(_, None)) =>
-        ctx.signal(SignalMsg.buildProblemReport(
+        ctx.signal(Sig.buildProblemReport(
           "cred def not found on ledger",
           ledgerAssetsUnavailable
         ))
 
       case Failure(_)   =>
         ctx.signal(
-          SignalMsg.buildProblemReport(
+          Sig.buildProblemReport(
             s"unable to retrieve cred def from ledger (CredDefId: ${m.cred_def_id})",
             ledgerAssetsUnavailable
           )
@@ -173,10 +168,10 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         ctx.apply(RequestSent(ctx.getInFlight.sender.id_!, Option(credRequested)))
         val rc = RequestCred(Vector(attachment), Option(credRequested.comment))
         ctx.send(rc)
-        ctx.signal(SignalMsg.Sent(rc))
+        ctx.signal(Sig.Sent(rc))
       case Failure(_) =>
         ctx.signal(
-          SignalMsg.buildProblemReport(
+          Sig.buildProblemReport(
             "unable to create credential request",
             credentialRequestCreation
           )
@@ -210,11 +205,11 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
         ctx.apply(IssueCredSent(Option(credIssued)))
         val issueCred = IssueCred(Vector(attachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
         ctx.send(issueCred)
-        ctx.signal(SignalMsg.Sent(issueCred))
+        ctx.signal(Sig.Sent(issueCred))
       case Failure(_) =>
         //TODO: need to finalize error message based on different expected exception
         ctx.signal(
-          SignalMsg.buildProblemReport(
+          Sig.buildProblemReport(
             "cred issuance failed",
             credentialRequestCreation
           )
@@ -231,11 +226,11 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
   def handleProblemReport(m: ProblemReport, st: State): Unit = {
     val reason = m.resolveDescription
     ctx.apply(ProblemReportReceived(reason))
-    ctx.signal(SignalMsg.buildProblemReport(reason, m.tryDescription().code))
+    ctx.signal(Sig.buildProblemReport(reason, m.tryDescription().code))
   }
 
   def handleAck(m: Ack): Unit = {
-    ctx.signal(SignalMsg.Ack(m.status))
+    ctx.signal(Sig.Ack(m.status))
   }
 
   def handleStatus(st: State): Unit = {
@@ -246,7 +241,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val credPreview = m.credential_proposal.map(buildEventCredPreview)
     val proposal = CredProposed(m.cred_def_id, credPreview, commentReq(m.comment))
     ctx.apply(ProposalReceived(senderId, Option(proposal)))
-    ctx.signal(SignalMsg.AcceptProposal(m))
+    ctx.signal(Sig.AcceptProposal(m))
   }
 
   def handleOfferCredReceived(m: OfferCred, senderId: String): Unit = {
@@ -254,7 +249,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     val attachmentObject = m.`offers~attach`.map(toAttachmentObject)
     val offer = CredOffered(Option(credPreviewObject), attachmentObject, commentReq(m.comment), m.price)
     ctx.apply(OfferReceived(senderId, Option(offer)))
-    ctx.signal(SignalMsg.AcceptOffer(m))
+    ctx.signal(Sig.AcceptOffer(m))
   }
 
   def handleRequestCredReceived(m: RequestCred, st: State.OfferSent, senderId: String): Unit = {
@@ -263,7 +258,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     if (st.autoIssue) {
       doIssueCredential(st.credOffer, buildRequestCred(Option(req)))
     } else {
-      ctx.signal(SignalMsg.AcceptRequest(m))
+      ctx.signal(Sig.AcceptRequest(m))
     }
   }
 
@@ -273,7 +268,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     // as we are not sure yet if that is the right way to proceed or we want it to
     // store it in persistent store and make it available to the state for further uses
     ctx.apply(IssueCredReceived(Option(cred)))
-    ctx.signal(SignalMsg.Received(m))
+    ctx.signal(Sig.Received(m))
     if (m.`~please_ack`.isDefined) {
       ctx.send(Ack("OK"))
     }
@@ -468,6 +463,27 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
 case class EncodedCredAttribute(raw: String, encoded: String)
 
 object IssueCredential {
+
+  type IssueCredContext = ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, State, String]
+
+  def invalidMessageState(invalidMsg: ProtoMsg)
+                         (implicit ctx: IssueCredContext): Unit = {
+    val msgName: String = invalidMsg.getClass.getSimpleName
+    val errorMsg = s"Invalid '$msgName' message in current state"
+    ctx.send(
+      Msg.buildProblemReport(errorMsg, invalidMessageStateError)
+    )
+  }
+
+  def invalidControlState(curState: State, invalidMsg: CtlMsg)
+                         (implicit ctx: IssueCredContext): Unit = {
+    val msgName: String = IssueCredMsgFamily.msgType(invalidMsg.getClass).msgName
+    val stateName: String = curState.getClass.getSimpleName
+    val errorMsg = s"Unexpected '$msgName' message in current state '$stateName"
+    ctx.signal(
+      Sig.buildProblemReport(errorMsg, unexpectedMessage)
+    )
+  }
 
   def toAttachmentObject(a: AttachmentDescriptor): AttachmentObject = {
     AttachmentObject(a.`@id`.getOrElse(""), a.`mime-type`.getOrElse(""), a.data.base64)

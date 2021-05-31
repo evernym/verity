@@ -4,7 +4,6 @@ import akka.testkit.EventFilter
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.base.{Done, Ping}
 import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoveryActorSpec, PersistenceIdParam}
-import com.evernym.verity.actor.testkit.WithAdditionalLogs
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.CredSentState
 import com.typesafe.config.{Config, ConfigFactory}
 

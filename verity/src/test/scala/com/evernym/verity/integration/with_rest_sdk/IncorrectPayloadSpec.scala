@@ -17,11 +17,11 @@ class IncorrectPayloadSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv(overriddenConfig = VAS_OVERRIDE_CONFIG)
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().withOverriddenConfig(VAS_OVERRIDE_CONFIG).build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   val issuerHolderConn = "connId1"
   var schemaId: SchemaId = _
@@ -59,12 +59,11 @@ class IncorrectPayloadSpec
     }
   }
 
-  val VAS_OVERRIDE_CONFIG: Option[Config] = Option {
+  val VAS_OVERRIDE_CONFIG: Config =
     ConfigFactory.parseString(
       """
        verity.rest-api.enabled = true
       """.stripMargin
     )
-  }
 }
 

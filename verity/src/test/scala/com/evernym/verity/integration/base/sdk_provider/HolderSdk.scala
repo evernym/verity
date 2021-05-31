@@ -19,8 +19,8 @@ import com.evernym.verity.protocol.engine.{DID, DIDDoc, MsgFamily, MsgId, Thread
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.{ConnRequest, ConnResponse, Connection}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{CredRequested, IssueCredential}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{CredRequested, IssueCredential}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, AvailableCredentials}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.{Presentation, RequestPresentation}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.{credentialsToUse, extractAttachment}
@@ -39,8 +39,9 @@ import scala.util.{Failure, Success, Try}
  * contains helper methods for holder sdk side of the operations
  *
  * @param param sdk parameters
+ * @param ledgerTxnExecutor ledger txn executor
  */
-case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) extends SdkBase(param) {
+case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecutor]) extends SdkBase(param) {
 
   def provisionVerityCloudAgent(): AgentCreated = {
     val reqKeys = RequesterKeys(localAgentDidPair.DID, localAgentDidPair.verKey)
@@ -186,12 +187,6 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
     }
   }
 
-  private def getCredDefJson(credDefId: String): String = {
-    val credDefResp = awaitLedgerReq(ledgerTxnExecutor.getCredDef(Submitter(), credDefId))
-    DefaultMsgCodec.toJson(credDefResp.credDef.get)
-  }
-
-
   private def createCredRequest(connId: String,
                                 credDefId: String,
                                 credDefJson: String,
@@ -214,8 +209,13 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
     }
   }
 
+  private def getCredDefJson(credDefId: String): String = {
+    val credDefResp = awaitLedgerReq(getCredDefFromLedger(Submitter(), credDefId))
+    DefaultMsgCodec.toJson(credDefResp.credDef.get)
+  }
+
   private def doSchemaRetrieval(ids: Set[String]): String = {
-    val schemas = ids.map(id => (id, awaitLedgerReq[GetSchemaResp](ledgerTxnExecutor.getSchema(Submitter(), id))))
+    val schemas = ids.map(id => (id, awaitLedgerReq(getSchemaFromLedger(Submitter(), id))))
     schemas.map { case (id, getSchemaResp) =>
       val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
       s""""$id": $schemaJson"""
@@ -224,12 +224,25 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
 
 
   private def doCredDefRetrieval(credDefIds: Set[String]): String = {
-
-    val credDefs = credDefIds.map(id => (id, awaitLedgerReq[GetCredDefResp](ledgerTxnExecutor.getCredDef(Submitter(), id))))
+    val credDefs = credDefIds.map(id => (id, awaitLedgerReq(getCredDefFromLedger(Submitter(), id))))
     credDefs.map { case (id, getCredDefResp) =>
       val credDefJson = DefaultMsgCodec.toJson(getCredDefResp.credDef)
       s""""$id": $credDefJson"""
     }.mkString("{", ",", "}")
+  }
+
+  private def getCredDefFromLedger(submitter: Submitter, id: String): Future[GetCredDefResp] = {
+    ledgerTxnExecutor match {
+      case Some(lte)  => lte.getCredDef(submitter, id)
+      case None       => ???
+    }
+  }
+
+  private def getSchemaFromLedger(submitter: Submitter, id: String): Future[GetSchemaResp] = {
+    ledgerTxnExecutor match {
+      case Some(lte)  => lte.getSchema(submitter, id)
+      case None       => ???
+    }
   }
 
   //----------------------
@@ -317,7 +330,8 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: LedgerTxnExecutor) exte
       case None if tryCount < 5 =>
         Thread.sleep(tryCount*1000)
         expectMsgFromConn(connId, msgTypeStr, excludePayload, statusCodes, tryCount+1)
-      case None => throw new RuntimeException("expected message not found: ")
+      case None =>
+        throw new RuntimeException("expected message not found: " + msgTypeStr)
     }
   }
 

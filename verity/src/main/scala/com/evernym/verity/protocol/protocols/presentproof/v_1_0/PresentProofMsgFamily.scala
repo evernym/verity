@@ -144,12 +144,12 @@ package object Sig {
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
   case class StatusReport(status: String, results: Option[PresentationResult], error: Option[Problem])
 
-  def proofRequestToReviewRequest(requestStr: String, canFulfill: Boolean) = {
+  def proofRequestToReviewRequest(requestStr: String, canFulfill: Boolean): ReviewRequest = {
     val req = DefaultMsgCodec.fromJson[ProofRequest](requestStr)
     ReviewRequest(req, canFulfill)
   }
 
-  def buildProblemReport(description: String, code: String): Sig.ProblemReport = {
+  def buildProblemReport(description: String, code: String): ProblemReport = {
     Sig.ProblemReport(
       ProblemDescription(
         Some(description),

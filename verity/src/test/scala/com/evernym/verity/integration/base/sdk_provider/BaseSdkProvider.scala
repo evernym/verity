@@ -29,7 +29,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.integration.base.{VerityEnv, VerityEnvUrlProvider}
+import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
@@ -53,7 +53,7 @@ trait SdkProvider {
     IssuerRestSDK(buildSdkParam(verityEnv))
   def setupVerifierSdk(verityEnv: VerityEnv): VerifierSdk =
     VerifierSdk(buildSdkParam(verityEnv))
-  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
+  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
@@ -72,17 +72,17 @@ trait SdkProvider {
     holderSDK.provisionVerityCloudAgent()
   }
 
-  def establishConnection(connId: String, issuerSDK: VeritySdkBase, holderSDK: HolderSdk): Unit = {
-    val receivedMsg = issuerSDK.sendCreateRelationship(connId)
+  def establishConnection(connId: String, inviterSDK: VeritySdkBase, inviteeSDK: HolderSdk): Unit = {
+    val receivedMsg = inviterSDK.sendCreateRelationship(connId)
     val lastReceivedThread = receivedMsg.threadOpt
-    val invitation = issuerSDK.sendCreateConnectionInvitation(connId, lastReceivedThread)
+    val invitation = inviterSDK.sendCreateConnectionInvitation(connId, lastReceivedThread)
 
-    holderSDK.sendCreateNewKey(connId)
-    holderSDK.sendConnReqForInvitation(connId, invitation)
+    inviteeSDK.sendCreateNewKey(connId)
+    inviteeSDK.sendConnReqForInvitation(connId, invitation)
 
-    issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
-    issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
-    issuerSDK.expectMsgOnWebhook[Complete]()
+    inviterSDK.expectMsgOnWebhook[ConnReqReceived]()
+    inviterSDK.expectMsgOnWebhook[ConnResponseSent]()
+    inviterSDK.expectMsgOnWebhook[Complete]()
   }
 
   def setupIssuer(issuerSDK: VeritySdkBase): Unit = {
@@ -293,18 +293,39 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
   def theirServiceEndpoint: ServiceEndpoint = theirDIDDocReq.endpoint
 
   def withProvisionalTheirDidDoc(invitation: Invitation): PairwiseRel = {
-    val ciValue = invitation.ciValueDecoded.getOrElse(throw new RuntimeException("invalid url: " + invitation.inviteURL))
-    val ciJson = new JSONObject(ciValue)
-    val theirVerKey = ciJson.getJSONArray("recipientKeys").toList.asScala.head.toString
-    val theirRoutingKeys = ciJson.getJSONArray("routingKeys").toList.asScala.map(_.toString).toVector
-    val theirServiceEndpoint = ciJson.getString("serviceEndpoint")
+    val theirServiceDetail = extractTheirServiceDetail(invitation.inviteURL).getOrElse(
+      throw new RuntimeException("invalid url: " + invitation.inviteURL)
+    )
     val didDoc = DIDDoc(
-      theirVerKey,
-      theirVerKey,
-      theirServiceEndpoint,
-      theirRoutingKeys
+      theirServiceDetail.verKey,    //TODO: come back to this if assigning ver key as id starts causing issues
+      theirServiceDetail.verKey,
+      theirServiceDetail.serviceEndpoint,
+      theirServiceDetail.routingKeys
     )
     copy(theirDIDDoc = Option(didDoc))
+  }
+
+  def extractTheirServiceDetail(inviteURL: String): Option[TheirServiceDetail] = {
+    if (inviteURL.contains("c_i=")) {
+      inviteURL.split("c_i=").lastOption.map { ciVal =>
+        val ciValue = Base64Util.urlDecodeToStr(ciVal)
+        val ciJson = new JSONObject(ciValue)
+        val theirVerKey = ciJson.getJSONArray("recipientKeys").toList.asScala.head.toString
+        val theirRoutingKeys = ciJson.getJSONArray("routingKeys").toList.asScala.map(_.toString).toVector
+        val theirServiceEndpoint = ciJson.getString("serviceEndpoint")
+        TheirServiceDetail(theirVerKey, theirRoutingKeys, theirServiceEndpoint)
+      }
+    } else if (inviteURL.contains("oob=")) {
+      inviteURL.split("\\?oob=").lastOption.map { oobVal =>
+        val oobValue = new String(Base64Util.getBase64UrlDecoded(oobVal))
+        val oobJson = new JSONObject(oobValue)
+        val service = new JSONObject(oobJson.getJSONArray("service").asScala.head.toString)
+        val theirVerKey = service.getJSONArray("recipientKeys").toList.asScala.head.toString
+        val theirRoutingKeys = service.getJSONArray("routingKeys").toList.asScala.map(_.toString).toVector
+        val theirServiceEndpoint = service.getString("serviceEndpoint")
+        TheirServiceDetail(theirVerKey, theirRoutingKeys, theirServiceEndpoint)
+      }
+    } else None
   }
 
   def withFinalTheirDidDoc(connResp: ConnResponse): PairwiseRel = {
@@ -415,6 +436,8 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     val threadJSON = new JSONObject()
     thread.thid.foreach(threadJSON.put("thid", _))
     thread.pthid.foreach(threadJSON.put("pthid", _))
+    //TODO: not adding 'sender_order' and 'received_orders' for now
+    // can do it when need arises
     coreJson.put("~thread", threadJSON).toString
   }
 
@@ -475,3 +498,5 @@ object MsgFamilyHelper {
     protoDefOpt.map(_.msgFamily)
   }
 }
+
+case class TheirServiceDetail(verKey: VerKey, routingKeys: Vector[VerKey], serviceEndpoint: ServiceEndpoint)

@@ -1,28 +1,14 @@
-package com.evernym.verity.integration.base.verity_provider
+package com.evernym.verity.integration.base.verity_provider.node.local
 
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import com.evernym.verity.config.CommonConfig.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
-import com.evernym.verity.integration.base.SharedEventStore
+import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
 import java.nio.file.Path
-import java.util.UUID
-import scala.util.Random
 
-
-object PortProfile {
-  def random(): PortProfile = {
-    val random = new Random(UUID.randomUUID().toString.hashCode)
-    val httpPort = 9000 + random.nextInt(900) + random.nextInt(90) + random.nextInt(9)
-    val arteryPort = 2000 + random.nextInt(900)  + random.nextInt(90) + random.nextInt(9)
-    val akkaMgmtPort = 8000 + random.nextInt(900)  + random.nextInt(90) + random.nextInt(9)
-    PortProfile(httpPort, arteryPort, akkaMgmtPort)
-  }
-}
-case class PortProfile(http: Int, artery: Int, akka_management: Int)
-
-object LocalVerityConfig {
+object VerityLocalConfig {
 
   val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552)
 
@@ -47,7 +33,7 @@ object LocalVerityConfig {
          |verity.endpoint.port = ${ports.http}
          |akka.remote.artery.canonical.hostname = ${InetAddress.getLocalHost.getHostAddress}
          |akka.remote.artery.canonical.port = ${ports.artery}
-         |akka.management.http.port = ${ports.akka_management}
+         |akka.management.http.port = ${ports.akkaManagement}
       """.stripMargin +
         "akka.cluster.seed-nodes = [" + "\n" +
           (ports.artery +: otherNodeArteryPorts).sorted.map { port =>
@@ -61,6 +47,8 @@ object LocalVerityConfig {
   private def useLevelDBPersistence(tempDir: Path, sharedEventStore: Option[SharedEventStore]=None): Config = {
     sharedEventStore match {
       case Some(ses) =>
+        //TODO: we have to turn on java serialization for internal persistent messages to be sent to remote
+        // shared event store (may come back to this to see if it can be fixed in different way)
         ConfigFactory.parseString(s"""
          |akka.actor.allow-java-serialization = on
          |akka.extensions = ["akka.persistence.Persistence"]
@@ -159,12 +147,12 @@ object LocalVerityConfig {
     )
   }
 
-  def standard(tempDir: Path,
-               port: PortProfile,
-               otherNodeArteryPorts: Seq[Int] = Seq.empty,
-               taaEnabled: Boolean = true,
-               taaAutoAccept: Boolean = true,
-               sharedEventStore: Option[SharedEventStore]=None): Config = {
+  def customOnly(tempDir: Path,
+                 port: PortProfile,
+                 otherNodeArteryPorts: Seq[Int] = Seq.empty,
+                 taaEnabled: Boolean = true,
+                 taaAutoAccept: Boolean = true,
+                 sharedEventStore: Option[SharedEventStore]=None): Config = {
     val parts = Seq(
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
@@ -174,11 +162,27 @@ object LocalVerityConfig {
       messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),
       akkaConfig(),
-      identityUrlShortener(),
-      ConfigFactory.load()
+      identityUrlShortener()
     )
-    val t = parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())
-    t
+
+    parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())
+  }
+
+  def standard(tempDir: Path,
+               port: PortProfile,
+               otherNodeArteryPorts: Seq[Int] = Seq.empty,
+               taaEnabled: Boolean = true,
+               taaAutoAccept: Boolean = true,
+               sharedEventStore: Option[SharedEventStore]=None): Config = {
+    val customConfig = customOnly(
+      tempDir,
+      port,
+      otherNodeArteryPorts,
+      taaEnabled,
+      taaAutoAccept,
+      sharedEventStore
+    )
+    customConfig.withFallback(ConfigFactory.load())
   }
 
 }

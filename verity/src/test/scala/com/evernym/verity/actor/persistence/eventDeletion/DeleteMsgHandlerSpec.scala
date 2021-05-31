@@ -7,7 +7,7 @@ import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.{ActorMessage, ItemUpdated, TestJournal}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic, WithAdditionalLogs}
+import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TimeZoneUtil.{getCurrentUTCZonedDateTime, getMillisFromZonedDateTime}

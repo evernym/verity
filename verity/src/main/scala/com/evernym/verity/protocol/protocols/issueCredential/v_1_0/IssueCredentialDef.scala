@@ -7,11 +7,11 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
 
 
-object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role, Msg, Event, State, String] {
+object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role, ProtoMsg, Event, State, String] {
   override val msgFamily: MsgFamily = IssueCredMsgFamily
 
-  override def create(context: ProtocolContextApi[IssueCredential, Role, Msg, Event, State, String]):
-  Protocol[IssueCredential, Role, Msg, Event, State, String] = {
+  override def create(context: ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, State, String]):
+  Protocol[IssueCredential, Role, ProtoMsg, Event, State, String] = {
     new IssueCredential()(context)
   }
 
@@ -56,4 +56,5 @@ object ProblemReportCodes {
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
   val shorteningFailed = "shortening-failed"
+  val invalidMessageStateError = "invalid-message-state"
 }

@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.user.GetConfigs
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
+import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.State.Initial
 
 

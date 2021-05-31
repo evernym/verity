@@ -20,7 +20,7 @@ trait ActorClientWalletAPISpecBase
   }
 
   override def waitForAllResponses(): Unit =  {
-    eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
+    eventually(timeout(Span(10, Minutes)), interval(Span(30, Seconds))) {
       walletSetupManager ! GetStatus
       val status = expectMsgType[Status]
       successResp = status.successResp

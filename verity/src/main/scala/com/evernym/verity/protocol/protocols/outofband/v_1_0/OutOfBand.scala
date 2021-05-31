@@ -70,7 +70,8 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
     id.foreach{ id =>
       if(isThreadedInviteId(id)) {
         parseThreadedInviteId(id)
-          .foreach{ p =>
+          .filter(p => p.relationshipId != ctx.getRoster.selfId_!)
+          .foreach { p =>
             ctx.signal(MoveProtocol(p.protoRefStr, p.relationshipId, ctx.getRoster.selfId_!, p.threadId))
           }
       }

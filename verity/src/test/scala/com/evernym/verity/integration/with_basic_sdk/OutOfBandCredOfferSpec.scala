@@ -6,7 +6,7 @@ import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{AcceptRequest, Invitation, Sent}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Invitation, Sent}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{HandshakeReuse, HandshakeReuseAccepted, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.ConnectionReused
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
@@ -19,11 +19,11 @@ class OutOfBandCredOfferSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   val issuerHolderConn = "connId1"
   val oobIssuerHolderConn = "connId2"

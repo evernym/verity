@@ -5,22 +5,23 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.integration.base.verity_provider.{LedgerSvcParam, ServiceParam}
+import com.evernym.verity.integration.base.verity_provider.node.local.ServiceParam
 import com.evernym.verity.ledger.{LedgerSvcException, TxnResp}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6._
-import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write => WriteSchema, StatusReport => WriteSchemaStatusReport}
+import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => WriteSchemaStatusReport, Write => WriteSchema}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Write => WriteCredDef}
 
 import scala.concurrent.Future
+
 
 class WriteCredDefFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  override val defaultSvcParam: ServiceParam = ServiceParam(LedgerSvcParam(ledgerTxnExecutor = new DummyLedgerTxnExecutor()))
+  override val defaultSvcParam: ServiceParam = ServiceParam.withLedgerTxnExecutor(new DummyLedgerTxnExecutor())
 
-  lazy val issuerVerityApp = setupNewVerityEnv()
+  lazy val issuerVerityApp = VerityEnvBuilder.default().build()
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
   var schemaId: String = ""
 

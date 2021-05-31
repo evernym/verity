@@ -17,11 +17,11 @@ class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _

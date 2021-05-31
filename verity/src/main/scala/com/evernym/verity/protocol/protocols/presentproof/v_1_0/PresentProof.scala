@@ -10,6 +10,7 @@ import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buil
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.ProposePresentation
@@ -80,19 +81,18 @@ class PresentProof (implicit val ctx: PresentProofContext)
     case (s: States.Complete        , _, ResultsOfVerification(r)) => States.Complete(s.data.addVerificationResults(r))
   }
 
-
-
   override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
     case (States.Initialized(_),  _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
     case (States.Initialized(_),  _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentation(msg)
     case (s: States.RequestSent,  _, msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
     case (_: States.ProposalSent, _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
     case (_: States.RequestSent,  _, msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
-    case (s: State,               r, msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
     case (States.Presented(_),    _, msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
     case (_,                      _, _  : Msg.Ack                ) => //Acks any other time are ignored
     case (_,                      _, msg: Msg.ProposePresentation) => handleMsgProposal(msg)
-    case (_,                      _, msg: ProtoMsg               ) => invalidMessageState(msg)
+
+    case (s: State,               r, msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
+    case (_: State,               _, msg: ProtoMsg               ) => invalidMessageState(msg)
   }
 
   override def handleControl: Control ?=> Any = statefulHandleControl
@@ -107,7 +107,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
     case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.Request            ) => handleCtlRequest(msg, s.data)
     case (s                         , _,              msg: Ctl.Status             ) => handleCtlStatus(s, msg)
     case (s                         , _,              msg: Ctl.Reject             ) => handleCtlReject(s, msg)
-    case (s: State                  , _             , msg: CtlMsg              ) => invalidControlState(s, msg)
+    case (s: State                  , _             , msg: CtlMsg                 ) => invalidControlState(s, msg)
   }
 
   // *****************************
@@ -560,7 +560,9 @@ object PresentProof {
     val msgName: String = PresentProofMsgFamily.msgType(invalidMsg.getClass).msgName
     val stateName: String = curState.getClass.getSimpleName
     val errorMsg = s"Unexpected '$msgName' message in current state '$stateName"
-    ctx.send(Msg.buildProblemReport(errorMsg, unexpectedMessage))
+    ctx.signal(
+      Sig.buildProblemReport(errorMsg, unexpectedMessage)
+    )
   }
 
   def rejectableState(state: State): Boolean = {

@@ -16,13 +16,13 @@ class ConnectionAcceptanceSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
 
-  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
-  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

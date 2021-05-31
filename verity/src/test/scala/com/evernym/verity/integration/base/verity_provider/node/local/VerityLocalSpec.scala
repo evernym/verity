@@ -1,32 +1,33 @@
-package com.evernym.verity.integration.base.verity_provider
+package com.evernym.verity.integration.base.verity_provider.node.local
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.base.AgentReqBuilder
-import com.evernym.verity.integration.base.verity_provider.LocalVerityConfig.defaultPorts
+import com.evernym.verity.integration.base.verity_provider.PortProfile
+import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalConfig.defaultPorts
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.Config
 
 
-class LocalVeritySpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil with TempDir {
+class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil with TempDir {
   override def deleteFiles: Boolean = false
 
   "LocalConfig" - {
     "basic" - {
       "is a TypeSafe Config" in {
-        LocalVerityConfig.standard(tempDir, defaultPorts) shouldBe an[Config]
+        VerityLocalConfig.standard(tempDir, defaultPorts) shouldBe an[Config]
       }
 
       "should in memory persistence" in {
-        LocalVerityConfig.standard(tempDir,defaultPorts).getString("akka.persistence.journal.plugin") should include ("leveldb")
+        VerityLocalConfig.standard(tempDir,defaultPorts).getString("akka.persistence.journal.plugin") should include ("leveldb")
       }
 
       "should use local snapshot" in {
-        LocalVerityConfig.standard(tempDir,defaultPorts).getString("akka.persistence.snapshot-store.plugin") should include ("snapshot-store.local")
+        VerityLocalConfig.standard(tempDir,defaultPorts).getString("akka.persistence.snapshot-store.plugin") should include ("snapshot-store.local")
       }
 
       "should use default wallet type" in {
-        LocalVerityConfig.standard(tempDir,defaultPorts).getString("verity.lib-indy.wallet.type") should include ("default")
+        VerityLocalConfig.standard(tempDir,defaultPorts).getString("verity.lib-indy.wallet.type") should include ("default")
       }
     }
   }
@@ -34,7 +35,7 @@ class LocalVeritySpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
   "LocalVerity" - {
 
     "should startup" ignore {
-      LocalVerity(tempDir, "11111111111111111111111111111111", defaultPorts)
+      LocalVerity(VerityNodeParam(tempDir, "11111111111111111111111111111111", defaultPorts))
     }
     "should be able to start multiple verity applications" ignore {
       val v1_dir = tempDir.resolve("v1")

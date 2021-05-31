@@ -11,7 +11,7 @@ class BasicMultiNodeClusterSpec
     with SdkProvider
     with Eventually {
 
-  lazy val verityEnv = setupNewVerityEnv(nodeCount = 3)
+  lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build()
   lazy val issuerSDK = setupIssuerSdk(verityEnv)
 
   "VerityAdmin" - {

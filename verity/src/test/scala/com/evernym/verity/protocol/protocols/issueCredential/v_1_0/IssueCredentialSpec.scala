@@ -57,13 +57,13 @@ class IssueCredentialSpec
 
         (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
         holder.role shouldBe Role.Holder()
-        holder expect signal[SignalMsg.Sent]
+        holder expect signal[Sig.Sent]
         val proposalSent = holder expect state[State.ProposalSent]
         assertStatus[State.ProposalSent](holder)
         assertProposalSent(proposalSent)
 
         issuer.role shouldBe Role.Issuer()
-        issuer expect signal[SignalMsg.AcceptProposal]
+        issuer expect signal[Sig.AcceptProposal]
         val proposalReceived = issuer expect state[State.ProposalReceived]
         assertStatus[State.ProposalReceived](issuer)
         assertProposalReceived(proposalReceived)
@@ -84,18 +84,18 @@ class IssueCredentialSpec
         val (issuer, holder) = (f.alice, f.bob)
 
         (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
-        holder expect signal[SignalMsg.Sent]
-        issuer expect signal[SignalMsg.AcceptProposal]
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
 
         issuer ~ buildSendOffer()
-        issuer expect signal[SignalMsg.Sent]
+        issuer expect signal[Sig.Sent]
         val offerSent = issuer expect state[State.OfferSent]
         assertStatus[State.OfferSent](issuer)
         assertOfferSent(offerSent)
 
-        holder expect signal[SignalMsg.AcceptOffer]
+        holder expect signal[Sig.AcceptOffer]
         val offerReceived = holder expect state[State.OfferReceived]
         assertStatus[State.OfferReceived](holder)
         assertOfferReceived(offerReceived)
@@ -109,25 +109,25 @@ class IssueCredentialSpec
         val (issuer, holder) = (f.alice, f.bob)
 
         (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
-        holder expect signal[SignalMsg.Sent]
-        issuer expect signal[SignalMsg.AcceptProposal]
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
 
         issuer ~ buildSendOffer()
-        issuer expect signal[SignalMsg.Sent]
-        holder expect signal[SignalMsg.AcceptOffer]
+        issuer expect signal[Sig.Sent]
+        holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
         holder ledgerAccess MockableLedgerAccess()
 
         holder ~ buildSendRequest()
-        holder expect signal[SignalMsg.Sent]
+        holder expect signal[Sig.Sent]
         val reqSent = holder expect state[State.RequestSent]
         assertStatus[State.RequestSent](holder)
         assertRequestSent(reqSent)
 
-        issuer expect signal[SignalMsg.AcceptRequest]
+        issuer expect signal[Sig.AcceptRequest]
         val reqReceived = issuer expect state[State.RequestReceived]
         assertStatus[State.RequestReceived](issuer)
         assertRequestReceived(reqReceived)
@@ -142,32 +142,32 @@ class IssueCredentialSpec
         val (issuer, holder) = (f.alice, f.bob)
 
         (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
-        holder expect signal[SignalMsg.Sent]
-        issuer expect signal[SignalMsg.AcceptProposal]
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
         issuer ~ buildSendOffer()
-        issuer expect signal[SignalMsg.Sent]
-        holder expect signal[SignalMsg.AcceptOffer]
+        issuer expect signal[Sig.Sent]
+        holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
         holder ledgerAccess MockableLedgerAccess()
         holder ~ buildSendRequest()
-        holder expect signal[SignalMsg.Sent]
-        issuer expect signal[SignalMsg.AcceptRequest]
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptRequest]
 
         issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-        issuer expect signal[SignalMsg.Sent]
+        issuer expect signal[Sig.Sent]
         val issueCredSent = issuer expect state[State.CredSent]
         assertStatus[State.CredSent](issuer)
         assertIssueSent(issueCredSent)
 
-        holder expect signal[SignalMsg.Received]
+        holder expect signal[Sig.Received]
         val issueCredReceived = holder expect state[State.CredReceived]
         assertStatus[State.CredReceived](holder)
         assertIssueReceived(issueCredReceived)
 
-        issuer expect signal[SignalMsg.Ack]
+        issuer expect signal[Sig.Ack]
       }
     }
   }
@@ -178,27 +178,27 @@ class IssueCredentialSpec
 
       issuer walletAccess MockableWalletAccess()
       (issuer engage holder) ~ buildSendOffer(None)
-      issuer expect signal[SignalMsg.Sent]
-      holder expect signal[SignalMsg.AcceptOffer]
+      issuer expect signal[Sig.Sent]
+      holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
       holder ~ buildSendRequest()
-      holder expect signal[SignalMsg.Sent]
-      issuer expect signal[SignalMsg.AcceptRequest]
+      holder expect signal[Sig.Sent]
+      issuer expect signal[Sig.AcceptRequest]
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-      issuer expect signal[SignalMsg.Sent]
+      issuer expect signal[Sig.Sent]
       val issueCredSent = issuer expect state[State.CredSent]
       assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
-      holder expect signal[SignalMsg.Received]
+      holder expect signal[Sig.Received]
       val issueCredReceived = holder expect state[State.CredReceived]
       assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
-      issuer expect signal[SignalMsg.Ack]
+      issuer expect signal[Sig.Ack]
     }
   }
 
@@ -208,27 +208,27 @@ class IssueCredentialSpec
 
       issuer walletAccess MockableWalletAccess()
       (issuer engage holder) ~ buildSendOffer(Option(false))
-      issuer expect signal[SignalMsg.Sent]
-      holder expect signal[SignalMsg.AcceptOffer]
+      issuer expect signal[Sig.Sent]
+      holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
       holder ~ buildSendRequest()
-      holder expect signal[SignalMsg.Sent]
-      issuer expect signal[SignalMsg.AcceptRequest]
+      holder expect signal[Sig.Sent]
+      issuer expect signal[Sig.AcceptRequest]
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-      issuer expect signal[SignalMsg.Sent]
+      issuer expect signal[Sig.Sent]
       val issueCredSent = issuer expect state[State.CredSent]
       assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
-      holder expect signal[SignalMsg.Received]
+      holder expect signal[Sig.Received]
       val issueCredReceived = holder expect state[State.CredReceived]
       assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
-      issuer expect signal[SignalMsg.Ack]
+      issuer expect signal[Sig.Ack]
     }
   }
 
@@ -238,20 +238,20 @@ class IssueCredentialSpec
 
       issuer walletAccess MockableWalletAccess()
       (issuer engage holder) ~ buildSendOffer(Option(true))
-      issuer expect signal[SignalMsg.Sent]
-      holder expect signal[SignalMsg.AcceptOffer]
+      issuer expect signal[Sig.Sent]
+      holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
       holder ~ buildSendRequest()
-      holder expect signal[SignalMsg.Sent]
+      holder expect signal[Sig.Sent]
 
-      issuer expect signal[SignalMsg.Sent]
+      issuer expect signal[Sig.Sent]
       val issueCredSent = issuer expect state[State.CredSent]
       assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
-      holder expect signal[SignalMsg.Received]
+      holder expect signal[Sig.Received]
       val issueCredReceived = holder expect state[State.CredReceived]
       assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
@@ -264,34 +264,34 @@ class IssueCredentialSpec
 
       issuer walletAccess MockableWalletAccess()
       (issuer engage holder) ~ buildSendOffer(Option(false))
-      issuer expect signal[SignalMsg.Sent]
-      holder expect signal[SignalMsg.AcceptOffer]
+      issuer expect signal[Sig.Sent]
+      holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
       holder ~ buildSendRequest()
-      holder expect signal[SignalMsg.Sent]
+      holder expect signal[Sig.Sent]
 
-      issuer expect signal[SignalMsg.AcceptRequest]
+      issuer expect signal[Sig.AcceptRequest]
       // if offer is sent in this state, problem-report is generated
       issuer ~ buildSendOffer(Option(false))
-      val pr = issuer expect signal[SignalMsg.ProblemReport]
+      val pr = issuer expect signal[Sig.ProblemReport]
       pr.description.code shouldBe ProblemReportCodes.unexpectedMessage
       issuer expect state[State.RequestReceived]
 
       // protocol continues to work normally afterwards.
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-      issuer expect signal[SignalMsg.Sent]
+      issuer expect signal[Sig.Sent]
       val issueCredSent = issuer expect state[State.CredSent]
       assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
-      holder expect signal[SignalMsg.Received]
+      holder expect signal[Sig.Received]
       val issueCredReceived = holder expect state[State.CredReceived]
       assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
-      issuer expect signal[SignalMsg.Ack]
+      issuer expect signal[Sig.Ack]
     }
   }
 
@@ -307,7 +307,7 @@ class IssueCredentialSpec
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
 
       // successful shortening
-      val invitation = issuer expect signal[SignalMsg.Invitation]
+      val invitation = issuer expect signal[Sig.Invitation]
       invitation.shortInviteURL shouldBe Some("http://short.url")
 
       invitation.inviteURL should not be empty
@@ -355,7 +355,7 @@ class IssueCredentialSpec
       issuer.backState.roster.selfRole_! shouldBe Role.Issuer()
 
       holder ~ Ctl.AttachedOffer(attachedOffer)
-      holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
+      holder.expectAs(signal[Sig.AcceptOffer]) { s =>
         s.offer.credential_preview.attributes.size should not be 0
         s.offer.credential_preview.attributes.head.value shouldBe "Joe"
       }
@@ -363,21 +363,21 @@ class IssueCredentialSpec
       holder.backState.roster.selfRole_! shouldBe Role.Holder()
 
       holder ~ buildSendRequest()
-      holder expect signal[SignalMsg.Sent]
-      issuer expect signal[SignalMsg.AcceptRequest]
+      holder expect signal[Sig.Sent]
+      issuer expect signal[Sig.AcceptRequest]
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-      issuer expect signal[SignalMsg.Sent]
+      issuer expect signal[Sig.Sent]
       val issueCredSent = issuer expect state[State.CredSent]
       assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
-      holder expect signal[SignalMsg.Received]
+      holder expect signal[Sig.Received]
       val issueCredReceived = holder expect state[State.CredReceived]
       assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
-      issuer expect signal[SignalMsg.Ack]
+      issuer expect signal[Sig.Ack]
     }
   }
 
@@ -395,7 +395,7 @@ class IssueCredentialSpec
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
 
       // successful shortening
-      val invitation = issuer expect signal[SignalMsg.Invitation]
+      val invitation = issuer expect signal[Sig.Invitation]
       invitation.shortInviteURL shouldBe Some("http://short.url")
 
       invitation.inviteURL should not be empty
@@ -443,7 +443,7 @@ class IssueCredentialSpec
       issuer.backState.roster.selfRole_! shouldBe Role.Issuer()
 
       holder ~ Ctl.AttachedOffer(attachedOffer)
-      holder.expectAs(signal[SignalMsg.AcceptOffer]) { s =>
+      holder.expectAs(signal[Sig.AcceptOffer]) { s =>
         s.offer.credential_preview.attributes.size should not be 0
         s.offer.credential_preview.attributes.head.value shouldBe "Joe"
       }
@@ -451,21 +451,21 @@ class IssueCredentialSpec
       holder.backState.roster.selfRole_! shouldBe Role.Holder()
 
       holder ~ buildSendRequest()
-      holder expect signal[SignalMsg.Sent]
-      issuer expect signal[SignalMsg.AcceptRequest]
+      holder expect signal[Sig.Sent]
+      issuer expect signal[Sig.AcceptRequest]
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
-      issuer expect signal[SignalMsg.Sent]
+      issuer expect signal[Sig.Sent]
       val issueCredSent = issuer expect state[State.CredSent]
       assertStatus[State.CredSent](issuer)
       assertIssueSent(issueCredSent)
 
-      holder expect signal[SignalMsg.Received]
+      holder expect signal[Sig.Received]
       val issueCredReceived = holder expect state[State.CredReceived]
       assertStatus[State.CredReceived](holder)
       assertIssueReceived(issueCredReceived)
 
-      issuer expect signal[SignalMsg.Ack]
+      issuer expect signal[Sig.Ack]
     }
   }
 
@@ -482,7 +482,7 @@ class IssueCredentialSpec
       issuer.backState.roster.selfRole_! shouldBe Role.Issuer()
 
       // failed shortening
-      val problemReport = issuer expect signal[SignalMsg.ProblemReport]
+      val problemReport = issuer expect signal[Sig.ProblemReport]
       problemReport.description.code shouldBe ProblemReportCodes.shorteningFailed
 
       issuer expect state[State.ProblemReported]

@@ -11,7 +11,7 @@ import com.evernym.verity.actor.base.{Done, Ping, Stop}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
 import com.evernym.verity.actor.itemmanager.ItemContainerMapper
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.testkit.{ActorSpec, WithAdditionalLogs}
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId

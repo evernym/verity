@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
+import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Error, Initialized, Processing}
 import com.evernym.verity.util.JsonUtil.seqToJson

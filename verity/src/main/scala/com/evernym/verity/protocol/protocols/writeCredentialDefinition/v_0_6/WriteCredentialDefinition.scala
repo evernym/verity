@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.noHandleProtoMsg
+import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
 
 import scala.util.{Failure, Success}

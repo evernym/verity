@@ -5,7 +5,7 @@ import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.{AcceptRequest, Sent}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
@@ -18,13 +18,13 @@ class PresentProofSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val verifierVerityEnv = setupNewVerityEnv()
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val verifierVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
   lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"

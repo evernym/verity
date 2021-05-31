@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols.presentproof.v_1_0
+package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.protocol.Control

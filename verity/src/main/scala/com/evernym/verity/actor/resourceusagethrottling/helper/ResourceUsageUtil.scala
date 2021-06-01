@@ -6,7 +6,7 @@ import com.evernym.verity.Status.VALIDATION_FAILED
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, RESOURCE_NAME_ALL, RESOURCE_NAME_ENDPOINT_ALL, RESOURCE_NAME_MESSAGE_ALL, RESOURCE_TYPE_ENDPOINT, RESOURCE_TYPE_MESSAGE, RESOURCE_TYPE_NAME_ENDPOINT, RESOURCE_TYPE_NAME_MESSAGE, ResourceName, ResourceType, ResourceTypeName}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_CREATE_MSG
 import com.evernym.verity.agentmsg.msgpacker.MsgFamilyDetail
-import com.evernym.verity.protocol.engine.MsgType
+import com.evernym.verity.protocol.engine.{MsgName, MsgType}
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util.{isDID, isVerKey}
 
@@ -62,16 +62,23 @@ object ResourceUsageUtil {
     }
   }
 
+  def getCreateMsgReqMsgName(msgName: MsgName): String = s"${MSG_TYPE_CREATE_MSG}_$msgName"
+
+  val MSG_FAMILY_VERSION_REGEX: Regex = raw"\d+(\.\d+)*".r
+
   def getMessageResourceName(msgType: MsgType): ResourceName = {
-    s"${msgType.familyName}/${msgType.msgName}"
+    msgType.familyName match {
+      case MSG_FAMILY_VERSION_REGEX(_*) => msgType.msgName
+      case realFamilyName => s"$realFamilyName/${msgType.msgName}"
+    }
   }
 
-  def getMessageResourceName(msgFamilyDetail: MsgFamilyDetail): ResourceName = {
-    s"${msgFamilyDetail.familyName}/${msgFamilyDetail.msgName}"
-  }
+  def getMessageResourceName(msgFamilyDetail: MsgFamilyDetail): ResourceName =
+    getMessageResourceName(msgFamilyDetail.msgType)
 
   def getCreateMessageResourceName(msgType: MsgType): ResourceName = {
-    s"${msgType.familyName}/${MSG_TYPE_CREATE_MSG}_${msgType.msgName}"
+    val createMsgReqMsgType = msgType.copy(msgName = getCreateMsgReqMsgName(msgType.msgName))
+    getMessageResourceName(createMsgReqMsgType)
   }
 
   def getResourceTypeName(resourceType: ResourceType): ResourceTypeName = {

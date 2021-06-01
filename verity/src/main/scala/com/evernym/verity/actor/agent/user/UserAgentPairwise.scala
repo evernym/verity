@@ -342,8 +342,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     runWithInternalSpan("handleCreateMsgGeneral", "UserAgentPairwise") {
       val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE,
-        s"${MSG_TYPE_CREATE_MSG}_${createMsgReq.mtype}", reqMsgContext.clientIpAddressReq, userId)
+      val resourceName = ResourceUsageUtil.getCreateMsgReqMsgName(createMsgReq.mtype)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       val msgDetail = amw.tailAgentMsgs.head.convertTo[GeneralCreateMsgDetail_MFV_0_5]
 
       val srm = SendRemoteMsg(amw.headAgentMsgDetail, createMsgReq.uid.getOrElse(getNewMsgUniqueId),

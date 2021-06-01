@@ -164,7 +164,9 @@ trait UserAgentCommon
   def handleUpdateConfigPackedReq(updateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
       val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
+      val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
+        .getOrElse(MSG_TYPE_UPDATE_CONFIGS)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       handleUpdateConfig(updateConf)
       postUpdateConfig(updateConf, reqMsgContext.msgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)

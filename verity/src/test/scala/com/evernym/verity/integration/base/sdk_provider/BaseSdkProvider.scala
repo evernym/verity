@@ -21,7 +21,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
-import com.evernym.verity.testkit.LegacyWalletAPI
+import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI}
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.ServiceEndpoint
@@ -32,10 +32,9 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.protocol.protocols
-import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
-import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import org.json.JSONObject
+import org.scalatest.matchers.should.Matchers
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
@@ -46,7 +45,8 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 
-trait SdkProvider {
+trait SdkProvider { this: BasicSpec =>
+
   def setupIssuerSdk(verityEnv: VerityEnv): IssuerSdk =
     IssuerSdk(buildSdkParam(verityEnv))
   def setupIssuerRestSdk(verityEnv: VerityEnv): IssuerRestSDK =
@@ -80,9 +80,7 @@ trait SdkProvider {
     inviteeSDK.sendCreateNewKey(connId)
     inviteeSDK.sendConnReqForInvitation(connId, invitation)
 
-    inviterSDK.expectMsgOnWebhook[ConnReqReceived]()
-    inviterSDK.expectMsgOnWebhook[ConnResponseSent]()
-    inviterSDK.expectMsgOnWebhook[Complete]()
+    inviterSDK.expectConnectionComplete(connId)
   }
 
   def setupIssuer(issuerSDK: VeritySdkBase): Unit = {
@@ -111,7 +109,9 @@ trait SdkProvider {
  * a base sdk class for issuer/holder sdk
  * @param param sdk parameters
  */
-abstract class SdkBase(param: SdkParam) {
+abstract class SdkBase(param: SdkParam) extends Matchers {
+
+  type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
     val resp = checkOKResponse(sendGET("agency"))
@@ -234,8 +234,6 @@ abstract class SdkBase(param: SdkParam) {
   def randomUUID(): String = UUID.randomUUID().toString
   def randomSeed(): String = randomUUID().replace("-", "")
 
-  type ConnId = String
-
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
   implicit val system: ActorSystem = ActorSystemVanilla(randomUUID())
 
@@ -272,6 +270,23 @@ abstract class SdkBase(param: SdkParam) {
     val walletAPI = new LegacyWalletAPI(new TestAppConfig(), walletProvider, None)
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
+  }
+
+  /**
+   * checks message orders (sender and received)
+   * @param threadOpt
+   * @param expectedSenderOrder
+   * @param expectedReceivedOrder assuming two participants as of now
+   */
+  def checkMsgOrders(threadOpt: Option[MsgThread],
+                     expectedSenderOrder: Int,
+                     expectedReceivedOrder: Map[ConnId, Int]): Unit = {
+    val receivedOrderByDid = expectedReceivedOrder.map { case (connId, count) =>
+      val theirDID = myPairwiseRelationships(connId).theirDIDDoc.get.getDID
+      theirDID -> count
+    }
+      threadOpt.flatMap(_.sender_order) shouldBe Some(expectedSenderOrder)
+    threadOpt.map(_.received_orders) shouldBe Some(receivedOrderByDid)
   }
 }
 

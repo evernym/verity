@@ -5,6 +5,8 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.didcomm.decorators.PleaseAck
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
@@ -15,10 +17,11 @@ import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 
 class IssueCredentialSpec
-  extends TestsProtocolsImpl(IssueCredentialProtoDef)
+  extends TestsProtocolsImpl(IssueCredentialProtoDef, Option(OneToOne))
   with BasicFixtureSpec {
 
   lazy val config: AppConfig = new TestAppConfig()
@@ -58,15 +61,13 @@ class IssueCredentialSpec
         (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
         holder.role shouldBe Role.Holder()
         holder expect signal[Sig.Sent]
-        val proposalSent = holder expect state[State.ProposalSent]
+        assertProposalSentState(holder)
         assertStatus[State.ProposalSent](holder)
-        assertProposalSent(proposalSent)
 
         issuer.role shouldBe Role.Issuer()
         issuer expect signal[Sig.AcceptProposal]
-        val proposalReceived = issuer expect state[State.ProposalReceived]
+        assertProposalReceivedState(issuer)
         assertStatus[State.ProposalReceived](issuer)
-        assertProposalReceived(proposalReceived)
 
         issuer ~ Reject(Option("rejected received proposal"))
         issuer expect state[State.Rejected]
@@ -91,14 +92,12 @@ class IssueCredentialSpec
 
         issuer ~ buildSendOffer()
         issuer expect signal[Sig.Sent]
-        val offerSent = issuer expect state[State.OfferSent]
+        assertOfferSentState(issuer)
         assertStatus[State.OfferSent](issuer)
-        assertOfferSent(offerSent)
 
         holder expect signal[Sig.AcceptOffer]
-        val offerReceived = holder expect state[State.OfferReceived]
+        assertOfferReceivedState(holder)
         assertStatus[State.OfferReceived](holder)
-        assertOfferReceived(offerReceived)
       }
     }
 
@@ -123,15 +122,41 @@ class IssueCredentialSpec
 
         holder ~ buildSendRequest()
         holder expect signal[Sig.Sent]
-        val reqSent = holder expect state[State.RequestSent]
+        assertRequestSentState(holder)
         assertStatus[State.RequestSent](holder)
-        assertRequestSent(reqSent)
 
         issuer expect signal[Sig.AcceptRequest]
-        val reqReceived = issuer expect state[State.RequestReceived]
+        assertRequestReceivedState(issuer)
         assertStatus[State.RequestReceived](issuer)
-        assertRequestReceived(reqReceived)
+      }
 
+      "if the credOffer segment on holders side has expired, error should be reported" in { f =>
+        val (issuer, holder) = (f.alice, f.bob)
+
+        (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptProposal]
+
+        issuer walletAccess MockableWalletAccess()
+
+        issuer ~ buildSendOffer()
+        issuer expect signal[Sig.Sent]
+        holder expect signal[Sig.AcceptOffer]
+
+        holder walletAccess MockableWalletAccess()
+        holder ledgerAccess MockableLedgerAccess()
+
+        // delete the stored segment (simulation of expire)
+        val offerReceived = holder expect state[State.OfferReceived]
+        holder.container_!.removeSegment(offerReceived.credOfferRef)
+
+        holder ~ buildSendRequest()
+        val pr = holder expect signal[Sig.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.expiredDataRetention
+        // state is unchanged
+        assertStatus[State.OfferReceived](holder)
+
+        assertStatus[State.OfferSent](issuer)
       }
     }
 
@@ -158,21 +183,81 @@ class IssueCredentialSpec
 
         issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
         issuer expect signal[Sig.Sent]
-        val issueCredSent = issuer expect state[State.CredSent]
+        assertCredSentState(issuer)
         assertStatus[State.CredSent](issuer)
-        assertIssueSent(issueCredSent)
 
         holder expect signal[Sig.Received]
         val issueCredReceived = holder expect state[State.CredReceived]
         assertStatus[State.CredReceived](holder)
-        assertIssueReceived(issueCredReceived)
 
         issuer expect signal[Sig.Ack]
+      }
+
+      "if the credOffer segment on issuer side has expired, error should be reported" in { f =>
+        val (issuer, holder) = (f.alice, f.bob)
+
+        (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptProposal]
+
+        issuer walletAccess MockableWalletAccess()
+        issuer ~ buildSendOffer()
+        issuer expect signal[Sig.Sent]
+        holder expect signal[Sig.AcceptOffer]
+
+        holder walletAccess MockableWalletAccess()
+        holder ledgerAccess MockableLedgerAccess()
+        holder ~ buildSendRequest()
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptRequest]
+
+        // delete the stored segment (simulation of expire)
+        val requestReceived = issuer expect state[State.RequestReceived]
+        issuer.container_!.removeSegment(requestReceived.credOfferRef)
+
+        issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
+        val pr = issuer expect signal[Sig.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.expiredDataRetention
+
+        // state is unchanged
+        assertStatus[State.RequestReceived](issuer)
+        assertStatus[State.RequestSent](holder)
+      }
+
+      "if the credRequest segment on issuer side has expired, error should be reported" in { f =>
+        val (issuer, holder) = (f.alice, f.bob)
+
+        (holder engage issuer) ~ Propose(createTest1CredDef, credValues)
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptProposal]
+
+        issuer walletAccess MockableWalletAccess()
+        issuer ~ buildSendOffer()
+        issuer expect signal[Sig.Sent]
+        holder expect signal[Sig.AcceptOffer]
+
+        holder walletAccess MockableWalletAccess()
+        holder ledgerAccess MockableLedgerAccess()
+        holder ~ buildSendRequest()
+        holder expect signal[Sig.Sent]
+        issuer expect signal[Sig.AcceptRequest]
+
+        // delete the stored segment (simulation of expire)
+        val requestReceived = issuer expect state[State.RequestReceived]
+        issuer.container_!.removeSegment(requestReceived.credRequestRef)
+
+        issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
+        val pr = issuer expect signal[Sig.ProblemReport]
+        pr.description.code shouldBe ProblemReportCodes.expiredDataRetention
+
+        // state is unchanged
+        assertStatus[State.RequestReceived](issuer)
+        assertStatus[State.RequestSent](holder)
       }
     }
   }
 
-  "when Issuer do not use auto_issue in offer (legacy)" - {
+  "when Issuer do not set auto_issue in offer" - {
     "it should follow two-step issuance flow" in { f =>
       val (issuer, holder) = (f.alice, f.bob)
 
@@ -189,14 +274,12 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[Sig.Sent]
-      val issueCredSent = issuer expect state[State.CredSent]
+      assertCredSentState(issuer)
       assertStatus[State.CredSent](issuer)
-      assertIssueSent(issueCredSent)
 
       holder expect signal[Sig.Received]
-      val issueCredReceived = holder expect state[State.CredReceived]
+      assertCredReceivedState(holder)
       assertStatus[State.CredReceived](holder)
-      assertIssueReceived(issueCredReceived)
 
       issuer expect signal[Sig.Ack]
     }
@@ -219,14 +302,12 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[Sig.Sent]
-      val issueCredSent = issuer expect state[State.CredSent]
+      assertCredSentState(issuer)
       assertStatus[State.CredSent](issuer)
-      assertIssueSent(issueCredSent)
 
       holder expect signal[Sig.Received]
-      val issueCredReceived = holder expect state[State.CredReceived]
+      assertCredReceivedState(holder)
       assertStatus[State.CredReceived](holder)
-      assertIssueReceived(issueCredReceived)
 
       issuer expect signal[Sig.Ack]
     }
@@ -247,14 +328,12 @@ class IssueCredentialSpec
       holder expect signal[Sig.Sent]
 
       issuer expect signal[Sig.Sent]
-      val issueCredSent = issuer expect state[State.CredSent]
+      assertCredSentState(issuer)
       assertStatus[State.CredSent](issuer)
-      assertIssueSent(issueCredSent)
 
       holder expect signal[Sig.Received]
-      val issueCredReceived = holder expect state[State.CredReceived]
+      assertCredReceivedState(holder)
       assertStatus[State.CredReceived](holder)
-      assertIssueReceived(issueCredReceived)
     }
   }
 
@@ -282,14 +361,12 @@ class IssueCredentialSpec
       // protocol continues to work normally afterwards.
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[Sig.Sent]
-      val issueCredSent = issuer expect state[State.CredSent]
+      assertCredSentState(issuer)
       assertStatus[State.CredSent](issuer)
-      assertIssueSent(issueCredSent)
 
       holder expect signal[Sig.Received]
-      val issueCredReceived = holder expect state[State.CredReceived]
+      assertCredReceivedState(holder)
       assertStatus[State.CredReceived](holder)
-      assertIssueReceived(issueCredReceived)
 
       issuer expect signal[Sig.Ack]
     }
@@ -368,14 +445,12 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[Sig.Sent]
-      val issueCredSent = issuer expect state[State.CredSent]
+      assertCredSentState(issuer)
       assertStatus[State.CredSent](issuer)
-      assertIssueSent(issueCredSent)
 
       holder expect signal[Sig.Received]
-      val issueCredReceived = holder expect state[State.CredReceived]
+      assertCredReceivedState(holder)
       assertStatus[State.CredReceived](holder)
-      assertIssueReceived(issueCredReceived)
 
       issuer expect signal[Sig.Ack]
     }
@@ -456,14 +531,12 @@ class IssueCredentialSpec
 
       issuer ~ Issue(`~please_ack` = Option(PleaseAck()))
       issuer expect signal[Sig.Sent]
-      val issueCredSent = issuer expect state[State.CredSent]
+      assertCredSentState(issuer)
       assertStatus[State.CredSent](issuer)
-      assertIssueSent(issueCredSent)
 
       holder expect signal[Sig.Received]
-      val issueCredReceived = holder expect state[State.CredReceived]
+      assertCredReceivedState(holder)
       assertStatus[State.CredReceived](holder)
-      assertIssueReceived(issueCredReceived)
 
       issuer expect signal[Sig.Ack]
     }
@@ -494,38 +567,95 @@ class IssueCredentialSpec
     from expect state[T]
   }
 
-  def assertProposalSent(proposalSent: State.ProposalSent): Unit = {
+  def assertProposalSent(proposalSent: State.ProposalSentLegacy): Unit = {
     proposalSent.credProposed.cred_def_id shouldBe createTest1CredDef
     proposalSent.credProposed.credential_proposal shouldBe Option(buildCredPreview())
   }
 
-  def assertProposalReceived(proposalReceived: State.ProposalReceived): Unit = {
+  def assertProposalSentState(env: TestEnvir): Unit = {
+    val proposalSent = env expect state[State.ProposalSent]
+    assertCredProposedSegment(env, proposalSent.credProposedRef)
+  }
+
+  def assertProposalReceived(proposalReceived: State.ProposalReceivedLegacy): Unit = {
     proposalReceived.credProposed.cred_def_id shouldBe createTest1CredDef
     proposalReceived.credProposed.credential_proposal shouldBe Option(buildCredPreview())
   }
 
-  def assertOfferSent(offerSent: State.OfferSent): Unit = {
+  def assertProposalReceivedState(env: TestEnvir): Unit = {
+    val proposalReceived = env expect state[State.ProposalReceived]
+    println(s"proposalReceived: $proposalReceived")
+    assertCredProposedSegment(env, proposalReceived.credProposedRef)
+  }
+
+  def assertCredProposedSegment(env: TestEnvir, segmentKey: SegmentId): Unit = {
+    env.container_!.withSegment[CredProposed](segmentKey) {
+      case Success(Some(proposal)) =>
+        proposal.credDefId shouldBe createTest1CredDef
+        proposal.credentialProposal shouldBe Option(buildCredPreview().toCredPreviewObject)
+      case Success(None) => throw new Exception("No item")
+      case Failure(e) => throw e
+    }
+  }
+
+  def assertOfferSent(offerSent: State.OfferSentLegacy): Unit = {
     assertOffer(offerSent.credOffer)
   }
 
-  def assertOfferReceived(offerReceived: State.OfferReceived): Unit = {
+  def assertOfferSentState(env: TestEnvir): Unit = {
+    val offerSent = env expect state[State.OfferSent]
+    println(s"offerSent: $offerSent")
+    assertCredOfferedSegment(env, offerSent.credOfferRef)
+  }
+
+  def assertOfferReceived(offerReceived: State.OfferReceivedLegacy): Unit = {
     assertOffer(offerReceived.credOffer)
   }
 
-  def assertRequestSent(requestSent: State.RequestSent): Unit = {
+  def assertOfferReceivedState(env: TestEnvir): Unit = {
+    val offerReceived = env expect state[State.OfferReceived]
+    assertCredOfferedSegment(env, offerReceived.credOfferRef)
+  }
+
+  def assertRequestSent(requestSent: State.RequestSentLegacy): Unit = {
     assertRequest(requestSent.credRequest)
   }
 
-  def assertRequestReceived(requestReceived: State.RequestReceived): Unit = {
+  def assertRequestSentState(env: TestEnvir): Unit = {
+    val requestSent = env expect state[State.RequestSent]
+    println(s"requestSent: $requestSent")
+    assertCredRequestedSegment(env, requestSent.credRequestRef)
+  }
+
+  def assertRequestReceived(requestReceived: State.RequestReceivedLegacy): Unit = {
     assertRequest(requestReceived.credRequest)
   }
 
-  def assertIssueSent(issueSent: State.CredSent): Unit = {
+  def assertRequestReceivedState(env: TestEnvir): Unit = {
+    val requestReceived = env expect state[State.RequestReceived]
+    println(s"requestReceived: $requestReceived")
+    assertCredRequestedSegment(env, requestReceived.credRequestRef)
+  }
+
+  def assertIssueSent(issueSent: State.CredSentLegacy): Unit = {
     assertIssuedCred(issueSent.credIssued)
   }
 
-  def assertIssueReceived(issueReceived: State.CredReceived): Unit = {
+  def assertCredSentState(env: TestEnvir): Unit = {
+    val credSent = env expect state[State.CredSent]
+    println(s"credSent: $credSent")
+    assertCredIssuedSegment(env, credSent.credIssuedRef)
+  }
+
+
+  def assertIssueReceived(issueReceived: State.CredReceivedLegacy): Unit = {
     assertIssuedCred(issueReceived.credIssued)
+  }
+
+  def assertCredReceivedState(env: TestEnvir): Unit = {
+    val credReceived = env expect state[State.CredReceived]
+    println(s"credReceived: $credReceived")
+    assertCredIssuedSegment(env, credReceived.credIssuedRef)
   }
 
   def assertOffer(credOffer: OfferCred): Unit = {
@@ -539,6 +669,22 @@ class IssueCredentialSpec
     dataBase64Decoded shouldBe expectedOfferAttachment
   }
 
+  def assertCredOfferedSegment(env: TestEnvir, segmentKey: SegmentId): Unit = {
+    env.container_!.withSegment[CredOffered](segmentKey) {
+      case Success(Some(credOffer)) =>
+        credOffer.offersAttach.size shouldBe 1
+        credOffer.price.contains(price) shouldBe true
+        val attachedOffer = credOffer.offersAttach.head
+        attachedOffer.id shouldBe "libindy-cred-offer-0"
+        attachedOffer.mimeType shouldBe "application/json"
+        attachedOffer.dataBase64.nonEmpty shouldBe true
+        val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedOffer.dataBase64))
+        dataBase64Decoded shouldBe expectedOfferAttachment
+      case Success(None) => throw new Exception("No item")
+      case Failure(e) => throw e
+    }
+  }
+
   def assertRequest(requestCred: RequestCred): Unit = {
     requestCred.`requests~attach`.size shouldBe 1
     val attachedRequest = requestCred.`requests~attach`.head
@@ -549,6 +695,21 @@ class IssueCredentialSpec
     dataBase64Decoded shouldBe expectedReqAttachment
   }
 
+  def assertCredRequestedSegment(env: TestEnvir, segmentKey: SegmentId): Unit = {
+    env.container_!.withSegment[CredRequested](segmentKey) {
+      case Success(Some(requestCred)) =>
+        requestCred.requestAttach.size shouldBe 1
+        val attachedRequest = requestCred.requestAttach.head
+        attachedRequest.id shouldBe "libindy-cred-req-0"
+        attachedRequest.mimeType shouldBe "application/json"
+        attachedRequest.dataBase64.nonEmpty shouldBe true
+        val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedRequest.dataBase64))
+        dataBase64Decoded shouldBe expectedReqAttachment
+      case Success(None) => throw new Exception("No item")
+      case Failure(e) => throw e
+    }
+  }
+
   def assertIssuedCred(issueCred: IssueCred): Unit = {
     issueCred.`credentials~attach`.size shouldBe 1
     val attachedCred = issueCred.`credentials~attach`.head
@@ -556,6 +717,20 @@ class IssueCredentialSpec
     attachedCred.`mime-type`.value shouldBe "application/json"
     attachedCred.data.base64.nonEmpty shouldBe true
     val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedCred.data.base64))
+  }
+
+  def assertCredIssuedSegment(env: TestEnvir, segmentKey: SegmentId): Unit = {
+    env.container_!.withSegment[CredIssued](segmentKey) {
+      case Success(Some(issueCred)) =>
+        issueCred.credAttach.size shouldBe 1
+        val attachedCred = issueCred.credAttach.head
+        attachedCred.id shouldBe "libindy-cred-0"
+        attachedCred.mimeType shouldBe "application/json"
+        attachedCred.dataBase64.nonEmpty shouldBe true
+        val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedCred.dataBase64))
+      case Success(None) => throw new Exception("No item")
+      case Failure(e) => throw e
+    }
   }
 
   lazy val price = "0"

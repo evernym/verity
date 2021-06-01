@@ -59,6 +59,11 @@ case class PresentationPreviewAttribute(name: String,
   }
 }
 
+object PresentationPreviewAttribute {
+  def fromEvt(e: PreviewAttribute): PresentationPreviewAttribute =
+    PresentationPreviewAttribute(e.name, e.credDefId.headOption, e.mimeType.headOption, e.value.headOption, e.referent.headOption)
+}
+
 case class PresentationPreviewPredicate(name: String,
                                         cred_def_id: String,
                                         predicate: String,
@@ -73,9 +78,23 @@ case class PresentationPreviewPredicate(name: String,
   }
 }
 
+object PresentationPreviewPredicate {
+  def fromEvt(e: PreviewPredicate): PresentationPreviewPredicate =
+    PresentationPreviewPredicate(e.name, e.credDefId, e.predicate, e.threshold)
+}
+
 case class PresentationPreview(attributes: Seq[PresentationPreviewAttribute],
                                predicates: Seq[PresentationPreviewPredicate],
                                `@type`: String = "https://didcomm.org/present-proof/1.0/presentation-preview")
+
+case object PresentationPreview {
+  def fromEvt(e: ProposeReceived): PresentationPreview = {
+    PresentationPreview(
+      e.attributes.map(PresentationPreviewAttribute.fromEvt),
+      e.predicates.map(PresentationPreviewPredicate.fromEvt),
+    )
+  }
+}
 
 // Protocol Messages
 sealed trait ProtoMsg extends MsgBase

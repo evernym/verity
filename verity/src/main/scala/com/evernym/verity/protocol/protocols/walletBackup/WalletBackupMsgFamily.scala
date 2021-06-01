@@ -76,6 +76,6 @@ object WalletBackupMsgFamily extends MsgFamily {
   case class ReportBackupFailure(failure: PersistenceFailure) extends BackupSignal
 
   type WalletBackupIntList = List[Int]
-  type WalletBackup = Array[Byte]
+  type WalletBackupBytes = Array[Byte]
   type WalletBackupEncoded = Base64Encoded
 }

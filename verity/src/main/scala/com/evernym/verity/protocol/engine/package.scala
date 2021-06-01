@@ -21,6 +21,7 @@ package object engine {
   type ContextId = String
   type RelationshipId = String
   type DomainId = String
+  type StorageId = String
 
   type ThreadId = String
   type MsgId = String

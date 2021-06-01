@@ -25,7 +25,7 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
-import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config, SendConfig}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
 import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
@@ -35,6 +35,7 @@ import java.time.ZonedDateTime
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
 import scala.concurrent.Future
 

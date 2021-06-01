@@ -5,24 +5,29 @@ import "scalapb/scalapb.proto";
 
 package com.evernym.verity.protocol;
 
-message SetDomainId {
+message DomainIdSet {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string domainId = 1;
 }
 
-message SetDataRetentionPolicy {
+message DataRetentionPolicySet {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string policy = 1;
 }
 
-message ChangePairwiseRelIds {
+message StorageIdSet {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string storageId = 1;
+}
+
+message PairwiseRelIdsChanged {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string newSelfId = 1;
     string newOtherId = 2;
 }
 
 //Note: this is not used any more kept for backward compatibility
-message SetPinstId {
+message PinstIdSet {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string pinstId = 1;
 }

@@ -4,11 +4,15 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
 
 
 object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role, ProtoMsg, Event, State, String] {
   override val msgFamily: MsgFamily = IssueCredMsgFamily
+
+  override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
   override def create(context: ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, State, String]):
   Protocol[IssueCredential, Role, ProtoMsg, Event, State, String] = {
@@ -56,5 +60,7 @@ object ProblemReportCodes {
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
   val shorteningFailed = "shortening-failed"
+  val expiredDataRetention = "expired-data-retention"
+  val segmentStorageFailure = "segment-storage-failure"
   val invalidMessageStateError = "invalid-message-state"
 }

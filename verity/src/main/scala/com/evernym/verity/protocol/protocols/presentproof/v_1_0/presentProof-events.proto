@@ -29,9 +29,16 @@ message AgentContext {
     google.protobuf.StringValue publicDid    = 4;
 }
 
+//Used as Segment
 message RequestGiven {
     option (scalapb.message).extends = "Event";
     string requestRaw = 1;
+}
+
+message RequestGivenRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to RequestGiven
+    string segRef = 1;
 }
 
 message RequestUsed {
@@ -39,9 +46,21 @@ message RequestUsed {
     string requestRaw = 1;
 }
 
+message RequestUsedRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to RequestUsed
+    string segRef = 1;
+}
+
 message PresentationUsed {
     option (scalapb.message).extends = "Event";
     string presentation = 1;
+}
+
+message PresentationUsedRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to PresentationUsed
+    string segRef = 1;
 }
 
 message PresentationGiven {
@@ -49,9 +68,21 @@ message PresentationGiven {
     string presentation = 1;
 }
 
+message PresentationGivenRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to PresentationGiven
+    string segRef = 1;
+}
+
 message PresentationAck {
     option (scalapb.message).extends = "Event";
     string status = 1;
+}
+
+message PresentationAckRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to PresentationAck
+    string segRef = 1;
 }
 
 message PreviewAttribute {
@@ -77,10 +108,22 @@ message PresentationProposed {
     repeated PreviewPredicate predicates = 2;
 }
 
+message PresentationProposedRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to PresentationProposed
+    string segRef = 1;
+}
+
 message ProposeReceived {
     option (scalapb.message).extends = "Event";
     repeated PreviewAttribute attributes = 1;
     repeated PreviewPredicate predicates = 2;
+}
+
+message ProposeReceivedRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to ProposeReceived
+    string segRef = 1;
 }
 
 message AttributesGiven {
@@ -88,9 +131,21 @@ message AttributesGiven {
     string attributesPresented = 1;
 }
 
+message AttributesGivenRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to AttributesGiven
+    string segRef = 1;
+}
+
 message ResultsOfVerification {
     option (scalapb.message).extends = "Event";
     string results = 1;
+}
+
+message ResultsOfVerificationRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to ResultsOfVerificationRef
+    string segRef = 1;
 }
 
 message Rejection {

@@ -96,7 +96,7 @@ trait LaunchesProtocol {
   }
 
   def segmentStoreStrategy(protoDef: ProtoDef): Option[SegmentStoreStrategy] = {
-    protocolRegistry.entries.find(_.protoDef == protoDef).flatMap(_.segmentStoreStrategy)
+    protocolRegistry.entries.find(_.protoDef == protoDef).flatMap(_.protoDef.segmentStoreStrategy)
   }
 }
 

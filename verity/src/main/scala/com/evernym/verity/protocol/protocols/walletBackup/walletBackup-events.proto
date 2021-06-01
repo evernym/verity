@@ -48,12 +48,7 @@ message BackupInProgress {
     option (scalapb.message).extends = "BackupEvt";
 }
 
-message BackupStored {
-    option (scalapb.message).extends = "BackupEvt";
-    bytes wallet = 1;
-}
-
-message BackupStoredInBlob {
+message BackupStoredRef {
     option (scalapb.message).extends = "BackupEvt";
     string blobAddress = 1;
 }

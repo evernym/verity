@@ -24,10 +24,14 @@ message AttachmentObject {
     string data_base64      = 4;
 }
 
-message MessageReceived {
+message MessageReceivedRef {
     option (scalapb.message).extends = "Event";
     google.protobuf.StringValue localization    = 1;
     string sentTime                             = 2;
-    string content                              = 3;
-    repeated AttachmentObject attachments       = 4;
+    string blobAddress                          = 3;
+}
+
+message MessageData {
+    string content                              = 1;
+    repeated AttachmentObject attachments       = 2;
 }

@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
+trait Event
+
 sealed trait State
 
 object State {
@@ -17,6 +19,6 @@ object State {
   // Receiver and Sender STATE:
 
   // Only one state
-  case class Messaging(message: Msg.Message) extends State
+  case class Messaging(message: Msg.Message, blobAddress: Option[String] = None) extends State
 }
 

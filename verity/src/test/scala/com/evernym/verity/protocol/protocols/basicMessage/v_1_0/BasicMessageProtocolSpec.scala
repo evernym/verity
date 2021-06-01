@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
 
@@ -19,7 +20,7 @@ import scala.language.{implicitConversions, reflectiveCalls}
 
 
 class BasicMessageSpec
-  extends TestsProtocolsImpl(BasicMessageDefinition)
+  extends TestsProtocolsImpl(BasicMessageDefinition, Option(OneToOne))
   with BasicFixtureSpec {
 
   import TestingVars._

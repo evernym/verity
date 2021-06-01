@@ -3,14 +3,12 @@ package com.evernym.verity.protocol.testkit
 import com.evernym.verity.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
-import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{WalletAccess, WalletAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.journal.JournalContext
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
@@ -24,7 +22,6 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
                                                   pinstId: PinstId,
                                                   threadId: Option[ThreadId],
                                                   definition: ProtocolDefinition[P,R,M,E,S,I],
-                                                  segmentStoreStrategy: Option[SegmentStoreStrategy],
                                                   initProvider: InitProvider,
                                                   eventRecorder: Option[RecordsEvents]=None,
                                                   driver: Option[Driver]=None,
@@ -46,7 +43,6 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   extends {
     val pinstId = pce.pinstId
     val definition = pce.definition
-    val segmentStoreStrategy = pce.segmentStoreStrategy
     val driver = pce.driver
     val participantId = pce.participantId
     val system = pce.system
@@ -56,6 +52,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     with HasInbox[Any,Any] {
 
   override val _threadId: Option[ThreadId] = pce.threadId
+  override val _storageId: Option[StorageId] = Some(pce.pinstId)
   override lazy val journalContext: JournalContext = pce.parentLogContext + pinstId.take(5)
   val sendsMsgs: SendsMsgs = new SendsMsgsForContainer[M](this) {
 
@@ -135,13 +132,17 @@ class MockStorageService(system: SimpleProtocolSystem) extends SegmentStoreAcces
       case other =>
         system.storeSegment(segmentAddress, segmentKey, other)
     }
-    handler(Try(StoredSegment(segmentAddress, Option(segment))))
+    handler(Try(StoredSegment(segmentAddress, segmentKey, Option(segment))))
   }
 
   def withSegment[T](segmentAddress: SegmentAddress, segmentKey: SegmentKey, retentionPolicy: Option[String]=None)
                     (handler: Try[Option[T]] => Unit): Unit = {
     val data = system.getSegment(segmentAddress, segmentKey) orElse S3Mock.get(segmentKey)
     handler(Try(data.map(_.asInstanceOf[T])))
+  }
+
+  def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey)(handler: Try[Unit] => Unit): Unit = {
+    handler(Try(system.removeSegment(segmentAddress, segmentKey)))
   }
 }
 

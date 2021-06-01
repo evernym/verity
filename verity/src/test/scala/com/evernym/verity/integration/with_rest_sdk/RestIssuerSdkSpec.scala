@@ -4,8 +4,6 @@ import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
-import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
@@ -13,7 +11,9 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswer
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.{AnswerGiven, StatusReport => QAStatusReport}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.ConnectionInvitation
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{ConfigResult, Update, Config => AgentConfig}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.Update
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusReport => WSStatusReport}
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -126,10 +126,8 @@ class RestIssuerSdkSpec
   "IssuerSdk" - {
     "after user accepted invitation" - {
       "should receive notifications on webhook" in {
-        issuerRestSDK.expectMsgOnWebhook[ConnReqReceived]()
-        issuerRestSDK.expectMsgOnWebhook[ConnResponseSent]()
-        val receivedMsgParam = issuerRestSDK.expectMsgOnWebhook[Complete]()
-        receivedMsgParam.msg.theirDid.isEmpty shouldBe false
+        val complete = issuerRestSDK.expectConnectionComplete(firstConn)
+        complete.theirDid.isEmpty shouldBe false
       }
     }
 

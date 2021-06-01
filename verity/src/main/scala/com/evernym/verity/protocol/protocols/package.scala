@@ -3,7 +3,6 @@ package com.evernym.verity.protocol
 import com.evernym.verity.drivers.{AgentProvisioningDriver, TicTacToeAI, WalletBackupDriver, _}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.PinstIdResolution.{DEPRECATED_V0_1, V0_2}
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.{Bucket_2_Legacy, OneToOneDomain}
 import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.{AgentProvisioningProtoDef => AgentProvisioningProtoDef_v_0_5}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6.{AgentProvisioningProtoDef => AgentProvisioningProtoDef_v_0_6}
@@ -32,7 +31,7 @@ package object protocols {
   val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = ProtocolRegistry(
     (AgentProvisioningProtoDef_v_0_5, DEPRECATED_V0_1, { new AgentProvisioningDriver(_) }),
     (AgentProvisioningProtoDef_v_0_6, DEPRECATED_V0_1, { new AgentProvisioningDriver(_) }),
-    (AgentProvisioningProtoDef_v_0_7, V0_2, { new AgentProvisioningDriver(_) }, OneToOneDomain),
+    (AgentProvisioningProtoDef_v_0_7, V0_2, { new AgentProvisioningDriver(_) }),
 
     (UpdateConfigsDefinition, V0_2, { new UpdateConfigsDriver(_) }),
 
@@ -46,8 +45,8 @@ package object protocols {
     (ConnectingProtoDef_v_0_6, DEPRECATED_V0_1, {new ConnectingDriver(_)}),
     (ConnectionsDef, V0_2, {new ConnectionsDriver(_)}),
 
-    (WalletBackupProtoDef, DEPRECATED_V0_1, { new WalletBackupDriver(_) }, Bucket_2_Legacy),
-    (DeadDropProtoDef, DEPRECATED_V0_1, Bucket_2_Legacy),
+    (WalletBackupProtoDef, DEPRECATED_V0_1, { new WalletBackupDriver(_) }),
+    (DeadDropProtoDef, DEPRECATED_V0_1),
 
     (WriteSchemaDefinition, V0_2, { new WriteSchemaDriver(_) }),
     (CredDefDefinition, V0_2, { new WriteCredDefDriver(_) }),

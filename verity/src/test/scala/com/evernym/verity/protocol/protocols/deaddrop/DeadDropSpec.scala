@@ -19,7 +19,7 @@ class DeadDropSpec
   "A protocol" - {
 
     "should be able to specify that its state is segmented"  in { _ =>
-      DeadDropProtoDef.segmentedStateName shouldBe Option("payload")
+      DeadDropProtoDef.segmentStoreStrategy shouldBe Some(Bucket_2_Legacy)
     }
 
     "should be able to store and retrieve data" in { f =>

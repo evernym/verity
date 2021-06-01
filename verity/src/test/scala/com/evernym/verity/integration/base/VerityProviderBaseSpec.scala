@@ -63,7 +63,7 @@ trait VerityProviderBaseSpec
 
       val appSeed = (0 to 31).map(_ => randomChar()).mkString("")
       val portProfiles = (1 to totalNodeCount)
-        .map( _ => getRandomPortProfile)
+        .map( _ => generateNewPortProfile)
         .sortBy(_.artery)
 
       val arteryPorts = portProfiles.map(_.artery)
@@ -105,14 +105,17 @@ trait VerityProviderBaseSpec
    * to be teared down at the end of the spec
    * @return
    */
-  private var allVerityEnvs: List[VerityEnv] = List.empty
+  private var allVerityEnvs: Seq[VerityEnv] = Seq.empty
 
-  private def getRandomPortProfile: PortProfile = {
-    val randomPortProfiles = Stream.continually(PortProfile.random()).take(10)
+  private var usedPortProfiles: Seq[PortProfile] = Seq.empty
+
+  private def generateNewPortProfile: PortProfile = {
+    val tryAttempts = 10
+    val randomPortProfiles = Stream.continually(PortProfile.random()).take(tryAttempts)
     val availableProfile = randomPortProfiles find { portProfile ⇒
-      val usedPortProfiles = allVerityEnvs.flatMap(_.nodes).map(_.portProfile)
       if (! usedPortProfiles.contains(portProfile)) true else false
-    } getOrElse sys.error(s"could not create unused port profile after 10 attempts")
+    } getOrElse sys.error(s"could not create unused port profile after $tryAttempts attempts")
+    usedPortProfiles = usedPortProfiles :+ availableProfile
     availableProfile
   }
 

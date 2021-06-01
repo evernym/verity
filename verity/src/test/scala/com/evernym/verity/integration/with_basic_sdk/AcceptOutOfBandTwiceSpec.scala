@@ -5,8 +5,6 @@ import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
-import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
-import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, ProblemReport => IssueCredProblemReport}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent, Invitation => IssueCredInvitation}
@@ -94,9 +92,7 @@ class AcceptOutOfBandTwiceSpec
           val issueCredInvite = issueCredInvitation.get
           val relInvite = Invitation(issueCredInvite.inviteURL, issueCredInvite.shortInviteURL, issueCredInvite.invitationId)
           holderSDK.sendConnReqForInvitation(oobIssuerHolderConn, relInvite)
-          issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
-          issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
-          issuerSDK.expectMsgOnWebhook[Complete]()
+          issuerSDK.expectConnectionComplete(oobIssuerHolderConn)
         }
       }
 
@@ -211,9 +207,7 @@ class AcceptOutOfBandTwiceSpec
           val proofReqInvite = proofReqInvitation.get
           val relInvite = Invitation(proofReqInvite.inviteURL, proofReqInvite.shortInviteURL, proofReqInvite.invitationId)
           holderSDK.sendConnReqForInvitation(oobVerifierHolderConn, relInvite)
-          verifierSDK.expectMsgOnWebhook[ConnReqReceived]()
-          verifierSDK.expectMsgOnWebhook[ConnResponseSent]()
-          verifierSDK.expectMsgOnWebhook[Complete]()
+          verifierSDK.expectConnectionComplete(oobVerifierHolderConn)
         }
       }
 

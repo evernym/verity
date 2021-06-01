@@ -6,6 +6,7 @@ import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects2._
@@ -23,7 +24,7 @@ class StateSegments2Spec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(On
 
   "A protocol" - {
     "should be able to specify that its state is segmented"  in { _ =>
-      PhoneBookProtoDef.segmentedStateName shouldBe Option("phone-book")
+      PhoneBookProtoDef.segmentStoreStrategy shouldBe Some(OneToOne)
     }
     "should be able to add a phone book entry " in { f =>
 
@@ -112,7 +113,7 @@ object TestObjects2 {
 
     val msgFamily: MsgFamily = PhoneBookMsgFamily
 
-    override val segmentedStateName = Option("phone-book")
+    override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
     override def initParamNames: Set[ParameterName] = Set(SELF_ID)
 

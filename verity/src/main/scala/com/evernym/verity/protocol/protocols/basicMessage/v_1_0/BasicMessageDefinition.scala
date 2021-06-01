@@ -3,11 +3,16 @@ package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
+import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupProtoDef.msgFamily
 
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = BasicMessageMsgFamily
+
+  override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p.paramValueRequired(SELF_ID), p.paramValueRequired(OTHER_ID))
 

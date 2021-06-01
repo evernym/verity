@@ -207,9 +207,9 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //segmented state region actors
   val segmentedStateRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
-    .entries.filter(_.protoDef.segmentedStateName.isDefined)
+    .entries.filter(_.protoDef.segmentStoreStrategy.isDefined)
     .map { e =>
-      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef, e.protoDef.segmentedStateName.get)
+      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef)
       val region = createPersistentRegion(
         typeName,
         SegmentedStateStore.props(agentActorContext.appConfig))

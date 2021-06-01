@@ -7,7 +7,7 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
-import com.evernym.verity.protocol.protocols.walletBackup.BackupStored
+import com.evernym.verity.protocol.protocols.walletBackup.legacy.BackupStored
 import com.google.protobuf.ByteString
 import scalapb.GeneratedMessage
 
@@ -15,8 +15,9 @@ import scalapb.GeneratedMessage
 object SegmentedStateStore extends HasProps {
   def props(implicit config: AppConfig): Props = Props(new SegmentedStateStore(config))
 
-  def buildTypeName(protoRef: ProtoRef, segmentName: String): String = {
-    protoRef + "-" + segmentName
+
+  def buildTypeName(protoRef: ProtoRef): String = {
+    s"${protoRef.msgFamilyName}-${protoRef.msgFamilyVersion}-segment"
   }
 
   def eventCode(event: GeneratedMessage): Int = {

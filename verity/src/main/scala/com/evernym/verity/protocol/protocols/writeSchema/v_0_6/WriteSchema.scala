@@ -15,8 +15,6 @@ import com.evernym.verity.util.JsonUtil.seqToJson
 
 import scala.util.{Failure, Success}
 
-trait Event
-
 class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String])
   extends Protocol[WriteSchema, Role, Msg, Any, WriteSchemaState, String](WriteSchemaDefinition) {
 

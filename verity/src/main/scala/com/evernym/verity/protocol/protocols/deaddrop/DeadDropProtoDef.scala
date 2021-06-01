@@ -7,6 +7,8 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DEAD_DROP_ST
 import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine.Scope.ProtocolScope
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.{Base64Encoded, Signature}
 
 
@@ -49,7 +51,7 @@ object DeadDropProtoDef
 
   val msgFamily: MsgFamily = DeadDropMsgFamily
 
-  override val segmentedStateName = Option("payload")
+  override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(Bucket_2_Legacy)
 
   override def createInitMsg(params: Parameters) = Init(params)
 

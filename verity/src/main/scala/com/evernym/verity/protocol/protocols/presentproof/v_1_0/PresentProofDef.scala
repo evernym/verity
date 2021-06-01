@@ -5,6 +5,8 @@ import com.evernym.verity.constants.InitParamConstants.{NAME, _}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.OptionUtil.blankOption
 
@@ -12,6 +14,8 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
 
   override val roles: Set[Role] = Set(Role.Prover, Role.Verifier)
   override val msgFamily: MsgFamily = PresentProofMsgFamily
+
+  override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
   override def create(context: ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]):
   Protocol[PresentProof, Role, ProtoMsg, Event, State, String] = {
@@ -76,6 +80,8 @@ object ProblemReportCodes {
   val ledgerAssetsUnavailable = "ledger-assets-unavailable"
   val unexpectedMessage = "unexpected-message"
   val shorteningFailed = "shortening-failed"
+  val segmentedStoreFailed = "segmented-store-failed"
+  val segmentedRetrieveFailed = "storage-not-found"
 }
 
 object Role {

@@ -65,6 +65,13 @@ object IssueCredMsgFamily
 case class CredPreviewAttribute(name: String, value: String, `mime-type`: Option[String]=None)
 case class CredPreview(`@type`: String, attributes: Vector[CredPreviewAttribute]) {
   def toOption: Option[CredPreview] = Option(this)
+
+  def toCredPreviewObject: CredPreviewObject = {
+    CredPreviewObject(
+      `@type`,
+      attributes.map(a => CredPreviewAttr(a.name, a.value, a.`mime-type`))
+    )
+  }
 }
 
 // Control Messages

@@ -16,11 +16,10 @@ import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.msg.{GivenDataRetentionPolicy, GivenDomainId, GivenSponsorRel}
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.protocols.HasWallet
-import com.evernym.verity.protocol.{ChangePairwiseRelIds, Control, CtlEnvelope}
+import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.{ActorResponse, ServiceEndpoint}
@@ -61,8 +60,7 @@ class ActorProtocolContainer[
   I]
 (
   val agentActorContext: AgentActorContext,
-  val definition: PD,
-  val segmentStoreStrategy: Option[SegmentStoreStrategy]
+  val definition: PD
 )
   extends ProtocolContainer[P,R,M,E,S,I]
     with HasLegacyProtocolContainerServices[M,E,I]
@@ -81,7 +79,7 @@ class ActorProtocolContainer[
 
   override lazy val logger: Logger = getAgentIdentityLoggerByName(
     this,
-    s"${protoRef.toString}"
+    s"${getProtoRef.toString}"
   )(context.system)
 
   override val appConfig: AppConfig = agentActorContext.appConfig
@@ -102,8 +100,11 @@ class ActorProtocolContainer[
   // the receiver becomes inert.
   final def initialBehavior: Receive = {
     case ProtocolCmd(InitProtocol(domainId, parameters, sponsorRelOpt), None)=>
-      submit(GivenDomainId(domainId))
-      submit(GivenDataRetentionPolicy(parameters.find(_.name == DATA_RETENTION_POLICY).map(_.value)))
+
+      submit(SetDomainId(domainId))
+      submit(SetStorageId(pinstId))
+      submit(SetDataRetentionPolicy(parameters.find(_.name == DATA_RETENTION_POLICY).map(_.value)))
+
       if(parameters.nonEmpty) {
         logger.debug(s"$protocolIdForLog about to send init msg")
         submitInitMsg(parameters)
@@ -118,7 +119,7 @@ class ActorProtocolContainer[
     case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
       newRel.relationshipType match {
         case PAIRWISE_RELATIONSHIP =>
-          val changeRelEvt = ChangePairwiseRelIds(newRel.myDid_!, newRel.theirDid_!)
+          val changeRelEvt = PairwiseRelIdsChanged(newRel.myDid_!, newRel.theirDid_!)
           toCopyEventsBehavior(changeRelEvt)
           context.system.actorOf(
             ExtractEventsActor.prop(
@@ -208,8 +209,8 @@ class ActorProtocolContainer[
   }
 
   def handleSponsorRel(s: SponsorRel): Unit = {
-    if (!s.equals(SponsorRel.empty)) submit(GivenSponsorRel(s))
-    val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> protoRef.toString)
+    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
+    val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
     MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
   }
 
@@ -220,9 +221,9 @@ class ActorProtocolContainer[
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)
-      sender ! ThreadContextStoredInProtoActor(pinstId, protoRef)
+      sender ! ThreadContextStoredInProtoActor(pinstId, getProtoRef)
     } else {
-      sender ! ThreadContextNotStoredInProtoActor(pinstId, protoRef)
+      sender ! ThreadContextNotStoredInProtoActor(pinstId, getProtoRef)
     }
   }
 
@@ -244,7 +245,7 @@ class ActorProtocolContainer[
     logger.debug(s"$protocolIdForLog about to send InitProtocolReq to forwarder: ${msgForwarder.forwarder}")
     val forwarder = msgForwarder.forwarder.getOrElse(throw new RuntimeException("forwarder not set"))
 
-    forwarder ! InitProtocolReq(definition.initParamNames, protoRef)
+    forwarder ! InitProtocolReq(definition.initParamNames, getProtoRef)
   }
 
   lazy val driver: Option[Driver] = {
@@ -337,8 +338,8 @@ class ActorProtocolContainer[
     new SegmentStoreAccessController(
       new SegmentStoreAccessAPI(
         agentActorContext.storageAPI,
-        protoRef,
-        segmentedStateName)
+        getProtoRef
+      )
     )
 
   /**
@@ -404,7 +405,7 @@ class ActorProtocolContainer[
   def withHandleResp(code: => Unit): Unit = {
     //NOTE: using 'handleResponse' in below line to be able to send back synchronous response
     // of callback handler execution to waiting caller in case it original request was expecting a synchronous response
-    val msgId = getInFlight.msgId
+    val msgId = Try(getInFlight.msgId).getOrElse(None)
     handleResponse(Try(code), msgId, senderActorRef)
   }
 
@@ -470,7 +471,9 @@ case class Init(params: Parameters) extends Control {
  * @param domainId domain id
  * @param parameters protocol initialization parameters
  */
-case class InitProtocol(domainId: DomainId, parameters: Set[Parameter], sponsorRel: Option[SponsorRel]) extends ActorMessage
+case class InitProtocol(domainId: DomainId,
+                        parameters: Set[Parameter],
+                        sponsorRel: Option[SponsorRel]) extends ActorMessage
 
 /**
  * This is used by this actor during protocol initialization process.

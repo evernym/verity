@@ -57,7 +57,8 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
 
   def statefulHandleControl(pf: (S, Option[R], Control) ?=> Any)
                            (implicit ctx: Context): Control ?=> Any = {
-    case c => pf((ctx.getState, ctx.getRoster.selfRole, c))
+    case c: Control if pf.isDefinedAt((ctx.getState, ctx.getRoster.selfRole, c)) =>
+      pf((ctx.getState, ctx.getRoster.selfRole, c))
   }
 
   def logger(implicit ctx: Context): Logger = {
@@ -68,11 +69,10 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
 
 object ProtocolHelpers {
   val noHandleProtoMsg = "This protocol don't have protocol messages! getting here should not be passable"
+
   def noHandleProtoMsg[S, R, M](customMsg: String = noHandleProtoMsg): (S, Option[R], M) ?=> Any = {
     case _ => throw new RuntimeException(noHandleProtoMsg)
   }
-
-  def statefulHandleControl[S](state: S)(pf: (S, Control) ?=> Any): Control ?=> Any = {case c => pf((state, c))}
 
   def defineSelf[R](roster: Roster[R], id: ParticipantId, role: R): Roster[R] = {
     roster

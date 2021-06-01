@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.testkit.EventFilter
-import ch.qos.logback.classic.Level
 import com.evernym.verity.Status
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ItemUpdated, ShardUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat

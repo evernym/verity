@@ -3,7 +3,6 @@ package com.evernym.verity.actor.persistence.eventDeletion
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import akka.testkit.EventFilter
-import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.{ActorMessage, ItemUpdated, TestJournal}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}

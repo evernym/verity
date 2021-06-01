@@ -475,9 +475,8 @@ message StorageInfo {
 }
 
 message StorageReferenceStored {
-    string id = 1;
-    int32 eventCode = 2;
-    StorageInfo storageInfo = 3;
+    int32 eventCode = 1;
+    StorageInfo storageInfo = 2;
 }
 
 message PublicIdentityStored {

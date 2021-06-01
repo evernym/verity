@@ -88,6 +88,9 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
                                   segmentKey: SegmentKey,
                                   retentionPolicy: Option[String]=None)
                                  (handler: Try[Option[T]] => Unit): Unit = {}
+
+      override def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey)
+                                (handler: Try[Unit] => Unit): Unit = {}
     }
 
     override def wallet: WalletAccess = ???

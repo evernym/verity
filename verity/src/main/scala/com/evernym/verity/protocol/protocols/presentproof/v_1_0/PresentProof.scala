@@ -8,6 +8,7 @@ import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
@@ -20,6 +21,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Ve
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.States.Complete
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy.PresentProofLegacy
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 
@@ -34,11 +36,70 @@ https://github.com/hyperledger/aries-rfcs/tree/4fae574c03f9f1013db30bf2c0c676b11
 
 class PresentProof (implicit val ctx: PresentProofContext)
   extends Protocol[PresentProof, Role, ProtoMsg, Event, State, String](PresentProofDef)
-  with ProtocolHelpers[PresentProof, Role, ProtoMsg, Event, State, String] {
+    with ProtocolHelpers[PresentProof, Role, ProtoMsg, Event, State, String]
+    with PresentProofLegacy {
 
   import PresentProof._
 
-  override def applyEvent: ApplyEvent = commonApplyEvent orElse proverApplyEvent orElse verifierApplyEvent
+  override def applyEvent: ApplyEvent =
+    commonApplyEvent orElse
+      proverApplyEvent orElse
+      verifierApplyEvent orElse
+      legacyApplyEvent
+
+  override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any =
+    mainProtoMsgHandler orElse
+      legacyProtoMsg orElse
+      invalidProtoMsgHandler
+
+  override def handleControl: Control ?=> Any =
+    mainHandleControl orElse
+      legacyControl orElse
+      invalidHandleControl
+
+  def mainHandleControl: Control ?=> Any = statefulHandleControl {
+    case (States.Uninitialized()    , None,           ctl: Ctl.Init               ) => handleCtlInit(ctl)
+    case (s: States.Initialized     , None,           ctl: Ctl.Request            ) => handleCtlRequest(ctl, s.data)
+    case (States.Initialized(_)     , None,           ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
+    case (_: States.RequestReceived , Some(Prover),   ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
+    case (States.Initialized(_)     , None,           ctl: Ctl.AttachedRequest    ) => handleCtlAttachedRequest(ctl)
+    case (s: States.RequestReceived , Some(Prover),   msg: Ctl.AcceptRequest      ) =>
+      withSegment(s.data.requests.head, handleCtlAcceptRequest(msg))
+    case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.AcceptProposal     ) =>
+      withSegment(s.data.proposals.head, handleCtlAcceptProposal(msg))
+    case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.Request            ) => handleCtlRequest(msg, s.data)
+    case (s                         , _,              msg: Ctl.Status             ) => handleCtlStatus(s, msg)
+    case (s                         , _,              msg: Ctl.Reject             ) => handleCtlReject(s, msg)
+    case (s: State                  , _             , msg: CtlMsg                 ) => invalidControlState(s, msg)
+  }
+
+  def invalidHandleControl: Control ?=> Any = statefulHandleControl {
+    case (s: State                  , _             , msg: CtlMsg                 ) => invalidControlState(s, msg)
+  }
+
+  // Proto Messages
+  def mainProtoMsgHandler: (State, Option[Role], ProtoMsg) ?=> Any = {
+    case (States.Initialized(_),  _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+
+    case (States.Initialized(_),  _, msg: Msg.ProposePresentation) =>
+      apply(Role.Verifier.toEvent)
+      handleMsgProposePresentation(msg)
+
+    case (s: States.RequestSent,  _, msg: Msg.Presentation       ) =>
+      withSegment(s.data.requests.head, handleMsgPresentation(msg), sendMsg = true)
+
+    case (_: States.ProposalSent, _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
+    case (_: States.RequestSent,  _, msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
+    case (s: State,               r, msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
+    case (States.Presented(_),    _, msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
+    case (_,                      _, _  : Msg.Ack                ) => //Acks any other time are ignored
+    case (_,                      _, msg: Msg.ProposePresentation) => handleMsgProposal(msg)
+    case (_,                      _, msg: ProtoMsg               ) => invalidMessageState(msg)
+  }
+
+  def invalidProtoMsgHandler: (State, Option[Role], ProtoMsg) ?=> Any = {
+    case (_,                            _, msg: ProtoMsg               ) => invalidMessageState(msg)
+  }
 
   def commonApplyEvent: ApplyEvent = {
     case (_: States.Uninitialized , _ , Participants(selfId, otherId)  ) =>
@@ -63,53 +124,30 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def proverApplyEvent: ApplyEvent = {
-    case (_: States.Initialized    , _, RequestGiven(r)           ) => States.initRequestReceived(r)
-    case (_: States.Initialized    , _, PresentationProposed(a, p)) => States.initProposalSent(a, p)
-    case (s: States.ProposalSent   , _, RequestGiven(r)           ) => States.RequestReceived(s.data.addRequest(r))
-    case (s: States.RequestReceived, _, PresentationUsed(p)       ) => States.Presented(s.data.addPresentation(p))
-    case (s: States.RequestReceived, _, PresentationProposed(a, p)) => States.ProposalSent(s.data.addProposal(a, p))
-    case (s: States.Presented      , _, PresentationAck(a)        ) => States.Presented(s.data.addAck(a))
+    case (_: States.Initialized    , _, RequestGivenRef(r)           )  => States.initRequestReceived(r)
+    case (_: States.Initialized    , _, PresentationProposedRef(r))     => States.initProposalSent(r)
+    case (s: States.ProposalSent   , _, RequestGivenRef(r)           )  => States.RequestReceived(s.data.addRequest(r))
+    case (s: States.RequestReceived, _, PresentationUsedRef(p)       )  => States.Presented(s.data.addPresentation(p))
+    case (s: States.RequestReceived, _, PresentationProposedRef(r))     => States.ProposalSent(s.data.addProposal(r))
+    case (s: States.Presented      , _, PresentationAck(a)        )     => States.Presented(s.data.addAck(a))
   }
 
   def verifierApplyEvent: ApplyEvent = {
-    case (_: States.Initialized     , _, RequestUsed(r)          ) => States.initRequestSent(r)
-    case (_: States.Initialized     , _, ProposeReceived(a, p)   ) => States.initProposalReceived(a, p)
-    case (s: States.ProposalReceived, _, RequestUsed(r)          ) => States.RequestSent(s.data.addRequest(r))
-    case (s: States.RequestSent     , _, PresentationGiven(p)    ) => States.Complete(s.data.addPresentation(p))
-    case (s: States.RequestSent     , _, ProposeReceived(a, p)   ) => States.ProposalReceived(s.data.addProposal(a, p))
-    case (s: States.Complete        , _, AttributesGiven(p)      ) => States.Complete(s.data.addAttributesPresented(p))
-    case (s: States.Complete        , _, ResultsOfVerification(r)) => States.Complete(s.data.addVerificationResults(r))
+    case (_: States.Initialized     , _, RequestUsedRef(r)          ) => States.initRequestSent(r)
+    case (_: States.Initialized     , _, ProposeReceivedRef(r)   )    => States.initProposalReceived(r)
+    case (s: States.ProposalReceived, _, RequestUsedRef(r)          ) =>  States.RequestSent(s.data.addRequest(r))
+    case (s: States.RequestSent     , _, PresentationGivenRef(p)    ) => States.Complete(s.data.addPresentation(p))
+    case (s: States.RequestSent     , _, ProposeReceivedRef(r)   )    => States.ProposalReceived(s.data.addProposal(r))
+    case (s: States.Complete        , _, ResultsOfVerification(r))    => States.Complete(s.data.addVerificationResults(r))
   }
 
-  override def handleProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (States.Initialized(_),  _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
-    case (States.Initialized(_),  _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentation(msg)
-    case (s: States.RequestSent,  _, msg: Msg.Presentation       ) => handleMsgPresentation(s, msg)
-    case (_: States.ProposalSent, _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
-    case (_: States.RequestSent,  _, msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
-    case (States.Presented(_),    _, msg: Msg.Ack                ) => apply(PresentationAck(msg.status))
-    case (_,                      _, _  : Msg.Ack                ) => //Acks any other time are ignored
-    case (_,                      _, msg: Msg.ProposePresentation) => handleMsgProposal(msg)
-
-    case (s: State,               r, msg: Msg.ProblemReport      ) => handleMsgProblemReport(s, r, msg)
-    case (_: State,               _, msg: ProtoMsg               ) => invalidMessageState(msg)
+  def withSegment[T](id: SegmentKey, f: T => Unit, sendMsg: Boolean = false): Unit = {
+    ctx.withSegment[T](id) {
+      case Success(Some(s)) => f(s)
+      case Success(None) => reportSegRetrieveFailed(sendMsg = sendMsg)
+      case Failure(e) => reportSegRetrieveFailed(Some(e), sendMsg)
+    }
   }
-
-  override def handleControl: Control ?=> Any = statefulHandleControl
-  {
-    case (States.Uninitialized()    , None,           ctl: Ctl.Init               ) => handleCtlInit(ctl)
-    case (s: States.Initialized     , None,           ctl: Ctl.Request            ) => handleCtlRequest(ctl, s.data)
-    case (States.Initialized(_)     , None,           ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
-    case (_: States.RequestReceived , Some(Prover),   ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
-    case (States.Initialized(_)     , None,           ctl: Ctl.AttachedRequest    ) => handleCtlAttachedRequest(ctl)
-    case (s: States.RequestReceived , Some(Prover),   msg: Ctl.AcceptRequest      ) => handleCtlAcceptRequest(s, msg)
-    case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.AcceptProposal     ) => handleCtlAcceptProposal(s, msg)
-    case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.Request            ) => handleCtlRequest(msg, s.data)
-    case (s                         , _,              msg: Ctl.Status             ) => handleCtlStatus(s, msg)
-    case (s                         , _,              msg: Ctl.Reject             ) => handleCtlReject(s, msg)
-    case (s: State                  , _             , msg: CtlMsg                 ) => invalidControlState(s, msg)
-  }
-
   // *****************************
   // HANDLE PROTOCOL MESSAGES
   // *****************************
@@ -118,12 +156,16 @@ class PresentProof (implicit val ctx: PresentProofContext)
     apply(Role.Prover.toEvent)
     extractRequest(request) match {
       case Success(request) =>
-        apply(RequestGiven(request))
-        ctx.wallet.credentialsForProofReq(request) {
-          case Success(_) =>
-            signal(Sig.proofRequestToReviewRequest(request, canFulfill = true))
-          case Failure(_) =>
-            signal(Sig.proofRequestToReviewRequest(request, canFulfill = false))
+        ctx.storeSegment(segment=RequestUsed(request)) {
+          case Success(s) =>
+            ctx.apply(RequestGivenRef(s.segmentKey))
+            ctx.wallet.credentialsForProofReq(request) {
+              case Success(_) =>
+                signal(Sig.proofRequestToReviewRequest(request, canFulfill = true))
+              case Failure(_) =>
+                signal(Sig.proofRequestToReviewRequest(request, canFulfill = false))
+            }
+          case Failure(e) => reportSegStoreFailed(e)
         }
       case Failure(e) => send(
         Msg.buildProblemReport(s"Invalid request -- ${e.getMessage}", invalidRequest)
@@ -142,59 +184,61 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def handleMsgProposePresentation(msg: Msg.ProposePresentation): Unit = {
-    apply(
-      ProposeReceived(
-        msg.presentation_proposal.attributes.map(_.toEvent),
-        msg.presentation_proposal.predicates.map(_.toEvent)
-      )
-    )
-    ctx.signal(Sig.ReviewProposal(msg.presentation_proposal.attributes, msg.presentation_proposal.predicates, msg.comment))
+    ctx.storeSegment(segment=ProposeReceived(
+      msg.presentation_proposal.attributes.map(_.toEvent),
+      msg.presentation_proposal.predicates.map(_.toEvent),
+    )) {
+      case Success(s) =>
+        ctx.apply(ProposeReceivedRef(s.segmentKey))
+        ctx.signal(Sig.ReviewProposal(msg.presentation_proposal.attributes, msg.presentation_proposal.predicates, msg.comment))
+      case Failure(e) => reportSegStoreFailed(e)
+    }
   }
 
-  def handleMsgPresentation(s: States.RequestSent, msg: Msg.Presentation): Unit = {
+  def handleMsgPresentation(msg: Msg.Presentation)(requestUsed: RequestUsed): Unit = {
     recordSenderId()
-    val proofRequest = s.data.requests.head
+    val proofRequest = DefaultMsgCodec.fromJson[ProofRequest](requestUsed.requestRaw)
     val proofRequestJson = DefaultMsgCodec.toJson(_checkRevocationInterval(proofRequest))
 
     extractPresentation(msg) match {
-      case Success(presentations) =>
-        val (presentation: ProofPresentation, presentationJson: String) = presentations
+      case Success((presentation: ProofPresentation, presentationJson: String)) =>
+        ctx.storeSegment(segment=PresentationGiven(presentationJson)) {
+          case Success(s) =>
+            ctx.apply(PresentationGivenRef(s.segmentKey))
+            send(Msg.Ack("OK"))
 
-        apply(PresentationGiven(presentationJson))
-        send(Msg.Ack("OK"))
+            val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
+            retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
+              case Success((schemaJson, credDefJson)) =>
+                runWithInternalSpan("processPresentation","PresentProof") {
+                  ctx.wallet.verifyProof(
+                    proofRequestJson,
+                    presentationJson,
+                    schemaJson,
+                    credDefJson,
+                    "{}",
+                    "{}",
+                  ) { proofVerifResult =>
+                    val correct = checkEncodedAttributes(presentation)
+                    val validity = proofVerifResult
+                      .map(_.result && correct)
+                      .map {
+                        case true => ProofValidated
+                        case _ => ProofInvalid
+                      }
+                      .getOrElse(ProofUndefined) // verifyProof throw an exception
 
-        val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
-        apply(AttributesGiven(DefaultMsgCodec.toJson(simplifiedProof)))
-
-        retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
-          case Success((schemaJson, credDefJson)) =>
-            runWithInternalSpan("processPresentation","PresentProof") {
-              ctx.wallet.verifyProof(
-                proofRequestJson,
-                presentationJson,
-                schemaJson,
-                credDefJson,
-                "{}",
-                "{}",
-              ) { proofVerifResult =>
-                  val correct = checkEncodedAttributes(presentation)
-                  val validity = proofVerifResult
-                    .map(_.result && correct)
-                    .map {
-                      case true => ProofValidated
-                      case _ => ProofInvalid
-                    }
-                    .getOrElse(ProofUndefined) // verifyProof throw an exception
-
-                  apply(ResultsOfVerification(validity))
-                  signal(Sig.PresentationResult(validity, simplifiedProof))
-              }
+                    apply(ResultsOfVerification(validity))
+                    signal(Sig.PresentationResult(validity, simplifiedProof))
+                  }
+                }
+              case Failure(_) =>
+                // Unable to get Ledger Assets
+                val validity = ProofUndefined
+                apply(ResultsOfVerification(validity))
+                signal(Sig.PresentationResult(validity , simplifiedProof))
             }
-          case Failure(_) =>
-            // Unable to get Ledger Assets
-            val validity = ProofUndefined
-            apply(ResultsOfVerification(validity))
-            signal(Sig.PresentationResult(validity , simplifiedProof))
+          case Failure(e) => reportSegStoreFailed(e)
         }
       case Failure(e) => send(
         Msg.buildProblemReport(s"Invalid presentation -- ${e.getMessage}", invalidPresentation)
@@ -245,14 +289,15 @@ class PresentProof (implicit val ctx: PresentProofContext)
     val attributes = ctp.attributes.getOrElse(List())
     val predicates = ctp.predicates.getOrElse(List())
 
-    apply(PresentationProposed(attributes.map(_.toEvent), predicates.map(_.toEvent)))
-
-    val proposeProof = ProposePresentation(
-      comment = ctp.comment,
-      presentation_proposal = PresentationPreview(attributes, predicates)
-    )
-
-    send(proposeProof)
+    ctx.storeSegment(segment=PresentationProposed(attributes.map(_.toEvent), predicates.map(_.toEvent))) {
+      case Success(s) =>
+        ctx.apply(PresentationProposedRef(s.segmentKey))
+        ctx.send(ProposePresentation(
+          comment = ctp.comment,
+          presentation_proposal = PresentationPreview(attributes, predicates)
+        ))
+      case Failure(e) => reportSegStoreFailed(e)
+    }
   }
 
   def handleCtlAttachedRequest(ctr: Ctl.AttachedRequest): Unit = {
@@ -267,11 +312,15 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
     proofRequestStr match {
       case Success(str) =>
-        val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
-        apply(RequestUsed(str))
+        ctx.storeSegment(segment=RequestUsed(str)) {
+          case Success(s) =>
+            ctx.apply(RequestUsedRef(s.segmentKey))
 
-        if(!ctr.by_invitation.getOrElse(false)) { send(presentationRequest) }
-        else { sendInvite(presentationRequest, stateData) }
+            val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
+            if(!ctr.by_invitation.getOrElse(false)) { ctx.send(presentationRequest) }
+            else { sendInvite(presentationRequest, stateData) }
+          case Failure(e) => reportSegStoreFailed(e)
+        }
       case Failure(e) =>
         signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
     }
@@ -299,9 +348,9 @@ class PresentProof (implicit val ctx: PresentProofContext)
     }
   }
 
-  def handleCtlAcceptRequest(s: States.RequestReceived, msg: Ctl.AcceptRequest): Unit = {
-    val proofRequest: ProofRequest = s.data.requests.head
-    val proofRequestJson: String = DefaultMsgCodec.toJson(proofRequest)
+  def handleCtlAcceptRequest(msg: Ctl.AcceptRequest)(requestUsed: RequestUsed): Unit = {
+    val proofRequest = DefaultMsgCodec.fromJson[ProofRequest](requestUsed.requestRaw)
+    val proofRequestJson = DefaultMsgCodec.toJson(proofRequest)
 
     ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofReqCreated] =>
       val credentialsNeeded =
@@ -319,8 +368,12 @@ class PresentProof (implicit val ctx: PresentProofContext)
           ) {
             case Success(proofCreated) =>
               val payload = buildAttachment(Some(AttIds.presentation0), proofCreated.proof)
-              send(Msg.Presentation("", Seq(payload)))
-              apply(PresentationUsed(proofCreated.proof))
+              ctx.storeSegment(segment=PresentationUsed(proofCreated.proof)) {
+                case Success(s) =>
+                  send(Msg.Presentation("", Seq(payload)))
+                  ctx.apply(PresentationUsedRef(s.segmentKey))
+                case Failure(e) => reportSegStoreFailed(e)
+              }
             case Failure(e) => signal(
               Sig.buildProblemReport(
                 s"Unable to crate proof presentation -- ${e.getMessage}",
@@ -336,25 +389,32 @@ class PresentProof (implicit val ctx: PresentProofContext)
     }
   }
 
-  def handleCtlAcceptProposal(s: States.ProposalReceived, msg: Ctl.AcceptProposal): Unit = {
-    val proposal = s.data.proposals.head
+  def handleCtlAcceptProposal(msg: Ctl.AcceptProposal)(proposal: ProposeReceived): Unit = {
+      val proofRequest = ProofRequestUtil.proposalToProofRequest(
+        PresentationPreview.fromEvt(proposal),
+        msg.name.getOrElse(""),
+        msg.non_revoked
+      )
+      val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
 
-    val proofRequest = ProofRequestUtil.proposalToProofRequest(proposal, msg.name.getOrElse(""), msg.non_revoked)
-    val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
-    proofRequestStr match {
-      case Success(str) =>
-        val presentationRequest = Msg.RequestPresentation(
-          "",
-          Vector(
-            buildAttachment(Some(AttIds.request0), str)
+      proofRequestStr match {
+        case Success(str) =>
+          val presentationRequest = Msg.RequestPresentation(
+            "",
+            Vector(
+              buildAttachment(Some(AttIds.request0), str)
+            )
           )
-        )
 
-        send(presentationRequest)
-        apply(RequestUsed(str))
-      case Failure(e) =>
-        signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
-    }
+          ctx.storeSegment(segment=RequestUsed(str)) {
+            case Success(s) =>
+              ctx.apply(RequestUsedRef(s.segmentKey))
+              send(presentationRequest)
+            case Failure(e) => reportSegStoreFailed(e)
+          }
+        case Failure(e) =>
+          signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
+      }
   }
 
   def handleCtlReject(s: State, msg: Ctl.Reject): Any = {
@@ -364,23 +424,29 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def handleCtlStatus(state: State, msg: Ctl.Status): Unit = {
-    val status = state match {
+    state match {
       case s: Complete =>
-        val verificationResults = s.data.verificationResults
-        val presented = s.data.presentedAttributes
-        val results = verificationResults
-          .flatMap(x=> presented.map(PresentationResult(x, _)))
-        Sig.StatusReport(s.getClass.getSimpleName, results, None)
+        s.data.verificationResults
+          .flatMap(x=> s.data.presentation.map( ref => {
+            ctx.withSegment[PresentationGiven](ref) {
+              case Success(Some(p)) =>
+                val presentation = DefaultMsgCodec.fromJson[ProofPresentation](p.presentation)
+                val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
+                val res = Some(PresentationResult(x, simplifiedProof))
+                signal(Sig.StatusReport(s.getClass.getSimpleName, res, None))
+              case Success(None) => signal(Sig.StatusReport(s.getClass.getSimpleName, None, None))
+              case Failure(e) => reportSegStoreFailed(e)
+            }
+          }))
       case s: HasData =>
-        Sig.StatusReport(s.getClass.getSimpleName, None, None)
+        signal(Sig.StatusReport(s.getClass.getSimpleName, None, None))
       case s: State   =>
-        Sig.StatusReport(s.getClass.getSimpleName, None, None)
+        signal(Sig.StatusReport(s.getClass.getSimpleName, None, None))
     }
-    signal(status)
   }
 
   def retrieveLedgerElements(identifiers: Seq[Identifier], allowsAllSelfAttested: Boolean=false)
-                            (handler: Try[(String, String)] => Unit): Unit = {
+                                  (handler: Try[(String, String)] => Unit): Unit = {
     val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
 
     identifiers.foreach { identifier =>
@@ -391,7 +457,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
   }
 
   def doSchemaAndCredDefRetrieval(ids: Set[(String,String)], allowsAllSelfAttested: Boolean)
-                                 (handler: Try[(String, String)] => Unit): Unit = {
+                                       (handler: Try[(String, String)] => Unit): Unit = {
     ids.size match {
       case 0 if !allowsAllSelfAttested => Failure(new Exception("No ledger identifiers were included with the Presentation"))
       case _ =>
@@ -433,6 +499,26 @@ class PresentProof (implicit val ctx: PresentProofContext)
 
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
+
+  def reportSegRetrieveFailed(e: Option[Throwable]=None, sendMsg: Boolean = false)(implicit ctx: PresentProofContext): Unit = {
+    e match {
+      case Some(_e) =>
+        ctx.logger.warn(s"could not store segment with e: ${_e.getMessage}")
+        ctx.signal(Sig.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
+        if (sendMsg)
+          ctx.send(Msg.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
+      case None =>
+        ctx.logger.warn(s"segmented state expired")
+        ctx.signal(Sig.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
+        if (sendMsg)
+          ctx.send(Msg.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
+    }
+  }
+
+  def reportSegStoreFailed(e: Throwable)(implicit ctx: PresentProofContext): Unit = {
+    ctx.logger.warn(s"could not store segment with e: ${e.getMessage}")
+    ctx.signal(Sig.buildProblemReport("segmented state storage failed", segmentedStoreFailed))
+  }
 
   def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)
                     (handler: Try[ShortenInvite] => Unit)
@@ -481,7 +567,7 @@ object PresentProof {
 
   def extractAttachment(attachmentId: String, attachments: Seq[AttachmentDescriptor]): Try[String] ={
     Try(attachments.size)
-    .getOrElse(throw new Exception("Attachment decorator don't have an Attachment"))
+      .getOrElse(throw new Exception("Attachment decorator don't have an Attachment"))
     match {
       case 1 =>
         attachments.head match {
@@ -560,9 +646,7 @@ object PresentProof {
     val msgName: String = PresentProofMsgFamily.msgType(invalidMsg.getClass).msgName
     val stateName: String = curState.getClass.getSimpleName
     val errorMsg = s"Unexpected '$msgName' message in current state '$stateName"
-    ctx.signal(
-      Sig.buildProblemReport(errorMsg, unexpectedMessage)
-    )
+    ctx.send(Msg.buildProblemReport(errorMsg, unexpectedMessage))
   }
 
   def rejectableState(state: State): Boolean = {
@@ -570,9 +654,9 @@ object PresentProof {
       case s: HasData => s match {
         // Allowed rejection states
         case _ @ (_: States.ProposalReceived |
-                  _: States.RequestSent      |
-                  _: States.RequestReceived  |
-                  _: States.ProposalSent     |
+                  _: States.RequestSent |
+                  _: States.RequestReceived |
+                  _: States.ProposalSent |
                   _: States.Presented) => true
         // Disallowed states
         case _ => false
@@ -583,17 +667,17 @@ object PresentProof {
 
   def recordSenderId()(implicit ctx: PresentProofContext): Unit = {
     ctx
-    .getInFlight
-    .sender
-    .id
-    .foreach { id =>
-      val r = ctx.getRoster
-      if(r.participantIndex(id).isEmpty) {
-        ctx.apply(Participants("", id))
-        r.selfRole.foreach{ selfRole =>
-          ctx.apply(MyRole(selfRole.roleNum))
+      .getInFlight
+      .sender
+      .id
+      .foreach { id =>
+        val r = ctx.getRoster
+        if(r.participantIndex(id).isEmpty) {
+          ctx.apply(Participants("", id))
+          r.selfRole.foreach{ selfRole =>
+            ctx.apply(MyRole(selfRole.roleNum))
+          }
         }
       }
-    }
   }
 }

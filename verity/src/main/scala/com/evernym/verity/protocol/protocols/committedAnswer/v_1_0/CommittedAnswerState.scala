@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
+trait Event
+
 sealed trait State
 
 object State {

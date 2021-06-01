@@ -14,8 +14,6 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Rol
 
 import scala.util.{Failure, Success}
 
-trait Event
-
 class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, CredDefState, String])
   extends Protocol[WriteCredDef, Role, Msg, Any, CredDefState, String](CredDefDefinition) {
 

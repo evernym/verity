@@ -8,6 +8,7 @@ import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
@@ -17,7 +18,7 @@ import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
   with BasicFixtureSpec {
@@ -148,22 +149,14 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         )
 
         verifier.role shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         // Prover should receive request and approve it
-        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
-          msg.proof_request.nonce shouldBe nonce.value
-        }
+        assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+
+        assertRequestReceivedState(prover)
+
         prover ~ Ctl.AcceptRequest()
 
         // Verifier should receive presentation and verify it
@@ -172,15 +165,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -202,8 +190,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
       "should handle Out-Of-Band Invitation happy path" in { f =>
         val (verifier, prover) = indyAccessMocks(f)
-
-        var nonce: Option[Nonce] = None
 
         verifier urlShortening MockableUrlShorteningAccess.shortened
         // Verifier starts protocol
@@ -262,21 +248,13 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
 
         verifier.backState.roster.selfRole_! shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         prover ~ Ctl.AttachedRequest(attachedRequest)
 
-        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
-          msg.proof_request.nonce shouldBe nonce.value
-        }
+        assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+        assertRequestReceivedState(prover)
         prover ~ Ctl.AcceptRequest()
 
         // Verifier should receive presentation and verify it
@@ -285,15 +263,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -317,8 +290,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val (verifier, prover) = indyAccessMocks(f)
 
         verifier.initParams(defaultInitParams.updated(MY_PUBLIC_DID, ""))
-
-        var nonce: Option[Nonce] = None
 
         verifier urlShortening MockableUrlShorteningAccess.shortened
 
@@ -378,21 +349,13 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         val attachedRequest: RequestPresentation = DefaultMsgCodec.fromJson[RequestPresentation](attachment)
 
         verifier.backState.roster.selfRole_! shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         prover ~ Ctl.AttachedRequest(attachedRequest)
 
-        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
-          msg.proof_request.nonce shouldBe nonce.value
-        }
+        assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+        assertRequestReceivedState(prover)
         prover ~ Ctl.AcceptRequest()
 
         // Verifier should receive presentation and verify it
@@ -401,15 +364,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -472,22 +430,12 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         )
 
         verifier.role shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         // Prover should receive request and propose different presentation
-        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
-          msg.proof_request.nonce shouldBe nonce.value
-        }
+        assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+        assertRequestReceivedState(prover)
 
         prover ~ Ctl.Propose(
           None,
@@ -503,17 +451,12 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         verifier.expectAs(state[States.ProposalReceived]) { s =>
           s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
           s.data.proposals should have size 1
         }
 
         verifier ~ Ctl.AcceptProposal(None, None)
 
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 2
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier, numberOfReq=2)
 
         prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
           msg.proof_request.non_revoked shouldBe None
@@ -541,15 +484,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -584,22 +522,12 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         )
 
         verifier.role shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         // Prover should receive request and propose different presentation
-        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
-          msg.proof_request.nonce shouldBe nonce.value
-        }
+        assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+        assertRequestReceivedState(prover)
 
         prover ~ Ctl.Propose(
           Some(List(proposedAttr1, proposedAttr2)),
@@ -615,7 +543,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         verifier.expectAs(state[States.ProposalReceived]) { s =>
           s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
           s.data.proposals should have size 1
         }
 
@@ -626,11 +553,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None
         )
 
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 2
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier, numberOfReq=2)
 
         // Prover should receive request and approve it
         prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
@@ -654,15 +577,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -685,8 +603,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       "should handle prover being able to start by proposing presentation" in { f =>
 
         val (verifier, prover) = indyAccessMocks(f)
-
-        var nonce: Option[Nonce] = None
 
         // Prover starts protocol
         (prover engage verifier) ~ Ctl.Propose(
@@ -714,11 +630,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         verifier ~ Ctl.AcceptProposal(None, None)
 
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
           msg.proof_request.non_revoked shouldBe None
@@ -746,15 +658,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -784,11 +691,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         (verifier engage prover) ~ allSelfAttestProofReq
 
         verifier.role shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         // Prover should receive request and approve it
         var selfAttestOptions: List[String] = List()
@@ -803,7 +706,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         prover.expectAs(state[States.RequestReceived]){ s =>
           s.data.requests should not be empty
           s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
         }
         val selfAttestedAttrs = selfAttestOptions.map(x => x -> "test data").toMap
         prover ~ Ctl.AcceptRequest(selfAttestedAttrs)
@@ -816,14 +718,11 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         verifier.expectAs(state[States.Complete]) { s =>
           s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.self_attested_attrs.size shouldBe 2
-          s.data.presentedAttributes.value.revealed_attrs shouldBe empty
           s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
         }
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -847,30 +746,19 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       "should fail with unexpected self attested" ignore {f =>
         val (verifier, prover) = indyAccessMocks(f, wa=MockableWalletAccess.walletAccess())
 
-        var nonce: Option[Nonce] = None
-
         // Verifier starts protocol
         (verifier engage prover) ~ reqWithRestriction
 
         verifier.role shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         // Prover should receive request and approve it
         prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
           assert(!msg.proof_request.allowsAllSelfAttested)
-          msg.proof_request.nonce shouldBe nonce.value
         }
 
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+        assertRequestReceivedState(prover)
 
         prover ~ Ctl.AcceptRequest(Map("invalid self attest" -> "invalid"))
 
@@ -883,29 +771,17 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       "should pass when prover provides credential when verifier allows self attested" in { f =>
         val (verifier, prover) = indyAccessMocks(f)
 
-        var nonce: Option[Nonce] = None
-
         // Verifier starts protocol
         (verifier engage prover) ~ reqWithSelfAttestAndRestrictions
 
         verifier.role shouldBe Role.Verifier
-        verifier.expectAs(state[States.RequestSent]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          nonce = Some(s.data.requests.head.nonce)
-        }
+        assertRequestSentState(verifier)
 
         // Prover should receive request and approve it
-        prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
-          msg.proof_request.nonce shouldBe nonce.value
-        }
+        assertReviewRequestSig(prover)
 
         prover.role shouldBe Role.Prover
-        prover.expectAs(state[States.RequestReceived]){ s =>
-          s.data.requests should not be empty
-          s.data.requests should have size 1
-          s.data.requests.head.nonce shouldBe nonce.value
-        }
+        assertRequestReceivedState(prover)
 
         // Possibility of self attested but uses mocked credentials instead
         prover ~ Ctl.AcceptRequest(Map.empty)
@@ -916,15 +792,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           msg.requested_presentation should not be null
         }
 
-        verifier.expectAs(state[States.Complete]) { s =>
-          s.data.presentation should not be None
-          s.data.presentedAttributes should not be None
-          s.data.presentedAttributes.value.revealed_attrs.values should contain (RevealedAttributeInfo(0,"Alex"))
-          s.data.verificationResults.value shouldBe VerificationResults.ProofValidated
-        }
+        assertCompleteState(verifier)
 
         // Prover should be in Presented state
-        prover.expectAs(state[States.Presented]) {s =>
+        prover.expectAs(state[States.Presented]) { s =>
           s.data.presentation should not be None
           s.data.presentationAcknowledged shouldBe true
         }
@@ -995,13 +866,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
             msg.requested_presentation should not be null
           }
 
-          verifier.expectAs(state[States.Complete]) { s =>
-            // Even though ledger access is not available, the
-            // presentation should be received and recorded
-            s.data.presentation should not be None
-            s.data.presentedAttributes should not be None
-            s.data.verificationResults.value shouldBe VerificationResults.ProofUndefined
-          }
+          assertCompleteState(verifier, Some(VerificationResults.ProofUndefined))
 
           prover.expectAs(state[States.Presented]) { s =>
             s.data.presentation should not be None
@@ -1061,6 +926,280 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         }
       }
+
+      "should handle data retention error cases" - {
+        "Verifier receives Presentation message when request sent is expired" - {
+          "should send problem report message" in { f =>
+
+            val (verifier, prover) = indyAccessMocks(f)
+
+            var nonce: Option[Nonce] = None
+
+            // Verifier starts protocol
+            (verifier engage prover) ~ Ctl.Request(
+              "",
+              Some(List(requestedAttr1)),
+              None,
+              None
+            )
+
+            verifier.role shouldBe Role.Verifier
+            val requestSent = assertRequestSentState(verifier)
+
+            // Prover should receive request and approve it
+            assertReviewRequestSig(prover)
+            prover.role shouldBe Role.Prover
+
+            assertRequestReceivedState(prover)
+
+            // simulating expire of request on verifier side.
+            verifier.container_!.removeSegment(requestSent.data.requests.head)
+
+            prover ~ Ctl.AcceptRequest()
+
+            // Verifier should receive problem report
+            verifier.expectAs(signal[Sig.ProblemReport]) { msg =>
+              msg.description.code shouldBe ProblemReportCodes.segmentedRetrieveFailed
+            }
+
+            // verifier should stay in its state
+            verifier expect state[States.RequestSent]
+
+            // prover should receive problem report
+            prover.expectAs(signal[Sig.ProblemReport]) { msg =>
+              msg.description.code shouldBe ProblemReportCodes.rejection
+            }
+
+            // Prover should be in Presented state
+            prover.expectAs(state[States.Rejected]) { s =>
+              s.data.presentation should not be None
+              s.data.presentationAcknowledged shouldBe false
+            }
+          }
+        }
+        "Prover uses AcceptRequest control message when request received is expired" - {
+          "should send problem report" in { f =>
+
+            val (verifier, prover) = indyAccessMocks(f)
+
+            var nonce: Option[Nonce] = None
+
+            // Verifier starts protocol
+            (verifier engage prover) ~ Ctl.Request(
+              "",
+              Some(List(requestedAttr1)),
+              None,
+              None
+            )
+
+            verifier.role shouldBe Role.Verifier
+            assertRequestSentState(verifier)
+
+            // Prover should receive request and approve it
+            assertReviewRequestSig(prover)
+            prover.role shouldBe Role.Prover
+
+            val requestReceived = assertRequestReceivedState(prover)
+
+            // simulating expire of request on prover side.
+            prover.container_!.removeSegment(requestReceived.data.requests.head)
+
+            prover ~ Ctl.AcceptRequest()
+
+            prover.expectAs(signal[Sig.ProblemReport]) { msg =>
+              msg.description.code shouldBe ProblemReportCodes.segmentedRetrieveFailed
+            }
+
+            verifier ~ Ctl.Status()
+            verifier.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results shouldBe None
+              s.status shouldBe "RequestSent"
+            }
+
+            prover ~ Ctl.Status()
+            prover.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results shouldBe None
+              s.status shouldBe "RequestReceived"
+            }
+          }
+        }
+        "Verifier uses AcceptProposal control message when received proposal is expired" - {
+          "should send problem report" in { f =>
+            val (verifier, prover) = indyAccessMocks(f)
+
+            // Prover starts protocol
+            (prover engage verifier) ~ Ctl.Propose(
+              Some(List(proposedAttr1)),
+              None,
+              "Proposal1"
+            )
+
+            prover.role shouldBe Role.Prover
+            prover.expectAs(state[States.ProposalSent]) { s =>
+              s.data.proposals should have size 1
+            }
+
+            verifier.expectAs(signal[Sig.ReviewProposal]) { msg =>
+              msg.attributes shouldBe List(proposedAttr1)
+              msg.predicates shouldBe List()
+              msg.comment shouldBe "Proposal1"
+            }
+            verifier.role shouldBe Role.Verifier
+
+            val proposalReceived = verifier.expectAs(state[States.ProposalReceived]) { s =>
+              s.data.requests should have size 0
+              s.data.proposals should have size 1
+            }
+
+            // simulating expire of proposal on verifier side.
+            verifier.container_!.removeSegment(proposalReceived.data.proposals.head)
+
+            verifier ~ Ctl.AcceptProposal(None, None)
+
+            // Verifier should receive problem report
+            verifier.expectAs(signal[Sig.ProblemReport]) { msg =>
+              msg.description.code shouldBe ProblemReportCodes.segmentedRetrieveFailed
+            }
+
+            verifier ~ Ctl.Status()
+            verifier.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results shouldBe None
+              s.status shouldBe "ProposalReceived"
+            }
+
+            prover ~ Ctl.Status()
+            prover.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results shouldBe None
+              s.status shouldBe "ProposalSent"
+            }
+          }
+        }
+
+        "Verifier uses Status control message when received presentation is expired" - {
+          "should get status without presentation data" in { f =>
+
+            val (verifier, prover) = indyAccessMocks(f)
+
+            var nonce: Option[Nonce] = None
+
+            // Verifier starts protocol
+            (verifier engage prover) ~ Ctl.Request(
+              "",
+              Some(List(requestedAttr1)),
+              None,
+              None
+            )
+
+            verifier.role shouldBe Role.Verifier
+            assertRequestSentState(verifier)
+
+            // Prover should receive request and approve it
+            assertReviewRequestSig(prover)
+            prover.role shouldBe Role.Prover
+
+            assertRequestReceivedState(prover)
+
+            prover ~ Ctl.AcceptRequest()
+
+            // Verifier should receive presentation and verify it
+            verifier.expectAs(signal[Sig.PresentationResult]) { msg =>
+              msg.verification_result shouldBe VerificationResults.ProofValidated
+              msg.requested_presentation should not be null
+            }
+
+            val complete = assertCompleteState(verifier)
+
+            // Prover should be in Presented state
+            prover.expectAs(state[States.Presented]) { s =>
+              s.data.presentation should not be None
+              s.data.presentationAcknowledged shouldBe true
+            }
+
+            verifier ~ Ctl.Status()
+            verifier.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results.value shouldBe an[PresentationResult]
+              s.status shouldBe "Complete"
+            }
+
+            // simulating expire of presentation on verifier side.
+            verifier.container_!.removeSegment(complete.data.presentation.get)
+
+            // user should receive the state but without the presentation data.
+            verifier ~ Ctl.Status()
+            verifier.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results shouldBe None // presentation result is None (because it is expired).
+              s.status shouldBe "Complete"
+            }
+
+            prover ~ Ctl.Status()
+            prover.expectAs(signal[Sig.StatusReport]) { s =>
+              s.error shouldBe None
+              s.results shouldBe None
+              s.status shouldBe "Presented"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def assertRequestSentState(env: TestEnvir, numberOfReq: Int=1): States.RequestSent = {
+    env.expectAs(state[States.RequestSent]){ s =>
+      s.data.requests should not be empty
+      s.data.requests should have size numberOfReq
+      assertRequestUsedSegment(env, s.data.requests.head)
+    }
+  }
+
+  def assertReviewRequestSig(env: TestEnvir): Sig.ReviewRequest = {
+    env.expectAs(signal[Sig.ReviewRequest]) { _ => }
+  }
+
+  def assertRequestReceivedState(env: TestEnvir): States.RequestReceived = {
+    env.expectAs(state[States.RequestReceived]){ s =>
+      s.data.requests should not be empty
+      s.data.requests should have size 1
+      assertRequestUsedSegment(env, s.data.requests.head)
+    }
+  }
+
+  def assertRequestUsedSegment(env: TestEnvir, segmentKey: SegmentKey): Unit = {
+    env.container_!.withSegment[RequestUsed](segmentKey) {
+      case Success(Some(r)) =>
+        val rr = DefaultMsgCodec.fromJson[ProofRequest](r.requestRaw)
+        rr.requested_attributes.values.toVector.contains(reqWithRestriction.proof_attrs.get.head)
+      case Success(None) => throw new Exception("No item")
+      case Failure(e) => throw e
+    }
+  }
+
+  def assertCompleteState(env: TestEnvir,
+                          verificationResult: Option[String]=Some(VerificationResults.ProofValidated)
+                         ): States.Complete = {
+    env.expectAs(state[States.Complete]) { s =>
+      s.data.presentation should not be None
+      s.data.verificationResults shouldBe verificationResult
+      assertProofReceived(env, s.data.presentation.head)
+    }
+  }
+
+  def assertProofReceived(env: TestEnvir, segmentKey: SegmentKey): Unit = {
+    env.container_!.withSegment[PresentationGiven](segmentKey) {
+      case Success(Some(r)) =>
+        val p = DefaultMsgCodec.fromJson[ProofPresentation](r.presentation)
+        assert(p.requested_proof
+          .revealed_attrs
+          .values
+          .toVector
+          .contains(RevealedAttr(0,"Alex", "99262857098057710338306967609588410025648622308394250666849665532448612202874")))
+      case Success(None) => throw new Exception("No item")
+      case Failure(e) => throw e
     }
   }
 

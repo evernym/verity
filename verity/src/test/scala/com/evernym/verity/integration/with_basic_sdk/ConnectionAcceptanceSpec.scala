@@ -7,8 +7,6 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
-import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 
 
@@ -78,10 +76,8 @@ class ConnectionAcceptanceSpec
 
   "IssuerSDK" - {
     "should receive final 'complete' (connections 1.0) message" in {
-      issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
-      issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
-      val receivedMsg = issuerSDK.expectMsgOnWebhook[Complete]()
-      receivedMsg.msg.theirDid.isEmpty shouldBe false
+      val complete = issuerSDK.expectConnectionComplete(firstConn)
+      complete.theirDid.isEmpty shouldBe false
     }
   }
 

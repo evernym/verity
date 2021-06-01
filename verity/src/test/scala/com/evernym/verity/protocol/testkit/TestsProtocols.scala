@@ -61,8 +61,7 @@ trait TestsProtocols[P,R,M,E,S,I] {
                    pinstId: PinstId=UUID.randomUUID.toString,
                    recorder: Option[RecordsEvents]=None,
                    driver: Option[Driver]=None): Container = {
-    val pce = ProtocolContainerElements(system, partiId, pinstId, None, protoDef, segmentStoreStrategy,
-      new TestSystemInitProvider, recorder, driver)
+    val pce = ProtocolContainerElements(system, partiId, pinstId, None, protoDef, new TestSystemInitProvider, recorder, driver)
     new Container(pce)
   }
 

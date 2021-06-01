@@ -29,14 +29,14 @@ import java.util.UUID
 
 class SdkFlowSpec
   extends BasicSpec
-  with TempDir
-  with IntegrationEnv
-  with InteractiveSdkFlow
-  with SetupFlow
-  with AdminFlow
-  with MetricsFlow
-  with CancelGloballyAfterFailure
-  with Eventually {
+    with TempDir
+    with IntegrationEnv
+    with InteractiveSdkFlow
+    with SetupFlow
+    with AdminFlow
+    with MetricsFlow
+    with CancelGloballyAfterFailure
+    with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)
 
@@ -190,7 +190,7 @@ class SdkFlowSpec
     connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
 
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
-       GoalCode.ISSUE_VC)
+      GoalCode.ISSUE_VC)
 
     issueCredential_1_0(
       apps(verity1),

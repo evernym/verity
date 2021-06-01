@@ -5,248 +5,136 @@ package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 // community to change it.
 
 import java.util.UUID
-
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
-import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol.Nonce
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Role.{Questioner, Responder}
-import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.StatusReport
+import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.{ProblemReport, StatusReport}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.State.AnswerValidity
+import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.legacy.QuestionAnswerLegacy
 import com.evernym.verity.util.Base64Util.{getBase64MultiDecoded, getBase64UrlEncoded}
 import com.evernym.verity.util.{HashAlgorithm, HashUtil}
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.{Failure, Success, Try}
 
-sealed trait Role
-
-object Role {
-
-  case object Questioner extends Role {
-    def roleNum = 0
-  }
-
-  case object Responder extends Role {
-    def roleNum = 1
-  }
-
-  def numToRole: Int ?=> Role = {
-    case 0 => Questioner
-    case 1 => Responder
-  }
-
-  def otherRole: Role ?=> Role = {
-    case Questioner => Responder
-    case Responder => Questioner
-  }
-
-}
-
-trait Event
-
-sealed trait State
-
-object State {
-
-  case class Uninitialized() extends State
-
-  case class Initialized() extends State
-
-  case class Error(errorCode:   Int,
-                   comment:     String,
-                   question:    Option[Msg.Question] = None,
-                   response:    Option[String] = None,
-                   signature:   Option[SigBlock] = None,
-                   received:    Option[String] = None,
-                   validStatus: Option[AnswerValidity] = None) extends State
-
-  // Questioner STATES:
-
-  case class QuestionSent(question: Msg.Question) extends State
-
-  case class AnswerReceived(question:    Msg.Question,
-                            response:    String,
-                            signature:   Option[SigBlock],
-                            received:    String,
-                            validStatus: Option[AnswerValidity]) extends State
-
-  // NOT a named state, but a dependent data structure
-  case class AnswerValidity(answerValidity:    Boolean,
-                            signatureValidity: Boolean,
-                            timingValidity:    Boolean)
-
-  // Responder STATES:
-
-  case class QuestionReceived(question: Msg.Question) extends State
-
-  case class AnswerSent(question:  Msg.Question,
-                        response:  String,
-                        signature: Option[SigBlock]) extends State
-}
-
-// Sub Types
-case class QuestionResponse(text: String)
-
-// Messages
-sealed trait Msg extends MsgBase
-
-object Msg {
-
-  case class Question(question_text: String,
-                      question_detail: Option[String],
-                      nonce: Nonce,
-                      signature_required: Boolean,
-                      valid_responses: Vector[QuestionResponse],
-                      `~timing`: Option[BaseTiming] // Expects field expireTime
-                     ) extends Msg
-
-
-  case class Answer(response: String,
-                    `response~sig`: Option[SigBlock],
-                    `~timing`: Option[BaseTiming] // Expects field outTime
-                   ) extends Msg
-}
-
-// Control Messages
-sealed trait Ctl extends Control with MsgBase
-
-object Ctl {
-
-  case class Init(selfId: ParameterValue, otherId: ParameterValue) extends Ctl
-
-  case class AskQuestion(text: String,
-                         detail: Option[String],
-                         valid_responses: Vector[String],
-                         signature_required: Boolean,
-                         expiration: Option[String]) extends Ctl
-
-  case class AnswerQuestion(response: Option[String]) extends Ctl
-
-  case class GetStatus() extends Ctl
-}
-
-// Signal Messages
-sealed trait SignalMsg
-
-object Signal {
-  case class AnswerNeeded(text: String,
-                          details: Option[String],
-                          valid_responses: Vector[String],
-                          signature_required: Boolean,
-                          expiration: Option[String]
-                         ) extends SignalMsg
-
-  case class AnswerGiven(answer: Base64Encoded,
-                         valid_answer: Boolean,
-                         valid_signature: Boolean,
-                         not_expired: Boolean
-                        ) extends SignalMsg
-
-  case class ProblemReport(errorCode: Int,
-                           comment: String
-                    ) extends SignalMsg
-
-  case class StatusReport(status: String, answer: Option[AnswerGiven] = None)
-}
-
 
 class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol, Role, Msg, Event, State, String])
-  extends Protocol[QuestionAnswerProtocol, Role, Msg, Event, State, String](QuestionAnswerDefinition) {
+  extends Protocol[QuestionAnswerProtocol, Role, Msg, Event, State, String](QuestionAnswerDefinition)
+    with QuestionAnswerLegacy {
 
   import QuestionAnswerProtocol._
 
-  // Event Handlers
-  def applyEvent: ApplyEvent = applyCommonEvt orElse applyQuestionerEvt orElse applyResponderEvt
+  override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = mainProtoMsg orElse legacyProtoMsg
+  def applyEvent: ApplyEvent = applyCommonEvt orElse applyQuestionerEvt orElse applyResponderEvt orElse legacyApply
 
+  // Event Handlers
   def applyCommonEvt: ApplyEvent = {
     case (_: State.Uninitialized , _ , e: Initialized  ) => (State.Initialized(), initialize(e))
     case (_                      , _ , MyRole(n)       ) => (None, setRole(n))
     case (s                      , _ , Error(code, comment)) => recordError(s, code, comment)
-    case (_: State.Initialized   , r , e: QuestionUsed) =>
+    case (_: State.Initialized   , r , q: QuestionUsedRef) =>
       r.selfRole_! match {
-        case Questioner => State.QuestionSent(buildQuestion(e))
-        case Responder  => State.QuestionReceived(buildQuestion(e))
+        case Questioner => State.QuestionSent(q.segRef)
+        case Responder  => State.QuestionReceived(q.segRef)
       }
   }
 
   def applyQuestionerEvt: ApplyEvent = {
-    case (s: State.QuestionSent       , _ , e: AnswerUsed        ) =>
-      State.AnswerReceived(s.question, e.response, None, e.received, None)
-    case (s: State.QuestionSent       , _ , e: SignedAnswerUsed  ) =>
-      State.AnswerReceived(s.question, e.response, Some(evtToSigBlock(e)), e.received, None)
+    case (_: State.QuestionSent       , _ , e: AnswerUsedRef    ) =>
+      State.AnswerReceived(e.segRef, sigRequired=false, None)
+    case (_: State.QuestionSent       , _ , e: SignedAnswerUsedRef) =>
+      State.AnswerReceived(e.segRef, sigRequired=true, None)
     case (s: State.AnswerReceived     , _ , e: Validity  ) =>
-      // AnswerValidated
       s.copy(validStatus = Some(AnswerValidity(e.answerValidity, e.signatureValidity, e.timingValidity)))
   }
 
   def applyResponderEvt: ApplyEvent = {
-    case (State.QuestionReceived(q), _ , e: AnswerUsed      ) =>
-      State.AnswerSent(q, e.response, None)
-    case (State.QuestionReceived(q), _ , e: SignedAnswerUsed) =>
-      State.AnswerSent(q, e.response, Some(SigBlock(e.signature, e.signatureData, e.signers)))
+    case (State.QuestionReceived(_), _ , e: AnswerUsedRef ) =>
+      State.AnswerSent(e.segRef)
+    case (State.QuestionReceived(_), _ , e: SignedAnswerUsedRef) =>
+      State.AnswerSent(e.segRef)
   }
 
   // Protocol Msg Handlers
-  override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
-    case (_: State.Initialized  , _ , m: Msg.Question ) => receiveQuestion(m)
-    case (s: State.QuestionSent , _ , m: Msg.Answer   ) => receiveAnswer(s, m)
+  def mainProtoMsg: (State, Option[Role], Msg) ?=> Any = {
+    case (_: State.Initialized     , _ , m: Msg.Question ) => receiveQuestion(m)
+    case (s: State.QuestionSent    , _ , m: Msg.Answer   ) => receiveAnswer(s, m)
+  }
+
+  // Control Message Handlers
+  def handleControl: Control ?=> Any = {
+    case m: Ctl.Init            => ctx.apply(Initialized(m.selfId, m.otherId))
+    case _: Ctl.GetStatus       => getStatus()
+    case m: Ctl.AskQuestion     => ask(m)
+    case m: Ctl.AnswerQuestion  => answer(m)
   }
 
   def receiveQuestion(m: Msg.Question): Unit = {
-    ctx.apply(MyRole(Responder.roleNum))
-    ctx.apply(questionToEvt(m))
+    ctx.storeSegment(segment=questionToEvt(m)) {
+      case Success(s) =>
+        ctx.apply(MyRole(Responder.roleNum))
+        ctx.apply(QuestionUsedRef(s.segmentKey))
 
-    val signal = Signal.AnswerNeeded(
-      m.question_text,
-      m.question_detail,
-      responsesToStrings(m.valid_responses),
-      m.signature_required,
-      m.`~timing`.flatMap(_.expires_time)
-    )
-    ctx.signal(signal)
+        val signal = Signal.AnswerNeeded(
+          m.question_text,
+          m.question_detail,
+          responsesToStrings(m.valid_responses),
+          m.signature_required,
+          m.`~timing`.flatMap(_.expires_time)
+        )
+        ctx.signal(signal)
+      case Failure(e) => reportSegStoreFailed(e)
+    }
   }
 
   def receiveAnswer(s: State.QuestionSent, m: Msg.Answer): Unit = {
-    ctx.apply(answerToEvt(m))
+    ctx.withSegment[QuestionUsed](s.id) {
+      case Success(Some(q)) =>
+        ctx.storeSegment(segment=answerToEvt(m)) {
+          case Success(stored) =>
+            if (m.`response~sig`.isDefined) ctx.apply(SignedAnswerUsedRef(stored.segmentKey))
+            else ctx.apply(AnswerUsedRef(stored.segmentKey))
 
-    val notExpired = isNotExpired(
-      s.question.`~timing`.flatMap(t => t.expires_time)
-    )
-    val validResponse = {
-      s.question.valid_responses.exists(_.text == m.response)
-    }
-    if (s.question.signature_required) {
-      m.`response~sig` match {
-        case Some(x) =>
-          val checkData = buildSignableHash(s.question.question_text, m.response, s.question.nonce)
-          val receivedSigData = getBase64MultiDecoded(x.sig_data)
-          if (!(receivedSigData sameElements checkData.bytes)) {
-            answerValidated(m.response, validResponse, validSignature = false, notExpired)
-          }
-          else {
-            ctx.wallet.verify(
-              ctx.getRoster.participantIdForRole_!(Role.Responder),
-              receivedSigData,
-              getBase64MultiDecoded(x.signature),
-              x.signers.headOption
-            ) {
-              case Success(sigVerifResult) =>
-                answerValidated(m.response, validResponse, sigVerifResult.verified, notExpired)
-              case Failure(ex) =>
-                ctx.logger.warn(s"Unable to verify signature - ${ex.getMessage}")
-                answerValidated(m.response, validResponse, validSignature = false, notExpired)
+            val notExpired = isNotExpired(Some(q.expiresTime))
+            val validResponse = q.validResponses.contains(m.response)
+            if (q.signatureRequired) {
+              m.`response~sig` match {
+                case Some(x) =>
+                  val checkData = buildSignableHash(q.questionText, m.response, q.nonce)
+                  val receivedSigData = getBase64MultiDecoded(x.sig_data)
+                  if (!(receivedSigData sameElements checkData.bytes)) {
+                    answerValidated(m.response, validResponse, validSignature = false, notExpired)
+                  }
+                  else {
+                    ctx.wallet.verify(
+                      ctx.getRoster.participantIdForRole_!(Role.Responder),
+                      receivedSigData,
+                      getBase64MultiDecoded(x.signature),
+                      x.signers.headOption
+                    ) {
+                      case Success(sigVerifResult) =>
+                        answerValidated(m.response, validResponse, sigVerifResult.verified, notExpired)
+                      case Failure(ex) =>
+                        ctx.logger.warn(s"Unable to verify signature - ${ex.getMessage}")
+                        answerValidated(m.response, validResponse, validSignature = false, notExpired)
+                    }
+                  }
+                case None =>
+                  answerValidated(m.response, validResponse, validSignature = false, notExpired)
+              }
+            } else {
+              answerValidated(m.response, validResponse, validSignature = true, notExpired)
             }
-          }
-        case None =>
-          answerValidated(m.response, validResponse, validSignature = false, notExpired)
-      }
-    } else {
-      answerValidated(m.response, validResponse, validSignature = true, notExpired)
+          case Failure(e) => reportSegStoreFailed(e)
+        }
+      case Success(None) => reportSegRetrieveFailed()
+      case Failure(e) => reportSegRetrieveFailed(Some(e))
     }
   }
 
@@ -255,23 +143,24 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
     ctx.signal(Signal.AnswerGiven(answer, validResponse, validSignature, notExpired))
   }
 
-  // Control Message Handlers
-  def handleControl: Control ?=> Any = {
-    case m: Ctl.Init            => ctx.apply(Initialized(m.selfId, m.otherId))
-    case m: Ctl.GetStatus       => getStatus(m)
-    case m: Ctl.AskQuestion     => ask(m)
-    case m: Ctl.AnswerQuestion  => answer(m)
+  def withAnswerReceived(s: State.AnswerReceived): Unit = {
+    s.validStatus.foreach {vs =>
+      val eType = if(s.sigRequired) SignedAnswerUsed.defaultInstance else AnswerUsed.defaultInstance
+      ctx.withSegment[eType.type](s.id) {
+        case Success(Some(a)) =>
+          val resp = Some(Signal.AnswerGiven(a.response, vs.answerValidity, vs.signatureValidity, vs.timingValidity))
+          ctx.signal(Signal.StatusReport(ctx.getState.getClass.getSimpleName, resp))
+        case Success(None) => ctx.signal(Signal.StatusReport(ctx.getState.getClass.getSimpleName, None))
+        case Failure(e) => reportSegRetrieveFailed(Some(e))
+      }
+    }
   }
 
-  def getStatus(m: Ctl.GetStatus): Unit = {
-    val answer = ctx.getState match {
-      case s: State.AnswerReceived =>
-        s.validStatus.map{ vs =>
-          Signal.AnswerGiven(s.response, vs.answerValidity, vs.signatureValidity, vs.timingValidity)
-        }
-      case _ => None
+  def getStatus(): Unit = {
+    ctx.getState match {
+      case s: State.AnswerReceived => withAnswerReceived(s)
+      case _ => ctx.signal(StatusReport(ctx.getState.getClass.getSimpleName, None))
     }
-    ctx.signal(StatusReport(ctx.getState.getClass.getSimpleName, answer))
   }
 
   def ask(m: Ctl.AskQuestion): Unit = {
@@ -285,21 +174,35 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
       stringsToResponses(m.valid_responses),
       m.expiration.map(stringToTiming)
     )
-    ctx.apply(questionToEvt(questionMsg))
-    ctx.send(questionMsg, Some(Responder), Some(Questioner))
+
+    ctx.storeSegment(segment=questionToEvt(questionMsg)) {
+      case Success(s) =>
+        ctx.apply(QuestionUsedRef(s.segmentKey))
+        ctx.send(questionMsg, Some(Responder), Some(Questioner))
+      case Failure(e) => reportSegStoreFailed(e)
+    }
   }
 
   def answer(m: Ctl.AnswerQuestion): Unit = {
     ctx.getState match {
       case state: State.QuestionReceived =>
-        buildAnswer(m.response, state, ctx.wallet) {
-          case Success(answer) =>
-            ctx.apply(answerToEvt(answer))
-            ctx.send(answer, Some(Questioner), Some(Responder))
-          case Failure(ex) =>
-            val failureMsg = s"Unable build answer - ${ex.getMessage}"
-            ctx.logger.info(failureMsg)
-            ctx.apply(Error(1, failureMsg))
+        ctx.withSegment[QuestionUsed](state.id) {
+          case Success(Some(q)) =>
+            buildAnswer(m.response, q, ctx.wallet) {
+              case Success(answer) =>
+                ctx.storeSegment(segment=answerToEvt(answer)) {
+                  case Success(s) =>
+                    ctx.apply(answerToEvtRef(answer, s.segmentKey))
+                    ctx.send(answer, Some(Questioner), Some(Responder))
+                  case Failure(e) => reportSegStoreFailed(e)
+                }
+              case Failure(ex) =>
+                val failureMsg = s"Unable build answer - ${ex.getMessage}"
+                ctx.logger.info(failureMsg)
+                ctx.apply(Error(1, failureMsg))
+            }
+          case Success(None) => reportSegRetrieveFailed()
+          case Failure(e) => reportSegRetrieveFailed(Some(e))
         }
 
       case _ => // Don't answer if there is no question
@@ -314,11 +217,32 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
     t
   }
 
-
-
   def initialize(p: Initialized): Roster[Role] = {
     ctx.updatedRoster(Seq(InitParamBase(SELF_ID, p.selfIdValue), InitParamBase(OTHER_ID, p.otherIdValue)))
   }
+
+  def reportSegRetrieveFailed(e: Option[Throwable]=None): Unit = {
+    e match {
+      case Some(_e) =>
+        ctx.logger.warn(s"could retrieve stored segment with e: ${_e.getMessage}")
+        ctx.signal(
+          Signal.buildProblemReport("segmented state retrieval failed", ProblemReportCodes.expiredDataRetention)
+        )
+      case None =>
+        ctx.logger.warn(s"segmented state expired")
+        ctx.signal(
+          Signal.buildProblemReport("segmented state retrieval failed", ProblemReportCodes.expiredDataRetention)
+        )
+    }
+  }
+
+  def reportSegStoreFailed(e: Throwable): Unit = {
+    ctx.logger.warn(s"could not store segment with e: ${e.getMessage}")
+    ctx.signal(
+      Signal.buildProblemReport("segmented state storage failed", ProblemReportCodes.segmentStorageFailure)
+    )
+  }
+
 }
 
 object QuestionAnswerProtocol {
@@ -357,6 +281,10 @@ object QuestionAnswerProtocol {
     Signable(bytes, getBase64UrlEncoded(bytes))
   }
 
+  def evtToResponses(values: Seq[String]): Seq[QuestionResponse] = {
+    values.map(x => QuestionResponse(x))
+  }
+
   def stringsToResponses(values: Vector[String]): Vector[QuestionResponse] = {
     values.map(QuestionResponse)
   }
@@ -380,14 +308,14 @@ object QuestionAnswerProtocol {
     )
   }
 
-  def buildAnswer(response: Option[String], state: State.QuestionReceived, wallet: WalletAccess)
+  def buildAnswer(response: Option[String], question: QuestionUsed, wallet: WalletAccess)
                  (handler: Try[Msg.Answer] => Unit): Unit = {
     response match {
       case None => ??? // Handle no answer case
-      case Some(resp) if !state.question.signature_required =>
+      case Some(resp) if !question.signatureRequired =>
         handler(Success(Msg.Answer(resp, None, None)))
       case Some(resp) => // Sig required
-        val signable = buildSignableHash(state.question.question_text, resp, state.question.nonce)
+        val signable = buildSignableHash(question.questionText, resp, question.nonce)
         wallet.sign(signable.bytes) { result =>
           handler(
             result.map { signedMsg =>
@@ -427,6 +355,12 @@ object QuestionAnswerProtocol {
     )
   }
 
+  def answerToEvtRef(ans: Msg.Answer, ref: SegmentKey): Event =
+    ans
+      .`response~sig`
+      .map(_ => SignedAnswerUsedRef(ref))
+      .getOrElse(AnswerUsedRef(ref))
+
   def answerToEvt(ans: Msg.Answer): Event = {
     ans
       .`response~sig`
@@ -443,16 +377,15 @@ object QuestionAnswerProtocol {
         AnswerUsed(ans.response, now.toString)
       }
   }
+
   def recordError(s: State, code: Int, comment: String): State.Error = {
     s match {
       case _: State.Uninitialized => State.Error(code, comment)
       case _: State.Initialized   => State.Error(code, comment)
       case State.QuestionSent(q)  => State.Error(code, comment, question = Some(q))
-      case State.AnswerReceived(q, r, s, t, v) =>
-        State.Error(code,comment,Some(q),Some(r),s,Some(t),v)
-      case State.QuestionReceived(q) => State.Error(code, comment, question = Some(q))
-      case State.AnswerSent(q, r, s) =>
-        State.Error(code, comment, question = Some(q), response = Some(r), signature = s)
+      case State.AnswerReceived(a, _, v) => State.Error(code, comment, received=Some(a), validStatus=v)
+      case State.QuestionReceived(q) => State.Error(code, comment, question=Some(q))
+      case State.AnswerSent(r) => State.Error(code, comment, received=Some(r))
       case s => State.Error(code, comment + s" (From an unknown state: ${s.getClass.getSimpleName})")
     }
   }

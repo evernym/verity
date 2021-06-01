@@ -27,8 +27,14 @@ message QuestionUsed {
     string expiresTime             = 6;
 }
 
-message SignedAnswerUsed {
+message QuestionUsedRef {
     option (scalapb.message).extends = "Event";
+    //Reference to QuestionUsed
+    string segRef            = 1;
+}
+
+message SignedAnswerUsed {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.AnswerEvt";
     string response         = 1;
     string received         = 2;
     string signature        = 3;
@@ -36,10 +42,22 @@ message SignedAnswerUsed {
     repeated string signers = 5;
 }
 
-message AnswerUsed {
+message SignedAnswerUsedRef {
     option (scalapb.message).extends = "Event";
+    //Reference to SignedAnswerUsed
+    string segRef            = 1;
+}
+
+message AnswerUsed {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.AnswerEvt";
     string response = 1;
     string received = 2;
+}
+
+message AnswerUsedRef {
+    option (scalapb.message).extends = "Event";
+    //Reference to AnswerUsed
+    string segRef            = 1;
 }
 
 message Validity {

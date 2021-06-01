@@ -4,7 +4,6 @@ import com.evernym.verity.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
-import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._

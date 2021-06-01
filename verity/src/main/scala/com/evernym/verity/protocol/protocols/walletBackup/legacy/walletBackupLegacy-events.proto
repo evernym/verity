@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.walletBackup.legacy;
+
+message BackupStored {
+  option (scalapb.message).extends = "com.evernym.verity.protocol.protocols.walletBackup.BackupEvt";
+  bytes wallet = 1;
+}
+

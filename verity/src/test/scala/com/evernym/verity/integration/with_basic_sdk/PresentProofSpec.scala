@@ -59,7 +59,8 @@ class PresentProofSpec
           Map("name" -> "Alice", "age" -> "20")
         )
         issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
-        issuerSDK.expectMsgOnWebhook[Sent]()
+        val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
+        issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map.empty)
       }
     }
   }
@@ -70,6 +71,7 @@ class PresentProofSpec
         val receivedMsg = holderSDK.expectMsgFromConn[OfferCred](issuerHolderConn)
         offerCred = receivedMsg.msg
         lastReceivedThread = receivedMsg.threadOpt
+        holderSDK.checkMsgOrders(lastReceivedThread, 0, Map.empty)
       }
     }
 
@@ -83,7 +85,8 @@ class PresentProofSpec
   "IssuerSDK" - {
     "when waiting for message on webhook" - {
       "should get 'accept-request' (issue-credential 1.0)" in {
-        issuerSDK.expectMsgOnWebhook[AcceptRequest]()
+        val receivedMsg = issuerSDK.expectMsgOnWebhook[AcceptRequest]()
+        issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map(issuerHolderConn -> 0))
       }
     }
 
@@ -91,7 +94,8 @@ class PresentProofSpec
       "should be successful" in {
         val issueMsg = Issue()
         issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThread)
-        issuerSDK.expectMsgOnWebhook[Sent]()
+        val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
+        issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 1, Map(issuerHolderConn -> 0))
       }
     }
   }

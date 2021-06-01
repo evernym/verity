@@ -200,7 +200,6 @@ class QuestionAnswerProtocolSpec
             val adState = s.questioner expect state[State.AnswerReceived]
             adState.validStatus.value.signatureValidity shouldBe true
             // A nonce is added by the protocol, ignore the nonce and check the rest.
-            adState.question.copy(nonce = "") shouldEqual testQuestion(EXPIRATION_TIME)
             adState.validStatus.value.timingValidity shouldBe true
 
             checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = true))))
@@ -228,7 +227,6 @@ class QuestionAnswerProtocolSpec
 
             val adState = s.questioner expect state[State.AnswerReceived]
             adState.validStatus.value.signatureValidity shouldBe true
-            adState.question.copy(nonce = "") shouldEqual testQuestion(TIME_EXPIRED)
             adState.validStatus.value.timingValidity shouldBe false
 
             checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = false))))
@@ -311,6 +309,132 @@ class QuestionAnswerProtocolSpec
         }
       }
     }
+
+    "Data retention expire cases" - {
+      "Responder uses AnswerQuestion control message when question segment is expired" - {
+        "should send problem report" in { s =>
+          interaction (s.questioner, s.responder) {
+
+            s.questioner ~ testAskQuestion(EXPIRATION_TIME)
+
+            s.responder expect signal [Signal.AnswerNeeded]
+
+            s.responder walletAccess MockableWalletAccess()
+
+            s.questioner walletAccess MockableWalletAccess()
+
+            // simulate expiry of the question segment
+            val questionReceived = s.responder expect state [State.QuestionReceived]
+            s.responder.container_!.removeSegment(questionReceived.id)
+
+            s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
+            val pr = s.responder expect signal [Signal.ProblemReport]
+            pr.description.code shouldBe ProblemReportCodes.expiredDataRetention
+
+            s.responder.state shouldBe a[State.QuestionReceived]
+            checkStatus(s.responder, StatusReport("QuestionReceived"))
+
+            s.questioner.state shouldBe a[State.QuestionSent]
+            checkStatus(s.questioner, StatusReport("QuestionSent"))
+          }
+        }
+      }
+
+      "Questioner receives Answer message when question segment is expired" - {
+        "should send problem report message" in { s =>
+          interaction (s.questioner, s.responder) {
+
+            s.questioner ~ testAskQuestion(EXPIRATION_TIME)
+
+            s.responder expect signal [Signal.AnswerNeeded]
+
+            s.responder walletAccess MockableWalletAccess()
+
+            s.questioner walletAccess MockableWalletAccess()
+
+            // simulate expiry of the question segment
+            val questionSent = s.questioner expect state[State.QuestionSent]
+            s.questioner.container_!.removeSegment(questionSent.id)
+
+            s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
+
+            s.responder.state shouldBe a[State.AnswerSent]
+            checkStatus(s.responder, StatusReport("AnswerSent"))
+
+            val pr = s.questioner expect signal [Signal.ProblemReport]
+            pr.description.code shouldBe ProblemReportCodes.expiredDataRetention
+
+            s.questioner.state shouldBe a[State.QuestionSent]
+            checkStatus(s.questioner, StatusReport("QuestionSent"))
+          }
+        }
+      }
+
+      "Questioner uses GetStatus control message in state AswerReceived with answer segment expired" - {
+        "when signature required = false" - {
+          "should return status without the answer" in { s =>
+            interaction (s.questioner, s.responder) {
+
+              s.questioner ~ testAskQuestion(EXPIRATION_TIME, sigRequired = false)
+
+              s.responder expect signal [Signal.AnswerNeeded]
+
+              s.responder walletAccess MockableWalletAccess()
+
+              s.questioner walletAccess MockableWalletAccess()
+
+              s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
+
+              s.responder.state shouldBe a[State.AnswerSent]
+              checkStatus(s.responder, StatusReport("AnswerSent"))
+
+              s.questioner.state shouldBe a[State.AnswerReceived]
+              val result = s.questioner expect signal [Signal.AnswerGiven]
+              result.valid_signature shouldBe true
+              checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = true))))
+
+              // simulate expiry of the question segment
+              val answerReceived = s.questioner expect state[State.AnswerReceived]
+              s.questioner.container_!.removeSegment(answerReceived.id)
+
+              checkStatus(s.questioner, StatusReport("AnswerReceived", None))
+            }
+          }
+        }
+        "signature required = true" - {
+          "should return status without the answer" in { s =>
+            interaction (s.questioner, s.responder) {
+
+              s.questioner ~ testAskQuestion(EXPIRATION_TIME)
+
+              s.responder expect signal [Signal.AnswerNeeded]
+
+              s.responder walletAccess MockableWalletAccess()
+
+              s.questioner walletAccess MockableWalletAccess()
+
+              s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
+
+              s.responder.state shouldBe a[State.AnswerSent]
+              checkStatus(s.responder, StatusReport("AnswerSent"))
+
+              s.questioner.state shouldBe a[State.AnswerReceived]
+              val result = s.questioner expect signal [Signal.AnswerGiven]
+              result.valid_signature shouldBe true
+              checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = true))))
+
+              // simulate expiry of the question segment
+              val answerReceived = s.questioner expect state[State.AnswerReceived]
+              s.questioner.container_!.removeSegment(answerReceived.id)
+
+              checkStatus(s.questioner, StatusReport("AnswerReceived", None))
+            }
+          }
+
+        }
+      }
+    }
+
     "function unit tests" - {
       "createNonce" - {
         "two calls must not be the same value" in { _ =>

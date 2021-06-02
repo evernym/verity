@@ -151,13 +151,13 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
     ))
 
     val defaultMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
-      "CREATE_MSG_connReq" -> connReqMessageBuckets,
-      "DUMMY_MSG" -> getMsgsMessageBuckets,
+      "connecting/CREATE_MSG_connReq" -> connReqMessageBuckets,
+      "dummy-family/DUMMY_MSG" -> getMsgsMessageBuckets,
       "default" ->  defaultMsgUsageBuckets
     ))
 
     val customMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
-      "CREATE_MSG_connReq" -> customConnReqMessageBuckets,
+      "connecting/CREATE_MSG_connReq" -> customConnReqMessageBuckets,
       "default" ->  defaultMsgUsageBuckets
     ))
 

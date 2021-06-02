@@ -88,9 +88,9 @@ class AllResourceViolationRulePathSpec extends BasicSpec with BeforeAndAfterAll 
         ResourceUsageTracker.violationRulePath(
           entityIdForDefaultUsageRule,
           RESOURCE_TYPE_MESSAGE,
-          "CREATE_MSG_connReq",
+          "connecting/CREATE_MSG_connReq",
           None
-        ) shouldBe "verity.resource-usage-rules.usage-rules.default.message.CREATE_MSG_connReq"
+        ) shouldBe "verity.resource-usage-rules.usage-rules.default.message.connecting/CREATE_MSG_connReq"
       }
     }
 

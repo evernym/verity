@@ -88,7 +88,7 @@ class ActionExecutorSpec
   }
 
   def buildViolationRule(entityId: EntityId, violationActionId: String): ViolatedRule = {
-    val resourceNameGetMsgs = "GET_MSGS"
+    val resourceNameGetMsgs = "pairwise/GET_MSGS"
     val bucketRule = BucketRule(10, violationActionId)
     val rulePath = ResourceUsageTracker.violationRulePath(
       entityId, RESOURCE_TYPE_MESSAGE, resourceNameGetMsgs, None)

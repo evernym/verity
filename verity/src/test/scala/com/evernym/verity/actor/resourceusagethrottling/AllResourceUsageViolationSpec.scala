@@ -95,11 +95,11 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
 
     assert(endpointAllError.respCode.equals("GNR-123") && endpointAllError.getMessage.equals("usage blocked"))
 
-    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_AGENT", ipAddress, None)
+    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "agent-provisioning/CREATE_AGENT", ipAddress, None)
     sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_KEY", ipAddress, None)
-    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_MSG_connReq", ipAddress, None)
+    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "connecting/CREATE_MSG_connReq", ipAddress, None)
     val messageAllError = intercept[BadRequestErrorException] {
-      sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_MSG_connReqAnswer", ipAddress, None)
+      sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "connecting/CREATE_MSG_connReqAnswer", ipAddress, None)
     }
 
     assert(messageAllError.respCode.equals("GNR-123") && endpointAllError.getMessage.equals("usage blocked"))

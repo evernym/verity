@@ -12,7 +12,7 @@ import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
 
   def testResourceUsage(): Unit = {
-    val resource = "CONNECT"
+    val resource = "agent-provisioning/CONNECT"
     val localhost: InetAddress = InetAddress.getLocalHost
     val localIpAddress: String = localhost.getHostAddress
     val bucket = 300
@@ -23,16 +23,16 @@ trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
     val clearBlockPayload= ByteString(s"""{"msgType": "block", "period":0, "allResources":"Y"}""")
 
     "when sent get resource usage for given id" - {
-      "should get resource usages, and confirm count for CONNECT msg usage is 2" in {
+      "should get resource usages, and confirm count for agent-provisioning/CONNECT msg usage is 2" in {
         buildGetReq(s"/agency/internal/resource-usage/id/$localIpAddress") ~> epRoutes ~> check {
           status shouldBe OK
           val resourceUsages = responseTo[ResourceUsages]
-          usageCountBefore = resourceUsages.usages("CONNECT")("300").usedCount
+          usageCountBefore = resourceUsages.usages("agent-provisioning/CONNECT")("300").usedCount
         }
       }
     }
 
-    "when sent update counter for CONNECT msg usage" - {
+    "when sent update counter for agent-provisioning/CONNECT msg usage" - {
       "should respond with OK" in {
         buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/counter",
           HttpEntity.Strict(ContentTypes.`application/json`, payload)
@@ -43,11 +43,11 @@ trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
     }
 
     "when sent get resource usage for given id after usage updated" - {
-      "should get resource usages, and confirm count for CONNECT msg usage is 3" in {
+      "should get resource usages, and confirm count for agent-provisioning/CONNECT msg usage is 3" in {
         buildGetReq(s"/agency/internal/resource-usage/id/$localIpAddress") ~> epRoutes ~> check {
           status shouldBe OK
           val resourceUsages = responseTo[ResourceUsages]
-          resourceUsages.usages("CONNECT")("300").usedCount shouldBe usageCountAfter
+          resourceUsages.usages("agent-provisioning/CONNECT")("300").usedCount shouldBe usageCountAfter
         }
       }
     }
@@ -57,7 +57,7 @@ trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
         buildGetReq(s"/agency/internal/resource-usage/id/global") ~> epRoutes ~> check {
           status shouldBe OK
           val resourceUsages = responseTo[ResourceUsages]
-          resourceUsages.usages("CONNECT")("300").usedCount shouldBe usageCountBefore
+          resourceUsages.usages("agent-provisioning/CONNECT")("300").usedCount shouldBe usageCountBefore
         }
       }
     }

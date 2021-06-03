@@ -46,7 +46,7 @@ trait VerityProviderBaseSpec
                               overriddenConfig: Option[Config] = None) {
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
-    def withOverriddenConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
+    def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
 
     def build(): VerityEnv = {
       val tmpDir = randomTmpDirPath()

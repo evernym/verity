@@ -12,7 +12,7 @@ message DomainIdSet {
 
 message DataRetentionPolicySet {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
-    string policy = 1;
+    string configStr = 1;
 }
 
 message StorageIdSet {
@@ -61,4 +61,14 @@ message SenderOrderIncremented {
 message ReceivedOrderIncremented {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
     string fromPartiId = 1;
+}
+
+message SegmentStored {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string segmentKey = 1;
+}
+
+message SegmentRemoved {
+    option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";
+    string segmentKey = 1;
 }

@@ -64,6 +64,7 @@ trait ProtocolDefinition[P,R,M,E,S,I] extends SegmentedStateProtoDef[S] {
   }
 
   def protocolIdSuffix(typedMsg: TypedMsgLike): Option[String] = None
+
 }
 
 /**

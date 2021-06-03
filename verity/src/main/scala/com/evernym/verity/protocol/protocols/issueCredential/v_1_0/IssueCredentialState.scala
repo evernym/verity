@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
+import com.evernym.verity.protocol.TerminalState
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.legacy.StateLegacy
 
@@ -57,13 +58,17 @@ object State extends StateLegacy {
 
   case class CredSent(myPwDid: String,
                       theirPwDid: Option[String],
-                      credIssuedRef: SegmentKey) extends PostInteractionStarted
+                      credIssuedRef: SegmentKey)
+    extends PostInteractionStarted
+      with TerminalState
 
   case class CredReceived(myPwDid: String,
                           theirPwDid: Option[String],
-                          credIssuedRef: SegmentKey) extends PostInteractionStarted
+                          credIssuedRef: SegmentKey)
+    extends PostInteractionStarted
+      with TerminalState
 
-  case class Rejected(comment: Option[String]=Some("")) extends State
+  case class Rejected(comment: Option[String]=Some("")) extends State with TerminalState
 
   case class ProblemReported(description: String) extends State
 }

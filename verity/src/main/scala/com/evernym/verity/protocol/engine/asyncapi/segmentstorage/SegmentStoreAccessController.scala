@@ -35,6 +35,12 @@ class SegmentStoreAccessController(segmentStoreExecutor: SegmentStoreAsyncOps)
       handler
     )
 
-  override def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey)
-                            (handler: Try[Unit] => Unit): Unit = ???
+  override def removeSegment(segmentAddress: SegmentAddress,
+                             segmentKey: SegmentKey,
+                             retentionPolicy: Option[String]) (handler: Try[SegmentKey] => Unit): Unit = {
+    withAsyncOpRunner(
+      {segmentStoreExecutor.runDeleteSegment(segmentAddress, segmentKey, retentionPolicy)},
+      handler
+    )
+  }
 }

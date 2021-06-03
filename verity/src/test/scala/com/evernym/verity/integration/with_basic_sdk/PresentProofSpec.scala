@@ -12,14 +12,15 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.typesafe.config.ConfigFactory
 
 
 class PresentProofSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
-  lazy val verifierVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_CONFIG).build()
+  lazy val verifierVerityEnv = VerityEnvBuilder.default().withConfig(VAS_CONFIG).build()
   lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
@@ -153,5 +154,16 @@ class PresentProofSpec
       requestPresentation.unrevealed_attrs.size shouldBe 0
       requestPresentation.self_attested_attrs.size shouldBe 0
     }
+  }
+
+  val VAS_CONFIG = ConfigFactory.parseString {
+    """
+      |verity.retention-policy.default {
+      | undefined-fallback {
+      |   expire-after-days = 3 day
+      |   expire-after-terminal-state = true
+      | }
+      |}
+      |""".stripMargin
   }
 }

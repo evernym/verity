@@ -1,23 +1,26 @@
 package com.evernym.verity.config
 
+import com.evernym.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.SponsorDetails
 import com.evernym.verity.util.TAAUtil.taaAcceptanceDatePattern
-import com.typesafe.config.{Config, ConfigException}
+import com.typesafe.config.{Config, ConfigException, ConfigFactory, ConfigRenderOptions}
 import com.typesafe.config.ConfigUtil.{joinPath, splitPath}
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.{DAYS, Duration, DurationInt}
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.{Failure, Success, Try}
 
 object ConfigUtil {
@@ -173,40 +176,47 @@ object ConfigUtil {
 
   private def emptyToUndefined(x: String): String = if (x.trim.nonEmpty) x else "undefined"
 
-  private def validateRetentionPolicy(policy: String): String =
-    Try(Duration(policy)) match {
-      case Success(p) if p.toDays <= MAX_RETENTION_POLICY  =>
-        policy
-      case Success(p) if p.toDays > MAX_RETENTION_POLICY =>
-        throw new ConfigException.BadValue(
-          policy, s"Data Retention Policy must be less than $MAX_RETENTION_POLICY, found policy: $policy"
-        )
-      case Failure(e) =>
-        throw new ConfigException.BadValue(policy, s"Couldn't parse $policy with exception: $e")
-    }
-
-  def dataRetentionTag(x: String): String = s"${Duration(x).toDays}d"
-
-  def getDataRetentionPolicy(config: AppConfig, domainId: String, protoref: String): String = {
-    val basePath = "verity.retention-policy"
+  def getRetentionPolicy(config: AppConfig,
+                         domainId: String,
+                         protoRef: String): RetentionPolicy = {
+    val basePath = RETENTION_POLICY
     val domainConfig = config.getConfigOption(s"$basePath.${emptyToUndefined(domainId)}")
     val defaultConfig = config.config.getConfig(s"$basePath.default")
 
     val policy = domainConfig match {
-      case Some(x) => getPolicy(x, protoref)
-      case None => getPolicy(defaultConfig, protoref)
+      case Some(x)  => getPolicyFromConfig(x, protoRef)
+      case None     => getPolicyFromConfig(defaultConfig, protoRef)
     }
-
-    config.logger.debug(s"data retention policy: $policy found for protocol: $protoref - domain: $domainId")
-    dataRetentionTag(validateRetentionPolicy(policy))
+    config.logger.debug(s"data retention policy: $policy found for protocol: $protoRef - domain: $domainId")
+    policy
   }
 
-  private def getPolicy(config: Config, protoref: String): String = {
-    AppConfigWrapper.getConfigStringOption(config, emptyToUndefined(protoref)) match {
-      case Some(x) => x
-      case None => AppConfigWrapper
-        .getConfigStringOption(config, "undefined-fallback")
-        .getOrElse(throw new ConfigException.Missing("Must define Data Retention Policy 'undefined-fallback'"))
+  private def getPolicyFromConfig(config: Config, protoRef: String): RetentionPolicy = {
+    val retentionPolicyConfig = AppConfigWrapper.getConfigOption(config, emptyToUndefined(protoRef)) match {
+        case Some(x)  => x
+        case None     => AppConfigWrapper
+          .getConfigOption(config, UNDEFINED_FALLBACK)
+          .getOrElse(throw new ConfigException.Missing(s"Must define Data Retention Policy '$UNDEFINED_FALLBACK'"))
+    }
+    getPolicyFromConfigStr(retentionPolicyConfig.root().render(ConfigRenderOptions.concise()))
+  }
+
+  @tailrec
+  def getPolicyFromConfigStr(configStr: String): RetentionPolicy = {
+    Try(new ConfigReadHelper(ConfigFactory.parseString(configStr))) match {
+      case Success(retentionConfig) =>
+        val expireAfterDays = retentionConfig.getConfigStringReq(EXPIRE_AFTER_DAYS)
+        val expireAfterTerminalState = retentionConfig.getConfigBooleanOption(EXPIRE_AFTER_TERMINAL_STATE).getOrElse(false)
+        RetentionPolicy(
+          configStr,
+          PolicyElements(expireAfterDays, expireAfterTerminalState)
+        )
+      case Failure(e: ConfigException.Parse) =>
+        //this is to handle the initial/older retention policy format which used to be just number of days
+        // instead of a valid concise typesafe config string
+        getPolicyFromConfigStr(s"""{"expire-after-days":"$configStr"}""")
+
+      case Failure(e) => throw e
     }
   }
 

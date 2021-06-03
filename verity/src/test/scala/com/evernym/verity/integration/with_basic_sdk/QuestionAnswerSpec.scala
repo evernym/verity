@@ -9,13 +9,14 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestio
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerGiven
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.typesafe.config.ConfigFactory
 
 
 class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_CONFIG).build()
   lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
@@ -122,5 +123,16 @@ class QuestionAnswerSpec
       val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]()
       receivedMsg.msg.answer shouldBe "I am fine after restart too"
     }
+  }
+
+  val VAS_CONFIG = ConfigFactory.parseString {
+    """
+      |verity.retention-policy.default {
+      | undefined-fallback {
+      |   expire-after-days = 3 day
+      |   expire-after-terminal-state = true
+      | }
+      |}
+      |""".stripMargin
   }
 }

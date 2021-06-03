@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
+import com.typesafe.scalalogging.Logger
 
 trait MockAsyncOpRunner
   extends AsyncOpRunner {
@@ -10,4 +12,6 @@ trait MockAsyncOpRunner
 
   def postAllAsyncOpsCompleted(): Unit = ???
   def abortTransaction(): Unit = ???
+
+  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
 }

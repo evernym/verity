@@ -1,46 +1,30 @@
-package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
+package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.expire_after_days
 
-import java.util.{Base64, UUID}
 import com.evernym.verity.actor.agent.TypeFormat
-import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.Envelope1
-import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
+import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlock
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol._
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Role.{Questioner, Responder}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.{AnswerGiven, StatusReport}
+import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0._
 import com.evernym.verity.protocol.testkit.DSL._
-import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
-import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.protocol.testkit.MockableWalletAccess
 
+import java.util.UUID
 import scala.language.{implicitConversions, reflectiveCalls}
 
 
-class QuestionAnswerProtocolSpec
-  extends TestsProtocolsImpl(QuestionAnswerDefinition)
-  with BasicFixtureSpec {
+class QuestionAnswerSpec
+  extends QuestionAnswerBaseSpec {
 
   import QuestionAnswerVars._
-
-  lazy val config: AppConfig = new TestAppConfig
-
-  private implicit def EnhancedScenario(s: Scenario) = new {
-    val questioner: TestEnvir = s(QUESTIONER)
-    val responder: TestEnvir = s(RESPONDER)
-  }
 
   override val defaultInitParams = Map(
     DATA_RETENTION_POLICY -> "30 day"
   )
-
-  def checkStatus(envir: TestEnvir, expectedStatus: StatusReport): Unit = {
-    envir clear signals
-    envir ~ GetStatus()
-    (envir expect signal [StatusReport]) shouldBe expectedStatus
-  }
 
   "Question Protocol Definition" - {
     "should have two roles" in { _ =>
@@ -80,6 +64,7 @@ class QuestionAnswerProtocolSpec
       "questioner and responder should both transition to correct states" in { s =>
         interaction (s.questioner, s.responder) {
 
+          s.checkTotalSegments(0)
           s.questioner ~ testAskQuestion(EXPIRATION_TIME)
 
           s.responder expect signal [Signal.AnswerNeeded]
@@ -89,6 +74,7 @@ class QuestionAnswerProtocolSpec
 
           s.responder.state shouldBe a[State.QuestionReceived]
           checkStatus(s.responder, StatusReport("QuestionReceived"))
+          s.checkTotalSegments(2, waitMillisBeforeCheck = 200)
         }
       }
     }
@@ -97,6 +83,7 @@ class QuestionAnswerProtocolSpec
       "Questioner should accept answer" in { s =>
         interaction (s.questioner, s.responder) {
 
+          s.checkTotalSegments(0)
           s.questioner ~ testAskQuestion(EXPIRATION_TIME)
 
           s.responder expect signal [Signal.AnswerNeeded]
@@ -114,6 +101,8 @@ class QuestionAnswerProtocolSpec
           val result = s.questioner expect signal [Signal.AnswerGiven]
           result.valid_signature shouldBe true
           checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = true))))
+
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
     }
@@ -121,6 +110,9 @@ class QuestionAnswerProtocolSpec
     "when Questioner verifies response" - {
       "should have state of AnswerReceived with hasValidSig equal to false" in { s =>
         interaction (s.questioner, s.responder) {
+
+          s.checkTotalSegments(0)
+
           s.questioner walletAccess MockableWalletAccess.alwaysVerifyAs(false)
 
           s.questioner ~ testAskQuestion(EXPIRATION_TIME)
@@ -140,11 +132,14 @@ class QuestionAnswerProtocolSpec
           s.responder expect state [State.AnswerSent]
 
           checkStatus(s.responder, StatusReport("AnswerSent", None))
+
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
 
       "should have state of AnswerDelivered with valid response" in { s =>
         interaction (s.questioner, s.responder) {
+          s.checkTotalSegments(0)
 
           withDefaultWalletAccess(s, {
             askAndAnswer(s)
@@ -156,11 +151,13 @@ class QuestionAnswerProtocolSpec
             s.responder expect state[State.AnswerSent]
             checkStatus(s.responder, StatusReport("AnswerSent", None))
           })
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
 
       "should have state of AnswerDelivered with no signature if question didn't specify" in { s =>
         interaction(s.questioner, s.responder) {
+          s.checkTotalSegments(0)
           s.questioner ~ testAskQuestion(EXPIRATION_TIME, sigRequired = false)
           s.responder walletAccess MockableWalletAccess()
           s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
@@ -170,12 +167,13 @@ class QuestionAnswerProtocolSpec
           // No SignatureResult ctl sent because question.signatureRequired=false doesn't signal a ValidateSignature
           { s.questioner expect state [State.AnswerReceived] }.validStatus.value.signatureValidity shouldBe true
           checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = true))))
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
 
       "should have a state indicating an invalid signature when signature check fails" in { s =>
         interaction(s.questioner, s.responder) {
-
+          s.checkTotalSegments(0)
           s.questioner walletAccess MockableWalletAccess.alwaysVerifyAs(false)
           s.responder walletAccess MockableWalletAccess()
 
@@ -187,12 +185,13 @@ class QuestionAnswerProtocolSpec
           signalMsg.answer shouldBe testAnswer(OUT_TIME).response
 
           checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(testAnswer(OUT_TIME).response, valid_answer = true, valid_signature = false, not_expired = true))))
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
 
       "should have access to original question in the state" in { s =>
         interaction(s.questioner, s.responder) {
-
+          s.checkTotalSegments(0)
           withDefaultWalletAccess(s, {
 
             askAndAnswer(s)
@@ -204,23 +203,25 @@ class QuestionAnswerProtocolSpec
 
             checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = true))))
           })
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
       "should allow ~timing to be None" in { s =>
         interaction(s.questioner, s.responder) {
           withDefaultWalletAccess(s, {
-
+            s.checkTotalSegments(0)
             s.questioner ~ testAskQuestion(None)
 
             s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
 
             s.questioner expect signal[Signal.AnswerGiven]
+            s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
           })
         }
       }
       "should signal with AnswerDelivered that the question expired" in { s =>
         interaction(s.questioner, s.responder) {
-
+          s.checkTotalSegments(0)
           withDefaultWalletAccess(s, {
 
             askAndAnswer(s, TIME_EXPIRED, OUT_TIME)
@@ -231,12 +232,14 @@ class QuestionAnswerProtocolSpec
 
             checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(CORRECT_ANSWER, valid_answer = true, valid_signature = true, not_expired = false))))
           })
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
     }
     "negative cases" - {
       "Responder signs incorrect data (changed nonce)" in { s =>
         interaction (s.questioner, s.responder) {
+          s.checkTotalSegments(0)
           withDefaultWalletAccess(s, {
 
             s.questioner ~ testAskQuestion(EXPIRATION_TIME)
@@ -265,11 +268,12 @@ class QuestionAnswerProtocolSpec
             answer.not_expired shouldBe true
             checkStatus(s.questioner, StatusReport("AnswerReceived", Some(AnswerGiven(answerNeeded.valid_responses.head, valid_answer = true, valid_signature = false, not_expired = true))))
           })
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
       "should set hasValidSig to false when questioner requests a sig but the answer's sig is None" in { s =>
         interaction(s.questioner, s.responder) {
-
+          s.checkTotalSegments(0)
           withDefaultWalletAccess(s, {
 
             s.questioner ~ testAskQuestion(EXPIRATION_TIME)
@@ -291,11 +295,12 @@ class QuestionAnswerProtocolSpec
             adState.validStatus.value.signatureValidity should not be true
 
           })
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
       "the answer is not one of the valid answer given" in { s => // not working for the first time yet
         interaction(s.questioner, s.responder) {
-
+          s.checkTotalSegments(0)
           withDefaultWalletAccess(s, {
 
             s.questioner ~ testAskQuestion(None)
@@ -306,6 +311,7 @@ class QuestionAnswerProtocolSpec
             v.valid_answer shouldBe false
             v.valid_signature shouldBe true
           })
+          s.checkTotalSegments(4, waitMillisBeforeCheck = 200)
         }
       }
     }
@@ -485,58 +491,5 @@ class QuestionAnswerProtocolSpec
     }
   }
 
-  def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {
-    s.responder walletAccess MockableWalletAccess()
-    s.questioner walletAccess MockableWalletAccess()
-    f
-  }
-
-  def askAndAnswer(s: Scenario,
-                   ex: Option[BaseTiming] = EXPIRATION_TIME,
-                   out: Option[BaseTiming] = OUT_TIME): Unit = {
-
-    s.questioner ~ testAskQuestion(ex)
-    s.questioner expect state [State.QuestionSent]
-    s.responder expect signal [Signal.AnswerNeeded]
-    s.responder expect state [State.QuestionReceived]
-
-    s.responder ~ AnswerQuestion(Some(CORRECT_ANSWER))
-    s.responder expect state [State.AnswerSent]
-    s.questioner expect state [State.AnswerReceived]
-  }
-
   override val containerNames: Set[ContainerName] = Set(QuestionAnswerVars.QUESTIONER, QuestionAnswerVars.RESPONDER)
-}
-
-object QuestionAnswerVars extends CommonSpecUtil {
-  val QUESTIONER = "questioner"
-  val RESPONDER = "responder"
-  val QUESTION_TEXT = "ask a question"
-  val QUESTION_DETAIL = Option("Some Context to question")
-  val CORRECT_ANSWER = "answer1"
-  val SIG: String = Base64.getEncoder().encodeToString(CORRECT_ANSWER.getBytes())
-  val VALID_RESPONSES: Vector[QuestionResponse] = Vector(
-    QuestionResponse(text = CORRECT_ANSWER),
-    QuestionResponse(text = "reject")
-  )
-  val EXPIRATION_TIME = Option(BaseTiming(expires_time = Some("2118-12-13T17:29:06+0000")))
-  val TIME_EXPIRED = Option(BaseTiming(expires_time = Some("2017-12-13T17:29:06+0000")))
-  val OUT_TIME = Option(BaseTiming(out_time = Some("2018-12-13T17:29:34+0000")))
-  val TEST_SIGNATURE_DATA: SigBlock = SigBlock(SIG, "base64 of response", Vector("V1", "V2"))
-
-  def testAskQuestion(time: Option[BaseTiming], sigRequired: Boolean = true): AskQuestion = {
-    AskQuestion(
-      QUESTION_TEXT,
-      QUESTION_DETAIL,
-      responsesToStrings(VALID_RESPONSES),
-      sigRequired,
-      time.flatMap(_.expires_time)
-    )
-  }
-
-  def testQuestion(time: Option[BaseTiming], sigRequired: Boolean = true): Msg.Question =
-    Msg.Question(QUESTION_TEXT, QUESTION_DETAIL, "", signature_required = sigRequired, VALID_RESPONSES, time)
-
-  def testAnswer(time: Option[BaseTiming], sigData: Option[SigBlock] = Some(TEST_SIGNATURE_DATA)): Msg.Answer =
-    Msg.Answer(CORRECT_ANSWER, sigData, time)
 }

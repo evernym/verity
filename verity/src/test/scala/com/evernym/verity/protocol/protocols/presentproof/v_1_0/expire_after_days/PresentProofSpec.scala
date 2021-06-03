@@ -1,120 +1,29 @@
-package com.evernym.verity.protocol.protocols.presentproof.v_1_0
+package com.evernym.verity.protocol.protocols.presentproof.v_1_0.expire_after_days
 
-import java.util.UUID
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.constants.InitParamConstants.{AGENCY_DID_VER_KEY, DATA_RETENTION_POLICY, LOGO_URL, MY_PUBLIC_DID, NAME}
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofSpec.{invalidEncoding, invalidProof}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{Role, _}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess, TestsProtocolsImpl}
-import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess}
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
-import scala.util.{Failure, Success, Try}
 
-class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
-  with BasicFixtureSpec {
-    import PresentProofSpec._
+class PresentProofSpec
+  extends PresentProofSpecBase {
 
-    val orgName = "Acme Corp"
-    val logoUrl = "https://robohash.org/234"
-    val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
-    val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
-
-    override val defaultInitParams = Map(
-      NAME -> orgName,
-      LOGO_URL -> logoUrl,
-      AGENCY_DID_VER_KEY -> agencyVerkey,
-      MY_PUBLIC_DID -> publicDid,
-      DATA_RETENTION_POLICY -> "100 days"
-    )
-
-
-    def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
-
-  val restriction1: RestrictionsV1 = RestrictionsV1(Some("NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0"),
-    None,
-    None,
-    None,
-    None,
-    None
+  override val defaultInitParams = Map(
+    NAME -> orgName,
+    LOGO_URL -> logoUrl,
+    AGENCY_DID_VER_KEY -> agencyVerkey,
+    MY_PUBLIC_DID -> publicDid,
+    DATA_RETENTION_POLICY -> "100 days"
   )
-
-  val requestedAttr1: ProofAttribute = ProofAttribute(
-    Some("test"),
-    None,
-    Some(List(restriction1)),
-    None,
-    self_attest_allowed = false
-  )
-
-  val requestedAttr2: ProofAttribute = ProofAttribute(
-    Some("test2"),
-    None,
-    Some(List(restriction1)),
-    None,
-    self_attest_allowed = false
-  )
-
-  val proposedAttr1Name: String = "pr-test1"
-  val proposedAttr1: PresentationPreviewAttribute = PresentationPreviewAttribute(
-    proposedAttr1Name,
-    None,
-    None,
-    None,
-    None
-  )
-
-  val proposedAttr2Name: String = "pr-test2"
-  val proposedAttr2CredDef: String = "cred-def-pa2"
-  val proposedAttr2: PresentationPreviewAttribute = PresentationPreviewAttribute(
-    proposedAttr2Name,
-    Some(proposedAttr2CredDef),
-    None,
-    None,
-    None
-  )
-
-  val proposedPred1Name: String = "pr-pred1"
-  val proposedPred1CredDef: String = "cred-def-pp1"
-  val proposedPred1: PresentationPreviewPredicate = PresentationPreviewPredicate(
-    proposedPred1Name,
-    proposedPred1CredDef,
-    ">",
-    18
-  )
-
-  val selfAttest1: ProofAttribute = generateAttr(name=Some("attest1"), selfAttestedAllowed=true)
-
-  val selfAttest2: ProofAttribute = generateAttr(name=Some("attest2"), selfAttestedAllowed=true)
-
-  val invalidAttr: ProofAttribute = ProofAttribute(
-      Some("test"),
-      Some(List("test", "test2")),
-      Some(List(restriction1)),
-      None,
-      self_attest_allowed = false
-    )
-
-  val reqWithPredicate: Ctl.Request = genReq(
-    "",
-    Some(List(selfAttest1, selfAttest2)),
-    Some(List(ProofPredicate("a", "b", 2, None, None)))
-  )
-
-  val allSelfAttestProofReq: Ctl.Request = genReq("", Some(List(selfAttest1, selfAttest2)))
-
-  val reqWithRestriction: Ctl.Request = genReq("", Some(List(requestedAttr1)))
-
-  val reqWithSelfAttestAndRestrictions: Ctl.Request = genReq("", Some(List(selfAttest1, selfAttest2, requestedAttr1)))
 
   "Present Proof Protocol" - {
     "indy proof object" - {
@@ -135,7 +44,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
     "verifier start protocol" - {
       "should handle happy path" in { f =>
-
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         var nonce: Option[Nonce] = None
@@ -147,6 +56,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           None
         )
+        f.checkTotalSegments(2)
 
         verifier.role shouldBe Role.Verifier
         assertRequestSentState(verifier)
@@ -158,6 +68,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         assertRequestReceivedState(prover)
 
         prover ~ Ctl.AcceptRequest()
+        f.checkTotalSegments(4)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -189,6 +100,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle Out-Of-Band Invitation happy path" in { f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         verifier urlShortening MockableUrlShorteningAccess.shortened
@@ -200,6 +112,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           Some(true)
         )
+        f.checkTotalSegments(1)
 
         // successful shortening
         val invitation = verifier expect signal[Sig.Invitation]
@@ -220,8 +133,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
         threadedInviteId.relationshipId shouldBe verifier.did_!
         threadedInviteId.threadId shouldBe verifier.currentInteraction.get.threadId.get
-
-
 
         inviteObj.getString("profileUrl") shouldBe logoUrl
         inviteObj.getString("label") shouldBe orgName
@@ -251,11 +162,13 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         assertRequestSentState(verifier)
 
         prover ~ Ctl.AttachedRequest(attachedRequest)
+        f.checkTotalSegments(2)
 
         assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
         assertRequestReceivedState(prover)
         prover ~ Ctl.AcceptRequest()
+        f.checkTotalSegments(4)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -287,6 +200,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle Out-Of-Band Invitation happy path without public did" in { f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         verifier.initParams(defaultInitParams.updated(MY_PUBLIC_DID, ""))
@@ -301,6 +215,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           Some(true)
         )
+        f.checkTotalSegments(1)
 
         // successful shortening
         val invitation = verifier expect signal[Sig.Invitation]
@@ -321,8 +236,6 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
         threadedInviteId.relationshipId shouldBe verifier.did_!
         threadedInviteId.threadId shouldBe verifier.currentInteraction.get.threadId.get
-
-
 
         inviteObj.getString("profileUrl") shouldBe logoUrl
         inviteObj.getString("label") shouldBe orgName
@@ -352,11 +265,13 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         assertRequestSentState(verifier)
 
         prover ~ Ctl.AttachedRequest(attachedRequest)
+        f.checkTotalSegments(2)
 
         assertReviewRequestSig(prover)
         prover.role shouldBe Role.Prover
         assertRequestReceivedState(prover)
         prover ~ Ctl.AcceptRequest()
+        f.checkTotalSegments(4)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -388,6 +303,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle Out-Of-Band Invitation shortening failed path" in { f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         verifier urlShortening MockableUrlShorteningAccess.shorteningFailed
@@ -400,6 +316,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           Some(true)
         )
+        f.checkTotalSegments(1)
 
         // failed shortening
         val problemReport = verifier expect signal[Sig.ProblemReport]
@@ -416,7 +333,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle prover being able to negotiate (verifier accepts)" in { f =>
-
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         var nonce: Option[Nonce] = None
@@ -428,7 +345,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           None
         )
-
+        f.checkTotalSegments(2)
         verifier.role shouldBe Role.Verifier
         assertRequestSentState(verifier)
 
@@ -442,6 +359,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           Some(List(proposedPred1)),
           "Proposal1"
         )
+        f.checkTotalSegments(4)
 
         verifier.expectAs( signal[Sig.ReviewProposal]) { msg =>
           msg.attributes shouldBe List()
@@ -455,7 +373,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         verifier ~ Ctl.AcceptProposal(None, None)
-
+        f.checkTotalSegments(6)
         assertRequestSentState(verifier, numberOfReq=2)
 
         prover.expectAs(signal[Sig.ReviewRequest]) { msg =>
@@ -477,6 +395,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         prover ~ Ctl.AcceptRequest()
+        f.checkTotalSegments(8)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -508,7 +427,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle verifier being able to renegotiate" in { f =>
-
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         var nonce: Option[Nonce] = None
@@ -520,6 +439,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           None
         )
+        f.checkTotalSegments(2)
 
         verifier.role shouldBe Role.Verifier
         assertRequestSentState(verifier)
@@ -534,6 +454,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           Some(List(proposedPred1)),
           "Proposal1"
         )
+        f.checkTotalSegments(4)
 
         verifier.expectAs( signal[Sig.ReviewProposal]) { msg =>
           msg.attributes shouldBe List(proposedAttr1, proposedAttr2)
@@ -552,6 +473,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           None
         )
+        f.checkTotalSegments(6)
 
         assertRequestSentState(verifier, numberOfReq=2)
 
@@ -570,6 +492,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         prover ~ Ctl.AcceptRequest()
+        f.checkTotalSegments(8)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -601,7 +524,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle prover being able to start by proposing presentation" in { f =>
-
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         // Prover starts protocol
@@ -610,6 +533,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           "Proposal1"
         )
+        f.checkTotalSegments(2)
 
         prover.role shouldBe Role.Prover
         prover.expectAs(state[States.ProposalSent]){ s =>
@@ -629,6 +553,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         verifier ~ Ctl.AcceptProposal(None, None)
+        f.checkTotalSegments(4)
 
         assertRequestSentState(verifier)
 
@@ -651,6 +576,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         prover ~ Ctl.AcceptRequest()
+        f.checkTotalSegments(6)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -683,12 +609,14 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
       // ignored because InMemoryProtocolContainer does not handle wallet async behavior yet
       "should handle all self attested - real wallet access" ignore { f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f, wa=MockableWalletAccess.walletAccess())
 
         var nonce: Option[Nonce] = None
 
         // Verifier starts protocol
         (verifier engage prover) ~ allSelfAttestProofReq
+        f.checkTotalSegments(2)
 
         verifier.role shouldBe Role.Verifier
         assertRequestSentState(verifier)
@@ -709,6 +637,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
         val selfAttestedAttrs = selfAttestOptions.map(x => x -> "test data").toMap
         prover ~ Ctl.AcceptRequest(selfAttestedAttrs)
+        f.checkTotalSegments(4)
 
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
@@ -744,10 +673,12 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
       // ignored because InMemoryProtocolContainer does not handle wallet async behavior yet
       "should fail with unexpected self attested" ignore {f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f, wa=MockableWalletAccess.walletAccess())
 
         // Verifier starts protocol
         (verifier engage prover) ~ reqWithRestriction
+        f.checkTotalSegments(2)
 
         verifier.role shouldBe Role.Verifier
         assertRequestSentState(verifier)
@@ -761,6 +692,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         assertRequestReceivedState(prover)
 
         prover ~ Ctl.AcceptRequest(Map("invalid self attest" -> "invalid"))
+        f.checkTotalSegments(4)
 
         // Verifier should receive presentation and verify it
         prover.expectAs( signal[Sig.ProblemReport]) { msg =>
@@ -769,10 +701,12 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should pass when prover provides credential when verifier allows self attested" in { f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         // Verifier starts protocol
         (verifier engage prover) ~ reqWithSelfAttestAndRestrictions
+        f.checkTotalSegments(2)
 
         verifier.role shouldBe Role.Verifier
         assertRequestSentState(verifier)
@@ -785,7 +719,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         // Possibility of self attested but uses mocked credentials instead
         prover ~ Ctl.AcceptRequest(Map.empty)
-
+        f.checkTotalSegments(4)
         // Verifier should receive presentation and verify it
         verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
           msg.verification_result shouldBe VerificationResults.ProofValidated
@@ -817,6 +751,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       }
 
       "should handle rejection by prover" in { f =>
+        f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
         // Verifier starts protocol
@@ -826,8 +761,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
           None,
           None
         )
+        f.checkTotalSegments(2)
 
         prover ~ Ctl.Reject(Some("Because I said so"))
+        f.checkTotalSegments(2)
 
         prover.expectAs(state[States.Rejected]) { s =>
           s.whoRejected shouldBe Role.Prover
@@ -847,6 +784,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
       "should handle error cases" - {
         "Ledger Assets are not available for verifier" in { f =>
+          f.checkTotalSegments(0)
           val (verifier, prover) = indyAccessMocks(f)
 
           verifier ledgerAccess MockableLedgerAccess(false)
@@ -858,8 +796,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
             None,
             None
           )
+          f.checkTotalSegments(2)
 
           prover ~ Ctl.AcceptRequest()
+          f.checkTotalSegments(4)
 
           verifier.expectAs( signal[Sig.PresentationResult]) { msg =>
             msg.verification_result shouldBe VerificationResults.ProofUndefined
@@ -878,6 +818,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         "Correctness check fails" in { f =>
+          f.checkTotalSegments(0)
           val (verifier, prover) = indyAccessMocks(f)
 
           // This will return an new raw value for `name` attr
@@ -885,8 +826,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
           // Verifier starts protocol
           (verifier engage prover) ~ reqWithRestriction
+          f.checkTotalSegments(2)
 
           prover ~ Ctl.AcceptRequest()
+          f.checkTotalSegments(4)
 
           verifier.expectAs(state[States.Complete]) { s =>
             // the correctness check should catch the invalid encoding don't match the raw value
@@ -895,6 +838,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         "Proof verification fails" in { f =>
+          f.checkTotalSegments(0)
           val (verifier, prover) = indyAccessMocks(f)
 
           // All proofs verifications will return false
@@ -902,8 +846,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
           // Verifier starts protocol
           (verifier engage prover) ~ reqWithRestriction
+          f.checkTotalSegments(2)
 
           prover ~ Ctl.AcceptRequest()
+          f.checkTotalSegments(4)
 
           verifier.expectAs(state[States.Complete]) { s =>
             // the verification of the proof is false
@@ -912,6 +858,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
 
         "Invalid Request signals Problem Report" in { f =>
+          f.checkTotalSegments(0)
           val (verifier, prover) = indyAccessMocks(f)
 
           // Verifier starts protocol
@@ -921,6 +868,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
             None,
             None
           )
+          f.checkTotalSegments(0)
 
           verifier expect signal[Sig.ProblemReport]
 
@@ -930,7 +878,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
       "should handle data retention error cases" - {
         "Verifier receives Presentation message when request sent is expired" - {
           "should send problem report message" in { f =>
-
+            f.checkTotalSegments(0)
             val (verifier, prover) = indyAccessMocks(f)
 
             var nonce: Option[Nonce] = None
@@ -942,6 +890,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
               None,
               None
             )
+            f.checkTotalSegments(2)
 
             verifier.role shouldBe Role.Verifier
             val requestSent = assertRequestSentState(verifier)
@@ -954,8 +903,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
             // simulating expire of request on verifier side.
             verifier.container_!.removeSegment(requestSent.data.requests.head)
+            f.checkTotalSegments(1)
 
             prover ~ Ctl.AcceptRequest()
+            f.checkTotalSegments(2)
 
             // Verifier should receive problem report
             verifier.expectAs(signal[Sig.ProblemReport]) { msg =>
@@ -979,7 +930,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
         "Prover uses AcceptRequest control message when request received is expired" - {
           "should send problem report" in { f =>
-
+            f.checkTotalSegments(0)
             val (verifier, prover) = indyAccessMocks(f)
 
             var nonce: Option[Nonce] = None
@@ -991,6 +942,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
               None,
               None
             )
+            f.checkTotalSegments(2)
 
             verifier.role shouldBe Role.Verifier
             assertRequestSentState(verifier)
@@ -1003,8 +955,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
             // simulating expire of request on prover side.
             prover.container_!.removeSegment(requestReceived.data.requests.head)
+            f.checkTotalSegments(1)
 
             prover ~ Ctl.AcceptRequest()
+            f.checkTotalSegments(1)
 
             prover.expectAs(signal[Sig.ProblemReport]) { msg =>
               msg.description.code shouldBe ProblemReportCodes.segmentedRetrieveFailed
@@ -1027,6 +981,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
         }
         "Verifier uses AcceptProposal control message when received proposal is expired" - {
           "should send problem report" in { f =>
+            f.checkTotalSegments(0)
             val (verifier, prover) = indyAccessMocks(f)
 
             // Prover starts protocol
@@ -1035,6 +990,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
               None,
               "Proposal1"
             )
+            f.checkTotalSegments(2)
 
             prover.role shouldBe Role.Prover
             prover.expectAs(state[States.ProposalSent]) { s =>
@@ -1055,8 +1011,10 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
             // simulating expire of proposal on verifier side.
             verifier.container_!.removeSegment(proposalReceived.data.proposals.head)
+            f.checkTotalSegments(1)
 
             verifier ~ Ctl.AcceptProposal(None, None)
+            f.checkTotalSegments(1)
 
             // Verifier should receive problem report
             verifier.expectAs(signal[Sig.ProblemReport]) { msg =>
@@ -1081,7 +1039,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
         "Verifier uses Status control message when received presentation is expired" - {
           "should get status without presentation data" in { f =>
-
+            f.checkTotalSegments(0)
             val (verifier, prover) = indyAccessMocks(f)
 
             var nonce: Option[Nonce] = None
@@ -1093,6 +1051,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
               None,
               None
             )
+            f.checkTotalSegments(2)
 
             verifier.role shouldBe Role.Verifier
             assertRequestSentState(verifier)
@@ -1104,6 +1063,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
             assertRequestReceivedState(prover)
 
             prover ~ Ctl.AcceptRequest()
+            f.checkTotalSegments(4)
 
             // Verifier should receive presentation and verify it
             verifier.expectAs(signal[Sig.PresentationResult]) { msg =>
@@ -1128,6 +1088,7 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
 
             // simulating expire of presentation on verifier side.
             verifier.container_!.removeSegment(complete.data.presentation.get)
+            f.checkTotalSegments(3)
 
             // user should receive the state but without the presentation data.
             verifier ~ Ctl.Status()
@@ -1149,201 +1110,4 @@ class PresentProofSpec extends TestsProtocolsImpl(PresentProofDef)
     }
   }
 
-  def assertRequestSentState(env: TestEnvir, numberOfReq: Int=1): States.RequestSent = {
-    env.expectAs(state[States.RequestSent]){ s =>
-      s.data.requests should not be empty
-      s.data.requests should have size numberOfReq
-      assertRequestUsedSegment(env, s.data.requests.head)
-    }
-  }
-
-  def assertReviewRequestSig(env: TestEnvir): Sig.ReviewRequest = {
-    env.expectAs(signal[Sig.ReviewRequest]) { _ => }
-  }
-
-  def assertRequestReceivedState(env: TestEnvir): States.RequestReceived = {
-    env.expectAs(state[States.RequestReceived]){ s =>
-      s.data.requests should not be empty
-      s.data.requests should have size 1
-      assertRequestUsedSegment(env, s.data.requests.head)
-    }
-  }
-
-  def assertRequestUsedSegment(env: TestEnvir, segmentKey: SegmentKey): Unit = {
-    env.container_!.withSegment[RequestUsed](segmentKey) {
-      case Success(Some(r)) =>
-        val rr = DefaultMsgCodec.fromJson[ProofRequest](r.requestRaw)
-        rr.requested_attributes.values.toVector.contains(reqWithRestriction.proof_attrs.get.head)
-      case Success(None) => throw new Exception("No item")
-      case Failure(e) => throw e
-    }
-  }
-
-  def assertCompleteState(env: TestEnvir,
-                          verificationResult: Option[String]=Some(VerificationResults.ProofValidated)
-                         ): States.Complete = {
-    env.expectAs(state[States.Complete]) { s =>
-      s.data.presentation should not be None
-      s.data.verificationResults shouldBe verificationResult
-      assertProofReceived(env, s.data.presentation.head)
-    }
-  }
-
-  def assertProofReceived(env: TestEnvir, segmentKey: SegmentKey): Unit = {
-    env.container_!.withSegment[PresentationGiven](segmentKey) {
-      case Success(Some(r)) =>
-        val p = DefaultMsgCodec.fromJson[ProofPresentation](r.presentation)
-        assert(p.requested_proof
-          .revealed_attrs
-          .values
-          .toVector
-          .contains(RevealedAttr(0,"Alex", "99262857098057710338306967609588410025648622308394250666849665532448612202874")))
-      case Success(None) => throw new Exception("No item")
-      case Failure(e) => throw e
-    }
-  }
-
-  def indyAccessMocks(f: FixtureParam, wa: WalletAccess=MockableWalletAccess.walletAccess(), la: LedgerAccess=MockableLedgerAccess()):
-  (TestEnvir, TestEnvir) = {
-    val (verifier, prover) = (f.alice, f.bob)
-
-    verifier ledgerAccess la
-    prover ledgerAccess la
-
-    verifier walletAccess wa
-    prover walletAccess wa
-
-    (verifier, prover)
-  }
-
-  def generateAttr(name: Option[String]=None,
-                   names: Option[List[String]]=None,
-                   restrictions: Option[List[RestrictionsV1]]=None,
-                   nonRevoked: Option[RevocationInterval] = None,
-                   selfAttestedAllowed: Boolean = false): ProofAttribute =
-    ProofAttribute(name, names, restrictions, nonRevoked, selfAttestedAllowed)
-
-  def allowsAllSelfAttested(req: Ctl.Request): Boolean =
-    ProofRequestUtil.requestToProofRequest(req).get.allowsAllSelfAttested
-
-  def genReq(name: String,
-             proof_attrs: Option[List[ProofAttribute]],
-             proof_predicates: Option[List[ProofPredicate]]=None,
-             revocation_interval: Option[RevocationInterval]=None): Ctl.Request =
-    Ctl.Request(name, proof_attrs, proof_predicates, revocation_interval)
-
-}
-
-//MockableAnonCredRequests.basic
-object PresentProofSpec {
-  import com.evernym.verity.protocol.testkit.MockableAnonCredRequests.basic
-  val invalidEncoding: AnonCredRequests = new AnonCredRequests {
-    override def createSchema(issuerDID: DID,
-                              name: String,
-                              version: String,
-                              data: String)
-                             (handler: Try[SchemaCreated] => Unit): Unit =
-      basic.createSchema(issuerDID, name, version, data)(handler)
-
-    override def createCredDef(issuerDID: DID,
-                               schemaJson: String,
-                               tag: String,
-                               sigType: Option[String],
-                               revocationDetails: Option[String])
-                              (handler: Try[CredDefCreated] => Unit): Unit =
-      basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
-
-    override def createCredOffer(a1: String)(handler: Try[CredOfferCreated] => Unit): Unit = basic.createCredOffer(a1)(handler)
-    override def createCredReq(a1: String, a2: DID, a3: String, a4: String)
-                              (handler: Try[CredReqCreated] => Unit): Unit =
-      basic.createCredReq(a1, a2, a3, a4)(handler)
-    override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int)
-                           (handler: Try[CredCreated] => Unit): Unit =
-      basic.createCred(a1, a2, a3, a4, a5)(handler)
-    override def credentialsForProofReq(a1: String)(handler: Try[CredForProofReqCreated] => Unit): Unit =
-      basic.credentialsForProofReq(a1)(handler)
-    override def verifyProof(a1: String, a2: String, a3: String, a4: String, a5: String, a6: String)
-                            (handler: Try[ProofVerifResult] => Unit): Unit =
-      basic.verifyProof(a1, a2, a3, a4, a5, a6)(handler)
-    override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String)
-                            (handler: Try[ProofCreated] => Unit): Unit = handler(Try(
-      // changes raw value of attr1_referent 'Alex' to 'Mark'
-      ProofCreated(
-      """{
-        |   "proof":{},
-        |   "requested_proof":{
-        |      "revealed_attrs":{
-        |         "attr1_referent":{
-        |            "sub_proof_index":0,
-        |            "raw":"Mark",
-        |            "encoded":"99262857098057710338306967609588410025648622308394250666849665532448612202874"
-        |         }
-        |      },
-        |      "self_attested_attrs":{
-        |         "attr3_referent":"8-800-300"
-        |      },
-        |      "unrevealed_attrs":{
-        |         "attr2_referent":{
-        |            "sub_proof_index":0
-        |         }
-        |      },
-        |      "predicates":{
-        |         "predicate1_referent":{
-        |            "sub_proof_index":0
-        |         }
-        |      }
-        |   },
-        |   "identifiers":[
-        |      {
-        |         "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
-        |         "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
-        |         "rev_reg_id":null,
-        |         "timestamp":null
-        |      }
-        |   ]
-        |}""".stripMargin
-    )))
-
-    override def storeCred(credId: String, credReqMetadataJson: String, credJson: String,
-                           credDefJson: String, revRegDefJson: String)
-                          (handler: Try[CredStored] => Unit): Unit =
-      handler(Try(CredStored(Option(credId).getOrElse(UUID.randomUUID().toString))))
-  }
-
-  val invalidProof: AnonCredRequests = new AnonCredRequests {
-    override def createSchema(issuerDID: DID,
-                              name: String,
-                              version: String,
-                              data: String)
-                             (handler: Try[SchemaCreated] => Unit): Unit =
-      basic.createSchema(issuerDID, name, version, data)(handler)
-
-    override def createCredDef(issuerDID: DID,
-                               schemaJson: String,
-                               tag: String,
-                               sigType: Option[String],
-                               revocationDetails: Option[String])
-                              (handler: Try[CredDefCreated] => Unit): Unit =
-      basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
-
-    override def createCredOffer(a1: String)(handler: Try[CredOfferCreated] => Unit): Unit = basic.createCredOffer(a1)(handler)
-    override def createCredReq(a1: String, a2: DID, a3: String, a4: String)
-                              (handler: Try[CredReqCreated] => Unit): Unit =
-      basic.createCredReq(a1, a2, a3, a4)(handler)
-    override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int)
-                           (handler: Try[CredCreated] => Unit): Unit =
-      basic.createCred(a1, a2, a3, a4, a5)(handler)
-    override def credentialsForProofReq(a1: String)(handler: Try[CredForProofReqCreated] => Unit): Unit =
-      basic.credentialsForProofReq(a1)(handler)
-    override def verifyProof(a1: String, a2: String, a3: String, a4: String, a5: String, a6: String)
-                            (handler: Try[ProofVerifResult] => Unit): Unit =
-      handler(Try(ProofVerifResult(false)))
-    override def createProof(a1: String, a2: String, a3: String, a4: String, a5: String)
-                            (handler: Try[ProofCreated] => Unit): Unit =
-      basic.createProof(a1, a2, a3, a4, a5)(handler)
-    override def storeCred(credId: String, credDefJson: String, credReqMetadataJson: String, credJson: String,
-                           revRegDefJson: String)
-                          (handler: Try[CredStored] => Unit): Unit =
-      basic.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)(handler)
-  }
 }

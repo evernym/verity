@@ -1,12 +1,13 @@
 package com.evernym.verity.protocol.engine.segmentedstate
 
+import com.evernym.verity.protocol.{SegmentRemoved, SegmentStored}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.util.ParticipantUtil
 
 import java.util.UUID
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 trait SegmentedStateContext[P,R,M,E,S,I]
   extends SegmentedStateContextApi { this: ProtocolContext[P,R,M,E,S,I] =>
@@ -26,7 +27,7 @@ trait SegmentedStateContext[P,R,M,E,S,I]
 
   /**
    * storeSegment implementation will store the given segments
-   *  (either to actor based storage or some external storage based on size constraints)
+   * (either to actor based storage or some external storage based on size constraints)
    * and as with any other async service, the 'segmentStorageService.storeSegment' async op
    * will be executed with AsyncOpRunner which will make sure to finalize things once
    * async op is completed
@@ -35,30 +36,64 @@ trait SegmentedStateContext[P,R,M,E,S,I]
     val segmentId = segmentStoreStrategy_!.calcSegmentId(segmentKey)
     val domainId = Try(getDomainId).getOrElse(withShadowAndRecord(getDomainId))
     val address = segmentStoreStrategy_!.calcSegmentAddress(domainId, _storageId_!, segmentId, getProtoRef)
-    segmentStore.storeSegment(address, segmentKey, segment, dataRetentionPolicy) { result =>
-      if (result.isSuccess) segmentCache += (segmentKey -> segment)
-      handler(result )
+    segmentStore.storeSegment(address, segmentKey, segment, dataRetentionPolicy.map(_.elements.expiryDaysStr)) { result =>
+      result match {
+        case Success(_) =>
+          apply(SegmentStored(segmentKey))
+          segmentCache += (segmentKey -> segment)
+        case Failure(e) =>
+          logger.error(s"error while storing segment: " +
+            s"protoRef: $getProtoRef, " +
+            s"state: ${getState.getClass.getSimpleName}, " +
+            s"error: ${e.getMessage}")
+      }
+      handler(result)
     }
   }
 
-
   final def withSegment[T](segmentKey: SegmentKey)(handler: Try[Option[T]] => Unit): Unit = {
     segmentCache.get(segmentKey) match {
-      case Some(s) => handler(Success(Some(s.asInstanceOf[T])))
+      case Some(s) =>
+        handler(Success(Some(s.asInstanceOf[T])))
       case None =>
         val segmentId = segmentStoreStrategy_!.calcSegmentId(segmentKey)
         val domainId = Try(getDomainId).getOrElse(withShadowAndRecord(getDomainId))
         val address = segmentStoreStrategy_!.calcSegmentAddress(domainId, _storageId_!, segmentId, getProtoRef)
-        segmentStore.withSegment(address, segmentKey, dataRetentionPolicy)(handler)
+        segmentStore.withSegment(address, segmentKey, dataRetentionPolicy.map(_.elements.expiryDaysStr)) { result: Try[Option[T]] =>
+          result match {
+            case Success(Some(_)) => //nothing to do
+            case Success(None)  =>
+              logger.info(s"requested segmented data not found (never stored or already removed or expired): " +
+                s"protoRef: $getProtoRef, " +
+                s"state: ${getState.getClass.getSimpleName}, " +
+                s"policy: ${dataRetentionPolicy.map(_.configString)}")
+            case Failure(e) =>
+              logger.error(s"error while retrieving segment: " +
+                s"protoRef: $getProtoRef, " +
+                s"state: ${getState.getClass.getSimpleName}, " +
+                s"error: " + e.getMessage)
+          }
+          handler(result)
+        }
     }
   }
 
-  final def removeSegment(segmentKey: SegmentKey): Unit = {
+  final def removeSegment(segmentKey: SegmentKey)(handler: Try[SegmentKey] => Unit): Unit = {
     val segmentId = segmentStoreStrategy_!.calcSegmentId(segmentKey)
     val domainId = Try(getDomainId).getOrElse(withShadowAndRecord(getDomainId))
     val address = segmentStoreStrategy_!.calcSegmentAddress(domainId, _storageId_!, segmentId, getProtoRef)
-    segmentStore.removeSegment(address, segmentKey) { result =>
-      if (result.isSuccess) segmentCache -= segmentKey
+    segmentStore.removeSegment(address, segmentKey, dataRetentionPolicy.map(_.elements.expiryDaysStr)) { result =>
+      result match {
+        case Success(_) =>
+          apply(SegmentRemoved(segmentKey))
+          segmentCache -= segmentKey
+        case Failure(e) =>
+          logger.error(s"error while removing segment: " +
+            s"protoRef: $getProtoRef, " +
+            s"state: ${getState.getClass.getSimpleName}, " +
+            s"error: " + e.getMessage)
+      }
+      handler(result)
     }
   }
 }

@@ -317,6 +317,11 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     260 -> presentProof_v10.PresentationProposedRef,
     261 -> presentProof_v10.ProposeReceivedRef,
     262 -> presentProof_v10.AttributesGivenRef,
+
+    263 -> SegmentedStateRemoved,
+
+    264 -> SegmentStored,
+    265 -> SegmentRemoved
   )
 
 }

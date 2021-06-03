@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
+import com.evernym.verity.protocol.TerminalState
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 
 trait Event
@@ -76,7 +77,7 @@ object States {
   // Verifier States
   case class ProposalReceived(data: StateData) extends State with HasData
   case class RequestSent(data: StateData) extends State with HasData
-  case class Complete(data: StateData) extends State with HasData
+  case class Complete(data: StateData) extends State with HasData with TerminalState
   def initRequestSent(id: SegmentKey): RequestSent = RequestSent(StateData(requests = List(id)))
   def initProposalReceived(id: SegmentKey): ProposalReceived = {
     ProposalReceived(StateData().addProposal(id))
@@ -85,7 +86,7 @@ object States {
   // Prover States
   case class RequestReceived(data: StateData) extends State with HasData
   case class ProposalSent(data: StateData) extends State with HasData
-  case class Presented(data: StateData) extends State with HasData
+  case class Presented(data: StateData) extends State with HasData with TerminalState
   def initRequestReceived(id: SegmentKey): RequestReceived = {
     RequestReceived(StateData(requests = List(id)))
   }

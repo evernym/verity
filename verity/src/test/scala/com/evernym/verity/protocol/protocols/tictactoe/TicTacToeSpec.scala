@@ -64,9 +64,9 @@ class TicTacToeSpec
         (alice engage bob) ~ MakeOffer()
 
         //NOTE: stateVersion is 2 because it would have already advanced to 1 during initialization
-        alice.stateVersion shouldBe 2
+        alice.stateVersion shouldBe 3
 
-        bob.stateVersion shouldBe 2
+        bob.stateVersion shouldBe 3
 
         alice.state shouldBe a[State.Offered]
         alice.role shouldBe PlayerA()

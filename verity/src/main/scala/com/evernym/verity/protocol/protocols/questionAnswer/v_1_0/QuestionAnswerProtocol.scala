@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.Seg
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Role.{Questioner, Responder}
-import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.{ProblemReport, StatusReport}
+import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.StatusReport
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.State.AnswerValidity
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.legacy.QuestionAnswerLegacy
 import com.evernym.verity.util.Base64Util.{getBase64MultiDecoded, getBase64UrlEncoded}
@@ -89,7 +89,7 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
           m.`~timing`.flatMap(_.expires_time)
         )
         ctx.signal(signal)
-      case Failure(e) => reportSegStoreFailed(e)
+      case Failure(e) => reportSegStoreFailed("error during processing question")
     }
   }
 
@@ -131,7 +131,7 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
             } else {
               answerValidated(m.response, validResponse, validSignature = true, notExpired)
             }
-          case Failure(e) => reportSegStoreFailed(e)
+          case Failure(e) => reportSegStoreFailed("error during processing answer")
         }
       case Success(None) => reportSegRetrieveFailed()
       case Failure(e) => reportSegRetrieveFailed(Some(e))
@@ -179,7 +179,7 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
       case Success(s) =>
         ctx.apply(QuestionUsedRef(s.segmentKey))
         ctx.send(questionMsg, Some(Responder), Some(Questioner))
-      case Failure(e) => reportSegStoreFailed(e)
+      case Failure(e) => reportSegStoreFailed("error during processing ask-question")
     }
   }
 
@@ -194,7 +194,7 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
                   case Success(s) =>
                     ctx.apply(answerToEvtRef(answer, s.segmentKey))
                     ctx.send(answer, Some(Questioner), Some(Responder))
-                  case Failure(e) => reportSegStoreFailed(e)
+                  case Failure(e) => reportSegStoreFailed("error during processing answer question")
                 }
               case Failure(ex) =>
                 val failureMsg = s"Unable build answer - ${ex.getMessage}"
@@ -236,10 +236,9 @@ class QuestionAnswerProtocol(val ctx: ProtocolContextApi[QuestionAnswerProtocol,
     }
   }
 
-  def reportSegStoreFailed(e: Throwable): Unit = {
-    ctx.logger.warn(s"could not store segment with e: ${e.getMessage}")
+  def reportSegStoreFailed(error: String): Unit = {
     ctx.signal(
-      Signal.buildProblemReport("segmented state storage failed", ProblemReportCodes.segmentStorageFailure)
+      Signal.buildProblemReport(error, ProblemReportCodes.segmentStorageFailure)
     )
   }
 

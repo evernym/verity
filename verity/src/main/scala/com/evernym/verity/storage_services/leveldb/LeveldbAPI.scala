@@ -19,6 +19,10 @@ import java.io.File
  * This is used for verity instances running in a local environment. It has not been tested for high load volume. The purpose
  * is to have storage for a contained environment.
  */
+
+//NOTE: if at all this file gets moved to different package, then it will require configuration change
+// so until it is important, should avoid moving this to different package.
+
 class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends StorageAPI(config) {
 
   lazy val path: String = config.config.getConfig("verity.blob-store").getString("local-store-path")

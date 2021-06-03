@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 
+import com.evernym.verity.protocol.TerminalState
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.legacy.StateLegacy
 
@@ -22,13 +23,14 @@ object State extends StateLegacy {
                    response:    Option[SegmentKey] = None,
                    signature:   Option[SegmentKey] = None,
                    received:    Option[SegmentKey] = None,
-                   validStatus: Option[AnswerValidity] = None) extends State
+                   validStatus: Option[AnswerValidity] = None) extends State with TerminalState
 
   // Questioner STATES:
 
   case class QuestionSent(id: SegmentKey) extends State
 
-  case class AnswerReceived(id: SegmentKey, sigRequired: Boolean, validStatus: Option[AnswerValidity]) extends State
+  case class AnswerReceived(id: SegmentKey, sigRequired: Boolean, validStatus: Option[AnswerValidity])
+    extends State with TerminalState
 
   // NOT a named state, but a dependent data structure
   case class AnswerValidity(answerValidity:    Boolean,
@@ -39,5 +41,5 @@ object State extends StateLegacy {
 
   case class QuestionReceived(id: SegmentKey) extends State
 
-  case class AnswerSent(id:  SegmentKey) extends State
+  case class AnswerSent(id:  SegmentKey) extends State with TerminalState
 }

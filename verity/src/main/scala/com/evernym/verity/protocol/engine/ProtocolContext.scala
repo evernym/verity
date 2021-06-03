@@ -1,10 +1,12 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
@@ -12,8 +14,9 @@ import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
-import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId, PersistenceFailure, UpdateThreadContext}
+import com.evernym.verity.protocol.engine.msg.{PersistenceFailure, SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId, UpdateThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
@@ -21,7 +24,7 @@ import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
 
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * Generically holds and manages protocol state.
@@ -69,7 +72,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def grantedAccessRights: Set[AccessRight] = protocol.definition.requiredAccess
 
   /* This is set during initialization of the protocol. The policy will not change throughout the protocol.*/
-  def dataRetentionPolicy: Option[String] = backState.dataRetentionPolicy
+  def dataRetentionPolicy: Option[RetentionPolicy] = backState.dataRetentionPolicy
 
   @deprecated("Use of services is deprecated. Use the instance of " +
     "ProtocolContextApi to access driver and the ability to send " +
@@ -124,12 +127,12 @@ trait ProtocolContext[P,R,M,E,S,I]
         val result = try {
           protocol.applyEvent(getState, getRoster, e)
         } catch {
-          case me: MatchError =>
+          case _: MatchError =>
             throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.toString)
         }
-        val sct = Option(result).getOrElse(throw new InvalidState("applyEvent"))
-        sct._1.foreach { newState => shadowState = Option(newState) }
-        sct._2.foreach { newRoster => shadowBackState = Some(getBackState.copy(roster = newRoster)) }
+        val (updatedState, updatedRoster) = Option(result).getOrElse(throw new InvalidState("applyEvent"))
+        updatedState.foreach { newState   => shadowState = Option(newState) }
+        updatedRoster.foreach { newRoster => shadowBackState = Some(getBackState.copy(roster = newRoster)) }
     }
   }
 
@@ -206,7 +209,7 @@ trait ProtocolContext[P,R,M,E,S,I]
                 incrementReceivedOrder(frm)
                 protocol.handleProtoMsg(getState, sender.role, msg)
               } catch {
-                case me: MatchError =>
+                case _: MatchError =>
                   abortTransaction()
                   throw new NoProtocolMsgHandler(
                     state.getClass.getSimpleName,
@@ -285,7 +288,8 @@ trait ProtocolContext[P,R,M,E,S,I]
       shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(s))
 
     case p: DataRetentionPolicySet => BackState()
-      shadowBackState.getOrElse(BackState()).copy(dataRetentionPolicy = Option(p.policy))
+      val retentionPolicy = ConfigUtil.getPolicyFromConfigStr(p.configStr)
+      shadowBackState.getOrElse(BackState()).copy(dataRetentionPolicy = Option(retentionPolicy))
 
     case pcs: PackagingContextSet =>
       val pc = PackagingContext.init(pcs)
@@ -316,6 +320,16 @@ trait ProtocolContext[P,R,M,E,S,I]
       val mrod = shadowBackState.getOrElse(BackState()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val updated = mrod.copy(senderOrder = mrod.senderOrder + 1)
       shadowBackState.getOrElse(BackState()).copy(msgOrders = Option(updated))
+
+    case SegmentStored(key) =>
+      val backState = shadowBackState.getOrElse(BackState())
+      val updatedSegmentKeys = backState.allStoredSegmentKeys :+ key
+      backState.copy(allStoredSegmentKeys = updatedSegmentKeys)
+
+    case SegmentRemoved(key) =>
+      val backState = shadowBackState.getOrElse(BackState())
+      val updatedSegmentKeys = backState.allStoredSegmentKeys.filterNot(_ == key)
+      backState.copy(allStoredSegmentKeys = updatedSegmentKeys)
   }
 
   def handleInternalSystemMsg(sysMsg: InternalSystemMsg): Any = {
@@ -328,8 +342,8 @@ trait ProtocolContext[P,R,M,E,S,I]
         if (backState.sponsorRel.isEmpty) apply(s)
       case SetDataRetentionPolicy(p)    =>
         if (backState.dataRetentionPolicy.isEmpty) p.map(x => apply(DataRetentionPolicySet(x)))
-      case utc: UpdateThreadContext     =>
 
+      case utc: UpdateThreadContext     =>
         if (backState.packagingContext.isEmpty) {
           apply(PackagingContextSet(utc.pd.msgPackFormat.value))
           apply(LegacyPackagingContextSet(utc.pd.msgTypeDeclarationFormat.value,
@@ -369,11 +383,12 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   /**
-   * execute store segment, record events and finalizing state
+   * execute remove segments, record events and finalizing state
    * once all in-progress async services (url-shortener, wallet, ledger and segmentStorage) is executed
    */
   def postAllAsyncOpsCompleted(): Unit = {
     if (isAllAsyncOpsCompleted) {
+      removeStoredSegmentData()
       recordEvents getOrElse finalizeState
     }
   }
@@ -398,7 +413,6 @@ trait ProtocolContext[P,R,M,E,S,I]
 
     state = getState
     backState = getBackState
-
     clearShadowState()
   }
 
@@ -437,7 +451,6 @@ trait ProtocolContext[P,R,M,E,S,I]
 
       clearShadowState()
       resetAllAsyncOpCallBackHandlers()
-
       processOutputBoxes()
       processNextInboxMsg()
     }
@@ -494,7 +507,9 @@ trait ProtocolContext[P,R,M,E,S,I]
     event foreach { e =>
       advanceStateVersion()
       withLog("record event", (pinstId, e)) {
-        eventRecorder.record(pinstId, e, state, eventPersistSuccess)
+        eventRecorder.record(pinstId, e, state) { evt =>
+          eventPersistSuccess(evt)
+        }
       }
     }
     event
@@ -548,6 +563,30 @@ trait ProtocolContext[P,R,M,E,S,I]
       packagingContext.usesLegacyBundledMsgWrapper,
       msgOrders
     )
+  }
+
+  def isAnyStoredSegmentToBeDeleted: Boolean = {
+    val keysNotEmpty = getBackState.allStoredSegmentKeys.nonEmpty
+    val isDeleteOnTerminalState = dataRetentionPolicy.exists(_.elements.expireAfterTerminalState)
+    val isTerminalState = getState match {
+      case _: TerminalState => true
+      case _                => false
+    }
+    keysNotEmpty && isDeleteOnTerminalState && isTerminalState
+  }
+
+  def removeStoredSegmentData(): Unit = {
+    if (isAnyStoredSegmentToBeDeleted) {
+      getBackState.allStoredSegmentKeys.headOption.foreach { segmentKey =>
+        removeSegment(segmentKey) {
+          case Success(segmentKey) =>
+            removeStoredSegmentData()
+          case Failure(e) =>
+            logger.error("unexpected response while deleting segmented state: " + e.getMessage)
+            throw e
+        }
+      }
+    }
   }
 
   def updatedRoster(params: Seq[InitParamBase]): Roster[R] = {
@@ -630,8 +669,9 @@ trait ProtocolContext[P,R,M,E,S,I]
                        packagingContext: Option[PackagingContext] = None,
                        msgOrders: Option[MsgOrders] = None,
                        sponsorRel: Option[SponsorRel]=None,
-                       dataRetentionPolicy: Option[String]=None,
-                       storageId: Option[StorageId]=None) {
+                       dataRetentionPolicy: Option[RetentionPolicy]=None,
+                       storageId: Option[StorageId]=None,
+                       allStoredSegmentKeys: Seq[SegmentKey] = Seq.empty) {
     def advanceVersion: BackState = {
       this.copy(stateVersion = this.stateVersion + 1)
     }

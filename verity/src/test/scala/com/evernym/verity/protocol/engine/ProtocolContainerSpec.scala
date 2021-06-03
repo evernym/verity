@@ -23,7 +23,7 @@ class ProtocolContainerSpec extends BasicSpec {
           override def eventRecorder: RecordsEvents = new RecordsEvents {
             override def recoverState(pinstId: PinstId): (_, Vector[_]) = (Offered(), Vector(Accepted()))
 
-            override def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit = ???
+            override def record(pinstId: PinstId, event: Any, state: Any)(cb: Any => Unit): Unit = ???
           }
 
           override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
@@ -36,9 +36,10 @@ class ProtocolContainerSpec extends BasicSpec {
                                segmentKey: SegmentKey,
                                retentionPolicy: Option[String]=None)
                               (handler: Try[Option[T]] => Unit): Unit = {}
-
-            override def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey)
-                                      (handler: Try[Unit] => Unit): Unit = {}
+            override def removeSegment(segmentAddress: SegmentAddress,
+                                       segmentKey: SegmentKey,
+                                       retentionPolicy: Option[String])
+                                      (handler: Try[SegmentKey] => Unit): Unit = {}
           }
 
           override def sendsMsgs: SendsMsgs = ???

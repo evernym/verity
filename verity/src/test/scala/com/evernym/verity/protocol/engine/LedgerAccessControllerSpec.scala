@@ -15,7 +15,10 @@ import com.evernym.verity.testkit.BasicSpec
 
 import scala.util.Try
 
-class LedgerAccessControllerSpec extends BasicSpec with MockAsyncOpRunner {
+class LedgerAccessControllerSpec
+  extends BasicSpec
+    with MockAsyncOpRunner {
+
   lazy val generalCache: Cache = new Cache("GC", Map())
 
   implicit def asyncAPIContext: AsyncAPIContext =

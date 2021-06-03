@@ -1,9 +1,13 @@
 package com.evernym.verity.protocol.engine.asyncapi
 
+import com.typesafe.scalalogging.Logger
+
 import scala.collection.mutable
 import scala.util.Try
 
 trait AsyncOpRunner {
+
+  def logger: Logger
 
   def postAllAsyncOpsCompleted()
   def abortTransaction()
@@ -58,6 +62,9 @@ trait AsyncOpRunner {
   }
 
   protected def resetAllAsyncOpCallBackHandlers(): Unit = {
+    if (asyncOpCallbackHandlers.nonEmpty) {
+      logger.error("unexpected situation, async op callback handler state was non empty while it has been tried to reset.")
+    }
     asyncOpCallbackHandlers = mutable.Stack[AsyncOpCallbackHandler[_]]()
   }
 

@@ -17,7 +17,7 @@ class IncorrectPayloadSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withOverriddenConfig(VAS_OVERRIDE_CONFIG).build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).build()
   lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv)

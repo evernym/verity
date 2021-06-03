@@ -64,9 +64,9 @@ class PresentProof (implicit val ctx: PresentProofContext)
     case (_: States.RequestReceived , Some(Prover),   ctl: Ctl.Propose            ) => handleCtlPropose(ctl)
     case (States.Initialized(_)     , None,           ctl: Ctl.AttachedRequest    ) => handleCtlAttachedRequest(ctl)
     case (s: States.RequestReceived , Some(Prover),   msg: Ctl.AcceptRequest      ) =>
-      withSegment(s.data.requests.head, handleCtlAcceptRequest(msg))
+      withSegment("accepting request", s.data.requests.head, handleCtlAcceptRequest(msg))
     case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.AcceptProposal     ) =>
-      withSegment(s.data.proposals.head, handleCtlAcceptProposal(msg))
+      withSegment("accepting proposal", s.data.proposals.head, handleCtlAcceptProposal(msg))
     case (s: States.ProposalReceived, Some(Verifier), msg: Ctl.Request            ) => handleCtlRequest(msg, s.data)
     case (s                         , _,              msg: Ctl.Status             ) => handleCtlStatus(s, msg)
     case (s                         , _,              msg: Ctl.Reject             ) => handleCtlReject(s, msg)
@@ -86,7 +86,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
       handleMsgProposePresentation(msg)
 
     case (s: States.RequestSent,  _, msg: Msg.Presentation       ) =>
-      withSegment(s.data.requests.head, handleMsgPresentation(msg), sendMsg = true)
+      withSegment("processing presentation", s.data.requests.head, handleMsgPresentation(msg), sendMsg = true)
 
     case (_: States.ProposalSent, _, msg: Msg.RequestPresentation) => handleMsgRequest(msg)
     case (_: States.RequestSent,  _, msg: Msg.ProposePresentation) => handleMsgProposePresentation(msg)
@@ -135,17 +135,17 @@ class PresentProof (implicit val ctx: PresentProofContext)
   def verifierApplyEvent: ApplyEvent = {
     case (_: States.Initialized     , _, RequestUsedRef(r)          ) => States.initRequestSent(r)
     case (_: States.Initialized     , _, ProposeReceivedRef(r)   )    => States.initProposalReceived(r)
-    case (s: States.ProposalReceived, _, RequestUsedRef(r)          ) =>  States.RequestSent(s.data.addRequest(r))
-    case (s: States.RequestSent     , _, PresentationGivenRef(p)    ) => States.Complete(s.data.addPresentation(p))
+    case (s: States.ProposalReceived, _, RequestUsedRef(r)          ) => States.RequestSent(s.data.addRequest(r))
     case (s: States.RequestSent     , _, ProposeReceivedRef(r)   )    => States.ProposalReceived(s.data.addProposal(r))
+    case (s: States.RequestSent     , _, PresentationGivenRef(p)    ) => States.Complete(s.data.addPresentation(p))
     case (s: States.Complete        , _, ResultsOfVerification(r))    => States.Complete(s.data.addVerificationResults(r))
   }
 
-  def withSegment[T](id: SegmentKey, f: T => Unit, sendMsg: Boolean = false): Unit = {
+  def withSegment[T](context: String, id: SegmentKey, f: T => Unit, sendMsg: Boolean = false): Unit = {
     ctx.withSegment[T](id) {
       case Success(Some(s)) => f(s)
-      case Success(None) => reportSegRetrieveFailed(sendMsg = sendMsg)
-      case Failure(e) => reportSegRetrieveFailed(Some(e), sendMsg)
+      case Success(None)  => reportSegNotFound(context, sendMsg = sendMsg)
+      case Failure(e)     => reportSegRetrieveFailed(context, sendMsg)
     }
   }
   // *****************************
@@ -165,7 +165,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
               case Failure(_) =>
                 signal(Sig.proofRequestToReviewRequest(request, canFulfill = false))
             }
-          case Failure(e) => reportSegStoreFailed(e)
+          case Failure(e) => reportSegStoreFailed("error during processing request presentation")
         }
       case Failure(e) => send(
         Msg.buildProblemReport(s"Invalid request -- ${e.getMessage}", invalidRequest)
@@ -191,7 +191,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
       case Success(s) =>
         ctx.apply(ProposeReceivedRef(s.segmentKey))
         ctx.signal(Sig.ReviewProposal(msg.presentation_proposal.attributes, msg.presentation_proposal.predicates, msg.comment))
-      case Failure(e) => reportSegStoreFailed(e)
+      case Failure(e) => reportSegStoreFailed("error during processing propose presentation")
     }
   }
 
@@ -238,7 +238,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
                 apply(ResultsOfVerification(validity))
                 signal(Sig.PresentationResult(validity , simplifiedProof))
             }
-          case Failure(e) => reportSegStoreFailed(e)
+          case Failure(e) => reportSegStoreFailed("error during processing presentation")
         }
       case Failure(e) => send(
         Msg.buildProblemReport(s"Invalid presentation -- ${e.getMessage}", invalidPresentation)
@@ -296,7 +296,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
           comment = ctp.comment,
           presentation_proposal = PresentationPreview(attributes, predicates)
         ))
-      case Failure(e) => reportSegStoreFailed(e)
+      case Failure(e) => reportSegStoreFailed("error during processing propose")
     }
   }
 
@@ -319,7 +319,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
             val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
             if(!ctr.by_invitation.getOrElse(false)) { ctx.send(presentationRequest) }
             else { sendInvite(presentationRequest, stateData) }
-          case Failure(e) => reportSegStoreFailed(e)
+          case Failure(e) => reportSegStoreFailed("error during processing request")
         }
       case Failure(e) =>
         signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
@@ -372,7 +372,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
                 case Success(s) =>
                   send(Msg.Presentation("", Seq(payload)))
                   ctx.apply(PresentationUsedRef(s.segmentKey))
-                case Failure(e) => reportSegStoreFailed(e)
+                case Failure(e) => reportSegStoreFailed("error during processing accept request")
               }
             case Failure(e) => signal(
               Sig.buildProblemReport(
@@ -410,7 +410,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
             case Success(s) =>
               ctx.apply(RequestUsedRef(s.segmentKey))
               send(presentationRequest)
-            case Failure(e) => reportSegStoreFailed(e)
+            case Failure(e) => reportSegStoreFailed("error during processing accept proposal")
           }
         case Failure(e) =>
           signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
@@ -435,7 +435,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
                 val res = Some(PresentationResult(x, simplifiedProof))
                 signal(Sig.StatusReport(s.getClass.getSimpleName, res, None))
               case Success(None) => signal(Sig.StatusReport(s.getClass.getSimpleName, None, None))
-              case Failure(e) => reportSegStoreFailed(e)
+              case Failure(e) => reportSegStoreFailed("error during processing status")
             }
           }))
       case s: HasData =>
@@ -500,24 +500,22 @@ class PresentProof (implicit val ctx: PresentProofContext)
 object PresentProof {
   type PresentProofContext = ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]
 
-  def reportSegRetrieveFailed(e: Option[Throwable]=None, sendMsg: Boolean = false)(implicit ctx: PresentProofContext): Unit = {
-    e match {
-      case Some(_e) =>
-        ctx.logger.warn(s"could not store segment with e: ${_e.getMessage}")
-        ctx.signal(Sig.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
-        if (sendMsg)
-          ctx.send(Msg.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
-      case None =>
-        ctx.logger.warn(s"segmented state expired")
-        ctx.signal(Sig.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
-        if (sendMsg)
-          ctx.send(Msg.buildProblemReport("segmented state storage failed", segmentedRetrieveFailed))
-    }
+  def reportSegNotFound(op: String, sendMsg: Boolean = false)
+                       (implicit ctx: PresentProofContext): Unit = {
+    ctx.signal(Sig.buildProblemReport(s"error while $op", segmentedRetrieveFailed))
+    if (sendMsg)
+      ctx.send(Msg.buildProblemReport(s"error while $op", segmentedRetrieveFailed))
   }
 
-  def reportSegStoreFailed(e: Throwable)(implicit ctx: PresentProofContext): Unit = {
-    ctx.logger.warn(s"could not store segment with e: ${e.getMessage}")
-    ctx.signal(Sig.buildProblemReport("segmented state storage failed", segmentedStoreFailed))
+  def reportSegRetrieveFailed(op: String, sendMsg: Boolean = false)
+                             (implicit ctx: PresentProofContext): Unit = {
+      ctx.signal(Sig.buildProblemReport(s"error while $op", segmentedRetrieveFailed))
+      if (sendMsg)
+        ctx.send(Msg.buildProblemReport(s"error while $op", segmentedRetrieveFailed))
+  }
+
+  def reportSegStoreFailed(errorMsg: String)(implicit ctx: PresentProofContext): Unit = {
+    ctx.signal(Sig.buildProblemReport(errorMsg, segmentedStoreFailed))
   }
 
   def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)

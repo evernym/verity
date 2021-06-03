@@ -16,7 +16,8 @@ trait SegmentStoreAccess {
                      retentionPolicy: Option[String]) (handler: Try[Option[T]] => Unit): Unit
 
   def removeSegment(segmentAddress: SegmentAddress,
-                    segmentKey: SegmentKey) (handler: Try[Unit] => Unit): Unit
+                    segmentKey: SegmentKey,
+                    retentionPolicy: Option[String]) (handler: Try[SegmentKey] => Unit): Unit
 }
 
 case class StoredSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, segment: Option[Any])

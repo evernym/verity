@@ -21,9 +21,9 @@ case class SetSponsorRel(sponsorRel: SponsorRel) extends InternalSystemMsg
 /**
  * The sponsorRel given to the protocol
  *
- * @param policy data retention policy
+ * @param configStr data retention policy config string
  */
-case class SetDataRetentionPolicy(policy: Option[String]) extends InternalSystemMsg
+case class SetDataRetentionPolicy(configStr: Option[String]) extends InternalSystemMsg
 
 /**
  * set the unique storage id to be used with segmented state

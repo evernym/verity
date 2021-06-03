@@ -100,7 +100,6 @@ class ActorProtocolContainer[
   // the receiver becomes inert.
   final def initialBehavior: Receive = {
     case ProtocolCmd(InitProtocol(domainId, parameters, sponsorRelOpt), None)=>
-
       submit(SetDomainId(domainId))
       submit(SetStorageId(pinstId))
       submit(SetDataRetentionPolicy(parameters.find(_.name == DATA_RETENTION_POLICY).map(_.value)))
@@ -238,7 +237,7 @@ class ActorProtocolContainer[
       (state, Vector.empty)
     }
 
-    def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit = persistExt(event)(cb)
+    def record(pinstId: PinstId, event: Any, state: Any)(cb: Any => Unit): Unit = persistExt(event)(cb)
   }
 
   def requestInit(): Unit = {

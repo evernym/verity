@@ -12,11 +12,11 @@ trait NonActorClientWalletAPISpec
     (1 to totalUsers).foreach { _ =>
       _baseWalletSetupWithAsyncAPI(walletAPI)
         .map { _ =>
-          successResp += 1
+          successResp.incrementAndGet()
         }.recover {
           case e: Throwable =>
             e.printStackTrace()
-            failedResp += 1
+            failedResp.incrementAndGet()
         }
     }
   }
@@ -26,6 +26,6 @@ trait NonActorClientWalletAPISpec
     eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
       totalRespCount shouldBe totalUsers
     }
-    failedResp shouldBe 0
+    failedResp.get() shouldBe 0
   }
 }

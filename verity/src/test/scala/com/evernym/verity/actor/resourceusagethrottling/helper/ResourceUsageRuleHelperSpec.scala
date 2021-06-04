@@ -99,42 +99,42 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
   }
 
   def getExpectedResourceUsageRule: ResourceUsageRuleConfig = {
-    val defaultEndpointUsageBuckets = ResourceUsageRule(
+    val endpointDefaultUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(100, "50"),
         600 -> BucketRule(200, "70"),
         1200 -> BucketRule(400, "90")
     ))
 
-    val postAgencyMsgEndpointUsageBuckets = ResourceUsageRule(
+    val postAgencyMsgUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(100, "50"),
         600 -> BucketRule(200, "70"),
         1200 -> BucketRule(400, "90")
     ))
 
-    val defaultEndpointUsageItemBuckets = ResourceTypeUsageRule(
+    val endpointAllUsageRule = ResourceUsageRule(
       Map (
-        "default" -> defaultEndpointUsageBuckets,
-        "POST_agency_msg" -> postAgencyMsgEndpointUsageBuckets
+        300 -> BucketRule(1000, "50"),
+        600 -> BucketRule(2000, "70"),
+        1200 -> BucketRule(4000, "90")
+      ))
+
+    val defaultEndpointUsageRule = ResourceTypeUsageRule(
+      Map (
+        "default" -> endpointDefaultUsageRule,
+        "POST_agency_msg" -> postAgencyMsgUsageRule,
+        "endpoint.all" -> endpointAllUsageRule
     ))
 
-    val defaultMsgUsageBuckets = ResourceUsageRule(
+    val messageDefaultUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(100, "50"),
         600 -> BucketRule(200, "70"),
         1200 -> BucketRule(400, "90")
     ))
 
-    val connReqMessageBuckets = ResourceUsageRule(
-      Map (
-        -1 -> BucketRule(100, "70", persistUsageState = true),
-        300 -> BucketRule(5, "50"),
-        600 -> BucketRule(20, "70"),
-        1800 -> BucketRule(50, "90")
-    ))
-
-    val getMsgsMessageBuckets = ResourceUsageRule(
+    val dummyMsgUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(3, "100"),
         600 -> BucketRule(3, "101"),
@@ -142,7 +142,22 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
         1800 -> BucketRule(4, "103"),
     ))
 
-    val customConnReqMessageBuckets = ResourceUsageRule(
+    val createMsgConnReqUsageRule = ResourceUsageRule(
+      Map (
+        -1 -> BucketRule(100, "70", persistUsageState = true),
+        300 -> BucketRule(5, "50"),
+        600 -> BucketRule(20, "70"),
+        1800 -> BucketRule(50, "90")
+      ))
+
+    val messageAllUsageRule = ResourceUsageRule(
+      Map (
+        300 -> BucketRule(500, "50"),
+        600 -> BucketRule(1000, "70"),
+        1200 -> BucketRule(2000, "90")
+      ))
+
+    val customCreateMsgConnReqUsageRule = ResourceUsageRule(
       Map (
         -1 -> BucketRule(2, "70", persistUsageState = true),
         300 -> BucketRule(5, "50"),
@@ -150,28 +165,30 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
         1800 -> BucketRule(50, "90")
     ))
 
-    val defaultMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
-      "connecting/CREATE_MSG_connReq" -> connReqMessageBuckets,
-      "dummy-family/DUMMY_MSG" -> getMsgsMessageBuckets,
-      "default" ->  defaultMsgUsageBuckets
+    val defaultMessageUsageRule = ResourceTypeUsageRule( Map (
+      "default" ->  messageDefaultUsageRule,
+      "dummy-family/DUMMY_MSG" -> dummyMsgUsageRule,
+      "connecting/CREATE_MSG_connReq" -> createMsgConnReqUsageRule,
+      "message.all" -> messageAllUsageRule
     ))
 
-    val customMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
-      "connecting/CREATE_MSG_connReq" -> customConnReqMessageBuckets,
-      "default" ->  defaultMsgUsageBuckets
+    val customMessageUsageRule = ResourceTypeUsageRule( Map (
+      "default" ->  messageDefaultUsageRule,
+      "connecting/CREATE_MSG_connReq" -> customCreateMsgConnReqUsageRule,
+      "message.all" -> messageAllUsageRule
     ))
 
     val defaultUsageRule = UsageRule(Map(
-      "endpoint" -> defaultEndpointUsageItemBuckets,
-      "message" -> defaultMessageUsageItemBuckets
+      "endpoint" -> defaultEndpointUsageRule,
+      "message" -> defaultMessageUsageRule
     ))
 
     val customUsageRule = UsageRule(Map(
-      "endpoint" -> defaultEndpointUsageItemBuckets,
-      "message" -> customMessageUsageItemBuckets
+      "endpoint" -> defaultEndpointUsageRule,
+      "message" -> customMessageUsageRule
     ))
 
-    val expectedRules = Map (
+    val usageRules = Map (
       "default" -> defaultUsageRule,
       "custom" -> customUsageRule
     )
@@ -227,7 +244,7 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
     )
 
     ResourceUsageRuleConfig(applyUsageRules = true, persistAllBucketUsages = false,
-      snapshotAfterEvents = 2, expectedRules, ruleToTokens, Set.empty, Set.empty, actionRules)
+      snapshotAfterEvents = 2, usageRules, ruleToTokens, Set.empty, Set.empty, actionRules)
   }
 
 }

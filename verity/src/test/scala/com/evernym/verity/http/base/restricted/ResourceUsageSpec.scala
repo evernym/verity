@@ -3,75 +3,122 @@ package com.evernym.verity.http.base.restricted
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.util.ByteString
+import com.evernym.verity.actor.resourceusagethrottling.ResourceName
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsages
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 
 import java.net.InetAddress
 
-trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
+trait ResourceUsageSpec { this: EdgeEndpointBaseSpec =>
 
   def testResourceUsage(): Unit = {
-    val resource = "agent-provisioning/CONNECT"
+
     val localhost: InetAddress = InetAddress.getLocalHost
     val localIpAddress: String = localhost.getHostAddress
-    val bucket = 300
-    var usageCountBefore = 0
-    val usageCountAfter: Int = 8
-    val payload = ByteString(s"""{"resourceUsageCounters": [{"resourceName\": "$resource", "bucketId": $bucket, "newCount": $usageCountAfter}]}""")
-    val blockEntityPayload = ByteString(s"""{"msgType": "block"}""")
-    val clearEntityBlockingPayload = ByteString(s"""{"msgType": "block", "period": 0, "allResources": "Y"}""")
-    val warnResourcePayload = ByteString(s"""{"msgType": "warn"}""")
-    val clearResourceWarningPayload = ByteString(s"""{"msgType": "warn", "period": 0}""")
 
-    "when sent get resource usage for given id" - {
-      "should get resource usages, and confirm count for agent-provisioning/CONNECT msg usage is 2" in {
-        buildGetReq(s"/agency/internal/resource-usage/id/$localIpAddress") ~> epRoutes ~> check {
-          status shouldBe OK
-          val resourceUsages = responseTo[ResourceUsages]
-          usageCountBefore = resourceUsages.usages("agent-provisioning/CONNECT")("300").usedCount
-        }
-      }
-    }
+    val resources: List[ResourceName] = List(
+      "POST_agency_msg",
+      "endpoint.all",
+      "CREATE_KEY",
+      "agent-provisioning/CONNECT",
+      "message.all",
+    )
 
-    "when sent update counter for agent-provisioning/CONNECT msg usage" - {
-      "should respond with OK" in {
-        buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/counter",
-          HttpEntity.Strict(ContentTypes.`application/json`, payload)
-        ) ~> epRoutes ~> check {
-          status shouldBe OK
-        }
-      }
-    }
+    val bucket = "300"
 
-    "when sent get resource usage for given id after usage updated" - {
-      "should get resource usages, and confirm count for agent-provisioning/CONNECT msg usage is 3" in {
-        buildGetReq(s"/agency/internal/resource-usage/id/$localIpAddress") ~> epRoutes ~> check {
-          status shouldBe OK
-          val resourceUsages = responseTo[ResourceUsages]
-          resourceUsages.usages("agent-provisioning/CONNECT")("300").usedCount shouldBe usageCountAfter
-        }
-      }
-    }
+    val newUsageCounts: Map[ResourceName, Int] = Map(
+      "POST_agency_msg" -> 15,
+      "endpoint.all" -> 20,
+      "CREATE_KEY" -> 3,
+      "agent-provisioning/CONNECT" -> 5,
+      "message.all" -> 10,
+    )
 
-    "when sent get resource usage for global" - {
+    "when sent get resource usage for source ID" - {
       "should respond with resource usages" in {
-        buildGetReq(s"/agency/internal/resource-usage/id/global") ~> epRoutes ~> check {
+        buildGetReq(s"/agency/internal/resource-usage/id/$localIpAddress") ~> epRoutes ~> check {
           status shouldBe OK
           val resourceUsages = responseTo[ResourceUsages]
-          resourceUsages.usages("agent-provisioning/CONNECT")("300").usedCount shouldBe usageCountBefore
+          resources.foreach { resource =>
+            resourceUsages.usages(resource)(bucket).usedCount > 0 // Only resources used earlier are used by this test
+          }
         }
       }
     }
 
-    "when IP address is blocked" - {
+    "when sent update counter for resource usage for source ID" - {
+      "should respond with OK" in {
+        resources.foreach { resource =>
+          buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/counter",
+            HttpEntity.Strict(ContentTypes.`application/json`, ByteString(
+              s"""{"resourceUsageCounters": [{"resourceName": "$resource", "bucketId": $bucket, "newCount": ${newUsageCounts(resource)}}]}"""))
+          ) ~> epRoutes ~> check {
+            status shouldBe OK
+          }
+        }
+      }
+    }
+
+    "when sent get resource usage for the source ID" - {
+      "should respond with resource usages, and confirm count for the resource has been updated" in {
+        resources.foreach { resource =>
+          buildGetReq(s"/agency/internal/resource-usage/id/$localIpAddress") ~> epRoutes ~> check {
+            status shouldBe OK
+            val resourceUsages = responseTo[ResourceUsages]
+            resourceUsages.usages(resource)(bucket).usedCount shouldBe newUsageCounts(resource)
+          }
+        }
+      }
+    }
+
+    "when source ID is warned" - {
       "should respond with OK" in {
         buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress",
-          HttpEntity.Strict(ContentTypes.`application/json`, blockEntityPayload)
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "warn"}"""))
         ) ~> epRoutes ~> check {
           status shouldBe OK
         }
       }
-      "should be able to get active blocks, and confirm the IP address is blocked" in {
+
+      "should be able to get active warnings, and confirm the source ID is warned" in {
+        buildGetReq(s"/agency/internal/resource-usage/warned") ~> epRoutes ~> check {
+          status shouldBe OK
+          val usageWarningStatus = responseTo[Map[String, Any]]
+          usageWarningStatus.contains(localIpAddress) shouldBe true
+          val entityWarningStatus = usageWarningStatus(localIpAddress).asInstanceOf[Map[String, Any]]
+          val entityWarningDetail = entityWarningStatus("status").asInstanceOf[Map[String, String]]
+          entityWarningDetail.contains("warnFrom") shouldBe true
+          entityWarningDetail.contains("warnTill") shouldBe false
+        }
+      }
+
+      "should be able to clear the warning" in {
+        buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress",
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "warn", "period": 0, "allResources": "Y"}"""))
+        ) ~> epRoutes ~> check {
+          status shouldBe OK
+        }
+      }
+
+      "should be able to get active warnings again, and confirm the source ID is no longer warned" in {
+        buildGetReq(s"/agency/internal/resource-usage/blocked") ~> epRoutes ~> check {
+          status shouldBe OK
+          val usageWarningStatus = responseTo[Map[String, Any]]
+          usageWarningStatus.contains(localIpAddress) shouldBe false
+        }
+      }
+    }
+
+    "when source ID is blocked" - {
+      "should respond with OK" in {
+        buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress",
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "block"}"""))
+        ) ~> epRoutes ~> check {
+          status shouldBe OK
+        }
+      }
+
+      "should be able to get active blocks, and confirm the source ID is blocked" in {
         buildGetReq(s"/agency/internal/resource-usage/blocked") ~> epRoutes ~> check {
           status shouldBe OK
           val usageBlockingStatus = responseTo[Map[String, Any]]
@@ -82,14 +129,16 @@ trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
           entityBlockingDetail.contains("blockTill") shouldBe false
         }
       }
-      "should be able clear block" in {
+
+      "should be able to clear the block" in {
         buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress",
-          HttpEntity.Strict(ContentTypes.`application/json`, clearEntityBlockingPayload)
+          HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "block", "period": 0, "allResources": "Y"}"""))
         ) ~> epRoutes ~> check {
           status shouldBe OK
         }
       }
-      "should be able to get active blocks again, and confirm the IP address is no longer blocked" in {
+
+      "should be able to get active blocks again, and confirm the source ID is no longer blocked" in {
         buildGetReq(s"/agency/internal/resource-usage/blocked") ~> epRoutes ~> check {
           status shouldBe OK
           val usageBlockingStatus = responseTo[Map[String, Any]]
@@ -98,42 +147,98 @@ trait ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
       }
     }
 
-    "when resource is warned for IP address" - {
+    "when resource is warned for source ID" - {
       "should respond with OK" in {
-        buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/resource/$resource",
-          HttpEntity.Strict(ContentTypes.`application/json`, warnResourcePayload)
-        ) ~> epRoutes ~> check {
-          status shouldBe OK
+        resources.foreach { resource =>
+          buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/resource/$resource",
+            HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "warn"}"""))
+          ) ~> epRoutes ~> check {
+            status shouldBe OK
+          }
         }
       }
-      "should be able to get active warnings, and confirm the resource is warned for the IP address" in {
+
+      "should be able to get active warnings, and confirm the resource is warned for the source ID" in {
         buildGetReq(s"/agency/internal/resource-usage/warned") ~> epRoutes ~> check {
           status shouldBe OK
           val usageWarningStatus = responseTo[Map[String, Any]]
           usageWarningStatus.contains(localIpAddress) shouldBe true
           val entityWarningStatus = usageWarningStatus(localIpAddress).asInstanceOf[Map[String, Any]]
           val resourcesWarningStatus = entityWarningStatus("resourcesStatus").asInstanceOf[Map[String, Any]]
-          val resourceWarningDetail = resourcesWarningStatus(resource).asInstanceOf[Map[String, String]]
-          resourceWarningDetail.contains("warnFrom") shouldBe true
-          resourceWarningDetail.contains("warnTill") shouldBe false
+          resources.foreach { resource =>
+            val resourceWarningDetail = resourcesWarningStatus(resource).asInstanceOf[Map[String, String]]
+            resourceWarningDetail.contains("warnFrom") shouldBe true
+            resourceWarningDetail.contains("warnTill") shouldBe false
+          }
         }
       }
-      "should be able clear warning" in {
-        buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/resource/$resource",
-          HttpEntity.Strict(ContentTypes.`application/json`, clearResourceWarningPayload)
-        ) ~> epRoutes ~> check {
-          status shouldBe OK
+
+      "should be able to clear the warning" in {
+        resources.foreach { resource =>
+          buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/resource/$resource",
+            HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "warn", "period": 0}"""))
+          ) ~> epRoutes ~> check {
+            status shouldBe OK
+          }
         }
       }
-      "should be able to get active warnings again, and confirm the resource is no longer warned for IP address" in {
-        buildGetReq(s"/agency/internal/resource-usage/blocked") ~> epRoutes ~> check {
+
+      "should be able to get active warnings again, and confirm the resource is no longer warned for the source ID" in {
+        buildGetReq(s"/agency/internal/resource-usage/warned") ~> epRoutes ~> check {
           status shouldBe OK
           val usageWarningStatus = responseTo[Map[String, Any]]
-          // localIpAddress should be absent in the map because no resources should be warned for it
+          // localIpAddress should be absent in usageWarningStatus because no resources should be warned for it
           usageWarningStatus.contains(localIpAddress) shouldBe false
         }
       }
     }
+
+    "when resource is blocked for source ID" - {
+      "should respond with OK" in {
+        resources.foreach { resource =>
+          buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/resource/$resource",
+            HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "block"}"""))
+          ) ~> epRoutes ~> check {
+            status shouldBe OK
+          }
+        }
+      }
+
+      "should be able to get active blocks, and confirm the resource is blocked for the source ID" in {
+        buildGetReq(s"/agency/internal/resource-usage/blocked") ~> epRoutes ~> check {
+          status shouldBe OK
+          val usageBlockingStatus = responseTo[Map[String, Any]]
+          usageBlockingStatus.contains(localIpAddress) shouldBe true
+          val entityBlockingStatus = usageBlockingStatus(localIpAddress).asInstanceOf[Map[String, Any]]
+          val resourcesBlockingStatus = entityBlockingStatus("resourcesStatus").asInstanceOf[Map[String, Any]]
+          resources.foreach { resource =>
+            val resourceBlockingDetail = resourcesBlockingStatus(resource).asInstanceOf[Map[String, String]]
+            resourceBlockingDetail.contains("blockFrom") shouldBe true
+            resourceBlockingDetail.contains("blockTill") shouldBe false
+          }
+        }
+      }
+
+      "should be able to clear the block" in {
+        resources.foreach { resource =>
+          buildPutReq(s"/agency/internal/resource-usage/id/$localIpAddress/resource/$resource",
+            HttpEntity.Strict(ContentTypes.`application/json`, ByteString(s"""{"msgType": "block", "period": 0}"""))
+          ) ~> epRoutes ~> check {
+            status shouldBe OK
+          }
+        }
+      }
+
+      "should be able to get active blocks again, and confirm the resource is no longer blocked for the source ID" in {
+        buildGetReq(s"/agency/internal/resource-usage/blocked") ~> epRoutes ~> check {
+          status shouldBe OK
+          val resourceBlockingDetail = responseTo[Map[String, Any]]
+          // localIpAddress should be absent in resourceBlockingDetail because no resources should be blocked for it
+          resourceBlockingDetail.contains(localIpAddress) shouldBe false
+        }
+      }
+    }
+
   }
 
 }

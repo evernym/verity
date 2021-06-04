@@ -1,4 +1,4 @@
-image: $EVERNYM_REGISTRY_HOST/dev/containers/build-verity:0f2dbf8d
+image: registry.gitlab.com/evernym/containers/build-verity:0f2dbf8d
 
 variables:
   MASTER_PROJECT_ID: "327"

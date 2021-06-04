@@ -1,6 +1,6 @@
 license-data-check:
   stage: check
-  image: $CI_REGISTRY/dev/containers/ssh-git:latest
+  image: registry.gitlab.com/evernym/containers/ssh-git:latest
   script: ./cicd/scripts/license-date-check.sh
   only:
     refs:

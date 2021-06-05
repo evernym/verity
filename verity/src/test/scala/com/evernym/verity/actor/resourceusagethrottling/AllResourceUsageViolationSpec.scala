@@ -144,14 +144,11 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
       // Block resource with a period of 0 to clear/delete the block instead of unblock indefinitely
       singletonParentProxy ! ForResourceBlockingStatusMngr(
         BlockResourceForCaller(ipAddress, resourceName, blockPeriod=Option(0)))
-      // FIXME: Why is BlockResourceForCaller responded with CallerResourceBlocked twice?
-      for (_ <- 1 to 2) {
-        expectMsgPF() {
-          case rbl: CallerResourceBlocked =>
-            rbl.callerId shouldBe ipAddress
-            rbl.resourceName shouldBe resourceName
-            rbl.blockPeriod shouldBe 0
-        }
+      expectMsgPF() {
+        case rbl: CallerResourceBlocked =>
+          rbl.callerId shouldBe ipAddress
+          rbl.resourceName shouldBe resourceName
+          rbl.blockPeriod shouldBe 0
       }
     }
 

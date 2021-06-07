@@ -5,6 +5,7 @@ license-data-check:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   tags:

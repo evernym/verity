@@ -25,12 +25,14 @@ package:
   only:
     refs:
       - master@dev/verity/verity
+      - main@evernym/verity/verity
 
 package-manual:
   extends: .package-common
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   when: manual

@@ -22,6 +22,7 @@ publish-deb:
   only:
     refs:
       - master@dev/verity/verity
+      # TODO replace by main@evernym/verity/verity for public gitlab
 
 publish-deb-manual:
   extends:
@@ -32,6 +33,7 @@ publish-deb-manual:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   when: manual
@@ -63,11 +65,9 @@ publish-deb-manual:
       --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
       --build-arg LIBMYSQLSTORAGE_VERSION=$LIBMYSQLSTORAGE_VERSION
       --build-arg EVERNYM_CERTIFICATE=$EVERNYM_CERTIFICATE
-      --context .
+      --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
       --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION
       --destination $CI_REGISTRY_IMAGE:latest
-      --destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
-      --destination $AWS_DEV_ECR_REGISTRY/verity:latest $DRY_RUN
   tags:
     - large
 
@@ -77,9 +77,14 @@ publish-docker:
     - .publish-common-docker
   dependencies:
     - package
-  only:
-    refs:
-      - master@dev/verity/verity
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
+      variables:
+        DOCKER_AWS_DESTINATIONS: ""
+    - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
+      variables:
+        DOCKER_AWS_DESTINATIONS: "--destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION \
+                                  --destination $AWS_DEV_ECR_REGISTRY/verity:latest"
 
 publish-docker-manual:
   extends:
@@ -90,6 +95,7 @@ publish-docker-manual:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   when: manual

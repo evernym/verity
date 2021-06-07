@@ -144,7 +144,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case pis: PublicIdentityStored         => state = state.withPublicIdentity(DidPair(pis.DID, pis.verKey))
 
       //this is received for each new pairwise connection/actor that gets created
-    case ads: AgentDetailSet               => addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
+    case ads: AgentDetailSet               =>
+      if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
   }
 
   def handleRemoveComMethod(cmd: ComMethodDeleted): Unit = {
@@ -420,32 +421,42 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       .filterByKeyIds(authKeyIds)
       .map(_.verKey).toSet
     val existingEndpointOpt = state.myDidDoc_!.endpoints_!.findById(comMethod.id)
-    val isComMethodExistsWithSameValue = existingEndpointOpt.exists{ eep =>
+    val isComMethodExists = existingEndpointOpt.exists { eep =>
       eep.`type` == comMethod.`type` && eep.value == comMethod.value && {
         (eep.packagingContext, comMethod.packaging) match {
-          case (Some(ecmp), Some(newp)) =>
-            ecmp.packFormat.isEqual(newp.pkgType) && newp.recipientKeys.exists(_.exists(verKeys.contains))
+          case (Some(epc), Some(newp)) =>
+            epc.packFormat.isEqual(newp.pkgType) &&
+              newp.recipientKeys.exists(_.exists(verKeys.contains))
           case (None, None) => true
-          case _ => false
+          case _            => false
         }
       }
     }
-    if (! isComMethodExistsWithSameValue) {
+    if (! isComMethodExists) {
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
       state.myDidDoc_!.endpoints_!.filterByTypes(comMethod.`type`)
         .filter (_ => isOnlyOneComMethodAllowed(comMethod.`type`)).foreach { ep =>
-	      writeAndApply(ComMethodDeleted(ep.id, ep.value, "new com method will be updated (as of now only one device supported at a time)"))
-      }
-      writeAndApply(ComMethodUpdated(
-        comMethod.id,
-        comMethod.`type`,
-        comMethod.value,
-        comMethod.packaging.map{ pkg =>
-          actor.ComMethodPackaging(
-            pkg.pkgType,
-            pkg.recipientKeys.getOrElse(Set.empty).toSeq
+	        writeAndApply(
+            ComMethodDeleted(
+              ep.id,
+              ep.value,
+              "new com method will be updated (as of now only one device supported at a time)"
+            )
           )
-        }))
+        }
+      writeAndApply(
+        ComMethodUpdated(
+          comMethod.id,
+          comMethod.`type`,
+          comMethod.value,
+          comMethod.packaging.map { pkg =>
+            actor.ComMethodPackaging(
+              pkg.pkgType,
+              pkg.recipientKeys.getOrElse(Set.empty).toSeq
+            )
+          }
+        )
+      )
       logger.info(s"update com method updated - id=${comMethod.id} - type: ${comMethod.`type`} - " +
         s"value: ${comMethod.value}")
       logger.debug(

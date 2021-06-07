@@ -217,7 +217,7 @@ trait UserAgentCommon
 
   def sendAgentMsgToRegisteredEndpoint(srm: SendMsgToRegisteredEndpoint): Future[Option[ControlMsg]] = {
     sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown", Option(PayloadWrapper(srm.msg, srm.metadata))), None)
-    Future.successful(None) // [DEVIN] WHY?? Seems like we are ignoring the real future sendMsgToRegisteredEndpoint
+      .map(_ => None)
   }
 
   override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,

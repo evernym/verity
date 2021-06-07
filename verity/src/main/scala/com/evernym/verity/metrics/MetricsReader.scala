@@ -43,8 +43,10 @@ object MetricsReader {
         else m.copy(tags = None)
       }
       NodeMetricsData(metadata, allFinalMetrics)
-    }.getOrElse(throw new FeatureNotEnabledException(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusCode,
-      Option(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusMsg)))
+    }.getOrElse{
+      throw new FeatureNotEnabledException(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusCode,
+        Option(METRICS_CAPTURING_STATUS_NOT_ENABLED.statusMsg))
+    }
   }
 
   def convertToProviderName(name: String): String = {

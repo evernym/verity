@@ -156,16 +156,16 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
   def onDeleteMessageFailure(dmf: DeleteMessagesFailure): Unit = {}
   def postAllMsgsDeleted(): Unit = {}
 
-  protected val initialBatchSize = 100
-  protected val maxBatchSize = 1000
-
-  protected val batchSizeMultiplier = 2
-  protected val batchIntervalInSeconds = 5
+  protected def initialBatchSize = 100
+  protected def maxBatchSize = 1000
+  protected def batchSizeMultiplier = 2
+  protected def batchIntervalInSeconds = 5
 
   private val originalReceiveTimeout = context.receiveTimeout
 
   private var deleteMsgConfig: DeleteMsgConfig = DeleteMsgConfig(
-    initialBatchSize, batchSizeMultiplier, maxBatchSize, batchIntervalInSeconds)
+      initialBatchSize, batchSizeMultiplier, maxBatchSize, batchIntervalInSeconds)
+
   private var deleteMsgProgress: DeleteMsgProgress = DeleteMsgProgress(
     0, 0, deleteMsgConfig.initialBatchSize)
 

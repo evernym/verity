@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.testkit
 
 import java.util.UUID
-
 import akka.actor.ActorRef
 import akka.testkit.TestKitBase
 import com.evernym.verity.Status.APP_STATUS_UPDATE_MANUAL
@@ -13,7 +12,7 @@ import com.evernym.verity.actor.testkit.actor.{MockNotifierService, MockShutdown
 import com.evernym.verity.config.AppConfig
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 /**
  * A special test kit to be able to test AppStateManager functionality.
@@ -76,7 +75,7 @@ class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
 
       case other => throw new RuntimeException("changing app state not yet supported: " + other)
     }
-    eventually(timeout(Span(5, Seconds)), interval(Span(2, Seconds))) {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       checkAppManagerState(newAppState)
     }
   }

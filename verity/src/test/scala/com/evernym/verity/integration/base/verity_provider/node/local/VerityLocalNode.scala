@@ -9,7 +9,7 @@ import com.evernym.verity.actor.node_singleton.DrainNode
 import com.evernym.verity.app_launcher.HttpServer
 import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
-import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.atMost
+import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.typesafe.config.Config
 
 import java.nio.file.Path
@@ -65,7 +65,7 @@ case class VerityLocalNode(tmpDirPath: Path,
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
     platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
-    TestKit.awaitCond(isNodeShutdown(cluster), atMost, 3.seconds)
+    TestKit.awaitCond(isNodeShutdown(cluster), waitAtMost, 300.millis)
   }
 
   private def isNodeShutdown(cluster: Cluster): Boolean = {
@@ -73,8 +73,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   }
 
   private def startVerityInstance(): HttpServer = {
-    val httpServer = LocalVerity(verityNodeParam, bootstrapApp = false)
-    httpServer
+    LocalVerity(verityNodeParam, bootstrapApp = false)
   }
 
   /**

@@ -5,16 +5,16 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.metrics.{MetricsReader, NodeMetricsData}
-import com.evernym.verity.testkit.AddMetricsReporter
-import org.scalatest.time.{Seconds, Span}
+import com.evernym.verity.testkit.MetricsReadHelper
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
-trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
+trait MetricsSpec extends MetricsReadHelper { this : EdgeEndpointBaseSpec =>
 
   def testMetrics(): Unit = {
     "when sent get metrics api call" - {
       "should response with metrics" taggedAs (UNSAFE_IgnoreLog) in {
-        eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+        eventually(timeout(Span(10, Seconds)), interval(Span(300, Millis))) {
           buildGetReq("/agency/internal/metrics") ~> epRoutes ~> check {
             status shouldBe OK
             val nmd = responseTo[NodeMetricsData]

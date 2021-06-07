@@ -49,7 +49,7 @@ class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean =
 }
 object TestAppConfig {
   def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =
-    new TestAppConfig(newConfig,clearValidators)
+    new TestAppConfig(newConfig, clearValidators)
 }
 
 sealed trait CleansUpPersistence { this: CleansUpActorSystem =>

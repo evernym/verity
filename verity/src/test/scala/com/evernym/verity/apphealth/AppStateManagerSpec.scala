@@ -46,7 +46,7 @@ class AppStateManagerSpec
           publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
             new RuntimeException("exception message"), msg = Option(CAUSE_MESSAGE_MILD_SYSTEM_ERROR)))
 
-          eventually(timeout(Span(5, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
             withLatestAppState { implicit las =>
               las.currentState shouldBe DegradedState
 
@@ -196,7 +196,7 @@ class AppStateManagerSpec
     publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_GENERAL, CAUSE_DETAIL_LISTENING_SUCCESSFULLY,
         msg = Option(CAUSE_MESSAGE_LISTENING_SUCCESSFULLY)))
 
-    eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       withLatestAppState { implicit las =>
         las.currentState shouldBe ListeningState
 
@@ -256,7 +256,7 @@ class AppStateManagerSpec
     }
 
     val cluster = Cluster(system)
-    eventually(timeout(Span(7, Seconds)), interval(Span(2, Seconds))) {
+    eventually(timeout(Span(7, Seconds)), interval(Span(200, Millis))) {
       List(Down, Removed).contains(cluster.selfMember.status) shouldBe true
     }
   }

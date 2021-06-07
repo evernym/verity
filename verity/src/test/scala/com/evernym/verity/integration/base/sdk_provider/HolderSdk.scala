@@ -327,8 +327,8 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecuto
         unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
       case Some(m) if excludePayload.contains(NO) =>
         throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 5 =>
-        Thread.sleep(tryCount*1000)
+      case None if tryCount < 20 =>
+        Thread.sleep(tryCount*50)
         expectMsgFromConn(connId, msgTypeStr, excludePayload, statusCodes, tryCount+1)
       case None =>
         throw new RuntimeException("expected message not found: " + msgTypeStr)
@@ -362,8 +362,8 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecuto
         unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
       case Some(m) if excludePayload.contains(NO) =>
         throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 5 =>
-        Thread.sleep(tryCount*1000)
+      case None if tryCount < 20 =>
+        Thread.sleep(tryCount*50)
         expectMsgFromConn(msgTypeStr, excludePayload, statusCodes, tryCount+1)
       case None => throw new RuntimeException("expected message not found: ")
     }

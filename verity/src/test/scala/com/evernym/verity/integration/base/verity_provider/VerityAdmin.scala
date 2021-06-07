@@ -7,7 +7,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.atMost
+import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -17,7 +17,7 @@ object VerityAdmin {
 
   implicit val actorSystem: ActorSystem = ActorSystemVanilla("verity-admin")
 
-  def bootstrapApplication(port: Int, appSeed: String, atMost: Duration = atMost): Unit = {
+  def bootstrapApplication(port: Int, appSeed: String, atMost: Duration = waitAtMost): Unit = {
     if (appSeed.length != 32) throw new Exception("Seeds must be exactly 32 characters long")
 
     val keySetupResp = Await.result(

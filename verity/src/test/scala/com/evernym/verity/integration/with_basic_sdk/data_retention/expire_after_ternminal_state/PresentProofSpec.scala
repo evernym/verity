@@ -1,8 +1,9 @@
-package com.evernym.verity.integration.with_basic_sdk
+package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
 
+import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
@@ -12,19 +13,32 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.typesafe.config.ConfigFactory
 
 
 class PresentProofSpec
   extends VerityProviderBaseSpec
-  with SdkProvider {
+    with DataRetentionBaseSpec
+    with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
-  lazy val verifierVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv =
+    VerityEnvBuilder
+      .default()
+      .withServiceParam(buildSvcParam)
+      .withConfig(DATA_RETENTION_CONFIG)
+      .build()
+
+  lazy val verifierVerityEnv =
+    VerityEnvBuilder.
+      default()
+      .withServiceParam(buildSvcParam)
+      .withConfig(DATA_RETENTION_CONFIG)
+      .build()
   lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
   lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
@@ -61,6 +75,7 @@ class PresentProofSpec
         issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map.empty)
+        issuerVerityEnv.checkBlobObjectCount("3d", 1)
       }
     }
   }
@@ -87,6 +102,7 @@ class PresentProofSpec
       "should get 'accept-request' (issue-credential 1.0)" in {
         val receivedMsg = issuerSDK.expectMsgOnWebhook[AcceptRequest]()
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map(issuerHolderConn -> 0))
+        issuerVerityEnv.checkBlobObjectCount("3d", 2)
       }
     }
 
@@ -96,6 +112,7 @@ class PresentProofSpec
         issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThread)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 1, Map(issuerHolderConn -> 0))
+        issuerVerityEnv.checkBlobObjectCount("3d", 0)
       }
     }
   }
@@ -125,6 +142,7 @@ class PresentProofSpec
           None
         )
         verifierSDK.sendMsgForConn(verifierHolderConn, msg)
+        verifierVerityEnv.checkBlobObjectCount("3d", 1)
       }
     }
   }
@@ -152,6 +170,30 @@ class PresentProofSpec
       requestPresentation.revealed_attrs.size shouldBe 2
       requestPresentation.unrevealed_attrs.size shouldBe 0
       requestPresentation.self_attested_attrs.size shouldBe 0
+      verifierVerityEnv.checkBlobObjectCount("3d", 0)
     }
   }
+
+  val DATA_RETENTION_CONFIG = ConfigFactory.parseString {
+    """
+      |verity {
+      |  retention-policy {
+      |    default {
+      |      undefined-fallback {
+      |        expire-after-days = 3 day
+      |        expire-after-terminal-state = true
+      |      }
+      |    }
+      |  }
+      |  blob-store {
+      |   storage-service = "com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore"
+      |
+      |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
+      |   bucket-name = "local-blob-store"
+      |   # Path to StorageAPI class to be used. Currently there is a LeveldbAPI and AlpakkaS3API
+      |  }
+      |}
+      |""".stripMargin
+  }
+
 }

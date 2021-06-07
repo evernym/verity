@@ -2,6 +2,7 @@ package com.evernym.verity.integration.base
 
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
@@ -10,6 +11,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import java.nio.file.{Files, Path}
+import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -20,7 +22,10 @@ import scala.util.Random
 //    1. AppConfigWrapper
 //    2. ResourceBlockingStatusMngrCache
 //    3. ResourceWarningStatusMngrCache
-//    4. AppStateUpdateAPI
+//    4. MsgProgressTrackerCache
+//    5. MetricsReader and KamonPrometheusMetricsReporter
+//    6. ItemConfigManager
+//    7. AppStateUpdateAPI
 
 /**
  * base class for specs to use LocalVerity
@@ -93,7 +98,7 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  val defaultSvcParam: ServiceParam = ServiceParam.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)
@@ -121,7 +126,7 @@ trait VerityProviderBaseSpec
 
   override def afterAll(): Unit = {
     super.afterAll()
-    allVerityEnvs.foreach(_.nodes.foreach(_.stop()))
+    Future(allVerityEnvs.foreach(_.nodes.foreach(_.stop())))
   }
 
   private def randomChar(): Char = {

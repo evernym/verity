@@ -1,25 +1,34 @@
-package com.evernym.verity.integration.with_basic_sdk
+package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_days
 
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerGiven
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.typesafe.config.ConfigFactory
 
 
 class QuestionAnswerSpec
   extends VerityProviderBaseSpec
+    with DataRetentionBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv =
+    VerityEnvBuilder
+      .default()
+      .withServiceParam(buildSvcParam)
+      .withConfig(DATA_RETENTION_CONFIG)
+      .build()
+
   lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -46,6 +55,7 @@ class QuestionAnswerSpec
     "when tried to send 'ask-question' (questionanswer 1.0) message" - {
       "should be successful" in {
         issuerSDK.sendMsgForConn(firstConn, AskQuestion("How are you?", Option("detail"), Vector("I am fine", "I am not fine"), signature_required = false, None))
+        issuerVerityEnv.checkBlobObjectCount("2d", 1)
       }
     }
   }
@@ -75,17 +85,7 @@ class QuestionAnswerSpec
     "should receive 'answer-given' (questionanswer 1.0) message" in {
       val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]()
       receivedMsg.msg.answer shouldBe "I am fine"
-    }
-  }
-
-  "VerityAdmin" - {
-    "when restarts verity instances" - {
-      "should be successful" in {
-        issuerVerityEnv.restartAllNodes()
-        holderVerityEnv.restartAllNodes()
-        issuerSDK.fetchAgencyKey()
-        holderSDK.fetchAgencyKey()
-      }
+      issuerVerityEnv.checkBlobObjectCount("2d", 2)
     }
   }
 
@@ -95,6 +95,7 @@ class QuestionAnswerSpec
         val msg = AskQuestion("How are you after restart?", Option("detail"),
           Vector("I am fine", "I am not fine"), signature_required = false, None)
         issuerSDK.sendMsgForConn(firstConn, msg)
+        issuerVerityEnv.checkBlobObjectCount("2d", 3)
       }
     }
   }
@@ -121,6 +122,29 @@ class QuestionAnswerSpec
     "should receive 'answer' (questionanswer 1.0) message after restart" in {
       val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]()
       receivedMsg.msg.answer shouldBe "I am fine after restart too"
+      issuerVerityEnv.checkBlobObjectCount("2d", 4)
     }
+  }
+
+  val DATA_RETENTION_CONFIG = ConfigFactory.parseString {
+    """
+      |verity {
+      |  retention-policy {
+      |    default {
+      |      undefined-fallback {
+      |        expire-after-days = 2 day
+      |        expire-after-terminal-state = false
+      |      }
+      |    }
+      |  }
+      |  blob-store {
+      |   storage-service = "com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore"
+      |
+      |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
+      |   bucket-name = "local-blob-store"
+      |   # Path to StorageAPI class to be used. Currently there is a LeveldbAPI and AlpakkaS3API
+      |  }
+      |}
+      |""".stripMargin
   }
 }

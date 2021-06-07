@@ -7,7 +7,7 @@ import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetc
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -29,7 +29,7 @@ class CacheMaxSizeSpec
           val cqr = Await.result(fut, 2.second)
           cqr shouldBe CacheQueryResponse(Map(s"$i" -> s"$i"))
         }
-        eventually(timeout(Span(5, Seconds)), interval(Span(100, Seconds))) {
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
           mockMaxSizeFetcher.maxSize shouldBe Option(20)
           cache.allCacheSize <= mockMaxSizeFetcher.maxSize.get shouldBe true
         }

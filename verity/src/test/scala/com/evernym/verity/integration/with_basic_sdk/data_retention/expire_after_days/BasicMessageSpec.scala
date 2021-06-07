@@ -1,23 +1,33 @@
-package com.evernym.verity.integration.with_basic_sdk
+package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_days
 
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.typesafe.config.ConfigFactory
 
 
-class BasicMessageSpec extends VerityProviderBaseSpec
-  with SdkProvider {
+class BasicMessageSpec
+  extends VerityProviderBaseSpec
+    with DataRetentionBaseSpec
+    with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv =
+    VerityEnvBuilder
+      .default()
+      .withServiceParam(buildSvcParam)
+      .withConfig(DATA_RETENTION_CONFIG)
+      .build()
+
   lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -44,6 +54,7 @@ class BasicMessageSpec extends VerityProviderBaseSpec
     "when tried to send 'send-message' (basicmessage 1.0) message" - {
       "should be successful" in {
         issuerSDK.sendMsgForConn(firstConn, SendMessage(sent_time = "", content = "How are you?"))
+        issuerVerityEnv.checkBlobObjectCount("4d", 1)
       }
     }
   }
@@ -72,7 +83,29 @@ class BasicMessageSpec extends VerityProviderBaseSpec
   "IssuerSDK" - {
     "should receive 'message' (basicmessage 1.0) message" in {
       issuerSDK.expectMsgOnWebhook[Message]()
+      issuerVerityEnv.checkBlobObjectCount("4d", 2)
     }
   }
 
+  val DATA_RETENTION_CONFIG = ConfigFactory.parseString {
+    """
+      |verity {
+      |  retention-policy {
+      |    default {
+      |     undefined-fallback {
+      |       expire-after-days = 4 day
+      |       expire-after-terminal-state = false
+      |     }
+      |    }
+      |  }
+      |  blob-store {
+      |   storage-service = "com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore"
+      |
+      |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
+      |   bucket-name = "local-blob-store"
+      |   # Path to StorageAPI class to be used. Currently there is a LeveldbAPI and AlpakkaS3API
+      |  }
+      |}
+      |""".stripMargin
+  }
 }

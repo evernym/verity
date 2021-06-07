@@ -6,7 +6,7 @@ import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.constants.Constants.YES
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 //testing for those systems who doesn't have any legacy routing actors,
 // the new routing actors and legacy route actor migration still works fine
@@ -29,7 +29,7 @@ class RouteStoreMigrationV2Spec
 
   //checks if all legacy agent route stores are migrated successfully
   def checkIfOverallMigrationCompleted(): Unit = {
-    val msd = eventually(timeout(Span(50, Seconds)), interval(Span(5, Seconds))) {
+    val msd = eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
       platform.singletonParentProxy ! ForAgentRoutesMigrator(GetMigrationStatus(Option(YES)))
       val msd = expectMsgType[MigrationStatusDetail]
       msd.completed.totalRouteStores shouldBe msd.registered.totalRouteStores

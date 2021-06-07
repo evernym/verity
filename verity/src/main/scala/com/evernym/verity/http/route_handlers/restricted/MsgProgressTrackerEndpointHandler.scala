@@ -22,7 +22,9 @@ import scala.concurrent.Future
 trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
 
   protected def configureTracking(trackingId: String, ct: ConfigureTracking): Future[Any] = {
-    platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, ct)
+    startTracking(trackingId).flatMap { _ =>
+      platform.msgProgressTrackerRegion ? ForIdentifier(trackingId, ct)
+    }
   }
 
   protected def startTracking(trackingId: String): Future[Any] = {

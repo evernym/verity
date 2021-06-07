@@ -11,7 +11,7 @@ import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 class OutgoingMsgSenderSpec
@@ -95,13 +95,13 @@ class OutgoingMsgSenderSpec
   }
 
   def checkRetryAttempt(): Unit = {
-    eventually(timeout(Span(40, Seconds)), interval(Span(10, Seconds))) {
+    eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
       expectMsgType[ProcessSendMsgToTheirDomain]
     }
   }
 
   def checkOutgoingMsgSenderActor(msgId: MsgId, shallExists: Boolean): Unit = {
-    eventually(timeout(Span(20, Seconds)), interval(Span(2, Seconds))) {
+    eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
       agentActor ! IsChildActorExists(msgId)
       expectMsg(shallExists)
     }
@@ -113,7 +113,7 @@ class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
     with HasOutgoingMsgSender {
 
   override val maxRetryAttempt: Int = 3
-  override val initialDelayInSeconds: Int = 5
+  override val initialDelayInSeconds: Int = 1
 
   var failNextDeliveryAttempt = false
 

@@ -7,8 +7,12 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT
-import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
+import com.evernym.verity.metrics.MetricsReader
+import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec}
 import org.scalatest.concurrent.Eventually
+
+import scala.language.postfixOps
+
 
 trait BaseRecoveryActorSpec
   extends BaseRecoverySpecLike
@@ -16,7 +20,12 @@ trait BaseRecoveryActorSpec
     with BasicSpec
     with Eventually { this: TestKitBase with BasicSpec =>
 
-  def restartActor(ar: agentRegion, times: Int = 3): Unit = {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    MetricsReader.initialize(appConfig)
+  }
+
+  def restartActor(ar: agentRegion, times: Int = 2): Unit = {
     (1 to times).foreach { _ =>
       restartActor(ar)
     }
@@ -25,7 +34,7 @@ trait BaseRecoveryActorSpec
   private def restartActor(ar: agentRegion): Unit = {
     ar ! Stop(sendBackConfirmation = true)
     expectMsgType[Done.type]
-    Thread.sleep(2000)
+    Thread.sleep(1500)
     ar ! Ping(sendBackConfirmation = true)
     expectMsgType[Done.type]
   }
@@ -33,10 +42,10 @@ trait BaseRecoveryActorSpec
 
 trait BaseRecoverySpecLike
   extends BasePersistentStore
-    with AddMetricsReporter { this: BasicSpec =>
+    with MetricsReadHelper { this: BasicSpec =>
 
-  def getWalletAPICallCount: Double = {
-    Thread.sleep(3000)  //waiting sufficient time so that metrics data gets stabilized
+  def getStableWalletAPISucceedCountMetric: Double = {
+    Thread.sleep(1000)  //waiting sufficient time so that metrics data gets stabilized
     val walletSucceedApiMetric = getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
     walletSucceedApiMetric.map(_.value).getOrElse(0)
   }

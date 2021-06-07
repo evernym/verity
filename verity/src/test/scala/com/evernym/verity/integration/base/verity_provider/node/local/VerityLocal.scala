@@ -15,6 +15,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
+import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -25,9 +26,12 @@ import scala.language.postfixOps
 
 
 object LocalVerity {
-  lazy val atMost: FiniteDuration = 25 seconds
+  lazy val waitAtMost: FiniteDuration = 25 seconds
 
-  lazy val defaultSvcParam: ServiceParam = ServiceParam.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+  lazy val defaultSvcParam: ServiceParam =
+    ServiceParam
+      .empty
+      .withLedgerTxnExecutor(new MockLedgerTxnExecutor())
 
   def apply(tempDir: Path,
             appSeed: String,
@@ -72,7 +76,7 @@ object LocalVerity {
   }
 
   private def waitTillUp(appStateManager: ActorRef): Unit = {
-    TestKit.awaitCond(isListening(appStateManager), atMost, 2.seconds)
+    TestKit.awaitCond(isListening(appStateManager), waitAtMost, 200.millis)
   }
 
   private def isListening(appStateManager: ActorRef): Boolean = {
@@ -84,10 +88,14 @@ object LocalVerity {
   class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam]) {
     class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam])
       extends DefaultAgentActorContext {
-        implicit val executor: ExecutionContextExecutor = system.dispatcher
-        override lazy val poolConnManager: LedgerPoolConnManager = {
-          new InMemLedgerPoolConnManager(serviceParam.flatMap(_.ledgerTxnExecutor))
-        }
+
+      implicit val executor: ExecutionContextExecutor = system.dispatcher
+      override lazy val poolConnManager: LedgerPoolConnManager = {
+        new InMemLedgerPoolConnManager(serviceParam.flatMap(_.ledgerTxnExecutor))
+      }
+      override lazy val storageAPI: StorageAPI = {
+        serviceParam.flatMap(_.storageAPI).getOrElse(StorageAPI.loadFromConfig(appConfig))
+      }
     }
 
     val platform: Platform = PlatformBuilder.build(
@@ -115,7 +123,7 @@ object LocalVerity {
         uri = s"http://localhost:$port/agency/internal/msg-progress-tracker/$trackingId"
       )
     )
-      , atMost)
+      , waitAtMost)
   }
 }
 
@@ -124,8 +132,7 @@ class AppConfigWrapper(config: Config) extends AppConfig {
 }
 
 object ServiceParam {
-  def withLedgerTxnExecutor(txnExecutor: LedgerTxnExecutor): ServiceParam =
-    ServiceParam(Option(LedgerSvcParam(ledgerTxnExecutor = Option(txnExecutor))))
+  def empty: ServiceParam = ServiceParam()
 }
 
 /**
@@ -138,7 +145,17 @@ object ServiceParam {
  * @param sharedEventStore
  */
 case class ServiceParam(ledgerSvcParam: Option[LedgerSvcParam]=None,
+                        storageAPI: Option[StorageAPI]=None,
                         sharedEventStore: Option[SharedEventStore]=None) {
+
+  def withLedgerTxnExecutor(txnExecutor: LedgerTxnExecutor): ServiceParam = {
+    val lsp = ledgerSvcParam.getOrElse(LedgerSvcParam())
+    copy(ledgerSvcParam = Option(lsp.copy(ledgerTxnExecutor = Option(txnExecutor))))
+  }
+
+  def withStorageApi(storageAPI: StorageAPI): ServiceParam = {
+    copy(storageAPI = Option(storageAPI))
+  }
 
   def ledgerTxnExecutor: Option[LedgerTxnExecutor] = ledgerSvcParam.flatMap(_.ledgerTxnExecutor)
 }

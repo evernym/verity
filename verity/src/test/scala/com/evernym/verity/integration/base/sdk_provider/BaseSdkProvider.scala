@@ -53,6 +53,8 @@ trait SdkProvider { this: BasicSpec =>
     IssuerRestSDK(buildSdkParam(verityEnv))
   def setupVerifierSdk(verityEnv: VerityEnv): VerifierSdk =
     VerifierSdk(buildSdkParam(verityEnv))
+  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor))
   def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor)
 

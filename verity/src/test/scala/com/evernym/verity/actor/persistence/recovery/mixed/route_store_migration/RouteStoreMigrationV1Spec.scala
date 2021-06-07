@@ -14,7 +14,7 @@ import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.protocol.engine.DID
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.util.Random
 
@@ -96,7 +96,7 @@ class RouteStoreMigrationV1Spec
 
   //checks migration status completeness only for given legacy agent route actors
   def checkIfMigrationCompleted(legacyActorRefs: Set[ActorRef]): Unit = {
-    eventually(timeout(Span(50, Seconds)), interval(Span(5, Seconds))) {
+    eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
       legacyActorRefs.foreach { ar =>
         ar ! GetRouteStoreMigrationStatus
         val migrationStatus = expectMsgType[RouteStoreMigrationStatus]
@@ -110,7 +110,7 @@ class RouteStoreMigrationV1Spec
   //checks migration status completeness only for those legacy routing actors
   // belonging to given routes
   def checkIfMigrationCompleted(routes: Map[DID, ActorAddressDetail]): Unit = {
-    eventually(timeout(Span(50, Seconds)), interval(Span(5, Seconds))) {
+    eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
       routes.foreach { case (r, aad) =>
         platform.routeRegion ! ForIdentifier(r, GetStoredRoute)
         val newDetail = expectMsgType[Option[ActorAddressDetail]]
@@ -125,7 +125,7 @@ class RouteStoreMigrationV1Spec
 
   //checks if all legacy agent route stores are migrated successfully
   def checkIfOverallMigrationCompleted(): Unit = {
-    val msd = eventually(timeout(Span(50, Seconds)), interval(Span(5, Seconds))) {
+    val msd = eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
       platform.singletonParentProxy ! ForAgentRoutesMigrator(GetMigrationStatus(Option(YES)))
       val msd = expectMsgType[MigrationStatusDetail]
       msd.completed.totalRouteStores shouldBe msd.registered.totalRouteStores

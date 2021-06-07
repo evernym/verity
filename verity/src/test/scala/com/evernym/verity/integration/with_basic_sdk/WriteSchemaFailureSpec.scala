@@ -18,7 +18,7 @@ class WriteSchemaFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  override val defaultSvcParam: ServiceParam = ServiceParam.withLedgerTxnExecutor(new DummyLedgerTxnExecutor())
+  override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor())
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build()
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)

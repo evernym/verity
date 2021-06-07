@@ -54,7 +54,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       val getMsgsRespMsg = GetMsgsMsgHelper.buildRespMsg(filteredMsgs)(reqMsgContext.agentMsgContext)
 
       val encParam = EncryptParam(
-        Set(KeyParam(Left(reqMsgContext.msgSenderVerKeyReq))),
+        Set(KeyParam(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
         Option(KeyParam(Left(state.thisAgentVerKeyReq)))
       )
       val logPrefix = "\n  => "
@@ -80,7 +80,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
     val msgStatusUpdatedRespMsg = UpdateMsgStatusMsgHelper.buildRespMsg(updatedMsgIds,
       ums.statusCode)(reqMsgContext.agentMsgContext)
     val encParam = EncryptParam(
-      Set(KeyParam(Left(reqMsgContext.msgSenderVerKeyReq))),
+      Set(KeyParam(Left(reqMsgContext.originalMsgSenderVerKeyReq))),
       Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)

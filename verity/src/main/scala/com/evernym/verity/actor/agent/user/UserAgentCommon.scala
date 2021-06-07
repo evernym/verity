@@ -163,10 +163,10 @@ trait UserAgentCommon
 
   def handleUpdateConfigPackedReq(tupdateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
-      val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
       handleUpdateConfig(tupdateConf)
-      postUpdateConfig(tupdateConf, reqMsgContext.msgSenderVerKey)
+      postUpdateConfig(tupdateConf, reqMsgContext.latestMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
@@ -188,7 +188,7 @@ trait UserAgentCommon
 
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleRemoveConfigMsg", "UserAgentCommon") {
-      val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_REMOVE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
       removeConf.configs.foreach { cn =>
         if (state.isConfigExists(cn))

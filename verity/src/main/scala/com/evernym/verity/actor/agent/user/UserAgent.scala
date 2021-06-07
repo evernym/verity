@@ -312,7 +312,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, reqMsgContext.clientIpAddressReq, userId)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
     val sndr = sender()
@@ -470,7 +470,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)

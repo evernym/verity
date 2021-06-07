@@ -28,20 +28,53 @@ trait MsgReceiver extends Eventually {
   // can be used for asserting things about the message. Do not assert outside
   // of the check function so that the ManualSdkProvider which don't provide
   // messages can still work.
-  final def expectMsg(expectedName: String, max: Option[Duration] = None)
+  final def expectMsg(expectedName: String,
+                      max: Option[Duration] = None)
                      (check: JSONObject => Unit)
                      (implicit scenario: Scenario): Unit = {
+    checkAndExpectMsg(Some(expectedName), max)(check)
+  }
+  final def checkMsg(max: Option[Duration] = None)
+                    (check: JSONObject => Unit)
+                    (implicit scenario: Scenario): Unit = {
+    checkAndExpectMsg(None, max)(check)
+  }
+  private def checkAndExpectMsg(expectedName: Option[String],
+                                max: Option[Duration] = None)
+                               (check: JSONObject => Unit)
+                               (implicit scenario: Scenario): Unit = {
+    def expecting: String = expectedName.map(x=>s"(expecting: $x) ").getOrElse("")
+    def lastReceived(msg: JSONObject): String = s"(last received: ${msg.getString(`@TYPE`)})"
+
     if(shouldExpectMsg()){
       val waitTimeout = max.getOrElse(scenario.timeout)
+
+      var msg = new JSONObject().put(`@TYPE`, "UnreceivedType")
+
       eventually(timeout(waitTimeout), Interval(Span(200, Millis))) {
-        val msg = expectMsg(waitTimeout)
+        try {
+          msg = expectMsg(waitTimeout)
+        }
+        catch {
+          case e: Exception =>
+            throw new Exception(
+              s"msg not received $expecting-- ${e.getMessage} ${lastReceived(msg)}"
+            )
+        }
+
         if(shouldCheckMsg()) {
           val msgType = try {
             msg.getString(`@TYPE`)
           } catch {
-            case _: Exception => throw new Exception(s"Unable to get message type for -- ${msg.toString()}")
+            case e: Exception =>
+              throw new Exception(s"Unable to get message type for $expecting-- ${msg.toString()} ${lastReceived(msg)}")
           }
-          assert (msgType.endsWith(expectedName), s"Unexpected message name -- $msgType is not $expectedName -- ${msg.toString(2)}")
+          expectedName.foreach { x =>
+            assert (
+              msgType.endsWith(x),
+              s"Unexpected message name -- $msgType is not $expecting-- ${msg.toString(2)} ${lastReceived(msg)}"
+            )
+          }
           check(msg)
         }
       }
@@ -68,6 +101,9 @@ trait ListeningSdkProvider extends MsgReceiver {
       }
     }
 
+    sdkConfig.receiveSpacing.foreach{ d =>
+      Thread.sleep(d.toMillis)
+    }
     m.getOrElse(throw new Exception(s"timeout ($max) during expectMsg while waiting for message"))
   }
 

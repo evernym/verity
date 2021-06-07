@@ -248,7 +248,11 @@ class SdkFlowSpec
       (OutOfBandMsgFamily, 1),
       (PresentProofMsgFamily, 2),
       (IssueCredMsgFamily, 1)
-    ).foreach(x => validateProtocolMetrics(apps(verity1), metricKey(x._1), expectedMetricCount=x._2))
+    ).foreach{ x =>
+      if (apps(verity1).instance.isRunningLocally) {
+        validateProtocolMetrics(apps(verity1), metricKey(x._1), expectedMetricCount=x._2)
+      }
+    }
   }
 
   def sdkOobInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -293,7 +297,9 @@ class SdkFlowSpec
   }
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
-    apps.forEachApplication(testMetrics)
+    apps.forEachApplication { a =>
+      if(a.instance.isRunningLocally) testMetrics(a)
+    }
   }
 
 }

@@ -154,7 +154,9 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
       }
     }
 
-  override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = ???
+  override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = new UndefinedOutOfBand_1_0() {
+    override def handshakeReuse(context: Context): Unit = {}
+  }
 
   override def relationship_1_0(label: String): RelationshipV1_0 = ???
 

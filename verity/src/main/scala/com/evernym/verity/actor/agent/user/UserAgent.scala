@@ -20,6 +20,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.metrics.CustomMetrics._
@@ -313,7 +314,9 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_CREATE_KEY, reqMsgContext.clientIpAddressReq, userId)
+    val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
+      .getOrElse(MSG_TYPE_CREATE_KEY)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     checkIfKeyNotCreated(createKeyReqMsg.forDID)
     val sndr = sender()
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).map { thisAgentKey =>
@@ -471,7 +474,9 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_COM_METHOD, reqMsgContext.clientIpAddressReq, userId)
+    val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
+      .getOrElse(MSG_TYPE_UPDATE_COM_METHOD)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
     buildAndSendComMethodUpdatedRespMsg(comMethod)

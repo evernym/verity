@@ -34,6 +34,7 @@ import com.evernym.verity.vault._
 import java.time.ZonedDateTime
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
@@ -148,7 +149,7 @@ trait UserAgentCommon
     sender ! AgencyIdentitySet(saw.didPair)
   }
 
-  def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
+  def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
 
   def notifyUser(nu: NotifyUserViaPushNotif): Unit = sendPushNotif(nu.pushNotifData, None)
 
@@ -161,12 +162,14 @@ trait UserAgentCommon
     }
   }
 
-  def handleUpdateConfigPackedReq(tupdateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
+  def handleUpdateConfigPackedReq(updateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
       val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
-      handleUpdateConfig(tupdateConf)
-      postUpdateConfig(tupdateConf, reqMsgContext.latestMsgSenderVerKey)
+      val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
+        .getOrElse(MSG_TYPE_UPDATE_CONFIGS)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
+      handleUpdateConfig(updateConf)
+      postUpdateConfig(updateConf, reqMsgContext.latestMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
@@ -189,7 +192,8 @@ trait UserAgentCommon
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleRemoveConfigMsg", "UserAgentCommon") {
       val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_REMOVE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
+      val resourceName = ResourceUsageUtil.getMessageResourceName(removeConf.msgFamilyDetail)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       removeConf.configs.foreach { cn =>
         if (state.isConfigExists(cn))
           writeAndApply(ConfigRemoved(cn))

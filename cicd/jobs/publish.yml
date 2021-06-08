@@ -61,6 +61,11 @@ publish-deb-manual:
       > /kaniko/.docker/config.json
     #- if [ "$CI_COMMIT_REF_NAME" == "master" ]; then DRY_RUN=""; else DRY_RUN="--no-push"; fi
     - >
+      if [ "$INCLUDE_DOCKER_AWS_DESTINATIONS" = "true" ]; then
+        DOCKER_AWS_DESTINATIONS="--destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
+                                 --destination $AWS_DEV_ECR_REGISTRY/verity:latest" ;
+      else DOCKER_AWS_DESTINATIONS=""; fi
+    - >
       /kaniko/executor
       --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
       --build-arg LIBMYSQLSTORAGE_VERSION=$LIBMYSQLSTORAGE_VERSION
@@ -80,11 +85,10 @@ publish-docker:
   rules:
     - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
       variables:
-        DOCKER_AWS_DESTINATIONS: ""
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
     - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
       variables:
-        DOCKER_AWS_DESTINATIONS: "--destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION \
-                                  --destination $AWS_DEV_ECR_REGISTRY/verity:latest"
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
 
 publish-docker-manual:
   extends:

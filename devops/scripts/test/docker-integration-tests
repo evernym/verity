@@ -115,6 +115,7 @@ if [[ "$testType" == "Legacy" ]]
 then
     echo "Running $testType e2e API integration tests..."
   sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
+  sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.vcx.VcxIssuerSpec"
 fi
 
 if [[ "$testType" == "Integration" ]]

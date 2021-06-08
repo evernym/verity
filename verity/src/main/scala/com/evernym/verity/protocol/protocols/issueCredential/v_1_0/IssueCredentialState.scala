@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, ProposeCred, RequestCred}
+import com.evernym.verity.protocol.TerminalState
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.legacy.StateLegacy
 
 trait Event
 
@@ -8,7 +10,7 @@ sealed trait State {
   def status: String = this.getClass.getSimpleName
 }
 
-object State {
+object State extends StateLegacy {
   case class Uninitialized() extends State
 
   trait HasMyAndTheirDid extends State {
@@ -30,40 +32,43 @@ object State {
 
   case class ProposalSent(myPwDid: String,
                           theirPwDid: Option[String],
-                          credProposed: ProposeCred) extends PostInteractionStarted
+                          credProposedRef: SegmentKey) extends PostInteractionStarted
 
   case class ProposalReceived(myPwDid: String,
                               theirPwDid: Option[String],
-                              credProposed: ProposeCred) extends PostInteractionStarted
+                              credProposedRef: SegmentKey) extends PostInteractionStarted
 
   case class OfferSent(myPwDid: String,
                        theirPwDid: Option[String],
-                       credOffer: OfferCred,
+                       credOfferRef: SegmentKey,
                        autoIssue: Boolean) extends PostInteractionStarted
 
   case class OfferReceived(myPwDid: String,
                            theirPwDid: Option[String],
-                           credOffer: OfferCred) extends PostInteractionStarted
+                           credOfferRef: SegmentKey) extends PostInteractionStarted
 
   case class RequestSent(myPwDid: String,
                          theirPwDid: Option[String],
-                         credOffer: OfferCred,
-                         credRequest: RequestCred) extends PostInteractionStarted
+                         credRequestRef: SegmentKey) extends PostInteractionStarted
 
   case class RequestReceived(myPwDid: String,
                              theirPwDid: Option[String],
-                             credOffer: OfferCred,
-                             credRequest: RequestCred) extends PostInteractionStarted
+                             credOfferRef: SegmentKey,
+                             credRequestRef: SegmentKey) extends PostInteractionStarted
 
   case class CredSent(myPwDid: String,
                       theirPwDid: Option[String],
-                      credIssued: IssueCred) extends PostInteractionStarted
+                      credIssuedRef: SegmentKey)
+    extends PostInteractionStarted
+      with TerminalState
 
   case class CredReceived(myPwDid: String,
                           theirPwDid: Option[String],
-                          credIssued: IssueCred) extends PostInteractionStarted
+                          credIssuedRef: SegmentKey)
+    extends PostInteractionStarted
+      with TerminalState
 
-  case class Rejected(comment: Option[String]=Some("")) extends State
+  case class Rejected(comment: Option[String]=Some("")) extends State with TerminalState
 
   case class ProblemReported(description: String) extends State
 }

@@ -212,9 +212,9 @@ lazy val settings = Seq(
 
 lazy val testSettings = Seq (
   //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", s"target/test-reports/$projectName"),
+//  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oNCXEHLOPQRM"),  // summarized test output
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
   // an issue was found related to class loading when we run 'sbt test'

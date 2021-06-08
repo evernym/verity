@@ -5,7 +5,6 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
@@ -24,7 +23,7 @@ class ProtocolContainerSpec extends BasicSpec {
           override def eventRecorder: RecordsEvents = new RecordsEvents {
             override def recoverState(pinstId: PinstId): (_, Vector[_]) = (Offered(), Vector(Accepted()))
 
-            override def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit = ???
+            override def record(pinstId: PinstId, event: Any, state: Any)(cb: Any => Unit): Unit = ???
           }
 
           override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
@@ -37,6 +36,10 @@ class ProtocolContainerSpec extends BasicSpec {
                                segmentKey: SegmentKey,
                                retentionPolicy: Option[String]=None)
                               (handler: Try[Option[T]] => Unit): Unit = {}
+            override def removeSegment(segmentAddress: SegmentAddress,
+                                       segmentKey: SegmentKey,
+                                       retentionPolicy: Option[String])
+                                      (handler: Try[SegmentKey] => Unit): Unit = {}
           }
 
           override def sendsMsgs: SendsMsgs = ???
@@ -50,8 +53,6 @@ class ProtocolContainerSpec extends BasicSpec {
           override def wallet: WalletAccess = ???
 
           override def serviceEndpoint: ServiceEndpoint = ???
-
-          override def segmentStoreStrategy: Option[SegmentStoreStrategy] = ???
 
           override def ledger: LedgerAccess = ???
 

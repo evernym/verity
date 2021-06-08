@@ -71,7 +71,7 @@ extends TokenToActorMappingProvider
     getNewActorIdFromSeed(entityId)
   }
 
-  def getProtocolIdDetail: ProtocolIdDetail = ProtocolIdDetail(protoRef, entityId)
+  def getProtocolIdDetail: ProtocolIdDetail = ProtocolIdDetail(getProtoRef, entityId)
 
   // For each sharded actor, there will be one region actor per type per node. The region
   // actor manages all the shard actors. See https://docs.google.com/drawings/d/1vyjsGYjEQtvQbwWVFditnTXP-JyhIIrMc2FATy4-GVs/edit

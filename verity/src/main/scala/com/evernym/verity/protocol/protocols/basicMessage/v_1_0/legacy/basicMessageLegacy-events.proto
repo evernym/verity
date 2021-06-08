@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+
+import "protocols/basicMessage/v_1_0/basicMessage-events.proto";
+package com.evernym.verity.protocol.protocols.basicMessage.v_1_0.legacy;
+
+message MessageReceived {
+  option (scalapb.message).extends = "com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Event";
+  google.protobuf.StringValue localization    = 1;
+  string sentTime                             = 2;
+  string content                              = 3;
+  repeated AttachmentObject attachments       = 4;
+}

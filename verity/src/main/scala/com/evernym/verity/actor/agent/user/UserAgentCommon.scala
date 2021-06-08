@@ -25,7 +25,7 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
-import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config, SendConfig}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
 import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
@@ -36,6 +36,7 @@ import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateA
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
 import scala.concurrent.Future
 
@@ -163,12 +164,12 @@ trait UserAgentCommon
 
   def handleUpdateConfigPackedReq(updateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
-      val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
         .getOrElse(MSG_TYPE_UPDATE_CONFIGS)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       handleUpdateConfig(updateConf)
-      postUpdateConfig(updateConf, reqMsgContext.msgSenderVerKey)
+      postUpdateConfig(updateConf, reqMsgContext.latestMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
@@ -190,7 +191,7 @@ trait UserAgentCommon
 
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleRemoveConfigMsg", "UserAgentCommon") {
-      val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       val resourceName = ResourceUsageUtil.getMessageResourceName(removeConf.msgFamilyDetail)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       removeConf.configs.foreach { cn =>
@@ -220,7 +221,7 @@ trait UserAgentCommon
 
   def sendAgentMsgToRegisteredEndpoint(srm: SendMsgToRegisteredEndpoint): Future[Option[ControlMsg]] = {
     sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown", Option(PayloadWrapper(srm.msg, srm.metadata))), None)
-    Future.successful(None) // [DEVIN] WHY?? Seems like we are ignoring the real future sendMsgToRegisteredEndpoint
+      .map(_ => None)
   }
 
   override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,

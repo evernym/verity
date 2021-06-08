@@ -306,7 +306,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
-        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, p.msgFamilyName))
+        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
       }
     }
   }
@@ -321,7 +321,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def getEncParamBasedOnMsgSender(implicit reqMsgContext: ReqMsgContext): EncryptParam = {
-    encParamBasedOnMsgSender(reqMsgContext.msgSenderVerKey)
+    encParamBasedOnMsgSender(reqMsgContext.latestMsgSenderVerKey)
   }
 
   override def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
@@ -402,7 +402,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     runWithInternalSpan("persistAndProcessSendRemoteMsg", "UserAgentPairwise") {
       implicit val reqMsgContext: ReqMsgContext = papsrm.reqHelperData.reqMsgContext
 
-      val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.msgSenderVerKeyReq)
+      val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.latestMsgSenderVerKeyReq)
 
       val payloadParam = StorePayloadParam(papsrm.sendRemoteMsg.`@msg`, None)
       val msgStoredEvents = buildMsgStoredEventsV1(papsrm.sendRemoteMsg.id, papsrm.sendRemoteMsg.mtype,
@@ -427,7 +427,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     runWithInternalSpan("validateAndProcessSendRemoteMsg", "UserAgentPairwise") {
       implicit val reqMsgContext: ReqMsgContext = vapsrm.reqHelperData.reqMsgContext
       checkIfTheirDidDocExists()
-      checkMsgSenderIfConnectionIsNotYetEstablished(reqMsgContext.msgSenderVerKeyReq)
+      checkMsgSenderIfConnectionIsNotYetEstablished(reqMsgContext.latestMsgSenderVerKeyReq)
       checkIfMsgExists(vapsrm.sendRemoteMsg.replyToMsgId)
       vapsrm.sendRemoteMsg.replyToMsgId.foreach(state.checkIfMsgAlreadyNotInAnsweredState)
       persistAndProcessSendRemoteMsg(PersistAndProcessSendRemoteMsg(vapsrm.sendRemoteMsg, getInternalReqHelperData))
@@ -435,7 +435,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleSendMsgs(sendMsgReq: SendMsgsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
     val resourceName = ResourceUsageUtil.getMessageResourceName(sendMsgReq.msgFamilyDetail)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
@@ -629,7 +629,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleUpdateConnStatusMsg(updateConnStatus: UpdateConnStatusReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
     val resourceName = ResourceUsageUtil.getMessageResourceName(updateConnStatus.msgFamilyDetail)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     if (updateConnStatus.statusCode != CONN_STATUS_DELETED.statusCode) {

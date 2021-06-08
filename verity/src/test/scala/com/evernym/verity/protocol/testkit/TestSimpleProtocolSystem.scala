@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.testkit
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetStorageId}
 
 /**
   * It's important to test the actual objects we use in `main` as much as
@@ -40,8 +41,10 @@ class TestSystemInitProvider(rel: Option[Relationship]=None, values: Map[String,
       }
     )
 
-    if(params.initParams.nonEmpty){
+    if (params.initParams.nonEmpty){
       c.submit(c.definition.createInitMsg(params))
+      c.submit(SetStorageId(c.system.didRouter.get(c.participantId).domainId))
+      c.submit(SetDataRetentionPolicy(params.initParams.find(_.name == DATA_RETENTION_POLICY).map(_.value)))
     }
 
   }

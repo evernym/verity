@@ -1,6 +1,6 @@
 package com.evernym.verity.config
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 
 object TypeSafeConfigExperiments extends App {
   val t = """
@@ -20,8 +20,12 @@ object TypeSafeConfigExperiments extends App {
             |      }
             |      retention-policy {
             |        Cg5Cd33KWJ9rJ9XyRBnni5 {
-            |          undefined-fallback = "3 days"
-            |          "basicmessage[1.0]" = "3 days"
+            |          undefined-fallback {
+            |            expire-after-days = "3 days"
+            |          }
+            |          "basicmessage[1.0]" {
+            |             expire-after-days = "3 days"
+            |          }
             |        }
             |      }
             |      #************************
@@ -39,8 +43,12 @@ object TypeSafeConfigExperiments extends App {
             |      }
             |      retention-policy {
             |        69bJGDneUaZvpyhr5CheeW {
-            |          undefined-fallback = "3 days"
-            |          "basicmessage[1.0]" = "3 days"
+            |          undefined-fallback {
+            |            expire-after-days = "3 days"
+            |          }
+            |          "basicmessage[1.0]" {
+            |           expire-after-days = "3 days"
+            |          }
             |        }
             |      }
             |    }

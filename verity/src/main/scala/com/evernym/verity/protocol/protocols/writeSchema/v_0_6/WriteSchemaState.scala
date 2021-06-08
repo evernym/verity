@@ -2,6 +2,8 @@ package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.protocol.engine.Parameters
 
+trait Event
+
 sealed trait WriteSchemaState
 object State {
   case class Undefined() extends WriteSchemaState

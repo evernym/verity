@@ -145,7 +145,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case pis: PublicIdentityStored         => state = state.withPublicIdentity(DidPair(pis.DID, pis.verKey))
 
       //this is received for each new pairwise connection/actor that gets created
-    case ads: AgentDetailSet               => addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
+    case ads: AgentDetailSet               =>
+      if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
   }
 
   def handleRemoveComMethod(cmd: ComMethodDeleted): Unit = {
@@ -312,7 +313,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleCreateKeyMsg(createKeyReqMsg: CreateKeyReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
     val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
       .getOrElse(MSG_TYPE_CREATE_KEY)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -423,32 +424,42 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       .filterByKeyIds(authKeyIds)
       .map(_.verKey).toSet
     val existingEndpointOpt = state.myDidDoc_!.endpoints_!.findById(comMethod.id)
-    val isComMethodExistsWithSameValue = existingEndpointOpt.exists{ eep =>
+    val isComMethodExists = existingEndpointOpt.exists { eep =>
       eep.`type` == comMethod.`type` && eep.value == comMethod.value && {
         (eep.packagingContext, comMethod.packaging) match {
-          case (Some(ecmp), Some(newp)) =>
-            ecmp.packFormat.isEqual(newp.pkgType) && newp.recipientKeys.exists(_.exists(verKeys.contains))
+          case (Some(epc), Some(newp)) =>
+            epc.packFormat.isEqual(newp.pkgType) &&
+              newp.recipientKeys.exists(_.exists(verKeys.contains))
           case (None, None) => true
-          case _ => false
+          case _            => false
         }
       }
     }
-    if (! isComMethodExistsWithSameValue) {
+    if (! isComMethodExists) {
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
       state.myDidDoc_!.endpoints_!.filterByTypes(comMethod.`type`)
         .filter (_ => isOnlyOneComMethodAllowed(comMethod.`type`)).foreach { ep =>
-	      writeAndApply(ComMethodDeleted(ep.id, ep.value, "new com method will be updated (as of now only one device supported at a time)"))
-      }
-      writeAndApply(ComMethodUpdated(
-        comMethod.id,
-        comMethod.`type`,
-        comMethod.value,
-        comMethod.packaging.map{ pkg =>
-          actor.ComMethodPackaging(
-            pkg.pkgType,
-            pkg.recipientKeys.getOrElse(Set.empty).toSeq
+	        writeAndApply(
+            ComMethodDeleted(
+              ep.id,
+              ep.value,
+              "new com method will be updated (as of now only one device supported at a time)"
+            )
           )
-        }))
+        }
+      writeAndApply(
+        ComMethodUpdated(
+          comMethod.id,
+          comMethod.`type`,
+          comMethod.value,
+          comMethod.packaging.map { pkg =>
+            actor.ComMethodPackaging(
+              pkg.pkgType,
+              pkg.recipientKeys.getOrElse(Set.empty).toSeq
+            )
+          }
+        )
+      )
       logger.info(s"update com method updated - id=${comMethod.id} - type: ${comMethod.`type`} - " +
         s"value: ${comMethod.value}")
       logger.debug(
@@ -462,7 +473,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def handleUpdateComMethodMsg(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.msgSenderVerKey)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
     val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
       .getOrElse(MSG_TYPE_UPDATE_COM_METHOD)
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -706,7 +717,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse(""))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
-      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, p.msgFamilyName))
+      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
     }
 
     agencyDidPairFut().map(adp => paramMap(adp.verKey))

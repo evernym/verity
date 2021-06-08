@@ -12,6 +12,7 @@ import com.evernym.verity.testkit.BasicAsyncSpec
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.BeforeAndAfterAll
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -27,7 +28,7 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
   private def blobConfig(): Config = (new TestAppConfig)
     .config
     .withValue("verity.blob-store.storage-service", ConfigValueFactory.fromAnyRef("com.evernym.verity.storage_services.leveldb.LeveldbAPI"))
-    .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef("/tmp/verity/leveldb"))
+    .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef(s"/tmp/verity/leveldb-spec-${UUID.randomUUID().toString}"))
 
   val appConfig: AppConfig = new TestAppConfig(Some(blobConfig()))
   lazy implicit val system: ActorSystem = ActorSystemVanilla("leveldb-test-system", appConfig.config)
@@ -44,7 +45,7 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
 
     "when dealing with a small object" - {
       "should succeed in uploading" in {
-        leveldbAPI put(BUCKET, ID1, OBJ1) map { _.`type` shouldBe "leveldb" }
+        leveldbAPI put(BUCKET, ID1, OBJ1) map { _.endpoint shouldBe s"$BUCKET-$ID1" }
       }
 
       "should succeed downloading" in {
@@ -63,7 +64,7 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
 
     "when dealing with a large object" - {
       "should succeed in uploading" in {
-        leveldbAPI put(BUCKET, ID2, OBJ2) map { _.`type` shouldBe "leveldb" }
+        leveldbAPI put(BUCKET, ID2, OBJ2) map { _.endpoint shouldBe s"$BUCKET-$ID2" }
       }
 
       "should succeed downloading" in {

@@ -256,11 +256,7 @@ trait UserAgentPairwiseSpecScaffolding
   protected def restartSpecs(): Unit = {
     "when tried to restart actor" - {
       "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
-        uap ! PoisonPill
-        expectNoMessage()
-        Thread.sleep(1000)
-        uap ! GetPersistentActorDetail
-        expectMsgType[PersistentActorDetail]
+        restartPersistentActor(uap)
       }
     }
   }

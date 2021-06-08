@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
@@ -62,7 +61,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
             it: InteractionType=defaultInteractionType
            )(implicit system: TestSystem): TestEnvir = {
     val dg = odg orElse defaultControllerProvider
-    val protoReg = ProtocolRegistry[SimpleControllerProviderInputType](Entry(protoDef, defaultPinstIdResolver, dg, segmentStoreStrategy))
+    val protoReg = ProtocolRegistry[SimpleControllerProviderInputType](Entry(protoDef, defaultPinstIdResolver, dg))
     new TestEnvir(system, new Domain(name, protoReg, system, defaultInitParams), it)
   }
 
@@ -391,8 +390,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
 
       val c = container_!
 
-      val pce = ProtocolContainerElements(c.system, c.participantId, c.pinstId,
-        c.threadId, c.definition, c.segmentStoreStrategy, c.initProvider,
+      val pce = ProtocolContainerElements(c.system, c.participantId, c.pinstId, c.threadId, c.definition, c.initProvider,
         recorder, c.driver, c.journalContext.dropLastOne)
 
       val newOne = domain.containerProvider(pce).asInstanceOf[Container]

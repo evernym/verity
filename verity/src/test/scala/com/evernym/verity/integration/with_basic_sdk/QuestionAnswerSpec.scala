@@ -5,8 +5,6 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
-import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerGiven
@@ -17,11 +15,11 @@ class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -41,9 +39,7 @@ class QuestionAnswerSpec
     holderSDK.sendCreateNewKey(firstConn)
     holderSDK.sendConnReqForInvitation(firstConn, firstInvitation)
 
-    issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
-    issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
-    issuerSDK.expectMsgOnWebhook[Complete]()
+    issuerSDK.expectConnectionComplete(firstConn)
   }
 
   "IssuerSDK" - {

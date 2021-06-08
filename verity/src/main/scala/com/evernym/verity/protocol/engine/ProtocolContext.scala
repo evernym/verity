@@ -1,10 +1,12 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol._
@@ -12,8 +14,9 @@ import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
-import com.evernym.verity.protocol.engine.msg.{GivenDataRetentionPolicy, GivenDomainId, GivenSponsorRel, PersistenceFailure, StoreThreadContext}
+import com.evernym.verity.protocol.engine.msg.{PersistenceFailure, SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId, UpdateThreadContext}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
@@ -21,7 +24,7 @@ import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker
 
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * Generically holds and manages protocol state.
@@ -43,6 +46,9 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   def _threadId: Option[ThreadId] = getInFlight.threadId
   def _threadId_! : ThreadId = _threadId getOrElse { throw new RuntimeException("thread id is required") }
+  def _storageId: Option[StorageId] = getBackState.storageId
+  def _storageId_! : StorageId = _storageId getOrElse { throw new RuntimeException("storage id is required") }
+
 
   lazy val logger: Logger = getLoggerByName(s"${definition.msgFamily.protoRef.toString}")
   lazy val journalContext: JournalContext = JournalContext(pinstId.take(5))
@@ -66,7 +72,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def grantedAccessRights: Set[AccessRight] = protocol.definition.requiredAccess
 
   /* This is set during initialization of the protocol. The policy will not change throughout the protocol.*/
-  def dataRetentionPolicy: Option[String] = backState.dataRetentionPolicy
+  def dataRetentionPolicy: Option[RetentionPolicy] = backState.dataRetentionPolicy
 
   @deprecated("Use of services is deprecated. Use the instance of " +
     "ProtocolContextApi to access driver and the ability to send " +
@@ -121,13 +127,12 @@ trait ProtocolContext[P,R,M,E,S,I]
         val result = try {
           protocol.applyEvent(getState, getRoster, e)
         } catch {
-          case me: MatchError =>
-            recordWarn(s"no event handler for: ${me.getMessage}")
-            throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.toString, me)
+          case _: MatchError =>
+            throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.toString)
         }
-        val sct = Option(result).getOrElse(throw new InvalidState("applyEvent"))
-        sct._1.foreach { newState => shadowState = Option(newState) }
-        sct._2.foreach { newRoster => shadowBackState = Some(getBackState.copy(roster = newRoster)) }
+        val (updatedState, updatedRoster) = Option(result).getOrElse(throw new InvalidState("applyEvent"))
+        updatedState.foreach { newState   => shadowState = Option(newState) }
+        updatedRoster.foreach { newRoster => shadowBackState = Some(getBackState.copy(roster = newRoster)) }
     }
   }
 
@@ -204,14 +209,12 @@ trait ProtocolContext[P,R,M,E,S,I]
                 incrementReceivedOrder(frm)
                 protocol.handleProtoMsg(getState, sender.role, msg)
               } catch {
-                case me: MatchError =>
-                  recordWarn(s"no protocol message handler for: ${me.getMessage}")
+                case _: MatchError =>
                   abortTransaction()
                   throw new NoProtocolMsgHandler(
                     state.getClass.getSimpleName,
                     sender.role.map(_.toString).getOrElse("UNKNOWN"),
-                    msg.getClass.getSimpleName,
-                    me
+                    msg.getClass.getSimpleName
                   )
               }
             }
@@ -261,20 +264,22 @@ trait ProtocolContext[P,R,M,E,S,I]
         checkIfControlMsg(ctl)
         protocol.handleControl(ctl)
       } catch {
-        case me: MatchError =>
-          recordWarn(s"no control handler found: ${me.getMessage}")
-          throw new NoControlHandler(ctl.toString, me)
+        case _: MatchError =>
+          throw new NoControlHandler(ctl.getClass.getSimpleName, state.getClass.getSimpleName)
       }
     }
   }
 
   protected def applySystemEvent: ProtoSystemEvent ?=> BackState = {
-    case SetPinstId(_) => shadowBackState.getOrElse(BackState()) // kept it for backward compatibility
+    case PinstIdSet(_) => shadowBackState.getOrElse(BackState()) // kept it for backward compatibility
 
-    case SetDomainId(id) =>
+    case DomainIdSet(id) =>
       shadowBackState.getOrElse(BackState()).copy(domainId = Option(id))
 
-    case ChangePairwiseRelIds(self, other) =>
+    case StorageIdSet(id) =>
+      shadowBackState.getOrElse(BackState()).copy(storageId = Option(id))
+
+    case PairwiseRelIdsChanged(self, other) =>
       val s = shadowBackState.getOrElse(BackState())
       val newRoster = s.roster.changeSelfId(self).changeOtherId(other)
       s.copy(roster = newRoster)
@@ -282,8 +287,9 @@ trait ProtocolContext[P,R,M,E,S,I]
     case s: SponsorRel => BackState()
       shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(s))
 
-    case p: SetDataRetentionPolicy => BackState()
-      shadowBackState.getOrElse(BackState()).copy(dataRetentionPolicy = Option(p.policy))
+    case p: DataRetentionPolicySet => BackState()
+      val retentionPolicy = ConfigUtil.getPolicyFromConfigStr(p.configStr)
+      shadowBackState.getOrElse(BackState()).copy(dataRetentionPolicy = Option(retentionPolicy))
 
     case pcs: PackagingContextSet =>
       val pc = PackagingContext.init(pcs)
@@ -314,22 +320,44 @@ trait ProtocolContext[P,R,M,E,S,I]
       val mrod = shadowBackState.getOrElse(BackState()).msgOrders.getOrElse(MsgOrders(senderOrder = -1))
       val updated = mrod.copy(senderOrder = mrod.senderOrder + 1)
       shadowBackState.getOrElse(BackState()).copy(msgOrders = Option(updated))
+
+    case SegmentStored(key) =>
+      val backState = shadowBackState.getOrElse(BackState())
+      val updatedSegmentKeys = backState.allStoredSegmentKeys :+ key
+      backState.copy(allStoredSegmentKeys = updatedSegmentKeys)
+
+    case SegmentRemoved(key) =>
+      val backState = shadowBackState.getOrElse(BackState())
+      val updatedSegmentKeys = backState.allStoredSegmentKeys.filterNot(_ == key)
+      backState.copy(allStoredSegmentKeys = updatedSegmentKeys)
   }
 
   def handleInternalSystemMsg(sysMsg: InternalSystemMsg): Any = {
     sysMsg match {
-      case GivenDomainId(id)           => apply(SetDomainId(id))
-      case GivenSponsorRel(s)          => apply(s)
-      case GivenDataRetentionPolicy(p) => p.map(x => apply(SetDataRetentionPolicy(x)))
-      case stc: StoreThreadContext     =>
-        val curPackagingContext = backState.packagingContext
-        if (curPackagingContext.isEmpty) {
-          apply(PackagingContextSet(stc.pd.msgPackFormat.value))
-          apply(LegacyPackagingContextSet(stc.pd.msgTypeDeclarationFormat.value, stc.pd.usesLegacyGenMsgWrapper, stc.pd.usesLegacyBundledMsgWrapper))
+      case SetDomainId(id)              =>
+        if (backState.domainId.isEmpty) apply(DomainIdSet(id))
+      case SetStorageId(id)             =>
+        if (backState.storageId.isEmpty) apply(StorageIdSet(id))
+      case SetSponsorRel(s)             =>
+        if (backState.sponsorRel.isEmpty) apply(s)
+      case SetDataRetentionPolicy(p)    =>
+        if (backState.dataRetentionPolicy.isEmpty) p.map(x => apply(DataRetentionPolicySet(x)))
+
+      case utc: UpdateThreadContext     =>
+        if (backState.packagingContext.isEmpty) {
+          apply(PackagingContextSet(utc.pd.msgPackFormat.value))
+          apply(LegacyPackagingContextSet(utc.pd.msgTypeDeclarationFormat.value,
+            utc.pd.usesLegacyGenMsgWrapper, utc.pd.usesLegacyBundledMsgWrapper))
         }
-        stc.senderOrder.foreach(so => apply(SenderOrderSet(so)))
-        stc.receivedOrder.foreach { receivedOrder =>
-          apply(ReceivedOrdersSet(receivedOrder))
+
+        utc.senderOrder.foreach { updatedSenderOrder =>
+          if (! backState.msgOrders.map(_.senderOrder).contains(updatedSenderOrder))
+            apply(SenderOrderSet(updatedSenderOrder))
+        }
+
+        utc.receivedOrder.foreach { updatedReceivedOrder =>
+          if (! backState.msgOrders.map(_.receivedOrders).contains(updatedReceivedOrder))
+            apply(ReceivedOrdersSet(updatedReceivedOrder))
         }
     }
   }
@@ -355,11 +383,12 @@ trait ProtocolContext[P,R,M,E,S,I]
   }
 
   /**
-   * execute store segment, record events and finalizing state
+   * execute remove segments, record events and finalizing state
    * once all in-progress async services (url-shortener, wallet, ledger and segmentStorage) is executed
    */
   def postAllAsyncOpsCompleted(): Unit = {
     if (isAllAsyncOpsCompleted) {
+      removeStoredSegmentData()
       recordEvents getOrElse finalizeState
     }
   }
@@ -384,7 +413,6 @@ trait ProtocolContext[P,R,M,E,S,I]
 
     state = getState
     backState = getBackState
-
     clearShadowState()
   }
 
@@ -423,7 +451,6 @@ trait ProtocolContext[P,R,M,E,S,I]
 
       clearShadowState()
       resetAllAsyncOpCallBackHandlers()
-
       processOutputBoxes()
       processNextInboxMsg()
     }
@@ -480,7 +507,9 @@ trait ProtocolContext[P,R,M,E,S,I]
     event foreach { e =>
       advanceStateVersion()
       withLog("record event", (pinstId, e)) {
-        eventRecorder.record(pinstId, e, state, eventPersistSuccess)
+        eventRecorder.record(pinstId, e, state) { evt =>
+          eventPersistSuccess(evt)
+        }
       }
     }
     event
@@ -534,6 +563,30 @@ trait ProtocolContext[P,R,M,E,S,I]
       packagingContext.usesLegacyBundledMsgWrapper,
       msgOrders
     )
+  }
+
+  def isAnyStoredSegmentToBeDeleted: Boolean = {
+    val keysNotEmpty = getBackState.allStoredSegmentKeys.nonEmpty
+    val isDeleteOnTerminalState = dataRetentionPolicy.exists(_.elements.expireAfterTerminalState)
+    val isTerminalState = getState match {
+      case _: TerminalState => true
+      case _                => false
+    }
+    keysNotEmpty && isDeleteOnTerminalState && isTerminalState
+  }
+
+  def removeStoredSegmentData(): Unit = {
+    if (isAnyStoredSegmentToBeDeleted) {
+      getBackState.allStoredSegmentKeys.headOption.foreach { segmentKey =>
+        removeSegment(segmentKey) {
+          case Success(segmentKey) =>
+            removeStoredSegmentData()
+          case Failure(e) =>
+            logger.error("unexpected response while deleting segmented state: " + e.getMessage)
+            throw e
+        }
+      }
+    }
   }
 
   def updatedRoster(params: Seq[InitParamBase]): Roster[R] = {
@@ -596,7 +649,7 @@ trait ProtocolContext[P,R,M,E,S,I]
         tc.usesLegacyBundledMsgWrapper
       )
       submit(
-        StoreThreadContext(pc,
+        UpdateThreadContext(pc,
           tc.msgOrders.map(_.senderOrder),
           tc.msgOrders.map(_.receivedOrders)))
     }
@@ -616,7 +669,9 @@ trait ProtocolContext[P,R,M,E,S,I]
                        packagingContext: Option[PackagingContext] = None,
                        msgOrders: Option[MsgOrders] = None,
                        sponsorRel: Option[SponsorRel]=None,
-                       dataRetentionPolicy: Option[String]=None) {
+                       dataRetentionPolicy: Option[RetentionPolicy]=None,
+                       storageId: Option[StorageId]=None,
+                       allStoredSegmentKeys: Seq[SegmentKey] = Seq.empty) {
     def advanceVersion: BackState = {
       this.copy(stateVersion = this.stateVersion + 1)
     }
@@ -661,19 +716,19 @@ class PartiMsg {
   }
 }
 
-abstract class NoHandler(msg: String, me: MatchError) extends RuntimeException(msg, me)
+abstract class NoHandler(msg: String) extends RuntimeException(msg)
 
-class NoControlHandler(ctl: String, me: MatchError)
-  extends NoHandler(s"no control handler found for control message `$ctl`", me)
+class NoControlHandler(ctl: String, state: String)
+  extends NoHandler(s"no control handler found for control message `$ctl` in state `$state`")
 
-class NoEventHandler(state: String, role: String, event: String, me: MatchError)
-  extends NoHandler(s"no event handler found for event `$event` in state `$state` with role `$role`", me)
+class NoEventHandler(state: String, role: String, event: String)
+  extends NoHandler(s"no event handler found for event `$event` in state `$state` with role `$role`")
 
-class NoSystemMsgHandler(sysMsg: String, me: MatchError)
-  extends NoHandler(s"no system msg handler found for system message `$sysMsg`", me)
+class NoSystemMsgHandler(sysMsg: String, state: String)
+  extends NoHandler(s"no system msg handler found for system message `$sysMsg` in state `$state`")
 
-class NoProtocolMsgHandler(state: String, role: String, msg: String, me: MatchError)
-  extends NoHandler(s"no protocol msg handler found for message `$msg` in state `$state` with role `$role`", me)
+class NoProtocolMsgHandler(state: String, role: String, msg: String)
+  extends NoHandler(s"no protocol msg handler found for message `$msg` in state `$state` with role `$role`")
 
 object PackagingContext {
   def init(pcs: PackagingContextSet): PackagingContext =

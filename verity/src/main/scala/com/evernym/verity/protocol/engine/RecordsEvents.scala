@@ -8,6 +8,6 @@ trait RecordsEvents {
 
   def recoverState(pinstId: PinstId): (_, Vector[_]) // Returns State and Vector[Events]. TODO: Make types more clear here.
 
-  def record(pinstId: PinstId, event: Any, state: Any, cb: Any => Unit): Unit
+  def record(pinstId: PinstId, event: Any, state: Any)(cb: Any => Unit): Unit
 
 }

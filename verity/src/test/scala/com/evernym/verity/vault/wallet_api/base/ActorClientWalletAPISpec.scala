@@ -6,7 +6,7 @@ import com.evernym.verity.actor.base.{CoreActor, Done}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Minutes, Seconds, Span}
+import org.scalatest.time.{Millis, Minutes, Span}
 
 trait ActorClientWalletAPISpecBase
   extends ClientWalletAPISpecBase
@@ -20,7 +20,7 @@ trait ActorClientWalletAPISpecBase
   }
 
   override def waitForAllResponses(): Unit =  {
-    eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
+    eventually(timeout(Span(10, Minutes)), interval(Span(100, Millis))) {
       walletSetupManager ! GetStatus
       val status = expectMsgType[Status]
       successResp = status.successResp

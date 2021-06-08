@@ -1,45 +1,33 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.protocol.TerminalState
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 
 trait Event
 
-case class StateData(requests: List[ProofRequest] = List(),
-                     proposals: List[PresentationPreview] = List(),
-                     presentation: Option[ProofPresentation] = None,
-                     presentedAttributes: Option[AttributesPresented] = None,
-                     verificationResults: Option[String] = None,
-                     presentationAcknowledged: Boolean = false,
-                     agentName: Option[String] = None,
-                     logoUrl: Option[String] = None,
-                     agencyVerkey: Option[String] = None,
-                     publicDid: Option[String] = None) {
+case class StateData(
+                      requests: List[SegmentKey] = List(),
+                      proposals: List[SegmentKey] = List(),
+                      presentation: Option[SegmentKey] = None,
+                      verificationResults: Option[String] = None,
+                      presentationAcknowledged: Boolean = false,
+                      agentName: Option[String] = None,
+                      logoUrl: Option[String] = None,
+                      agencyVerkey: Option[String] = None,
+                      publicDid: Option[String] = None
+                    ) {
 
-  def addRequest(request: String): StateData = {
-    addRequest(DefaultMsgCodec.fromJson[ProofRequest](request))
+
+  def addProposal(id: SegmentKey): StateData = {
+    copy(proposals = id :: proposals)
   }
 
-  def addRequest(request: ProofRequest): StateData = {
-    copy(requests = request :: requests)
+  def addRequest(id: SegmentKey): StateData = {
+    copy(requests = id :: requests)
   }
 
-  def addProposal(attrs: Seq[PreviewAttribute], preds: Seq[PreviewPredicate]): StateData = {
-    addProposal(PresentationPreview(
-      attrs.map(a => fromEvent(a)),
-      preds.map(p => fromEvent(p)),
-    ))
-  }
-
-  def addProposal(proposal: PresentationPreview): StateData = {
-    copy(proposals = proposal :: proposals)
-  }
-
-  def addPresentation(presentation: String): StateData = {
-    copy(presentation = Some(DefaultMsgCodec.fromJson[ProofPresentation](presentation)))
-  }
-
-  def addAttributesPresented(given: String): StateData = {
-    copy(presentedAttributes = Some(DefaultMsgCodec.fromJson[AttributesPresented](given)))
+  def addPresentation(id: SegmentKey): StateData = {
+    copy(presentation = Some(id))
   }
 
   def addVerificationResults(results: String): StateData = {
@@ -74,7 +62,7 @@ case class StateData(requests: List[ProofRequest] = List(),
   }
 }
 
-sealed trait State
+trait State
 sealed trait HasData {
   def data: StateData
 }
@@ -89,24 +77,21 @@ object States {
   // Verifier States
   case class ProposalReceived(data: StateData) extends State with HasData
   case class RequestSent(data: StateData) extends State with HasData
-  case class Complete(data: StateData) extends State with HasData
-  def initRequestSent(requestStr: String): RequestSent = {
-    val req = DefaultMsgCodec.fromJson[ProofRequest](requestStr)
-    RequestSent(StateData(requests = List(req)))
-  }
-  def initProposalReceived(attrs: Seq[PreviewAttribute], preds: Seq[PreviewPredicate]): ProposalReceived = {
-    ProposalReceived(StateData().addProposal(attrs, preds))
+  case class Complete(data: StateData) extends State with HasData with TerminalState
+  def initRequestSent(id: SegmentKey): RequestSent = RequestSent(StateData(requests = List(id)))
+  def initProposalReceived(id: SegmentKey): ProposalReceived = {
+    ProposalReceived(StateData().addProposal(id))
   }
 
   // Prover States
   case class RequestReceived(data: StateData) extends State with HasData
   case class ProposalSent(data: StateData) extends State with HasData
-  case class Presented(data: StateData) extends State with HasData
-  def initRequestReceived(requestStr: String): RequestReceived = {
-    val req = DefaultMsgCodec.fromJson[ProofRequest](requestStr)
-    RequestReceived(StateData(requests = List(req)))
+  case class Presented(data: StateData) extends State with HasData with TerminalState
+  def initRequestReceived(id: SegmentKey): RequestReceived = {
+    RequestReceived(StateData(requests = List(id)))
   }
-  def initProposalSent(attrs: Seq[PreviewAttribute], preds: Seq[PreviewPredicate]): ProposalSent = {
-    ProposalSent(StateData().addProposal(attrs, preds))
+
+  def initProposalSent(id: SegmentKey): ProposalSent = {
+    ProposalSent(StateData().addProposal(id))
   }
 }

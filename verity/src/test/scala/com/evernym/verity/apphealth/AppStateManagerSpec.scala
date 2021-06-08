@@ -13,7 +13,7 @@ import com.evernym.verity.testkit.{BasicFixtureSpec, CancelGloballyAfterFailure}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.Outcome
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.util.Try
 
@@ -46,7 +46,7 @@ class AppStateManagerSpec
           publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
             new RuntimeException("exception message"), msg = Option(CAUSE_MESSAGE_MILD_SYSTEM_ERROR)))
 
-          eventually(timeout(Span(5, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
             withLatestAppState { implicit las =>
               las.currentState shouldBe DegradedState
 
@@ -196,7 +196,7 @@ class AppStateManagerSpec
     publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_GENERAL, CAUSE_DETAIL_LISTENING_SUCCESSFULLY,
         msg = Option(CAUSE_MESSAGE_LISTENING_SUCCESSFULLY)))
 
-    eventually(timeout(Span(5, Seconds)), interval(Span(1, Seconds))) {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       withLatestAppState { implicit las =>
         las.currentState shouldBe ListeningState
 
@@ -238,7 +238,7 @@ class AppStateManagerSpec
         msg = Option(CAUSE_MESSAGE_DRAINING_STARTED)
       ))
 
-    eventually(timeout(Span(7, Seconds)), interval(Span(1, Seconds))) {
+    eventually(timeout(Span(7, Seconds)), interval(Span(100, Millis))) {
       withLatestAppState { implicit las =>
         las.currentState shouldBe DrainingState
 
@@ -256,7 +256,7 @@ class AppStateManagerSpec
     }
 
     val cluster = Cluster(system)
-    eventually(timeout(Span(7, Seconds)), interval(Span(2, Seconds))) {
+    eventually(timeout(Span(7, Seconds)), interval(Span(200, Millis))) {
       List(Down, Removed).contains(cluster.selfMember.status) shouldBe true
     }
   }
@@ -326,7 +326,7 @@ class AppStateManagerSpec
     val fixture = new AppStateManagerTestKit(this, appConfig)
     val r = super.withFixture(test.toNoArgTest(fixture))
     Try(fixture.stop())   //best effort to stop the app state manager actor
-    Thread.sleep(1000)  //just to make sure the app state manager actor gets stopped
+    Thread.sleep(100)  //just to make sure the app state manager actor gets stopped
     r
   }
 

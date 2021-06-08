@@ -6,7 +6,7 @@ import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.{ItemManagerConfigNotYetSet, _}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.typesafe.config.Config
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 class TimeBasedMovingItemManagerSpec extends ItemManagerSpecBase {
@@ -207,7 +207,7 @@ class TimeBasedMovingItemManagerSpec extends ItemManagerSpecBase {
       "should have moved to new item container" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
         //Note: eventually item should be moved to latest container
         val item2OriginalContainerEntityId = getOriginalItemContainerEntityId(ITEM_ID_2)
-        eventually(timeout(Span(15, Seconds)), interval(Span(3, Seconds))) {
+        eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
 
           sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_2))
           expectMsgPF() {
@@ -218,7 +218,7 @@ class TimeBasedMovingItemManagerSpec extends ItemManagerSpecBase {
         }
         //Note: and then previous obsolete container should have cleaned up its storage
         val item2PostMigrationContainerEntityId = getLastKnownItemContainerEntityId(ITEM_ID_2)
-        eventually(timeout(Span(15, Seconds)), interval(Span(3, Seconds))) {
+        eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
           sendExternalCmdToItemContainer(item2PostMigrationContainerEntityId, GetState)
           expectMsgPF() {
             case ics: ItemContainerState

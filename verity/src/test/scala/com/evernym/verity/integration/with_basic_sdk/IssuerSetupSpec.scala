@@ -12,7 +12,7 @@ class IssuerSetupSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
 
   override def beforeAll(): Unit = {

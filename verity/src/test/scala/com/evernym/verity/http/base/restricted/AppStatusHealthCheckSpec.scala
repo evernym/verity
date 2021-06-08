@@ -10,7 +10,7 @@ import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.restricted.UpdateAppStatus
 import com.evernym.verity.{AppVersion, BuildInfo}
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 trait AppStatusHealthCheckSpec { this : EdgeEndpointBaseSpec =>
@@ -62,7 +62,7 @@ trait AppStatusHealthCheckSpec { this : EdgeEndpointBaseSpec =>
 
         switchAppToListeningSate()
 
-        eventually(timeout(Span(5, Seconds)), interval(Span(2, Seconds))) {
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
           buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
             status shouldBe OK
             val appState = responseTo[AppStateDetailedResp]

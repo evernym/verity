@@ -130,19 +130,18 @@ object ProtocolRegistry {
     */
   case class Entry[-A](protoDef: ProtoDef,
                        pinstIdResol: PinstIdResolver,
-                       driverGen: DriverGen[A]=None,
-                       segmentStoreStrategy: Option[SegmentStoreStrategy]=None)
+                       driverGen: DriverGen[A]=None)
 
   implicit def Func2OptFunc[A](func: Function[A,Driver]): Option[Function[A,Driver]] = Option(func)
-  implicit def DefResol2Entry[A](t: (ProtoDef, PinstIdResolver)): Entry[A] = Entry(t._1, t._2, None, None)
+  implicit def DefResol2Entry[A](t: (ProtoDef, PinstIdResolver)): Entry[A] = Entry(t._1, t._2, None)
   implicit def DefResolDriver2Entry[A](t: (ProtoDef, PinstIdResolver, Function[A,Driver])): Entry[A] = {
-    Entry(t._1, t._2, Option(t._3), None)
+    Entry(t._1, t._2, Option(t._3))
   }
   implicit def DefResolStoreStrategy2Entry[A](t: (ProtoDef, PinstIdResolver, SegmentStoreStrategy)): Entry[A] = {
-    Entry(t._1, t._2, None, Option(t._3))
+    Entry(t._1, t._2, None)
   }
   implicit def FullTuple2Entry[A](t: (ProtoDef, PinstIdResolver, Function[A,Driver], SegmentStoreStrategy)): Entry[A] = {
-    Entry(t._1, t._2, Option(t._3), Option(t._4))
+    Entry(t._1, t._2, Option(t._3))
   }
 
 }

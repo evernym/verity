@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.testkit.EventFilter
-import ch.qos.logback.classic.Level
 import com.evernym.verity.Status
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ItemUpdated, ShardUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat
@@ -11,7 +10,7 @@ import com.evernym.verity.actor.base.{Done, Ping, Stop}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
 import com.evernym.verity.actor.itemmanager.ItemContainerMapper
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.testkit.{ActorSpec, WithAdditionalLogs}
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId
@@ -29,11 +28,9 @@ class FailedMsgRetrierSpec
   extends ActorSpec
     with BasicSpec
     with ShardUtil
-    with WithAdditionalLogs
     with Eventually
     with BeforeAndAfterAll {
 
-  override def toLevel: Level = Level.DEBUG
   lazy val mockAgentRegion: ActorRef = createPersistentRegion(MockAgentActor.name, MockAgentActor.props(appConfig))
 
   override def beforeAll(): Unit = {
@@ -121,6 +118,7 @@ class FailedMsgRetrierSpec
 
          akka.loglevel = DEBUG
          akka.test.filter-leeway = 20s   # to make the event filter run for longer time
+         akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
       """
     )
   }

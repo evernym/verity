@@ -28,8 +28,7 @@ class ActorProtocol(val protoDef: ProtoDef) {
   def region(implicit system: ActorSystem): ActorRef = ClusterSharding(system).shardRegion(typeName)
 
   def props(agentActorContext: AgentActorContext): Props = {
-    val sss = agentActorContext.protocolRegistry.entries.find(_.protoDef == protoDef).flatMap(_.segmentStoreStrategy)
-    Props(classOf[ActorProtocolContainer[_, _, _, _, _, _, _]], agentActorContext, protoDef, sss)
+    Props(classOf[ActorProtocolContainer[_, _, _, _, _, _, _]], agentActorContext, protoDef)
   }
 
 }

@@ -19,11 +19,11 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
 
   private def handleExtendedCmd: Receive = {
     case p: Ping        =>
-      if (p.sendBackConfirmation) sender ! Done
+      if (p.sendAck) sender ! Done
 
     case s: Stop        =>
       stopActor()
-      if (s.sendBackConfirmation) sender ! Done
+      if (s.sendAck) sender ! Done
 
     case ReceiveTimeout => handleReceiveTimeout()
   }
@@ -52,5 +52,5 @@ abstract class SerializableObject extends Serializable with ActorMessage
 case object Done extends SerializableObject
 case object AlreadyDone extends SerializableObject
 case object NotFound extends SerializableObject
-case class Ping(sendBackConfirmation: Boolean = false) extends ActorMessage
-case class Stop(sendBackConfirmation: Boolean = false) extends ActorMessage
+case class Ping(sendAck: Boolean = false) extends ActorMessage
+case class Stop(sendAck: Boolean = false) extends ActorMessage

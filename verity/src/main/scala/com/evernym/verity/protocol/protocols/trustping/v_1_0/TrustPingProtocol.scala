@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
 
 class TrustPingProtocol(implicit val ctx: ProtocolContextApi[TrustPingProtocol, Role, Msg, Event, State, String])
   extends Protocol[TrustPingProtocol, Role, Msg, Event, State, String](TrustPingDefinition)

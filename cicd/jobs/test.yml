@@ -1,0 +1,137 @@
+.test:
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.sbt/
+      - $CI_PROJECT_DIR/.ivy2/
+  stage: test
+  before_script:
+    - mkdir -p $CI_PROJECT_DIR/.sbt && cp -r ~/.sbt/* $CI_PROJECT_DIR/.sbt/.
+  tags:
+    - docker-machine
+    - general-xlarge
+
+unit-test:
+  extends: .test
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  script:
+    - devops/scripts/test/docker-unit-tests $CI_PROJECT_DIR
+
+.static-analysis: # This test don't work and is currently not providing value
+  extends: .test
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - verity/target/scala-*/scapegoat-report
+  script:
+    - devops/scripts/test/docker-static-code-analysis $CI_PROJECT_DIR
+  allow_failure: true # Eventually this will be removed and we will have a zero error/warning policy
+
+.integration-common:
+  extends: .test
+  variables:
+    # General vars
+    MESSAGE_PROGRESS_TRACKING_ENABLED: "true"
+
+    # For the integration tests to set up a usable bucket
+    BLOB_BUCKET: "blob-bucket"
+    BLOB_S3_ENDPOINT: "http://s3server:8000"
+
+    # These are used by the s3 service in .integration jobs
+    REMOTE_MANAGEMENT_DISABLE: 1
+    ENDPOINT: "s3server"
+
+    # Ledger Pool
+    POOL_HOST: "indy-pool"
+    TAA_ENABLE: "true"
+
+    # For MYSQL docker container service
+    MYSQL_ROOT_PASSWORD: "root"
+    MYSQL_DATABASE: "wallet"
+    MYSQL_USER: "msuser"
+    MYSQL_PASSWORD: "mspassword"
+
+    # For yourls service
+    YOURLS_SITE: "http://yourls"
+    YOURLS_USER: "yourlsuser"
+    YOURLS_PASS: "yourlspass"
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - integration-tests/target/scalatest-runs
+    when: always
+  script:
+    - devops/scripts/test/retrieve-genesis-txn
+    - devops/scripts/s3server/s3_init.sh
+    - devops/scripts/yourls/yourls_init.sh
+    - devops/scripts/test/docker-integration-tests $CI_PROJECT_DIR
+  services:
+    - name: registry.gitlab.com/evernym/containers/indy-pool:${indyNodeVersion}_${sovtokenVersion}
+      alias: indy-pool
+    - name: registry.gitlab.com/evernym/containers/verity-mysql-wallet:288429c3
+      alias: mysql
+    - name: registry.gitlab.com/evernym/containers/verity-dynamodb:20b4ceda
+      alias: dynamodb
+    - name: zenko/cloudserver
+      alias: s3server # use endpoint_url value of http://s3server:8000
+      entrypoint: [ '/usr/src/app/docker-entrypoint.sh' ]
+      command: [ 'yarn', 'start', 'mem_backend' ]
+    - name: registry.gitlab.com/evernym/containers/yourls-mysql:f2d0fff1
+      alias: yourls
+
+legacy:
+  extends: .integration-common
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Legacy"
+    TEST_SCENARIOS: "scenario1, scenario2"
+
+legacy-with-restart:
+  extends: .integration-common
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Legacy"
+    TEST_SCENARIOS: "scenario1"
+    TEST_RESTART_VERITY_RANDOMLY: "true"
+
+integration:
+  extends: .integration-common
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Integration"
+
+limits:
+  extends: .integration-common
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  variables:
+    TEST_TYPE: "Limits"

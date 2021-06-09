@@ -9,7 +9,7 @@ import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import org.scalatest.concurrent.Eventually
-import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec, PlatformInitialized}
+import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec, PlatformInitialized}
 
 
 class MsgRespTimeTrackerShardedSpec
@@ -19,7 +19,7 @@ class MsgRespTimeTrackerShardedSpec
     with BasicSpec
     with ImplicitSender
     with MsgRespTimeTracker
-    with AddMetricsReporter
+    with MetricsReadHelper
     with Eventually {
 
   implicit lazy val system: ActorSystem = AkkaTestBasic.system()

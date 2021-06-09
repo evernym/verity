@@ -1,12 +1,11 @@
 package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
 import java.util.UUID
-
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.StandardTypeFormat
 import com.evernym.verity.protocol.engine.DEFAULT_THREAD_ID
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.testkit.BasicSpec
 
 

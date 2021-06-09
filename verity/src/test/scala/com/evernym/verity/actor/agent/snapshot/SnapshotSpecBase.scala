@@ -6,28 +6,29 @@ import com.evernym.verity.actor.persistence.stdPersistenceId
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
+import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec}
 import com.evernym.verity.transformations.transformers.v1.createPersistenceTransformerV1
 import com.evernym.verity.util.Util
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 trait SnapshotSpecBase
   extends AgentSpecHelper
     with HasTransformationRegistry
-    with AddMetricsReporter
+    with MetricsReadHelper
     with Eventually { this: PersistentActorSpec with BasicSpec =>
 
   def checkStateSizeMetrics(actorClass: String, expectSize: Double): Unit = {
-    java.lang.Thread.sleep(5000)    //to make sure metrics are recorded and available to read by this time
-    val stateSizeMetrics =
-      getFilteredMetrics(
-        "as.akka.actor.agent.state",
-        Map("actor_class" -> actorClass))
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      val stateSizeMetrics =
+        getFilteredMetrics(
+          "as.akka.actor.agent.state",
+          Map("actor_class" -> actorClass))
 
-    stateSizeMetrics.size shouldBe 12   //histogram metrics
-    stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
-      checkStateSizeSum(v.value, expectSize)
+      stateSizeMetrics.size shouldBe 12 //histogram metrics
+      stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
+        checkStateSizeSum(v.value, expectSize)
+      }
     }
   }
 
@@ -42,7 +43,7 @@ trait SnapshotSpecBase
                            expectedPersistedSnapshots: Int,
                            protoInstancesSize: Int)
   : Unit = {
-    eventually(timeout(Span(5, Seconds)), interval(Span(2, Seconds))) {
+    eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
       val actualPersistedEvents = persTestKit.persistedInStorage(persId)
       actualPersistedEvents.size shouldBe expectedPersistedEvents
       val actualPersistedSnapshots = snapTestKit.persistedInStorage(persId).map(_._2)

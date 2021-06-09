@@ -12,32 +12,32 @@ trait ResourceWarningStatusMngrCommon {
   /**
    * mapping between entity id and its warning status (warn & unwarn both)
    */
-  protected var resourceWarningStatus = Map.empty[EntityId, EntityWarningStatus]
+  protected var entityWarningStatus = Map.empty[EntityId, EntityWarningStatus]
 
   val processEvent: PartialFunction[Any, Unit] = {
     case cw: CallerWarned =>
-      val uws = resourceWarningStatus.getOrElse(cw.callerId, getEmptyEntityWarningStatus)
+      val uws = entityWarningStatus.getOrElse(cw.callerId, getEmptyEntityWarningStatus)
       val newUws = uws.copy(status = updateWarningDetail(cw.warnFrom, cw.warnPeriod, uws.status))
-      resourceWarningStatus = resourceWarningStatus + (cw.callerId -> newUws)
+      entityWarningStatus = entityWarningStatus + (cw.callerId -> newUws)
 
     case crw: CallerResourceWarned =>
-      val uws = resourceWarningStatus.getOrElse(crw.callerId, EntityWarningStatus(buildEmptyWarningDetail, Map.empty))
+      val uws = entityWarningStatus.getOrElse(crw.callerId, EntityWarningStatus(buildEmptyWarningDetail, Map.empty))
       val urwd = uws.resourcesStatus.getOrElse(crw.resourceName, buildEmptyWarningDetail)
       val newUrws = uws.resourcesStatus + (crw.resourceName -> updateWarningDetail(crw.warnFrom, crw.warnPeriod, urwd))
       val newUws = uws.copy(resourcesStatus = newUrws)
-      resourceWarningStatus = resourceWarningStatus + (crw.callerId -> newUws)
+      entityWarningStatus = entityWarningStatus + (crw.callerId -> newUws)
 
     case cuw: CallerUnwarned =>
-      val uws = resourceWarningStatus.getOrElse(cuw.callerId, getEmptyEntityWarningStatus)
+      val uws = entityWarningStatus.getOrElse(cuw.callerId, getEmptyEntityWarningStatus)
       val newUws = uws.copy(status = updateUnwarningDetail(cuw.unwarnFrom, cuw.unwarnPeriod, uws.status))
-      resourceWarningStatus = resourceWarningStatus + (cuw.callerId -> newUws)
+      entityWarningStatus = entityWarningStatus + (cuw.callerId -> newUws)
 
     case cruw: CallerResourceUnwarned =>
-      val uws = resourceWarningStatus.getOrElse(cruw.callerId, EntityWarningStatus(buildEmptyWarningDetail, Map.empty))
+      val uws = entityWarningStatus.getOrElse(cruw.callerId, EntityWarningStatus(buildEmptyWarningDetail, Map.empty))
       val urwd = uws.resourcesStatus.getOrElse(cruw.resourceName, buildEmptyWarningDetail)
       val newUrws = uws.resourcesStatus + (cruw.resourceName -> updateUnwarningDetail(cruw.unwarnFrom, cruw.unwarnPeriod, urwd))
       val newUws = uws.copy(resourcesStatus = newUrws)
-      resourceWarningStatus = resourceWarningStatus + (cruw.callerId -> newUws)
+      entityWarningStatus = entityWarningStatus + (cruw.callerId -> newUws)
   }
 
   /**
@@ -126,17 +126,17 @@ trait ResourceWarningStatusMngrCommon {
 
   def getOnlyWarned(onlyActive: Boolean=true):  Map[EntityId, EntityWarningStatus] = {
     val curDateTime = if (onlyActive) Option(getCurrentUTCZonedDateTime) else None
-    filterWarnedUserResources(resourceWarningStatus, curDateTime)
+    filterWarnedUserResources(entityWarningStatus, curDateTime)
   }
 
   def getOnlyUnwarned(onlyActive: Boolean=true):  Map[EntityId, EntityWarningStatus] = {
     val curDateTime = if (onlyActive) Option(getCurrentUTCZonedDateTime) else None
-    filterUnwarnedUserResources(resourceWarningStatus, curDateTime)
+    filterUnwarnedUserResources(entityWarningStatus, curDateTime)
   }
 
   def getAll(onlyActive: Boolean=true):  Map[EntityId, EntityWarningStatus] = {
     val curDateTime = if (onlyActive) Option(getCurrentUTCZonedDateTime) else None
-    filterAllResources(resourceWarningStatus, curDateTime)
+    filterAllResources(entityWarningStatus, curDateTime)
   }
 
   def updateWarningDetail(warnFrom: Long, warnPeriod: Long, toWarningDetail: WarningDetail): WarningDetail = {

@@ -82,7 +82,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def handleGetWarnedList(onlyWarned: String, onlyUnwarned: String, onlyActive: String,
-                          ids: Option[String], resourceNames: Option[String]): Route = {
+                                    ids: Option[String], resourceNames: Option[String]): Route = {
     complete {
       val gwlc = GetWarnedList(onlyWarned, onlyUnwarned, onlyActive, inChunks = false, ids, resourceNames)
       getWarnedResources(gwlc).map[ToResponseMarshallable] {
@@ -93,7 +93,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def handleGetBlockedList(onlyBlocked: String, onlyUnblocked: String, onlyActive: String,
-                           ids: Option[String], resourceNames: Option[String]): Route = {
+                                     ids: Option[String], resourceNames: Option[String]): Route = {
     complete {
       val gblc = GetBlockedList(onlyBlocked, onlyUnblocked, onlyActive, inChunks = false, ids, resourceNames)
       getBlockedResources(gblc).map[ToResponseMarshallable] {
@@ -182,9 +182,9 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
                         }
                       } ~
                       pathPrefix("resource") {
-                        pathPrefix(Segment) { resource =>
+                        pathPrefix(Segments(1, 2)) { resourceSegments =>
                           (put & pathEnd & entityAs[UpdateViolationDetail]) { uvd =>
-                            handleUpdateResourceDetail(callerId, resource, uvd)
+                            handleUpdateResourceDetail(callerId, resourceSegments.mkString("/"), uvd)
                           }
                         }
                       }
@@ -203,12 +203,14 @@ case class UpdateViolationDetail(msgType: String,
                                  allResources: Option[String])
 
 case class ResourceUsageLimitDetail(resourceName: String, bucketId: Int,
-                                    newLimit: Option[Int]=None, addToCurrentUsedCount: Option[Int]=None) {
-  require(! (newLimit.isEmpty && addToCurrentUsedCount.isEmpty),
+                                    newLimit: Option[Int] = None, addToCurrentUsedCount: Option[Int] = None) {
+  require(!(newLimit.isEmpty && addToCurrentUsedCount.isEmpty),
     "one and only one of these should be specified: 'newLimit' or 'addToCurrentUsedCount'")
 }
+
 case class UpdateResourcesUsageLimit(resourceUsageLimits: List[ResourceUsageLimitDetail])
 
 
 case class ResourceUsageCounterDetail(resourceName: String, bucketId: Int, newCount: Option[Int])
+
 case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessage

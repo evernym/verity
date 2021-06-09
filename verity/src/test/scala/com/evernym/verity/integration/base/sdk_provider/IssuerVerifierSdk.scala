@@ -18,13 +18,13 @@ import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.{MsgFamily, VerKey}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent}
+import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnRequestReceived, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
-import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.ConfigResult
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
-import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
 import java.util.UUID
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -37,6 +37,15 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
 
+  def expectConnectionComplete(connId: ConnId): Complete = {
+    val msgReceived = expectMsgOnWebhook[ConnRequestReceived]()
+    val conn = msgReceived.msg.conn
+    val theirDIDDoc = conn.DIDDoc.toDIDDoc
+    val updatedPairwiseRel = myPairwiseRelationships(connId).copy(theirDIDDoc = Option(theirDIDDoc))
+    myPairwiseRelationships += (connId -> updatedPairwiseRel)
+    expectMsgOnWebhook[ConnResponseSent]()
+    expectMsgOnWebhook[Complete]().msg
+  }
   /**
    *
    * @param msg the message to be sent
@@ -98,7 +107,7 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
   }
 
   def msgListener: MsgListenerBase[_]
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T]
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
 }
 
 /**
@@ -158,7 +167,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
    * @tparam T expected message type
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     unpackMsg(msg)
   }
@@ -293,7 +302,7 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
    * @tparam T
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     ReceivedMsgParam(msg)
   }

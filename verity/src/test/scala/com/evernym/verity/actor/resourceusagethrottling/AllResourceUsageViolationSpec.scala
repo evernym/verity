@@ -95,11 +95,11 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
 
     assert(endpointAllError.respCode.equals("GNR-123") && endpointAllError.getMessage.equals("usage blocked"))
 
-    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_AGENT", ipAddress, None)
+    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "agent-provisioning/CREATE_AGENT", ipAddress, None)
     sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_KEY", ipAddress, None)
-    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_MSG_connReq", ipAddress, None)
+    sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "connecting/CREATE_MSG_connReq", ipAddress, None)
     val messageAllError = intercept[BadRequestErrorException] {
-      sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "CREATE_MSG_connReqAnswer", ipAddress, None)
+      sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "connecting/CREATE_MSG_connReqAnswer", ipAddress, None)
     }
 
     assert(messageAllError.respCode.equals("GNR-123") && endpointAllError.getMessage.equals("usage blocked"))
@@ -144,14 +144,11 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
       // Block resource with a period of 0 to clear/delete the block instead of unblock indefinitely
       singletonParentProxy ! ForResourceBlockingStatusMngr(
         BlockResourceForCaller(ipAddress, resourceName, blockPeriod=Option(0)))
-      // FIXME: Why is BlockResourceForCaller responded with CallerResourceBlocked twice?
-      for (_ <- 1 to 2) {
-        expectMsgPF() {
-          case rbl: CallerResourceBlocked =>
-            rbl.callerId shouldBe ipAddress
-            rbl.resourceName shouldBe resourceName
-            rbl.blockPeriod shouldBe 0
-        }
+      expectMsgPF() {
+        case rbl: CallerResourceBlocked =>
+          rbl.callerId shouldBe ipAddress
+          rbl.resourceName shouldBe resourceName
+          rbl.blockPeriod shouldBe 0
       }
     }
 

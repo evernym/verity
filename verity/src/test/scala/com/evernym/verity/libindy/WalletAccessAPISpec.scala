@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessPack, AccessRight, AccessSign, AccessStoreTheirDiD, AccessUnPack, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner}
@@ -11,6 +12,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, Wall
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.ParticipantUtil
+import com.typesafe.scalalogging.Logger
 
 import scala.util.{Failure, Success}
 
@@ -106,4 +108,5 @@ class WalletAccessAPISpec
   override def runAsyncOp(op: => Any): Unit = op
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}
+  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
 }

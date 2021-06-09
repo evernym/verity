@@ -117,7 +117,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           path("stop") {
             (post & pathEnd) {
               complete {
-                sendToRouteMaintenanceHelper(taskId, Stop(sendBackConfirmation = true)).map[ToResponseMarshallable] {
+                sendToRouteMaintenanceHelper(taskId, Stop(sendAck = true)).map[ToResponseMarshallable] {
                   case Done => OK
                   case e => handleUnexpectedResponse(e)
                 }

@@ -30,13 +30,13 @@ class UserAgentRecoverySpec
         uaRegion ! GetPersistentActorDetail
         expectMsgType[PersistentActorDetail]
 
-        val walletServiceCountBeforeRestart = getWalletAPICallCount
+        val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
         val uaEventsBeforeRestart = getEvents(mySelfRelAgentPersistenceId)
         uaEventsBeforeRestart shouldBe uaEventsBeforeStart  ++ getAuthKeyAddedEvents(List(mySelfRelDIDPair, mySelfRelAgentDIDPair))
 
         restartActor(uaRegion)
 
-        val walletServiceCountAfterRestart = getWalletAPICallCount
+        val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric
         val uaEventsAfterRestart = getEvents(mySelfRelAgentPersistenceId)
 
         walletServiceCountAfterRestart shouldBe walletServiceCountBeforeRestart

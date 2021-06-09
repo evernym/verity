@@ -4,7 +4,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Future
 
@@ -14,7 +14,7 @@ class AllClusterNodeRestartSpec
     with SdkProvider
     with Eventually {
 
-  lazy val verityEnv = setupNewVerityEnv(nodeCount = 3)
+  lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build()
   lazy val issuerSDK = setupIssuerSdk(verityEnv)
 
   "VerityAdmin" - {
@@ -23,7 +23,7 @@ class AllClusterNodeRestartSpec
 
       "when checked if all nodes are up" - {
         "should be successful" in {
-          eventually(timeout(Span(20, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
             verityEnv.checkIfNodesAreUp() shouldBe true
             verityEnv.availableNodes.size shouldBe 3
           }
@@ -38,11 +38,10 @@ class AllClusterNodeRestartSpec
         }
       }
 
-      "when try to restart all node parallely" - {
+      "when try to restart all nodes" - {
         "should be successful" in {
-          verityEnv.availableNodes.foreach(node => Future(node.restart()))
-          Thread.sleep(5000)    //wait for some time to make sure restart process started
-          eventually(timeout(Span(30, Seconds)), interval(Span(3, Seconds))) {
+          verityEnv.availableNodes.foreach(node => node.restart())
+          eventually(timeout(Span(30, Seconds)), interval(Span(100, Millis))) {
             verityEnv.availableNodes.size shouldBe 3
           }
         }
@@ -59,5 +58,3 @@ class AllClusterNodeRestartSpec
   }
 
 }
-
-

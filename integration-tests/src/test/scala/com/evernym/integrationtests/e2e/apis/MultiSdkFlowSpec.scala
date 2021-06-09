@@ -12,7 +12,7 @@ import com.evernym.verity.config.ConfigUtilBaseSpec
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
@@ -21,7 +21,6 @@ import org.scalatest.concurrent.Eventually
 
 import java.io.IOException
 import java.util.UUID
-
 import scala.util.Random
 
 class MultiSdkFlowSpec
@@ -33,6 +32,7 @@ class MultiSdkFlowSpec
   with ConfigUtilBaseSpec
   with VerityConfigFlow
   with AdminFlow
+  with CancelGloballyAfterFailure
   with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)

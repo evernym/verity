@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class Listener {
     private Integer port;
@@ -52,7 +53,7 @@ public class Listener {
     }
 
     public void stop() {
-        server.stop();
+        server.shutdown(1, TimeUnit.SECONDS);
     }
 
     static class StdErrorExceptionLogger implements ExceptionLogger {
@@ -60,7 +61,7 @@ public class Listener {
         @Override
         public void log(final Exception ex) {
             if (ex instanceof SocketTimeoutException) {
-                logger.error("Connection timed out");
+                logger.error("Connection timed out -- " + ex.getMessage());
             } else if (ex instanceof ConnectionClosedException) {
                 logger.debug("ConnectionClosedException: "+ex.getMessage());
             } else {

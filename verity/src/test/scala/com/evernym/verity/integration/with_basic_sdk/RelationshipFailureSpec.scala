@@ -7,20 +7,22 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.integration.base.{VerityEnv, VerityProviderBaseSpec}
+import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{CurrentPublicIdentifier, PublicIdentifier, PublicIdentifierCreated, Create => CreatePublicIdentifier}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSConnectionInvitation, SMSOutOfBandInvitation}
 
 import java.nio.charset.Charset
 
+
 class RelationshipFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  lazy val issuerVerityApp: VerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityApp: VerityEnv = VerityEnvBuilder.default().build()
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp)
   val connId = "connId1"
 

@@ -18,6 +18,7 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 trait AgentSpecHelper
@@ -103,11 +104,11 @@ trait AgentSpecHelper
   }
 
   protected def restartPersistentActor(ar: agentRegion): Unit = {
-    Thread.sleep(2000)
     ar ! PoisonPill
     expectNoMessage()
-    Thread.sleep(2000)
-    ar ! GetPersistentActorDetail
-    expectMsgType[PersistentActorDetail]
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      ar ! GetPersistentActorDetail
+      expectMsgType[PersistentActorDetail]
+    }
   }
 }

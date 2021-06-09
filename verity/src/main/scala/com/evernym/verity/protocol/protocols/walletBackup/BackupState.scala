@@ -1,19 +1,20 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.protocol.protocols.walletBackup.legacy.LegacyState
 
-sealed trait BackupState
+trait BackupState
 
-sealed trait State
-object State {
+trait State
+
+object State extends LegacyState {
   // General
   case class Uninitialized() extends BackupState
   case class Initialized() extends BackupState
 
   // Persister
   case class RecoveryModeRequested(vk: VerKey) extends BackupState
-  case class ReadyToPersistBackup(vk: VerKey, lastWallet: Option[Array[Byte]]) extends BackupState
-  case class ReadyToPersistBackupInBlob(vk: VerKey, blobAddress: String) extends BackupState
+  case class ReadyToPersistBackupRef(vk: VerKey, blobAddress: String) extends BackupState
 
   // Exporter
   case class BackupInitRequested() extends BackupState

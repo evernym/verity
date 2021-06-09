@@ -2,17 +2,18 @@ package com.evernym.verity.metrics
 
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SpanUtil._
-import com.evernym.verity.testkit.{AddMetricsReporter, BasicSpec}
+import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec}
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
+
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import scala.concurrent.Future
 
-class SpanSpec extends BasicSpec with AddMetricsReporter with Eventually {
+class SpanSpec extends BasicSpec with MetricsReadHelper with Eventually {
 
   "runWithInternalSpan" - {
     "when tested with synchronous code" - {
@@ -45,7 +46,7 @@ class SpanSpec extends BasicSpec with AddMetricsReporter with Eventually {
   }
 
   def checkSpan(metricName: String, opName: String, componentName:String, expectMinValue: Double): Unit = {
-    eventually (timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+    eventually (timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
       val metrics =  MetricsReader.getNodeMetrics().metrics
       val filteredMetric = metrics
           .filter(_.name == metricName)

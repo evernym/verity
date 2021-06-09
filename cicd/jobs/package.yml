@@ -1,0 +1,38 @@
+.package-common:
+  stage: package
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - verity/target/docker
+      - verity/target/scala-2.12/verity-assembly-*.jar
+      - verity/target/*.deb
+    when: always
+  cache:
+    paths:
+      - $CI_PROJECT_DIR/.sbt/
+      - $CI_PROJECT_DIR/.ivy2/
+  script:
+    - cd $CI_PROJECT_DIR
+    - sbt assembly
+    - sbt verity/k8sDockerPackage
+    - sbt debian:packageBin
+  tags:
+    - docker-machine
+    - large
+
+package:
+  extends: .package-common
+  only:
+    refs:
+      - master@dev/verity/verity
+      - main@evernym/verity/verity
+
+package-manual:
+  extends: .package-common
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  when: manual

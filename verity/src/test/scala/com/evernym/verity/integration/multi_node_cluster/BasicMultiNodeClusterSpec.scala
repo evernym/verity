@@ -3,7 +3,7 @@ package com.evernym.verity.integration.multi_node_cluster
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 class BasicMultiNodeClusterSpec
@@ -11,7 +11,7 @@ class BasicMultiNodeClusterSpec
     with SdkProvider
     with Eventually {
 
-  lazy val verityEnv = setupNewVerityEnv(nodeCount = 3)
+  lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build()
   lazy val issuerSDK = setupIssuerSdk(verityEnv)
 
   "VerityAdmin" - {
@@ -20,7 +20,7 @@ class BasicMultiNodeClusterSpec
 
       "when checked if all nodes are up" - {
         "should be successful" in {
-          eventually(timeout(Span(20, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
             verityEnv.checkIfNodesAreUp() shouldBe true
             verityEnv.availableNodes.size shouldBe 3
           }

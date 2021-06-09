@@ -1,7 +1,7 @@
 package com.evernym.verity.vault.wallet_api.base
 
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Minutes, Seconds, Span}
+import org.scalatest.time.{Millis, Minutes, Span}
 
 
 trait NonActorClientWalletAPISpec
@@ -23,7 +23,7 @@ trait NonActorClientWalletAPISpec
 
   def waitForAllResponses(): Unit = {
     //wait until all user wallet setup is completed
-    eventually(timeout(Span(5, Minutes)), interval(Span(30, Seconds))) {
+    eventually(timeout(Span(10, Minutes)), interval(Span(100, Millis))) {
       totalRespCount shouldBe totalUsers
     }
     failedResp.get() shouldBe 0

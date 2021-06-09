@@ -6,6 +6,8 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.{SendConfig, Update}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.{ConfigResult, UpdateConfig}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{InteractionController, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec

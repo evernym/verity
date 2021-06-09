@@ -27,7 +27,8 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
                          clientIpAddress: Option[IpAddress] = None,
                          msgFamilyDetail: Option[MsgFamilyDetail] = None,
                          msgPackFormat: Option[MsgPackFormat] = None,
-                         msgSenderVerKey: Option[VerKey] = None) {
+                         originalSenderVerKey: Option[VerKey] = None,
+                         latestMsgSenderVerKey: Option[VerKey] = None) {
 
   val startTime: LocalDateTime = LocalDateTime.now()
 
@@ -40,12 +41,21 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
     throw new RuntimeException("msg pack format not set in request message context")
   )
 
-  def msgSenderVerKeyReq: VerKey = msgSenderVerKey.getOrElse(
-    throw new RuntimeException("msg sender ver key not set in request message context")
+  def latestMsgSenderVerKeyReq: VerKey = latestMsgSenderVerKey.getOrElse(
+    throw new RuntimeException("latest msg sender ver key not set in request message context")
+  )
+
+  def originalMsgSenderVerKeyReq: VerKey = originalSenderVerKey.getOrElse(
+    throw new RuntimeException("original msg sender ver key not set in request message context")
   )
 
   def withMsgPackFormat(mpf: MsgPackFormat): ReqMsgContext = {
     copy(msgPackFormat = Option(mpf))
+  }
+
+  def withOrigMsgSenderVerKey(verKey: Option[VerKey]): ReqMsgContext = {
+    if (originalSenderVerKey.isDefined) this
+    else copy(originalSenderVerKey = verKey)
   }
 
   def withClientIpAddress(ipa: String): ReqMsgContext =
@@ -55,7 +65,8 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
     copy(clientReqId = cri)
 
   def withAgentMsgWrapper(amw: AgentMsgWrapper): ReqMsgContext = {
-    copy(msgSenderVerKey = amw.senderVerKey)
+    withOrigMsgSenderVerKey(amw.senderVerKey)
+      .copy(latestMsgSenderVerKey = amw.senderVerKey)
       .copy(msgPackFormat = Option(amw.msgPackFormat))
       .copy(msgFamilyDetail = Option(amw.headAgentMsgDetail))
   }
@@ -70,5 +81,5 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
   )
 
   def agentMsgContext: AgentMsgContext =
-    AgentMsgContext(msgPackFormatReq, msgFamilyDetailReq.familyVersion, msgSenderVerKey)
+    AgentMsgContext(msgPackFormatReq, msgFamilyDetailReq.familyVersion, originalSenderVerKey)
 }

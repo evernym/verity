@@ -21,8 +21,8 @@ class CheckUsageBlockSpec
     "for unblocked ip address and user id" - {
       "when called 'checkIfUsageIsBlocked'" - {
         "should be successful" in {
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "GET_MSGS")
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS")
         }
       }
     }
@@ -31,7 +31,7 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked' for ip address entity id" - {
         "should throw exception" in {
           blockEntity(ipAddressV4)
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "GET_MSGS")
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS")
         }
       }
     }
@@ -42,7 +42,7 @@ class CheckUsageBlockSpec
           //NOTE: in real scenario, this situation won't be reached
           // as it first checks with 'ipAddress' as entity id and it will throw an exception there itself
           blockEntity(ipAddressV4)
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS")
         }
       }
     }
@@ -51,7 +51,7 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked' for ip address entity id" - {
         "should be successful" in {
           blockEntity(userId)
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS")
         }
       }
     }
@@ -60,7 +60,7 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked' for userid entity id" - {
         "should throw exception" in {
           blockEntity(userId)
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, userId, "GET_MSGS")
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, userId, "pairwise/GET_MSGS")
         }
       }
     }
@@ -69,8 +69,8 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked'" - {
         "should throw exception" in {
           val resourceUsageRuleConfig = buildResourceUsageRuleConfig(blackListedEntityIds = Set(ipAddressV4))
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "GET_MSGS", resourceUsageRuleConfig)
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, userId, "GET_MSGS", resourceUsageRuleConfig)
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleConfig)
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleConfig)
         }
       }
     }
@@ -80,8 +80,8 @@ class CheckUsageBlockSpec
         "should be successful" in {
           blockEntity(ipAddressV4)
           val resourceUsageRuleConfig = buildResourceUsageRuleConfig(whitelistedEntityIds = Set(ipAddressV4))
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "GET_MSGS", resourceUsageRuleConfig)
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleConfig)
         }
       }
     }
@@ -91,8 +91,8 @@ class CheckUsageBlockSpec
         "should respond accordingly" in {
           blockEntity(userId)
           val resourceUsageRuleConfig = buildResourceUsageRuleConfig(whitelistedEntityIds = Set(userId))
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "GET_MSGS", resourceUsageRuleConfig)
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleConfig)
         }
       }
     }
@@ -102,8 +102,8 @@ class CheckUsageBlockSpec
         "should be successful" in {
           blockEntity(userId)
           val resourceUsageRuleConfig = buildResourceUsageRuleConfig(whitelistedEntityIds = Set(ipAddressV4))
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "GET_MSGS", resourceUsageRuleConfig)
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleConfig)
         }
       }
     }
@@ -114,11 +114,11 @@ class CheckUsageBlockSpec
           blockEntity(ipAddressV4)
 
           val resourceUsageRuleConfig = buildResourceUsageRuleConfig(whitelistedEntityIds = Set(userId))
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "GET_MSGS", resourceUsageRuleConfig)
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleConfig)
 
           //whitelist rule takes preference (as of now)
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "GET_MSGS", resourceUsageRuleConfig)
-          checkResourceUsageIsAllowed("2.3.4.5", userId, "GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleConfig)
+          checkResourceUsageIsAllowed("2.3.4.5", userId, "pairwise/GET_MSGS", resourceUsageRuleConfig)
         }
       }
     }

@@ -45,8 +45,6 @@ object Role {
 
 }
 
-trait Event
-
 class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtocol, Role, Msg, Event, State, String])
   extends Protocol[CommittedAnswerProtocol, Role, Msg, Event, State, String](CommittedAnswerDefinition) {
 

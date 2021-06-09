@@ -25,13 +25,13 @@ class UserAgentRecoverySpec
 
     "when started" - {
       "should respond as expected" in {
-        val prevWalletServiceCount = getWalletAPICallCount
+        val prevWalletServiceCount = getStableWalletAPISucceedCountMetric
 
         val uaEventsBeforeStart = getEvents(mySelfRelAgentPersistenceId)
         uaRegion ! GetPersistentActorDetail
         expectMsgType[PersistentActorDetail]
 
-        val walletServiceCountBeforeRestart = getWalletAPICallCount
+        val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
         walletServiceCountBeforeRestart shouldBe prevWalletServiceCount
 
         val uaEventsBeforeRestart = getEvents(mySelfRelAgentPersistenceId)
@@ -39,7 +39,7 @@ class UserAgentRecoverySpec
 
         restartActor(uaRegion)
 
-        val walletServiceCountAfterRestart = getWalletAPICallCount
+        val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric
         val uaEventsAfterRestart = getEvents(mySelfRelAgentPersistenceId)
 
         walletServiceCountAfterRestart shouldBe walletServiceCountBeforeRestart

@@ -30,7 +30,7 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
     case bu: BlockCaller                => handleBlockCaller(bu)
     case bur: BlockResourceForCaller    => handleBlockResourceForCaller(bur)
     case uu: UnblockCaller              => handleUnblockCaller(uu)
-    case uur: UnblockResourceForCaller  => handleUnblockForCaller(uur)
+    case uur: UnblockResourceForCaller  => handleUnblockResourceForCaller(uur)
     case gbl: GetBlockedList            => sendBlockedList(gbl)
     case Done                           => // do nothing
   }
@@ -41,65 +41,73 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
 
   def handleBlockCaller(bu: BlockCaller): Unit = {
     logger.debug("received block caller request: " + bu)
-    val blockFromTimeInMillis = getMillisFromZonedDateTime(bu.blockFrom.getOrElse(getCurrentUTCZonedDateTime))
 
-    // First set period to 0 (clear block) on all resources with the same ID if allBlockedResources is set to Y/y
-    if (bu.blockPeriod.getOrElse(None) == 0
-      && bu.allBlockedResources.map(_.toUpperCase).contains(YES)) {
-      val curDate = getCurrentUTCZonedDateTime
-      logger.debug(s"Removed ${bu.entityId} caller block")
+    val curDate = getCurrentUTCZonedDateTime
+    val blockFrom = getMillisFromZonedDateTime(bu.blockFrom.getOrElse(curDate))
+
+    // At first, clear blocks on all resources for this source ID if period is 0 and allResources is Y/y
+    if (bu.blockPeriod.contains(0) && bu.allBlockedResources.map(_.toUpperCase).contains(YES)) {
       entityBlockingStatus.get(bu.entityId).foreach { ebs =>
         ebs.resourcesStatus.filter(_._2.isBlocked(curDate)).foreach { case (rn, _) =>
-          removeResourceBlock(bu.entityId, rn, blockFromTimeInMillis)
           resetResourceUsageCounts(bu.entityId, rn)
+
+          val resourceEvent = CallerResourceBlocked(bu.entityId, rn, blockFrom, 0)
+          writeAndApply(resourceEvent)
+          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
         }
       }
     }
 
-    val event = CallerBlocked(bu.entityId, blockFromTimeInMillis, getTimePeriodInSeconds(bu.blockPeriod))
+    val event = CallerBlocked(bu.entityId, blockFrom, getTimePeriodInSeconds(bu.blockPeriod))
     writeApplyAndSendItBack(event)
-    sendChangeToNodeSingleton(event)
+    singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
   def handleBlockResourceForCaller(bur: BlockResourceForCaller): Unit = {
     logger.debug("received block caller resource request: " + bur)
-    val blockFromTimeInMillis = getMillisFromZonedDateTime(bur.blockFrom.getOrElse(getCurrentUTCZonedDateTime))
-    val event = CallerResourceBlocked(bur.entityId, bur.resourceName, blockFromTimeInMillis, getTimePeriodInSeconds(bur.blockPeriod))
-    writeApplyAndSendItBack(event)
-    sendChangeToNodeSingleton(event)
 
-    // Set period to 0 (clear block) on all resources with the same ID if allBlockedResources is set to 'Y' or 'y'
-    if (bur.blockPeriod.getOrElse(None) == 0) {
-      removeResourceBlock(bur.entityId, bur.resourceName, blockFromTimeInMillis)
+    // At first, reset this resource usage counts for this source ID if period is 0
+    if (bur.blockPeriod.contains(0)) {
       resetResourceUsageCounts(bur.entityId, bur.resourceName)
     }
+
+    val blockFrom = getMillisFromZonedDateTime(bur.blockFrom.getOrElse(getCurrentUTCZonedDateTime))
+
+    val event = CallerResourceBlocked(bur.entityId, bur.resourceName, blockFrom, getTimePeriodInSeconds(bur.blockPeriod))
+    writeApplyAndSendItBack(event)
+    singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
   def handleUnblockCaller(uu: UnblockCaller): Unit = {
     logger.debug("received unblock caller request: " + uu)
-    val curDate = getCurrentUTCZonedDateTime
-    val unblockFromTimeInMillis = getMillisFromZonedDateTime(uu.unblockFrom.getOrElse(curDate))
-    val event = CallerUnblocked(uu.entityId, unblockFromTimeInMillis, getTimePeriodInSeconds(uu.unblockPeriod))
-    writeApplyAndSendItBack(event)
-    sendChangeToNodeSingleton(event)
 
+    val curDate = getCurrentUTCZonedDateTime
+    val unblockFrom = getMillisFromZonedDateTime(uu.unblockFrom.getOrElse(curDate))
+
+    // At first, unblock all resources for this source ID if allResources is Y/y
     if (uu.allBlockedResources.map(_.toUpperCase).contains(YES)) {
-      entityBlockingStatus.get(uu.entityId).foreach { rubs =>
-        rubs.resourcesStatus.filter(_._2.isBlocked(curDate)).foreach { case (rn, _) =>
-          val resourceEvent = CallerResourceUnblocked(uu.entityId, rn, unblockFromTimeInMillis, getTimePeriodInSeconds(uu.unblockPeriod))
+      entityBlockingStatus.get(uu.entityId).foreach { ebs =>
+        ebs.resourcesStatus.filter(_._2.isBlocked(curDate)).foreach { case (rn, _) =>
+          val resourceEvent = CallerResourceUnblocked(uu.entityId, rn, unblockFrom, getTimePeriodInSeconds(uu.unblockPeriod))
           writeAndApply(resourceEvent)
-          sendChangeToNodeSingleton(resourceEvent)
+          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
         }
       }
     }
+
+    val event = CallerUnblocked(uu.entityId, unblockFrom, getTimePeriodInSeconds(uu.unblockPeriod))
+    writeApplyAndSendItBack(event)
+    singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
-  def handleUnblockForCaller(uur: UnblockResourceForCaller): Unit = {
+  def handleUnblockResourceForCaller(uur: UnblockResourceForCaller): Unit = {
     logger.debug("received unblock caller resource request: " + uur)
+
     val unblockFrom = getMillisFromZonedDateTime(uur.unblockFrom.getOrElse(getCurrentUTCZonedDateTime))
+
     val event = CallerResourceUnblocked(uur.entityId, uur.resourceName, unblockFrom, getTimePeriodInSeconds(uur.unblockPeriod))
     writeApplyAndSendItBack(event)
-    sendChangeToNodeSingleton(event)
+    singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
   def prepareValidListOfStringsFromCsv(csvStr: Option[String]): List[String] =
@@ -133,17 +141,6 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
     } else {
       sender ! UsageBlockingStatusChunk(Map.empty, 1, 1)
     }
-  }
-
-  def removeResourceBlock(entityId: EntityId, resourceName: ResourceName, blockFromTimeInMillis: Long): Unit = {
-    logger.debug(s"Remove $resourceName resource blocks")
-    val event = CallerResourceBlocked(entityId, resourceName, blockFromTimeInMillis, getTimePeriodInSeconds(Some(0)))
-    writeApplyAndSendItBack(event)
-    singletonParentProxyActor ! SendCmdToAllNodes(event)
-  }
-
-  def sendChangeToNodeSingleton(changeEvent: Any): Unit = {
-    singletonParentProxyActor ! SendCmdToAllNodes(changeEvent)
   }
 
   def system: ActorSystem = aac.system

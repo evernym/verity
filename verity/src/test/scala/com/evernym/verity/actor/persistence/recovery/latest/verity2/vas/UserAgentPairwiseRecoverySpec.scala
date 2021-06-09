@@ -29,20 +29,20 @@ class UserAgentPairwiseRecoverySpec
 
     "when started" - {
       "should respond as expected" in {
-        val prevWalletServiceCount = getWalletAPICallCount
+        val prevWalletServiceCount = getStableWalletAPISucceedCountMetric
 
         val uapEventsBeforeStart = getEvents(myPairwiseRelAgentPersistenceId)
         uapRegion ! GetPersistentActorDetail
         expectMsgType[PersistentActorDetail]
 
-        val walletServiceCountBeforeRestart = getWalletAPICallCount
+        val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
         walletServiceCountBeforeRestart shouldBe prevWalletServiceCount
         val uapEventsBeforeRestart = getEvents(myPairwiseRelAgentPersistenceId)
 
         uapEventsBeforeRestart shouldBe uapEventsBeforeStart
         restartActor(uapRegion)
 
-        val walletServiceCountAfterRestart = getWalletAPICallCount
+        val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric
         val uapEventsAfterRestart = getEvents(myPairwiseRelAgentPersistenceId)
 
         walletServiceCountAfterRestart shouldBe walletServiceCountBeforeRestart

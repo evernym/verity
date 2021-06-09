@@ -107,7 +107,7 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
   }
 
   def msgListener: MsgListenerBase[_]
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T]
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
 }
 
 /**
@@ -167,7 +167,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
    * @tparam T expected message type
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     unpackMsg(msg)
   }
@@ -302,7 +302,7 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
    * @tparam T
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(30, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     ReceivedMsgParam(msg)
   }

@@ -514,6 +514,13 @@ object MsgFamilyHelper {
         }
     protoDefOpt.map(_.msgFamily)
   }
+
+  def buildMsgTypeStr[T: ClassTag]: String = {
+    val clazz = implicitly[ClassTag[T]].runtimeClass
+    val msgType = MsgFamilyHelper.getMsgFamilyOpt.map(_.msgType(clazz))
+    msgType.map(MsgFamily.typeStrFromMsgType)
+      .getOrElse(throw new RuntimeException("message type not found in any registered protocol: " + clazz.getClass.getSimpleName))
+  }
 }
 
 case class TheirServiceDetail(verKey: VerKey, routingKeys: Vector[VerKey], serviceEndpoint: ServiceEndpoint)

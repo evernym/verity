@@ -33,7 +33,7 @@ class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
   private val appManager: ActorRef = {
     val ar = testKit.system.actorOf(
       AppStateManager.props(appConfig, MockNotifierService, MockShutdownService), actorName)
-    ar ! Ping(sendBackConfirmation = true)
+    ar ! Ping(sendAck = true)
     testKit.expectMsgType[Done.type]
     ar
   }
@@ -58,7 +58,7 @@ class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
   }
 
   def stop(): Unit = {
-    sendToAppStateManager(Stop(sendBackConfirmation = true))
+    sendToAppStateManager(Stop(sendAck = true))
     testKit.expectMsgType[Done.type]
   }
 

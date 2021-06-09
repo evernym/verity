@@ -43,7 +43,7 @@ class FailedMsgRetrierSpec
     "when started" - {
       "should NOT register itself with watcher" in {
         EventFilter.debug(pattern = "item added to watcher: .*", occurrences = 0) intercept {
-          sendToMockActor(Ping(sendBackConfirmation = true))
+          sendToMockActor(Ping(sendAck = true))
           expectMsgType[Done.type]
         }
       }
@@ -75,7 +75,7 @@ class FailedMsgRetrierSpec
       "should be stopped" in {
         //stopping agent actor to confirm it will be spinned up by the watcher actor
         // because it was registered in watcher
-        sendToMockActor(Stop(sendBackConfirmation = true))
+        sendToMockActor(Stop(sendAck = true))
         expectMsgType[Done.type]
       }
     }

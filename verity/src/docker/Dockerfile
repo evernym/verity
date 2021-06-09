@@ -29,8 +29,8 @@ RUN curl https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key | apt-key ad
 # Install libindy libraries
 RUN apt-get update && \
     apt-get install -y \
-        libindy=${LIBINDY_VERSION}-bionic \
-        libnullpay=${LIBINDY_VERSION}-bionic \
+        libindy-async=${LIBINDY_VERSION}-bionic \
+        libnullpay-async=${LIBINDY_VERSION}-bionic \
         libmysqlstorage=${LIBMYSQLSTORAGE_VERSION}
 
 # cleanup and remove Evernym internal repo

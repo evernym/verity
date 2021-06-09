@@ -29,7 +29,7 @@ class RouteStoreMigrationV2Spec
 
   //checks if all legacy agent route stores are migrated successfully
   def checkIfOverallMigrationCompleted(): Unit = {
-    val msd = eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
+    val msd = eventually(timeout(Span(10, Seconds))) {
       platform.singletonParentProxy ! ForAgentRoutesMigrator(GetMigrationStatus(Option(YES)))
       val msd = expectMsgType[MigrationStatusDetail]
       msd.completed.totalRouteStores shouldBe msd.registered.totalRouteStores
@@ -51,13 +51,13 @@ class RouteStoreMigrationV2Spec
                 interval-in-seconds = 1
               }
               registration {
-                batch-size = 20    //how many parallel legacy agent route store actor to ask for registration
+                batch-size = 50    //how many parallel legacy agent route store actor to ask for registration
               }
               processing {
-                batch-size = 20    //how many parallel legacy agent route store actor to be processed for migration
+                batch-size = 50    //how many parallel legacy agent route store actor to be processed for migration
               }
               routes {
-                batch-size = 2    //how many parallel routes per legacy agent route actor to be migrated
+                batch-size = 50    //how many parallel routes per legacy agent route actor to be migrated
               }
             }
          }

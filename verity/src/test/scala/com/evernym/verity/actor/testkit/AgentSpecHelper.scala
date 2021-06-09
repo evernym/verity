@@ -106,7 +106,7 @@ trait AgentSpecHelper
   protected def restartPersistentActor(ar: agentRegion): Unit = {
     ar ! PoisonPill
     expectNoMessage()
-    eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       ar ! GetPersistentActorDetail
       expectMsgType[PersistentActorDetail]
     }

@@ -28,7 +28,7 @@ class ActorCreationFailureSpec
     "when throws an unhandled exception" - {
       "should be stopped" in {
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
-          mockSupervised ! Ping(sendBackConfirmation = true)
+          mockSupervised ! Ping(sendAck = true)
           expectNoMessage()
         }
 

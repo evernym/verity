@@ -2,7 +2,6 @@ package com.evernym.verity.integration.base
 
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
@@ -11,7 +10,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import java.nio.file.{Files, Path}
-import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -126,7 +124,7 @@ trait VerityProviderBaseSpec
 
   override def afterAll(): Unit = {
     super.afterAll()
-    Future(allVerityEnvs.foreach(_.nodes.foreach(_.stop())))
+    allVerityEnvs.foreach(_.nodes.foreach(_.stop()))
   }
 
   private def randomChar(): Char = {

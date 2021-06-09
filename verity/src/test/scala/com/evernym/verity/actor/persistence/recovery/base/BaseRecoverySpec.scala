@@ -8,8 +8,9 @@ import com.evernym.verity.actor.persistence.PersistentActorDetail
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT
 import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec}
+import com.evernym.verity.testkit.{BasicSpec, MetricsReadHelper}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.language.postfixOps
 
@@ -20,34 +21,49 @@ trait BaseRecoveryActorSpec
     with BasicSpec
     with Eventually { this: TestKitBase with BasicSpec =>
 
+  //this 'expectDeadLetters' is overridden to ignore some dead letter messages
+  // logged during actor restart ('restartActor' function below)
+  override def expectDeadLetters = true
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     MetricsReader.initialize(appConfig)
   }
 
-  def restartActor(ar: agentRegion, times: Int = 2): Unit = {
+  def restartActor(ar: agentRegion, times: Int = 1): Unit = {
     (1 to times).foreach { _ =>
       restartActor(ar)
     }
   }
 
   private def restartActor(ar: agentRegion): Unit = {
-    ar ! Stop(sendBackConfirmation = true)
+    ar ! Stop(sendAck = true)
     expectMsgType[Done.type]
-    Thread.sleep(1500)
-    ar ! Ping(sendBackConfirmation = true)
-    expectMsgType[Done.type]
+    eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+      ar ! Ping(sendAck = true)
+      expectMsgType[Done.type]
+    }
   }
 }
 
 trait BaseRecoverySpecLike
   extends BasePersistentStore
-    with MetricsReadHelper { this: BasicSpec =>
+    with MetricsReadHelper
+    with Eventually { this: BasicSpec =>
 
   def getStableWalletAPISucceedCountMetric: Double = {
-    Thread.sleep(1000)  //waiting sufficient time so that metrics data gets stabilized
-    val walletSucceedApiMetric = getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
-    walletSucceedApiMetric.map(_.value).getOrElse(0)
+    var apiCallCount: Double = -1
+    var timesFoundSame: Int = 0
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      val walletSucceedApiMetric = getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+      val newCount: Double = walletSucceedApiMetric.map(_.value).getOrElse(0)
+      if (apiCallCount == newCount) timesFoundSame = timesFoundSame + 1
+      else timesFoundSame = 0
+      val isStable = apiCallCount == newCount && timesFoundSame >= 5
+      apiCallCount = newCount
+      isStable shouldBe true
+    }
+    apiCallCount
   }
 
   /**

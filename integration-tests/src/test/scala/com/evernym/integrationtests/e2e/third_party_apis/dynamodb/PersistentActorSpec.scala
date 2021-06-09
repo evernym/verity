@@ -26,7 +26,7 @@ class PersistentActorSpec
   "MockPersistentActor" - {
     "when sent PersistEvent command" - {
       "should persist event and save snapshot" taggedAs IgnoreAkkaEvents in {
-        sendToMockActor(MOCK_ACTOR_1, Ping(sendBackConfirmation = true))
+        sendToMockActor(MOCK_ACTOR_1, Ping(sendAck = true))
         expectMsgType[Done.type]
 
         //send first event which should force snapshot

@@ -12,7 +12,7 @@ import java.nio.file.Path
 import scala.collection.JavaConverters._
 
 object K8sTasks {
-  def init(addedJars: Seq[String], libindyVer: String, libmysqlVer: String) = {
+  def init(addedJars: Seq[String], libindyVer: String) = {
     Seq(
       k8sDockerPackageDir := { target.value / "docker" },
       k8sConfigGenDir := { k8sDockerPackageDir.value / "configuration" },
@@ -85,7 +85,6 @@ object K8sTasks {
           s"""
             |export VERITY_VERSION="${version.value}"
             |export LIBINDY_VERSION="$libindyVer"
-            |export LIBMYSQLSTORAGE_VERSION="$libmysqlVer"
             |""".stripMargin
 
         log.info(s"Writing args.env to -- $argFileDest")

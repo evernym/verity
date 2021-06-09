@@ -23,11 +23,11 @@ trait ActorClientWalletAPISpecBase
     eventually(timeout(Span(10, Minutes)), interval(Span(100, Millis))) {
       walletSetupManager ! GetStatus
       val status = expectMsgType[Status]
-      successResp = status.successResp
-      failedResp = status.failedResp
+      successResp.set(status.successResp)
+      failedResp.set(status.failedResp)
       status.totalRespCount shouldBe totalUsers
     }
-    failedResp shouldBe 0
+    failedResp.get() shouldBe 0
   }
 }
 

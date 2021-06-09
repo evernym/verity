@@ -44,15 +44,15 @@ trait MetricsSpec extends MetricsReadHelper { this : EdgeEndpointBaseSpec =>
       "span_processing_time_seconds_count",
       "span_processing_time_seconds_sum",
       "span_processing_time_seconds_bucket",
-//      "libindy_command_duration_ms_count", //TODO should be added again once we switch to libindy-async
-//      "libindy_command_duration_ms_sum",
-//      "libindy_command_duration_ms_bucket",
+      "libindy_command_duration_ms_count",
+      "libindy_command_duration_ms_sum",
+      "libindy_command_duration_ms_bucket",
       "libindy_wallet_count"
     ).map(MetricsReader.convertToProviderName)
     val nameSet = metrics.map(_.name).toSet
     val notFound = expectedMetrics.diff(nameSet)
     notFound shouldBe empty
-    nameSet should not contain("libindy_command_duration_ms_count") // If this fails, add above entries back in
+    nameSet should contain allElementsOf expectedMetrics
   }
 
 }

@@ -10,6 +10,7 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ClientWalletAPISpecBase
@@ -37,9 +38,9 @@ trait ClientWalletAPISpecBase
   def startUserWalletSetupWithAsyncAPI(): Unit
   def waitForAllResponses(): Unit
 
-  var successResp: Int = 0
-  var failedResp: Int = 0
-  def totalRespCount: Int = successResp + failedResp
+  var successResp = new AtomicInteger(0)
+  var failedResp = new AtomicInteger(0)
+  def totalRespCount: Int = successResp.get() + failedResp.get()
 
   lazy val libIndyMetricsCollector: ActorRef = platform.libIndyMetricsCollector
 

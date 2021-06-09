@@ -34,7 +34,7 @@ deploy-manually-team1:
   when: manual
   only:
     refs:
-      - master@dev/verity/verity
+      - main@evernym/verity/verity
 
 .deploy-manually-team2:
   extends: .deploy-common
@@ -65,4 +65,4 @@ deploy-manually-dev-rc: # special branch for manual deployment verity master wit
   when: manual
   only:
     refs:
-      - master@dev/verity/verity
+      - main@evernym/verity/verity

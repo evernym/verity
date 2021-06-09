@@ -21,8 +21,7 @@ publish-deb:
     - package
   only:
     refs:
-      - master@dev/verity/verity
-      # TODO replace by main@evernym/verity/verity for public gitlab
+      - main@evernym/verity/verity
 
 publish-deb-manual:
   extends:
@@ -85,10 +84,10 @@ publish-docker:
   rules:
     - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
       variables:
-        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
     - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
       variables:
-        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
 
 publish-docker-manual:
   extends:

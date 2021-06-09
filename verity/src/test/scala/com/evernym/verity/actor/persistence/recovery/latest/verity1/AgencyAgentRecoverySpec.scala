@@ -26,7 +26,7 @@ class AgencyAgentRecoverySpec
 
     "when started" - {
       "should respond as expected" in {
-        val prevWalletServiceCount = getWalletAPICallCount
+        val prevWalletServiceCount = getStableWalletAPISucceedCountMetric
 
         val aaEventsBeforeStart = getEvents(myAgencyAgentPersistenceId)
         aaRegion ! GetAgencyAgentDetail
@@ -44,7 +44,7 @@ class AgencyAgentRecoverySpec
         apdBeforeRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
         aiBeforeRestart.verKeyReq shouldBe myAgencyAgentDIDPair.verKey
 
-        val walletServiceCountBeforeRestart = getWalletAPICallCount
+        val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
         walletServiceCountBeforeRestart shouldBe prevWalletServiceCount
 
         val aaEventsBeforeRestart = getEvents(myAgencyAgentPersistenceId)
@@ -52,7 +52,7 @@ class AgencyAgentRecoverySpec
 
         restartActor(aaRegion)
 
-        val walletServiceCountAfterRestart = getWalletAPICallCount
+        val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric
         val aaEventsAfterRestart = getEvents(myAgencyAgentPersistenceId)
         walletServiceCountAfterRestart shouldBe walletServiceCountBeforeRestart
         aaEventsAfterRestart shouldBe aaEventsBeforeRestart

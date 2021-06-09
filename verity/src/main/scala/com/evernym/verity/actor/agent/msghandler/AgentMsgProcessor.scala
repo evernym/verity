@@ -19,6 +19,7 @@ import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent, TrackingIdParam}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.resourceusagethrottling.{RESOURCE_TYPE_MESSAGE, UserId}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -31,7 +32,7 @@ import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.MSG_LIMITS
-import com.evernym.verity.constants.Constants.{MSG_PACK_VERSION, UNKNOWN_SENDER_PARTICIPANT_ID}
+import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
@@ -290,11 +291,11 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       msgType match {
         // These signals should not be stored because of legacy reasons.
         case mt: MsgType if isLegacySignalMsgNotToBeStored(mt) =>
-          sendToAgentActor(SendUnStoredMsgToMyDomain(omp))
+          sendToAgentActor(SendUnStoredMsgToMyDomain(omp, msgId, msgType.msgName))
         // Other signals go regularly.
         case _ =>
           recordOutMsgDeliveryEvent(msgId)
-          sendToAgentActor(StoreAndSendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
+          sendToAgentActor(SendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
       }
       NEXT_HOP_MY_EDGE_AGENT
     } else {
@@ -308,7 +309,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       packOutgoingMsg(omp, omc.to, msgPackFormat).map { outgoingMsg =>
         logger.debug(s"outgoing msg will be stored and sent ...")
         recordOutMsgDeliveryEvent(msgId)
-        sendToAgentActor(StoreAndSendMsgToTheirDomain(
+        sendToAgentActor(SendMsgToTheirDomain(
           outgoingMsg, msgId, MsgFamily.typeStrFromMsgType(msgType), ParticipantUtil.DID(omc.from), thread))
       }
       NEXT_HOP_THEIR_ROUTING_SERVICE
@@ -800,7 +801,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           val msgId = MsgUtil.newMsgId
           recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.msgFamilyDetail.msgType.toString))
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
-          sendToAgentActor(StoreAndSendMsgToMyDomain(
+          sendToAgentActor(SendMsgToMyDomain(
             OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
             msgId, fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN), ParticipantUtil.DID(param.selfParticipantId), None))
           recordOutMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
@@ -862,8 +863,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
     reqMsgContext.clientIpAddress.foreach { ipAddress =>
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE,
-        getResourceName(msgType.msgName), ipAddress, userId)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType), ipAddress, userId)
     }
     senderVerKey.foreach { svk =>
       if (! param.allowedUnAuthedMsgTypes.contains(msgType)) {
@@ -885,35 +885,16 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     param.agentActorRef.tell(msg, self)
   }
 
-  private def getResourceName(msgName: String): String = {
-    msgName match {
-      case CREATE_MSG_TYPE_CONN_REQ | CREATE_MSG_TYPE_CONN_REQ_ANSWER => s"${MSG_TYPE_CREATE_MSG}_$msgName"
-      case x => x
+  private def getResourceName(msgType: MsgType): String = {
+    msgType.msgName match {
+      case CREATE_MSG_TYPE_CONN_REQ | CREATE_MSG_TYPE_CONN_REQ_ANSWER =>
+        ResourceUsageUtil.getCreateMessageResourceName(msgType)
+      case _ => ResourceUsageUtil.getMessageResourceName(msgType)
     }
   }
 
   private def buildReqMsgContext(amw: AgentMsgWrapper, rmc: ReqMsgContext): ReqMsgContext = {
-    rmc.append(buildReqContextData(amw))
-    rmc
-  }
-
-  /**
-   * builds request message context data for the incoming message
-   * @param amw agent message wrapper
-   * @return
-   */
-  private def buildReqContextData(amw: AgentMsgWrapper): Map[String, Any] = {
-    import ReqMsgContext._
-
-    val map1 = amw.senderVerKey.map { sk =>
-      Map(LATEST_DECRYPTED_MSG_SENDER_VER_KEY -> sk)
-    }.getOrElse(Map.empty)
-
-    val map2 = Map(
-      MSG_PACK_VERSION -> amw.msgPackFormat,
-      MSG_TYPE_DETAIL -> amw.headAgentMsg.msgFamilyDetail)
-
-    map1 ++ map2
+    rmc.withAgentMsgWrapper(amw)
   }
 
   /**
@@ -995,19 +976,19 @@ case class SendPushNotif(pcms: Set[ComMethodDetail],
                          pnData: PushNotifData,
                          sponsorId: Option[String]) extends ActorMessage
 
-case class StoreAndSendMsgToMyDomain(om: OutgoingMsgParam,
-                                     msgId: MsgId,
-                                     msgName: MsgName,
-                                     senderDID: DID,
-                                     threadOpt: Option[Thread]) extends ActorMessage
+case class SendMsgToMyDomain(om: OutgoingMsgParam,
+                             msgId: MsgId,
+                             msgName: MsgName,
+                             senderDID: DID,
+                             threadOpt: Option[Thread]) extends ActorMessage
 
-case class StoreAndSendMsgToTheirDomain(om: OutgoingMsgParam,
-                                        msgId: MsgId,
-                                        msgName: MsgName,
-                                        senderDID: DID,
-                                        threadOpt: Option[Thread]) extends ActorMessage
+case class SendMsgToTheirDomain(om: OutgoingMsgParam,
+                                msgId: MsgId,
+                                msgName: MsgName,
+                                senderDID: DID,
+                                threadOpt: Option[Thread]) extends ActorMessage
 
-case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam) extends ActorMessage
+case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String) extends ActorMessage
 
 /**
  * this is used during incoming message processing to specify request/response context information

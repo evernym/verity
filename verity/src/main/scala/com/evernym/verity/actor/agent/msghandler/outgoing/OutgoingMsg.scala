@@ -69,6 +69,7 @@ case class ProtocolSyncRespMsg(msg: Any, requestMsgId: Option[MsgId]) extends Re
  * interface to send messages (implemented by various traits in MsgNotifier.scala)
  */
 trait SendOutgoingMsg {
+
   /**
    * responsible to send stored message to self's edge agent
    * (for example by using push notification and/or http endpoint etc)
@@ -111,10 +112,11 @@ case class OutgoingMsgParam(givenMsg: Any, metadata: Option[PayloadMetadata]=Non
   def msgToBeProcessed: Array[Byte] = givenMsg match {
     case pm: PackedMsg   => pm.msg
     case jm: JsonMsg     => jm.msg.getBytes()
+    case other           => throw new RuntimeException("Unsupported outgoing msg: " + other.getClass.getSimpleName)
   }
 
   def jsonMsg_!(): String = givenMsg match {
-    case _: PackedMsg    => throw new RuntimeException("Getting JSON from packed msg")
     case jm: JsonMsg     => jm.msg
+    case other           => throw new RuntimeException("Unsupported outgoing json message: " + other.getClass.getSimpleName)
   }
 }

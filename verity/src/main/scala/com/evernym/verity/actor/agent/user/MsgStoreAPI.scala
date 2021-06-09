@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, MSG_TYPE_UPDATE_MSG_STATUS}
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, GetMsgsReqMsg, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
@@ -34,7 +34,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleGetMsgs", "UserAgentCommon") {
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_GET_MSGS, reqMsgContext.clientIpAddressReq, userId)
+      val resourceName = ResourceUsageUtil.getMessageResourceName(amw.msgType)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       val gmr = GetMsgsMsgHelper.buildReqMsg(amw)
       logger.debug("get msgs request: " + gmr)
       val allMsgs = msgStore.getMsgs(gmr)
@@ -61,7 +62,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       logger.debug(s"filtered get msgs: $logPrefix" + filteredMsgs.mkString(logPrefix))
       logger.debug("get msgs response: " + getMsgsRespMsg)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg("GetMsgsResp", rp, sndr)
     }
   }
@@ -74,7 +75,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   def handleUpdateMsgStatus(amw: AgentMsgWrapper)
                            (implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_MSG_STATUS, reqMsgContext.clientIpAddressReq, userId)
+    val resourceName = ResourceUsageUtil.getMessageResourceName(amw.msgType)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val ums = UpdateMsgStatusMsgHelper.buildReqMsg(amw)
     val updatedMsgIds = handleUpdateMsgStatusBase(ums)
     val msgStatusUpdatedRespMsg = UpdateMsgStatusMsgHelper.buildRespMsg(updatedMsgIds,
@@ -84,7 +86,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
     sendRespMsg("MsgStatusUpdatedResp", rp)
   }
 
@@ -205,15 +207,17 @@ trait MsgStoreAPI { this: UserAgentCommon =>
    * @param umds update msg delivery status
    */
   def updateMsgDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit = {
-    val msgDeliveryStatuses = getMsgDeliveryStatus(umds.uid)
-    val deliveryStatusByDestination = msgDeliveryStatuses.get(umds.to)
-    val existingFailedAttemptCount = deliveryStatusByDestination.map(_.failedAttemptCount).getOrElse(0)
-    val newFailedAttemptCount =
-      if (umds.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode) existingFailedAttemptCount + 1
-      else existingFailedAttemptCount
-    writeAndApply(MsgDeliveryStatusUpdated(umds.uid, umds.to, umds.statusCode,
-      umds.statusDetail.getOrElse(Evt.defaultUnknownValueForStringType),
-      getMillisForCurrentUTCZonedDateTime, newFailedAttemptCount))
+    msgStore.getMsgOpt(umds.uid).foreach { _ =>
+      val msgDeliveryStatuses = getMsgDeliveryStatus(umds.uid)
+      val deliveryStatusByDestination = msgDeliveryStatuses.get(umds.to)
+      val existingFailedAttemptCount = deliveryStatusByDestination.map(_.failedAttemptCount).getOrElse(0)
+      val newFailedAttemptCount =
+        if (umds.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode) existingFailedAttemptCount + 1
+        else existingFailedAttemptCount
+      writeAndApply(MsgDeliveryStatusUpdated(umds.uid, umds.to, umds.statusCode,
+        umds.statusDetail.getOrElse(Evt.defaultUnknownValueForStringType),
+        getMillisForCurrentUTCZonedDateTime, newFailedAttemptCount))
+    }
   }
 }
 

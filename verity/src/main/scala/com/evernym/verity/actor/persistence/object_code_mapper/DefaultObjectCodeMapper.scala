@@ -6,9 +6,11 @@ import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, AgencyAg
 import com.evernym.verity.actor.agent.user.{UserAgentPairwiseState, UserAgentState}
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
 import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.{legacy => basicMessage_legacy}
 import com.evernym.verity.protocol.protocols.committedAnswer.{v_1_0 => committedAnswer_v10}
 import com.evernym.verity.protocol.protocols.connections.{v_1_0 => connections_10}
 import com.evernym.verity.protocol.protocols.issueCredential.{v_1_0 => issueCredential_v10}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{legacy => issueCredential_legacy}
 import com.evernym.verity.protocol.protocols.issuersetup.{v_0_6 => issuerSetup_v06}
 import com.evernym.verity.protocol.protocols.outofband.{v_1_0 => outOfBand_v10}
 import com.evernym.verity.protocol.protocols.presentproof.{v_1_0 => presentProof_v10}
@@ -18,6 +20,7 @@ import com.evernym.verity.protocol.protocols.trustping.{v_1_0 => trustping_v10}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef_v06}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
+import com.evernym.verity.protocol.protocols.walletBackup.{legacy => walletBackupLegacy}
 import com.evernym.verity.protocol._
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
@@ -84,13 +87,13 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     52 -> ConnectionStatusUpdated,
     53 -> ProtocolIdDetailSet,
     54 -> ThreadContextStored,    //no more used for new data, kept here for backward compatibility
-    55 -> SetPinstId, //NOTE: this is not used anymore, but we'll have to keep it for backward compatibility
+    55 -> PinstIdSet,   //NOTE: this is not used anymore, but we'll have to keep it for backward compatibility
     56 -> walletBackup.WalletBackupInitialized,
     57 -> walletBackup.ProvisionRequested,
     58 -> walletBackup.ReadyToExport,
     59 -> walletBackup.ReadyToPersist,
     60 -> walletBackup.BackupInProgress,
-    61 -> walletBackup.BackupStored,
+    61 -> walletBackupLegacy.BackupStored,
     62 -> walletBackup.BackupStoredAck,
     63 -> ap5.RequesterPartiSet,
     64 -> ap5.ProvisioningInitiaterPartiSet,
@@ -190,14 +193,14 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     156 -> relationship_10.InvitationCreated_DEPRECATED,
 
     157 -> issueCredential_v10.Initialized,
-    158 -> issueCredential_v10.ProposalSent,
-    159 -> issueCredential_v10.OfferSent,
-    160 -> issueCredential_v10.RequestSent,
-    161 -> issueCredential_v10.IssueCredSent,
-    162 -> issueCredential_v10.ProposalReceived,
-    163 -> issueCredential_v10.OfferReceived,
-    164 -> issueCredential_v10.RequestReceived,
-    165 -> issueCredential_v10.IssueCredReceived,
+    158 -> issueCredential_legacy.ProposalSentLegacy,
+    159 -> issueCredential_legacy.OfferSentLegacy,
+    160 -> issueCredential_legacy.RequestSentLegacy,
+    161 -> issueCredential_legacy.IssueCredSentLegacy,
+    162 -> issueCredential_legacy.ProposalReceivedLegacy,
+    163 -> issueCredential_legacy.OfferReceivedLegacy,
+    164 -> issueCredential_legacy.RequestReceivedLegacy,
+    165 -> issueCredential_legacy.IssueCredReceivedLegacy,
     166 -> issueCredential_v10.Rejected,
     167 -> issueCredential_v10.ProblemReportReceived,
 
@@ -220,7 +223,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     182 -> writeSchema_v06.AskedForEndorsement,
     183 -> writeCredDef_v06.AskedForEndorsement,
 
-    184 -> SetDomainId,
+    184 -> DomainIdSet,
 
     185 -> trustping_v10.Initialized,
     186 -> trustping_v10.MyRole,
@@ -253,7 +256,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     206 -> basicMessage_v10.Initialized,
     207 -> basicMessage_v10.MyRole,
-    208 -> basicMessage_v10.MessageReceived,
+    208 -> basicMessage_legacy.MessageReceived,
 
     209 -> presentProof_v10.AgentContext,
 
@@ -277,17 +280,48 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
 
     225 -> UserAgentState,
     226 -> UserAgentPairwiseState,
-    227 -> ChangePairwiseRelIds,
+    227 -> PairwiseRelIdsChanged,
 
     228 -> AuthKeyAdded,
     229 -> issueCredential_v10.CredSentState,
-    230 -> SetDataRetentionPolicy,
-    231 -> walletBackup.BackupStoredInBlob,
-
+    230 -> DataRetentionPolicySet,
+    231 -> walletBackup.BackupStoredRef,
     232 -> RouteSet,
     233 -> RoutesMigrated,
     234 -> MigrationCandidatesRecorded,
-    235 -> MigrationStatusRecorded
+    235 -> MigrationStatusRecorded,
+    236 -> basicMessage_v10.MessageData,
+    237 -> basicMessage_v10.MessageReceivedRef,
+    238 -> issueCredential_v10.ProposalSent,
+    239 -> issueCredential_v10.ProposalReceived,
+    240 -> issueCredential_v10.OfferSent,
+    241 -> issueCredential_v10.OfferReceived,
+    242 -> issueCredential_v10.RequestSent,
+    243 -> issueCredential_v10.RequestReceived,
+    244 -> issueCredential_v10.IssueCredSent,
+    245 -> issueCredential_v10.IssueCredReceived,
+    246 -> issueCredential_v10.CredProposed,
+    247 -> issueCredential_v10.CredOffered,
+    248 -> issueCredential_v10.CredRequested,
+    249 -> issueCredential_v10.CredIssued,
+    250 -> questionAnswer_v10.QuestionUsedRef,
+    251 -> questionAnswer_v10.SignedAnswerUsedRef,
+    252 -> questionAnswer_v10.AnswerUsedRef,
+    253 -> StorageIdSet,
+    254 -> presentProof_v10.ResultsOfVerificationRef,
+    255 -> presentProof_v10.RequestGivenRef,
+    256 -> presentProof_v10.RequestUsedRef,
+    257 -> presentProof_v10.PresentationUsedRef,
+    258 -> presentProof_v10.PresentationGivenRef,
+    259 -> presentProof_v10.PresentationAckRef,
+    260 -> presentProof_v10.PresentationProposedRef,
+    261 -> presentProof_v10.ProposeReceivedRef,
+    262 -> presentProof_v10.AttributesGivenRef,
+
+    263 -> SegmentedStateRemoved,
+
+    264 -> SegmentStored,
+    265 -> SegmentRemoved
   )
 
 }

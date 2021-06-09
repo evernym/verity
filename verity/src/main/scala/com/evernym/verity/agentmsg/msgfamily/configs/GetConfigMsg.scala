@@ -35,8 +35,8 @@ object GetConfigsMsgHelper {
     GetConfigsRespMsg_MFV_0_5(TypeDetail(MSG_TYPE_CONFIGS, MTV_1_0), configs)
   }
 
-  def buildRespMsg(configs: Set[ConfigDetail])(implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+  def buildRespMsg(configs: Set[ConfigDetail])(implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildGetConfigsResp_MFV_0_5(configs))
       case x => throw new RuntimeException("get config resp builder failed: " + x)
     }

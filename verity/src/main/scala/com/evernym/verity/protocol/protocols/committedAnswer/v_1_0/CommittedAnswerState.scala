@@ -1,5 +1,9 @@
 package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
+import com.evernym.verity.protocol.TerminalState
+
+trait Event
+
 sealed trait State
 
 object State {
@@ -24,7 +28,7 @@ object State {
                             response:    String,
                             signature:   Option[Sig],
                             received:    String,
-                            validStatus: Option[AnswerValidity]) extends State
+                            validStatus: Option[AnswerValidity]) extends State with TerminalState
 
   // NOT a named state, but a dependent data structure
   case class AnswerValidity(answerValidity:    Boolean,

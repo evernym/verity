@@ -46,16 +46,16 @@ object IssueCredMsgFamily
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-    classOf[SignalMsg.Sent]                   -> "sent",
-    classOf[SignalMsg.Received]               -> "received",
-    classOf[SignalMsg.AcceptProposal]         -> "accept-proposal",
-    classOf[SignalMsg.AcceptOffer]            -> "accept-offer",
-    classOf[SignalMsg.AcceptRequest]          -> "accept-request",
-    classOf[SignalMsg.ShouldIssue]            -> "should-issue",
-    classOf[SignalMsg.StatusReport]           -> "status-report",
-    classOf[SignalMsg.ProblemReport]          -> "problem-report",
-    classOf[SignalMsg.Ack]                    -> "ack-received",
-    classOf[SignalMsg.Invitation]             -> "protocol-invitation",
+    classOf[Sig.Sent]                   -> "sent",
+    classOf[Sig.Received]               -> "received",
+    classOf[Sig.AcceptProposal]         -> "accept-proposal",
+    classOf[Sig.AcceptOffer]            -> "accept-offer",
+    classOf[Sig.AcceptRequest]          -> "accept-request",
+    classOf[Sig.ShouldIssue]            -> "should-issue",
+    classOf[Sig.StatusReport]           -> "status-report",
+    classOf[Sig.ProblemReport]          -> "problem-report",
+    classOf[Sig.Ack]                    -> "ack-received",
+    classOf[Sig.Invitation]             -> "protocol-invitation",
   )
 
 }
@@ -65,20 +65,26 @@ object IssueCredMsgFamily
 case class CredPreviewAttribute(name: String, value: String, `mime-type`: Option[String]=None)
 case class CredPreview(`@type`: String, attributes: Vector[CredPreviewAttribute]) {
   def toOption: Option[CredPreview] = Option(this)
+
+  def toCredPreviewObject: CredPreviewObject = {
+    CredPreviewObject(
+      `@type`,
+      attributes.map(a => CredPreviewAttr(a.name, a.value, a.`mime-type`))
+    )
+  }
 }
 
 // Control Messages
-trait Ctl extends Control with Msg
-
+trait CtlMsg extends Control with MsgBase
 object Ctl {
 
-  case class Init(params: Parameters) extends Ctl
+  case class Init(params: Parameters) extends CtlMsg
 
-  case class Reject(comment: Option[String]=Some("")) extends Ctl
+  case class Reject(comment: Option[String]=Some("")) extends CtlMsg
 
-  case class Status() extends Ctl
+  case class Status() extends CtlMsg
 
-  case class AttachedOffer(offer: OfferCred) extends Ctl {
+  case class AttachedOffer(offer: OfferCred) extends CtlMsg {
     override def validate(): Unit = {
       checkRequired("offer", offer)
     }
@@ -86,7 +92,7 @@ object Ctl {
 
   case class Propose(cred_def_id: String,
                      credential_values: Map[String, String],
-                     comment: Option[String]=Some("")) extends Ctl {
+                     comment: Option[String]=Some("")) extends CtlMsg {
     override def validate(): Unit = {
       checkRequired("cred_def_id", cred_def_id)
       checkRequired("credential_values", credential_values)
@@ -99,7 +105,7 @@ object Ctl {
                    comment: Option[String]=Some(""),
                    auto_issue: Option[Boolean]=None,
                    by_invitation: Option[Boolean]=None,
-                  ) extends Ctl {
+                  ) extends CtlMsg {
     override def validate(): Unit = {
       checkRequired("cred_def_id", cred_def_id)
       checkRequired("credential_values", credential_values)
@@ -109,7 +115,7 @@ object Ctl {
   }
 
   case class Request(cred_def_id: String,
-                     comment: Option[String]=Some("")) extends Ctl {
+                     comment: Option[String]=Some("")) extends CtlMsg {
     override def validate(): Unit = {
       checkRequired("cred_def_id", cred_def_id)
     }
@@ -117,24 +123,24 @@ object Ctl {
 
   case class Issue(revRegistryId: Option[String]=None,
                    comment: Option[String]=Some(""),
-                   `~please_ack`: Option[PleaseAck]=None) extends Ctl
+                   `~please_ack`: Option[PleaseAck]=None) extends CtlMsg
 }
 
 //signal messages
-sealed trait SignalMsg
-object SignalMsg {
-  case class Sent(msg: Any) extends SignalMsg
-  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
-  case class Received(msg: Any) extends SignalMsg
-  case class AcceptProposal(proposal: ProposeCred) extends SignalMsg
-  case class AcceptOffer(offer: OfferCred) extends SignalMsg
-  case class AcceptRequest(request: RequestCred) extends SignalMsg
-  case class ShouldIssue(requestCred: RequestCred) extends SignalMsg
-  case class StatusReport(status: String) extends SignalMsg
-  case class Ack(status: String) extends SignalMsg
-  case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SignalMsg
-  def buildProblemReport(description: String, code: String): SignalMsg.ProblemReport = {
-    SignalMsg.ProblemReport(
+sealed trait SigMsg
+object Sig {
+  case class Sent(msg: Any) extends SigMsg
+  case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SigMsg
+  case class Received(msg: Any) extends SigMsg
+  case class AcceptProposal(proposal: ProposeCred) extends SigMsg
+  case class AcceptOffer(offer: OfferCred) extends SigMsg
+  case class AcceptRequest(request: RequestCred) extends SigMsg
+  case class ShouldIssue(requestCred: RequestCred) extends SigMsg
+  case class StatusReport(status: String) extends SigMsg
+  case class Ack(status: String) extends SigMsg
+  case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SigMsg
+  def buildProblemReport(description: String, code: String): Sig.ProblemReport = {
+    Sig.ProblemReport(
       ProblemDescription(
         Some(description),
         code
@@ -143,20 +149,19 @@ object SignalMsg {
   }
 }
 
-trait Msg extends MsgBase
-
 //protocol messages
+trait ProtoMsg extends MsgBase
 object Msg {
   case class ProposeCred(cred_def_id: String,
                          credential_proposal: Option[CredPreview]=None,
-                         comment: Option[String]=Some("")) extends Msg {
+                         comment: Option[String]=Some("")) extends ProtoMsg {
     checkRequired("cred_def_id", cred_def_id)
   }
 
   case class OfferCred(credential_preview: CredPreview,
                        `offers~attach`: Vector[AttachmentDescriptor],
                        comment: Option[String]=Some(""),
-                       price: Option[String]=None) extends Msg {
+                       price: Option[String]=None) extends ProtoMsg {
     override def validate(): Unit = {
       checkRequired("credential_preview", credential_preview)
       checkRequired("offers~attach", `offers~attach`, allowEmpty = true)
@@ -164,7 +169,7 @@ object Msg {
   }
 
   case class RequestCred(`requests~attach`: Vector[AttachmentDescriptor],
-                         comment: Option[String]=Some("")) extends Msg {
+                         comment: Option[String]=Some("")) extends ProtoMsg {
     override def validate(): Unit = {
       checkRequired("requests~attach", `requests~attach`, allowEmpty = true)
     }
@@ -172,20 +177,20 @@ object Msg {
 
   case class IssueCred(`credentials~attach`: Vector[AttachmentDescriptor],
                        comment: Option[String]=Some(""),
-                       `~please_ack`: Option[PleaseAck]=None) extends Msg {
+                       `~please_ack`: Option[PleaseAck]=None) extends ProtoMsg {
     override def validate(): Unit = {
       checkRequired("credentials~attach", `credentials~attach`, allowEmpty = true)
     }
   }
 
-  case class Ack(status: String) extends Msg with AdoptableAck {
+  case class Ack(status: String) extends ProtoMsg with AdoptableAck {
     override def validate(): Unit = {
       checkRequired("status", `status`, allowEmpty = true)
     }
   }
 
   case class ProblemReport(description: ProblemDescription, override val comment: Option[String] = None)
-    extends Msg
+    extends ProtoMsg
       with AdoptableProblemReport
 
   def buildProblemReport(description: String, code: String): Msg.ProblemReport = {

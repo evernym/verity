@@ -5,13 +5,12 @@ import akka.testkit.EventFilter
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
-import com.evernym.verity.actor.testkit.WithAdditionalLogs
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.container.actor.base.{BaseProtocolActorSpec, GetPinstId, MockControllerActorBase, SendToProtocolActor}
 import com.evernym.verity.protocol.engine.PinstIdPair
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Propose
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.SignalMsg.Sent
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.Sent
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration._
@@ -19,8 +18,7 @@ import scala.language.postfixOps
 
 
 class ExtractEventsActorSpec
-  extends BaseProtocolActorSpec
-    with WithAdditionalLogs {
+  extends BaseProtocolActorSpec {
 
     val credDefId = "1"
     val credValue = Map("name" -> "Alice")
@@ -29,7 +27,7 @@ class ExtractEventsActorSpec
 
     "empty event stream should return ExtractionComplete imminently" in {
       EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
-        ConfigUtil.getDataRetentionPolicy(appConfig, "", "")
+        ConfigUtil.getRetentionPolicy(appConfig, "", "")
         system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor))
         expectMsgPF() {
           case ProtocolCmd(e: ExtractionComplete, None) => e
@@ -122,7 +120,11 @@ class ExtractEventsActorSpec
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory.parseString {
-      "akka.loglevel = DEBUG"
+      """
+        |akka.loglevel = DEBUG
+        |akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
+      |""".stripMargin
+
     }
   }
 }

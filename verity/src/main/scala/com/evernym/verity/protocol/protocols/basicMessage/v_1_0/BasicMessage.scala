@@ -8,6 +8,11 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
+import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.legacy.BasicMessageLegacy
+
+import java.util.UUID
+import scala.util.{Failure, Success, Try}
 
 
 sealed trait Role
@@ -25,17 +30,21 @@ object Role {
     case Participator => Participator
   }
 }
-trait Event
+
 class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, State, String])
-  extends Protocol[BasicMessage, Role, Msg, Event, State, String](BasicMessageDefinition) {
+  extends Protocol[BasicMessage, Role, Msg, Event, State, String](BasicMessageDefinition)
+    with BasicMessageLegacy {
+
   import BasicMessage._
   // Event Handlers
 
-  def applyEvent: ApplyEvent = {
-    case (_: State.Uninitialized , _ , e: Initialized  ) => (State.Initialized(), initialize(e))
-    case (_                      , _ , MyRole(n)       ) => (None, setRole(n))
-    case (_: State.Initialized   , _ , e: MessageReceived  ) => State.Messaging(buildMessage(e))
-    case (_: State.Messaging     , _ , e: MessageReceived  ) => State.Messaging(buildMessage(e))
+  override def applyEvent: ApplyEvent = mainEvent orElse legacyEvent
+
+  def mainEvent: ApplyEvent = {
+    case (_: State.Uninitialized , _ , e: Initialized  )      => (State.Initialized(), initialize(e))
+    case (_                      , _ , MyRole(n)       )      => (None, setRole(n))
+    case (_: State.Initialized   , _ , e: MessageReceivedRef) => State.Messaging(buildMessage(e), Some(e.blobAddress))
+    case (_: State.Messaging     , _ , e: MessageReceivedRef) => State.Messaging(buildMessage(e), Some(e.blobAddress))
   }
   // Protocol Msg Handlers
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = {
@@ -53,18 +62,20 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   }
 
   def receiveMessage(m: Msg.Message): Unit = {
-    ctx.apply(MyRole(Participator.roleNum))
-    ctx.apply(messageToEvt(m))
-
-    val signal = Signal.ReceivedMessage(
+    val sig: Signal.ReceivedMessage = Signal.ReceivedMessage(
       ctx.getRoster.selfId_!,
       m.`~l10n`,
       m.sent_time,
       m.content,
       m.`~attach`,
     )
-
-    ctx.signal(signal)
+    ctx.apply(MyRole(Participator.roleNum))
+    saveMessage(m) {
+      case Success(_) => ctx.signal(sig)
+      case Failure(ex) =>
+        ctx.logger.warn(s"could not store message: ${m.getClass.getSimpleName} because of ${ex.getMessage}")
+        ctx.signal(sig)
+    }
   }
 
   def send(m: Ctl.SendMessage): Unit = {
@@ -76,8 +87,10 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
       m.content,
       m.`~attach`,
     )
-    ctx.apply(messageToEvt(messageMsg))
-    ctx.send(messageMsg)
+    saveMessage(messageMsg) {
+      case Success(_) => ctx.send(messageMsg)
+      case Failure(ex) => // TODO: handle error
+    }
   }
 
   // Helper Functions
@@ -90,24 +103,53 @@ class BasicMessage(val ctx: ProtocolContextApi[BasicMessage, Role, Msg, Event, S
   def initialize(p: Initialized): Roster[Role] = {
     ctx.updatedRoster(Seq(InitParamBase(SELF_ID, p.selfIdValue), InitParamBase(OTHER_ID, p.otherIdValue)))
   }
+
+  def saveMessage(m: Msg.Message)(handler: Try[Unit] => Unit): Unit = {
+    val segmentKey: SegmentKey = UUID.randomUUID().toString
+    val messageData = MessageData(m.content, attachmentsToAttachmentObjects(m.`~attach`.getOrElse(Vector.empty)))
+    ctx.storeSegment(segmentKey, messageData) { result =>
+      handler(
+        result.map { _ =>
+          val ev = MessageReceivedRef(
+            m.`~l10n`.locale,
+            m.sent_time,
+            segmentKey
+          )
+          ctx.apply(ev)
+        }
+      )
+    }
+  }
+
+  // Not used yet, but example how data can be retrieved.
+  def retrieveMessage(localization: Option[String], sentTime: String, blobAddress: String)(handler: Try[Msg.Message] => Unit): Unit = {
+    val msg = Msg.Message(
+      l10n(locale = localization),
+      sentTime,
+      "",
+      None
+    )
+
+    ctx.withSegment[MessageData](blobAddress) {
+      case Success(Some(data)) =>
+        handler(
+          Success(msg.copy(content = data.content, `~attach` = Some(attachmentObjectsToAttachments(data.attachments.toVector))))
+        )
+      case Success(None) => // no data in segmented state (probably expired)
+        handler(Success(msg))
+      case Failure(ex) => // failure in retrieving
+        handler(Failure(ex))
+    }
+  }
 }
 
 object BasicMessage {
-  def buildMessage(m: MessageReceived): Msg.Message = {
+  def buildMessage(m: MessageReceivedRef): Msg.Message = {
     Msg.Message(
       l10n(locale = m.localization),
       m.sentTime,
-      m.content,
-      Some(attachmentObjectsToAttachments(m.attachments.toVector)),
-    )
-  }
-
-  def messageToEvt(m: Msg.Message): MessageReceived = {
-    MessageReceived(
-      m.`~l10n`.locale,
-      m.sent_time,
-      m.content,
-      attachmentsToAttachmentObjects(m.`~attach`.getOrElse(Vector.empty)),
+      "",
+      None,
     )
   }
 

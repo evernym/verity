@@ -86,16 +86,14 @@ trait AgentMsgHandler
     logger.debug("default implementation of storeOutgoingMsg")
   }
 
-  def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
-    logger.debug("default implementation of sendStoredMsgToMyDomain")
+  def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: MsgName): Unit = {
+    logger.debug("default implementation of sendMsgToMyDomain")
   }
 
-  def sendStoredMsgToTheirDomain(omp: OutgoingMsgParam, msgId: MsgId,
-                                 msgName: MsgName, thread: Option[Thread]=None): Unit = {
-    logger.debug("default implementation of sendStoredMsgToTheirDomain")
-  }
-
-  def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Unit = {
-    logger.debug("default implementation of sendUnStoredMsgToMyDomain")
+  def sendMsgToTheirDomain(omp: OutgoingMsgParam,
+                           msgId: MsgId,
+                           msgName: MsgName,
+                           thread: Option[Thread]=None): Unit = {
+    logger.debug("default implementation of sendMsgToTheirDomain")
   }
 }

@@ -26,6 +26,7 @@ import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectio
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.InternalReqHelperData
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -269,11 +270,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleMsgSentSuccessfully(mss: MsgSentSuccessfully): Unit = {
-    notifyUserForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ), updateDeliveryStatus = false)
+    notifyUserForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ))
   }
 
   def handleMsgSendingFailed(msf: MsgSendingFailed): Unit = {
-    notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ), updateDeliveryStatus = false)
+    notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ))
   }
 
   def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]] = {
@@ -305,7 +306,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
-        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, p.msgFamilyName))
+        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
       }
     }
   }
@@ -320,13 +321,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def getEncParamBasedOnMsgSender(implicit reqMsgContext: ReqMsgContext): EncryptParam = {
-    encParamBasedOnMsgSender(reqMsgContext.latestDecryptedMsgSenderVerKey)
+    encParamBasedOnMsgSender(reqMsgContext.latestMsgSenderVerKey)
   }
 
-  override def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
+  override def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
-    tupdateConf.configs.filter(_.name == configName).foreach { c =>
+    updateConf.configs.filter(_.name == configName).foreach { c =>
       val msgs = Set(
         UpdateMsgExpirationTime_MFV_0_5(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt),
         UpdateMsgExpirationTime_MFV_0_6(CREATE_MSG_TYPE_CONN_REQ, c.value.toInt))
@@ -341,8 +342,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     runWithInternalSpan("handleCreateMsgGeneral", "UserAgentPairwise") {
       val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE,
-        s"${MSG_TYPE_CREATE_MSG}_${createMsgReq.mtype}", reqMsgContext.clientIpAddressReq, userId)
+      val resourceName = ResourceUsageUtil.getCreateMsgReqMsgName(createMsgReq.mtype)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       val msgDetail = amw.tailAgentMsgs.head.convertTo[GeneralCreateMsgDetail_MFV_0_5]
 
       val srm = SendRemoteMsg(amw.headAgentMsgDetail, createMsgReq.uid.getOrElse(getNewMsgUniqueId),
@@ -389,7 +390,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
       val param = AgentMsgPackagingUtil.buildPackMsgParam(getEncParamBasedOnMsgSender, msgCreatedResp ++ otherRespMsgs, reqMsgContext.wrapInBundledMsg)
       logger.debug("param (during general proof/cred msgs): " + param)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg("SendRemoteMsgResp", rp, sender)
     }
   }
@@ -401,7 +402,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     runWithInternalSpan("persistAndProcessSendRemoteMsg", "UserAgentPairwise") {
       implicit val reqMsgContext: ReqMsgContext = papsrm.reqHelperData.reqMsgContext
 
-      val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.latestDecryptedMsgSenderVerKeyReq)
+      val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.latestMsgSenderVerKeyReq)
 
       val payloadParam = StorePayloadParam(papsrm.sendRemoteMsg.`@msg`, None)
       val msgStoredEvents = buildMsgStoredEventsV1(papsrm.sendRemoteMsg.id, papsrm.sendRemoteMsg.mtype,
@@ -426,7 +427,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     runWithInternalSpan("validateAndProcessSendRemoteMsg", "UserAgentPairwise") {
       implicit val reqMsgContext: ReqMsgContext = vapsrm.reqHelperData.reqMsgContext
       checkIfTheirDidDocExists()
-      checkMsgSenderIfConnectionIsNotYetEstablished(reqMsgContext.latestDecryptedMsgSenderVerKeyReq)
+      checkMsgSenderIfConnectionIsNotYetEstablished(reqMsgContext.latestMsgSenderVerKeyReq)
       checkIfMsgExists(vapsrm.sendRemoteMsg.replyToMsgId)
       vapsrm.sendRemoteMsg.replyToMsgId.foreach(state.checkIfMsgAlreadyNotInAnsweredState)
       persistAndProcessSendRemoteMsg(PersistAndProcessSendRemoteMsg(vapsrm.sendRemoteMsg, getInternalReqHelperData))
@@ -434,11 +435,12 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleSendMsgs(sendMsgReq: SendMsgsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_SEND_MSGS, reqMsgContext.clientIpAddressReq, userId)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
+    val resourceName = ResourceUsageUtil.getMessageResourceName(sendMsgReq.msgFamilyDetail)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
     sendRespMsg("SendMsgResp", rp, sender)
   }
 
@@ -616,7 +618,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   private def sendToMyRegisteredComMethods(uid: MsgId): Future[Any] = {
     if (! state.isConnectionStatusEqualTo(CONN_STATUS_DELETED.statusCode)) {
       val msg = getMsgReq(uid)
-      notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType), updateDeliveryStatus = true)
+      val payloadWrapper = getMsgPayload(uid)
+      notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType, payloadWrapper))
     } else {
       val errorMsg = s"connection is marked as DELETED, user won't be notified about this msg: $uid"
       logger.warn("user agent pairwise", "notify user",
@@ -626,15 +629,16 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleUpdateConnStatusMsg(updateConnStatus: UpdateConnStatusReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
-    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONN_STATUS, reqMsgContext.clientIpAddressReq, userId)
+    val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
+    val resourceName = ResourceUsageUtil.getMessageResourceName(updateConnStatus.msgFamilyDetail)
+    addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     if (updateConnStatus.statusCode != CONN_STATUS_DELETED.statusCode) {
       throw new BadRequestErrorException(INVALID_VALUE.statusCode, Option(s"invalid status code value: ${updateConnStatus.statusCode}"))
     }
     writeAndApply(ConnStatusUpdated(updateConnStatus.statusCode))
     val connectionStatusUpdatedRespMsg = UpdateConnStatusMsgHelper.buildRespMsg(updateConnStatus.statusCode)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, connectionStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
     sendRespMsg("ConnStatusUpdatedResp", rp)
   }
 
@@ -705,11 +709,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     senderParticipantId
   }
 
-  override def sendStoredMsgToTheirDomain(omp: OutgoingMsgParam,
-                                          msgId: MsgId,
-                                          msgName: MsgName,
-                                          thread: Option[Thread]=None): Unit = {
-    logger.debug("about to send stored msg to other entity: " + msgId)
+  override def sendMsgToTheirDomain(omp: OutgoingMsgParam,
+                                    msgId: MsgId,
+                                    msgName: MsgName,
+                                    thread: Option[Thread]=None): Unit = {
+    logger.debug("about to send msg to other entity: " + msgId)
     omp.givenMsg match {
       case pm: PackedMsg =>
         val sendMsgParam: SendMsgParam = buildSendMsgParam(msgId, msgName, pm.msg, isItARetryAttempt=false)

@@ -9,7 +9,7 @@ import com.evernym.verity.actor.testkit.checks.{IgnoreLog, UNSAFE_IgnoreAkkaEven
 import com.evernym.verity.actor.appStateManager.state.ListeningState
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.config.Config
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Future
 
@@ -136,7 +136,7 @@ class DeleteMessageFailureItemManagerSpec
         asmTestKit.withListeningAppState() {
           //note: eventually, during item container cleanup, if delete events fail (which we are doing in test)
           //it should NOT change app state
-          eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
             sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
             expectMsgType[ItemCmdResponse]
             asmTestKit.checkAppManagerState(ListeningState)

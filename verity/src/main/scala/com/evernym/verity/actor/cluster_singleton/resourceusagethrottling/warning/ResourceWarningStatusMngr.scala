@@ -29,7 +29,7 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
     case wu: WarnCaller               => handleWarnCaller(wu)
     case wur: WarnResourceForCaller   => handleWarnResourceForCaller(wur)
     case uu: UnwarnCaller             => handleUnwarnCaller(uu)
-    case uur: UnwarnResourceForCaller => handleUnwarnCallerForResource(uur)
+    case uur: UnwarnResourceForCaller => handleUnwarnResourceForCaller(uur)
     case gwl: GetWarnedList           => sendWarnedList(gwl)
     case Done                         => // do nothing
   }
@@ -40,19 +40,23 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
 
   def handleWarnCaller(wu: WarnCaller): Unit = {
     logger.debug("received warn caller request: " + wu)
-    val warnFrom = getMillisFromZonedDateTime(wu.warnFrom.getOrElse(getCurrentUTCZonedDateTime))
-    // First set period to 0 (clear warning) on all resources with the same ID if allWarnedResources is set to Y/y
-    if (wu.warnPeriod.getOrElse(None) == 0
-      && wu.allWarnedResources.map(_.toUpperCase).contains(YES)) {
-      val curDate = getCurrentUTCZonedDateTime
-      logger.debug(s"Removed ${wu.entityId} caller warning")
-      resourceWarningStatus.get(wu.entityId).foreach { rubs =>
-        rubs.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
-          removeResourceWarning(wu.entityId, rn, warnFrom)
+
+    val curDate = getCurrentUTCZonedDateTime
+    val warnFrom = getMillisFromZonedDateTime(wu.warnFrom.getOrElse(curDate))
+
+    // At first, clear warnings on all resources for this source ID if period is 0 and allResources is Y/y
+    if (wu.warnPeriod.contains(0) && wu.allWarnedResources.map(_.toUpperCase).contains(YES)) {
+      entityWarningStatus.get(wu.entityId).foreach { ews =>
+        ews.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
           resetResourceUsageCounts(wu.entityId, rn)
+
+          val resourceEvent = CallerResourceWarned(wu.entityId, rn, warnFrom, 0)
+          writeAndApply(resourceEvent)
+          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
         }
       }
     }
+
     val event = CallerWarned(wu.entityId, warnFrom, getTimePeriodInSeconds(wu.warnPeriod))
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
@@ -60,40 +64,46 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
 
   def handleWarnResourceForCaller(wur: WarnResourceForCaller): Unit = {
     logger.debug("received warn caller resource request: " + wur)
+
+    // At first, reset this resource usage counts for this source ID if period is 0
+    if (wur.warnPeriod.contains(0)) {
+      resetResourceUsageCounts(wur.entityId, wur.resourceName)
+    }
+
     val warnFrom = getMillisFromZonedDateTime(wur.warnFrom.getOrElse(getCurrentUTCZonedDateTime))
+
     val event = CallerResourceWarned(wur.entityId, wur.resourceName, warnFrom, getTimePeriodInSeconds(wur.warnPeriod))
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
-
-    // Set period to 0 (clear warning) on all resources with the same ID if allWarnedResources is set to 'Y' or 'y'
-    if (wur.warnPeriod.getOrElse(None) == 0) {
-      removeResourceWarning(wur.entityId, wur.resourceName, warnFrom)
-      resetResourceUsageCounts(wur.entityId, wur.resourceName)
-    }
   }
 
   def handleUnwarnCaller(uu: UnwarnCaller): Unit = {
     logger.debug("received unwarn caller request: " + uu)
+
     val curDate = getCurrentUTCZonedDateTime
     val unwarnFrom = getMillisFromZonedDateTime(uu.unwarnFrom.getOrElse(curDate))
-    val event = CallerUnwarned(uu.entityId, unwarnFrom, getTimePeriodInSeconds(uu.unwarnPeriod))
-    writeApplyAndSendItBack(event)
-    singletonParentProxyActor ! SendCmdToAllNodes(event)
 
+    // At first, unwarn all resources for this source ID if allResources is Y/y
     if (uu.allWarnedResources.map(_.toUpperCase).contains(YES)) {
-      resourceWarningStatus.get(uu.entityId).foreach { ruws =>
-        ruws.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
+      entityWarningStatus.get(uu.entityId).foreach { ews =>
+        ews.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
           val resourceEvent = CallerResourceUnwarned(uu.entityId, rn, unwarnFrom, getTimePeriodInSeconds(uu.unwarnPeriod))
           writeAndApply(resourceEvent)
           singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
         }
       }
     }
+
+    val event = CallerUnwarned(uu.entityId, unwarnFrom, getTimePeriodInSeconds(uu.unwarnPeriod))
+    writeApplyAndSendItBack(event)
+    singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
-  def handleUnwarnCallerForResource(uur: UnwarnResourceForCaller): Unit = {
+  def handleUnwarnResourceForCaller(uur: UnwarnResourceForCaller): Unit = {
     logger.debug("received unwarn caller resource request: " + uur)
+
     val unwarnFrom = getMillisFromZonedDateTime(uur.unwarnFrom.getOrElse(getCurrentUTCZonedDateTime))
+
     val event = CallerResourceUnwarned(uur.entityId, uur.resourceName, unwarnFrom, getTimePeriodInSeconds(uur.unwarnPeriod))
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
@@ -130,13 +140,6 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
     } else {
       sender ! UsageWarningStatusChunk(Map.empty, 1, 1)
     }
-  }
-
-  def removeResourceWarning(entityId: EntityId, resourceName: ResourceName, warnFrom: Long): Unit = {
-    logger.debug(s"Remove $resourceName resource warnings")
-    val event = CallerResourceWarned(entityId, resourceName, warnFrom, getTimePeriodInSeconds(Some(0)))
-    writeApplyAndSendItBack(event)
-    singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
   def system: ActorSystem = aac.system

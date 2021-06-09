@@ -197,7 +197,8 @@ trait BasePersistentStore
   def overrideSpecificConfig: Option[Config] = None
 
   final override def overrideConfig: Option[Config] = Option {
-    val baseConfig = ConfigFactory.empty()
+    val baseConfig =
+      ConfigFactory.empty()
         .withFallback(EventSourcedBehaviorTestKit.config)
         .withFallback(PersistenceTestKitSnapshotPlugin.config)
     overrideSpecificConfig match {

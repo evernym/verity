@@ -83,13 +83,14 @@ trait MsgCodec {
     val msgType = msgFamily.msgType(value.getClass)
     val doc = value match {
       case s: String  => docFromStr(s)
-      case ojb        => toDocument(ojb)
+      case obj        => toDocument(obj)
     }
 
     val typedJsonMsg = msgTypeFormat match {
       case _:NoopTypeFormat     => doc
       case _:LegacyTypeFormat   => addLegacyMetaDataToDoc(doc, msgType, threadId)
       case _:StandardTypeFormat => addMetaDataToDoc(doc, msgType, msgId, threadId, msgOrders)
+      case other                => throw new RuntimeException("unsupported message type format: " + other)
     }
 
     AgentJsonMsg(typedJsonMsg.toString, msgType)

@@ -1,19 +1,15 @@
 package com.evernym.verity.util
 
-import java.net.URLEncoder
-import java.time._
-import java.util
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.{HandledErrorException, _}
 import com.evernym.verity.Status._
+import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
@@ -21,13 +17,17 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.vault._
-import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.codec.digest.DigestUtils
+
+import java.net.URLEncoder
+import java.time._
+import java.util
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 // TODO should not be needed here, should remove utils that use it
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -196,10 +196,20 @@ trait UtilBase extends AsyncToSync {
   }
 
   def buildAgencyEndpoint(appConfig: AppConfig): UrlParam = {
+    buildAgencyUrl(
+      appConfig,
+      appConfig.getConfigStringOption(VERITY_ENDPOINT_PATH_PREFIX)
+    )
+  }
+
+  def buildAgencyUrl(appConfig: AppConfig, pathPrefix: Option[String]): UrlParam = {
     val host = appConfig.getConfigStringReq(VERITY_ENDPOINT_HOST)
     val port = appConfig.getConfigIntReq(VERITY_ENDPOINT_PORT)
-    val pathPrefix = Option(appConfig.getConfigStringReq(VERITY_ENDPOINT_PATH_PREFIX))
-    UrlParam(host, port, pathPrefix)
+    UrlParam(
+      host,
+      port,
+      pathPrefix
+    )
   }
 
   def checkIfDIDBelongsToVerKey(did: DID, verKey: VerKey): Unit = {

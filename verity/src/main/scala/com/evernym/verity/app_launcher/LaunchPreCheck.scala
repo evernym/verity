@@ -42,8 +42,12 @@ object LaunchPreCheck {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
-      implicit val timeout: Timeout = Timeout(Duration.create(10, TimeUnit.SECONDS))
+      implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
       val pcFut = Future(aac.poolConnManager.open())
+        .recover {
+          case e: Throwable =>
+            logger.error("error while checking ledger connection: " + Exceptions.getStackTraceAsSingleLineString(e))
+        }
       Await.result(pcFut, timeout.duration)
     } catch {
       case e: TimeoutException =>
@@ -72,10 +76,15 @@ object LaunchPreCheck {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
-      implicit val timeout: Timeout = Timeout(Duration.create(10, TimeUnit.SECONDS))
+      implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
       val actorId = "dummy-actor-" + UUID.randomUUID().toString
       val keyValueMapper = aac.system.actorOf(KeyValueMapper.props(aac), actorId)
-      val fut = (keyValueMapper ? GetValue("dummy-key")).mapTo[Option[String]]
+      val fut = (keyValueMapper ? GetValue("dummy-key"))
+          .mapTo[Option[String]]
+          .recover {
+            case e: Throwable =>
+              logger.error("error while checking akka event storage connection: " + Exceptions.getStackTraceAsSingleLineString(e))
+          }
       Await.result(fut, timeout.duration)
       aac.system.stop(keyValueMapper)
     } catch {

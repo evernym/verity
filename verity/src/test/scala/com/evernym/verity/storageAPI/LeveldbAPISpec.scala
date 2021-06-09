@@ -4,24 +4,34 @@ import java.util.UUID
 import akka.Done
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.leveldb.LeveldbAPI
 import com.evernym.verity.testkit.BasicAsyncSpec
 import com.typesafe.config.{Config, ConfigValueFactory}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.BeforeAndAfterAll
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class LeveldbAPISpec extends BasicAsyncSpec {
+class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    Await.result(system.terminate(), 10 seconds)
+  }
 
   private def blobConfig(): Config = (new TestAppConfig)
     .config
     .withValue("verity.blob-store.storage-service", ConfigValueFactory.fromAnyRef("com.evernym.verity.storage_services.leveldb.LeveldbAPI"))
-    .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef("/tmp/verity/leveldb"))
+    .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef(s"/tmp/verity/leveldb-spec-${UUID.randomUUID().toString}"))
 
   val appConfig: AppConfig = new TestAppConfig(Some(blobConfig()))
-  lazy implicit val system: ActorSystem = ActorSystem("leveldb-test-system", appConfig.config)
+  lazy implicit val system: ActorSystem = ActorSystemVanilla("leveldb-test-system", appConfig.config)
   val BUCKET: String = "leveldb-bucket"
 
   val leveldbAPI: LeveldbAPI = StorageAPI.loadFromConfig(appConfig).asInstanceOf[LeveldbAPI]
@@ -35,7 +45,7 @@ class LeveldbAPISpec extends BasicAsyncSpec {
 
     "when dealing with a small object" - {
       "should succeed in uploading" in {
-        leveldbAPI put(BUCKET, ID1, OBJ1) map { _.`type` shouldBe "leveldb" }
+        leveldbAPI put(BUCKET, ID1, OBJ1) map { _.endpoint shouldBe s"$BUCKET-$ID1" }
       }
 
       "should succeed downloading" in {
@@ -54,7 +64,7 @@ class LeveldbAPISpec extends BasicAsyncSpec {
 
     "when dealing with a large object" - {
       "should succeed in uploading" in {
-        leveldbAPI put(BUCKET, ID2, OBJ2) map { _.`type` shouldBe "leveldb" }
+        leveldbAPI put(BUCKET, ID2, OBJ2) map { _.endpoint shouldBe s"$BUCKET-$ID2" }
       }
 
       "should succeed downloading" in {

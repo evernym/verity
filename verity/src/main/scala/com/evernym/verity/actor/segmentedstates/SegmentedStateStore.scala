@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.segmentedstates
 
+import akka.Done
 import akka.actor.Props
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.object_code_mapper.DefaultObjectCodeMapper
@@ -7,7 +8,7 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
-import com.evernym.verity.protocol.protocols.walletBackup.BackupStored
+import com.evernym.verity.protocol.protocols.walletBackup.legacy.BackupStored
 import com.google.protobuf.ByteString
 import scalapb.GeneratedMessage
 
@@ -15,8 +16,9 @@ import scalapb.GeneratedMessage
 object SegmentedStateStore extends HasProps {
   def props(implicit config: AppConfig): Props = Props(new SegmentedStateStore(config))
 
-  def buildTypeName(protoRef: ProtoRef, segmentName: String): String = {
-    protoRef + "-" + segmentName
+
+  def buildTypeName(protoRef: ProtoRef): String = {
+    s"${protoRef.msgFamilyName}-${protoRef.msgFamilyVersion}-segment"
   }
 
   def eventCode(event: GeneratedMessage): Int = {
@@ -49,7 +51,10 @@ class SegmentedStateStore(val appConfig: AppConfig)
       sender ! ValidationError("segmented state already stored with segmentKey: " + segmentKey)
     case SaveSegmentedState(segmentKey, value: GeneratedMessage) =>
       storeSegment(segmentKey, value)
-    case GetSegmentedState(segmentKey) => sender ! state.get(segmentKey)
+    case DeleteSegmentedState(segmentKey) =>
+      removeSegment(segmentKey)
+    case GetSegmentedState(segmentKey) =>
+      sender ! state.get(segmentKey)
   }
 
   def storeSegment(key: SegmentKey, value: GeneratedMessage): Unit = {
@@ -60,15 +65,22 @@ class SegmentedStateStore(val appConfig: AppConfig)
     sender ! Some(value)
   }
 
+  def removeSegment(key: SegmentKey): Unit = {
+    writeAndApply(SegmentedStateRemoved(key))
+    sender ! Done
+  }
+
   def receiveEvent: Receive = {
     case evt: SegmentedStateStored =>
       val dse = SegmentedStateStore.buildEvent(evt.eventCode, evt.data.toByteArray)
       state += (evt.key -> dse)
+    case SegmentedStateRemoved(key) =>
+      state -= key
   }
 
 }
 
 case class SaveSegmentedState(segmentKey: SegmentKey, value : GeneratedMessage) extends ActorMessage
 case class GetSegmentedState(segmentKey: SegmentKey) extends ActorMessage
-
+case class DeleteSegmentedState(segmentKey: SegmentKey) extends ActorMessage
 case class ValidationError(error: String) extends ActorMessage

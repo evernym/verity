@@ -14,22 +14,29 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
       }
     }
 
-    "when called get resource usage rule for a token" - {
-      "should respond with applicable resource usage rule name" in {
-        ResourceUsageRuleHelper.getRuleNameByEntityId("global") shouldBe "global"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("127.0.0.4") shouldBe "ip-address"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4") shouldBe "ip-address"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
+    "when called get default usage rule name for a token" - {
+      "should respond with default usage rule name based on the token type" in {
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("global") shouldBe "global"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("191.0.0.4") shouldBe "ip-address"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("randomToken") shouldBe "default"
+        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("128.0.0.1") shouldBe "ip-address"
+      }
+    }
 
-        ResourceUsageRuleHelper.getRuleNameByEntityId("128.0.0.1") shouldBe "custom"
+    "when called get usage rule name for a token" - {
+      "should respond with applicable usage rule name" in {
+        ResourceUsageRuleHelper.getRuleNameByEntityId("global") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "default"
         ResourceUsageRuleHelper.getRuleNameByEntityId("randomToken") shouldBe "default"
-
-        ResourceUsageRuleHelper.getRuleNameByEntityId("otherToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4otherToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4/otherToken") shouldBe "default"
+        ResourceUsageRuleHelper.getRuleNameByEntityId("128.0.0.1") shouldBe "custom"
       }
     }
   }
@@ -92,42 +99,42 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
   }
 
   def getExpectedResourceUsageRule: ResourceUsageRuleConfig = {
-    val defaultEndpointUsageBuckets = ResourceUsageRule(
+    val endpointDefaultUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(100, "50"),
         600 -> BucketRule(200, "70"),
         1200 -> BucketRule(400, "90")
     ))
 
-    val postAgencyMsgEndpointUsageBuckets = ResourceUsageRule(
+    val postAgencyMsgUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(100, "50"),
         600 -> BucketRule(200, "70"),
         1200 -> BucketRule(400, "90")
     ))
 
-    val defaultEndpointUsageItemBuckets = ResourceTypeUsageRule(
+    val endpointAllUsageRule = ResourceUsageRule(
       Map (
-        "default" -> defaultEndpointUsageBuckets,
-        "POST_agency_msg" -> postAgencyMsgEndpointUsageBuckets
+        300 -> BucketRule(1000, "50"),
+        600 -> BucketRule(2000, "70"),
+        1200 -> BucketRule(4000, "90")
+      ))
+
+    val defaultEndpointUsageRule = ResourceTypeUsageRule(
+      Map (
+        "default" -> endpointDefaultUsageRule,
+        "POST_agency_msg" -> postAgencyMsgUsageRule,
+        "endpoint.all" -> endpointAllUsageRule
     ))
 
-    val defaultMsgUsageBuckets = ResourceUsageRule(
+    val messageDefaultUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(100, "50"),
         600 -> BucketRule(200, "70"),
         1200 -> BucketRule(400, "90")
     ))
 
-    val connReqMessageBuckets = ResourceUsageRule(
-      Map (
-        -1 -> BucketRule(100, "70", persistUsageState = true),
-        300 -> BucketRule(5, "50"),
-        600 -> BucketRule(20, "70"),
-        1800 -> BucketRule(50, "90")
-    ))
-
-    val getMsgsMessageBuckets = ResourceUsageRule(
+    val dummyMsgUsageRule = ResourceUsageRule(
       Map (
         300 -> BucketRule(3, "100"),
         600 -> BucketRule(3, "101"),
@@ -135,7 +142,22 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
         1800 -> BucketRule(4, "103"),
     ))
 
-    val customConnReqMessageBuckets = ResourceUsageRule(
+    val createMsgConnReqUsageRule = ResourceUsageRule(
+      Map (
+        -1 -> BucketRule(100, "70", persistUsageState = true),
+        300 -> BucketRule(5, "50"),
+        600 -> BucketRule(20, "70"),
+        1800 -> BucketRule(50, "90")
+      ))
+
+    val messageAllUsageRule = ResourceUsageRule(
+      Map (
+        300 -> BucketRule(500, "50"),
+        600 -> BucketRule(1000, "70"),
+        1200 -> BucketRule(2000, "90")
+      ))
+
+    val customCreateMsgConnReqUsageRule = ResourceUsageRule(
       Map (
         -1 -> BucketRule(2, "70", persistUsageState = true),
         300 -> BucketRule(5, "50"),
@@ -143,28 +165,30 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
         1800 -> BucketRule(50, "90")
     ))
 
-    val defaultMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
-      "CREATE_MSG_connReq" -> connReqMessageBuckets,
-      "DUMMY_MSG" -> getMsgsMessageBuckets,
-      "default" ->  defaultMsgUsageBuckets
+    val defaultMessageUsageRule = ResourceTypeUsageRule( Map (
+      "default" ->  messageDefaultUsageRule,
+      "dummy-family/DUMMY_MSG" -> dummyMsgUsageRule,
+      "connecting/CREATE_MSG_connReq" -> createMsgConnReqUsageRule,
+      "message.all" -> messageAllUsageRule
     ))
 
-    val customMessageUsageItemBuckets = ResourceTypeUsageRule( Map (
-      "CREATE_MSG_connReq" -> customConnReqMessageBuckets,
-      "default" ->  defaultMsgUsageBuckets
+    val customMessageUsageRule = ResourceTypeUsageRule( Map (
+      "default" ->  messageDefaultUsageRule,
+      "connecting/CREATE_MSG_connReq" -> customCreateMsgConnReqUsageRule,
+      "message.all" -> messageAllUsageRule
     ))
 
     val defaultUsageRule = UsageRule(Map(
-      "endpoint" -> defaultEndpointUsageItemBuckets,
-      "message" -> defaultMessageUsageItemBuckets
+      "endpoint" -> defaultEndpointUsageRule,
+      "message" -> defaultMessageUsageRule
     ))
 
     val customUsageRule = UsageRule(Map(
-      "endpoint" -> defaultEndpointUsageItemBuckets,
-      "message" -> customMessageUsageItemBuckets
+      "endpoint" -> defaultEndpointUsageRule,
+      "message" -> customMessageUsageRule
     ))
 
-    val expectedRules = Map (
+    val usageRules = Map (
       "default" -> defaultUsageRule,
       "custom" -> customUsageRule
     )
@@ -220,7 +244,7 @@ class ResourceUsageRuleHelperSpec extends BasicSpec {
     )
 
     ResourceUsageRuleConfig(applyUsageRules = true, persistAllBucketUsages = false,
-      snapshotAfterEvents = 2, expectedRules, ruleToTokens, Set.empty, Set.empty, actionRules)
+      snapshotAfterEvents = 2, usageRules, ruleToTokens, Set.empty, Set.empty, actionRules)
   }
 
 }

@@ -19,23 +19,32 @@ trait WithAdditionalLogs
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
     initialLevel = Some(
       LoggerFactory
         .getLogger(Logger.ROOT_LOGGER_NAME)
         .asInstanceOf[LogbackLogger]
         .getLevel
     )
-    LoggerFactory
-      .getLogger(Logger.ROOT_LOGGER_NAME)
-      .asInstanceOf[LogbackLogger]
-      .setLevel(toLevel)
+
+    if(initialLevel.exists(_.isGreaterOrEqual(toLevel))){
+      LoggerFactory
+        .getLogger(Logger.ROOT_LOGGER_NAME)
+        .asInstanceOf[LogbackLogger]
+        .setLevel(toLevel)
+    }
+    else {
+      initialLevel = None
+    }
   }
 
   override def afterAll(): Unit = {
     super.afterAll()
-    LoggerFactory
-      .getLogger(Logger.ROOT_LOGGER_NAME)
-      .asInstanceOf[LogbackLogger]
-      .setLevel(initialLevel.get)
+    initialLevel.foreach{
+      LoggerFactory
+        .getLogger(Logger.ROOT_LOGGER_NAME)
+        .asInstanceOf[LogbackLogger]
+        .setLevel(_)
+    }
   }
 }

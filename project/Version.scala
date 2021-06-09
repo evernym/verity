@@ -37,9 +37,9 @@ object Version {
   }
 
   def patchNum(commitDate: Option[String], commitHash: Option[String], uncommitChanges: Boolean): String = {
-    if (uncommitChanges || !sys.env.get("CI").isDefined) {
+    if (uncommitChanges || !sys.env.contains("CI")) {
       // Always use SNAPSHOTs when producing artifacts outside of gitlab pipelines
-      if (sys.env.get("DEVLAB").isDefined) {
+      if (sys.env.contains("DEVLAB")) {
         // A debian package DOES NOT get overwritten when posting a debian to the Aptly 'repo' container in devlab
         // if the version already exists in the repo. When a developer sets the "DEVLAB" environment variable, use
         // "now()" instead of commitDate to produce a unique (like a build number), newer version for each packaged

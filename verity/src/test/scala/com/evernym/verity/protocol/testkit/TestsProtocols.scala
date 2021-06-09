@@ -1,12 +1,13 @@
 package com.evernym.verity.protocol.testkit
 
 import java.util.UUID
-
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import org.scalatest.Outcome
 import org.scalatest.FixtureTestSuite
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.reflect.ClassTag
 
@@ -17,7 +18,7 @@ abstract class TestsProtocolsImpl[P,R,M,E,S,I](val protoDef: ProtocolDefinition[
     with ProtocolTestKitLike[P,R,M,E,S,I]
     with FixtureTestSuite
 
-trait TestsProtocols[P,R,M,E,S,I] {
+trait TestsProtocols[P,R,M,E,S,I] extends Eventually {
   ptk: ProtocolTestKitLike[P,R,M,E,S,I] with FixtureTestSuite =>
 
   type ContainerName = String
@@ -61,8 +62,7 @@ trait TestsProtocols[P,R,M,E,S,I] {
                    pinstId: PinstId=UUID.randomUUID.toString,
                    recorder: Option[RecordsEvents]=None,
                    driver: Option[Driver]=None): Container = {
-    val pce = ProtocolContainerElements(system, partiId, pinstId, None, protoDef, segmentStoreStrategy,
-      new TestSystemInitProvider, recorder, driver)
+    val pce = ProtocolContainerElements(system, partiId, pinstId, None, protoDef, new TestSystemInitProvider, recorder, driver)
     new Container(pce)
   }
 
@@ -94,6 +94,13 @@ trait TestsProtocols[P,R,M,E,S,I] {
       te
     }
 
+    def checkTotalSegments(expectedSize: Int, waitMillisBeforeCheck: Int = 0): Unit = {
+      Thread.sleep(waitMillisBeforeCheck)
+      eventually(timeout(Span(3, Seconds)), interval(Span(300, Millis))) {
+        assert (sys.totalStoredSegments == expectedSize,
+          s" (stored segment size was expected to be '$expectedSize', but it was '${sys.totalStoredSegments}'")
+      }
+    }
   }
 
 }

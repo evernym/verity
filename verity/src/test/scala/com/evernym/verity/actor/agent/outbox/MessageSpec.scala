@@ -3,10 +3,9 @@ package com.evernym.verity.actor.agent.outbox
 import akka.Done
 import akka.actor.testkit.typed.scaladsl._
 import akka.pattern.StatusReply
-import com.evernym.verity.actor.agent.outbox.TestKit.TestMessage
 import com.evernym.verity.actor.agent.outbox.Message.Error.{MSG_ALREADY_SET, MSG_CLEARED, MSG_NOT_SET}
+import com.evernym.verity.actor.agent.outbox.TestKit.TestMessage
 import com.evernym.verity.testkit.BasicSpec
-import org.scalatest.BeforeAndAfterEach
 
 import scala.language.implicitConversions
 
@@ -16,8 +15,7 @@ import scala.language.implicitConversions
   */
 class MessageSpec
   extends ScalaTestWithActorTestKit(TestKit.config)
-    with BasicSpec
-    with BeforeAndAfterEach {
+    with BasicSpec {
 
 
   implicit def XToOption[A](a: A): Option[A] = Option(a)

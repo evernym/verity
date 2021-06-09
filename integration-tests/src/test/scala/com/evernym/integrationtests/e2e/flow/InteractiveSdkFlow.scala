@@ -1,9 +1,8 @@
 package com.evernym.integrationtests.e2e.flow
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
@@ -15,8 +14,8 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.protocol.engine.Constants.`@TYPE`
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -32,8 +31,6 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 
 import java.nio.charset.StandardCharsets
-import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import java.util.UUID
@@ -41,6 +38,7 @@ import scala.collection.mutable
 import scala.concurrent.{Await, ExecutionException}
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 import scala.language.postfixOps
+import scala.util.Try
 
 trait InteractiveSdkFlow extends MetricsFlow {
   this: BasicSpec with TempDir with Eventually =>
@@ -48,8 +46,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
   val logger: Logger = getLoggerByName(getClass.getName)
 
   import InteractiveSdkFlow._
-
-  val system: ActorSystem = ActorSystem.create("InteractiveSdkFlow")
 
   var iterationCountMap: mutable.Map[String, Int] = mutable.Map()
 
@@ -156,14 +152,27 @@ trait InteractiveSdkFlow extends MetricsFlow {
       val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
       s"[$issuerName] use issuer-setup protocol" in {
-        issuerSdk.issuerSetup_0_6
-          .create(issuerSdk.context)
 
-        receiverSdk.expectMsg("public-identifier-created") { resp =>
-          resp shouldBe an[JSONObject]
+        issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
 
-          assert(resp.getJSONObject("identifier").has("verKey"))
-          assert(resp.getJSONObject("identifier").has("did"))
+        receiverSdk.checkMsg(){ resp =>
+          if(resp.getString(`@TYPE`).contains("problem-report")) {
+            issuerSdk.issuerSetup_0_6
+              .create(issuerSdk.context)
+
+            receiverSdk.expectMsg("public-identifier-created") { resp =>
+              resp shouldBe an[JSONObject]
+
+              assert(resp.getJSONObject("identifier").has("verKey"))
+              assert(resp.getJSONObject("identifier").has("did"))
+            }
+          }
+          else if (resp.getString(`@TYPE`).contains("public-identifier")) {
+            logger.info("Issuer is already setup")
+          }
+          else {
+            throw new Exception("Unexpected message type")
+          }
         }
       }
     }
@@ -235,8 +244,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
     assert(result.contains(logoUrl))
   }
 
-  def resolveShortInviteUrl(shortInviteUrl: String): String = {
-    val fut = Http()(system).singleRequest(
+  def resolveShortInviteUrl(shortInviteUrl: String)(implicit scenario: Scenario): String = {
+    val fut = Http()(scenario.actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
         uri = shortInviteUrl,
@@ -263,7 +272,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                   schemaAttrs: String*)
                  (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
-    s"write schema $schemaName on $issuerName" - {
+    s"write schema $schemaName for $issuerName" - {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
@@ -330,17 +339,29 @@ trait InteractiveSdkFlow extends MetricsFlow {
                                   schemaAttrs: String*)
                                  (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
-    s"write schema on $issuerName" - {
+    s"endorser request for unprivileged $issuerName" - {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
       s"[$issuerName] use write-schema protocol before issuer DID is on ledger" in {
-        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
-        schema.write(issuerSdk.context)
+        val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+        val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
+        val endorserDidOnLedger = Try {
+          ledgerUtil.checkDidOnLedger(issuerDID, issuerVerkey, "ENDORSER")
+          true
+        }.getOrElse(false)
 
-        msgReceiverSdk.expectMsg("needs-endorsement") {resp =>
-          resp shouldBe an[JSONObject]
-          resp.getString("schemaJson").contains("endorser") shouldBe true
+        if (!endorserDidOnLedger) {
+          val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+          schema.write(issuerSdk.context)
+
+          msgReceiverSdk.expectMsg("needs-endorsement") {resp =>
+            resp shouldBe an[JSONObject]
+            resp.getString("schemaJson").contains("endorser") shouldBe true
+          }
+        }
+        else {
+          logger.info("Can not check endorser flow if issuer DID is already on ledger")
         }
       }
     }
@@ -377,7 +398,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
     val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
-    s"write credential def ($credDefName) on $issuerName" - {
+    s"write credential def ($credDefName) for $issuerName" - {
       s"[$issuerName] use write-cred-def protocol" taggedAs UNSAFE_IgnoreLog in {
         val schemaId = issuerSdk.data_!(s"$schemaName-$schemaVersion-id")
         issuerSdk.writeCredDef_0_6(credDefName, schemaId, Some(credTag), Some(revocation))
@@ -1115,10 +1136,14 @@ trait InteractiveSdkFlow extends MetricsFlow {
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
         verifierMsgReceiver.expectMsg("status-report") { status =>
           status.getString("status") shouldBe "Complete"
-          val presentationAgain = status
-            .getJSONObject("results")
-            .getJSONObject("requested_presentation")
-          presentationAgain.toString shouldBe presentation.toString
+          // Data may not be available since it may have been redacted but its there it should match
+          Try{
+            status
+              .getJSONObject("results")
+              .getJSONObject("requested_presentation")
+          }.foreach { r =>
+            r.toString shouldBe presentation.toString
+          }
         }
       }
     }
@@ -1207,10 +1232,14 @@ trait InteractiveSdkFlow extends MetricsFlow {
         verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
         verifierMsgReceiver.expectMsg("status-report") { status =>
           status.getString("status") shouldBe "Complete"
-          val presentationAgain = status
-            .getJSONObject("results")
-            .getJSONObject("requested_presentation")
-          presentationAgain.toString shouldBe presentation.toString
+          // Data may not be available since it may have been redacted but its there it should match
+          Try{
+            status
+              .getJSONObject("results")
+              .getJSONObject("requested_presentation")
+          }.foreach { r =>
+            r.toString shouldBe presentation.toString
+          }
         }
       }
     }
@@ -1431,15 +1460,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
             .getJSONObject("last_name")
             .getString("value") shouldBe "Marley"
         }
-
-        //        verifierSdk.presentProof_1_0(forRel, tid).status(verifierSdk.context)
-        //        verifierMsgReceiver.expectMsg("status-report") { status =>
-        //          status.getString("status") shouldBe "Complete"
-        //          val presentationAgain = status
-        //            .getJSONObject("results")
-        //            .getJSONObject("requested_presentation")
-        //          presentationAgain.toString shouldBe presentation.toString
-        //        }
       }
     }
   }

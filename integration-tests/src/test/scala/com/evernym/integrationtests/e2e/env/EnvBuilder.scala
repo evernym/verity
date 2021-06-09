@@ -58,6 +58,7 @@ object Constants {
   final val SDK_ENDPOINT = ENDPOINT
   final val SDK_DOMAIN_DID = "domain-did"
   final val SDK_AGENT_VERKEY = "verkey"
+  final val SDK_RECEIVE_SPACING = "receive-spacing"
   final val SDK_SEED = "seed"
   final val SDK_VERITY_INSTANCE = "verity-instance"
 
@@ -203,9 +204,10 @@ trait IntegrationTestEnvBuilder {
     val endpoint = stringOption(config, SDK_ENDPOINT, key)
     val domainDID = stringOption(config, SDK_DOMAIN_DID, key)
     val agentVerkey = stringOption(config, SDK_AGENT_VERKEY, key)
+    val spacing = stringOption(config, SDK_RECEIVE_SPACING, key).map(Duration.apply)
     val keySeed = stringOption(config, SDK_SEED, key)
 
-    SdkConfig(sdkType, name, version, port, endpoint, domainDID, agentVerkey, keySeed, instance)
+    SdkConfig(sdkType, name, version, port, endpoint, domainDID, agentVerkey, keySeed, spacing, instance)
   }
 
   def prepareLedgerConfig: LedgerConfig = {
@@ -461,7 +463,6 @@ case class VerityInstance(name: String,
 
       EnvVar("VERITY_ENDPOINT_HOST", endpoint.host),
       EnvVar("VERITY_ENDPOINT_PORT", endpoint.port),
-      EnvVar("VERITY_DOMAIN_URL_PREFIX", endpoint, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
@@ -527,6 +528,7 @@ case class SdkConfig(sdkTypeStr: String,
                      domainDid: Option[String],
                      agentVerkey: Option[String],
                      keySeed: Option[String],
+                     receiveSpacing: Option[Duration],
                      verityInstance: VerityInstance) {
   val sdkType: SdkType = SdkType.fromString(sdkTypeStr)
 

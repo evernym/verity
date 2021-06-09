@@ -9,7 +9,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
-import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam, SendStoredMsgToMyDomain}
+import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, MsgAndDelivery, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
@@ -25,7 +25,7 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
-import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config, SendConfig}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
 import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
@@ -34,7 +34,9 @@ import com.evernym.verity.vault._
 import java.time.ZonedDateTime
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
 import scala.concurrent.Future
 
@@ -147,11 +149,9 @@ trait UserAgentCommon
     sender ! AgencyIdentitySet(saw.didPair)
   }
 
-  def postUpdateConfig(tupdateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
+  def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
 
-  def notifyUser(nu: NotifyUserViaPushNotif): Unit = {
-    sendPushNotif(nu.pushNotifData, updateDeliveryStatus = false, None)
-  }
+  def notifyUser(nu: NotifyUserViaPushNotif): Unit = sendPushNotif(nu.pushNotifData, None)
 
   def validateConfigValues(cds: Set[ConfigDetail]): Unit = {
     cds.find(_.name == PUSH_COM_METHOD).foreach { pcmConfig =>
@@ -162,15 +162,17 @@ trait UserAgentCommon
     }
   }
 
-  def handleUpdateConfigPackedReq(tupdateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
+  def handleUpdateConfigPackedReq(updateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
-      val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_UPDATE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
-      handleUpdateConfig(tupdateConf)
-      postUpdateConfig(tupdateConf, reqMsgContext.latestDecryptedMsgSenderVerKey)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
+      val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
+        .getOrElse(MSG_TYPE_UPDATE_CONFIGS)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
+      handleUpdateConfig(updateConf)
+      postUpdateConfig(updateConf, reqMsgContext.latestMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg("ConfigUpdated", rp, sender)
     }
   }
@@ -189,15 +191,16 @@ trait UserAgentCommon
 
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     runWithInternalSpan("handleRemoveConfigMsg", "UserAgentCommon") {
-      val userId = userIdForResourceUsageTracking(reqMsgContext.latestDecryptedMsgSenderVerKey)
-      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, MSG_TYPE_REMOVE_CONFIGS, reqMsgContext.clientIpAddressReq, userId)
+      val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
+      val resourceName = ResourceUsageUtil.getMessageResourceName(removeConf.msgFamilyDetail)
+      addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
       removeConf.configs.foreach { cn =>
         if (state.isConfigExists(cn))
           writeAndApply(ConfigRemoved(cn))
       }
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg("ConfigRemoved", rp, sender)
     }
   }
@@ -211,14 +214,14 @@ trait UserAgentCommon
       val confs = getFilteredConfigs(getConfs.configs)
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormat, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
       sendRespMsg("Configs", rp, sender)
     }
   }
 
   def sendAgentMsgToRegisteredEndpoint(srm: SendMsgToRegisteredEndpoint): Future[Option[ControlMsg]] = {
-    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown"), PayloadWrapper(srm.msg, srm.metadata), None)
-    Future.successful(None) // [DEVIN] WHY?? Seems like we are ignoring the real future sendMsgToRegisteredEndpoint
+    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown", Option(PayloadWrapper(srm.msg, srm.metadata))), None)
+      .map(_ => None)
   }
 
   override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
@@ -230,17 +233,14 @@ trait UserAgentCommon
     logger.debug("packed msg stored")
   }
 
-  override def sendStoredMsgToMyDomain(msgId:MsgId): Unit = {
-    // flow diagram: fwd.edge, step 11 -- Queue msg for delivery to edge.
-    logger.debug("about to send stored msg to my domain (edge): " + msgId)
-    self ! SendStoredMsgToMyDomain(msgId)
-  }
-
-  override def sendUnStoredMsgToMyDomain(omp: OutgoingMsgParam): Unit = {
+  override def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String): Unit = {
     logger.debug("about to send un stored msg to my domain (edge): " + omp.givenMsg)
-    sendMsgToRegisteredEndpoint(
-      NotifyMsgDetail.withTrackingId(omp.givenMsg.getClass.getSimpleName),
-      PayloadWrapper(omp.msgToBeProcessed, omp.metadata), None)
+    notifyUserForNewMsg(
+      NotifyMsgDetail(
+        msgId,
+        msgName,
+        Option(PayloadWrapper(omp.msgToBeProcessed, omp.metadata)))
+    )
   }
 
   def agentName(configs: Set[ConfigDetail]): String = {

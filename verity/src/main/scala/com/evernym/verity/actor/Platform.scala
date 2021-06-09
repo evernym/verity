@@ -1,6 +1,6 @@
 package com.evernym.verity.actor
 
-import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Extension, ExtensionId, PoisonPill, Props}
 import akka.cluster.singleton._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -56,6 +56,16 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //start prometheus reporter
   // intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is validated as well
   MetricsReader.initialize(appConfig)
+
+  def startExtensionIfEnabled[T <: Extension](t: ExtensionId[T], confPath: String)(start: T => Unit): Unit = {
+    val isEnabled = appConfig
+      .getConfigBooleanOption(confPath)
+      .getOrElse(false)
+
+    if (isEnabled) {
+      start(t.get(actorSystem))
+    }
+  }
 
   //initialize app state manager
   val appStateManager: ActorRef = agentActorContext.system.actorOf(
@@ -197,9 +207,9 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //segmented state region actors
   val segmentedStateRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
-    .entries.filter(_.protoDef.segmentedStateName.isDefined)
+    .entries.filter(_.protoDef.segmentStoreStrategy.isDefined)
     .map { e =>
-      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef, e.protoDef.segmentedStateName.get)
+      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef)
       val region = createPersistentRegion(
         typeName,
         SegmentedStateStore.props(agentActorContext.appConfig))

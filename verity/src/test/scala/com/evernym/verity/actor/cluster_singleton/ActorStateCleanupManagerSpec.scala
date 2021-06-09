@@ -17,7 +17,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 class ActorStateCleanupManagerSpec
@@ -56,7 +56,7 @@ class ActorStateCleanupManagerSpec
 
     "when sent GetStatus" - {
       "should respond with correct status" in {
-        eventually(timeout(Span(20, Seconds)), interval(Span(4, Seconds))) {
+        eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
@@ -67,7 +67,7 @@ class ActorStateCleanupManagerSpec
 
     "after some time" - {
       "should have processed all state cleanup" taggedAs (UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
-        eventually(timeout(Span(35, Seconds)), interval(Span(4, Seconds))) {
+        eventually(timeout(Span(35, Seconds)), interval(Span(200, Millis))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize

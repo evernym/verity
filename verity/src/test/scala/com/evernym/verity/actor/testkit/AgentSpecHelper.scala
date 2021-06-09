@@ -4,7 +4,6 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, PoisonPill}
 import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
@@ -19,6 +18,7 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 trait AgentSpecHelper
@@ -51,11 +51,7 @@ trait AgentSpecHelper
 
   def wrapAsPackedMsgParam(packedMsg: PackedMsg): ProcessPackedMsg = ProcessPackedMsg(packedMsg, reqMsgContext)
 
-  def reqMsgContext: ReqMsgContext = {
-    val rmi = ReqMsgContext()
-    rmi.append(Map(CLIENT_IP_ADDRESS -> "1.2.3.4"))
-    rmi
-  }
+  def reqMsgContext: ReqMsgContext = ReqMsgContext.empty.withClientIpAddress("1.2.3.4")
 
   private def expectedUnsupportedVersionMsg(typ: String,
                                             unsupportedVersion: String,
@@ -108,11 +104,11 @@ trait AgentSpecHelper
   }
 
   protected def restartPersistentActor(ar: agentRegion): Unit = {
-    Thread.sleep(2000)
     ar ! PoisonPill
     expectNoMessage()
-    Thread.sleep(2000)
-    ar ! GetPersistentActorDetail
-    expectMsgType[PersistentActorDetail]
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      ar ! GetPersistentActorDetail
+      expectMsgType[PersistentActorDetail]
+    }
   }
 }

@@ -6,13 +6,15 @@ import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
 import AgentProvisioningMsgFamily._
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerify}
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
+import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
 
 object AgentProvisioningDefinition
   extends ProtocolDefinition[AgentProvisioning,Role,Msg,Any,AgentProvisioningState,String] {
 
   val msgFamily: MsgFamily = AgentProvisioningMsgFamily
 
-  override def segmentedStateName: Option[String] = Option("provisionTokenCache")
+  override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOneDomain)
 
   override val roles: Set[Role] = Set(Requester, Provisioner)
 

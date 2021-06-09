@@ -13,7 +13,7 @@ import DevEnvironment.DebianRepo
 import DevEnvironmentTasks.{envRepos, jdkExpectedVersion}
 import SharedLibrary.{NonMatchingDistLib, NonMatchingLib}
 import SharedLibraryTasks.{sharedLibraries, updateSharedLibraries}
-import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, findAdditionalJars, referenceConfMerge}
+import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, referenceConfMerge, searchForAdditionalJars}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
@@ -42,18 +42,19 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.15.0~1618"
-val libMysqlStorageVer = "0.1.11"
+val libIndyVer = "1.95.0~1577"
 val sharedLibDeps = Seq(
-  NonMatchingDistLib("libindy", libIndyVer, "libindy.so"),
-  NonMatchingDistLib("libnullpay", libIndyVer, "libnullpay.so"),
-  NonMatchingLib("libmysqlstorage", libMysqlStorageVer, "libmysqlstorage.so"),
-  NonMatchingLib("libvcx", "0.10.1-bionic~1131", "libvcx.so"), // For integration testing ONLY
+  NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
+  NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
+  NonMatchingLib("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so")  // For integration testing ONLY
+)
+
+val additionalJars: Seq[String] = Seq(
+  "kanela-agent"
 )
 
 //deb package dependencies versions
 val debPkgDepLibIndyMinVersion = libIndyVer
-val debPkgDepLibMySqlStorageVersion = libMysqlStorageVer
 
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
@@ -101,6 +102,8 @@ ThisBuild / envRepos := Seq(evernymDevRepo, evernymUbuntuRepo)
 SharedLibraryTasks.init
 DevEnvironmentTasks.init
 
+val jars = taskKey[Seq[File]]("List of Jars to package")
+
 lazy val root = (project in file("."))
   .aggregate(verity)
 
@@ -115,7 +118,8 @@ lazy val verity = (project in file("verity"))
     protoBufSettings,
     libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
     // Conditionally download an unpack shared libraries
-    update := update.dependsOn(updateSharedLibraries).value
+    update := update.dependsOn(updateSharedLibraries).value,
+    K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion)
   )
 
 lazy val integrationTests = (project in file("integration-tests"))
@@ -205,9 +209,9 @@ lazy val settings = Seq(
 
 lazy val testSettings = Seq (
   //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", s"target/test-reports/$projectName"),
+//  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
-  //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oNCXEHLOPQRM"),  // summarized test output
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
   // an issue was found related to class loading when we run 'sbt test'
@@ -231,13 +235,14 @@ lazy val packageSettings = Seq (
       baseDirectory.value / "src" / "debian" / "empty"
         -> s"/etc/verity/${packageName.value}"
     )
-    val additionalJars = findAdditionalJars(
+    val jars = searchForAdditionalJars(
       (assembly / externalDependencyClasspath).value,
-      s"/usr/lib/${packageName.value}",
-      Seq("kanela-agent")
+      additionalJars
     )
+    .map(x => x.copy(_2 = s"/usr/lib/${packageName.value}/${x._2}"))
+
     println(basePackageMapping)
-    packageMapping(basePackageMapping ++ additionalJars: _*)
+    packageMapping(basePackageMapping ++ jars: _*)
   },
   linuxPackageMappings += {
     buildPackageMappings(s"verity/src/main/resources/debian-package-resources",
@@ -248,9 +253,8 @@ lazy val packageSettings = Seq (
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy(>= $debPkgDepLibIndyMinVersion)",
-    s"libnullpay(>= $debPkgDepLibIndyMinVersion)",  // must be the same version as libindy
-    s"libmysqlstorage(=$debPkgDepLibMySqlStorageVersion)" //temporary pinning it to specific version until latest version gets fixed
+    s"libindy-async(>= $debPkgDepLibIndyMinVersion)",
+    s"libnullpay-async(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",
@@ -275,8 +279,15 @@ lazy val commonLibraryDependencies = {
 
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,
-    "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,                //not using as such
-    "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,   //not using as such
+
+    "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,
+    "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,
+    "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaMgtVer,
+
+    "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % akkaMgtVer,
+
+    "com.typesafe.akka" %% "akka-discovery" % akkaVer,
+    "com.typesafe.akka" %% "akka-actor" % akkaVer,
 
     //other akka dependencies
     "com.twitter" %% "chill-akka" % "0.9.5",    //serialization/deserialization for akka remoting
@@ -392,7 +403,6 @@ lazy val confFiles = Set (
   "logback.xml",
   "salt.conf",
   "secret.conf",
-  "sms-client.conf",
   "sms-server.conf",
   "url-mapper-client.conf",
   "metrics.conf",

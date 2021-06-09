@@ -1,16 +1,16 @@
 package com.evernym.verity.util
 
-import akka.actor.ActorSystem
 import akka.serialization._
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ShardUtil}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
+import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ShardUtil}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestMessages.{TestMessage1, TestMessage2}
 import com.twitter.chill.akka.AkkaSerializer
 
 
-class ActorMessageSerializerSpec extends BasicSpec {
+class ActorMessageSerializerSpec extends ActorSpec with BasicSpec {
 
   "AkkaSerializer" - {
 
@@ -69,8 +69,8 @@ class ActorMessageSerializerSpec extends BasicSpec {
     }
   }
 
-  val node1Serializer: Serialization = SerializationExtension(ActorSystem("node1"))
-  val node2Serializer: Serialization = SerializationExtension(ActorSystem("node2"))
+  val node1Serializer: Serialization = SerializationExtension(system)
+  val node2Serializer: Serialization = SerializationExtension(system)
 }
 
 object TestMessages {

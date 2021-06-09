@@ -6,9 +6,7 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.protocol.engine.ThreadId
-import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
-import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnResponseSent}
+import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 
 
@@ -16,13 +14,13 @@ class ConnectionAcceptanceSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = setupNewVerityEnv()
-  lazy val holderVerityEnv = setupNewVerityEnv()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
 
-  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
-  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -35,7 +33,7 @@ class ConnectionAcceptanceSpec
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
-  var lastReceivedThreadId: Option[ThreadId] = None
+  var lastReceivedThread: Option[MsgThread] = None
 
   "IssuerSDK" - {
     "when sent 'create' (relationship 1.0) message" - {
@@ -44,13 +42,13 @@ class ConnectionAcceptanceSpec
         val created = receivedMsg.msg
         created.did.nonEmpty shouldBe true
         created.verKey.nonEmpty shouldBe true
-        lastReceivedThreadId = receivedMsg.threadIdOpt
+        lastReceivedThread = receivedMsg.threadOpt
       }
     }
 
     "when sent 'connection-invitation' (relationship 1.0) message" - {
       "should be successful" in {
-        val invitation = issuerSDK.sendCreateConnectionInvitation(firstConn, lastReceivedThreadId)
+        val invitation = issuerSDK.sendCreateConnectionInvitation(firstConn, lastReceivedThread)
         invitation.inviteURL.nonEmpty shouldBe true
         firstInvitation = invitation
       }
@@ -78,10 +76,8 @@ class ConnectionAcceptanceSpec
 
   "IssuerSDK" - {
     "should receive final 'complete' (connections 1.0) message" in {
-      issuerSDK.expectMsgOnWebhook[ConnReqReceived]()
-      issuerSDK.expectMsgOnWebhook[ConnResponseSent]()
-      val receivedMsg = issuerSDK.expectMsgOnWebhook[Complete]()
-      receivedMsg.msg.theirDid.isEmpty shouldBe false
+      val complete = issuerSDK.expectConnectionComplete(firstConn)
+      complete.theirDid.isEmpty shouldBe false
     }
   }
 

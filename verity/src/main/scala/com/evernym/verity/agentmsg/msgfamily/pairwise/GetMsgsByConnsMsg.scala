@@ -75,8 +75,8 @@ object GetMsgsByConnsMsgHelper extends MsgHelper[GetMsgsByConnsReqMsg] {
     GetMsgsByConnsRespMsg_MFV_0_6(MSG_TYPE_DETAIL_MSGS_BY_CONNS, pairwiseMsgs)
   }
 
-  def buildRespMsg(msgs: Map[String, scala.List[MsgDetail]])(implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+  def buildRespMsg(msgs: Map[String, scala.List[MsgDetail]])(implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildMsgsByConnsResp_MFV_0_5(msgs))
       case MFV_0_6 => List(buildMsgsByConnsResp_MFV_0_6(msgs))
       case x => throw new RuntimeException("get msgs by conns response builder failed: " + x)

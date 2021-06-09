@@ -31,9 +31,9 @@ package object resourceusagethrottling {
   type ResourceTypeName = String
 
   /**
-   * Resource Name (endpoint-path or message-name)
-   * endpoint-path examples: /agency/msg etc
-   * message-name examples: "GET_MSGS" etc
+   * Resource Name (for endpoint resource or message resource)
+   * Endpoint resource name examples: "POST_agency_msg", etc, and also "endpoint.all"
+   * Message resource name examples: "GET_MSGS", etc, and also "message.all"
    */
   type ResourceName = String
 
@@ -91,6 +91,10 @@ package object resourceusagethrottling {
   val ENTITY_ID_GLOBAL = "global"
 
   val RESOURCE_NAME_ALL = "all"
+  val RESOURCE_NAME_ENDPOINT_ALL = "endpoint.all"
+  val RESOURCE_NAME_MESSAGE_ALL = "message.all"
+
+  val DEFAULT_RESOURCE_USAGE_RULE_NAME = "default"
 
   val RESOURCE_TYPE_ENDPOINT = 1
   val RESOURCE_TYPE_MESSAGE = 2

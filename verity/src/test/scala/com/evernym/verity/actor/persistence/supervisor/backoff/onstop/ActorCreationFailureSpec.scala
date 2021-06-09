@@ -22,7 +22,7 @@ class ActorCreationFailureSpec
     "when throws an unhandled exception" - {
       "should be stopped and started as per back off strategy" in {
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 3) intercept {
-          mockSupervised ! Ping(sendBackConfirmation = true)
+          mockSupervised ! Ping(sendAck = true)
           expectNoMessage()
         }
       }

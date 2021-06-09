@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, RelationshipName, SelfRelationship}
-import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -68,6 +67,14 @@ class SimpleProtocolSystem() extends HasContainers with HasDidRouter with Segmen
     val uniqueSegmentId = buildUniqueKey(segmentAddress, segmentKey)
     segmentedState.get(uniqueSegmentId)
   }
+
+  def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey): SegmentKey = {
+    val uniqueSegmentId = buildUniqueKey(segmentAddress, segmentKey)
+    segmentedState -= uniqueSegmentId
+    segmentKey
+  }
+
+  def totalStoredSegments: Int = segmentedState.size
 
   def handleControl[A <: Control](env: CtlEnvelope[A], myDid: DID): Unit = {
     val domain = didRouter.get(myDid)
@@ -360,8 +367,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
       val driver = protocolRegistry.find_!(protoDef.msgFamily.protoRef).driverGen map { _.apply(driverParam) }
 
-      val sss = segmentStoreStrategy(protoDef)
-      val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef, sss,
+      val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef,
         initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider, urlShorteningAccessProvider)
 
       val container = containerProvider(pce)
@@ -370,7 +376,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
       container.recoverOrInit() //TODO add log msg here
 
-      container.asInstanceOf[Container]
+      container
     }
   }
 

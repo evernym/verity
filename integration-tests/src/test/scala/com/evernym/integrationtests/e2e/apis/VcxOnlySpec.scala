@@ -14,7 +14,7 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.sdk.utils.ContextBuilder
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
@@ -25,7 +25,6 @@ import org.scalatest.time.{Seconds, Span}
 
 import java.util.UUID
 import java.util.concurrent.ExecutionException
-
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -40,6 +39,7 @@ class VcxOnlySpec
     with InteractiveSdkFlow
     with SetupFlow
     with AdminFlow
+    with CancelGloballyAfterFailure
     with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)
@@ -51,21 +51,19 @@ class VcxOnlySpec
 
   val cas1 = testEnv.instance_!(APP_NAME_CAS_1).appInstance
 
-  runScenario("vcxOnlyFlow") {
+  runScenario("vcxOnlyFlow") (Scenario(
+    "VCX only work-flows",
+    List(cas1),
+    suiteTempDir,
+    projectDir,
+    defaultTimeout = Some(10 minute))) { implicit scenario =>
+
     lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
       appEnv.config,
       Option(appEnv.ledgerConfig.submitterDID),
       Option(appEnv.ledgerConfig.submitterSeed),
       appEnv.ledgerConfig.submitterRole,
       genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
-    )
-
-    implicit val scenario: Scenario = Scenario(
-      "VCX only work-flows",
-      List(cas1),
-      suiteTempDir,
-      projectDir,
-      defaultTimeout = Some(10 minute)
     )
 
     val apps = ScenarioAppEnvironment(scenario, testEnv)

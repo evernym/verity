@@ -201,8 +201,8 @@ object AcceptConnReqMsgHelper {
   }
 
   def buildRespMsg(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None)
-                  (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+                  (implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildMsgCreatedResp_MFV_0_5(`@id`))
       case MFV_0_6 => List(buildAcceptConnReqResp_MFV_0_6(`@id`, threadId, sourceId))
       case x => throw new RuntimeException("accept conn req response builder failed: " + x)
@@ -232,8 +232,8 @@ object DeclineConnReqMsgHelper {
 
 
   def buildRespMsg(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None)
-                  (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+                  (implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_6 => List(buildDeclineConnReqResp_MFV_0_6(`@id`, threadId, sourceId))
       case x => throw new RuntimeException("decline conn req response builder failed: " + x)
     }
@@ -301,8 +301,8 @@ object RedirectConnReqMsgHelper {
   }
 
   def buildRespMsg(`@id`: String, threadId: ThreadId, sourceId: Option[String]=None)
-                  (implicit respMsgParam: AgentMsgContext): List[Any] = {
-    respMsgParam.familyVersion match {
+                  (implicit agentMsgContext: AgentMsgContext): List[Any] = {
+    agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildConnReqRedirectedResp_MFV_0_5(`@id`))
       case MFV_0_6 => List(buildConnReqRedirectedResp_MFV_0_6(`@id`, threadId, sourceId))
       case x => throw new RuntimeException("redirect conn req response builder failed: " + x)

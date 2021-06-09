@@ -3,11 +3,10 @@ package com.evernym.verity.actor.persistence.eventDeletion
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import akka.testkit.EventFilter
-import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.{ActorMessage, ItemUpdated, TestJournal}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic, WithAdditionalLogs}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, GetPersistentActorDetail, PersistentActorDetail}
+import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TimeZoneUtil.{getCurrentUTCZonedDateTime, getMillisFromZonedDateTime}
@@ -18,10 +17,8 @@ import scala.concurrent.Future
 //tests how deletion of events (messages) handled in batches
 class DeleteMsgHandlerSpec
   extends BasicSpec
-    with ActorSpec
-    with WithAdditionalLogs {
+    with ActorSpec {
 
-  override def toLevel: Level = Level.INFO
   lazy val mockActor: ActorRef = system.actorOf(MockPersistentActor.props(appConfig))
 
   "PersistentActor" - {
@@ -36,11 +33,24 @@ class DeleteMsgHandlerSpec
     "when tried to delete events" - {
       "should be successfully deleted" in {
         //here we are indirectly testing success and failure scenario along with max batch size as well.
-        EventFilter.info(pattern = "delete message successful: DeleteMessagesSuccess(.*)", occurrences = 8) intercept {
-          mockActor ! StartMsgDeletion
-          expectMsg(Done)
+        mockActor ! StartMsgDeletion
+        expectMsgType[Done.type]
+        val expectedEventDeletionInBatch = Seq(700, 1700, 2700, 3000)
+        EventFilter.info(pattern = s"delete message completed", occurrences = 1) intercept {
+          expectedEventDeletionInBatch.foreach { batchSize =>
+            checkBatchSuccessMsg(batchSize)
+          }
         }
       }
+    }
+  }
+
+  def checkBatchSuccessMsg(deletedEvent: Int, occurrences: Int = 1): Unit = {
+    EventFilter.info(
+      pattern = s"delete message successful: DeleteMessagesSuccess\\($deletedEvent\\)",
+      occurrences = occurrences) intercept {
+      mockActor ! GetPersistentActorDetail
+      expectMsgType[PersistentActorDetail]
     }
   }
 
@@ -49,6 +59,7 @@ class DeleteMsgHandlerSpec
       """
          akka.loglevel = INFO
          akka.test.filter-leeway = 20s   # to make the event filter run for longer time
+         akka.logging-filter = "com.evernym.verity.actor.testkit.logging.TestFilter"
         """
     }.withFallback(configForDeleteEventFailure)
   }
@@ -72,12 +83,12 @@ class MockPersistentActor(val appConfig: AppConfig)
       totalEventsToBePersisted = totalEvents
       (1 to totalEvents).foreach { i =>
         writeAndApply(
-        ItemUpdated(
-          i.toString,
-          0,      //status would be always from this new request message
-          "detail",     //detail would be always from this new request message
-          isFromMigration = false,
-          getMillisFromZonedDateTime(getCurrentUTCZonedDateTime))
+          ItemUpdated(
+            i.toString,
+            0, //status would be always from this new request message
+            "detail", //detail would be always from this new request message
+            isFromMigration = false,
+            getMillisFromZonedDateTime(getCurrentUTCZonedDateTime))
         )
       }
 
@@ -95,8 +106,6 @@ class MockPersistentActor(val appConfig: AppConfig)
       }
   }
 
-  override def postAllMsgsDeleted(): Unit = {}
-
   override def onDeleteMessageSuccess(dms: DeleteMessagesSuccess): Unit = {
     log.info("delete message successful: " + dms)
   }
@@ -105,11 +114,12 @@ class MockPersistentActor(val appConfig: AppConfig)
 
   }
 
-  override protected val initialBatchSize = 50
-  override protected val maxBatchSize = 1000
-  override protected val batchSizeMultiplier = 2
-  override protected val batchIntervalInSeconds = 2
+  override def postAllMsgsDeleted(): Unit = {
+    log.info("delete message completed")
+  }
 
+  override protected def initialBatchSize = 700
+  override protected def batchIntervalInSeconds = 1
 }
 
 case class PersistEvents(totalEvents: Int) extends ActorMessage

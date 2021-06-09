@@ -5,16 +5,16 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.metrics.reporter.MetricDetail
 import com.evernym.verity.metrics.{MetricsReader, NodeMetricsData}
-import com.evernym.verity.testkit.AddMetricsReporter
-import org.scalatest.time.{Seconds, Span}
+import com.evernym.verity.testkit.MetricsReadHelper
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
-trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
+trait MetricsSpec extends MetricsReadHelper { this : EdgeEndpointBaseSpec =>
 
   def testMetrics(): Unit = {
     "when sent get metrics api call" - {
       "should response with metrics" taggedAs (UNSAFE_IgnoreLog) in {
-        eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+        eventually(timeout(Span(10, Seconds)), interval(Span(300, Millis))) {
           buildGetReq("/agency/internal/metrics") ~> epRoutes ~> check {
             status shouldBe OK
             val nmd = responseTo[NodeMetricsData]
@@ -44,15 +44,15 @@ trait MetricsSpec extends AddMetricsReporter { this : EdgeEndpointBaseSpec =>
       "span_processing_time_seconds_count",
       "span_processing_time_seconds_sum",
       "span_processing_time_seconds_bucket",
-//      "libindy_command_duration_ms_count", //TODO should be added again once we switch to libindy-async
-//      "libindy_command_duration_ms_sum",
-//      "libindy_command_duration_ms_bucket",
+      "libindy_command_duration_ms_count",
+      "libindy_command_duration_ms_sum",
+      "libindy_command_duration_ms_bucket",
       "libindy_wallet_count"
     ).map(MetricsReader.convertToProviderName)
     val nameSet = metrics.map(_.name).toSet
     val notFound = expectedMetrics.diff(nameSet)
     notFound shouldBe empty
-    nameSet should not contain("libindy_command_duration_ms_count") // If this fails, add above entries back in
+    nameSet should contain allElementsOf expectedMetrics
   }
 
 }

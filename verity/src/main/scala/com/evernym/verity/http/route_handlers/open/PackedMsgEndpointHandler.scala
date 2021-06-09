@@ -6,7 +6,6 @@ import akka.http.scaladsl.model.{HttpEntity, HttpMethod, HttpMethods, HttpReques
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.base.Done
@@ -117,7 +116,7 @@ trait PackedMsgEndpointHandler
   protected def handleAgentMsgReq(implicit req: HttpRequest, remoteAddress: RemoteAddress): Route = {
     // flow diagram: fwd + ctl + proto + legacy, step 1 -- Packed msg arrives.
     incrementAgentMsgCount
-    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext(initData = Map(CLIENT_IP_ADDRESS -> clientIpAddress))
+    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext.empty.withClientIpAddress(clientIpAddress)
     logIncoming(HttpMethods.POST)
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
     req.entity.contentType.mediaType match {

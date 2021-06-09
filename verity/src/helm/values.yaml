@@ -1,0 +1,19 @@
+deployment:
+  image: "727797026123.dkr.ecr.us-west-2.amazonaws.com/verity"
+  tag: "latest"
+  imagePullPolicy: "Always"
+  containerPort: 9000
+k8sService:
+  type: ClusterIP
+  port: 80
+  targetPort: 9000
+ingress:
+  port: 80
+# List of sponsors for Verity
+sponsors:
+# List configuration for for TAA.
+taa:
+# Custom and Adhoc Configuration for Verity in HOCON Notation
+# Intended to allow quick injection of config that is
+# not managed by this helm chart
+customConfig: |

@@ -9,6 +9,7 @@ import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.recovery.legacy.verity1.AgencyAgentEventSetter
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
+import com.evernym.verity.actor.testkit.checks.IgnoreAkkaEvents
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -26,7 +27,7 @@ class AgencyAgentRecoverySpec
   "Legacy Agency agent actor" - {
 
     "when started" - {
-      "should respond as expected" in {
+      "should respond as expected" taggedAs IgnoreAkkaEvents in {
 
         val aaEventsBeforeStart = getEvents(myAgencyAgentPersistenceId)
         aaRegion ! GetAgencyAgentDetail
@@ -44,14 +45,14 @@ class AgencyAgentRecoverySpec
         apdBeforeRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
         aiBeforeRestart.verKeyReq shouldBe myAgencyAgentDIDPair.verKey
 
-        val walletServiceCountBeforeRestart = getWalletAPICallCount
+        val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
 
         val aaEventsBeforeRestart = getEvents(myAgencyAgentPersistenceId)
         aaEventsBeforeRestart shouldBe aaEventsBeforeStart ++ getAuthKeyAddedEvents(myAgencyAgentDIDPair)
 
         restartActor(aaRegion)
 
-        val walletServiceCountAfterRestart = getWalletAPICallCount
+        val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric
         val aaEventsAfterRestart = getEvents(myAgencyAgentPersistenceId)
         walletServiceCountAfterRestart shouldBe walletServiceCountBeforeRestart
         aaEventsAfterRestart shouldBe aaEventsBeforeRestart

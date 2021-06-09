@@ -25,7 +25,7 @@ class ResourceUsageViolationSpec
 
   val logger: Logger = getLoggerByClass(classOf[ResourceUsageViolationSpec])
 
-  val DUMMY_MSG = "DUMMY_MSG"
+  val DUMMY_MSG = "dummy-family/DUMMY_MSG"
 
   val globalToken = "global"
 
@@ -39,7 +39,7 @@ class ResourceUsageViolationSpec
   val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
   val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
 
-  val createMsgConnReq: String = MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
+  val createMsgConnReq: String = MSG_FAMILY_CONNECTING + "/" + MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
 
   def resourceUsageTrackerSpec() {
 
@@ -65,8 +65,8 @@ class ResourceUsageViolationSpec
       resourceUsageParams.foreach { rup =>
         // Clear all buckets in preparation for this test
         // Previous tests may have already added stats to each of the following buckets (300, 600, ..., etc).
-        // CREATE_MSG_connReq
-        (Option(ENTITY_ID_GLOBAL) ++ Option(rup.ipAddress) ++ rup.userId).foreach { entityId =>
+        // connecting/CREATE_MSG_connReq
+        (Option(rup.ipAddress) ++ rup.userId ++ Option(ENTITY_ID_GLOBAL)).foreach { entityId =>
           sendToResourceUsageTrackerRegion(entityId,
             UpdateResourcesUsageCounter(List(
               ResourceUsageCounterDetail(rup.resourceName, 300, None),
@@ -98,7 +98,7 @@ class ResourceUsageViolationSpec
               fail("Unhandled exception encountered while adding resource usage stats: entityId: " +
                 rup.ipAddress + " resourceType: " + RESOURCE_TYPE_MESSAGE + " resourceName: " + rup.resourceName)
           }
-          // Yield to other threads between calls to sendToResourceUsageTrackerRegionAddResourceUsage.
+          // Yield to other threads between calls to sendToResourceUsageTracker.
           // Don't overwhelm the resource usage tracker during this test so that numbers are predictable. It is
           // expected for limits to possibly exceeded thresholds, because of async processing and analyzing of
           // usage counts.
@@ -112,7 +112,7 @@ class ResourceUsageViolationSpec
       // violation-action group 70 to call log-msg, warn-entity, and block-resource after the second iteration; when
       // allowed-counts of 2 is exceeded on bucket -1 (infinite bucket).
       //
-      // CREATE_MSG_connReq {
+      // "connecting/CREATE_MSG_connReq" {
       //   300: {"allowed-counts": 5, "violation-action-id": 50}
       //   600: {"allowed-counts": 20, "violation-action-id": 70}
       //   1800: {"allowed-counts": 50, "violation-action-id": 90}
@@ -128,12 +128,12 @@ class ResourceUsageViolationSpec
       //   block-resource: {"entity-types": "ip", "period": 600}
       // }
       //
-      // Expect the CREATE_MSG_connReq resource to be blocked for user1IpAddress
+      // Expect the connecting/CREATE_MSG_connReq resource to be blocked for user1IpAddress
       //
       // The following rules in resource-usage-rule.conf causes violation-action groups 100 - 103 to fire after
       // the third iteration (100-102 on the 4th iteration and 103 on the 5th iteration)
       //
-      // DUMMY_MSG {
+      // "dummy-family/DUMMY_MSG" {
       //  300: {"allowed-counts": 3, "violation-action-id": 100}
       //  600: {"allowed-counts": 3, "violation-action-id": 101}
       //  1200: {"allowed-counts": 3, "violation-action-id": 102}
@@ -167,8 +167,8 @@ class ResourceUsageViolationSpec
       //   block-resource: {"entity-types": "global", "period": 180}
       // }
       //
-      // Expect the DUMMY_MSG resource to be blocked for user2IpAddress (action 101), user2DID (action 102),
-      // and "global" (action 103)
+      // Expect the dummy-family/DUMMY_MSG resource to be blocked for user2IpAddress (action 101),
+      // user2DID (action 102), and "global" (action 103)
 
       // Give time for the system to process all of the AddResourceUsage messages. The sleep causes GetBlockedList
       // to be called once per second for up to 10 seconds.
@@ -236,7 +236,7 @@ class ResourceUsageViolationSpec
         singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked = false,
           onlyActive = true, inChunks = false))
         expectMsgPF() {
-          case bl: UsageBlockingStatusChunk if bl.usageBlockingStatus.isEmpty =>
+          case bl: UsageBlockingStatusChunk => bl.usageBlockingStatus.isEmpty shouldBe true
         }
       }
 
@@ -255,7 +255,7 @@ class ResourceUsageViolationSpec
       //
       // The following rule in resource-usage-rule.conf (resource-usage-rule.conf file used for tests) causes
       // violation-action group 50 to call log-msg and warn-resource after the fifth iteration, when
-      // allowed-counts of 5 is exceeded on bucket 300 (5 CREATE_MSG_connReq allowed within 300 seconds).
+      // allowed-counts of 5 is exceeded on bucket 300 (5 connecting/CREATE_MSG_connReq allowed within 300 seconds).
       //
       // 300: {"allowed-counts": 5, "violation-action-id": 50}
       //
@@ -267,8 +267,10 @@ class ResourceUsageViolationSpec
       //   warn-resource: {"entity-types": "ip", "period": 600}
       // }
       //
-      // Expect both a warning on the CREATE_MSG_connReq resource (warn-resource from violation-action group 50) and a
-      // warning on the caller's IP (warn-entity from violation-action group 70 (see "Test blocked" comment above)
+      // Expect both a warning on the connecting/CREATE_MSG_connReq resource
+      // (warn-resource from violation-action group 50)
+      // and a warning on the caller's IP
+      // (warn-entity from violation-action group 70 - see "Test blocked" comment above)
       eventually {
         singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned = false,
           onlyActive = true, inChunks = false))
@@ -277,7 +279,7 @@ class ResourceUsageViolationSpec
         }
       }
 
-      // Remove warning on the CREATE_MSG_connReq resource
+      // Remove warning on the connecting/CREATE_MSG_connReq resource
       singletonParentProxy ! ForResourceWarningStatusMngr(UnwarnResourceForCaller(user1IpAddress,
         createMsgConnReq, Some(ZonedDateTime.now())))
       expectMsgPF() {
@@ -460,8 +462,8 @@ class ResourceUsageViolationSpec
         }
       }
 
-      // Restart the actor (clears usage stats) and add one usage for CREATE_MSG_connReq for user1IpAddress
-      "when sent GetResourceUsage command for user1 for CREATE_MSG_connReq message usages (after actor restart)" - {
+      // Restart the actor (clears usage stats) and add one usage for connecting/CREATE_MSG_connReq for user1IpAddress
+      "when sent GetResourceUsage command for user1 for connecting/CREATE_MSG_connReq message usages (after actor restart)" - {
         "should respond with expected ResourceUsages" in {
           sendToResourceUsageTrackerRegion(user1IpAddress, tracking.GetResourceUsage(createMsgConnReq), restartActorBefore = true)
           expectMsgPF() {

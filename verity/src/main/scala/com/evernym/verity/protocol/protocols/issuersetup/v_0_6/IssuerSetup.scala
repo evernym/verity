@@ -1,14 +1,13 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
 import java.util.UUID
-
 import com.evernym.verity.Exceptions
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.State.StateData
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers.{defineSelf, noHandleProtoMsg}
+import com.evernym.verity.protocol.protocols.ProtocolHelpers.{defineSelf, noHandleProtoMsg}
 
 import scala.util.{Failure, Success}
 

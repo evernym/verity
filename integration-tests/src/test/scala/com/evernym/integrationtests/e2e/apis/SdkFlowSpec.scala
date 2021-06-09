@@ -17,7 +17,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
@@ -29,13 +29,14 @@ import java.util.UUID
 
 class SdkFlowSpec
   extends BasicSpec
-  with TempDir
-  with IntegrationEnv
-  with InteractiveSdkFlow
-  with SetupFlow
-  with AdminFlow
-  with MetricsFlow
-  with Eventually {
+    with TempDir
+    with IntegrationEnv
+    with InteractiveSdkFlow
+    with SetupFlow
+    with AdminFlow
+    with MetricsFlow
+    with CancelGloballyAfterFailure
+    with Eventually {
 
   override val logger: Logger = getLoggerByClass(getClass)
 
@@ -48,15 +49,12 @@ class SdkFlowSpec
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
   val limitsCredDefName = "creds_for_limits"
 
-  runScenario("sdkFlow") {
-
-    implicit val scenario: Scenario = Scenario(
-      "SDK Workflow test for 0.6 Protocols",
-      List(cas1, verity1),
-      suiteTempDir,
-      projectDir,
-      defaultTimeout = testEnv.timeout
-    )
+  runScenario("sdkFlow") ( Scenario(
+    "SDK Workflow to test protocols",
+    List(cas1, verity1),
+    suiteTempDir,
+    projectDir,
+    defaultTimeout = testEnv.timeout) ) { implicit scenario =>
 
     val apps = ScenarioAppEnvironment(scenario, appEnv)
 
@@ -192,7 +190,7 @@ class SdkFlowSpec
     connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
 
     out_of_band_with_connect_1_0(apps(verity1), apps(cas1), connectionId, "label",
-       GoalCode.ISSUE_VC)
+      GoalCode.ISSUE_VC)
 
     issueCredential_1_0(
       apps(verity1),
@@ -250,7 +248,11 @@ class SdkFlowSpec
       (OutOfBandMsgFamily, 1),
       (PresentProofMsgFamily, 2),
       (IssueCredMsgFamily, 1)
-    ).foreach(x => validateProtocolMetrics(apps(verity1), metricKey(x._1), expectedMetricCount=x._2))
+    ).foreach{ x =>
+      if (apps(verity1).instance.isRunningLocally) {
+        validateProtocolMetrics(apps(verity1), metricKey(x._1), expectedMetricCount=x._2)
+      }
+    }
   }
 
   def sdkOobInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -295,7 +297,9 @@ class SdkFlowSpec
   }
 
   def testMetricsForVerityInstances(apps: ScenarioAppEnvironment): Unit = {
-    apps.forEachApplication(testMetrics)
+    apps.forEachApplication { a =>
+      if(a.instance.isRunningLocally) testMetrics(a)
+    }
   }
 
 }

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  replicas: {{ .Values.startReplicas }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+        actorSystemName: verity
+    spec:
+      containers:
+      - name: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+        image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
+        startupProbe:
+          httpGet:
+            path: /agency
+            port: 9000
+          periodSeconds: 10
+          failureThreshold: 20
+        readinessProbe:
+          httpGet:
+            path: /agency
+            port: 9000
+        livenessProbe:
+          httpGet:
+            path: /agency
+            port: 9000
+          periodSeconds: 30
+          failureThreshold: 1
+        envFrom:
+        - configMapRef:
+            name: vars-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+        volumeMounts:
+        - name: config-files
+          mountPath: /etc/verity/verity-application/config-map
+          readOnly: true
+        - name: ledger-genesis-files
+          mountPath: /var/lib/indy/
+          readOnly: true
+        ports:
+        - name: http
+          containerPort: {{ .Values.deployment.containerPort }}
+        - name: management
+          containerPort: 8558
+          protocol: TCP
+        imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
+      volumes:
+      - name: config-files
+        configMap:
+          name: file-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+      - name: ledger-genesis-files
+        configMap:
+          name: ledger-genesis-files
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-reader-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+subjects:
+  - kind: User
+    name: system:serviceaccount:default:default
+roleRef:
+  kind: Role
+  name: pod-reader-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  apiGroup: rbac.authorization.k8s.io

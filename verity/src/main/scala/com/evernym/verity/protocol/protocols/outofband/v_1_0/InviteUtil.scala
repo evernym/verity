@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.actor.wallet.GetVerKeyResp
+import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
@@ -51,7 +52,7 @@ object InviteUtil {
       goalCode,
       goal,
       Vector(attachment),
-      service,
+      if (AppConfigWrapper.getConfigBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
       logoUrl,
       publicDid.map("did:sov:"+_),
       id

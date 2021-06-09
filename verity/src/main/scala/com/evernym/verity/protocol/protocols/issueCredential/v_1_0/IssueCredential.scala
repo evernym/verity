@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCreated}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ledger.GetCredDefResp
@@ -24,7 +23,6 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProtocolHelpers
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import org.json.JSONObject
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 
 import scala.util.{Failure, Success, Try}
 
@@ -443,7 +441,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
           s.agentName,
           s.logoUrl,
           s.publicDid,
-          if (AppConfigWrapper.getConfigBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
+          service,
           offerAttachment,
           goalCode = Some("issue-vc"),
           goal = Some("To issue a credential"),

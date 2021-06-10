@@ -1,7 +1,6 @@
 FROM ubuntu:18.04
 
 ARG LIBINDY_VERSION
-ARG LIBMYSQLSTORAGE_VERSION
 ARG EVERNYM_CERTIFICATE
 
 WORKDIR /root
@@ -30,8 +29,7 @@ RUN curl https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key | apt-key ad
 RUN apt-get update && \
     apt-get install -y \
         libindy-async=${LIBINDY_VERSION}-bionic \
-        libnullpay-async=${LIBINDY_VERSION}-bionic \
-        libmysqlstorage=${LIBMYSQLSTORAGE_VERSION}
+        libnullpay-async=${LIBINDY_VERSION}-bionic
 
 # cleanup and remove Evernym internal repo
 RUN apt-get autoremove -y && \

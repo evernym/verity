@@ -68,7 +68,6 @@ publish-deb-manual:
     - >
       /kaniko/executor
       --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
-      --build-arg LIBMYSQLSTORAGE_VERSION=$LIBMYSQLSTORAGE_VERSION
       --build-arg EVERNYM_CERTIFICATE=$EVERNYM_CERTIFICATE
       --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
       --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION

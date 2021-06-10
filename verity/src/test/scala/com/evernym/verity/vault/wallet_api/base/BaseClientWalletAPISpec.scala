@@ -38,8 +38,8 @@ trait ClientWalletAPISpecBase
   def startUserWalletSetupWithAsyncAPI(): Unit
   def waitForAllResponses(): Unit
 
-  var successResp = new AtomicInteger(0)
-  var failedResp = new AtomicInteger(0)
+  val successResp = new AtomicInteger(0)
+  val failedResp = new AtomicInteger(0)
   def totalRespCount: Int = successResp.get() + failedResp.get()
 
   lazy val libIndyMetricsCollector: ActorRef = platform.libIndyMetricsCollector

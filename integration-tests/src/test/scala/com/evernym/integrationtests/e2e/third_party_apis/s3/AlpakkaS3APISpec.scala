@@ -9,7 +9,6 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
 import com.evernym.verity.testkit.BasicAsyncSpec
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures

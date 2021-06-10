@@ -1,11 +1,11 @@
 package com.evernym.verity.integration.base.verity_provider
 
 import akka.actor.{ActorSystem, ExtendedActorSystem}
+import com.evernym.verity.integration.base.PortProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
 import java.nio.file.{Files, Path}
-import scala.util.Random
 
 /**
  * this class holds an actor system which is serving the event and snapshot storage
@@ -19,7 +19,7 @@ import scala.util.Random
  */
 class SharedEventStore(tempDir: Path) {
 
-  val arteryPort: Int = 4000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+  val arteryPort: Int = PortProvider.getUnusedPort(4000)
 
   val actorSystem: ActorSystem = {
     val parts = Seq(

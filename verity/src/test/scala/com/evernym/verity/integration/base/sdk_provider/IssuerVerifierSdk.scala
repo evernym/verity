@@ -13,6 +13,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{MsgListenerBase, PackedMsgListener, PlainMsgListener}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.{MsgFamily, VerKey}
@@ -29,7 +30,6 @@ import org.json.JSONObject
 import java.util.UUID
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
-import scala.util.Random
 
 abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
 
@@ -172,8 +172,8 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
     unpackMsg(msg)
   }
 
-  lazy val msgListener: PackedMsgListener = {
-    val port = 8000 + Random.nextInt(1000)
+  val msgListener: PackedMsgListener = {
+    val port = PortProvider.getUnusedPort(7000)
     new PackedMsgListener(port)(system)
   }
 
@@ -307,8 +307,8 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
     ReceivedMsgParam(msg)
   }
 
-  lazy val msgListener: PlainMsgListener = {
-    val port = 7000 + Random.nextInt(1000)
+  val msgListener: PlainMsgListener = {
+    val port = PortProvider.getUnusedPort(7000)
     new PlainMsgListener(port)(system)
   }
 }

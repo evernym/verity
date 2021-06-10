@@ -150,6 +150,9 @@ trait CommonConfig {
   val MESSAGES = s"$VERITY.msgs"
   val CONN_REQ_MSG_EXPIRATION_TIME_IN_SECONDS = s"$MESSAGES.conn-req-expiration-time-in-seconds"
 
+  private val OUT_OF_BAND = s"$VERITY.out-of-band"
+  val SERVICE_KEY_DID_FORMAT = s"$OUT_OF_BAND.service-key-did-format"
+
   private val CACHE = s"$VERITY.cache"
   val KEY_VALUE_MAPPER_CACHE = s"$CACHE.key-value-mapper"
   val AGENT_CONFIG_CACHE = s"$CACHE.agent-config"

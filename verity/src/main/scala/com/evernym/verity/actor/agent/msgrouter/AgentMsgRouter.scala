@@ -42,6 +42,32 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   extends ShardRegionNameFromActorSystem
    with HasLegacyRegionNames {
 
+  def execute: PartialFunction[Any, Future[Any]] = {
+    case cmd: Any => withAskTimeoutLogged(executeCmd(cmd, None))
+  }
+
+  def forward: PartialFunction[(Any, ActorRef), Unit] = {
+    case (cmd, sender) =>
+      val futResp = withAskTimeoutLogged(executeCmd(cmd, Option(sender)))
+      futResp.recover {
+        case e: Exception => ExceptionHandler.handleException(e, sender)
+      }
+  }
+
+  private def executeCmd: PartialFunction[(Any, Option[ActorRef]), Future[AskResp]] = {
+    case (cmd, senderOpt) =>
+      cmd match {
+        case sr: SetRoute               => setRoute(sr)
+        case gr: GetRoute               => getRouteInfo(gr.routeDID)
+        // flow diagram: fwd, step 5 -- trigger routing for packed messages.
+        case efw: PackedMsgRouteParam   => routePackedMsg(efw)(senderOpt)
+        // flow diagram: ctl + proto, step 11; SIG, step 6 -- trigger routing for internal message.
+        case im: InternalMsgRouteParam  => routeInternalMsg(im)(senderOpt)
+        // flow diagram: rest, step 6 -- trigger routing for REST message.
+        case rm: RestMsgRouteParam      => routeRestMsg(rm)(senderOpt)
+      }
+  }
+
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
 
@@ -72,15 +98,12 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
     logger.debug("get route info started", (LOG_KEY_SRC_DID, routeDID))
     val futResp =
       getRouteInfoViaCache(routeDID)
-      .map {
-        case Some(aa: ActorAddressDetail) => Some(aa)
-        case None => None
-      } map { r =>
-        val curTime = LocalDateTime.now
-        val millis = ChronoUnit.MILLIS.between(startTime, curTime)
-        logger.debug(s"get route info finished, time taken (in millis): $millis", (LOG_KEY_SRC_DID, routeDID))
-        r
-      }
+        .map { r =>
+          val curTime = LocalDateTime.now
+          val millis = ChronoUnit.MILLIS.between(startTime, curTime)
+          logger.debug(s"get route info finished, time taken (in millis): $millis", (LOG_KEY_SRC_DID, routeDID))
+          r
+        }
     Future(AskResp(futResp, Option(s"getting route info: $routeDID")))
   }
 
@@ -92,15 +115,17 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   }
 
   def getRouteRegionActor(route: RouteId): Future[RouteInfo] = {
-    getRouteInfo(route).flatMap(_.actualFut).map {
-      case Some(ad: ActorAddressDetail) =>
-        val regionActor: ActorRef = getActorTypeToRegions(ad.actorTypeId)
-        val ri = RouteInfo(regionActor, ad.address)
-        logger.debug("routing info for route '" + route + "' is: " + ri, (LOG_KEY_SRC_DID, route))
-        ri
-      case None =>
-        throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, msg = Option(s"agent not created for route: $route"))
-    }
+    getRouteInfo(route)
+      .flatMap(_.actualFut)
+      .map {
+        case Some(ad: ActorAddressDetail) =>
+          val regionActor: ActorRef = getActorTypeToRegions(ad.actorTypeId)
+          val ri = RouteInfo(regionActor, ad.address)
+          logger.debug("routing info for route '" + route + "' is: " + ri, (LOG_KEY_SRC_DID, route))
+          ri
+        case None =>
+          throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, msg = Option(s"agent not created for route: $route"))
+      }
   }
 
   private def sendCmdToGivenActor(to: ActorRef, cmd: ForIdentifier)
@@ -120,53 +145,30 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
     // baked into it in some way? When I follow the function and its internals, I see what looks
     // like a mapping between actor type and regions, which doesn't seem to care about shards in
     // a cluster. ?
-    getRouteRegionActor(pmrp.toRoute).map { ri =>
-      logDuration(logger, "sending msg to target actor") {
-        logger.debug("sending msg to target actor")
-        sendCmdToGivenActor(ri.actorRef, ForIdentifier(ri.entityId, ProcessPackedMsg(pmrp.packedMsg, pmrp.reqMsgContext)))
-      }
+    getRouteRegionActor(pmrp.toRoute)
+      .map { ri =>
+        logDuration(logger, "sending msg to target actor") {
+          logger.debug("sending msg to target actor")
+          sendCmdToGivenActor(ri.actorRef, ForIdentifier(ri.entityId, ProcessPackedMsg(pmrp.packedMsg, pmrp.reqMsgContext)))
+        }
     }
   }
 
   private def routeInternalMsg(imrp: InternalMsgRouteParam)(implicit senderOpt: Option[ActorRef]): Future[AskResp] = {
     // flow diagram: ctl + proto, step 12; sig, step 7
-    getRouteRegionActor(imrp.toRoute).map { ri =>
-      sendCmdToGivenActor(ri.actorRef, ForIdentifier(ri.entityId, imrp.msg))
-    }
+    getRouteRegionActor(imrp.toRoute)
+      .map { ri =>
+        sendCmdToGivenActor(ri.actorRef, ForIdentifier(ri.entityId, imrp.msg))
+      }
   }
 
   private def routeRestMsg(rmrp: RestMsgRouteParam)(implicit senderOpt: Option[ActorRef]): Future[AskResp] = {
     // flow diagram: rest, step 7
-    getRouteRegionActor(rmrp.toRoute).map { ri =>
-      logDuration(logger, "sending rest msg to target actor") {
-        sendCmdToGivenActor(ri.actorRef, ForIdentifier(ri.entityId, ProcessRestMsg(rmrp.msg, rmrp.restMsgContext)))
-      }
-    }
-  }
-
-  private def executeCmd: PartialFunction[(Any, Option[ActorRef]), Future[AskResp]] = {
-    case (cmd, senderOpt) =>
-      cmd match {
-        case sr: SetRoute               => setRoute(sr)
-        case gr: GetRoute               => getRouteInfo(gr.routeDID)
-        // flow diagram: fwd, step 5 -- trigger routing for packed messages.
-        case efw: PackedMsgRouteParam   => routePackedMsg(efw)(senderOpt)
-        // flow diagram: ctl + proto, step 11; SIG, step 6 -- trigger routing for internal message.
-        case im: InternalMsgRouteParam  => routeInternalMsg(im)(senderOpt)
-        // flow diagram: rest, step 6 -- trigger routing for REST message.
-        case rm: RestMsgRouteParam      => routeRestMsg(rm)(senderOpt)
-      }
-  }
-
-  def execute: PartialFunction[Any, Future[Any]] = {
-    case cmd: Any => withAskTimeoutLogged(executeCmd(cmd, None))
-  }
-
-  def forward: PartialFunction[(Any, ActorRef), Unit] = {
-    case (cmd, sender) =>
-      val futResp = withAskTimeoutLogged(executeCmd(cmd, Option(sender)))
-      futResp.recover {
-        case e: Exception => ExceptionHandler.handleException(e, sender)
+    getRouteRegionActor(rmrp.toRoute)
+      .map { ri =>
+        logDuration(logger, "sending rest msg to target actor") {
+          sendCmdToGivenActor(ri.actorRef, ForIdentifier(ri.entityId, ProcessRestMsg(rmrp.msg, rmrp.restMsgContext)))
+        }
       }
   }
 

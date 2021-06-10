@@ -10,6 +10,7 @@ package object engine {
   type ParameterValue = String
 
   type DID = String
+  type DIDKeyStr = String
   type VerKey = String
   type Ledgers = List[Map[String, Any]]
 

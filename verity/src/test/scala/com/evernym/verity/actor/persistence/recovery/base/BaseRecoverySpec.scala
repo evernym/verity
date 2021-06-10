@@ -52,14 +52,16 @@ trait BaseRecoverySpecLike
     with Eventually { this: BasicSpec =>
 
   def getStableWalletAPISucceedCountMetric: Double = {
-    var apiCallCount: Double = -1
-    var timesFoundSame: Int = 0
+    var apiCallCount: Double =
+      getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+        .map(_.value).getOrElse(0)
+    var timesFoundSameCount: Int = 0    //how many times the metrics count was found same (stable count)
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      val walletSucceedApiMetric = getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
-      val newCount: Double = walletSucceedApiMetric.map(_.value).getOrElse(0)
-      if (apiCallCount == newCount) timesFoundSame = timesFoundSame + 1
-      else timesFoundSame = 0
-      val isStable = apiCallCount == newCount && timesFoundSame >= 5
+      val newCount: Double = getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+        .map(_.value).getOrElse(0)
+      if (apiCallCount == newCount) timesFoundSameCount = timesFoundSameCount + 1
+      else timesFoundSameCount = 0
+      val isStable = apiCallCount == newCount && timesFoundSameCount >= 5
       apiCallCount = newCount
       isStable shouldBe true
     }

@@ -1,12 +1,9 @@
 package com.evernym.verity.integration.multi_node_cluster
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-
-import scala.concurrent.Future
 
 
 class AllClusterNodeRestartSpec

@@ -87,7 +87,7 @@ object Msg {
                                  service: Vector[ServiceFormatted],
                                  profileUrl: Option[String],
                                  public_did: Option[String],
-                                 `@type`: String = MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, OutOfBandMsgFamily.name, OutOfBandMsgFamily.version, "invitation"), //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/" +
+                                 `@type`: String = MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, OutOfBandMsgFamily.name, OutOfBandMsgFamily.version, "invitation"),
                                  `@id`: String = MsgIdProvider.getNewMsgId) extends BaseInvitation
 }
 

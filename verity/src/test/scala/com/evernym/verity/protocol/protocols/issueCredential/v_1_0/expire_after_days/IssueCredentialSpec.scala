@@ -448,8 +448,7 @@ class IssueCredentialSpec
       inviteObj.getJSONArray("service")
         .getJSONObject(0)
         .getJSONArray("routingKeys")
-        .getString(1) shouldBe agencyVerkey
-
+        .getString(1) should (be (agencyVerkey) or be (agencyDidkey))
       val attachmentBase64 = inviteObj
         .getJSONArray("request~attach")
         .getJSONObject(0)
@@ -539,8 +538,7 @@ class IssueCredentialSpec
       inviteObj.getJSONArray("service")
         .getJSONObject(0)
         .getJSONArray("routingKeys")
-        .getString(1) shouldBe agencyVerkey
-
+        .getString(1) should (be (agencyVerkey) or be (agencyDidkey))
       val attachmentBase64 = inviteObj
         .getJSONArray("request~attach")
         .getJSONObject(0)

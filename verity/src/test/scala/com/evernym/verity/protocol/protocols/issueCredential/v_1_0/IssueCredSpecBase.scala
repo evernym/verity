@@ -25,6 +25,7 @@ abstract class IssueCredSpecBase
   val orgName = "Acme Corp"
   val logoUrl = "https://robohash.org/234"
   val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
+  val agencyDidkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
   val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
 
   def assertStatus[T: ClassTag](from: TestEnvir): Unit = {

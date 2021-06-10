@@ -40,7 +40,7 @@ class PresentProofSpec
         // Fails with only proof request restrictions
         assert(!allowsAllSelfAttested(reqWithRestriction))
       }
-     }
+    }
 
     "verifier start protocol" - {
       "should handle happy path" in { f =>
@@ -141,7 +141,7 @@ class PresentProofSpec
         inviteObj.getJSONArray("service")
           .getJSONObject(0)
           .getJSONArray("routingKeys")
-          .getString(1) shouldBe agencyVerkey
+          .getString(1) should (be (agencyVerkey) or be (agencyDidkey))
 
         val attachmentBase64 = inviteObj
           .getJSONArray("request~attach")
@@ -244,7 +244,7 @@ class PresentProofSpec
         inviteObj.getJSONArray("service")
           .getJSONObject(0)
           .getJSONArray("routingKeys")
-          .getString(1) shouldBe agencyVerkey
+          .getString(1) should (be (agencyVerkey) or be (agencyDidkey))
 
         val attachmentBase64 = inviteObj
           .getJSONArray("request~attach")

@@ -7,13 +7,14 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DebugProtocols, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, ServiceFormatted, SignalEnvelope}
+import com.evernym.verity.protocol.engine.{DebugProtocols, ServiceFormatted, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.DID.Methods.DIDKey
 import org.json.JSONObject
 
 class RelationshipProtocolSpec
@@ -1041,13 +1042,19 @@ class RelationshipProtocolSpec
     service.length shouldBe 1
 
     val serviceBlock = DefaultMsgCodec.fromJson[ServiceFormatted](service.optString(0))
-    serviceBlock shouldBe ServiceFormatted(
+    serviceBlock should (be (ServiceFormatted(
       s"${newIdentity.DID};indy",
       "IndyAgent",
       Vector(newIdentity.verKey),
       Option(Vector(newIdentity.verKey, defAgencyVerkey)),
       inviteURL.split('?').head
-    )
+    )) or be (ServiceFormatted(
+        s"${newIdentity.DID};indy",
+        "IndyAgent",
+        Vector(new DIDKey(newIdentity.verKey).toString),
+        Option(Vector(new DIDKey(newIdentity.verKey).toString, new DIDKey(defAgencyVerkey).toString)),
+        inviteURL.split('?').head
+    )))
   }
 
   def getInvitationJsonFromUrl(inviteURL: String, queryName: String): JSONObject = {

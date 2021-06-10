@@ -12,4 +12,8 @@ trait SegmentStoreAsyncOps {
   def runWithSegment[T](segmentAddress: SegmentAddress,
                         segmentKey: SegmentKey,
                         retentionPolicy: Option[String] = None): Unit
+
+  def runDeleteSegment(segmentAddress: SegmentAddress,
+                       segmentKey: SegmentKey,
+                       retentionPolicy: Option[String]=None): Unit
 }

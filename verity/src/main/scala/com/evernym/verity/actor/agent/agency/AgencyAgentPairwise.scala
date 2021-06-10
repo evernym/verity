@@ -133,7 +133,8 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     def paramMap(agencyVerKey: VerKey, protoRef: ProtoRef): String ?=> Parameter = {
       case SELF_ID     => Parameter(SELF_ID, ParticipantUtil.participantId(state.myDid_!, None))
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
-      case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getDataRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName))
+      case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY,
+        ConfigUtil.getRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
     }
 
     for (

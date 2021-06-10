@@ -33,12 +33,10 @@ class LibindyMetricsCollectorSpec
         val criteria = MetricsFilterCriteria(filtered = false)
         awaitCond(
           MetricsReader.getNodeMetrics(criteria).metrics.exists(
-            metricDetail => metricDetail.name.contains("libindy_wallet_count")
-            //TODO should be added again once we switch to libindy-async
-//            metricDetail => metricDetail.name.contains("libindy_command_duration_ms_count") &&
-//              metricDetail.value.isValidInt &&
-//              metricDetail.tags.get.contains("command") &&
-//              metricDetail.tags.get.contains("stage")
+            metricDetail => metricDetail.name.contains("libindy_command_duration_ms_count") &&
+              metricDetail.value.isValidInt &&
+              metricDetail.tags.get.contains("command") &&
+              metricDetail.tags.get.contains("stage")
           ),
           60.seconds
         )

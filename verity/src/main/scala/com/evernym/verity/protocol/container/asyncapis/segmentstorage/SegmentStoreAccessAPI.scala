@@ -1,10 +1,12 @@
 package com.evernym.verity.protocol.container.asyncapis.segmentstorage
 
+import akka.Done
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.{ForIdentifier, StorageInfo, StorageReferenceStored}
-import com.evernym.verity.actor.segmentedstates.{GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
+import com.evernym.verity.actor.segmentedstates.{DeleteSegmentedState, GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -32,11 +34,19 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
 
   private def isLessThanMaxSegmentSize(data: GeneratedMessage): Boolean = data.serializedSize <= MAX_SEGMENT_SIZE
 
-  private def sendToSegmentedRegion(segmentAddress: SegmentAddress, segmentKey: SegmentKey, cmd: Any)
+  lazy val typeName: String = SegmentedStateStore.buildTypeName(protoRef)
+  lazy val segmentedStateRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(typeName)
+
+  private def sendToSegmentedRegion(segmentAddress: SegmentAddress, cmd: Any)
+                                   (implicit ec: ExecutionContext): Future[Any] = {
+    segmentedStateRegion ? ForIdentifier(segmentAddress, cmd)
+  }
+
+  private def sendToSegmentedRegion(segmentAddress: SegmentAddress,
+                                    segmentKey: SegmentKey,
+                                    cmd: Any)
                                    (implicit ec: ExecutionContext): Future[StoredSegment] = {
-    val typeName = SegmentedStateStore.buildTypeName(protoRef)
-    val segmentedStateRegion = ClusterSharding.get(context.system).shardRegion(typeName)
-    val fut = segmentedStateRegion ? ForIdentifier(segmentAddress, cmd)
+    val fut = sendToSegmentedRegion(segmentAddress, cmd)
     fut map {
       case Some(v: Any)         => StoredSegment(segmentAddress, segmentKey, Option(v))
       case None                 => StoredSegment(segmentAddress, segmentKey, None)
@@ -111,6 +121,11 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
     }
   }
 
+  private def deleteFromBlobStore(blob: BlobSegment)
+                                 (implicit ec: ExecutionContext): Future[Done] = {
+    storageAPI.delete(blob.bucketName, blob.lifecycleAddress)
+  }
+
   private def readSegmentedState[T](segmentAddress: SegmentAddress,
                                     segmentKey: SegmentKey,
                                     retentionPolicy: Option[String]
@@ -122,6 +137,22 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
       case StoredSegment(_, _, Some(segment: Any)) => Future.successful(Option(segment))
       case StoredSegment(_, _, None)               => Future.successful(None)
       case other  => throw new RuntimeException("unexpected response while retrieving segment: " + other)
+    }
+  }
+
+  private def runDeleteSegmentState[T](segmentAddress: SegmentAddress,
+                                       segmentKey: SegmentKey,
+                                       retentionPolicy: Option[String]=None
+                                      ) (implicit ec: ExecutionContext): Future[SegmentKey] = {
+    val cmd = GetSegmentedState(segmentKey)
+    sendToSegmentedRegion(segmentAddress, cmd).flatMap {
+      case Some(_: StorageReferenceStored)   => deleteFromBlobStore(BlobSegment(blobStoreBucket, segmentAddress, segmentKey, retentionPolicy))
+      case Some(_: Any) | None               => Future.successful(Done)
+      case other  => throw new RuntimeException("unexpected response while getting retrieving segment: " + other)
+    }.flatMap { _ =>
+      sendToSegmentedRegion(segmentAddress, DeleteSegmentedState(segmentKey))
+    }.map { _ =>
+      segmentKey
     }
   }
 
@@ -141,6 +172,14 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
                         retentionPolicy: Option[String]=None): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey, retentionPolicy) }
+    )
+  }
+
+  def runDeleteSegment(segmentAddress: SegmentAddress,
+                       segmentKey: SegmentKey,
+                       retentionPolicy: Option[String]=None): Unit = {
+    withAsyncOpExecutorActor(
+      { implicit ec: ExecutionContext => runDeleteSegmentState(segmentAddress, segmentKey, retentionPolicy) }
     )
   }
 

@@ -15,6 +15,7 @@ unit-test:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   script:
@@ -25,6 +26,7 @@ unit-test:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   artifacts:
@@ -74,17 +76,17 @@ unit-test:
     - devops/scripts/yourls/yourls_init.sh
     - devops/scripts/test/docker-integration-tests $CI_PROJECT_DIR
   services:
-    - name: $CI_REGISTRY/dev/containers/indy-pool:${indyNodeVersion}_${sovtokenVersion}
+    - name: registry.gitlab.com/evernym/containers/indy-pool:${indyNodeVersion}_${sovtokenVersion}
       alias: indy-pool
-    - name: $CI_REGISTRY/dev/containers/verity-mysql-wallet:288429c3
+    - name: registry.gitlab.com/evernym/containers/verity-mysql-wallet:288429c3
       alias: mysql
-    - name: $CI_REGISTRY/dev/containers/verity-dynamodb:20b4ceda
+    - name: registry.gitlab.com/evernym/containers/verity-dynamodb:20b4ceda
       alias: dynamodb
     - name: zenko/cloudserver
       alias: s3server # use endpoint_url value of http://s3server:8000
       entrypoint: [ '/usr/src/app/docker-entrypoint.sh' ]
       command: [ 'yarn', 'start', 'mem_backend' ]
-    - name: $CI_REGISTRY/dev/containers/yourls-mysql:2283cd0c
+    - name: registry.gitlab.com/evernym/containers/yourls-mysql:f2d0fff1
       alias: yourls
 
 legacy:
@@ -92,6 +94,7 @@ legacy:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   variables:
@@ -103,6 +106,7 @@ legacy-with-restart:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   variables:
@@ -115,6 +119,7 @@ integration:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   variables:
@@ -125,6 +130,7 @@ limits:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   variables:

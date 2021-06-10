@@ -25,7 +25,7 @@ class IssueCredSnapshotRecovery
     "when started" - {
       "should be successful" in {
         EventFilter.debug(pattern = ".*snapshot state received and applied \\(issue-credential\\[1.0\\]\\).*", occurrences = 1) intercept {
-          issueCredRegion ! ForIdentifier(persIdParam.entityId, Ping(sendBackConfirmation = true))
+          issueCredRegion ! ForIdentifier(persIdParam.entityId, Ping(sendAck = true))
           expectMsgType[Done.type]
         }
       }

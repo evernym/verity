@@ -3,8 +3,12 @@ package com.evernym.verity.integration.base.verity_provider
 import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
-import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.atMost
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
+import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
+import com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore
+import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -12,7 +16,9 @@ import scala.util.Random
 
 
 case class VerityEnv(seed: String,
-                     nodes: Seq[VerityNode]) {
+                     nodes: Seq[VerityNode])
+  extends Eventually
+    with Matchers {
 
   var isVerityBootstrapped: Boolean = false
 
@@ -41,7 +47,7 @@ case class VerityEnv(seed: String,
       (curNode, otherNodeStatus)
     }
 
-    TestKit.awaitCond(nodesToBeChecked.forall(n => n._1.checkIfNodeIsUp(n._2)), atMost, 3.seconds)
+    TestKit.awaitCond(nodesToBeChecked.forall(n => n._1.checkIfNodeIsUp(n._2)), waitAtMost, 200.millis)
   }
 
   /**
@@ -82,10 +88,20 @@ case class VerityEnv(seed: String,
   def init(): Unit = {
     if (! isVerityBootstrapped) {
       nodes.headOption.foreach { node =>
-        java.lang.Thread.sleep(10000)
-        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, atMost)
+        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost)
         isVerityBootstrapped = true
       }
+    }
+  }
+
+  lazy val mockBlobStore =
+    nodes.head.serviceParam.flatMap(_.storageAPI).map(_.asInstanceOf[MockBlobStore]).getOrElse(
+    throw new RuntimeException("mock blob store api not set")
+  )
+
+  def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
     }
   }
 

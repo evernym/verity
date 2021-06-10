@@ -20,7 +20,10 @@ import scala.util.Random
 //    1. AppConfigWrapper
 //    2. ResourceBlockingStatusMngrCache
 //    3. ResourceWarningStatusMngrCache
-//    4. AppStateUpdateAPI
+//    4. MsgProgressTrackerCache
+//    5. MetricsReader and KamonPrometheusMetricsReporter
+//    6. ItemConfigManager
+//    7. AppStateUpdateAPI
 
 /**
  * base class for specs to use LocalVerity
@@ -46,7 +49,7 @@ trait VerityProviderBaseSpec
                               overriddenConfig: Option[Config] = None) {
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
-    def withOverriddenConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
+    def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
 
     def build(): VerityEnv = {
       val tmpDir = randomTmpDirPath()
@@ -93,7 +96,7 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  val defaultSvcParam: ServiceParam = ServiceParam.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)

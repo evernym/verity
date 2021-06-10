@@ -337,7 +337,7 @@ trait IssueCredentialHelpers
           case Failure(e) =>
             ctx.signal(
               Sig.buildProblemReport(
-                s"unable to create credential offer - store segment error: $e",
+                s"unable to create credential offer",
                 credentialOfferCreation
               ))
         }
@@ -354,8 +354,8 @@ trait IssueCredentialHelpers
   def handleRequest(credOfferRef: SegmentId, m: Ctl.Request, myPwDid: DID): Unit = {
     ctx.withSegment[CredOffered](credOfferRef) {
       case Success(o) if o.isDefined => handleRequest(m, myPwDid, buildOfferCred(o))
-      case Success(None) => expiredSegment("Credential Offer")
-      case Failure(e) => segmentFailure(e, ctx.getState)
+      case Success(None)  => expiredSegment("Credential Offer")
+      case Failure(_)     => segmentFailure("error during processing credential request")
     }
   }
 
@@ -398,7 +398,7 @@ trait IssueCredentialHelpers
           case Failure(e) =>
             ctx.signal(
               Sig.buildProblemReport(
-                s"unable to create credential request - store segment error: $e",
+                s"unable to create credential request",
                 credentialRequestCreation
               )
             )
@@ -417,12 +417,14 @@ trait IssueCredentialHelpers
     ctx.withSegment[CredOffered](s.credOfferRef) {
       case Success(o) if o.isDefined =>
         ctx.withSegment[CredRequested](s.credRequestRef) {
-          case Success(r) if r.isDefined => handleIssue(m, buildOfferCred(o), buildRequestCred(r))
-          case Success(None) => expiredSegment("Cred Request")
-          case Failure(e) => segmentFailure(e, s)
+          case Success(r) if r.isDefined =>
+            handleIssue(m, buildOfferCred(o), buildRequestCred(r))
+          case Success(None) =>
+            expiredSegment("Cred Request")
+          case Failure(e) => segmentFailure("error during processing issue credential")
         }
       case Success(None) => expiredSegment("Cred Offer")
-      case Failure(e) => segmentFailure(e, s)
+      case Failure(e) => segmentFailure("error during processing issue credential")
     }
 
   }
@@ -460,7 +462,7 @@ trait IssueCredentialHelpers
           case Failure(e) =>
             ctx.signal(
               Sig.buildProblemReport(
-                s"cred issuance failed - store segment error: $e",
+                s"cred issuance failed",
                 credentialRequestCreation
               )
             )
@@ -489,19 +491,15 @@ trait IssueCredentialHelpers
 
   def handleProblemReport(m: ProblemReport, s: S): Unit = {
     val reason = m.resolveDescription
-
     ctx.apply(ProblemReportReceived(reason))
     ctx.signal(Sig.buildProblemReport(reason, m.tryDescription().code))
   }
 
-  def segmentFailure(e: Any, s: S): Unit = {
-    val des = s"failed to retrieve segment: $e"
-    ctx.logger.warn(des)
-    handleProblemReport(buildProblemReport(des, segmentStorageFailure), s)
+  def segmentFailure(errorMsg: String): Unit = {
+    ctx.signal(Sig.buildProblemReport(errorMsg, segmentStorageFailure))
   }
 
   def expiredSegment(msgType: String): Unit = {
-    ctx.logger.warn(expiredDataRetentionMsg(msgType))
     ctx.signal(Sig.buildProblemReport(expiredDataRetentionMsg(msgType), expiredDataRetention))
   }
 
@@ -522,10 +520,10 @@ trait IssueCredentialHelpers
       case Success(s: StoredSegment) =>
         ctx.apply(ProposalReceived(senderId, s.segmentKey))
         ctx.signal(Sig.AcceptProposal(m))
-      case Failure(e) =>
+      case Failure(_) =>
         ctx.signal(
           Sig.buildProblemReport(
-            s"cred proposed failed - store segment error: $e",
+            s"cred proposed failed",
             credentialOfferCreation
           )
         )
@@ -544,7 +542,7 @@ trait IssueCredentialHelpers
       case Failure(e) =>
         ctx.signal(
           Sig.buildProblemReport(
-            s"cred offer received failed - store segment error: $e",
+            s"cred offer received failed",
             credentialOfferCreation
           )
         )
@@ -556,7 +554,7 @@ trait IssueCredentialHelpers
       case Success(o: Some[CredOffered]) =>
         handleRequestCredReceived(m, buildOfferCred(o), senderId_!(), s.autoIssue)
       case Success(None) => expiredSegment("Credential Offer")
-      case Failure(e) => segmentFailure(e, s)
+      case Failure(e)     => segmentFailure("error during processing received credential request")
     }
 
   }
@@ -574,7 +572,7 @@ trait IssueCredentialHelpers
       case Failure(e) =>
         ctx.signal(
           Sig.buildProblemReport(
-            s"cred request received failed - store segment error: $e",
+            s"cred request received failed",
             credentialRequestCreation
           )
         )
@@ -597,7 +595,7 @@ trait IssueCredentialHelpers
       case Failure(e) =>
         ctx.signal(
           Sig.buildProblemReport(
-            s"issue cred failed - store segment error: $e",
+            s"issue cred failed",
             credentialRequestCreation
           )
         )

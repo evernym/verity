@@ -13,6 +13,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_DETAIL_GET_
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsByConnsReqMsg_MFV_0_6, GetMsgsByConnsRespMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
+import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.{DID, DIDDoc, MsgFamily, MsgId, ThreadId}
@@ -327,8 +328,8 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecuto
         unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
       case Some(m) if excludePayload.contains(NO) =>
         throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 5 =>
-        Thread.sleep(tryCount*1000)
+      case None if tryCount < 20 =>
+        Thread.sleep(tryCount*50)
         expectMsgFromConn(connId, msgTypeStr, excludePayload, statusCodes, tryCount+1)
       case None =>
         throw new RuntimeException("expected message not found: " + msgTypeStr)
@@ -362,18 +363,11 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecuto
         unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
       case Some(m) if excludePayload.contains(NO) =>
         throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 5 =>
-        Thread.sleep(tryCount*1000)
+      case None if tryCount < 20 =>
+        Thread.sleep(tryCount*50)
         expectMsgFromConn(msgTypeStr, excludePayload, statusCodes, tryCount+1)
       case None => throw new RuntimeException("expected message not found: ")
     }
-  }
-
-  private def buildMsgTypeStr[T: ClassTag]: String = {
-    val clazz = implicitly[ClassTag[T]].runtimeClass
-    val msgType = MsgFamilyHelper.getMsgFamilyOpt.map(_.msgType(clazz))
-    msgType.map(MsgFamily.typeStrFromMsgType)
-      .getOrElse(throw new RuntimeException("message type not found in any registered protocol: " + clazz.getClass.getSimpleName))
   }
 
   private def packForMyPairwiseRel(connId: String, msg: String): Array[Byte] = {

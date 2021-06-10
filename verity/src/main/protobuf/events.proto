@@ -469,6 +469,11 @@ message SegmentedStateStored {
     bytes data = 3;
 }
 
+message SegmentedStateRemoved {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
+    string key = 1;
+}
+
 message StorageInfo {
     string endpoint = 1;
     string type = 2;

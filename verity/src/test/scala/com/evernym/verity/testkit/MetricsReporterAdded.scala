@@ -4,9 +4,7 @@ import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.metrics.reporter.{KamonPrometheusMetricsReporter, MetricDetail}
 import org.scalatest.{BeforeAndAfterEach, Suite}
 
-//adds kamon prometheus metrics reporter to be used/queried by main/test code
-trait AddMetricsReporter {
-  MetricsReader   //adds/initialized metrics reporter
+trait MetricsReadHelper {
 
   def getFilteredMetric(nameStartsWith: String,
                         tags: Map[String, String]=Map.empty): Option[MetricDetail] = {
@@ -27,7 +25,7 @@ trait AddMetricsReporter {
 //adds kamon prometheus metrics reporter to be used/queried by main/test code
 // and also it gets reset before each test
 trait ResetMetricsReporterBeforeEach
-  extends AddMetricsReporter
+  extends MetricsReadHelper
     with BeforeAndAfterEach
     with Matchers { this : Suite =>
 

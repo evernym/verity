@@ -68,10 +68,13 @@ class SimpleProtocolSystem() extends HasContainers with HasDidRouter with Segmen
     segmentedState.get(uniqueSegmentId)
   }
 
-  def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey): Unit = {
+  def removeSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey): SegmentKey = {
     val uniqueSegmentId = buildUniqueKey(segmentAddress, segmentKey)
     segmentedState -= uniqueSegmentId
+    segmentKey
   }
+
+  def totalStoredSegments: Int = segmentedState.size
 
   def handleControl[A <: Control](env: CtlEnvelope[A], myDid: DID): Unit = {
     val domain = didRouter.get(myDid)
@@ -373,7 +376,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
       container.recoverOrInit() //TODO add log msg here
 
-      container.asInstanceOf[Container]
+      container
     }
   }
 

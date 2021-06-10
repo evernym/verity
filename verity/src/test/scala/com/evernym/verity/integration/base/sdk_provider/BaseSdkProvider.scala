@@ -53,6 +53,8 @@ trait SdkProvider { this: BasicSpec =>
     IssuerRestSDK(buildSdkParam(verityEnv))
   def setupVerifierSdk(verityEnv: VerityEnv): VerifierSdk =
     VerifierSdk(buildSdkParam(verityEnv))
+  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor))
   def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor)
 
@@ -511,6 +513,13 @@ object MsgFamilyHelper {
           Try (pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
         }
     protoDefOpt.map(_.msgFamily)
+  }
+
+  def buildMsgTypeStr[T: ClassTag]: String = {
+    val clazz = implicitly[ClassTag[T]].runtimeClass
+    val msgType = MsgFamilyHelper.getMsgFamilyOpt.map(_.msgType(clazz))
+    msgType.map(MsgFamily.typeStrFromMsgType)
+      .getOrElse(throw new RuntimeException("message type not found in any registered protocol: " + clazz.getClass.getSimpleName))
   }
 }
 

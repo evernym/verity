@@ -135,7 +135,7 @@ class OutOfBandCredOfferSpec
         holderSDK.expectMsgFromConn[HandshakeReuseAccepted](issuerHolderConn)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
         receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
-        java.lang.Thread.sleep(5000)  //time to get move protocol finish
+        java.lang.Thread.sleep(2000)  //time to let "move protocol" finish on verity side
       }
     }
 

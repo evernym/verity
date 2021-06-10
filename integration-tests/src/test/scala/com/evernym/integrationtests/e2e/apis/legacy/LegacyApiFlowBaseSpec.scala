@@ -123,13 +123,6 @@ trait LegacyApiFlowBaseSpec
     logger.info(s"[FINISH] $msg")
   }
 
-  case class AgencyAdminEnvironment (scenario: Scenario,
-                                     casVerityInstance: VerityInstance,
-                                     easVerityInstance: VerityInstance) {
-    val consumerAgencyAdmin = new ConsumerAgencyAdminExt(scenario, casVerityInstance)
-    val enterpriseAgencyAdmin = new EnterpriseAgencyAdminExt(scenario, easVerityInstance)
-  }
-
   case class ClientEnvironment (scenario: Scenario,
                                 consumerAgencyEndpoint: UrlParam,
                                 enterpriseAgencyEndpoint: UrlParam) {
@@ -747,14 +740,6 @@ trait LegacyApiFlowBaseSpec
     }
   }
 
-  class EnterpriseAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance)
-    extends ApplicationAdminExt(scenario, verityInstance)
-      with AdminClient
-
-  class ConsumerAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance)
-    extends ApplicationAdminExt(scenario, verityInstance)
-      with AdminClient
-
   class EntAgentOwner(val scenario: Scenario, override val urlParam: UrlParam)
     extends MockEnterpriseEdgeAgentApiExecutor(urlParam)
       with LegacyAgentOwnerCommon
@@ -1033,3 +1018,19 @@ trait LegacyApiFlowBaseSpec
 
 class EdgeHttpListenerForPackedMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam) extends PackedMsgHttpListener
 class EdgeHttpListenerForPushNotifMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam) extends PushNotifMsgHttpListener
+
+class EnterpriseAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance)
+  extends ApplicationAdminExt(scenario, verityInstance)
+    with AdminClient
+
+class ConsumerAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance)
+  extends ApplicationAdminExt(scenario, verityInstance)
+    with AdminClient
+
+
+case class AgencyAdminEnvironment (scenario: Scenario,
+                                   casVerityInstance: VerityInstance,
+                                   easVerityInstance: VerityInstance) {
+  val consumerAgencyAdmin = new ConsumerAgencyAdminExt(scenario, casVerityInstance)
+  val enterpriseAgencyAdmin = new EnterpriseAgencyAdminExt(scenario, easVerityInstance)
+}

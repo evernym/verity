@@ -22,6 +22,7 @@ publish-deb:
   only:
     refs:
       - master@dev/verity/verity
+      # TODO replace by main@evernym/verity/verity for public gitlab
 
 publish-deb-manual:
   extends:
@@ -32,6 +33,7 @@ publish-deb-manual:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   when: manual
@@ -59,15 +61,18 @@ publish-deb-manual:
       > /kaniko/.docker/config.json
     #- if [ "$CI_COMMIT_REF_NAME" == "master" ]; then DRY_RUN=""; else DRY_RUN="--no-push"; fi
     - >
+      if [ "$INCLUDE_DOCKER_AWS_DESTINATIONS" = "true" ]; then
+        DOCKER_AWS_DESTINATIONS="--destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
+                                 --destination $AWS_DEV_ECR_REGISTRY/verity:latest" ;
+      else DOCKER_AWS_DESTINATIONS=""; fi
+    - >
       /kaniko/executor
       --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
       --build-arg LIBMYSQLSTORAGE_VERSION=$LIBMYSQLSTORAGE_VERSION
       --build-arg EVERNYM_CERTIFICATE=$EVERNYM_CERTIFICATE
-      --context .
+      --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
       --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION
       --destination $CI_REGISTRY_IMAGE:latest
-      --destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
-      --destination $AWS_DEV_ECR_REGISTRY/verity:latest $DRY_RUN
   tags:
     - large
 
@@ -77,9 +82,13 @@ publish-docker:
     - .publish-common-docker
   dependencies:
     - package
-  only:
-    refs:
-      - master@dev/verity/verity
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
+    - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
 
 publish-docker-manual:
   extends:
@@ -90,6 +99,7 @@ publish-docker-manual:
   only:
     refs:
       - master
+      - main
       - tags
       - merge_requests
   when: manual

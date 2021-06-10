@@ -16,7 +16,7 @@ import com.evernym.verity.util.MsgIdProvider
 import com.google.protobuf.ByteString
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 
 class MsgStoreSpec
@@ -180,7 +180,7 @@ class MsgStoreSpec
                                  expectedRemovedMsgsSum: Int): Unit = {
     msgStore.updateMsgStateMetrics()
 
-    eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+    eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
 
       val retainedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}_sum")
       val removedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}_sum")

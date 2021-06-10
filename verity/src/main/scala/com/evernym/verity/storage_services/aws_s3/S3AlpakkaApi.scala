@@ -17,6 +17,9 @@ import com.evernym.verity.storage_services.StorageAPI
 import scala.concurrent.Future
 import scala.language.postfixOps
 
+//NOTE: if at all this file gets moved to different package, then it will require configuration change
+// so until it is important, should avoid moving this to different package.
+
 class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends StorageAPI(config) {
 
   def s3Settings: S3Settings = S3Settings(config.config.getConfig("alpakka.s3"))
@@ -64,10 +67,10 @@ class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends Stor
   }
 
   def delete(bucketName: String, id: String): Future[Done] = {
-      S3 deleteObject(bucketName, id) withAttributes s3Attrs runWith Sink.head flatMap {
-        case x: Done => Future(x)
-        case _ => throw new S3Failure(S3_FAILURE.statusCode, Some(s"Failed deleting object for id: $id in bucket: $bucketName"))
-      }
+    S3 deleteObject(bucketName, id) withAttributes s3Attrs runWith Sink.head flatMap {
+      case x: Done => Future(x)
+      case _ => throw new S3Failure(S3_FAILURE.statusCode, Some(s"Failed deleting object for id: $id in bucket: $bucketName"))
+    }
   }
 
   class S3Failure(statusCode: String, statusMsg: Option[String] = None,

@@ -390,6 +390,11 @@ trait CommonConfig {
   val AGENT_ROUTES_MIGRATOR_ROUTES_BATCH_ITEM_INTERVAL_IN_MILLIS =
     s"$AGENT_ROUTES_MIGRATOR_ROUTES.batch-item-interval-in-millis"
 
+  val RETENTION_POLICY = s"$VERITY.retention-policy"
+  val UNDEFINED_FALLBACK = "undefined-fallback"
+  val EXPIRE_AFTER_DAYS = "expire-after-days"
+  val EXPIRE_AFTER_TERMINAL_STATE = "expire-after-terminal-state"
+
 }
 
 object CommonConfig extends CommonConfig

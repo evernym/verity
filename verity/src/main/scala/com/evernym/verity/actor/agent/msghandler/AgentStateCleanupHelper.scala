@@ -34,9 +34,9 @@ trait AgentStateCleanupHelper {
   }
 
   /**
-   * this is because in few cases until the agent actor completely recovers, it doesn't have
-   * all members of state evaluated and calculation of pinst id fails
-   * hence, this function would be called once per actor start (immediately after all recovered events applied)
+   * this is because in few cases until the agent actor completely recovers,
+   * it doesn't have all members of state evaluated and calculation of pinst id fails,
+   * hence this function would be called once per actor start (immediately after all recovered events applied)
    */
   def fixThreadMigrationState(): Unit = {
     //only proceed if there are any pending thread context to be migrated

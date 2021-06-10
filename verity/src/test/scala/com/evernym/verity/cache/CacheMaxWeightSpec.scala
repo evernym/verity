@@ -7,7 +7,7 @@ import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetc
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicAsyncSpec
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Future
 
@@ -62,7 +62,7 @@ class CacheMaxWeightSpec
         val largerObject = Array.range(0, 270).map(_.toByte)
         val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right(largerObject)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
-          eventually(timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+          eventually(timeout(Span(10, Seconds)), interval(Span(300, Millis))) {
             cache.allKeys shouldBe Set("2", "3", "larger")
             cache.allCacheHitCount shouldBe 0
             cache.allCacheMissCount shouldBe 4

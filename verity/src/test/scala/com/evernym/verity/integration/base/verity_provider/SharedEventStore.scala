@@ -19,7 +19,7 @@ import scala.util.Random
  */
 class SharedEventStore(tempDir: Path) {
 
-  val arteryPort: Int = 2000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+  val arteryPort: Int = 4000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
 
   val actorSystem: ActorSystem = {
     val parts = Seq(

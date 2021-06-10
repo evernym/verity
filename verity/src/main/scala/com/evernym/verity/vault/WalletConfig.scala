@@ -43,7 +43,7 @@ class MySqlWalletConfig(readHost: String, writeHost: String, port: Int,
                         userName: String, password: String, dbName: String,
                         connectionLimit: Option[Int]) extends WalletConfig {
 
-  val DEFAULT_CONNECTION_LIMIT = 100
+  val DEFAULT_CONNECTION_LIMIT = 1
 
   List(readHost, writeHost, port, userName, password, dbName).foreach { i =>
     require(i != null)

@@ -220,28 +220,28 @@ trait AgentCommon
   def updateAgencyDidPair(dp: DidPair): Unit
 
   override def postSuccessfulActorRecovery(): Unit = {
-    logStateSizeMetrics()
+    Option(state).foreach { s =>
+      isThreadContextMigrationFinished = s.currentThreadContextSize == 0
+      logStateSizeMetrics(s)
+    }
   }
 
-  def logStateSizeMetrics(): Unit = {
-    Option(state).foreach { s =>
-      isThreadContextMigrationFinished = state.currentThreadContextSize == 0
-      try {
-        val stateSize = s.serializedSize
-        if (stateSize >= 0) { // so only states that can calculate size are part the metric
-          MetricsWriter.histogramApi.recordWithTag(
-            AS_ACTOR_AGENT_STATE_SIZE,
-            MeasurementUnit.information.bytes,
-            stateSize,
-            "actor_class" -> this.getClass.getSimpleName,
-          )
-        }
-      } catch {
-        case e: RuntimeException =>
-          logger.error(s"[$persistenceId] error occurred while calculating state size => " +
-            s"state: $s, error: ${e.getMessage}, exception stack trace: " +
-            s"${Exceptions.getStackTraceAsSingleLineString(e)}")
+  def logStateSizeMetrics(s: StateType): Unit = {
+    try {
+      val stateSize = s.serializedSize
+      if (stateSize >= 0) { // so only states that can calculate size are part the metric
+        MetricsWriter.histogramApi.recordWithTag(
+          AS_ACTOR_AGENT_STATE_SIZE,
+          MeasurementUnit.information.bytes,
+          stateSize,
+          "actor_class" -> this.getClass.getSimpleName,
+        )
       }
+    } catch {
+      case e: RuntimeException =>
+        logger.error(s"[$persistenceId] error occurred while calculating state size => " +
+          s"state: $s, error: ${e.getMessage}, exception stack trace: " +
+          s"${Exceptions.getStackTraceAsSingleLineString(e)}")
     }
   }
 

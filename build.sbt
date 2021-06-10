@@ -59,24 +59,24 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
 
-val akkaVer         = "2.6.10"
-val akkaHttpVer     = "10.2.2"
-val akkaMgtVer      = "1.0.10"
-val alpAkkaVer      = "2.0.2"
-val kamonVer        = "2.1.9"
-val kanelaAgentVer  = "1.0.7"
+val akkaVer         = "2.6.14"
+val akkaHttpVer     = "10.2.4"
+val akkaMgtVer      = "1.1.0"
+val alpAkkaVer      = "3.0.1"
+val kamonVer        = "2.2.0"
+val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.8"
+val scalatestVer    = "3.2.9"
 val mockitoVer      = "1.16.37"
 val veritySdkVer    = "0.4.5-77b158ab"
 val vcxWrapperVer   = "0.10.1.1131"
 
 // compiler plugin versions
-val silencerVersion = "1.7.1"
+val silencerVersion = "1.7.5"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -168,7 +168,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 lazy val settings = Seq(
   organization := "com.evernym",
   version := s"${major.value}.${minor.value}.${patch.value}",
-  scalaVersion := "2.12.12",
+  scalaVersion := "2.12.13",
   scalacOptions := Seq(
     "-feature",
     "-unchecked",
@@ -290,7 +290,7 @@ lazy val commonLibraryDependencies = {
     "com.typesafe.akka" %% "akka-actor" % akkaVer,
 
     //other akka dependencies
-    "com.twitter" %% "chill-akka" % "0.9.5",    //serialization/deserialization for akka remoting
+    "com.twitter" %% "chill-akka" % "0.10.0",    //serialization/deserialization for akka remoting
 
     //hyper-ledger indy dependencies
     "org.hyperledger" % "indy" % indyWrapperVer,
@@ -317,19 +317,19 @@ lazy val commonLibraryDependencies = {
     "io.kamon" %% "kamon-bundle" % kamonVer,
     "io.kamon" %% "kamon-prometheus" % kamonVer,
     "io.kamon" %% "kamon-datadog" % kamonVer,
-    "io.kamon" %% "kamon-jaeger" % "2.1.2",
+    "io.kamon" %% "kamon-jaeger" % kamonVer,
 
     //other dependencies
-    "com.github.blemale" %% "scaffeine" % "4.0.2",
+    "com.github.blemale" %% "scaffeine" % "4.1.0",
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
-    "org.fusesource.jansi" % "jansi" % "1.18",    //used by protocol engine for customized logging
+    "org.fusesource.jansi" % "jansi" % "2.3.2",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "1.1.1",  //used for libindy sync api calls
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.4",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-    //"org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1",   //commented as seemed not used
+    //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 
     "org.iq80.leveldb" % "leveldb" % "0.12",      //used as alternate StorageAPI to S3
   )
@@ -360,7 +360,7 @@ lazy val commonLibraryDependencies = {
       exclude ("org.hyperledger", "indy"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
-    "com.google.guava" % "guava" % "28.1-jre",
+    "com.google.guava" % "guava" % "30.1.1-jre",
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 

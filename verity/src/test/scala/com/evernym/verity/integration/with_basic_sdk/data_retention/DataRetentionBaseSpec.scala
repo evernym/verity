@@ -3,13 +3,12 @@ package com.evernym.verity.integration.with_basic_sdk.data_retention
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{PortProvider, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.verity_provider.node.local.ServiceParam
 import com.evernym.verity.storage_services.StorageAPI
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
-import scala.util.Random
 
 
 trait DataRetentionBaseSpec { this: VerityProviderBaseSpec =>
@@ -26,7 +25,7 @@ trait DataRetentionBaseSpec { this: VerityProviderBaseSpec =>
       .withLedgerTxnExecutor(ledgerTxnExecutor)
       .withStorageApi(StorageAPI.loadFromConfig(appConfig))
 
-  val arteryPort: Int = 3000 + Random.nextInt(900)  + Random.nextInt(90) + Random.nextInt(9)
+  val arteryPort: Int = PortProvider.getUnusedPort(3000)
 
   implicit lazy val actorSystem: ActorSystem = {
     val parts = Seq(akkaConfig(arteryPort))

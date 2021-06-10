@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{AppStateRequest, AppStateEvent}
+import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateRequest}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass

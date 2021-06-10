@@ -142,7 +142,7 @@ object VerityLocalConfig {
   private def identityUrlShortener(): Config = {
     ConfigFactory.parseString(
       s"""
-         |verity.services.url-shortener-service.selected = IDENTITY
+         |verity.services.url-shortener-service.selected = "com.evernym.verity.urlshortener.IdentityUrlShortener"
          |""".stripMargin
     )
   }

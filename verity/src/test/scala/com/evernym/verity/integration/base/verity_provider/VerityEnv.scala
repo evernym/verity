@@ -3,6 +3,7 @@ package com.evernym.verity.integration.base.verity_provider
 import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
+import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore
@@ -10,9 +11,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import java.util.UUID
 import scala.concurrent.duration._
-import scala.util.Random
 
 
 case class VerityEnv(seed: String,
@@ -118,12 +117,13 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 
 object PortProfile {
   def random(): PortProfile = {
-    val random = new Random(UUID.randomUUID().toString.hashCode)
-    val httpPort = 9000 + random.nextInt(900) + random.nextInt(90) + random.nextInt(9)
-    val arteryPort = 2000 + random.nextInt(900)  + random.nextInt(90) + random.nextInt(9)
-    val akkaMgmtPort = 8000 + random.nextInt(900)  + random.nextInt(90) + random.nextInt(9)
+    val arteryPort    = PortProvider.getUnusedPort(2000)
+    val akkaMgmtPort  = PortProvider.getUnusedPort(8000)
+    val httpPort      = PortProvider.getUnusedPort(9000)
     PortProfile(httpPort, arteryPort, akkaMgmtPort)
   }
 }
 
-case class PortProfile(http: Int, artery: Int, akkaManagement: Int)
+case class PortProfile(http: Int, artery: Int, akkaManagement: Int) {
+  def ports: Seq[Int] = Seq(http, artery, akkaManagement)
+}

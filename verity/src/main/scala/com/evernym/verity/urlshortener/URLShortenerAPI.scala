@@ -9,6 +9,7 @@ import com.evernym.verity.config.CommonConfig.URL_SHORTENER_SVC_SELECTED
 import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.util.Util.{getJsonStringFromMap, logger}
 
+
 trait UrlShorteningResponse extends ActorMessage
 case class UrlShortened(shortUrl: String) extends UrlShorteningResponse
 case class UrlShorteningFailed(errorCode: String, errorMsg: String) extends UrlShorteningResponse
@@ -17,7 +18,7 @@ case class UrlInfo(url: String) extends ActorMessage {
   def json: String = getJsonStringFromMap(Map(TYPE -> SHORTEN_URL, URL -> url))
 }
 
-trait URLShortenerServiceProvider {
+trait URLShortenerAPI {
   def providerId: String
   def appConfig: AppConfig
 
@@ -36,8 +37,7 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
               case Left(exception) => sender ! UrlShorteningFailed("Exception", exception.getErrorMsg)
               case Right(value) => sender ! UrlShortened(value)
             }
-          }
-          catch {
+          } catch {
             case e: Throwable =>
               logger.warn(s"UrlShortener (${shortener.providerId}) failed with exception: ${e.getMessage}", e)
               sender ! UrlShorteningFailed("Exception", e.getMessage)
@@ -48,20 +48,22 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
       }
   }
 
-  lazy val allServices: List[URLShortenerServiceProvider] =
-    List(
-      new YOURLSSvc(config),
-      new IdentityUrlShortener(config)
-    )
-
-  def shortenerSvc(): Option[URLShortenerServiceProvider] = {
-    val svc = config.getConfigStringOption(URL_SHORTENER_SVC_SELECTED).getOrElse("")
-    allServices.find(s => s.providerId == svc)
+  def shortenerSvc(): Option[URLShortenerAPI] = {
+    DefaultURLShortener.loadFromConfig(config)
   }
 }
 
-class YOURLSSvc(val appConfig: AppConfig) extends YOURLSDispatcher
-
 object DefaultURLShortener {
+
+  def loadFromConfig(appConfig: AppConfig): Option[URLShortenerAPI] = {
+    appConfig.getConfigStringOption(URL_SHORTENER_SVC_SELECTED).map { clazz =>
+      Class
+        .forName(clazz)
+        .getConstructor(classOf[AppConfig])
+        .newInstance(appConfig)
+        .asInstanceOf[URLShortenerAPI]
+    }
+  }
+
   def props(config: AppConfig): Props = Props(new DefaultURLShortener(config))
 }

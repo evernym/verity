@@ -47,7 +47,6 @@ trait AgentMsgHandler
         // b. control messages sent by agent actors (in response to a signal message handling)
         //      (search for 'sendUntypedMsgToProtocol' method in UserAgent.scala to see these messages)
         //      (few others are like GetMsgs, UpdateMsgExpirationTime etc)
-
         sendToAgentMsgProcessor(ProcessUntypedMsgV1(m, relationshipId, DEFAULT_THREAD_ID, UNKNOWN_SENDER_PARTICIPANT_ID))
       } catch protoExceptionHandler
   }

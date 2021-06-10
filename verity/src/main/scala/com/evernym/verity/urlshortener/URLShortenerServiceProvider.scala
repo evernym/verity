@@ -7,7 +7,8 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.SHORTEN_URL
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.URL_SHORTENER_SVC_SELECTED
 import com.evernym.verity.constants.Constants.{TYPE, URL}
-import com.evernym.verity.util.Util.{getJsonStringFromMap, logger}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util.Util.getJsonStringFromMap
 
 trait UrlShorteningResponse extends ActorMessage
 case class UrlShortened(shortUrl: String) extends UrlShorteningResponse
@@ -26,6 +27,7 @@ trait URLShortenerServiceProvider {
 
 class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging {
   implicit val system: ActorSystem = context.system
+  private val logger = getLoggerByClass(getClass)
 
   override def receive: Receive = {
     case urlInfo: UrlInfo =>

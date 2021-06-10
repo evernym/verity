@@ -5,12 +5,14 @@ import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.Constants.DEFAULT_INVITE_RECEIVER_USER_NAME
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
-import com.evernym.verity.util.Util.logger
 
 trait HasCloudAgent { this: MockAgent =>
+
+  private val logger = getLoggerByName("HasCloudAgent")
 
   //my agency's public DID detail
   var agencyPublicDid: Option[AgencyPublicDid] = None

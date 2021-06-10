@@ -10,8 +10,8 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateAgent_MFV_0_7, CreateEdgeAgent_MFV_0_7}
-import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockAgent
 
 import scala.util.Left
@@ -19,6 +19,8 @@ import scala.util.Left
 trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
 
   object v_0_7_req {
+
+    private val logger = getLoggerByClass(getClass)
 
     implicit val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
 

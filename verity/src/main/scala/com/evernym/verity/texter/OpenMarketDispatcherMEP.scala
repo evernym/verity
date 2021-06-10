@@ -1,15 +1,16 @@
 package com.evernym.verity.texter
 
 import java.net.HttpURLConnection._
-
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.util.Util._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
+
 import javax.ws.rs.client.{Client, ClientBuilder, Entity}
 import javax.ws.rs.core.MediaType
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
@@ -23,6 +24,8 @@ case class InvokeService(endUser: EndUser, variables: Variables)
 
 
 trait OpenMarketMEPAPI extends SMSServiceProvider with ConfigSvc {
+
+  private val logger = getLoggerByName("OpenMarketMEPAPI")
 
   lazy val providerId = SMS_PROVIDER_ID_OPEN_MARKET
 

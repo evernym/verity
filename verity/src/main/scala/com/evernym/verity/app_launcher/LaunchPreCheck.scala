@@ -10,13 +10,13 @@ import com.evernym.verity.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.util.Util.logger
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future, TimeoutException}
@@ -28,6 +28,8 @@ import scala.math.min
  * external dependencies are available/responding (like DynamoDB, MySql, Ledger etc)
  */
 object LaunchPreCheck {
+
+  private val logger = getLoggerByClass(getClass)
 
   def checkReqDependencies(aac: AgentActorContext): Unit = {
     checkAkkaEventStorageConnection(aac)(aac.system)

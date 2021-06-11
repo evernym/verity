@@ -14,7 +14,7 @@ then
   sudo apt-get update
 
   echo "Installing xenial dependencies..."
-  sudo apt-get install -y --allow-downgrades libindy-async=1.95.0~1577-xenial
+  sudo apt-get install -y --allow-downgrades libindy-async=1.95.0~1624-xenial
 else
   if ! grep -q "deb https://repo.sovrin.org/sdk/deb bionic master" /etc/apt/sources.list /etc/apt/sources.list.d/*; then
     sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master"
@@ -24,5 +24,5 @@ else
 
   echo "Installing bionic dependencies..."
   # All other debian-based systems get the bionic build
-  sudo apt-get install -y --allow-downgrades libindy-async=1.95.0~1577-bionic
+  sudo apt-get install -y --allow-downgrades libindy-async=1.95.0~1624-bionic
 fi

@@ -12,7 +12,7 @@
     - curl
       --insecure
       --request POST
-      --form token=$CI_JOB_TOKEN
+      --form token=$TRIGGER_API_TOKEN
       --form ref=$TRIGGERAPI_REF_VERITY_RELEASE
       --form "variables[VERITY_PACKAGE_VERSION]=$VERITY_VERSION"
       --form "variables[TARGET_ENV]=$TARGET_ENVIRONMENT"

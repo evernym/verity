@@ -72,7 +72,7 @@ val sdnotifyVer     = "1.3"
 //test dependency versions
 val scalatestVer    = "3.2.9"
 val mockitoVer      = "1.16.37"
-val veritySdkVer    = "0.4.5-77b158ab"
+val veritySdkVer    = "0.4.8-d248cd7a"
 val vcxWrapperVer   = "0.10.1.1131"
 
 // compiler plugin versions
@@ -188,7 +188,7 @@ lazy val settings = Seq(
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-  resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
 
   Test / parallelExecution := false,
   Test / logBuffered := false,

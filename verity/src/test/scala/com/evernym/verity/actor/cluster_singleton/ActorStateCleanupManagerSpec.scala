@@ -173,7 +173,7 @@ class DummyAgentActor extends CoreActorExtended {
   //this is to create/test scenario wherein some agent actor doesn't recover successfully
   // (or in other words they never responds to the 'FixActorState' command)
   // then also the whole actor state cleanup process should still be working fine.
-  val notRespondEntityIds = List("2LsdxuRArjHNvKYngrunpn", "Hcn6Wipq2YVvnUE4rvApZx")
+  val notRespondEntityIds = List("WpGeaHXpyUFLMn3K7rLdD8", "N3gagwN9hYcrBDHQkHYfG4")
 
   override def receiveCmd: Receive = {
     case fas: FixActorState             =>

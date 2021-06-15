@@ -1,11 +1,11 @@
 import java.io.File
 import java.nio.file.Files
 import java.util.Optional
-
 import com.typesafe.sbt.packager.linux.LinuxPackageMapping
 import com.typesafe.sbt.packager.linux.LinuxPlugin.autoImport.packageMapping
 import sbt.Def.Classpath
-import sbt._
+import sbt.Keys.{resources, target}
+import sbt.{Compile, IO, file, taskKey, _}
 import sbt.internal.inc.classpath.ClasspathUtil
 import sbt.internal.inc.{Analysis, LastModified, Stamps}
 import sbtassembly.MergeStrategy
@@ -16,6 +16,7 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS, _}
 import scala.language.postfixOps
+import scala.sys.process.Process
 
 object Util {
   lazy implicit val inGitlabCI: Boolean = sys.env.contains("CI")

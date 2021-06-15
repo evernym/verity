@@ -121,6 +121,19 @@ lazy val verity = (project in file("verity"))
     update := update.dependsOn(updateSharedLibraries).value,
     K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion)
   )
+//  .settings(
+//    versionConfig := {
+//      val v = s"${major.value}.${minor.value}.${patch.value}"
+//      val log = streams.value.log
+//      log.error(s"RTM -> property foo = $v")
+//      writeVerityVersion(v)
+//    },
+//
+//    onLoad in Global := {
+//      val old = (onLoad in Global).value
+//      startupTransition compose old
+//    }
+//  )
 
 lazy val integrationTests = (project in file("integration-tests"))
   .settings(
@@ -169,6 +182,10 @@ lazy val settings = Seq(
   organization := "com.evernym",
   version := s"${major.value}.${minor.value}.${patch.value}",
   scalaVersion := "2.12.13",
+  Compile / resourceGenerators += {
+    SourceGenerator.writeVerityVersionConf(s"${major.value}.${minor.value}.${patch.value}").taskValue
+  },
+
   scalacOptions := Seq(
     "-feature",
     "-unchecked",
@@ -248,6 +265,13 @@ lazy val packageSettings = Seq (
     buildPackageMappings(s"verity/src/main/resources/debian-package-resources",
       s"/usr/share/${name.value}/${packageName.value}",
       includeFiles = confFiles, replaceFilesIfExists = true)
+  },
+//  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version.value).taskValue,
+//  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf("aaaabbbccc").taskValue,
+
+  linuxPackageMappings += {
+    buildPackageMappings(target.value.getAbsolutePath, s"/usr/share/${name.value}/${packageName.value}",
+      includeFiles = Set("verity-version.conf"), replaceFilesIfExists = true)
   },
   Debian / packageArchitecture := "amd64",
   // libindy provides libindy.so

@@ -1,5 +1,5 @@
 import sbt._
-import sbt.Keys.{name, resourceManaged, sourceManaged, target, version}
+import sbt.Keys.{resourceManaged, sourceManaged}
 
 import scala.language.postfixOps
 import java.io.File

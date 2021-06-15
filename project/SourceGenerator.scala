@@ -27,7 +27,7 @@ object SourceGenerator {
   def writeVerityVersionConf(version: SettingKey[String]): Def.Initialize[Task[Seq[File]]] = {
     Def.task {
       val file = resourceManaged.value / "verity-version.conf"
-      println(s"RTM -> file: ${file.getAbsoluteFile}")
+      println(s"Generated version conf file: ${file.getAbsoluteFile}")
       val contents = s"verity.version=${version.value}"
       IO.write(file, contents)
       Seq(file)

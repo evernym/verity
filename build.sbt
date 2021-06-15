@@ -94,7 +94,7 @@ ThisBuild / patch := patchNum(
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
@@ -121,19 +121,6 @@ lazy val verity = (project in file("verity"))
     update := update.dependsOn(updateSharedLibraries).value,
     K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion)
   )
-//  .settings(
-//    versionConfig := {
-//      val v = s"${major.value}.${minor.value}.${patch.value}"
-//      val log = streams.value.log
-//      log.error(s"RTM -> property foo = $v")
-//      writeVerityVersion(v)
-//    },
-//
-//    onLoad in Global := {
-//      val old = (onLoad in Global).value
-//      startupTransition compose old
-//    }
-//  )
 
 lazy val integrationTests = (project in file("integration-tests"))
   .settings(
@@ -180,11 +167,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  version := s"${major.value}.${minor.value}.${patch.value}",
   scalaVersion := "2.12.13",
-  Compile / resourceGenerators += {
-    SourceGenerator.writeVerityVersionConf(s"${major.value}.${minor.value}.${patch.value}").taskValue
-  },
 
   scalacOptions := Seq(
     "-feature",
@@ -266,13 +249,7 @@ lazy val packageSettings = Seq (
       s"/usr/share/${name.value}/${packageName.value}",
       includeFiles = confFiles, replaceFilesIfExists = true)
   },
-//  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version.value).taskValue,
-//  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf("aaaabbbccc").taskValue,
-
-  linuxPackageMappings += {
-    buildPackageMappings(target.value.getAbsolutePath, s"/usr/share/${name.value}/${packageName.value}",
-      includeFiles = Set("verity-version.conf"), replaceFilesIfExists = true)
-  },
+  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version).taskValue,
   Debian / packageArchitecture := "amd64",
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(

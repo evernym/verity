@@ -3,12 +3,14 @@ deployment:
   tag: "latest"
   imagePullPolicy: "Always"
   containerPort: 9000
+  vault:
+    enable: true
+    authRole: "verity-eks"
+    basePath: "sharedpass/dev/kubernetes"
 k8sService:
-  type: ClusterIP
+  type: NodePort
   port: 80
   targetPort: 9000
-ingress:
-  port: 80
 # List of sponsors for Verity
 sponsors:
 # List configuration for for TAA.

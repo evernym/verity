@@ -1,20 +1,37 @@
+{{- $fullname := printf "%s-%s-%s" .Values.service .Values.name .Values.env -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  name: {{ $fullname }}
 spec:
   selector:
     matchLabels:
-      app: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+      app: {{ $fullname }}
   replicas: {{ .Values.startReplicas }}
   template:
     metadata:
       labels:
-        app: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+        app: {{ $fullname }}
         actorSystemName: verity
+      annotations:
+        {{- if .Values.deployment.vault.enable }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.deployment.vault.authRole }}"
+        vault.hashicorp.com/agent-inject-secret-credentials: "{{ .Values.deployment.vault.basePath }}/{{ $fullname }}"
+        vault.hashicorp.com/tls-secret: vault-tls-secret
+        vault.hashicorp.com/ca-cert: /vault/tls/evernym-root-ca.crt
+        vault.hashicorp.com/agent-pre-populate-only : "true"
+        vault.hashicorp.com/agent-inject-template-credentials: |
+          {{`{{ with secret `}}"{{ .Values.deployment.vault.basePath }}/{{ $fullname }}"{{` -}}`}}
+          {{`{{ range $k, $v := .Data.data -}}
+            export {{ $k }}={{ $v }}
+          {{ end }}
+          {{- end }}`}}
+        {{- end }}
     spec:
+      # TODO create dedicated serviceAccountName and run Verity pods under dedicates service account
       containers:
-      - name: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+      - name: {{ $fullname }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
         startupProbe:
           httpGet:
@@ -34,7 +51,7 @@ spec:
           failureThreshold: 1
         envFrom:
         - configMapRef:
-            name: vars-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+            name: vars-{{ $fullname }}
         volumeMounts:
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map
@@ -48,11 +65,22 @@ spec:
         - name: management
           containerPort: 8558
           protocol: TCP
+        {{- if .Values.deployment.vault.enable }}
+        command: ['/bin/sh', '-c']
+        args:
+          - >-
+            . /vault/secrets/credentials;
+            /usr/bin/java
+            -javaagent:/usr/lib/verity-application/kanela-agent.jar
+            -Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener
+            -cp /etc/verity/verity-application:/etc/verity/verity-application/config-map:/usr/lib/verity-application/verity-assembly.jar
+            com.evernym.verity.Main
+        {{- end }}
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:
       - name: config-files
         configMap:
-          name: file-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+          name: file-{{ $fullname }}
       - name: ledger-genesis-files
         configMap:
           name: ledger-genesis-files
@@ -61,7 +89,7 @@ spec:
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pod-reader-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  name: pod-reader-{{ $fullname }}
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -70,11 +98,11 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: read-pods-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  name: read-pods-{{ $fullname }}
 subjects:
   - kind: User
     name: system:serviceaccount:default:default
 roleRef:
   kind: Role
-  name: pod-reader-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  name: pod-reader-{{ $fullname }}
   apiGroup: rbac.authorization.k8s.io

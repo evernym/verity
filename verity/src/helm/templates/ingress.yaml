@@ -3,14 +3,17 @@ kind: Ingress
 metadata:
   name: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
   annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/certificate-arn: "{{ .Values.vars.SSL_CERTIFICATE_ARN }}"
+    alb.ingress.kubernetes.io/healthcheck-path: /agency
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.vars.VERITY__ENDPOINT__HOST }}
 spec:
   rules:
-  - host: {{ .Values.vars.VERITY__ENDPOINT__HOST }}
-    http:
+  - http:
       paths:
-      - path: "/"
+      - path: /
         pathType: Prefix
         backend:
           serviceName: {{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
-          servicePort: {{ .Values.ingress.port }}
-
+          servicePort: {{ .Values.k8sService.port }}

@@ -4,9 +4,10 @@ package com.evernym.verity.itemmanager
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager._
-import com.evernym.verity.actor.testkit.{AppStateManagerTestKit, PersistentActorSpec}
+import com.evernym.verity.actor.testkit.{AkkaTestBasic, AppStateManagerTestKit, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.{IgnoreLog, UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.appStateManager.state.ListeningState
+import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.config.Config
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -26,42 +27,18 @@ class DeleteMessageFailureItemManagerSpec
       .withFallback(configForDeleteEventFailure)
   }
 
-  final val ITEM_TYPE = "uap-messages"
-
-  "ItemConfigProvider" - {
-    "when tried to add a mapper" - {
-      "should be able to add it" in {
-        ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
-          TestTimeBasedItemContainerMapper(ENTITY_ID_MAPPER_VERSION_V1))
-        ItemConfigManager.addNewItemContainerMapper(ITEM_TYPE,
-          TestTimeBasedItemContainerMapper(LATEST_ITEM_ACTOR_ENTITY_ID_MAPPER_VERSION + 1))
-      }
-    }
-  }
+  final val itemManagerId = AgentActorWatcher.itemManagerEntityId
 
   "ItemManager" - {
+
     "when sent 'SetItemManagerConfig'" - {
-      "should respond 'ItemManagerStateDetail'" taggedAs UNSAFE_IgnoreLog in {
-        try {
-          sendExternalCmdToItemManager(
-            itemManagerEntityId1,
-            SetItemManagerConfig(
-              ITEM_TYPE,
-              ITEM_OWNER_VER_KEY,
-              migrateItemsToNextLinkedContainer = true,
-              migrateItemsToLatestVersionedContainers = false
-            )
-          )
-        }
-        catch {
-          case t: Throwable =>
-//            Is trapping Throwable really a good idea?
-//            println(t.getMessage)
-//            println(t.getCause.getMessage)
-//            println(t.getCause.printStackTrace())
-        }
-        expectMsgPF() {
-          case _: ItemManagerStateDetail =>
+      "should respond 'ItemManagerConfigAlreadySet'" in {
+        eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
+          sendExternalCmdToItemManager(itemManagerEntityId1, SetItemManagerConfig(itemManagerId,
+            migrateItemsToNextLinkedContainer = true))
+          expectMsgPF() {
+            case ItemManagerConfigAlreadySet =>
+          }
         }
       }
     }
@@ -146,6 +123,9 @@ class DeleteMessageFailureItemManagerSpec
     }
   }
 
+  def configForDeleteEventFailure: Config =  {
+    AkkaTestBasic.customJournal("com.evernym.verity.itemmanager.FailsOnDeleteEventsTestJournal")
+  }
 }
 
 

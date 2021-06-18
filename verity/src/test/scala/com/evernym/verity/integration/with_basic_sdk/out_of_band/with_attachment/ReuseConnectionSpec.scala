@@ -1,26 +1,30 @@
-package com.evernym.verity.integration.with_basic_sdk
+package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment
 
-import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
+import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Invitation, Sent}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{HandshakeReuse, HandshakeReuseAccepted, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.ConnectionReused
-import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
 
-class OutOfBandCredOfferSpec
+//Holder and Issuer already have a connection.
+//Holder receives a new "cred offer attached OOB invitation" from the same Issuer.
+// Holder re-uses the existing connection (handshake-reuse) and move forward successfully with OOB attached cred offer
+
+class ReuseConnectionSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
@@ -45,60 +49,6 @@ class OutOfBandCredOfferSpec
     credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
     establishConnection(issuerHolderConn, issuerSDK, holderSDK)
-  }
-
-  "IssuerSDK" - {
-    "sends 'offer' (issue-credential 1.0) message" - {
-      "should be successful" in {
-        val offerMsg = Offer(
-          credDefId,
-          Map("name" -> "Alice", "age" -> "20")
-        )
-        issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
-        issuerSDK.expectMsgOnWebhook[Sent]()
-      }
-    }
-  }
-
-  "HolderSDK" - {
-    "when try to get un viewed messages" - {
-      "should get 'offer-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[OfferCred](issuerHolderConn)
-        offerCred = receivedMsg.msg
-        lastReceivedThread = receivedMsg.threadOpt
-      }
-    }
-
-    "when sent 'request-credential' (issue-credential 1.0) message" - {
-      "should be successful" in {
-        holderSDK.sendCredRequest(issuerHolderConn, credDefId, offerCred, lastReceivedThread)
-      }
-    }
-  }
-
-  "IssuerSDK" - {
-    "when waiting for message on webhook" - {
-      "should get 'accept-request' (issue-credential 1.0)" in {
-        issuerSDK.expectMsgOnWebhook[AcceptRequest]()
-      }
-    }
-
-    "when sent 'issue' (issue-credential 1.0) message" - {
-      "should be successful" in {
-        val issueMsg = Issue()
-        issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThread)
-        issuerSDK.expectMsgOnWebhook[Sent]()
-      }
-    }
-  }
-
-  "HolderSDK" - {
-    "when try to get un viewed messages" - {
-      "should get 'issue-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[IssueCred](issuerHolderConn)
-        holderSDK.storeCred(receivedMsg.msg, lastReceivedThread)
-      }
-    }
   }
 
   "IssuerSDK" - {
@@ -151,4 +101,28 @@ class OutOfBandCredOfferSpec
     }
   }
 
+  "IssuerSDK" - {
+    "when waiting for message on webhook" - {
+      "should get 'accept-request' (issue-credential 1.0)" in {
+        issuerSDK.expectMsgOnWebhook[AcceptRequest]()
+      }
+    }
+
+    "when sent 'issue' (issue-credential 1.0) message" - {
+      "should be successful" in {
+        val issueMsg = Issue()
+        issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThread)
+        issuerSDK.expectMsgOnWebhook[Sent]()
+      }
+    }
+  }
+
+  "HolderSDK" - {
+    "when try to get un viewed messages" - {
+      "should get 'issue-credential' (issue-credential 1.0) message" in {
+        val receivedMsg = holderSDK.expectMsgFromConn[IssueCred](issuerHolderConn)
+        holderSDK.storeCred(receivedMsg.msg, lastReceivedThread)
+      }
+    }
+  }
 }

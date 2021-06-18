@@ -8,13 +8,13 @@ Notes:
     * segment storage (mock for S3)  
   * local storage for snapshot store  
   * file based wallet storage
-  * 'in-memory' mocked ledger  
+  * 'in-memory' mocked ledger
+  * mock url shortener (it returns the same long url)
 <br/>
 
 
 * It does not support below mentioned services (unless we add some mocked support or something):
-  * SMS service 
-  * UrlShortening service  
+  * SMS service
 <br/>
 
 * The 'Sdk' used in these specs:

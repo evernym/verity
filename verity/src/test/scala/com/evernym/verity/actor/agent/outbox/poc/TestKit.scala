@@ -1,6 +1,4 @@
-package com.evernym.verity.actor.agent.outbox
-
-import java.util.concurrent.atomic.AtomicInteger
+package com.evernym.verity.actor.agent.outbox.poc
 
 import akka.Done
 import akka.actor.typed.{ActorSystem, Behavior}
@@ -9,45 +7,15 @@ import akka.pattern.StatusReply
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.{EventSourcedBehaviorTestKit, PersistenceTestKit, SnapshotTestKit}
 import akka.persistence.typed.PersistenceId
-import com.evernym.verity.actor.agent.outbox.Message.MsgId
-import com.evernym.verity.actor.agent.outbox.Outbox.{Cmd, Evt, State, TypeKey}
+import com.evernym.verity.actor.agent.outbox.poc.Message.MsgId
+import com.evernym.verity.actor.agent.outbox.poc.Outbox.{Cmd, Evt, State, TypeKey}
 import com.typesafe.config.{Config, ConfigFactory}
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
 
 object TestKit {
-
-  val config: Config = ConfigFactory.parseString("""
-    akka.actor {
-      serialization-bindings {
-        "com.evernym.verity.actor.agent.outbox.Encodable" = jackson-cbor
-      }
-    }
-    """)
-    .withFallback(EventSourcedBehaviorTestKit.config)
-    .withFallback(PersistenceTestKitSnapshotPlugin.config)
-
-  val clusterConfig: Config = ConfigFactory.parseString("""
-    akka {
-      actor {
-        provider = "cluster"
-      }
-      remote.artery {
-        canonical {
-          hostname = "127.0.0.1"
-          port = 2551
-        }
-      }
-
-      cluster {
-        seed-nodes = [
-          "akka://TestSystem@127.0.0.1:2551",
-        ]
-        downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
-      }
-    }
-    """)
 
   object TestOutbox {
     val lastOutboxId = new AtomicInteger(0)
@@ -88,9 +56,9 @@ object TestKit {
 
 
   /**
-    * While this is a helper for tests and has value on its own merits, it also somewhat accomplishes the goal of
-    * https://github.com/akka/akka/issues/29143.
-    */
+   * While this is a helper for tests and has value on its own merits, it also somewhat accomplishes the goal of
+   * https://github.com/akka/akka/issues/29143.
+   */
   abstract class EventSourcedScenario[C, E, S](val behavior: Behavior[C],
                                                val entityId: String,
                                                val TypeKey: EntityTypeKey[C])

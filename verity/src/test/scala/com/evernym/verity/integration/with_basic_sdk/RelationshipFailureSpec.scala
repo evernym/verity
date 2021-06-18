@@ -7,7 +7,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
@@ -22,7 +22,7 @@ class RelationshipFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  lazy val issuerVerityApp: VerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityApp: VerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp)
   val connId = "connId1"
 

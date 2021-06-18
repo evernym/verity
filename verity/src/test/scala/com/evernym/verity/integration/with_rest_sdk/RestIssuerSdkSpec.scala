@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_rest_sdk
 
 import akka.http.scaladsl.model.StatusCodes.Accepted
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
@@ -24,8 +24,8 @@ class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv)
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
@@ -175,7 +175,7 @@ class RestIssuerSdkSpec
     }
   }
 
-  val VAS_OVERRIDE_CONFIG: Config =
+  val REST_API_CONFIG: Config =
     ConfigFactory.parseString(
       """
          verity.rest-api.enabled = true

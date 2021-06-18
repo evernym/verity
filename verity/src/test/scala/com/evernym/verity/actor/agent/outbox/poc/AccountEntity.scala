@@ -1,19 +1,25 @@
-package com.evernym.verity.actor.agent.outbox
+package com.evernym.verity.actor.agent.outbox.poc
 
 import akka.Done
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
+import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
-import akka.pattern.StatusReply
+import com.evernym.verity.actor.typed.Encodable
 
 object AccountEntity {
   // Command
   sealed trait Command extends Encodable
+
   final case class CreateAccount(replyTo: ActorRef[StatusReply[Done]]) extends Command
+
   final case class Deposit(amount: BigDecimal, replyTo: ActorRef[StatusReply[Done]]) extends Command
+
   final case class Withdraw(amount: BigDecimal, replyTo: ActorRef[StatusReply[Done]]) extends Command
+
   final case class GetBalance(replyTo: ActorRef[CurrentBalance]) extends Command
+
   final case class CloseAccount(replyTo: ActorRef[StatusReply[Done]]) extends Command
 
   // Reply
@@ -21,9 +27,13 @@ object AccountEntity {
 
   // Event
   sealed trait Event extends Encodable
+
   case object AccountCreated extends Event
+
   case class Deposited(amount: BigDecimal) extends Event
+
   case class Withdrawn(amount: BigDecimal) extends Event
+
   case object AccountClosed extends Event
 
   val Zero = BigDecimal(0)
@@ -32,12 +42,14 @@ object AccountEntity {
   sealed trait Account extends Encodable {
     def applyEvent(event: Event): Account
   }
+
   case object EmptyAccount extends Account {
     override def applyEvent(event: Event): Account = event match {
       case AccountCreated => OpenedAccount(Zero)
-      case _              => throw new IllegalStateException(s"unexpected event [$event] in state [EmptyAccount]")
+      case _ => throw new IllegalStateException(s"unexpected event [$event] in state [EmptyAccount]")
     }
   }
+
   case class OpenedAccount(balance: BigDecimal) extends Account {
     require(balance >= Zero, "Account balance can't be negative")
 
@@ -45,8 +57,8 @@ object AccountEntity {
       event match {
         case Deposited(amount) => copy(balance = balance + amount)
         case Withdrawn(amount) => copy(balance = balance - amount)
-        case AccountClosed     => ClosedAccount
-        case AccountCreated    => throw new IllegalStateException(s"unexpected event [$event] in state [OpenedAccount]")
+        case AccountClosed => ClosedAccount
+        case AccountCreated => throw new IllegalStateException(s"unexpected event [$event] in state [OpenedAccount]")
       }
 
     def canWithdraw(amount: BigDecimal): Boolean = {
@@ -54,6 +66,7 @@ object AccountEntity {
     }
 
   }
+
   case object ClosedAccount extends Account {
     override def applyEvent(event: Event): Account =
       throw new IllegalStateException(s"unexpected event [$event] in state [ClosedAccount]")
@@ -77,14 +90,14 @@ object AccountEntity {
         case EmptyAccount =>
           cmd match {
             case c: CreateAccount => createAccount(c)
-            case _                => Effect.unhandled.thenNoReply() // CreateAccount before handling any other commands
+            case _ => Effect.unhandled.thenNoReply() // CreateAccount before handling any other commands
           }
 
-        case acc @ OpenedAccount(_) =>
+        case acc@OpenedAccount(_) =>
           cmd match {
-            case c: Deposit      => deposit(c)
-            case c: Withdraw     => withdraw(acc, c)
-            case c: GetBalance   => getBalance(acc, c)
+            case c: Deposit => deposit(c)
+            case c: Withdraw => withdraw(acc, c)
+            case c: GetBalance => getBalance(acc, c)
             case c: CloseAccount => closeAccount(acc, c)
             case c: CreateAccount =>
               Effect.reply(c.replyTo)(StatusReply.Error(s"Account $accountNumber is already created"))

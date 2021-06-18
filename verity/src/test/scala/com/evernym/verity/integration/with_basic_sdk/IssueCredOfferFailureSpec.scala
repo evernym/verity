@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk
 
 import akka.http.scaladsl.model.StatusCodes.BadRequest
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
@@ -15,8 +15,8 @@ class IssueCredOfferFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)

@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
 
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
@@ -11,6 +11,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.typesafe.config.ConfigFactory
@@ -26,15 +27,16 @@ class PresentProofSpec
       .default()
       .withServiceParam(buildSvcParam)
       .withConfig(DATA_RETENTION_CONFIG)
-      .build()
+      .build(VAS)
 
   lazy val verifierVerityEnv =
     VerityEnvBuilder.
       default()
       .withServiceParam(buildSvcParam)
       .withConfig(DATA_RETENTION_CONFIG)
-      .build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+      .build(VAS)
+
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
   lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
@@ -166,6 +168,7 @@ class PresentProofSpec
   "VerifierSDK" - {
     "should receive 'presentation-result' (present-proof 1.0) message on webhook" in {
       val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
+      receivedMsgParam.msg.verification_result shouldBe ProofValidated
       val requestPresentation = receivedMsgParam.msg.requested_presentation
       requestPresentation.revealed_attrs.size shouldBe 2
       requestPresentation.unrevealed_attrs.size shouldBe 0

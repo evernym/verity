@@ -1,24 +1,25 @@
-package com.evernym.verity.actor.agent.outbox
+package com.evernym.verity.actor.agent.outbox.poc
+
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 
 import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 
-import akka.actor.typed.ActorRef
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
-
 object Aggregator {
 
   sealed trait Cmd
+
   private case object ReceiveTimeout extends Cmd
+
   private case class WrappedReply[R](reply: R) extends Cmd
 
-  def apply[Reply: ClassTag, Aggregate]( sendRequests: ActorRef[Reply] => Unit,
-                                         expectedReplies: Int,
-                                         replyTo: ActorRef[Aggregate],
-                                         aggregateReplies: immutable.IndexedSeq[Reply] => Aggregate,
-                                         timeout: FiniteDuration): Behavior[Cmd] = {
+  def apply[Reply: ClassTag, Aggregate](sendRequests: ActorRef[Reply] => Unit,
+                                        expectedReplies: Int,
+                                        replyTo: ActorRef[Aggregate],
+                                        aggregateReplies: immutable.IndexedSeq[Reply] => Aggregate,
+                                        timeout: FiniteDuration): Behavior[Cmd] = {
     Behaviors.setup { context =>
       context.setReceiveTimeout(timeout, ReceiveTimeout)
       val replyAdapter = context.messageAdapter[Reply](WrappedReply(_))

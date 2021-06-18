@@ -1,10 +1,11 @@
-package com.evernym.verity.actor.agent.outbox
+package com.evernym.verity.actor.agent.outbox.poc
 
 import akka.Done
 import akka.actor.testkit.typed.scaladsl._
 import akka.pattern.StatusReply
-import com.evernym.verity.actor.agent.outbox.Message.Error.{MSG_ALREADY_SET, MSG_CLEARED, MSG_NOT_SET}
-import com.evernym.verity.actor.agent.outbox.TestKit.TestMessage
+import com.evernym.verity.actor.agent.outbox.poc.Message.Error.{MSG_ALREADY_SET, MSG_CLEARED, MSG_NOT_SET}
+import com.evernym.verity.actor.agent.outbox.poc.TestKit.TestMessage
+import com.evernym.verity.actor.typed.TypedTestKit
 import com.evernym.verity.testkit.BasicSpec
 
 import scala.language.implicitConversions
@@ -14,7 +15,7 @@ import scala.language.implicitConversions
   * These tests use the same Akka system. Each test instantiates a Scenario that is a helper encapsulation
   */
 class MessageSpec
-  extends ScalaTestWithActorTestKit(TestKit.config)
+  extends ScalaTestWithActorTestKit(TypedTestKit.config)
     with BasicSpec {
 
 

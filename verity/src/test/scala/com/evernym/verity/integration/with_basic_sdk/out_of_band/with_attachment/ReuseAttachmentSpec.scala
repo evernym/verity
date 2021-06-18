@@ -1,20 +1,19 @@
-package com.evernym.verity.integration.with_basic_sdk
+package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment
 
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, ProblemReport => IssueCredProblemReport}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent, Invitation => IssueCredInvitation}
-import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{HandshakeReuse, HandshakeReuseAccepted, OutOfBandInvitation}
-import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.ConnectionReused
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.{RequestPresentation, ProblemReport => PresentProofProblemReport}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.{Invitation => ProofReqInvitation}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.{PresentationResult, Invitation => ProofReqInvitation}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
@@ -22,13 +21,19 @@ import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
 
-class AcceptOutOfBandTwiceSpec
+//Holder connects with Issuer via a "cred offer attached OOB invitation" and responds to the attached message.
+// Issuer side of the issue-credential protocol state moves accordingly.
+//Then same Holder try to respond to the same "attached cred offer" again
+// and the expectation is that the Holder should receive a problem report back
+// (because the issuer side of the protocol won't entertain same message again in different state)
+
+class ReuseAttachmentSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build()
-  lazy val verifierVerityEnv = VerityEnvBuilder.default().build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val verifierVerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
   lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
@@ -135,32 +140,18 @@ class AcceptOutOfBandTwiceSpec
   }
 
   "HolderSDK" - {
-    "when try to answer same OOB invitation (from issuer) again" - {
-      "by sending 'handshake-reuse' (out-of-band 1.0) message" - {
-        "should be successful" in {
-          val oobInvite = oobIssueCredInvitation.get
-          val handshakeReuse = HandshakeReuse(MsgThread(pthid = Option(oobInvite.`@id`)))
-          val msgThread = Option(MsgThread(pthid = Option(oobInvite.`@id`)))
-          holderSDK.sendProtoMsgToTheirAgent(oobIssuerHolderConn, handshakeReuse, msgThread)
-          holderSDK.expectMsgFromConn[HandshakeReuseAccepted](oobIssuerHolderConn)
-          val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
-          receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
-        }
-      }
+    "when tried to send 'request-credential' (issue-credential 1.0) message again" - {
+      "should receive problem report back as asynchronous message" in {
+        val oobInvite = oobIssueCredInvitation.get
+        val oobOfferCredAttachment = new String(Base64Util.getBase64Decoded(oobInvite.`request~attach`.head.data.base64))
+        val attachmentJsonObj = new JSONObject(oobOfferCredAttachment)
+        offerCred = JacksonMsgCodec.fromJson[OfferCred](attachmentJsonObj.toString())
+        lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
+        holderSDK.sendCredRequest(oobIssuerHolderConn, credDefId, offerCred, lastReceivedThread)
 
-      "when tried to send 'request-credential' (issue-credential 1.0) message" - {
-        "should receive problem report back as asynchronous message" in {
-          val oobInvite = oobIssueCredInvitation.get
-          val oobOfferCredAttachment = new String(Base64Util.getBase64Decoded(oobInvite.`request~attach`.head.data.base64))
-          val attachmentJsonObj = new JSONObject(oobOfferCredAttachment)
-          offerCred = JacksonMsgCodec.fromJson[OfferCred](attachmentJsonObj.toString())
-          lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
-          holderSDK.sendCredRequest(oobIssuerHolderConn, credDefId, offerCred, lastReceivedThread)
-
-          val receivedMsg = holderSDK.expectMsgFromConn[IssueCredProblemReport](oobIssuerHolderConn)
-          receivedMsg.msg.description shouldBe ProblemDescription(
-            Some("Invalid 'RequestCred' message in current state"), "invalid-message-state")
-        }
+        val receivedMsg = holderSDK.expectMsgFromConn[IssueCredProblemReport](oobIssuerHolderConn)
+        receivedMsg.msg.description shouldBe ProblemDescription(
+          Some("Invalid 'RequestCred' message in current state"), "invalid-message-state")
       }
     }
   }
@@ -227,6 +218,7 @@ class AcceptOutOfBandTwiceSpec
   "VerifierSDK" - {
     "should receive 'presentation-result' (present-proof 1.0) message on webhook" in {
       val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
+      receivedMsgParam.msg.verification_result shouldBe ProofValidated
       val requestPresentation = receivedMsgParam.msg.requested_presentation
       requestPresentation.revealed_attrs.size shouldBe 2
       requestPresentation.unrevealed_attrs.size shouldBe 0
@@ -235,31 +227,17 @@ class AcceptOutOfBandTwiceSpec
   }
 
   "HolderSDK" - {
-    "when try to answer same OOB invitation (from verifier) again" - {
-      "by sending 'handshake-reuse' (out-of-band 1.0) message" - {
-        "should be successful" in {
-            val oobInvite = oobProofReqInvitation.get
-            val handshakeReuse = HandshakeReuse(MsgThread(pthid = Option(oobInvite.`@id`)))
-            val msgThread = Option(MsgThread(pthid = Option(oobInvite.`@id`)))
-            holderSDK.sendProtoMsgToTheirAgent(oobVerifierHolderConn, handshakeReuse, msgThread)
-            holderSDK.expectMsgFromConn[HandshakeReuseAccepted](oobVerifierHolderConn)
-            val receivedMsg = verifierSDK.expectMsgOnWebhook[ConnectionReused]()
-            receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
-          }
-      }
-
-      "when tried to send 'presentation' (present-proof 1.0) message" - {
-        "receive problem report back as asynchronous message" in {
-          val oobInvite = oobProofReqInvitation.get
-          val oobProofReqAttachment = new String(Base64Util.getBase64Decoded(oobInvite.`request~attach`.head.data.base64))
-          val attachmentJsonObj = new JSONObject(oobProofReqAttachment)
-          reqPresentation = JacksonMsgCodec.fromJson[RequestPresentation](attachmentJsonObj.toString())
-          lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
-          holderSDK.acceptProofReq(oobVerifierHolderConn, reqPresentation, Map.empty, lastReceivedThread)
-          val receivedMsg = holderSDK.expectMsgFromConn[PresentProofProblemReport](oobVerifierHolderConn)
-          receivedMsg.msg.description shouldBe ProblemDescription(
-            Some("Invalid 'Presentation' message in current state"), "invalid-message-state")
-        }
+    "when tried to send 'presentation' (present-proof 1.0) message again" - {
+      "receive problem report back as asynchronous message" in {
+        val oobInvite = oobProofReqInvitation.get
+        val oobProofReqAttachment = new String(Base64Util.getBase64Decoded(oobInvite.`request~attach`.head.data.base64))
+        val attachmentJsonObj = new JSONObject(oobProofReqAttachment)
+        reqPresentation = JacksonMsgCodec.fromJson[RequestPresentation](attachmentJsonObj.toString())
+        lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
+        holderSDK.acceptProofReq(oobVerifierHolderConn, reqPresentation, Map.empty, lastReceivedThread)
+        val receivedMsg = holderSDK.expectMsgFromConn[PresentProofProblemReport](oobVerifierHolderConn)
+        receivedMsg.msg.description shouldBe ProblemDescription(
+          Some("Invalid 'Presentation' message in current state"), "invalid-message-state")
       }
     }
   }

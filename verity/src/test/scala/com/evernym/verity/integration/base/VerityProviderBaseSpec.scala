@@ -51,7 +51,7 @@ trait VerityProviderBaseSpec
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
 
-    def build(): VerityEnv = {
+    def build(appType: AppType): VerityEnv = {
       val tmpDir = randomTmpDirPath()
       val totalNodeCount = nodeCount
       val multiNodeServiceParam = if (totalNodeCount > 1) {
@@ -62,7 +62,7 @@ trait VerityProviderBaseSpec
       } else serviceParam
 
       //adding fallback common config (unless overridden) to be needed for multi node testing
-      val multiNodeClusterConfig = buildMultiNodeClusterConfig(overriddenConfig)
+      val multiNodeClusterConfig = buildVerityAppConfig(appType, overriddenConfig)
 
       val appSeed = (0 to 31).map(_ => randomChar()).mkString("")
       val portProfiles = (1 to totalNodeCount)
@@ -121,14 +121,41 @@ trait VerityProviderBaseSpec
     (Random.nextInt(high - low) + low).toChar
   }
 
-  private def buildMultiNodeClusterConfig(overriddenConfig: Option[Config] = None): Option[Config] = {
+  private def buildVerityAppConfig(appType: AppType,
+                                   overriddenConfig: Option[Config] = None): Option[Config] = {
+
+    val appTypeConfig = MULTI_NODE_CLUSTER_CONFIG.withFallback {
+      appType match {
+        case CAS => CAS_DEFAULT_CONFIG
+        case VAS => VAS_DEFAULT_CONFIG
+      }
+    }
+
     Option(
       overriddenConfig match {
-        case Some(c)  => c.withFallback(MULTI_NODE_CLUSTER_CONFIG)
-        case None     => MULTI_NODE_CLUSTER_CONFIG
+        case Some(c)  => c.withFallback(appTypeConfig)
+        case None     => appTypeConfig
       }
     )
   }
+
+  private val VAS_DEFAULT_CONFIG = ConfigFactory.parseString(
+    """
+      |sharding-region-name {
+      |    user-agent = "VerityAgent"
+      |    user-agent-pairwise = "VerityAgentPairwise"
+      |  }
+      |""".stripMargin
+  )
+
+  private val CAS_DEFAULT_CONFIG = ConfigFactory.parseString(
+    """
+      |sharding-region-name {
+      |    user-agent = "ConsumerAgent"
+      |    user-agent-pairwise = "ConsumerAgentPairwise"
+      |  }
+      |""".stripMargin
+  )
 
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
@@ -140,3 +167,7 @@ trait VerityProviderBaseSpec
       |""".stripMargin
   )
 }
+
+trait AppType
+case object CAS extends AppType
+case object VAS extends AppType

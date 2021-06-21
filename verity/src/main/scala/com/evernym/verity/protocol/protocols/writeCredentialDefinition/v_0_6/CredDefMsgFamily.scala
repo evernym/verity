@@ -56,11 +56,16 @@ case class RevocationDetails(support_revocation: Boolean, tails_file: String, ma
  */
 trait CredDefControl extends Control
 case class InitMsg() extends CredDefControl
-case class Write(name: String, schemaId: String, tag: Option[String], revocationDetails: Option[RevocationDetails]) extends Msg with CredDefControl {
+case class Write(name: String,
+                 schemaId: String,
+                 tag: Option[String],
+                 revocationDetails: Option[RevocationDetails],
+                 endorserDID: Option[String]=None) extends Msg with CredDefControl {
   override def validate(): Unit = {
     checkRequired("name", name)
     checkRequired("schemaId", schemaId)
     checkOptionalNotEmpty("tag", tag)
+    checkOptionalNotEmpty("endorserDID", endorserDID)
   }
 }
 

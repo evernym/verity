@@ -345,12 +345,8 @@ message MigratedContainerStorageCleaned {
 
 message ItemContainerConfigSet {
     option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
-    string itemType = 1;
-    int32 versionId = 2;
-    string managerEntityId = 3;
-    string ownerVerKey = 4;
-    bool migrateItemsToNextLinkedContainer = 5;
-    bool migrateItemsToLatestVersionedContainers = 6;
+    string managerEntityId = 1;
+    bool migrateItemsToNextLinkedContainer = 2;
 }
 
 message ItemContainerPrevIdUpdated {

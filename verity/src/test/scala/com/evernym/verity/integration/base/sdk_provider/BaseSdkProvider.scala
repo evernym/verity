@@ -129,11 +129,20 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
     val jsonMsgBuilder = JsonMsgBuilder(createAgentMsg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, agencyDID, packedMsg)
-    val unpackedMsg = parseAndUnpackResponse[AgentCreated](sendPOST(routedPackedMsg))
-    val verityAgent = unpackedMsg.msg
-    verityAgentDidPairOpt = Option(DidPair(verityAgent.selfDID, verityAgent.agentVerKey))
-    storeTheirKey(DidPair(verityAgent.selfDID, verityAgent.agentVerKey))
-    verityAgent
+    val receivedMsgParam = parseAndUnpackResponse[AgentCreated](sendPOST(routedPackedMsg))
+    val agentCreated = receivedMsgParam.msg
+    require(agentCreated.selfDID.trim.nonEmpty, "agent provisioning selfDID can't be empty")
+    require(agentCreated.agentVerKey.trim.nonEmpty, "agent provisioning verKey can't be empty")
+    verityAgentDidPairOpt = Option(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
+    storeTheirKey(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
+    agentCreated
+  }
+
+  def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DID): ReceivedMsgParam[T] = {
+    val jsonMsgBuilder = JsonMsgBuilder(msg)
+    val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
+    val routedPackedMsg = prepareFwdMsg(agencyDID, fwdToDID, packedMsg)
+    parseAndUnpackResponse[T](sendPOST(routedPackedMsg))
   }
 
   protected def packForMyVerityAgent(msg: String): Array[Byte] = {
@@ -216,6 +225,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   }
 
   protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse): ReceivedMsgParam[T] = {
+    checkOKResponse(resp)
     val packedMsg = parseHttpResponseAsString(resp)
     unpackMsg[T](packedMsg.getBytes)
   }
@@ -230,7 +240,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   }
 
   protected def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, Duration(20, SECONDS))
+    Await.result(fut, Duration(25, SECONDS))
   }
 
   def randomUUID(): String = UUID.randomUUID().toString

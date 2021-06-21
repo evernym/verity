@@ -69,12 +69,11 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   var routesByInsertionOrder: List[(DID, Int)] = List.empty
 
   def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
-                      actorTypeIds: List[Int] = List.empty): Set[String] = {
+                      actorTypeIds: List[Int] = List.empty): List[String] = {
     routesByInsertionOrder
       .take(totalCandidates)
       .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
       .map(_._1)
-      .toSet
   }
 
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
@@ -82,7 +81,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
     val candidates =
       getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
       .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
-    val resp = GetRouteBatchResult(entityId, candidates)
+    val resp = GetRouteBatchResult(entityId, candidates.toSet)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
   }

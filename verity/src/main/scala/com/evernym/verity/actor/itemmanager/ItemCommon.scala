@@ -1,26 +1,18 @@
 package com.evernym.verity.actor.itemmanager
 
 import java.time.ZonedDateTime
-
 import akka.actor.{ActorLogging, Props}
 import akka.event.Logging._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.appStateManager.ErrorEvent
-import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId, ItemType, VersionId}
+import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.VerKey
 
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 
   def receiveCmdHandler: Receive
-
-  def ownerVerKey: Option[VerKey]
-
-  def verifySignature(signature: String): Boolean = {
-    throw new NotImplementedError("signature verification not yet implemented")
-  }
 
   def validateMsg(msg: Any): Boolean = {
     //can be overridden by implementing class if needed
@@ -29,16 +21,6 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 
   def preMsgHandler(msg: Any): Unit = {
     //can be overridden by implementing class if needed
-  }
-
-  def verifySignatureIfRequired(cmd: Any): Unit = {
-    cmd match {
-      case ecw: ExternalCmdWrapper =>
-        ownerVerKey.foreach { _ =>
-          verifySignature(ecw.ownerSignature.orNull)
-        }
-      case _ =>
-    }
   }
 
   final override def receiveCmd: Receive = {
@@ -52,7 +34,6 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
       logMsg("validation successful: " + msg, DebugLevel)
       preMsgHandler(msg)
       logMsg("pre cmd handler executed: " + msg, DebugLevel)
-      verifySignatureIfRequired(msg)
       receiveCmdHandler(msg)
       logMsg("receive cmd handler executed: " + msg, DebugLevel)
     } else {
@@ -90,14 +71,14 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
   }
 }
 
-object ItemManager extends HasProps {
+object ItemManager {
   def props(implicit conf: AppConfig): Props = Props(new ItemManager)
 }
 
 class ItemManager(implicit val appConfig: AppConfig) extends ItemManagerBase
 
 
-object ItemContainer extends HasProps {
+object ItemContainer {
   def props(implicit conf: AppConfig): Props = Props(new ItemContainer)
 }
 
@@ -131,13 +112,8 @@ case object ItemManagerConfigNotYetSet extends ActorMessage
 
 case object ItemManagerConfigAlreadySet extends ActorMessage
 
-case class SetItemManagerConfig(itemType: ItemType,
-                                ownerVerKey: Option[VerKey],
-                                migrateItemsToNextLinkedContainer: Boolean,
-                                migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
-  require (migrateItemsToNextLinkedContainer != migrateItemsToLatestVersionedContainers,
-    "one and only one of 'migrateItemsToNextLinkedContainer' and 'migrateItemsToLatestVersionedContainers' should be set to true")
-}
+case class SetItemManagerConfig(itemManagerId: ItemId,
+                                migrateItemsToNextLinkedContainer: Boolean) extends ActorMessage
 
 case object ItemContainerStaleOrConfigNotYetSet extends ActorMessage
 
@@ -145,16 +121,9 @@ case object ItemContainerDeleted extends ActorMessage
 
 case object ItemContainerConfigAlreadySet extends ActorMessage
 
-case class SetItemContainerConfig(itemType: ItemType,
-                                  versionId: VersionId,
-                                  managerEntityId: ItemManagerEntityId,
-                                  ownerVerKey: Option[VerKey],
+case class SetItemContainerConfig(managerEntityId: ItemManagerEntityId,
                                   prevContainerEntityId: Option[ItemContainerEntityId],
-                                  migrateItemsToNextLinkedContainer: Boolean,
-                                  migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
-  require (migrateItemsToNextLinkedContainer != migrateItemsToLatestVersionedContainers,
-    "one and only one of 'migrateItemsToNextLinkedContainer' and 'migrateItemsToLatestVersionedContainers' should be set to true")
-}
+                                  migrateItemsToNextLinkedContainer: Boolean) extends ActorMessage
 
 case class MigrateItems(toContainerEntityIdOpt: Option[ItemContainerEntityId]=None)
 
@@ -170,8 +139,6 @@ case class ItemContainerLink(prevId: Option[ItemContainerEntityId], nextId: Opti
 
 object ItemCommonType {
   type ItemId = String
-  type ItemType = String
-  type VersionId = Int
   type ItemManagerEntityId = String
   type ItemContainerEntityId = String
 }

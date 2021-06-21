@@ -20,7 +20,6 @@ import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.actor.itemmanager.ItemConfigManager.addNewItemContainerMapper
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -54,7 +53,7 @@ class AgentActorWatcher(val appConfig: AppConfig)
     with HasActorResponseTimeout
     with HasAppConfig {
 
-  addNewItemContainerMapper(itemManagerEntityId, TimeBasedItemContainerMapper(ENTITY_ID_MAPPER_VERSION_V1))
+  import AgentActorWatcher._
 
   val logger: Logger = getLoggerByClass(classOf[AgentActorWatcher])
 
@@ -79,31 +78,14 @@ class AgentActorWatcher(val appConfig: AppConfig)
   def ownerVerKey: Option[VerKey]=None
 
   /**
-   * item manager entity id which will be used by this watcher actor to send messages like save item, get item etc.
-   * @return
-   */
-
-  lazy val itemManagerEntityId: String = "watcher"
-
-  /**
    * configuration which decides if items should be migrated to next linked container or not.
    * @return
    */
   lazy val migrateItemsToNextLinkedContainer: Boolean = true
 
-  /**
-   * configuration which decides if items should be migrated to latest versioned containers or not.
-   * say initial version was v1 and for any reason if we want to introduce new version
-   * and we want old container's active items to be migrated to new containers (as per new version)
-   * @return
-   */
-  lazy val migrateItemsToLatestVersionedContainers: Boolean = false
-
   def buildItemManagerConfig: SetItemManagerConfig = SetItemManagerConfig(
     itemManagerEntityId,
-    ownerVerKey,
-    migrateItemsToNextLinkedContainer,
-    migrateItemsToLatestVersionedContainers)
+    migrateItemsToNextLinkedContainer)
 
   lazy val itemManagerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_MANAGER_REGION_ACTOR_NAME)
 
@@ -209,6 +191,12 @@ case class RemoveItem(itemId: ItemId, itemEntityType: String) extends ActorMessa
 case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
 
 object AgentActorWatcher {
+  /**
+   * item manager entity id which will be used by this watcher actor to send messages like save item, get item etc.
+   * @return
+   */
+
+  lazy val itemManagerEntityId: String = "watcher"
   def props(config: AppConfig): Props = Props(new AgentActorWatcher(config))
 }
 

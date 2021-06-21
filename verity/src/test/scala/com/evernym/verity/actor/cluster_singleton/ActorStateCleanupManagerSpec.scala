@@ -1,13 +1,13 @@
 package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
-import akka.actor.{ActorRef, PoisonPill, Props}
+import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
+import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus, StartJob, StopJob}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.legacy.LegacySetRoute
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil}
-import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
@@ -31,9 +31,8 @@ class ActorStateCleanupManagerSpec
     super.beforeAll()
   }
 
-  //number of total route store actors
-  val shardSize = 100         //total possible actors
-  val totalRouteEntries = 30
+  val shardSize = 100           //total possible legacy routing actors
+  val totalRouteEntries = 150   //total routing entries distributed over 'shardSize'
 
   "Platform" - {
     "during launch" - {
@@ -47,7 +46,15 @@ class ActorStateCleanupManagerSpec
   "AgentRouteStore" - {
     "when sent several SetRoute commands" - {
       "should store the routes successfully" taggedAs UNSAFE_IgnoreLog in {
+        //stop the cleanup job until the test creates required data
+        platform.singletonParentProxy ! ForActorStateCleanupManager(StopJob)
+        expectMsgType[Done.type]
+
         addRandomRoutes()
+
+        //start the cleanup job so that it can start its processing
+        platform.singletonParentProxy ! ForActorStateCleanupManager(StartJob)
+        expectMsgType[Done.type]
       }
     }
   }
@@ -56,7 +63,7 @@ class ActorStateCleanupManagerSpec
 
     "when sent GetStatus" - {
       "should respond with correct status" in {
-        eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
+        eventually(timeout(Span(30, Seconds)), interval(Span(100, Millis))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
@@ -74,6 +81,7 @@ class ActorStateCleanupManagerSpec
           status.totalCandidateAgentActors shouldBe totalRouteEntries
           status.processedRouteStoreActorCount shouldBe shardSize
           status.totalProcessedAgentActors shouldBe totalRouteEntries
+          status.inProgressCleanupStatus.isEmpty shouldBe true
         }
       }
     }
@@ -101,8 +109,8 @@ class ActorStateCleanupManagerSpec
       sendMsgToAgentRouteStore(entityId, GetPersistentActorDetail)
       expectMsgType[PersistentActorDetail].totalPersistedEvents shouldBe routeDIDs.size
 
-      //stop the actor
-      sendMsgToAgentRouteStore(entityId, PoisonPill)
+      //stop actor
+      //sendMsgToAgentRouteStore(entityId, PoisonPill)
     }
   }
 
@@ -142,7 +150,7 @@ class ActorStateCleanupManagerSpec
          |        }
          |
          |        scheduled-job {
-         |          initial-delay-in-seconds = 10
+         |          initial-delay-in-seconds = 2
          |          interval-in-seconds = 2
          |        }
          |      }
@@ -151,7 +159,7 @@ class ActorStateCleanupManagerSpec
          |        batch-size = 1
          |        scheduled-job {
          |          initial-delay-in-seconds = 1
-         |          interval-in-seconds = 3
+         |          interval-in-seconds = 2
          |        }
          |      }
          |    }

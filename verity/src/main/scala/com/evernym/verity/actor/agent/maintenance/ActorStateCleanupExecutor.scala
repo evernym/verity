@@ -333,9 +333,13 @@ case class CleanupStatus(isRouteSet: Boolean,
                          pendingCount: Int,
                          successfullyMigratedCount: Int,
                          nonMigratedCount: Int) {
-  def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
+
+  def totalProcessed: Int = {
+    val result = successfullyMigratedCount + nonMigratedCount
+    if (result < 0) -1 else result
+  }
   def isAllProcessed: Boolean = (totalThreadContexts == totalProcessed) || pendingCount == 0
-  def actorStateCleaned: Boolean = isRouteSet && isAllProcessed
+  def actorStateCleaned: Boolean = totalThreadContexts == -1 || (isRouteSet && isAllProcessed)
 }
 
 //incoming message

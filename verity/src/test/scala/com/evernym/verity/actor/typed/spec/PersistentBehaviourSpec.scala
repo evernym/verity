@@ -1,26 +1,26 @@
-package com.evernym.verity.actor.typed.persistence_effect
+package com.evernym.verity.actor.typed.spec
 
 import akka.Done
 import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.cluster.sharding.typed.ShardingEnvelope
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
-import com.evernym.verity.actor.typed.persistence_effect.Events._
+import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.{Encodable, TypedTestKit}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.typed.poc.{EventSourcedBehaviorBuilder, PersistenceHandler}
+import com.evernym.verity.actor.typed.base.{BehaviourUtil, EventSourcedBehaviorBuilder}
 import com.evernym.verity.testkit.BasicSpec
 import scalapb.GeneratedMessageCompanion
 
 import java.util.UUID
 
 
-class PersistenceHandlerSpec
+class PersistentBehaviourSpec
   extends ScalaTestWithActorTestKit(
     ActorTestKit(
       "TestSystem",
@@ -32,7 +32,7 @@ class PersistenceHandlerSpec
 
   val sharding = ClusterSharding(system)
   val accountRegion = sharding.init(Entity(Account.TypeKey) { entityContext =>
-    Account(entityContext.entityId)
+    Account(entityContext)
   })
 
   "Account behaviour" - {
@@ -121,7 +121,7 @@ class PersistenceHandlerSpec
 
 object Account {
 
-  trait Cmd extends Encodable
+  trait Cmd
   object Commands {
     case class Open(name: String, balance: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
     case class Credit(amount: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
@@ -131,7 +131,7 @@ object Account {
     case class Stop(replyTo: ActorRef[StatusReply[Done]]) extends Cmd
   }
 
-  trait State extends Encodable
+  trait State
   object States {
     case object Empty extends State
     case class Opened(name: String, balance: Double) extends State
@@ -140,32 +140,33 @@ object Account {
 
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Account")
 
-  def apply(entityId: EntityId): Behavior[Cmd] = {
+  def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
     EventSourcedBehaviorBuilder
-      .withPersistenceHandler(PersistenceId(TypeKey.name, entityId), States.Empty, commandHandler, eventHandler)
+      .default(PersistenceId(TypeKey.name, entityContext.entityId), States.Empty, commandHandler, eventHandler)
       .withObjectCodeMapper(TestObjectCodeMapper)
+      .withSignalHandler(signalHandler)
       .build()
   }
 
-  def commandHandler(persistenceHandler: PersistenceHandler): (State, Cmd) => ReplyEffect[Any, State] = {
+  private def commandHandler(util: BehaviourUtil): (State, Cmd) => ReplyEffect[Any, State] = {
 
     case (States.Empty, Commands.Open(name, balance, replyTo)) =>
-      persistenceHandler
+      util
         .persist(Events.Opened(name, balance))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Credit(amount, replyTo)) =>
-      persistenceHandler
+      util
         .persist(Events.Credited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Debit(amount, replyTo)) =>
-      persistenceHandler
+      util
         .persist(Events.Debited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Close(replyTo)) =>
-      persistenceHandler
+      util
         .persist(Events.Closed())
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
@@ -175,6 +176,12 @@ object Account {
     case (_: State, Commands.Stop(replyTo)) =>
       Behaviors.stopped
       Effect.reply(replyTo)(StatusReply.Ack)
+  }
+
+  private def signalHandler(util: BehaviourUtil): PartialFunction[(State, Signal), Unit] = {
+    case (_: State, PostStop) =>
+      util.logger.debug(s"[${util.persId}] behaviour stopped")
+
   }
 
   private val eventHandler: (State, Any) => State = {

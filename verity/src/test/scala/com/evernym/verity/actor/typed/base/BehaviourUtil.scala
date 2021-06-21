@@ -1,16 +1,20 @@
-package com.evernym.verity.actor.typed.poc
+package com.evernym.verity.actor.typed.base
 
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EffectBuilder}
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORMATION_ID_V1, createPersistenceTransformerV1}
 import com.evernym.verity.transformations.transformers.{<=>, IdentityTransformer}
+import com.typesafe.scalalogging.Logger
 
 
-class PersistenceHandler(persId: PersistenceId,
+case class BehaviourUtil(persId: PersistenceId,
                          encryptionKey: String,
                          objectCodeMapper: ObjectCodeMapperBase) {
+
+  val logger: Logger = getLoggerByClass(getClass)
 
   //takes the given event, applies persistence transformations (serialization, encryption etc)
   // before it goes to akka persistence layer
@@ -20,7 +24,7 @@ class PersistenceHandler(persId: PersistenceId,
 
   //during recovery, checks if the recovered event is 'PersistentMsg'
   // and then un-transforms it (decryption, deserialization etc)
-  def eventHandlerWrapper[E, S](eventHandler: (S, E) => S): (S, E) => S = {
+  def eventHandlerWrapper[E,S](eventHandler: (S, E) => S): (S, E) => S = {
     case (state, pm: PersistentMsg) =>
       val untransformedEvent =
           lookupTransformer(pm.transformationId)

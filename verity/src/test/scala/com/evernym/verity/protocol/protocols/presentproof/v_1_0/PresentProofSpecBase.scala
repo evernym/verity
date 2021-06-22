@@ -21,7 +21,7 @@ abstract class PresentProofSpecBase
   val orgName = "Acme Corp"
   val logoUrl = "https://robohash.org/234"
   val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
-  val agencyDidkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
+  val agencyDidkey = "did:key:z6Mkma8jnVAkW4RZRHTWQRQj84JReTmi8DtjDzoryzPykD3v"
   val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
 
   def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"

@@ -63,19 +63,19 @@ class NodeSingleton(val appConfig: AppConfig)
       logger.debug(s"metrics data fetched !!")
 
     case uws: UpdateWarningStatus =>
-      ResourceWarningStatusMngrCache.processEvent(uws)
+      ResourceWarningStatusMngrCache(context.system).processEvent(uws)
       sender ! Done
 
     case cuws: UsageWarningStatusChunk =>
-      ResourceWarningStatusMngrCache.initWarningList(cuws)
+      ResourceWarningStatusMngrCache(context.system).initWarningList(cuws)
       sender ! Done
 
     case ubs: UpdateBlockingStatus =>
-      ResourceBlockingStatusMngrCache.processEvent(ubs)
+      ResourceBlockingStatusMngrCache(context.system).processEvent(ubs)
       sender ! Done
 
     case cubs: UsageBlockingStatusChunk =>
-      ResourceBlockingStatusMngrCache.initBlockingList(cubs)
+      ResourceBlockingStatusMngrCache(context.system).initBlockingList(cubs)
       sender ! Done
 
     case spt: StartProgressTracking =>

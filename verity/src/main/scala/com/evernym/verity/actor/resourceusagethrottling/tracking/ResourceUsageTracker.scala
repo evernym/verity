@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.resourceusagethrottling.tracking
 
 import java.time.ZonedDateTime
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
@@ -178,7 +178,7 @@ object ResourceUsageTracker {
    */
   def checkIfUsageIsBlocked(ipAddress: IpAddress,
                             entityId: EntityId,
-                            resourceName: ResourceName): Unit = {
+                            resourceName: ResourceName)(implicit as:ActorSystem): Unit = {
     checkIfUsageIsBlocked(ipAddress, entityId, resourceName, ResourceUsageRuleHelper.resourceUsageRules)
   }
 
@@ -191,14 +191,14 @@ object ResourceUsageTracker {
   def checkIfUsageIsBlocked(ipAddress: IpAddress,
                             entityId: EntityId,
                             resourceName: ResourceName,
-                            resourceUsageRuleConfig:  ResourceUsageRuleConfig): Unit = {
+                            resourceUsageRuleConfig:  ResourceUsageRuleConfig)(implicit as: ActorSystem): Unit = {
     val isBlacklisted = resourceUsageRuleConfig.isBlacklisted(ipAddress, entityId)
     if (isBlacklisted) {
       throw new BadRequestErrorException(USAGE_BLOCKED.statusCode, Option("usage blocked"))
     }
     val isWhitelisted = resourceUsageRuleConfig.isWhitelisted(ipAddress, entityId)
     if (! isWhitelisted) {
-      ResourceBlockingStatusMngrCache.checkIfUsageBlocked(entityId, resourceName)
+      ResourceBlockingStatusMngrCache(as).checkIfUsageBlocked(entityId, resourceName)
     }
   }
 
@@ -214,7 +214,7 @@ object ResourceUsageTracker {
                            resourceName: ResourceName,
                            ipAddress: IpAddress,
                            userIdOpt: Option[UserId],
-                           sendBackAck: Boolean)(rut: ActorRef): Unit = {
+                           sendBackAck: Boolean)(rut: ActorRef)(implicit as: ActorSystem): Unit = {
     // Do NOT increment global counter if ipAddressOpt or userIdOpt is blocked.
     // global MUST be AFTER `ipAddressOpt` and `userIdOpt`.
     val trackByEntityIds = Option(ipAddress) ++ userIdOpt ++ Option(ENTITY_ID_GLOBAL)
@@ -235,7 +235,7 @@ object ResourceUsageTracker {
       resourceNames.foreach { resourceName =>
         val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
         if (! isWhitelisted) {
-          if (! ResourceBlockingStatusMngrCache.isInUnblockingPeriod(entityId, resourceName)) {
+          if (! ResourceBlockingStatusMngrCache(as).isInUnblockingPeriod(entityId, resourceName)) {
             val aru = tracking.AddResourceUsage(resourceType, resourceName, sendBackAck)
             rut.tell(ForIdentifier(entityId, aru), Actor.noSender)
           }

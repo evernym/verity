@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.node_singleton
 
+import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.Status.USAGE_BLOCKED
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UsageBlockingStatusChunk
@@ -11,7 +12,7 @@ import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
  * This cache is node singleton and gets updated when any changes happens to the
  * main blocking list (which would be on a cluster singleton)
  */
-object ResourceBlockingStatusMngrCache extends ResourceBlockingStatusMngrCommon {
+class ResourceBlockingStatusMngrCacheImpl extends ResourceBlockingStatusMngrCommon with Extension {
 
   def initBlockingList(cubs: UsageBlockingStatusChunk): Unit = {
     if (cubs.currentChunkNumber == 1) {
@@ -43,4 +44,11 @@ object ResourceBlockingStatusMngrCache extends ResourceBlockingStatusMngrCommon 
       }
     }
   }
+}
+
+object ResourceBlockingStatusMngrCache extends ExtensionId[ResourceBlockingStatusMngrCacheImpl] with ExtensionIdProvider {
+
+  override def lookup = ResourceBlockingStatusMngrCache
+
+  override def createExtension(system: ExtendedActorSystem) = new ResourceBlockingStatusMngrCacheImpl
 }

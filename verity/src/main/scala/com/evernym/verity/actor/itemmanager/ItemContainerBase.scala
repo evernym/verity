@@ -307,8 +307,7 @@ trait ItemContainerBase
       migrationCheckResults.size == disableScheduleJobAfterTriesWithoutWork
       && migrationCheckResults.forall { mcr =>
       //this means, this actor is not doing anything meaningful
-      ! mcr.migrateToLatestVersionedContainers &&
-        ! mcr.migrateToNextLinkedContainer &&
+      ! mcr.migrateToNextLinkedContainer &&
         ! mcr.keepProcessingStartedMigrations}) {
       stopPeriodicJob()
     }
@@ -404,7 +403,7 @@ trait ItemContainerBase
   }
 
   def buildItemContainerEntityId(itemId: ItemId): ItemContainerEntityId = {
-    ItemConfigManager.buildItemContainerEntityId(getItemContainerConfigReq.managerEntityId, itemId, appConfig)
+    buildItemContainerEntityId(getItemContainerConfigReq.managerEntityId, itemId)
   }
 
   def handleItemFound(gi: GetItem, id: ItemDetail): Unit = {
@@ -640,7 +639,6 @@ case class ItemDetail(status: Int, detail: Option[String], isFromMigration: Bool
 }
 case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessage
 case class MigrationCheckResult(checkedAt: ZonedDateTime,
-                                migrateToLatestVersionedContainers: Boolean=false,
                                 migrateToNextLinkedContainer: Boolean=false,
                                 keepProcessingStartedMigrations: Boolean=false,
                                 detail: Option[String]=None)

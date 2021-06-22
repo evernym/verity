@@ -110,7 +110,7 @@ trait BasePersistentStore
 
   def getTransformerFor(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Any <=> PersistentMsg = {
     val encKey = encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(pp.entityId, appConfig))
+      DefaultPersistenceEncryption.getEventEncryptionKey(pp.entityId, appConfig))
     getTransformer(encKey)
   }
 
@@ -175,7 +175,7 @@ trait BasePersistentStore
                              objectType: String)(implicit pp: PersistParam)
     : <=>[Any, _ >: TransformedMsg] = {
     val encKey = pp.encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(entityId, appConfig))
+      DefaultPersistenceEncryption.getEventEncryptionKey(entityId, appConfig))
     (pp.transformerId, objectType) match {
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "event")  =>
         legacy.createLegacyEventTransformer(encKey, objectCodeMapper)

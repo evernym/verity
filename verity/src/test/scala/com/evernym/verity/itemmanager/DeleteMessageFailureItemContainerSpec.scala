@@ -7,7 +7,8 @@ import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, AppStateManagerTestKit, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.{IgnoreLog, UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.appStateManager.state.ListeningState
-import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher
+import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher.itemManagerEntityIdPrefix
+import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.config.Config
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -27,7 +28,7 @@ class DeleteMessageFailureItemManagerSpec
       .withFallback(configForDeleteEventFailure)
   }
 
-  final val itemManagerId = AgentActorWatcher.itemManagerEntityId
+  final val itemManagerId = versionedItemManagerEntityId(itemManagerEntityIdPrefix, appConfig)
 
   "ItemManager" - {
 

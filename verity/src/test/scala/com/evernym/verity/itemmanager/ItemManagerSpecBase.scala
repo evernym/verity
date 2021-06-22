@@ -1,8 +1,9 @@
 package com.evernym.verity.itemmanager
 
 import com.evernym.verity.actor.ForIdentifier
-import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher
+import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher.itemManagerEntityIdPrefix
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId}
+import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.actor.itemmanager.{ExternalCmdWrapper, ItemContainerMapper}
 import com.evernym.verity.actor.persistence.SnapshotConfig
 import com.evernym.verity.actor.testkit.PersistentActorSpec
@@ -11,6 +12,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
 import java.time.LocalDateTime
+
 
 trait ItemManagerSpecBase
   extends PersistentActorSpec
@@ -25,7 +27,7 @@ trait ItemManagerSpecBase
   final val ORIG_ITEM_DETAIL = "detail"
   final val UPDATED_ITEM_DETAIL = "detail updated"
 
-  val itemManagerEntityId1: String = AgentActorWatcher.itemManagerEntityId
+  val itemManagerEntityId1: String = versionedItemManagerEntityId(itemManagerEntityIdPrefix, appConfig)
 
   implicit val persistenceConfig: SnapshotConfig = SnapshotConfig (
     snapshotEveryNEvents = None,

@@ -113,7 +113,7 @@ trait ItemManagerBase
   }
 
   def buildItemContainerEntityId(itemId: ItemId): ItemContainerEntityId = {
-    ItemConfigManager.buildItemContainerEntityId(entityId, itemId, appConfig)
+    buildItemContainerEntityId(entityId, itemId)
   }
 
   def recordMetrics(): Unit = {

@@ -31,22 +31,7 @@ class TimeBasedItemContainerMapper extends ItemContainerMapper {
 ////NOTE: Most of the logic in this class should not be changed else it may break things
 object ItemConfigManager {
 
-  def buildItemContainerEntityId(itemManagerEntityId: ItemManagerEntityId,
-                                 itemId: ItemId,
-                                 appConfig: AppConfig): ItemContainerEntityId = {
-    versionedItemManagerEntityId(itemManagerEntityId, appConfig) + "-" + itemContainerMapper(appConfig).getItemContainerId(itemId)
-  }
-
-  private def itemContainerMapper(appConfig: AppConfig): ItemContainerMapper = {
-    val clazz = appConfig.getConfigStringReq(ITEM_CONTAINER_MAPPER_CLASS)
-    Class
-      .forName(clazz)
-      .getConstructor()
-      .newInstance()
-      .asInstanceOf[ItemContainerMapper]
-  }
-
-  private def versionedItemManagerEntityId(itemManagerEntityId: EntityId, appConfig: AppConfig): String = {
+  def versionedItemManagerEntityId(itemManagerEntityId: EntityId, appConfig: AppConfig): String = {
     itemManagerEntityId + "-" + getManagerVersionPrefix(itemManagerEntityId, appConfig)
   }
 

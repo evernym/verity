@@ -55,7 +55,7 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   }
 
   private def blobEncryptionSeed(id: String): String =
-    DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(id, appConfig)
+    DefaultPersistenceEncryption.getEventEncryptionKey(id, appConfig)
 
   private def encryptBlob(blob: Array[Byte], id: String): Array[Byte] =
     PersistentDataEncryptor.encrypt(blob, blobEncryptionSeed(id))

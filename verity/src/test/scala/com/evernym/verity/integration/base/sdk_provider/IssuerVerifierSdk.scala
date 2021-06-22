@@ -20,7 +20,7 @@ import com.evernym.verity.protocol.engine.{MsgFamily, VerKey}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnRequestReceived, ConnResponseSent}
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create}
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.util.Base58Util
@@ -134,6 +134,12 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
 
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation = {
     sendMsgForConn(connId, ConnectionInvitation(), thread)
+    val receivedMsg = expectMsgOnWebhook[Invitation]()
+    receivedMsg.msg
+  }
+
+  def sendCreateOOBInvitation(connId: String, thread: Option[MsgThread]): Invitation = {
+    sendMsgForConn(connId, OutOfBandInvitation(), thread)
     val receivedMsg = expectMsgOnWebhook[Invitation]()
     receivedMsg.msg
   }

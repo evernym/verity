@@ -1,6 +1,6 @@
 package com.evernym.verity.integration.multi_node_cluster
 
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -11,7 +11,7 @@ class AllClusterNodeRestartSpec
     with SdkProvider
     with Eventually {
 
-  lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build()
+  lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build(VAS)
   lazy val issuerSDK = setupIssuerSdk(verityEnv)
 
   "VerityAdmin" - {

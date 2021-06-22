@@ -3,7 +3,7 @@ package com.evernym.verity.integration.with_rest_sdk
 import akka.http.scaladsl.model.StatusCodes.BadRequest
 import com.evernym.verity.Status.INVALID_VALUE
 import com.evernym.verity.http.route_handlers.open.RestErrorResponse
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
@@ -17,8 +17,8 @@ class IncorrectPayloadSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).build(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv)
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)

@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.itemmanager
 
 import java.time.ZonedDateTime
-
 import akka.actor.ActorRef
 import akka.cluster.sharding.ClusterSharding
 import akka.event.Logging.DebugLevel
@@ -14,7 +13,6 @@ import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.TimeZoneUtil._
 
 import scala.concurrent.Future
@@ -94,11 +92,7 @@ trait ItemContainerBase
   override val receiveEvent: Receive = {
 
     case imcs: ItemContainerConfigSet =>
-      val ownerVerKeyOpt = if (imcs.ownerVerKey == "") None else Option(imcs.ownerVerKey)
-      itemContainerConfig = Option(
-        ItemContainerConfig(imcs.itemType, imcs.versionId, imcs.managerEntityId, ownerVerKeyOpt,
-          imcs.migrateItemsToNextLinkedContainer, imcs.migrateItemsToLatestVersionedContainers)
-      )
+      itemContainerConfig = Option(ItemContainerConfig(imcs.managerEntityId, imcs.migrateItemsToNextLinkedContainer))
 
     case piu: ItemContainerPrevIdUpdated =>
       val prevIdOpt = if (piu.id == NO_CONTAINER_ID) None else Option(piu.id)
@@ -261,8 +255,6 @@ trait ItemContainerBase
 
   def getActiveItemsOnly: Map[ItemId, ItemDetail] = items.filter(_._2.status == ITEM_STATUS_ACTIVE)
 
-  def ownerVerKey: Option[VerKey] = itemContainerConfig.flatMap(_.ownerVerKey)
-
   def getItemContainerConfigReq: ItemContainerConfig = itemContainerConfig.getOrElse(
     throw new RuntimeException("item container config not yet set"))
 
@@ -315,17 +307,10 @@ trait ItemContainerBase
       migrationCheckResults.size == disableScheduleJobAfterTriesWithoutWork
       && migrationCheckResults.forall { mcr =>
       //this means, this actor is not doing anything meaningful
-      ! mcr.migrateToLatestVersionedContainers &&
-        ! mcr.migrateToNextLinkedContainer &&
+      ! mcr.migrateToNextLinkedContainer &&
         ! mcr.keepProcessingStartedMigrations}) {
       stopPeriodicJob()
     }
-  }
-
-  def checkIfMigrationToLatestVersionedContainersShallBeStarted(conf: ItemContainerConfig): Boolean = {
-    conf.migrateItemsToLatestVersionedContainers &&
-      conf.currentVersionIsNotLatest &&
-      isMigrationNotStarted(None)
   }
 
   def checkIfMigrationToNextLinkedContainerShallBeStarted(conf: ItemContainerConfig): Boolean = {
@@ -349,14 +334,7 @@ trait ItemContainerBase
 
   def performItemMigrationIfRequired(): Unit = {
     itemContainerConfig.foreach { conf =>
-      if (checkIfMigrationToLatestVersionedContainersShallBeStarted(conf)) {
-        //this section is for current container to check and migrate items to latest versioned containers if required
-        self ! InternalCmdWrapper(MigrateItems())
-        addToMigrationCheckResultHistory(latestMigrationCheckResult().copy(
-          migrateToLatestVersionedContainers=true,
-          detail=Option("sent 'MigrateItems()' to self")
-        ))
-      } else if (checkIfMigrationToNextLinkedContainerShallBeStarted(conf)) {
+      if (checkIfMigrationToNextLinkedContainerShallBeStarted(conf)) {
         //this section is for current container to check and migrate items to next linked container (it may not be the latest one) if required
         self ! InternalCmdWrapper(MigrateItems(itemContainerLink.flatMap(_.nextId)))
         addToMigrationCheckResultHistory(latestMigrationCheckResult().copy(
@@ -424,9 +402,8 @@ trait ItemContainerBase
     sender ! InternalCmdWrapper(ItemCmdResponse(ItemMigrated(sim.uip.id, entityId), entityId))
   }
 
-  def buildItemContainerEntityId(itemId: ItemId, mapperVersionIdOpt: Option[VersionId]): ItemContainerEntityId = {
-    ItemConfigManager.buildItemContainerEntityId(
-      getItemContainerConfigReq.itemType, itemId, appConfig, mapperVersionIdOpt)
+  def buildItemContainerEntityId(itemId: ItemId): ItemContainerEntityId = {
+    buildItemContainerEntityId(getItemContainerConfigReq.managerEntityId, itemId)
   }
 
   def handleItemFound(gi: GetItem, id: ItemDetail): Unit = {
@@ -435,8 +412,6 @@ trait ItemContainerBase
 
   def getItemContainerIdToBeQueriedForItemsNotFound(itemId: ItemId): Option[ItemContainerEntityId] = {
     itemContainerConfig match {
-      case Some(c) if c.migrateItemsToLatestVersionedContainers && c.entityIdMapperVersion - 1 > 0 =>
-        Option(buildItemContainerEntityId(itemId, Option(c.entityIdMapperVersion - 1)))
       case Some(c) if c.migrateItemsToNextLinkedContainer && itemContainerLink.exists(_.prevId.isDefined) =>
         getItemContainerLinkReq.prevId
       case _ => None
@@ -520,7 +495,7 @@ trait ItemContainerBase
       if (candidates.nonEmpty) {
         logMsg("few items will be migrated", DebugLevel)
         candidates.foreach { case (itemId, itemDetail) =>
-          val newContainerEntityId = mi.toContainerEntityIdOpt.getOrElse(buildItemContainerEntityId(itemId, None))
+          val newContainerEntityId = mi.toContainerEntityIdOpt.getOrElse(buildItemContainerEntityId(itemId))
           sendInternalCmdToItemContainer(SaveItemFromMigration(UpdateItem(itemId,
             Option(itemDetail.status), itemDetail.detail, Option(itemDetail.createdAt))), newContainerEntityId)
         }
@@ -637,9 +612,7 @@ trait ItemContainerBase
   def handleSetItemContainerConfig(so: SetItemContainerConfig): Unit = {
     val prevContainerEntityId = getContainerId(so.prevContainerEntityId)
     writeAndApply(ItemContainerPrevIdUpdated(prevContainerEntityId))
-    writeApplyAndSendItBack(ItemContainerConfigSet(so.itemType, so.versionId,
-      so.managerEntityId, so.ownerVerKey.getOrElse(""),
-      so.migrateItemsToNextLinkedContainer, so.migrateItemsToLatestVersionedContainers))
+    writeApplyAndSendItBack(ItemContainerConfigSet(so.managerEntityId, so.migrateItemsToNextLinkedContainer))
   }
 
   def sendInternalCmdToItemContainer(cmd: Any, toEntityId: ItemContainerEntityId): Unit = {
@@ -666,7 +639,6 @@ case class ItemDetail(status: Int, detail: Option[String], isFromMigration: Bool
 }
 case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessage
 case class MigrationCheckResult(checkedAt: ZonedDateTime,
-                                migrateToLatestVersionedContainers: Boolean=false,
                                 migrateToNextLinkedContainer: Boolean=false,
                                 keepProcessingStartedMigrations: Boolean=false,
                                 detail: Option[String]=None)
@@ -675,17 +647,8 @@ case class MigratedItemDetail(id: ItemId, toContainerEntityId: ItemContainerEnti
 
 case class ItemNotFound(id: ItemId) extends ActorMessage
 
-case class ItemContainerConfig(itemType: ItemType,
-                               entityIdMapperVersion: VersionId,
-                               managerEntityId: ItemManagerEntityId,
-                               ownerVerKey: Option[VerKey],
-                               migrateItemsToNextLinkedContainer: Boolean,
-                               migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage {
-
-  def currentVersionIsNotLatest: Boolean = {
-    !ItemConfigManager.isLatestVersion(itemType, entityIdMapperVersion)
-  }
-}
+case class ItemContainerConfig(managerEntityId: ItemManagerEntityId,
+                               migrateItemsToNextLinkedContainer: Boolean) extends ActorMessage
 
 case class ScheduledJobDetail(isScheduled: Boolean, migrationCheckResultHistory: List[MigrationCheckResult])
 

@@ -3,7 +3,7 @@ package com.evernym.verity.integration.with_basic_sdk
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.verity_provider.node.local.ServiceParam
 import com.evernym.verity.ledger.{LedgerSvcException, TxnResp}
@@ -21,7 +21,7 @@ class WriteCredDefFailureSpec
 
   override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor())
 
-  lazy val issuerVerityApp = VerityEnvBuilder.default().build()
+  lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
   var schemaId: String = ""
 

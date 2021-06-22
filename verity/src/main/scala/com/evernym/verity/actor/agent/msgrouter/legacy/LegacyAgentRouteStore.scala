@@ -39,7 +39,9 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
         LegacyRouteSet(sr.forDID, sr.actorAddressDetail.actorTypeId, sr.actorAddressDetail.address))
     case gr: LegacyGetRoute             => handleGetRoute(gr)
 
-    case GetRegisteredRouteSummary      => sender ! RegisteredRouteSummary(entityId, getAllRouteDIDs().size)
+    case GetRegisteredRouteSummary      =>
+      sender ! RegisteredRouteSummary(entityId, orderedRoutes.getAllRouteDIDs().size)
+
     case grd: GetRouteBatch             => handleGetRouteBatch(grd)
 
     case mp: MigratePending             => migratePending(mp)
@@ -57,7 +59,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
       val aad = ActorAddressDetail(rs.actorTypeId, rs.address)
       routes = routes.updated(rs.forDID, aad)
       pendingRouteMigration = pendingRouteMigration.updated(rs.forDID, aad)
-      routesByInsertionOrder = routesByInsertionOrder :+ (rs.forDID, aad.actorTypeId)
+      orderedRoutes.add(rs)
 
     case m: RoutesMigrated =>
       m.routes.foreach { r =>
@@ -66,23 +68,10 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
       pendingRouteMigration = pendingRouteMigration -- m.routes
   }
 
-  var routesByInsertionOrder: List[(DID, Int)] = List.empty
-
-  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
-                      actorTypeIds: List[Int] = List.empty): Set[String] = {
-    routesByInsertionOrder
-      .take(totalCandidates)
-      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
-      .map(_._1)
-      .toSet
-  }
-
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
-    val candidates =
-      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
-      .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
-    val resp = GetRouteBatchResult(entityId, candidates)
+    val candidates = orderedRoutes.getRouteBatch(grd)
+    val resp = GetRouteBatchResult(entityId, candidates.toSet)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
   }
@@ -153,6 +142,8 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   }
 
   var routes: Map[RouteId, ActorAddressDetail] = Map.empty
+  var orderedRoutes = new OrderedRoutes()
+
   var pendingRouteMigration: Map[RouteId, ActorAddressDetail] = Map.empty
   var migrationStatus: Map[RouteId, RouteMigrationStatus] = Map.empty
 
@@ -161,6 +152,27 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   val routeRegion: ActorRef = ClusterSharding(context.system).shardRegion(ROUTE_REGION_ACTOR_NAME)
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
 
+}
+
+class OrderedRoutes {
+  private var routesByInsertionOrder: List[(DID, Int)] = List.empty
+
+  def add(lrs: LegacyRouteSet): Unit = {
+    routesByInsertionOrder = routesByInsertionOrder :+ (lrs.forDID, lrs.actorTypeId)
+  }
+
+  def getRouteBatch(grd: GetRouteBatch): List[DID] = {
+      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
+        .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+  }
+
+  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
+                      actorTypeIds: List[Int] = List.empty): List[DID] = {
+    routesByInsertionOrder
+      .take(totalCandidates)
+      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
+      .map(_._1)
+  }
 }
 
 object LegacyAgentRouteStore {

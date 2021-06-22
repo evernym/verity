@@ -1,12 +1,13 @@
-package com.evernym.verity.actor.agent.outbox
+package com.evernym.verity.actor.agent.outbox.poc
 
 import akka.Done
 import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit, TestProbe}
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityRef}
 import akka.pattern.StatusReply
-import com.evernym.verity.actor.agent.outbox.Message.{MsgId, MsgType}
-import com.evernym.verity.actor.agent.outbox.Outbox.OutboxId
+import com.evernym.verity.actor.agent.outbox.poc.Message.{MsgId, MsgType}
+import com.evernym.verity.actor.agent.outbox.poc.Outbox.OutboxId
+import com.evernym.verity.actor.typed.TypedTestKit
 import com.evernym.verity.testkit.BasicSpec
 
 /**
@@ -16,7 +17,7 @@ class MessageOutboxSpec
   extends ScalaTestWithActorTestKit(
       ActorTestKit(
         "TestSystem",
-        TestKit.config.withFallback(TestKit.clusterConfig)
+        TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
       ))
     with BasicSpec {
 

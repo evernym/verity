@@ -61,9 +61,13 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
   override lazy val entityId: String = actorParam.actorEntityId
   override def recoverFromSnapshot: Boolean = actorParam.recoverFromSnapshot
 
-  override def getEventEncryptionKeyWithoutWallet: String =
-    actorParam.persEncKeyConfPath.map(appConfig.getConfigStringReq)
-      .getOrElse(super.getEventEncryptionKeyWithoutWallet)
+  override def getEventEncryptionKey: String =
+    actorParam.persEncKey match {
+      case Some(pk) => appConfig.getConfigStringOption(pk).getOrElse(pk)
+      case None     => super.getEventEncryptionKey
+    }
+
+
 
   //We don't want this read only actor to write/persist any state/event
   // hence override these functions to throw exception if at all accidentally used by this actor
@@ -133,6 +137,6 @@ object ReadOnlyPersistentActor {
 case class ActorParam(actorTypeName: String,
                       actorEntityId: String,
                       recoverFromSnapshot: Boolean = true,
-                      persEncKeyConfPath: Option[String]=None) {
+                      persEncKey: Option[String]=None) {
   def id: String = actorTypeName + actorEntityId
 }

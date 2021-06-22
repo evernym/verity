@@ -1,11 +1,10 @@
 import java.io.File
 import java.nio.file.Files
 import java.util.Optional
-
 import com.typesafe.sbt.packager.linux.LinuxPackageMapping
 import com.typesafe.sbt.packager.linux.LinuxPlugin.autoImport.packageMapping
 import sbt.Def.Classpath
-import sbt._
+import sbt.{file, _}
 import sbt.internal.inc.classpath.ClasspathUtil
 import sbt.internal.inc.{Analysis, LastModified, Stamps}
 import sbtassembly.MergeStrategy

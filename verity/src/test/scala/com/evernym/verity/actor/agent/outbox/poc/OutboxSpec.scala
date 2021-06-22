@@ -1,10 +1,11 @@
-package com.evernym.verity.actor.agent.outbox
+package com.evernym.verity.actor.agent.outbox.poc
 
 import akka.Done
 import akka.actor.testkit.typed.scaladsl._
 import akka.pattern.StatusReply
-import com.evernym.verity.actor.agent.outbox.TestKit.TestOutbox
-import com.evernym.verity.actor.agent.outbox.Outbox.{Cmd, Evt, State}
+import com.evernym.verity.actor.agent.outbox.poc.Outbox.{Cmd, Evt, State}
+import com.evernym.verity.actor.agent.outbox.poc.TestKit.TestOutbox
+import com.evernym.verity.actor.typed.TypedTestKit
 import com.evernym.verity.testkit.BasicSpec
 
 import scala.language.implicitConversions
@@ -13,7 +14,7 @@ import scala.language.implicitConversions
   * These tests use the same Akka system. Each test instantiates a Scenario that is a helper encapsulation
   */
 class OutboxSpec
-  extends ScalaTestWithActorTestKit(TestKit.config)
+  extends ScalaTestWithActorTestKit(TypedTestKit.config)
     with BasicSpec {
 
   implicit def XToOption[A](a: A): Option[A] = Option(a)

@@ -7,8 +7,6 @@ import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ItemUpdated, Shard
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.base.{Done, Ping, Stop}
-import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, VersionId}
-import com.evernym.verity.actor.itemmanager.ItemContainerMapper
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.config.AppConfig
@@ -16,7 +14,6 @@ import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
@@ -167,18 +164,3 @@ object MockAgentActor {
 
 case object GetPending extends ActorMessage
 case class PendingMsgs(msgs: Set[MsgId]) extends ActorMessage
-
-case class MockTimeBasedItemContainerMapper(versionId: VersionId) extends ItemContainerMapper {
-
-  def getItemContainerId(itemId: ItemId): ItemContainerEntityId = {
-    val ldTime = getCurrentUTCZonedDateTime
-    val hourBlock = ldTime.getHour.toString.reverse.padTo(2, '0').reverse
-    val minuteBlock = ldTime.getMinute.toString.reverse.padTo(2, '0').reverse
-    val secondBlock = (0 to 59).grouped(10).toList.zipWithIndex
-      .find { case (r, _) => r.contains(ldTime.getMinute) }
-      .map(_._2).getOrElse(-1)
-    val paddedMonth = ldTime.getMonthValue.toString.reverse.padTo(2, '0').reverse
-    val paddedDay = ldTime.getDayOfMonth.toString.reverse.padTo(2, '0').reverse
-    s"${ldTime.getYear}$paddedMonth$paddedDay-" + hourBlock + minuteBlock + secondBlock.toString.reverse.padTo(2, '0').reverse
-  }
-}

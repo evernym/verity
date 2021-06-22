@@ -1,6 +1,4 @@
-package com.evernym.verity.actor.agent.outbox
-
-import java.io.ByteArrayInputStream
+package com.evernym.verity.actor.agent.outbox.poc
 
 import akka.Done
 import akka.actor.testkit.typed.scaladsl.{LogCapturing, ScalaTestWithActorTestKit}
@@ -9,10 +7,13 @@ import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import akka.persistence.typed.PersistenceId
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
+import com.evernym.verity.actor.agent.outbox.poc
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigFactory
 import org.scalatest.BeforeAndAfterEach
 import org.slf4j.LoggerFactory
+
+import java.io.ByteArrayInputStream
 
 class AccountEntitySpec {
 
@@ -50,7 +51,7 @@ object AccountExampleDocSpec {
   val config = ConfigFactory.parseString("""
     akka.actor {
       serialization-bindings {
-        "com.evernym.verity.actor.agent.outbox.Encodable" = jackson-json
+        "com.evernym.verity.actor.typed.Encodable" = jackson-json
       }
     }
   """).withFallback(EventSourcedBehaviorTestKit.config)
@@ -67,7 +68,7 @@ class AccountExampleDocSpec
   private val eventSourcedTestKit =
     EventSourcedBehaviorTestKit[AccountEntity.Command, AccountEntity.Event, AccountEntity.Account](
       system,
-      AccountEntity("1", PersistenceId("Account", "1")))
+      poc.AccountEntity("1", PersistenceId("Account", "1")))
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()

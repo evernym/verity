@@ -42,7 +42,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1577"
+val libIndyVer = "1.95.0~1624"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
   NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
@@ -94,7 +94,7 @@ ThisBuild / patch := patchNum(
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
@@ -167,8 +167,8 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  version := s"${major.value}.${minor.value}.${patch.value}",
   scalaVersion := "2.12.13",
+
   scalacOptions := Seq(
     "-feature",
     "-unchecked",
@@ -249,6 +249,7 @@ lazy val packageSettings = Seq (
       s"/usr/share/${name.value}/${packageName.value}",
       includeFiles = confFiles, replaceFilesIfExists = true)
   },
+  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version).taskValue,
   Debian / packageArchitecture := "amd64",
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(

@@ -100,17 +100,21 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
       writeAndApply(asc)
       val batchItemStatus = batchStatus.candidates.getOrElse(asc.actorId, BatchItemStatus.empty)
       batchStatus = batchStatus.withItemStatusUpdated(asc.actorId, batchItemStatus.copy(stateCleaningCompleted = true))
-      if (batchStatus.isCompleted) {
-        batchStatus = BatchStatus.empty
-        if (recordedBatchSize.last != recordedBatchSize.current) {
-          val event = BatchSizeRecorded(nextSeqNoForDeletion, nextSeqNoForDeletion)
-          applyEvent(event)
-          writeWithoutApply(event)
-        }
-        sendProcessPending()
-      }
+      processIfBatchCompleted()
     } else {
       logger.error(s"unexpected situation, received asc: $asc, without an initial state")
+    }
+  }
+
+  def processIfBatchCompleted(): Unit = {
+    if (batchStatus.isCompleted) {
+      batchStatus = BatchStatus.empty
+      if (recordedBatchSize.last != recordedBatchSize.current) {
+        val event = BatchSizeRecorded(nextSeqNoForDeletion, nextSeqNoForDeletion)
+        applyEvent(event)
+        writeWithoutApply(event)
+      }
+      sendProcessPending()
     }
   }
 
@@ -160,7 +164,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
         batchStatus.candidatesWithStatus(false).keySet.foreach { did =>
           sendFixActorStateCleanupCmd(did)
         }
-      }
+      } else processIfBatchCompleted()
     }
   }
 
@@ -329,9 +333,13 @@ case class CleanupStatus(isRouteSet: Boolean,
                          pendingCount: Int,
                          successfullyMigratedCount: Int,
                          nonMigratedCount: Int) {
-  def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
+
+  def totalProcessed: Int = {
+    val result = successfullyMigratedCount + nonMigratedCount
+    if (result < 0) -1 else result
+  }
   def isAllProcessed: Boolean = (totalThreadContexts == totalProcessed) || pendingCount == 0
-  def actorStateCleaned: Boolean = isRouteSet && isAllProcessed
+  def actorStateCleaned: Boolean = totalThreadContexts == -1 || (isRouteSet && isAllProcessed)
 }
 
 //incoming message

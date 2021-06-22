@@ -9,11 +9,10 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemType}
+import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
-import com.evernym.verity.protocol.engine.VerKey
 
 import scala.concurrent.Future
 
@@ -72,12 +71,10 @@ trait ItemManagerBase
 
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
     case ims: ItemManagerState =>
-      val ownerVerKeyOpt = if (ims.ownerVerKey == "") None else Option(ims.ownerVerKey)
       val headIdOpt = if (ims.headContainerEntityId == "") None else Option(ims.headContainerEntityId)
       val tailIdOpt = if (ims.tailContainerEntityId == "") None else Option(ims.tailContainerEntityId)
-      itemManagerState = Option(ItemManagerStateDetail(ims.itemType, ownerVerKeyOpt,
-        ims.totalEverAllocatedContainers, headIdOpt, tailIdOpt, ims.migrateItemsToNextLinkedContainer,
-        ims.migrateItemsToLatestVersionedContainers))
+      itemManagerState = Option(ItemManagerStateDetail(
+        ims.totalEverAllocatedContainers, headIdOpt, tailIdOpt, ims.migrateItemsToNextLinkedContainer))
       itemManagerState.flatMap(_.tailContainerEntityId).foreach { tailContainerId =>
         addItemToInitializedContainer(tailContainerId)
       }
@@ -87,20 +84,15 @@ trait ItemManagerBase
   var saveItemIdsInProgress: Map[ItemId, ActorRef] = Map.empty
   var initializedItemContainers: Set[ItemContainerEntityId] = Set.empty
 
-  def ownerVerKey: Option[VerKey] = itemManagerState.flatMap(_.ownerVerKey)
-
   def itemManagerStateReq: ItemManagerStateDetail = itemManagerState.getOrElse(
     throw new RuntimeException("not yet initialized"))
 
   lazy val itemContainerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_CONTAINER_REGION_ACTOR_NAME)
 
-  def latestItemContainerMapper: ItemContainerMapper =
-    ItemConfigManager.getLatestMapperByType(itemManagerStateReq.itemType)
-
   override def snapshotState: Option[ItemManagerState] =
-    itemManagerState.map(ims => ItemManagerState(ims.itemType, ims.ownerVerKey.getOrElse(""),
-      ims.totalEverAllocatedContainers, ims.headContainerEntityId.getOrElse(""), ims.tailContainerEntityId.getOrElse(""),
-      ims.migrateItemsToNextLinkedContainer, ims.migrateItemsToLatestVersionedContainers))
+    itemManagerState.map(ims => ItemManagerState(
+      ims.totalEverAllocatedContainers, ims.headContainerEntityId.getOrElse(""),
+      ims.tailContainerEntityId.getOrElse(""), ims.migrateItemsToNextLinkedContainer))
 
   def sendResponseToSender(itemContainerEntityId: ItemContainerEntityId, itemId: ItemId, response: Any): Unit = {
     saveItemIdsInProgress.get(itemId).foreach { origSender =>
@@ -121,7 +113,7 @@ trait ItemManagerBase
   }
 
   def buildItemContainerEntityId(itemId: ItemId): ItemContainerEntityId = {
-    ItemConfigManager.buildItemContainerEntityId(itemManagerStateReq.itemType, itemId, appConfig)
+    buildItemContainerEntityId(entityId, itemId)
   }
 
   def recordMetrics(): Unit = {
@@ -161,11 +153,9 @@ trait ItemManagerBase
       Future.successful(ItemContainerConfigAlreadySet)
     } else {
       val itemManagerState = itemManagerStateReq
-      val vid = latestItemContainerMapper.versionId
-      val icc = SetItemContainerConfig(itemManagerState.itemType, vid,
-        entityId, itemManagerState.ownerVerKey, itemManagerState.tailContainerEntityId,
-        itemManagerState.migrateItemsToNextLinkedContainer,
-        itemManagerState.migrateItemsToLatestVersionedContainers)
+      val icc = SetItemContainerConfig(
+        entityId, itemManagerState.tailContainerEntityId,
+        itemManagerState.migrateItemsToNextLinkedContainer)
 
       //set the new container with appropriate initial state
       val setupNewContainerFut = {
@@ -242,8 +232,7 @@ trait ItemManagerBase
   }
 
   def handleSetItemManagerConfig(so: SetItemManagerConfig): Unit = {
-    itemManagerState = Option(ItemManagerStateDetail(so.itemType, so.ownerVerKey, 0, None, None,
-      so.migrateItemsToNextLinkedContainer, so.migrateItemsToLatestVersionedContainers))
+    itemManagerState = Option(ItemManagerStateDetail(0, None, None, so.migrateItemsToNextLinkedContainer))
     saveUpdatedState()
     sender ! itemManagerStateReq
   }
@@ -254,13 +243,10 @@ trait ItemManagerBase
 }
 
 case class UpdateHeadAndOrTailId(latestCreatedContainerId: ItemContainerEntityId) extends ActorMessage
-case class ItemManagerStateDetail(itemType: ItemType,
-                                  ownerVerKey: Option[VerKey],
-                                  totalEverAllocatedContainers: Int,
+case class ItemManagerStateDetail(totalEverAllocatedContainers: Int,
                                   headContainerEntityId: Option[ItemContainerEntityId],
                                   tailContainerEntityId: Option[ItemContainerEntityId],
-                                  migrateItemsToNextLinkedContainer: Boolean,
-                                  migrateItemsToLatestVersionedContainers: Boolean) extends ActorMessage
+                                  migrateItemsToNextLinkedContainer: Boolean) extends ActorMessage
 
 case class ContainerMigrated(migratedContainerEntityId: ItemContainerEntityId, migratedContainersNextEntityId: ItemContainerEntityId) extends ActorMessage
 case class MarkItemContainerAsInitialized(entityId: ItemContainerEntityId) extends ActorMessage

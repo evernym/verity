@@ -49,7 +49,7 @@ sendToOutbox(outboxIds, msg, metadata, binaryProtocol)
 * The message payload will be encrypted before it gets stored in external storage
 
 
-###Possible Outboxes (for an identity owner)
+### Possible Outboxes (for an identity owner)
 **For Legacy APIs**
 * Outbox-selfRelId-default             (for CAS/EAS/VAS)
 * Outbox-theirPairwiseRelId1-default   (for CAS/EAS/VAS)

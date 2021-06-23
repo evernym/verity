@@ -9,9 +9,10 @@ import scala.Array._
 
 class DIDKey(val publicKeyBase58: VerKey) extends DID{
   val verKey: VerKey = publicKeyBase58
-  override val method: String = "key"      // z6Mk is the multicodec for Ed25519 public keys
-  override val identifier: String = "z6Mk"+Base58Util.encode(Base58Util.decode(publicKeyBase58).getOrElse(
-    throw new InvalidDidKeyFormatException(publicKeyBase58)))
+  override val method: String = "key"      // 237 is 0xed, is the multicodec for Ed25519 public keys
+  override val identifier: String = "z"+Base58Util.encode(concat(Array(237.toByte), Base58Util.decode(publicKeyBase58).getOrElse(
+    throw new InvalidDidKeyFormatException(publicKeyBase58))))
+
 
   def resolveKey(): VerKey = verKey
 }

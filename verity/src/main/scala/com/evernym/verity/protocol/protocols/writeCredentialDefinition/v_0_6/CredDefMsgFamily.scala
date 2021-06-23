@@ -66,6 +66,9 @@ case class Write(name: String,
     checkRequired("schemaId", schemaId)
     checkOptionalNotEmpty("tag", tag)
     checkOptionalNotEmpty("endorserDID", endorserDID)
+    endorserDID.foreach{ endorser =>
+      checkValidDID("endorserDID", endorser)
+    }
   }
 }
 

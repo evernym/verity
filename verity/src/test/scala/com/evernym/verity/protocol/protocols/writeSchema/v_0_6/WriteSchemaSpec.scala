@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
@@ -47,6 +48,22 @@ class WriteSchemaSpec
     "has one role" in { f =>
       WriteSchemaDefinition.roles.size shouldBe 1
       WriteSchemaDefinition.roles shouldBe Set(Role.Writer())
+    }
+  }
+
+  "Endorser DID validation" - {
+    "If endorser did not provided, validation should pass" in { _ =>
+      Write(schemaName, schemaVersion, schemaAttrsJson, None).validate()
+    }
+
+    "If valid endorser did provided, validation should pass" in { _ =>
+      Write(schemaName, schemaVersion, schemaAttrsJson, Some(userEndorser)).validate()
+    }
+
+    "If invalid endorser did provided, validation should fail" in { _ =>
+      assertThrows[InvalidFieldValueProtocolEngineException] {
+        Write(schemaName, schemaVersion, schemaAttrsJson, Some("invalid did")).validate()
+      }
     }
   }
 

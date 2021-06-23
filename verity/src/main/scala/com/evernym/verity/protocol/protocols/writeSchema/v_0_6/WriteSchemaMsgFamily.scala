@@ -47,6 +47,9 @@ case class Write(name: String, version: String, attrNames: Seq[String], endorser
     checkRequired("version", version)
     checkRequired("attrNames", attrNames)
     checkOptionalNotEmpty("endorserDID", endorserDID)
+    endorserDID.foreach{ endorser =>
+      checkValidDID("endorserDID", endorser)
+    }
   }
 }
 

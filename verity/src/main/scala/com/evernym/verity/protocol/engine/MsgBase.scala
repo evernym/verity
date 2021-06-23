@@ -1,8 +1,9 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.Exceptions.InvalidValueException
+import com.evernym.verity.constants.Constants.VALID_DID_BYTE_LENGTH
+import com.evernym.verity.util.Base58Util
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class EmptyValueForOptionalFieldProtocolEngineException(statusMsg: String)
   extends ProtocolEngineException(statusMsg)
@@ -25,14 +26,14 @@ trait MsgBase {
     throw new EmptyValueForOptionalFieldProtocolEngineException(s"empty value given for optional field: '$fieldName'")
   }
 
-  def throwInvalidReqFieldProtocolEngineException(fieldName: String, explanation: Option[String] = None): Unit = {
+  def throwInvalidFieldProtocolEngineException(fieldName: String, explanation: Option[String] = None): Unit = {
     val exp: String = explanation.map(e => s": $e").getOrElse("")
     throw new InvalidFieldValueProtocolEngineException(s"field '$fieldName' has invalid value$exp")
   }
 
   def checkIfValidBooleanData(fieldName: String, fieldValue: Option[Boolean]): Unit = {
     Try(fieldValue.getOrElse(false)).getOrElse(
-      throwInvalidReqFieldProtocolEngineException(fieldName)
+      throwInvalidFieldProtocolEngineException(fieldName)
     )
   }
 
@@ -67,6 +68,20 @@ trait MsgBase {
       case Some(mb: MsgBase) => mb.validate()
       case Some(_: Any) => //
       case _ => //
+    }
+  }
+
+  def checkValidDID(fieldName: String, fieldValue: String): Unit = {
+    if (fieldValue.length > 100) { // value that definitely cover 32 byte payload
+      throwInvalidFieldProtocolEngineException(fieldName, Some("Value too long"))
+    }
+    val decoded = Base58Util.decode(fieldValue)
+    decoded match {
+      case Success(m) =>
+        if (m.length != VALID_DID_BYTE_LENGTH)
+          throwInvalidFieldProtocolEngineException(fieldName, Some("Invalid length"))
+      case Failure(_) =>
+        throwInvalidFieldProtocolEngineException(fieldName, Some("Unable to decode"))
     }
   }
 }

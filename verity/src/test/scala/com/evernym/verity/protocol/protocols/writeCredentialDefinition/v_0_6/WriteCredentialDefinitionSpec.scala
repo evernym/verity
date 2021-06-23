@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -35,6 +36,23 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
       CredDefDefinition.roles shouldBe Set(Role.Writer())
     }
   }
+
+  "Endorser DID validation" - {
+    "If endorser did not provided, validation should pass" in { _ =>
+      Write(credDefName, schemaId, None, None, None).validate()
+    }
+
+    "If valid endorser did provided, validation should pass" in { _ =>
+      Write(credDefName, schemaId, None, None, Some(userEndorser)).validate()
+    }
+
+    "If invalid endorser did provided, validation should fail" in { _ =>
+      assertThrows[InvalidFieldValueProtocolEngineException] {
+        Write(credDefName, schemaId, None, None, Some("invalid did")).validate()
+      }
+    }
+  }
+
 
   "CredDefProtocol" - {
     "should signal it needs endorsement when issuer did is not written to ledger" - {

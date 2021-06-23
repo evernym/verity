@@ -271,5 +271,32 @@ class MsgBaseSpec extends BasicSpec {
         }
       }
     }
+
+    "checkValidDID" - {
+      "valid should pass" in {
+        MsgBaseTest.checkValidDID("attrName", "V4SGRU86Z58d6TV7PBUe6f")
+      }
+
+      "too long string should fail" in {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
+          MsgBaseTest.checkValidDID(
+            "attrName",
+            "dsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafd"
+          )
+        }
+      }
+
+      "if not base58 should fail" in {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
+          MsgBaseTest.checkValidDID("attrName", "V4SGRU86Z58d6_V7PBUe6f")
+        }
+      }
+
+      "too long decoded base58 should fail" in {
+        assertThrows[InvalidFieldValueProtocolEngineException] {
+          MsgBaseTest.checkValidDID("attrName", "V4SGRU86Z58d6TV7PBUe6fA")
+        }
+      }
+    }
   }
 }

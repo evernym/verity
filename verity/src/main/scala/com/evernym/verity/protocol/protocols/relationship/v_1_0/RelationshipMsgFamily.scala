@@ -115,7 +115,7 @@ object Ctl {
     override def validate() {
       checkRequired("phoneNumber", phoneNumber)
       if (!isPhoneNumberInValidFormat(phoneNumber))
-        throwInvalidReqFieldProtocolEngineException(
+        throwInvalidFieldProtocolEngineException(
           "phoneNumber",
           Some("Phone number provided is not in valid international format.")
         )
@@ -125,7 +125,7 @@ object Ctl {
     override def validate() {
       checkRequired("phoneNumber", phoneNumber)
       if (!isPhoneNumberInValidFormat(phoneNumber))
-        throwInvalidReqFieldProtocolEngineException(
+        throwInvalidFieldProtocolEngineException(
           "phoneNumber",
           Some("Phone number provided is not in valid international format.")
         )

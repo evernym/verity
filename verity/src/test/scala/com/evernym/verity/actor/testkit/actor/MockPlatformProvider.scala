@@ -5,8 +5,8 @@ import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.appStateManager.{SysServiceNotifier, SysShutdownProvider}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
-import com.evernym.verity.testkit.util.TestUtil.logger
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 
@@ -27,6 +27,7 @@ object MockNotifierService extends SysServiceNotifier {
 }
 
 object MockShutdownService extends SysShutdownProvider {
+  private val logger = getLoggerByClass(getClass)
   override def performServiceShutdown(): Unit = {
     logger.info("performing mock system exit (as this must be running in test case environment)")
   }

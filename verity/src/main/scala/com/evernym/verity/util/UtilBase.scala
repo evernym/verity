@@ -10,7 +10,6 @@ import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
 import com.evernym.verity.util.HashAlgorithm.SHA256
@@ -20,7 +19,6 @@ import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.fasterxml.jackson.core.JsonParseException
-import com.typesafe.scalalogging.Logger
 import org.apache.commons.codec.digest.DigestUtils
 
 import java.net.URLEncoder
@@ -42,7 +40,6 @@ case class PackedMsgWrapper(msg: Array[Byte], reqMsgContext: ReqMsgContext) exte
 
 
 trait UtilBase extends AsyncToSync {
-  val logger: Logger = getLoggerByClass(classOf[UtilBase])
 
   def replaceVariables(str: String, map: Map[String, String]): String ={
     val encodedStr = map.foldLeft(str)((s:String, x:(String,String)) => ( "#\\{" + x._1 + "\\}" ).r.

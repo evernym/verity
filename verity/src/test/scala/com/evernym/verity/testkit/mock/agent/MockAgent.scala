@@ -1,17 +1,17 @@
 package com.evernym.verity.testkit.mock.agent
 
 import java.util.UUID
-
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
 import com.evernym.verity.testkit.{HasDefaultTestWallet, HasTestWalletAPI}
 import com.evernym.verity.testkit.util.PublicIdentifier
-import com.evernym.verity.util.Util.{getAgentKeyDlgProof, logger}
+import com.evernym.verity.util.Util.getAgentKeyDlgProof
 import com.evernym.verity.vault.EncryptParam
 
 /**
@@ -22,6 +22,8 @@ trait MockAgent
     with CommonSpecUtil
     with HasAppConfig
     with HasDefaultTestWallet {
+
+  private val logger = getLoggerByName("MockAgent")
 
   def myDIDDetail: AgentDIDDetail  //selfDID detail
   def appConfig: AppConfig

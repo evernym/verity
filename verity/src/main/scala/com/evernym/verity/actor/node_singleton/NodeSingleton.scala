@@ -12,14 +12,16 @@ import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
 
 
 class NodeSingleton(val appConfig: AppConfig)
   extends CoreActorExtended
     with HasActorResponseTimeout {
+
+  private val logger = getLoggerByClass(getClass)
 
   def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
     singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,

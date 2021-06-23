@@ -22,10 +22,12 @@ class OrderedRoutesSequentialSpec
     "when checked for sequential GetRouteBatch" - {
       "should return expected result" in {
         List(orderedRoutes1, orderedRoutes2).foreach { orderedRoutes =>
-          orderedRoutes.getAllRouteDIDs().size shouldBe 0
-          routesToBeAdded.foreach(orderedRoutes.add)
-          orderedRoutes.getAllRouteDIDs().size shouldBe routesToBeAdded.size
-          orderedRoutes.getAllRouteDIDs() shouldBe routesToBeAdded.map(_.forDID)
+          orderedRoutes.routes.size shouldBe 0
+          routesToBeAdded.zipWithIndex.foreach { case (lrs, index) =>
+            orderedRoutes.add(index, lrs)
+          }
+          orderedRoutes.routes.size shouldBe routesToBeAdded.size
+          orderedRoutes.routes shouldBe routesToBeAdded.map(_.forDID)
           checkInsertionOrderIsMaintained(orderedRoutes)
         }
       }
@@ -33,7 +35,7 @@ class OrderedRoutesSequentialSpec
   }
 
   private def checkInsertionOrderIsMaintained(orderedRoutes: OrderedRoutes): Unit = {
-    val totalCandidates = orderedRoutes.getAllRouteDIDs().size
+    val totalCandidates = orderedRoutes.routes.size
     val mockExecutor = new MockExecutor(1)
     mockExecutor.setTotalCandidates(totalCandidates)
     while (mockExecutor.getTotalProcessed < totalCandidates) {
@@ -74,6 +76,6 @@ class MockExecutor(batchSize: Int) {
       case 0 => totalProcessed
       case _ => (totalProcessed/batchSize)*batchSize
     }
-    GetRouteBatch(totalCandidates, fromIndex, batchSize)
+    GetRouteBatch(fromIndex, batchSize)
   }
 }

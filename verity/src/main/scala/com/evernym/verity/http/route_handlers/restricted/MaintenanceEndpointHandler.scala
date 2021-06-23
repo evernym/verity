@@ -7,9 +7,9 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
-import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, ForRouteMaintenanceHelper, maintenance}
-import com.evernym.verity.actor.base.{AlreadyDone, Done, Stop}
-import com.evernym.verity.actor.cluster_singleton.maintenance.{ActionStatus, GetMigrationStatus, GetStatus, MaintenanceCmdWrapper, MigrationStatusDetail, RestartAllActors}
+import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
+import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatus, MigrationStatusDetail}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.{ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.common.CustomExceptionHandler._
@@ -35,10 +35,6 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     } else {
       platform.nodeSingleton ? OverrideNodeConfig(str)
     }
-  }
-
-  protected def sendToRouteMaintenanceHelper(taskId: String, cmd: Any): Future[Any] = {
-    platform.singletonParentProxy ? ForRouteMaintenanceHelper(MaintenanceCmdWrapper(taskId, cmd))
   }
 
   protected def stopActorStateCleanupManager(): Future[Any] = {
@@ -97,45 +93,6 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     stopAgentRoutesMigrator()
     startAgentRoutesMigrator()
   }
-
-  private val routeMaintenanceRoutes: Route =
-    pathPrefix("route" / "task") {
-      pathPrefix(Segment) { taskId =>
-        path("restart-all-actors") {
-          (post & pathEnd) {
-            parameters('actorTypeIds ? "1,2,3,4,5,6") { actorTypeIds =>
-              complete {
-                val cmd = RestartAllActors(actorTypeIds, restartTaskIfAlreadyRunning = false)
-                sendToRouteMaintenanceHelper(taskId, cmd).map[ToResponseMarshallable] {
-                  case Done | AlreadyDone => OK
-                  case e => handleUnexpectedResponse(e)
-                }
-              }
-            }
-          }
-        } ~
-          path("stop") {
-            (post & pathEnd) {
-              complete {
-                sendToRouteMaintenanceHelper(taskId, Stop(sendAck = true)).map[ToResponseMarshallable] {
-                  case Done => OK
-                  case e => handleUnexpectedResponse(e)
-                }
-              }
-            }
-          } ~
-          path("status") {
-            (get & pathEnd) {
-              complete {
-                sendToRouteMaintenanceHelper(taskId, GetStatus).map[ToResponseMarshallable] {
-                  case s: ActionStatus => handleExpectedResponse(s)
-                  case e => handleUnexpectedResponse(e)
-                }
-              }
-            }
-          }
-      }
-    }
 
   private val routeMigrationRoutes: Route =
     pathPrefix("route-migration") {
@@ -305,7 +262,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
               checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-              routeMaintenanceRoutes ~ actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes ~ routeMigrationRoutes
+              actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes ~ routeMigrationRoutes
             }
           }
         }

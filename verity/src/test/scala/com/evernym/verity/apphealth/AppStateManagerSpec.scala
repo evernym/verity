@@ -31,7 +31,7 @@ class AppStateManagerSpec
     "when initialized for first time " - {
       "should switch to 'InitializingState'" in { implicit asmTestKit =>
         withLatestAppState { implicit las =>
-          asmTestKit.currentAppState shouldBe InitializingState
+          asmTestKit.currentAppState shouldBe a [InitializingState]
           assertEvents(las.stateEvents, 1)
           assertCausesByState(las.causesByState, Map.empty)
           assertCausesByContext(las.causesByContext, Map.empty)

@@ -16,7 +16,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocki
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.WatcherManager
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.cluster_singleton.maintenance.{AgentRoutesMigrator, RouteMaintenanceHelper}
+import com.evernym.verity.actor.cluster_singleton.maintenance.AgentRoutesMigrator
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _}
@@ -79,7 +79,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
       ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig),
-      RouteMaintenanceHelper.name -> RouteMaintenanceHelper.props(appConfig, agentActorContext.agentMsgRouter),
       AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig)
     )
 
@@ -236,9 +235,6 @@ case class ForAgentRoutesMigrator(override val cmd: Any) extends ForSingletonChi
 }
 trait ForWatcherManager extends ForSingletonChild
 
-case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
-  def getActorName: String = ROUTE_MAINTENANCE_HELPER
-}
 case object NodeAddedToClusterSingleton extends ActorMessage
 
 case class SendNodeAddedAck(address: Address, curAttemptCount: Int = 1, maxAttemptCount: Int = 10) extends ActorMessage

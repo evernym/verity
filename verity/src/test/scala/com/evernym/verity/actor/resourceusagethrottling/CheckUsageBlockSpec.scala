@@ -5,13 +5,15 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocki
 import com.evernym.verity.actor.node_singleton.ResourceBlockingStatusMngrCache
 import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleConfig, ResourceUsageRuleHelper, UsageRule, ViolationActions}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
+import com.evernym.verity.actor.testkit.HasBasicActorSystem
 import com.evernym.verity.testkit.BasicSpec
 
 import java.time.ZonedDateTime
 
 
 class CheckUsageBlockSpec
-  extends BasicSpec {
+  extends BasicSpec
+  with HasBasicActorSystem {
 
   val ipAddressV4 = "1.2.3.4"
   val userId = "userId1"
@@ -140,7 +142,7 @@ class CheckUsageBlockSpec
       currentChunkNumber = 1,
       totalChunks = 1
     )
-    ResourceBlockingStatusMngrCache.initBlockingList(ubsc)
+    ResourceBlockingStatusMngrCache(system).initBlockingList(ubsc)
   }
 
   def blockEntityResource(entityId: EntityId, resourceName: ResourceName, sinceMinutesInPast: Int): Unit = {
@@ -151,7 +153,7 @@ class CheckUsageBlockSpec
       currentChunkNumber = 1,
       totalChunks = 1
     )
-    ResourceBlockingStatusMngrCache.initBlockingList(ubsc)
+    ResourceBlockingStatusMngrCache(system).initBlockingList(ubsc)
   }
 
   def checkUsageBlockedExceptionIsThrown(ipAddress: IpAddress,

@@ -584,7 +584,7 @@ class ResourceUsageViolationSpec
               bl.usageBlockingStatus.contains(user1IpAddress) =>
           }
           eventually {
-            ResourceBlockingStatusMngrCache.getOnlyBlocked().size shouldBe 1
+            ResourceBlockingStatusMngrCache(system).getOnlyBlocked().size shouldBe 1
           }
         }
       }
@@ -609,7 +609,7 @@ class ResourceUsageViolationSpec
               bl.usageBlockingStatus.contains(user2IpAddress) =>
           }
           eventually {
-            ResourceBlockingStatusMngrCache.getOnlyBlocked().size shouldBe 2
+            ResourceBlockingStatusMngrCache(system).getOnlyBlocked().size shouldBe 2
           }
         }
       }
@@ -743,7 +743,7 @@ class ResourceUsageViolationSpec
               bl.usageWarningStatus.contains(user1IpAddress) =>
           }
           eventually {
-            ResourceWarningStatusMngrCache.getOnlyWarned().size shouldBe 1
+            ResourceWarningStatusMngrCache(system).getOnlyWarned().size shouldBe 1
           }
         }
       }
@@ -768,7 +768,7 @@ class ResourceUsageViolationSpec
               bl.usageWarningStatus.contains(user2IpAddress) =>
           }
           eventually {
-            ResourceWarningStatusMngrCache.getOnlyWarned().size shouldBe 2
+            ResourceWarningStatusMngrCache(system).getOnlyWarned().size shouldBe 2
           }
         }
       }

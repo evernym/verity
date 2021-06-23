@@ -1,14 +1,15 @@
 ## Integration changes
 
 ### DeliveryMechanism integration
-* the legacy com method api
-  - instead of updating its own state, will prepare and send appropriate command to
-    the default Outbox.
-  - persist the outbox id  
-
-* the new outbox apis
-  - will always update the outbox with given destination information (delivery channels etc)
-  - persist the outbox id
+**RelationshipActors**
+  * the legacy com method api
+    * instead of updating its own state, will prepare and send appropriate command to
+      the default Outbox.
+    * persist the outbox id  
+  
+  * the new outbox apis
+    * will always update the outbox with given destination information (delivery channels etc)
+    * persist the outbox id
 
 ### Outgoing Message integration
 **ActorProtocolContainer**
@@ -25,23 +26,23 @@
   sendToOutbox(outboxIds, jsonMsg, metadata, binaryProtocol)
 
 ## OutboxAdapter Implementation
-  sendToOutbox(outboxIds, msg, metadata, binaryProtocol)
-    - add given msg to MessageBehaviour
-    - add given msg to outboxIds
+sendToOutbox(outboxIds, msg, metadata, binaryProtocol)
+* add given msg to MessageBehaviour<br>
+* add given msg to outboxIds
 
 ### Outbox behaviour
 * 'entity-id' will be created by concatenating 'relationship-id' and 'destination-id'.
 * when started, if doesn't have any delivery channels (this will only happen once that too for legacy APIs):
-  - it will ask and get it from "relationship actor" and save it and will send back and acknowledgement
-  - when "relationship actor" receives that acknowledgement, it will delete the com method from its state (by persisting an event)
-  - will use below mentioned 'PackMsgAdapter' to pack the message
+  * it will ask and get it from "relationship actor" and save it and will send back and acknowledgement
+  * when "relationship actor" receives that acknowledgement, it will delete the com method from its state (by persisting an event)
+  * will use below mentioned 'PackMsgAdapter' to pack the message
 
 ### PackMsgAdapter
   packMsg(relationshipId, packagingProtocol, jsonMsg, recipKeysOption)
-    - will send this request to given relationship id to get the packed message.
 
 ### PackMsgAdapterImplementation
   packMsg(relationshipId, packagingProtocol, jsonMsg, recipKeysOption)
+  * will send this request to given relationship id to get the packed message
 
 ### Message behavior
 * The message payload will be always a json message with all the required data in it (@type, ~thread etc)

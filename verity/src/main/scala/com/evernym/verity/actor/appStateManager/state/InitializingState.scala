@@ -10,7 +10,7 @@ import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_INITIALIZ
 import com.evernym.verity.config.AppConfigWrapper
 
 
-object InitializingState extends AppState {
+class InitializingState extends AppState {
 
   override val name: String = STATUS_INITIALIZING
 

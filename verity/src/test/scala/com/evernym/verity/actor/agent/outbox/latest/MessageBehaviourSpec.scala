@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.outbox.latest
 
 import com.evernym.verity.testkit.BasicSpec
 
-
 class MessageBehaviourSpec
   extends BasicSpec {
 
@@ -65,9 +64,10 @@ class MessageBehaviourSpec
         }
       }
 
-      //this confirms that actor recovery works fine
-      "when sent Get command" - {
-        "should respond with Message" in {
+      //this confirms that behaviour has all persistent state in place
+      // and is able to fetch payload from external storage
+      "when sent Get command again" - {
+        "should respond with Message (with payload)" in {
           pending
         }
       }
@@ -86,14 +86,15 @@ class MessageBehaviourSpec
       }
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
-        "should respond with appropriate DeliveryStatus" in {
+        "should respond with undelivered status" in {
           /*
             DeliveryStatus(
-              undelivered,
-              Map(
-                'com-method-id-1' -> List(
-                    Detail(timestamp, 'success_count=0,failed_count=1,message=error-message')
-                  )
+              status = undelivered,
+              activities = Map(
+                'com-method-id-1' ->
+                    List(
+                      Activity(timestamp, 'success_count=0,failed_count=1,message=error-message')
+                    )
               )
            )
            */
@@ -102,22 +103,23 @@ class MessageBehaviourSpec
       }
 
       //with status=delivered and detail=Detail(com-method-id-1, 'success_count=1,failed_count=1')
-      "when sent AddDeliveryStatus(outbox-id-1, undelivered, detail) command" - {
+      "when sent AddDeliveryStatus(outbox-id-1, delivered, detail) command" - {
         "should respond with Acknowledgement" in {
           pending
         }
       }
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
-        "should respond with appropriate DeliveryStatus" in {
+        "should respond with delivered status" in {
           /*
             DeliveryStatus(
-              delivered,
-              Map(
-                'com-method-id-1' -> List(
-                    Detail(timestamp, 'success_count=0,failed_count=1,message=error-message'),
-                    Detail(timestamp, 'success_count=1,failed_count=1'),
-                  )
+              status = delivered,
+              activities = Map(
+                'com-method-id-1' ->
+                    List(
+                      Activity(timestamp, 'success_count=0,failed_count=1,message=error-message'),
+                      Activity(timestamp, 'success_count=1,failed_count=1')
+                    )
               )
            )
            */

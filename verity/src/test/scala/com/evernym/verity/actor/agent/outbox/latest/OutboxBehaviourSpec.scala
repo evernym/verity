@@ -4,30 +4,6 @@ import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
-//the outbox 'entity-id' will be created by concatenating 'relationship-id' and 'destination-id' and
-// either:
-//  * when relationship actors (UserAgent and/or UserAgentPairwise) start, they also starts all required outbox actors
-// or:
-//  * the outbox actors when started, extracts the relationshipId from entity id and
-//    get necessary details from that relationship actor
-
-
-// so an identity owner can have these outbox actors:
-// * For Legacy APIs
-//   * In scope of 'self-relationship':
-//        'Outbox-selfRelId-default'            (for CAS/EAS/VAS)
-//   * In scope of 'pairwise-relationship'
-//        'Outbox-selfRelId-default'            (for CAS/EAS/VAS)
-//        'Outbox-theirPairwiseRelId-default'   (for CAS/EAS/VAS)
-
-// * For New APIs
-//   * In scope of 'self-relationship':
-//        'Outbox-selfRelId-dest-1'             (for CAS/EAS/VAS)
-//   * In scope of 'pairwise-relationship'
-//        'Outbox-selfRelId-dest-1'             (for CAS/EAS/VAS)
-//        'Outbox-theirPairwiseRelId-default'   (for CAS/EAS/VAS)
-
-
 class OutboxBehaviourSpec
   extends BasicSpec
     with Eventually {
@@ -63,16 +39,51 @@ class OutboxBehaviourSpec
         }
       }
 
+      //make sure Outbox validates push com method delivery channel
+      "when sent invalid UpdateDeliveryChannels(DeliveryChannel(push-token)) command" - {
+        "should respond with appropriate Error message" in {
+          pending
+        }
+      }
+
+      //make sure Outbox validates sponsor push delivery channel
+      "when sent invalid UpdateDeliveryChannels(DeliveryChannel(sponsor-push)) command" - {
+        "should respond with appropriate Error message" in {
+          pending
+        }
+      }
+
+      //make sure Outbox validates webhook delivery channel
+      "when sent invalid UpdateDeliveryChannels(DeliveryChannel(webhook)) command" - {
+        "should respond with appropriate Error message" in {
+          pending
+        }
+      }
+
+      //make sure Outbox validates forward push delivery channel
+      "when sent invalid UpdateDeliveryChannels(DeliveryChannel(fwd-push)) command" - {
+        "should respond with appropriate Error message" in {
+          pending
+        }
+      }
+
+      //update all com methods
+      "when sent UpdateDeliveryChannels command" - {
+        "should respond with Acknowledgement" in {
+          pending
+        }
+      }
+
       //need to make sure if given delivery channels and
       // stored delivery channels are same then it doesn't persist unnecessary event.
-      "when sent UpdateDeliveryChannels(com-method-1, com-method-2) command" - {
+      "when sent same (as above) UpdateDeliveryChannels command" - {
         "should respond with Acknowledgement" in {
           pending
         }
       }
 
       "when sent GetDeliveryChannels command" - {
-        "should respond with DeliveryChannels(com-method-1, com-method-2)" in {
+        "should respond with DeliveryChannels(push, sponsor-push, webhook, fwd-push)" in {
           pending
         }
       }
@@ -128,7 +139,7 @@ class OutboxBehaviourSpec
         }
       }
 
-      //delivered (successfully or failed with exhausted retries)
+      //delivered (successfully or failed with exhausted retries) or acknowledged
       // messages will be removed from the state
       "when checking status in outbox actor" - {
         "eventually those messages should disappear" in {
@@ -139,6 +150,37 @@ class OutboxBehaviourSpec
       //NOTE: this is against Message actor (and not the Outbox actor)
       "when checking the Message actors" - {
         "there should be delivery status found for this outbox" in {
+          pending
+        }
+      }
+
+      "when sent lots of AddMsg commands" - {
+        "should respond with Acknowledgement message for each of them" in {
+          pending
+        }
+      }
+
+      "when sent same GetMsgs command multiple times" - {
+        "should respond it successfully" in {
+          (1 to 10).foreach { _ =>
+            //send GetMsgs command
+            // it should respond with
+            //  - only undelivered messages
+            //  - they should be in their creation/arrival order
+            //  - they may get limited by overall "payload" size or by "total number of messages"
+            pending
+          }
+        }
+      }
+
+      "when sent AckMsgs command" - {
+        "should update it accordingly" in {
+          pending
+        }
+      }
+
+      "when sent GetMsgs command (post acknowledgement)" - {
+        "should not return acknowledged messages" in {
           pending
         }
       }

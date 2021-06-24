@@ -1,67 +1,68 @@
 ## Integration changes
 
-### DeliveryMechanism integration
+### DeliveryMechanism management
 **RelationshipActors**
-  * the legacy com method api
-    * instead of updating its own state, will prepare and send appropriate command to
-      the default Outbox.
-    * persist the outbox id  
-  
-  * the new outbox apis
-    * will always update the outbox with given destination information (delivery channels etc)
-    * persist the outbox id
 
+* Has endpoints (for different agents) in respective DIDDocs. 
+* As of today we only support one destination, in future when we have to support multiple destinations,
+  it may/will require some changes in the relationship data model.
+    
 ### Outgoing Message integration
 **ActorProtocolContainer**
-* the synchronous response message will be sent back to AgentMsgProcessor (as it does today).
-* the async outgoing protocol message will be sent to the relationship actor
+* the synchronous response message:
+  will be sent back to AgentMsgProcessor as it does today (no changes here).
+  
+* for async outgoing protocol message: 
+  `OutgoingRouterService.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 
 **Driver**
-* the async outgoing signal message will be sent to the relationship actor
+* for async outgoing signal message:
+  `OutgoingRouterService.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 
-**RelationshipActor**
-* will send them to OutboxAdapter (relationship actor knows how many outboxes it has)
+**AgentMsgProcessor**
+* for outgoing protocol message received from other domain
+  `OutgoingRouterService.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 
-### OutboxAdapter
-  sendToOutbox(outboxIds, jsonMsg, metadata, binaryProtocol)
+### OutgoingRouterService
+sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol): Unit
 
-## OutboxAdapter Implementation
-sendToOutbox(outboxIds, msg, metadata, binaryProtocol)
-* add given msg to MessageBehaviour<br>
-* add given msg to outboxIds
-
-### Outbox behaviour
-* 'entity-id' will be created by concatenating 'relationship-id' and 'destination-id'.
-* when started, if doesn't have any delivery channels (this will only happen once that too for legacy APIs):
-  * it will ask and get it from "relationship actor" and save it and will send back and acknowledgement
-  * when "relationship actor" receives that acknowledgement, it will delete the com method from its state (by persisting an event)
-  * will use below mentioned 'PackMsgAdapter' to pack the message
-
-### PackMsgAdapter
-  packMsg(relationshipId, packagingProtocol, jsonMsg, recipKeysOption)
-
-### PackMsgAdapterImplementation
-  packMsg(relationshipId, packagingProtocol, jsonMsg, recipKeysOption)
-  * will send this request to given relationship id to get the packed message
+### OutgoingRouterService Implementation
+sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol): Unit
+  - creates a new `MessageBehaviour` and sends it `AddMsg(jsonMsg, metadata, data-retention-policy)`
+  - RelationshipService.getOutboxIds(fromParticipantId) map { outboxIds =>
+      for each outboxIds ->
+        sends a message `AddMsg(msgId)` to the **sharded** `OutboxBehavior`
+  }
 
 ### Message behavior
 * The message payload will be always a json message with all the required data in it (@type, ~thread etc)
 * The message payload will be encrypted before it gets stored in external storage
 
+### Outbox behaviour
+* 'entity-id' will be created by concatenating 'relationship-id' and 'destination-id'.
+* when started, calls `RelationshipService.getOutboxParam(relationship-id)`
+* when receives OutboxParam, then only it starts processing message deliveries.
+
+### RelationshipService
+  getOutboxParam(forRelationshipId): Future[OutboxParam]
+
+### RelationshipServiceImpl
+  getOutboxParam(forRelationshipId): Future[OutboxParam]
+    asks from relationship actor and returns it back 
 
 ### Possible Outboxes (for an identity owner)
 **For Legacy APIs**
-* Outbox-selfRelId-default             (for CAS/EAS/VAS)
-* Outbox-theirPairwiseRelId1-default   (for CAS/EAS/VAS)
-* Outbox-theirPairwiseRelId2-default   (for CAS/EAS/VAS)
+* Outbox/selfRelId-default             (for CAS/EAS/VAS)
+* Outbox/theirPairwiseRelId1-default   (for CAS/EAS/VAS)
+* Outbox/theirPairwiseRelId2-default   (for CAS/EAS/VAS)
 * ...
 * ...
 
 <br>
 
 **For New APIs**
-* Outbox-selfRelId-<dest-1>            (for CAS/EAS/VAS)
-* Outbox-theirPairwiseRelId1-default   (for CAS/EAS/VAS)
-* Outbox-theirPairwiseRelId2-default   (for CAS/EAS/VAS)
+* Outbox/selfRelId-<dest-1>            (for CAS/EAS/VAS)
+* Outbox/theirPairwiseRelId1-default   (for CAS/EAS/VAS)
+* Outbox/theirPairwiseRelId2-default   (for CAS/EAS/VAS)
 * ...
 * ...

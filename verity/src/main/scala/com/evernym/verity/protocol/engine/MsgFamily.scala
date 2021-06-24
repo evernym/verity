@@ -23,8 +23,10 @@ object MsgFamily {
   def msgQualifierFromQualifierStr(qualifier: String): MsgFamilyQualifier = {
     qualifier match {
       case "did:sov:BzCbsNYhMrjHiqZDTUASHg" => COMMUNITY_QUALIFIER
+      case "did:sov:123456789abcdefghi1234;spec" => COMMUNITY_QUALIFIER
       case "BzCbsNYhMrjHiqZDTUASHg" => COMMUNITY_QUALIFIER
       case "did:sov:123456789abcdefghi1234" => EVERNYM_QUALIFIER
+      case "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec" => EVERNYM_QUALIFIER
       case "123456789abcdefghi1234" => EVERNYM_QUALIFIER
       case "didcomm.org" => COMMUNITY_QUALIFIER
       case "didcomm.evernym.com" => EVERNYM_QUALIFIER

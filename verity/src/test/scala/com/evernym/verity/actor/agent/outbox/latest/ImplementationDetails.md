@@ -31,14 +31,13 @@ sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol): 
 
 ### OutgoingRouterService Implementation
 sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol): Unit
-  - Assumes that the jsonMsg already contains required fields (@type, ~thread etc)
-  - RelationshipService.getOutboxIds(fromParticipantId) map { outboxIds =>
-        - store payload to external storage (S3)
-        - creates a new `MessageBehaviour` (sharded persistent entity) and sends it
-            `AddMsg(metadata, data-retention-policy, payload_location, outboxIds)`
-        for each outboxIds ->
-            sends a message `AddMsg(msgId)` to the **sharded** `OutboxBehavior`
-    }
+  * Assumes that the jsonMsg already contains required fields (@type, ~thread etc)
+  * outboxIds = RelationshipService.getOutboxIds(fromParticipantId)
+  * store payload to external storage (S3) 
+  * creates a new `MessageBehaviour` (sharded persistent entity) and sends it
+      * `AddMsg(metadata, data-retention-policy, payload_location, outboxIds)`
+  * for each outboxIds ->
+      * sends a message `AddMsg(msgId)` to the **sharded** `OutboxBehavior`
 
 ### Message behavior
 * Stores message and activity level data

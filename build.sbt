@@ -275,6 +275,10 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding" % akkaVer,
     akkaGrp %% "akka-http" % akkaHttpVer,
 
+    akkaGrp %% "akka-actor-typed" % akkaVer,
+    akkaGrp %% "akka-persistence-typed" % akkaVer,
+    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
+
     //akka persistence dependencies
     akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
 
@@ -344,10 +348,6 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-freespec" % scalatestVer,
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
-
-    akkaGrp %% "akka-actor-typed" % akkaVer,
-    akkaGrp %% "akka-persistence-typed" % akkaVer,
-    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,

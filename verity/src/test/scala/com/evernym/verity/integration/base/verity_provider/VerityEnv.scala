@@ -6,7 +6,7 @@ import akka.testkit.TestKit
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
-import com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore
+import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}

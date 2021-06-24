@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.agent.outbox.latest
+package com.evernym.verity.actor.agent.outbox_behaviours.latest
 
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually

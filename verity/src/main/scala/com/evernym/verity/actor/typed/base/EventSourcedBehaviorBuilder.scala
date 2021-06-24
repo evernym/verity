@@ -25,7 +25,7 @@ case class EventSourcedBehaviorBuilder[C,E,S](persId: PersistenceId,
                                               enforcedReplies: Boolean = true,
                                               encryptionKey: Option[String] = None) {
 
-  def withObjectCodeMapper(objectCodeMapper: ObjectCodeMapperBase): EventSourcedBehaviorBuilder[C,E,S] =
+  def withEventCodeMapper(objectCodeMapper: ObjectCodeMapperBase): EventSourcedBehaviorBuilder[C,E,S] =
     copy(objectCodeMapper = objectCodeMapper)
 
   def withEnforcedReplies(enforceReply: Boolean): EventSourcedBehaviorBuilder[C,E,S] =

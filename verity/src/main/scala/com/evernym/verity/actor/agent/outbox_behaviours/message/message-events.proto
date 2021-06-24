@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+import "events.proto";
+
+package com.evernym.verity.actor.agent.outbox_behaviours.message;
+
+message Added {
+    string type = 1;
+    string retentionPolicy = 2;
+    StorageInfo storageInfo = 3;
+}

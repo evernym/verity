@@ -1,20 +1,31 @@
-package com.evernym.verity.actor.agent.outbox.latest
+package com.evernym.verity.actor.agent.outbox_behaviours.latest
 
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
-import com.evernym.verity.actor.agent.outbox.latest.behaviours.MessageBehaviour
-import com.evernym.verity.actor.agent.outbox.latest.behaviours.MessageBehaviour.{Commands, RespMsg, RespMsgs}
+import com.evernym.verity.actor.StorageInfo
+import com.evernym.{PolicyElements, RetentionPolicy}
+import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour
+import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.{Commands, RespMsg, RespMsgs}
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
+import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.config.ConfigFactory
 
 import java.util.UUID
+import scala.concurrent.duration.{DAYS, Duration}
+
 
 class MessageBehaviourSpec
   extends EventSourcedBehaviourSpec
     with BasicSpec {
 
   val msgId: String = UUID.randomUUID().toString
+  val retentionPolicy: RetentionPolicy = RetentionPolicy(
+    """{"expire-after-days":20 days,"expire-after-terminal-state":true}""",
+    PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true)
+  )
 
   "Message behaviour" - {
 
@@ -30,25 +41,23 @@ class MessageBehaviourSpec
 
       //what would 'Add' command will contain (message detail, data retention policy)?
       "when sent Add command" - {
-        "should respond with Acknowledgement" in {
-          pending
+        "should be successful" in {
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId,
+            Commands.Add("credOffer", StorageInfo(msgId, "s3"), retentionPolicy, probe.ref))
+          probe.expectMessage(StatusReply.success(RespMsgs.MsgAdded))
         }
       }
     }
 
     "in Initialized state" - {
 
-      //this confirms that "Message behaviour" as part of previous
-      // Add command stored the payload to external storage (mock s3 etc)
-      "when checked external storage for payload" - {
-        "it should be found" in {
-          pending
-        }
-      }
-
       "when sent Add command" - {
         "should respond with MsgAlreadyAdded message" in {
-          pending
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId,
+            Commands.Add("credOffer", StorageInfo(msgId, "s3"), retentionPolicy, probe.ref))
+          probe.expectMessage(StatusReply.success(RespMsgs.MsgAlreadyAdded))
         }
       }
 
@@ -142,11 +151,17 @@ class MessageBehaviourSpec
     }
   }
 
+  val APP_CONFIG = ConfigFactory.parseString (
+    """
+      |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
+      |""".stripMargin
+  )
+
+  val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
+  lazy val storageAPI = StorageAPI.loadFromConfig(appConfig)(system.classicSystem)
   lazy val sharding = ClusterSharding(system)
   lazy val messageRegion = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
-    MessageBehaviour(entityContext)
+    MessageBehaviour(entityContext, storageAPI)
   })
+
 }
-
-
-

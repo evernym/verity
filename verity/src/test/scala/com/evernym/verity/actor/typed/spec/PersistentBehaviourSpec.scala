@@ -138,7 +138,7 @@ object Account {
   def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
     EventSourcedBehaviorBuilder
       .default(PersistenceId(TypeKey.name, entityContext.entityId), States.Empty, commandHandler, eventHandler)
-      .withObjectCodeMapper(TestObjectCodeMapper)
+      .withEventCodeMapper(TestObjectCodeMapper)
       .withSignalHandler(signalHandler)
       .build()
   }

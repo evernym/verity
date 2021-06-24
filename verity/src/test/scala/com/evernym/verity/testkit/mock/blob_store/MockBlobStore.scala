@@ -1,4 +1,4 @@
-package com.evernym.verity.integration.with_basic_sdk.data_retention
+package com.evernym.verity.testkit.mock.blob_store
 
 import akka.Done
 import akka.actor.ActorSystem

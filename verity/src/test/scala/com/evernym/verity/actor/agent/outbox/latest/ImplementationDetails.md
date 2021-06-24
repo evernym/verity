@@ -4,6 +4,7 @@
 **RelationshipActors (UserAgent and UserAgentPairwise)**
 
 * Has communication method details:
+  
     ActorState -> relationship -> DIDDoc -> Endpoints. 
 * As of today we only support one destination, in future when we have to support multiple destinations,
   it may/will require some changes in the relationship data model.

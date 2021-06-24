@@ -1,9 +1,20 @@
 package com.evernym.verity.actor.agent.outbox.latest
 
+import akka.cluster.sharding.typed.ShardingEnvelope
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
+import akka.pattern.StatusReply
+import com.evernym.verity.actor.agent.outbox.latest.behaviours.MessageBehaviour
+import com.evernym.verity.actor.agent.outbox.latest.behaviours.MessageBehaviour.{Commands, RespMsg, RespMsgs}
+import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
 import com.evernym.verity.testkit.BasicSpec
 
+import java.util.UUID
+
 class MessageBehaviourSpec
-  extends BasicSpec {
+  extends EventSourcedBehaviourSpec
+    with BasicSpec {
+
+  val msgId: String = UUID.randomUUID().toString
 
   "Message behaviour" - {
 
@@ -11,7 +22,9 @@ class MessageBehaviourSpec
 
       "when sent Get command" - {
         "should respond with MsgNotAdded message" in {
-          pending
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
+          probe.expectMessage(StatusReply.success(RespMsgs.MsgNotAdded))
         }
       }
 
@@ -128,6 +141,11 @@ class MessageBehaviourSpec
       }
     }
   }
+
+  lazy val sharding = ClusterSharding(system)
+  lazy val messageRegion = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
+    MessageBehaviour(entityContext)
+  })
 }
 
 

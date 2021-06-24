@@ -1,8 +1,18 @@
 package com.evernym.verity.actor.typed
 
+import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.typesafe.config.{Config, ConfigFactory}
+
+
+abstract class EventSourcedBehaviourSpec
+  extends ScalaTestWithActorTestKit(
+    ActorTestKit(
+      "TestSystem",
+      TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
+    )
+  )
 
 object TypedTestKit {
 

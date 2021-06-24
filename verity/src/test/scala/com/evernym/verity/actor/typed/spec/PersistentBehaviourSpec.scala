@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.typed.spec
 
 import akka.Done
-import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
@@ -11,7 +10,7 @@ import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
 import com.evernym.verity.actor.typed.spec.Events._
-import com.evernym.verity.actor.typed.{Encodable, TypedTestKit}
+import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.actor.typed.base.{BehaviourUtil, EventSourcedBehaviorBuilder}
 import com.evernym.verity.testkit.BasicSpec
@@ -21,11 +20,7 @@ import java.util.UUID
 
 
 class PersistentBehaviourSpec
-  extends ScalaTestWithActorTestKit(
-    ActorTestKit(
-      "TestSystem",
-      TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
-    ))
+  extends EventSourcedBehaviourSpec
     with BasicSpec {
 
   import Account._

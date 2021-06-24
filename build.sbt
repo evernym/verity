@@ -72,7 +72,7 @@ val sdnotifyVer     = "1.3"
 //test dependency versions
 val scalatestVer    = "3.2.9"
 val mockitoVer      = "1.16.37"
-val veritySdkVer    = "0.4.8-d248cd7a"
+val veritySdkVer    = "0.4.9-1024e509"
 val vcxWrapperVer   = "0.10.1.1131"
 
 // compiler plugin versions

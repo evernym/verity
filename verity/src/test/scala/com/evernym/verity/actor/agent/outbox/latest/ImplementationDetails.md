@@ -6,7 +6,7 @@
 * Has endpoints (for different agents) in respective DIDDocs. 
 * As of today we only support one destination, in future when we have to support multiple destinations,
   it may/will require some changes in the relationship data model.
-    
+
 ### Outgoing Message integration
 **ActorProtocolContainer**
 * the synchronous response message:
@@ -40,15 +40,16 @@ sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol): 
 
 ### Outbox behaviour
 * 'entity-id' will be created by concatenating 'relationship-id' and 'destination-id'.
-* when started, calls `RelationshipService.getOutboxParam(relationship-id)`
+* when started, calls `RelationshipService.getOutboxParam(relationship-id, destination-id)`
 * when receives OutboxParam, then only it starts processing message deliveries.
 
 ### RelationshipService
-  getOutboxParam(forRelationshipId): Future[OutboxParam]
+  getOutboxParam(forRelationshipId, destination-id): Future[OutboxParam]
 
 ### RelationshipServiceImpl
-  getOutboxParam(forRelationshipId): Future[OutboxParam]
-    asks from relationship actor and returns it back 
+  getOutboxParam(forRelationshipId, destination-id): Future[OutboxParam]
+    asks from relationship actor and returns requested information back 
+    (Destination(com-methods), walletId)
 
 ### Possible Outboxes (for an identity owner)
 **For Legacy APIs**

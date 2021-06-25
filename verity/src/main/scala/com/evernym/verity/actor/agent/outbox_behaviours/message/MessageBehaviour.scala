@@ -13,7 +13,7 @@ import com.evernym.verity.actor.typed.base.{EventSourcedBehaviorBuilder, EventTr
 import com.evernym.verity.actor.{ActorMessage, StorageInfo}
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.storage_services.StorageAPI
+import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 
 
 object MessageBehaviour {
@@ -74,7 +74,8 @@ object MessageBehaviour {
       Effect.reply(c.replyTo)(StatusReply.success(RespMsgs.MsgAlreadyAdded))
 
     case (st: States.Added, Commands.Get(replyTo)) =>
-      storageAPI.get(bucketName, msgId).map { data =>
+      val lifeCycleAddress = BucketLifeCycleUtil.lifeCycleAddress(Option(st.policy.elements.expiryDaysStr), msgId)
+      storageAPI.get(bucketName, lifeCycleAddress).map { data =>
         replyTo ! StatusReply.success(Msg(st.`type`, st.legacyMsgData, data))
       }
       Effect.noReply

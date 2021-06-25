@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.outbox_behaviours.latest
 
+import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
@@ -9,9 +10,10 @@ import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour
 import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.{Commands, RespMsg, RespMsgs}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
-import com.evernym.verity.storage_services.StorageAPI
+import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.evernym.verity.testkit.BasicSpec
-import com.typesafe.config.ConfigFactory
+import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
+import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.UUID
 import scala.concurrent.Await
@@ -28,6 +30,8 @@ class MessageBehaviourSpec
     PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true)
   )
 
+  val msgIdLifeCycleAddress = BucketLifeCycleUtil.lifeCycleAddress(Option(retentionPolicy.elements.expiryDaysStr), msgId)
+
   "Message behaviour" - {
 
     "in Uninitialized state" - {
@@ -43,8 +47,15 @@ class MessageBehaviourSpec
       //what would 'Add' command will contain (message detail, data retention policy)?
       "when sent Add command" - {
         "should be successful" in {
-          val storePayload = storageAPI.put(BUCKET_NAME, msgId, "cred-offer-msg".getBytes)
+          storageAPI.getBlobObjectCount("20d", BUCKET_NAME) shouldBe 0
+          val storePayload = storageAPI.put(
+            BUCKET_NAME,
+            msgIdLifeCycleAddress,
+            "cred-offer-msg".getBytes
+          )
           Await.result(storePayload, 5.seconds)
+          storageAPI.getBlobObjectCount("20d", BUCKET_NAME) shouldBe 1
+
           val probe = createTestProbe[StatusReply[RespMsg]]()
           messageRegion ! ShardingEnvelope(msgId,
             Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), probe.ref))
@@ -153,7 +164,7 @@ class MessageBehaviourSpec
 
       "when deleted the payload from external storage (s3 mock etc)" - {
         "should be successful" in {
-          val storePayload = storageAPI.delete(BUCKET_NAME, msgId)
+          val storePayload = storageAPI.delete(BUCKET_NAME, msgIdLifeCycleAddress)
           Await.result(storePayload, 5.seconds)
         }
       }
@@ -173,7 +184,7 @@ class MessageBehaviourSpec
 
   lazy val BUCKET_NAME = "blob-name"
 
-  lazy val APP_CONFIG = ConfigFactory.parseString (
+  lazy val APP_CONFIG: Config = ConfigFactory.parseString (
     s"""
       |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
       |verity.blob-store.bucket-name = "$BUCKET_NAME"
@@ -181,9 +192,9 @@ class MessageBehaviourSpec
   )
 
   val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
-  lazy val storageAPI = StorageAPI.loadFromConfig(appConfig)(system.classicSystem)
-  lazy val sharding = ClusterSharding(system)
-  lazy val messageRegion = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
+  lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig)(system.classicSystem).asInstanceOf[MockBlobStore]
+  lazy val sharding: ClusterSharding = ClusterSharding(system)
+  lazy val messageRegion: ActorRef[ShardingEnvelope[MessageBehaviour.Cmd]] = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
     MessageBehaviour(entityContext, BUCKET_NAME, storageAPI)
   })
 

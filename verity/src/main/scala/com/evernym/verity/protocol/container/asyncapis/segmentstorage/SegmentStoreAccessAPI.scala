@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreA
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController}
 import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, ProtoRef}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
-import com.evernym.verity.storage_services.StorageAPI
+import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
@@ -190,5 +190,5 @@ case class BlobSegment(bucketName: String,
                        segmentAddress: SegmentAddress,
                        segmentKey: SegmentKey,
                        lifecycle: Option[String]) {
-  def lifecycleAddress: String = lifecycle.map(x => s"$x/").getOrElse("") + segmentAddress
+  def lifecycleAddress: String = BucketLifeCycleUtil.lifeCycleAddress(lifecycle, segmentAddress)
 }

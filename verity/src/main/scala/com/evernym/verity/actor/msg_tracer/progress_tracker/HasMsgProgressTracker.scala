@@ -113,7 +113,7 @@ trait HasMsgProgressTracker
 
   private def sendToMsgTracker(cmd: Any): Unit = {
     candidateTrackingIds.foreach { trackingId =>
-      if (MsgProgressTrackerCache.isTracked(trackingId)) {
+      if (MsgProgressTrackerCache(context.system).isTracked(trackingId)) {
         val finalCmd = cmd match {
           case rre: RecordRoutingEvent => rre.withDetailAppended(extraDetail)
           case other                   => other

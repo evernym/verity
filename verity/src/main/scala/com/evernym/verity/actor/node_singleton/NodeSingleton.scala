@@ -81,11 +81,11 @@ class NodeSingleton(val appConfig: AppConfig)
       sender ! Done
 
     case spt: StartProgressTracking =>
-      MsgProgressTrackerCache.startProgressTracking(spt.trackingId)
+      MsgProgressTrackerCache(context.system).startProgressTracking(spt.trackingId)
       sender ! Done
 
     case spt: StopProgressTracking =>
-      MsgProgressTrackerCache.stopProgressTracking(spt.trackingId)
+      MsgProgressTrackerCache(context.system).stopProgressTracking(spt.trackingId)
       sender ! Done
 
     case DrainNode =>

@@ -65,7 +65,7 @@ class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
   def changeAppState(newAppState: AppState): Unit = {
     val currentState = currentAppState
     (currentState, newAppState) match {
-      case (InitializingState, ListeningState) =>
+      case (_: InitializingState, ListeningState) =>
         sendToAppStateManager(SuccessEvent(ListeningSuccessful, "SERVICE_INIT",
           CauseDetail("agent-service-started", "agent-service-started-listening-successfully")))
 

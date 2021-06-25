@@ -56,7 +56,7 @@ trait AppStateManagerBase { this: Actor =>
     import com.evernym.verity.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
     val currentState: AppState = getState
     currentState match {
-      case InitializingState
+      case _: InitializingState
            | DrainingState
            | ShutdownWithErrors
            | ShutdownState =>
@@ -85,8 +85,9 @@ trait AppStateManagerBase { this: Actor =>
   private def init(): Unit = {
     causesByState = Map.empty
     causesByContext = Map.empty
-    events = List(EventDetail(ZonedDateTime.now(), InitializingState, MSG_AGENT_SERVICE_INIT_STARTED))
-    currentState = InitializingState
+    val initState = new InitializingState
+    events = List(EventDetail(ZonedDateTime.now(), initState, MSG_AGENT_SERVICE_INIT_STARTED))
+    currentState = initState
     logTransitionedMsg(currentState, Option(MSG_AGENT_SERVICE_INIT_STARTED))
     notifierService.setStatus(STATUS_INITIALIZING)
   }

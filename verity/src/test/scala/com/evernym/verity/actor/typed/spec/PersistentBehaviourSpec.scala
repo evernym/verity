@@ -12,8 +12,10 @@ import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.typed.base.{BehaviourUtil, EventSourcedBehaviorBuilder}
+import com.evernym.verity.actor.typed.base.{EventSourcedBehaviorBuilder, EventTransformer}
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessageCompanion
 
 import java.util.UUID
@@ -143,25 +145,27 @@ object Account {
       .build()
   }
 
-  private def commandHandler(util: BehaviourUtil): (State, Cmd) => ReplyEffect[Any, State] = {
+  val logger: Logger = getLoggerByClass(getClass)
+
+  private def commandHandler(eventTransformer: EventTransformer): (State, Cmd) => ReplyEffect[Any, State] = {
 
     case (States.Empty, Commands.Open(name, balance, replyTo)) =>
-      util
+      eventTransformer
         .persist(Events.Opened(name, balance))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Credit(amount, replyTo)) =>
-      util
+      eventTransformer
         .persist(Events.Credited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Debit(amount, replyTo)) =>
-      util
+      eventTransformer
         .persist(Events.Debited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Close(replyTo)) =>
-      util
+      eventTransformer
         .persist(Events.Closed())
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
@@ -173,10 +177,8 @@ object Account {
       Effect.reply(replyTo)(StatusReply.Ack)
   }
 
-  private def signalHandler(util: BehaviourUtil): PartialFunction[(State, Signal), Unit] = {
-    case (_: State, PostStop) =>
-      util.logger.debug(s"[${util.persId}] behaviour stopped")
-
+  private def signalHandler(util: EventTransformer): PartialFunction[(State, Signal), Unit] = {
+    case (_: State, PostStop) => logger.debug(s"[${util.persId}] behaviour stopped")
   }
 
   private val eventHandler: (State, Any) => State = {

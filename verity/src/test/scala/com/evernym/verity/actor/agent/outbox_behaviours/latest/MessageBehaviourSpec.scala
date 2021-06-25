@@ -161,7 +161,7 @@ class MessageBehaviourSpec
   lazy val storageAPI = StorageAPI.loadFromConfig(appConfig)(system.classicSystem)
   lazy val sharding = ClusterSharding(system)
   lazy val messageRegion = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
-    MessageBehaviour(entityContext, storageAPI)
+    MessageBehaviour(entityContext)
   })
 
 }

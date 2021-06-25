@@ -5,12 +5,15 @@ import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 
+//used for persistent behaviour which needed to use event transformations (encryption/decryption etc)
+// during persistence and recovery. This just helps to avoid repeat some code in each behaviour
+// and helps the behaviour code to look clean.
 
 object EventSourcedBehaviorBuilder {
 
   def default[C,E,S](persId: PersistenceId,
                      emptyState: S,
-                     commandHandler: BehaviourUtil => (S, C) => ReplyEffect[E, S],
+                     commandHandler: EventTransformer => (S, C) => ReplyEffect[E, S],
                      eventHandler: (S, E) => S): EventSourcedBehaviorBuilder[C,E,S] = {
     EventSourcedBehaviorBuilder(persId, emptyState, commandHandler, eventHandler)
   }
@@ -18,10 +21,10 @@ object EventSourcedBehaviorBuilder {
 
 case class EventSourcedBehaviorBuilder[C,E,S](persId: PersistenceId,
                                               emptyState: S,
-                                              commandHandler: BehaviourUtil => (S, C) => ReplyEffect[E, S],
+                                              commandHandler: EventTransformer => (S, C) => ReplyEffect[E, S],
                                               eventHandler: (S, E) => S,
                                               objectCodeMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper,
-                                              signalHandler: BehaviourUtil => PartialFunction[(S, Signal), Unit] = { _: BehaviourUtil => PartialFunction.empty},
+                                              signalHandler: EventTransformer => PartialFunction[(S, Signal), Unit] = { _: EventTransformer => PartialFunction.empty},
                                               enforcedReplies: Boolean = true,
                                               encryptionKey: Option[String] = None) {
 
@@ -34,27 +37,27 @@ case class EventSourcedBehaviorBuilder[C,E,S](persId: PersistenceId,
   def withEncryptionKey(key: String): EventSourcedBehaviorBuilder[C,E,S] =
     copy(encryptionKey = Option(key))
 
-  def withSignalHandler(handler: BehaviourUtil => PartialFunction[(S, Signal), Unit]): EventSourcedBehaviorBuilder[C,E,S] =
+  def withSignalHandler(handler: EventTransformer => PartialFunction[(S, Signal), Unit]): EventSourcedBehaviorBuilder[C,E,S] =
     copy(signalHandler = handler)
 
   def build(): EventSourcedBehavior[C, E, S] = {
-    val util = BehaviourUtil(persId, encryptionKey.getOrElse(persId.id), objectCodeMapper)
+    val eventTransformer = EventTransformer(persId, encryptionKey.getOrElse(persId.id), objectCodeMapper)
     val baseBehavior = if (enforcedReplies) {
       EventSourcedBehavior
         .withEnforcedReplies(
           persId,
           emptyState,
-          commandHandler(util),
-          util.eventHandlerWrapper(eventHandler)
+          commandHandler(eventTransformer),
+          eventTransformer.transformedEventHandler(eventHandler)
         )
     } else {
       EventSourcedBehavior(
         persId,
         emptyState,
-        commandHandler(util),
-        util.eventHandlerWrapper(eventHandler)
+        commandHandler(eventTransformer),
+        eventTransformer.transformedEventHandler(eventHandler)
       )
     }
-    baseBehavior.receiveSignal(signalHandler(util))
+    baseBehavior.receiveSignal(signalHandler(eventTransformer))
   }
 }

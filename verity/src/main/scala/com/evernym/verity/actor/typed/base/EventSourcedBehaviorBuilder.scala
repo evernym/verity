@@ -24,7 +24,7 @@ case class EventSourcedBehaviorBuilder[C,E,S](persId: PersistenceId,
                                               commandHandler: EventTransformer => (S, C) => ReplyEffect[E, S],
                                               eventHandler: (S, E) => S,
                                               objectCodeMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper,
-                                              signalHandler: EventTransformer => PartialFunction[(S, Signal), Unit] = { _: EventTransformer => PartialFunction.empty},
+                                              signalHandler: PartialFunction[(S, Signal), Unit] = PartialFunction.empty,
                                               enforcedReplies: Boolean = true,
                                               encryptionKey: Option[String] = None) {
 
@@ -37,7 +37,7 @@ case class EventSourcedBehaviorBuilder[C,E,S](persId: PersistenceId,
   def withEncryptionKey(key: String): EventSourcedBehaviorBuilder[C,E,S] =
     copy(encryptionKey = Option(key))
 
-  def withSignalHandler(handler: EventTransformer => PartialFunction[(S, Signal), Unit]): EventSourcedBehaviorBuilder[C,E,S] =
+  def withSignalHandler(handler: PartialFunction[(S, Signal), Unit]): EventSourcedBehaviorBuilder[C,E,S] =
     copy(signalHandler = handler)
 
   def build(): EventSourcedBehavior[C, E, S] = {
@@ -58,6 +58,6 @@ case class EventSourcedBehaviorBuilder[C,E,S](persId: PersistenceId,
         eventTransformer.transformedEventHandler(eventHandler)
       )
     }
-    baseBehavior.receiveSignal(signalHandler(eventTransformer))
+    baseBehavior.receiveSignal(signalHandler)
   }
 }

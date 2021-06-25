@@ -4,19 +4,20 @@ import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
+
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour
-import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.{Commands, RespMsg, RespMsgs}
+import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour._
+import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.{Commands, RespMsg}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
-import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
+import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.UUID
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -24,42 +25,25 @@ class MessageBehaviourSpec
   extends EventSourcedBehaviourSpec
     with BasicSpec {
 
-  val msgId: String = UUID.randomUUID().toString
-  val retentionPolicy: RetentionPolicy = RetentionPolicy(
-    """{"expire-after-days":20 days,"expire-after-terminal-state":true}""",
-    PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true)
-  )
-
-  val msgIdLifeCycleAddress = BucketLifeCycleUtil.lifeCycleAddress(Option(retentionPolicy.elements.expiryDaysStr), msgId)
-
   "Message behaviour" - {
 
     "in Uninitialized state" - {
 
       "when sent Get command" - {
         "should respond with MsgNotAdded message" in {
-          val probe = createTestProbe[StatusReply[RespMsg]]()
+          val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          probe.expectMessage(StatusReply.success(RespMsgs.MsgNotAdded))
+          probe.expectMessage(StatusReply.success(MsgNotYetAdded))
         }
       }
 
       //what would 'Add' command will contain (message detail, data retention policy)?
       "when sent Add command" - {
         "should be successful" in {
-          storageAPI.getBlobObjectCount("20d", BUCKET_NAME) shouldBe 0
-          val storePayload = storageAPI.put(
-            BUCKET_NAME,
-            msgIdLifeCycleAddress,
-            "cred-offer-msg".getBytes
-          )
-          Await.result(storePayload, 5.seconds)
-          storageAPI.getBlobObjectCount("20d", BUCKET_NAME) shouldBe 1
-
-          val probe = createTestProbe[StatusReply[RespMsg]]()
+          val probe = createTestProbe[StatusReply[AddMsgRespBase]]()
           messageRegion ! ShardingEnvelope(msgId,
             Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), probe.ref))
-          probe.expectMessage(StatusReply.success(RespMsgs.MsgAdded))
+          probe.expectMessage(StatusReply.success(MsgAdded))
         }
       }
     }
@@ -68,21 +52,21 @@ class MessageBehaviourSpec
 
       "when sent Add command" - {
         "should respond with MsgAlreadyAdded message" in {
-          val probe = createTestProbe[StatusReply[RespMsg]]()
+          val probe = createTestProbe[StatusReply[AddMsgRespBase]]()
           messageRegion ! ShardingEnvelope(msgId,
             Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), probe.ref))
-          probe.expectMessage(StatusReply.success(RespMsgs.MsgAlreadyAdded))
+          probe.expectMessage(StatusReply.success(MsgAlreadyAdded))
         }
       }
 
       "when sent Get command" - {
         "should respond with Message with payload" in {
-          val probe = createTestProbe[StatusReply[RespMsg]]()
+          val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[RespMsgs.Msg]].getValue
+          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
           msg.`type` shouldBe "credOffer"
-          msg.legacyMsgData shouldBe None
-          msg.payload.map(new String(_)) shouldBe Option("cred-offer-msg")
+          msg.legacyData shouldBe None
+          msg.payload.isEmpty shouldBe true
         }
       }
 
@@ -98,25 +82,30 @@ class MessageBehaviourSpec
       // and is able to fetch payload from external storage
       "when sent Get command again" - {
         "should respond with Message (with payload)" in {
-          val probe = createTestProbe[StatusReply[RespMsg]]()
+          val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[RespMsgs.Msg]].getValue
+          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
           msg.`type` shouldBe "credOffer"
-          msg.legacyMsgData shouldBe None
-          msg.payload.map(new String(_)) shouldBe Option("cred-offer-msg")
+          msg.legacyData shouldBe None
+          msg.payload.isEmpty shouldBe true
         }
       }
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
         "should respond with NoDeliveryStatusFound" in {
-          pending
+          val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
+          val deliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+          deliveryStatus.statuses.isEmpty shouldBe true
         }
       }
 
-      //with status=undelivered and detail=Detail(com-method-id-1, 'success_count=0,failed_count=1,message=error-message')
-      "when sent AddDeliveryStatus(outbox-id-1, undelivered, detail) command" - {
-        "should respond with Acknowledgement" in {
-          pending
+      "when sent RecordDeliveryAttempt(outbox-id-1, destination-id, undelivered, detail) command" - {
+        "should respond with DeliveryAttemptRecorded" in {
+          val probe = createTestProbe[StatusReply[DeliveryAttemptRecorded.type]]()
+          messageRegion ! ShardingEnvelope(msgId,
+            Commands.RecordDeliveryAttempt("outbox-id1", "com-method-id1", "MDS-101", Option("detail"), probe.ref))
+          probe.expectMessage(StatusReply.success(DeliveryAttemptRecorded))
         }
       }
 
@@ -162,20 +151,13 @@ class MessageBehaviourSpec
         }
       }
 
-      "when deleted the payload from external storage (s3 mock etc)" - {
-        "should be successful" in {
-          val storePayload = storageAPI.delete(BUCKET_NAME, msgIdLifeCycleAddress)
-          Await.result(storePayload, 5.seconds)
-        }
-      }
-
       "when send Get command (post payload deletion from external storage)" - {
         "should still respond with Message but without payload" in {
           val probe = createTestProbe[StatusReply[RespMsg]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[RespMsgs.Msg]].getValue
+          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
           msg.`type` shouldBe "credOffer"
-          msg.legacyMsgData shouldBe None
+          msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
         }
       }
@@ -186,16 +168,23 @@ class MessageBehaviourSpec
 
   lazy val APP_CONFIG: Config = ConfigFactory.parseString (
     s"""
-      |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
-      |verity.blob-store.bucket-name = "$BUCKET_NAME"
-      |""".stripMargin
+       |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
+       |verity.blob-store.bucket-name = "$BUCKET_NAME"
+       |""".stripMargin
   )
 
-  val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
+  lazy val msgId: String = UUID.randomUUID().toString
+  lazy val retentionPolicy: RetentionPolicy = RetentionPolicy(
+    """{"expire-after-days":20 days,"expire-after-terminal-state":true}""",
+    PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true)
+  )
+
+
+  lazy val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
   lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig)(system.classicSystem).asInstanceOf[MockBlobStore]
   lazy val sharding: ClusterSharding = ClusterSharding(system)
   lazy val messageRegion: ActorRef[ShardingEnvelope[MessageBehaviour.Cmd]] = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
-    MessageBehaviour(entityContext, BUCKET_NAME, storageAPI)
+    MessageBehaviour(entityContext)
   })
 
 }

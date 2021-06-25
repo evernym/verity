@@ -27,11 +27,6 @@ class PersistentBehaviourSpec
 
   import Account._
 
-  val sharding = ClusterSharding(system)
-  val accountRegion = sharding.init(Entity(Account.TypeKey) { entityContext =>
-    Account(entityContext)
-  })
-
   "Account behaviour" - {
 
     "when initialized first time" - {
@@ -114,6 +109,11 @@ class PersistentBehaviourSpec
     prob.expectMessageType[State]
   }
 
+  lazy val sharding: ClusterSharding = ClusterSharding(system)
+  lazy val accountRegion: ActorRef[ShardingEnvelope[Cmd]] = sharding.init(Entity(Account.TypeKey) { entityContext =>
+    Account(entityContext)
+  })
+
 }
 
 object Account {
@@ -138,10 +138,11 @@ object Account {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Account")
 
   def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
+    val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
     EventSourcedBehaviorBuilder
-      .default(PersistenceId(TypeKey.name, entityContext.entityId), States.Empty, commandHandler, eventHandler)
+      .default(persistenceId, States.Empty, commandHandler, eventHandler)
       .withEventCodeMapper(TestObjectCodeMapper)
-      .withSignalHandler(signalHandler)
+      .withSignalHandler(signalHandler(persistenceId))
       .build()
   }
 
@@ -177,8 +178,8 @@ object Account {
       Effect.reply(replyTo)(StatusReply.Ack)
   }
 
-  private def signalHandler(util: EventTransformer): PartialFunction[(State, Signal), Unit] = {
-    case (_: State, PostStop) => logger.debug(s"[${util.persId}] behaviour stopped")
+  private def signalHandler(persistenceId: PersistenceId): PartialFunction[(State, Signal), Unit] = {
+    case (_: State, PostStop) => logger.debug(s"[$persistenceId] behaviour stopped")
   }
 
   private val eventHandler: (State, Any) => State = {

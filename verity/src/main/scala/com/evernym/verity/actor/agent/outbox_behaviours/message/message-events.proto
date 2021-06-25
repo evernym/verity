@@ -2,11 +2,12 @@ syntax = "proto3";
 
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
 import "events.proto";
 
-package com.evernym.verity.actor.agent.outbox_behaviours.message;
+package com.evernym.verity.actor.agent.outbox_behaviours.message.Events;
 
-message Added {
+message MsgAdded {
     string type = 1;
     LegacyMsgData legacyMsgData = 2;
     string retentionPolicy = 3;
@@ -15,5 +16,18 @@ message Added {
 
 message LegacyMsgData {
     string senderDID = 1;
-    string refMsgId = 2;
+    google.protobuf.StringValue refMsgId = 2;
+}
+
+message DeliveryAttemptRecorded {
+    string outboxId = 2;
+    string comMethodId = 3;
+    string status = 4;
+    DeliveryAttemptActivity activity = 5;
+}
+
+message DeliveryAttemptActivity {
+    uint64 creationTimeInMillis = 1;
+    google.protobuf.StringValue detail = 2;
+
 }

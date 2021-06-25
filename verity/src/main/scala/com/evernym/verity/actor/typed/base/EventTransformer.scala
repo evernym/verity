@@ -14,7 +14,7 @@ case class EventTransformer(persId: PersistenceId,
 
   //takes the given event, applies persistence transformations (serialization, encryption etc)
   // before it goes to akka persistence layer
-  def persist[E, S](event: E): EffectBuilder[PersistentMsg, S] = {
+  def persist[E,S](event: E): EffectBuilder[PersistentMsg, S] = {
     Effect.persist(eventTransformer.execute(event))
   }
 

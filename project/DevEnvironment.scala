@@ -272,10 +272,15 @@ case class Ubuntu(codeName: String, toolsCheck: Boolean) extends OS {
   }
 
   override def checkPkg(packageName: String, packageVersion: Option[String], reason: Option[String], indent: Int = 2): Boolean = {
-    val t = run(s"dpkg -s $packageName")
+    val lines = run(s"dpkg -s $packageName")
       .map(_.linesIterator.toSeq)
+
+    val statusInstalled = lines
+      .map(_.exists(_.matches("Status:.*installed")))
+
+    val installedVersion = lines
       .map(_.find(_.startsWith("Version:")))
-      .flatMap{ o =>
+      .flatMap { o =>
         Try(o.getOrElse(throw new Exception("Unable to find Version of package")))
       }
       .map { version =>
@@ -285,11 +290,16 @@ case class Ubuntu(codeName: String, toolsCheck: Boolean) extends OS {
         }
       }
 
+    val isValidInstall = for(
+      status <- statusInstalled;
+      version <- installedVersion
+    ) yield status && version._2
+
     val reasonStr = reason.map(r=>s" (for $r)").getOrElse("")
     val rtn = printDetection(
       s"$packageName$reasonStr",
-      t.map(_._1).getOrElse(""),
-      t.map(_._2).getOrElse(false),
+      installedVersion.map(_._1).getOrElse(""),
+      isValidInstall.getOrElse(false),
       indent
     )
     if(!rtn) {

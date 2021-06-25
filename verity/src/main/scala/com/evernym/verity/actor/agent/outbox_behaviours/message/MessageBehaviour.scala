@@ -1,11 +1,11 @@
 package com.evernym.verity.actor.agent.outbox_behaviours.message
 
+import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
-
 import com.evernym.RetentionPolicy
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.RespMsgs.{Msg, MsgAdded}
@@ -26,6 +26,7 @@ object MessageBehaviour {
                    retentionPolicy: RetentionPolicy,
                    payloadStorageInfo: StorageInfo,
                    replyTo: ActorRef[StatusReply[RespMsg]]) extends Cmd
+    case object Stop extends Cmd
   }
 
   trait State
@@ -74,8 +75,12 @@ object MessageBehaviour {
 
     case (st: States.Added, Commands.Get(replyTo)) =>
       storageAPI.get(bucketName, msgId).map { data =>
-        replyTo ! StatusReply.success(Msg(st.`type`, st.legacyMsgData, Option(data)))
+        replyTo ! StatusReply.success(Msg(st.`type`, st.legacyMsgData, data))
       }
+      Effect.noReply
+
+    case (_: State, Commands.Stop) =>
+      Behaviors.stopped
       Effect.noReply
   }
 

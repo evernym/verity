@@ -112,12 +112,12 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   private def readFromBlobStore[T](blob: BlobSegment,
                                    storageRef: StorageReferenceStored)
                                   (implicit ec: ExecutionContext): Future[Option[T]] = {
-    storageAPI.get(blob.bucketName, blob.lifecycleAddress).map { encryptedData: Array[Byte]  =>
-      Option(
+    storageAPI.get(blob.bucketName, blob.lifecycleAddress).map { encryptedData: Option[Array[Byte]]  =>
+      encryptedData.map { ed =>
         SegmentedStateStore
-          .buildEvent(storageRef.eventCode, decryptBlob(encryptedData, blob.segmentAddress))
+          .buildEvent(storageRef.eventCode, decryptBlob(ed, blob.segmentAddress))
           .asInstanceOf[T]
-      )
+      }
     }
   }
 

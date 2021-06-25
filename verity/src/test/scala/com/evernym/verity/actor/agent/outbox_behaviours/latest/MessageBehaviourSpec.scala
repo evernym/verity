@@ -75,22 +75,11 @@ class MessageBehaviourSpec
         }
       }
 
-      "when deleted the payload from external storage (s3 mock etc)" - {
-        "should be successful" in {
-          pending
-        }
-      }
-
-      //this confirms that MessageBehaviour has the payload in it's in-memory state
-      "when send Get command (post payload deletion from external storage)" - {
-        "should still respond with Message along with payload" in {
-          pending
-        }
-      }
-
       "when sent Stop command" - {
         "should be stopped" in {
-          pending
+          val probe = createTestProbe()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Stop)
+          probe.expectNoMessage()
         }
       }
 
@@ -98,7 +87,12 @@ class MessageBehaviourSpec
       // and is able to fetch payload from external storage
       "when sent Get command again" - {
         "should respond with Message (with payload)" in {
-          pending
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
+          val msg = probe.expectMessageType[StatusReply[RespMsgs.Msg]].getValue
+          msg.`type` shouldBe "credOffer"
+          msg.legacyMsgData shouldBe None
+          msg.payload.map(new String(_)) shouldBe Option("cred-offer-msg")
         }
       }
 
@@ -156,12 +150,30 @@ class MessageBehaviourSpec
           pending
         }
       }
+
+      "when deleted the payload from external storage (s3 mock etc)" - {
+        "should be successful" in {
+          val storePayload = storageAPI.delete(BUCKET_NAME, msgId)
+          Await.result(storePayload, 5.seconds)
+        }
+      }
+
+      "when send Get command (post payload deletion from external storage)" - {
+        "should still respond with Message but without payload" in {
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
+          val msg = probe.expectMessageType[StatusReply[RespMsgs.Msg]].getValue
+          msg.`type` shouldBe "credOffer"
+          msg.legacyMsgData shouldBe None
+          msg.payload.isEmpty shouldBe true
+        }
+      }
     }
   }
 
-  val BUCKET_NAME = "blob-name"
+  lazy val BUCKET_NAME = "blob-name"
 
-  val APP_CONFIG = ConfigFactory.parseString (
+  lazy val APP_CONFIG = ConfigFactory.parseString (
     s"""
       |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
       |verity.blob-store.bucket-name = "$BUCKET_NAME"

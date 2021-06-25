@@ -19,9 +19,9 @@ class MockBlobStore(config: AppConfig)(implicit val as: ActorSystem) extends Sto
 
   def calcKey(bucketName: String, id: String): String = s"$bucketName-$id"
 
-  override def get(bucketName: String, id: String): Future[Array[Byte]] = {
+  override def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
     val dbKey = calcKey(bucketName, id)
-    Future(bucketStore(bucketName)(dbKey))
+    Future(bucketStore(bucketName).get(dbKey))
   }
 
   override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {

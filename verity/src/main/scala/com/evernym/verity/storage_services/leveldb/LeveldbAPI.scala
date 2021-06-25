@@ -52,10 +52,10 @@ class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends Storag
     }
   }
 
-  def get(bucketName: String, id: String): Future[Array[Byte]] = {
+  def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
     withDB { db =>
       Option(db.get(dbKey(bucketName, id).getBytes())) match {
-        case Some(x: Array[Byte]) => Future(x)
+        case Some(x: Array[Byte]) => Future(Some(x))
         case None => failure(DATA_NOT_FOUND.statusCode, s"No object for id: $id in bucket: $bucketName")
       }
     }

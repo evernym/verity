@@ -1,11 +1,9 @@
 package com.evernym.verity.actor.base
 
 import java.time.LocalDateTime
-
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.appStateManager.AppStateEvent
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateUpdateAPI}
 import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
@@ -151,7 +149,7 @@ trait CoreActor
   val recordStopCountMetrics = true
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
-    publishEvent(event)(context.system)
+    AppStateUpdateAPI(context.system).publishEvent(event)
   }
 
 }

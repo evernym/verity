@@ -8,6 +8,12 @@ package com.evernym.verity.actor.agent.outbox_behaviours.message;
 
 message Added {
     string type = 1;
-    string retentionPolicy = 2;
-    StorageInfo storageInfo = 3;
+    LegacyMsgData legacyMsgData = 2;
+    string retentionPolicy = 3;
+    StorageInfo storageInfo = 4;
+}
+
+message LegacyMsgData {
+    string senderDID = 1;
+    string refMsgId = 2;
 }

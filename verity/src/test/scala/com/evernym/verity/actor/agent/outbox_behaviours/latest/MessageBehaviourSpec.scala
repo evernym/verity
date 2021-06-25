@@ -14,7 +14,8 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigFactory
 
 import java.util.UUID
-import scala.concurrent.duration.{DAYS, Duration}
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 
 class MessageBehaviourSpec
@@ -42,9 +43,11 @@ class MessageBehaviourSpec
       //what would 'Add' command will contain (message detail, data retention policy)?
       "when sent Add command" - {
         "should be successful" in {
+          val storePayload = storageAPI.put(BUCKET_NAME, msgId, "cred-offer-msg".getBytes)
+          Await.result(storePayload, 5.seconds)
           val probe = createTestProbe[StatusReply[RespMsg]]()
           messageRegion ! ShardingEnvelope(msgId,
-            Commands.Add("credOffer", StorageInfo(msgId, "s3"), retentionPolicy, probe.ref))
+            Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), probe.ref))
           probe.expectMessage(StatusReply.success(RespMsgs.MsgAdded))
         }
       }
@@ -56,14 +59,19 @@ class MessageBehaviourSpec
         "should respond with MsgAlreadyAdded message" in {
           val probe = createTestProbe[StatusReply[RespMsg]]()
           messageRegion ! ShardingEnvelope(msgId,
-            Commands.Add("credOffer", StorageInfo(msgId, "s3"), retentionPolicy, probe.ref))
+            Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), probe.ref))
           probe.expectMessage(StatusReply.success(RespMsgs.MsgAlreadyAdded))
         }
       }
 
       "when sent Get command" - {
-        "should respond with Message" in {
-          pending
+        "should respond with Message with payload" in {
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
+          val msg = probe.expectMessageType[StatusReply[RespMsgs.Msg]].getValue
+          msg.`type` shouldBe "credOffer"
+          msg.legacyMsgData shouldBe None
+          msg.payload.map(new String(_)) shouldBe Option("cred-offer-msg")
         }
       }
 
@@ -151,9 +159,12 @@ class MessageBehaviourSpec
     }
   }
 
+  val BUCKET_NAME = "blob-name"
+
   val APP_CONFIG = ConfigFactory.parseString (
-    """
+    s"""
       |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
+      |verity.blob-store.bucket-name = "$BUCKET_NAME"
       |""".stripMargin
   )
 
@@ -161,7 +172,7 @@ class MessageBehaviourSpec
   lazy val storageAPI = StorageAPI.loadFromConfig(appConfig)(system.classicSystem)
   lazy val sharding = ClusterSharding(system)
   lazy val messageRegion = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
-    MessageBehaviour(entityContext)
+    MessageBehaviour(entityContext, BUCKET_NAME, storageAPI)
   })
 
 }

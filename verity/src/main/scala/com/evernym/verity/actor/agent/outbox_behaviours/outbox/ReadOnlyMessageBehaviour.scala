@@ -65,10 +65,10 @@ object ReadOnlyMessageBehaviour {
   private def commandHandler(buffer: StashBuffer[Cmd])
                             (eventTransformer: EventTransformer): (State, Cmd) => ReplyEffect[Any, State] = {
     case (st: States.Initializing, SetPayload(payload)) =>
-      val newBehaviour: Behavior[Cmd] = postPayloadRetrieval(Initialized(st.msg.copy(payload = payload)))
+      val newBehaviour: Behavior[Cmd] = readOnlyBehaviour(Initialized(st.msg.copy(payload = payload)))
       buffer.unstashAll(newBehaviour)
       Effect.noReply
-    case (_: States.Initializing, cmd: Cmd)                   =>
+    case (_: States.Initializing, cmd: Cmd) =>
       buffer.stash(cmd)
       Effect.noReply
   }
@@ -77,6 +77,9 @@ object ReadOnlyMessageBehaviour {
     case (States.Uninitialized, Events.MsgAdded(typ, legacyMsgData, policy, Some(storageInfo))) =>
       States.Initializing(Msg(typ, legacyMsgData.map(LegacyData(_)),
         ConfigUtil.getPolicyFromConfigStr(policy), storageInfo))
+    case (st: States.Initializing, event) =>
+      //for this read only behaviour we are not interested in any other event
+      st
   }
 
   private def signalHandler(context: ActorContext[Cmd],
@@ -92,7 +95,7 @@ object ReadOnlyMessageBehaviour {
       }
   }
 
-  private def postPayloadRetrieval(st: Initialized): Behavior[Cmd] = {
+  private def readOnlyBehaviour(st: Initialized): Behavior[Cmd] = {
     Behaviors.receiveMessagePartial {
       case Commands.Get(replyTo) =>
         replyTo ! StatusReply.success(st.msg)

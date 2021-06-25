@@ -59,7 +59,7 @@ class AlpakkaS3APISpec
       }
 
       "should succeed downloading" in {
-        alpAkkaS3API get(DEV_S3_BUCKET, ID1) map { _ shouldBe OBJ1 }
+        alpAkkaS3API get(DEV_S3_BUCKET, ID1) map { data => checkArrayEquality(Option(OBJ1), data) }
       }
 
 
@@ -71,9 +71,8 @@ class AlpakkaS3APISpec
         alpAkkaS3API delete(DEV_S3_BUCKET, ID1) map { _ shouldBe Done }
       }
 
-      "should fail to get the deleted object" in {
-        val get = alpAkkaS3API get(DEV_S3_BUCKET, ID1)
-        ScalaFutures.whenReady(get.failed) { _ shouldBe a [alpAkkaS3API.S3Failure]}
+      "should return None for deleted object" in {
+        alpAkkaS3API get(DEV_S3_BUCKET, ID1) map { _ shouldBe None }
       }
 
       "should fail getting object meta" in {
@@ -89,7 +88,7 @@ class AlpakkaS3APISpec
       }
 
       "should succeed downloading" in {
-        alpAkkaS3API get(DEV_S3_BUCKET, ID2) map { _ shouldBe OBJ2 }
+        alpAkkaS3API get(DEV_S3_BUCKET, ID2) map { data => checkArrayEquality(Option(OBJ2), data) }
       }
     }
 
@@ -106,7 +105,7 @@ class AlpakkaS3APISpec
       }
 
       "should do succeed in downloading" in {
-        alpAkkaS3API get(newBucketName, newId) map { _ shouldBe newId.getBytes() }
+        alpAkkaS3API get(newBucketName, newId) map { data => checkArrayEquality(Option(newId.getBytes), data)}
       }
     }
   }

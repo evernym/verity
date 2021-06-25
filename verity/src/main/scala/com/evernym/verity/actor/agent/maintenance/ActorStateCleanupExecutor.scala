@@ -88,8 +88,8 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   def handleActorNotResponding(did: DID): Unit = {
-    applyEvent(ActorStateStored(did, -1))
-    applyEvent(ActorStateCleaned(did, -1, -1))
+    writeAndApply(ActorStateStored(did, -1))
+    writeAndApply(ActorStateCleaned(did, -1, -1))
     val batchItemStatus = batchStatus.candidates.getOrElse(did, BatchItemStatus.empty)
     batchStatus = batchStatus.withItemStatusUpdated(did, batchItemStatus.copy(stateCleaningCompleted = true))
   }

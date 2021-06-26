@@ -63,7 +63,7 @@ val akkaVer         = "2.6.14"
 val akkaHttpVer     = "10.2.4"
 val akkaMgtVer      = "1.1.0"
 val alpAkkaVer      = "3.0.1"
-val kamonVer        = "2.2.0"
+val kamonVer        = "2.2.1"
 val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.

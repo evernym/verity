@@ -204,7 +204,7 @@ lazy val settings = Seq(
   ivyConfigurations += CompileOnly.hide,
   // appending everything from 'compileonly' to unmanagedClasspath
   Compile / unmanagedClasspath ++= update.value.select(configurationFilter(COMPILE_TIME_ONLY)),
-  ThisBuild / scapegoatVersion := "1.3.9",
+  ThisBuild / scapegoatVersion := "1.3.11",
 ) ++ Defaults.itSettings
 
 lazy val testSettings = Seq (

@@ -2,17 +2,17 @@ package com.evernym.verity.actor.agent.outbox_behaviours.outbox
 
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
-import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 import akka.pattern.StatusReply
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
-import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.{LegacyData, RespMsg}
 import com.evernym.verity.actor.agent.outbox_behaviours.message.{EventObjectMapper, Events, MessageBehaviour}
 import com.evernym.verity.actor.agent.outbox_behaviours.outbox.ReadOnlyMessageBehaviour.Commands.SetPayload
 import com.evernym.verity.actor.agent.outbox_behaviours.outbox.ReadOnlyMessageBehaviour.States.Initialized
-import com.evernym.verity.actor.typed.base.{EventSourcedBehaviorBuilder, EventTransformer}
+import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
@@ -44,33 +44,30 @@ object ReadOnlyMessageBehaviour {
     case class Initialized(msg: Msg) extends State
   }
 
-  def apply(entityContext: EntityContext[Cmd],
+  def apply(msgId: MsgId,
             bucketName: String,
             storageAPI: StorageAPI): Behavior[Cmd] = {
     Behaviors.withStash(100) { buffer =>
       Behaviors.setup { context =>
-        EventSourcedBehaviorBuilder
-          .default(
-            PersistenceId(MessageBehaviour.TypeKey.name, entityContext.entityId),
+        EventSourcedBehavior(
+            PersistenceId(MessageBehaviour.TypeKey.name, msgId),
             States.Uninitialized,
             commandHandler(buffer),
             eventHandler)
-          .withEventCodeMapper(EventObjectMapper)
-          .withSignalHandler(signalHandler(context, entityContext.entityId, bucketName, storageAPI))
-          .build()
+          .eventAdapter(new EventPersistenceAdapter(msgId, EventObjectMapper))
+          .receiveSignal(signalHandler(context, msgId, bucketName, storageAPI))
       }
     }
   }
 
-  private def commandHandler(buffer: StashBuffer[Cmd])
-                            (eventTransformer: EventTransformer): (State, Cmd) => ReplyEffect[Any, State] = {
+  private def commandHandler(buffer: StashBuffer[Cmd]): (State, Cmd) => Effect[Any, State] = {
     case (st: States.Initializing, SetPayload(payload)) =>
       val newBehaviour: Behavior[Cmd] = readOnlyBehaviour(Initialized(st.msg.copy(payload = payload)))
-      buffer.unstashAll(newBehaviour)
-      Effect.noReply
+      Effect.unstashAll()
+      Effect.none
     case (_: States.Initializing, cmd: Cmd) =>
-      buffer.stash(cmd)
-      Effect.noReply
+      Effect.stash()
+      Effect.none
   }
 
   private val eventHandler: (State, Any) => State = {
@@ -78,7 +75,7 @@ object ReadOnlyMessageBehaviour {
       States.Initializing(Msg(typ, legacyMsgData.map(LegacyData(_)),
         ConfigUtil.getPolicyFromConfigStr(policy), storageInfo))
     case (st: States.Initializing, event) =>
-      //for this read only behaviour we are not interested in any other event
+      //for this read only behaviour we are not interested in any other event (as of writing this)
       st
   }
 

@@ -37,7 +37,6 @@ class MessageBehaviourSpec
         }
       }
 
-      //what would 'Add' command will contain (message detail, data retention policy)?
       "when sent Add command" - {
         "should be successful" in {
           val probe = createTestProbe[StatusReply[AddMsgRespBase]]()
@@ -78,10 +77,8 @@ class MessageBehaviourSpec
         }
       }
 
-      //this confirms that behaviour has all persistent state in place
-      // and is able to fetch payload from external storage
       "when sent Get command again" - {
-        "should respond with Message (with payload)" in {
+        "should respond with Message" in {
           val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
           val msg = probe.expectMessageType[StatusReply[Msg]].getValue
@@ -92,7 +89,7 @@ class MessageBehaviourSpec
       }
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
-        "should respond with NoDeliveryStatusFound" in {
+        "should respond with empty delivery status" in {
           val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
           val deliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
@@ -104,55 +101,53 @@ class MessageBehaviourSpec
         "should respond with DeliveryAttemptRecorded" in {
           val probe = createTestProbe[StatusReply[DeliveryAttemptRecorded.type]]()
           messageRegion ! ShardingEnvelope(msgId,
-            Commands.RecordDeliveryAttempt("outbox-id1", "com-method-id1", "MDS-101", Option("detail"), probe.ref))
+            Commands.RecordDeliveryAttempt("outbox-id1", "com-method-id1", "MDS-101", Option("activity-1"), probe.ref))
+          probe.expectMessage(StatusReply.success(DeliveryAttemptRecorded))
+        }
+      }
+
+      "when sent GetDeliveryStatus command" - {
+        "should respond with undelivered status" in {
+          val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
+          val deliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+          val outboxDeliveryStatus = deliveryStatus.statuses.find(_.outboxId == "outbox-id1")
+          outboxDeliveryStatus.isDefined shouldBe true
+          outboxDeliveryStatus.get.comMethodId shouldBe "com-method-id1"
+          outboxDeliveryStatus.get.status shouldBe "MDS-101"
+          val activities = outboxDeliveryStatus.get.activities
+          activities.size shouldBe 1
+          activities.head.detail shouldBe Option("activity-1")
+        }
+      }
+
+      "when sent RecordDeliveryAttempt(outbox-id-1, destination-id, delivered, detail) command" - {
+        "should respond with Acknowledgement" in {
+          val probe = createTestProbe[StatusReply[DeliveryAttemptRecorded.type]]()
+          messageRegion ! ShardingEnvelope(msgId,
+            Commands.RecordDeliveryAttempt("outbox-id1", "com-method-id1", "MDS-102", None, probe.ref))
           probe.expectMessage(StatusReply.success(DeliveryAttemptRecorded))
         }
       }
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
-        "should respond with undelivered status" in {
-          /*
-            DeliveryStatus(
-              status = undelivered,
-              activities = Map(
-                'com-method-id-1' ->
-                    List(
-                      Activity(timestamp, 'success_count=0,failed_count=1,message=error-message')
-                    )
-              )
-           )
-           */
-          pending
-        }
-      }
-
-      //with status=delivered and detail=Detail(com-method-id-1, 'success_count=1,failed_count=1')
-      "when sent AddDeliveryStatus(outbox-id-1, delivered, detail) command" - {
-        "should respond with Acknowledgement" in {
-          pending
-        }
-      }
-
-      "when sent GetDeliveryStatus(outbox-id) command" - {
         "should respond with delivered status" in {
-          /*
-            DeliveryStatus(
-              status = delivered,
-              activities = Map(
-                'com-method-id-1' ->
-                    List(
-                      Activity(timestamp, 'success_count=0,failed_count=1,message=error-message'),
-                      Activity(timestamp, 'success_count=1,failed_count=1')
-                    )
-              )
-           )
-           */
-          pending
+          val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
+          val deliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+          val outboxDeliveryStatus = deliveryStatus.statuses.find(_.outboxId == "outbox-id1")
+          outboxDeliveryStatus.isDefined shouldBe true
+          outboxDeliveryStatus.get.comMethodId shouldBe "com-method-id1"
+          outboxDeliveryStatus.get.status shouldBe "MDS-102"
+          val activities = outboxDeliveryStatus.get.activities
+          activities.size shouldBe 2
+          activities.head.detail shouldBe Option("activity-1")
+          activities.last.detail shouldBe None
         }
       }
 
-      "when send Get command (post payload deletion from external storage)" - {
-        "should still respond with Message but without payload" in {
+      "when send Get command" - {
+        "should still respond with Message" in {
           val probe = createTestProbe[StatusReply[RespMsg]]()
           messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
           val msg = probe.expectMessageType[StatusReply[Msg]].getValue
@@ -179,12 +174,12 @@ class MessageBehaviourSpec
     PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true)
   )
 
-
   lazy val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
   lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig)(system.classicSystem).asInstanceOf[MockBlobStore]
   lazy val sharding: ClusterSharding = ClusterSharding(system)
-  lazy val messageRegion: ActorRef[ShardingEnvelope[MessageBehaviour.Cmd]] = sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
-    MessageBehaviour(entityContext)
-  })
+  lazy val messageRegion: ActorRef[ShardingEnvelope[MessageBehaviour.Cmd]] =
+    sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
+      MessageBehaviour(entityContext)
+    })
 
 }

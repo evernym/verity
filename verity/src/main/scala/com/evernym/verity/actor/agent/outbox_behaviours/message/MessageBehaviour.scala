@@ -5,11 +5,10 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
-
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.agent.outbox_behaviours.message.Events.{DeliveryAttemptActivity, LegacyMsgData}
-import com.evernym.verity.actor.typed.base.{EventSourcedBehaviorBuilder, EventTransformer}
+import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
 import com.evernym.verity.actor.{ActorMessage, StorageInfo}
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.engine.{DID, MsgId}
@@ -79,23 +78,22 @@ object MessageBehaviour {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Message")
 
   def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
-    EventSourcedBehaviorBuilder
-      .default(
+    EventSourcedBehavior
+      .withEnforcedReplies(
         PersistenceId(TypeKey.name, entityContext.entityId),
         States.Uninitialized,
         commandHandler,
         eventHandler)
-      .withEventCodeMapper(EventObjectMapper)
-      .build()
+      .eventAdapter(new EventPersistenceAdapter(entityContext.entityId, EventObjectMapper))
   }
 
-  private def commandHandler(eventTransformer: EventTransformer): (State, Cmd) => ReplyEffect[Any, State] = {
+  private def commandHandler: (State, Cmd) => ReplyEffect[Any, State] = {
 
     case (States.Uninitialized, Commands.Get(replyTo)) =>
       Effect.reply(replyTo)(StatusReply.success(MsgNotYetAdded))
 
     case (States.Uninitialized, c: Commands.Add) =>
-      eventTransformer
+      Effect
         .persist(Events.MsgAdded(c.`type`, c.legacyMsgData, c.retentionPolicy.configString, Option(c.payloadStorageInfo)))
         .thenReply(c.replyTo)(_ => StatusReply.success(MsgAdded))
 
@@ -108,12 +106,12 @@ object MessageBehaviour {
     case (st: States.Initialized, Commands.GetDeliveryStatus(replyTo)) =>
       Effect.reply(replyTo)(StatusReply.success(st.deliveryStatus))
 
-    case (st: States.Initialized, ads: Commands.RecordDeliveryAttempt) =>
+    case (_: States.Initialized, ads: Commands.RecordDeliveryAttempt) =>
       val deliveryActivity = DeliveryAttemptActivity(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime, ads.activity)
       val deliveryAttemptAdded = Events.DeliveryAttemptRecorded(ads.outboxId, ads.comMethodId, ads.status, Option(deliveryActivity))
-      eventTransformer
+      Effect
         .persist(deliveryAttemptAdded)
-      Effect.reply(ads.replyTo)(StatusReply.success(DeliveryAttemptRecorded))
+        .thenReply(ads.replyTo)(_ => StatusReply.success(DeliveryAttemptRecorded))
 
     case (_: State, Commands.Stop) =>
       Behaviors.stopped

@@ -1,34 +1,27 @@
 package com.evernym.verity.actor.typed.base
 
-import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, EffectBuilder}
+import akka.persistence.typed.{EventAdapter, EventSeq}
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORMATION_ID_V1, createPersistenceTransformerV1}
 import com.evernym.verity.transformations.transformers.{<=>, IdentityTransformer}
+import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORMATION_ID_V1, createPersistenceTransformerV1}
 
 
-case class EventTransformer(persId: PersistenceId,
-                            encryptionKey: String,
-                            objectCodeMapper: ObjectCodeMapperBase) {
+class EventPersistenceAdapter[E](encryptionKey: String,
+                                 objectCodeMapper: ObjectCodeMapperBase) extends EventAdapter[E,PersistentMsg] {
 
-  //takes the given event, applies persistence transformations (serialization, encryption etc)
-  // before it goes to akka persistence layer
-  def persist[E,S](event: E): EffectBuilder[PersistentMsg, S] = {
-    Effect.persist(eventTransformer.execute(event))
+  override def toJournal(event: E): PersistentMsg = {
+    eventTransformer.execute(event)
   }
 
-  //during recovery, checks if the recovered event is 'PersistentMsg'
-  // and then un-transforms it (decryption, deserialization etc)
-  // and then pass it on to the actual 'eventHandler'
-  def transformedEventHandler[E, S](eventHandler: (S, E) => S): (S, E) => S = {
-    case (state, pm: PersistentMsg) =>
-      val untransformedEvent =
-        lookupTransformer(pm.transformationId)
-          .undo(pm)
-          .asInstanceOf[E]
-      eventHandler(state, untransformedEvent)
-  }
+  override def manifest(event: E): String = ""
+
+  override def fromJournal(pm: PersistentMsg, manifest: String): EventSeq[E] =
+    EventSeq(scala.collection.immutable.Seq(
+      lookupTransformer(pm.transformationId)
+      .undo(pm)
+      .asInstanceOf[E]
+    ))
 
   private lazy val eventTransformer: Any <=> PersistentMsg = persistenceTransformerV1
 
@@ -66,5 +59,4 @@ case class EventTransformer(persId: PersistenceId,
   private val persistentObjectMapper: ObjectCodeMapperBase = objectCodeMapper
 
   private val schemaEvolTransformation: IdentityTransformer[Any] = new IdentityTransformer
-
 }

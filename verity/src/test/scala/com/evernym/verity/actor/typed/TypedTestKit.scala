@@ -16,14 +16,7 @@ abstract class EventSourcedBehaviourSpec
 
 object TypedTestKit {
 
-  val config: Config = ConfigFactory.parseString(
-    """
-    akka.actor {
-      serialization-bindings {
-        "com.evernym.verity.actor.typed.Encodable" = jackson-cbor
-      }
-    }
-    """)
+  val config: Config = ConfigFactory.empty
     .withFallback(EventSourcedBehaviorTestKit.config)
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
 

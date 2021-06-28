@@ -8,11 +8,11 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.typed.base.{EventSourcedBehaviorBuilder, EventTransformer}
+import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.scalalogging.Logger
@@ -139,34 +139,33 @@ object Account {
 
   def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
     val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
-    EventSourcedBehaviorBuilder
-      .default(persistenceId, States.Empty, commandHandler, eventHandler)
-      .withEventCodeMapper(TestObjectCodeMapper)
-      .withSignalHandler(signalHandler(persistenceId))
-      .build()
+    EventSourcedBehavior
+      .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
+      .eventAdapter(new EventPersistenceAdapter(entityContext.entityId, TestObjectCodeMapper))
+      .receiveSignal(signalHandler(persistenceId))
   }
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  private def commandHandler(eventTransformer: EventTransformer): (State, Cmd) => ReplyEffect[Any, State] = {
+  private def commandHandler: (State, Cmd) => ReplyEffect[Any, State] = {
 
     case (States.Empty, Commands.Open(name, balance, replyTo)) =>
-      eventTransformer
+      Effect
         .persist(Events.Opened(name, balance))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Credit(amount, replyTo)) =>
-      eventTransformer
+      Effect
         .persist(Events.Credited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Debit(amount, replyTo)) =>
-      eventTransformer
+      Effect
         .persist(Events.Debited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Close(replyTo)) =>
-      eventTransformer
+      Effect
         .persist(Events.Closed())
         .thenReply(replyTo)(_ => StatusReply.Ack)
 

@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.agent.outbox_behaviours.poc
+package com.evernym.verity.actor.msgoutbox.poc
 
 import akka.Done
 import akka.actor.typed.{ActorRef, Behavior}

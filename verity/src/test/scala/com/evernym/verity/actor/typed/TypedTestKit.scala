@@ -6,7 +6,7 @@ import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.typesafe.config.{Config, ConfigFactory}
 
 
-abstract class EventSourcedBehaviourSpec
+abstract class BehaviourSpecBase
   extends ScalaTestWithActorTestKit(
     ActorTestKit(
       "TestSystem",

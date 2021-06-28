@@ -1,17 +1,17 @@
-package com.evernym.verity.actor.agent.outbox_behaviours.latest
+package com.evernym.verity.actor.msgoutbox.latest
 
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
 import com.evernym.verity.actor.StorageInfo
-import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour
-import com.evernym.verity.actor.agent.outbox_behaviours.message.MessageBehaviour.{AddMsgRespBase, Commands, MsgAdded}
-import com.evernym.verity.actor.agent.outbox_behaviours.outbox.ReadOnlyMessageBehaviour
-import com.evernym.verity.actor.agent.outbox_behaviours.outbox.ReadOnlyMessageBehaviour.Commands.Get
-import com.evernym.verity.actor.agent.outbox_behaviours.outbox.ReadOnlyMessageBehaviour.{GetMsgRespBase, Msg}
+import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour
+import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour.{AddMsgRespBase, Commands, MsgAdded}
+import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour
+import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.Commands.Get
+import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.{GetMsgRespBase, Msg}
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
+import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 
 
 class ReadOnlyMessageBehaviourSpec
-  extends EventSourcedBehaviourSpec
+  extends BehaviourSpecBase
     with BasicSpec {
 
   "OutgoingRouter" - {
@@ -44,7 +44,7 @@ class ReadOnlyMessageBehaviourSpec
       "should be able to store the message" in {
         val probe = createTestProbe[StatusReply[AddMsgRespBase]]()
         messageRegion ! ShardingEnvelope(msgId,
-          Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), probe.ref))
+          Commands.Add("credOffer", None, retentionPolicy, StorageInfo(msgId, "s3"), Set("outbox-id-1"), probe.ref))
         probe.expectMessage(StatusReply.success(MsgAdded))
       }
     }
@@ -53,7 +53,7 @@ class ReadOnlyMessageBehaviourSpec
   "ReadOnlyMessage behaviour" - {
 
     "when sent Get command for first time" - {
-      "should be successful" ignore {
+      "should be successful" in {
         val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
         readOnlyActor ! Get(probe.ref)
         val msg = probe.expectMessageType[StatusReply[Msg]].getValue
@@ -61,12 +61,14 @@ class ReadOnlyMessageBehaviourSpec
       }
     }
 
-    "when sent Get command again" - {
-      "should be successful" ignore {
-        val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
-        readOnlyActor ! Get(probe.ref)
-        val msg = probe.expectMessageType[StatusReply[Msg]].getValue
-        msg.payload.map(p => new String(p)) shouldBe Option("cred-offer-msg")
+    "when sent Get command few more times" - {
+      "should be successful" in {
+        (1 to 5).foreach { _ =>
+          val probe = createTestProbe[StatusReply[GetMsgRespBase]]()
+          readOnlyActor ! Get(probe.ref)
+          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
+          msg.payload.map(p => new String(p)) shouldBe Option("cred-offer-msg")
+        }
       }
     }
   }
@@ -93,11 +95,11 @@ class ReadOnlyMessageBehaviourSpec
   lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig)(system.classicSystem).asInstanceOf[MockBlobStore]
   lazy val sharding: ClusterSharding = ClusterSharding(system)
 
-  lazy val readOnlyActor = spawn(ReadOnlyMessageBehaviour(msgId, BUCKET_NAME, storageAPI))
+  lazy val readOnlyActor: ActorRef[ReadOnlyMessageBehaviour.Cmd] = spawn(ReadOnlyMessageBehaviour(msgId, BUCKET_NAME, storageAPI))
 
   lazy val messageRegion: ActorRef[ShardingEnvelope[MessageBehaviour.Cmd]] =
     sharding.init(Entity(MessageBehaviour.TypeKey) { entityContext =>
-      MessageBehaviour(entityContext)
+      MessageBehaviour(entityContext, BUCKET_NAME, storageAPI)
     })
 
 }

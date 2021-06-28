@@ -10,7 +10,7 @@ import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.actor.typed.spec.Events._
-import com.evernym.verity.actor.typed.EventSourcedBehaviourSpec
+import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -22,7 +22,7 @@ import java.util.UUID
 
 
 class PersistentBehaviourSpec
-  extends EventSourcedBehaviourSpec
+  extends BehaviourSpecBase
     with BasicSpec {
 
   import Account._

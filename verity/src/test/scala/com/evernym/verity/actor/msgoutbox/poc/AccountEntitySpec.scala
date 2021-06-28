@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.agent.outbox_behaviours.poc
+package com.evernym.verity.actor.msgoutbox.poc
 
 import akka.Done
 import akka.actor.testkit.typed.scaladsl.{LogCapturing, ScalaTestWithActorTestKit}
@@ -7,7 +7,7 @@ import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import akka.persistence.typed.PersistenceId
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
-import com.evernym.verity.actor.agent.outbox_behaviours.poc
+import com.evernym.verity.actor.msgoutbox.poc
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigFactory
 import org.scalatest.BeforeAndAfterEach

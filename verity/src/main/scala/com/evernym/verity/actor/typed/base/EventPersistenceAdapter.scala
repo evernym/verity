@@ -14,14 +14,14 @@ class EventPersistenceAdapter[E](encryptionKey: String,
     eventTransformer.execute(event)
   }
 
-  override def manifest(event: E): String = ""
-
   override def fromJournal(pm: PersistentMsg, manifest: String): EventSeq[E] =
     EventSeq(scala.collection.immutable.Seq(
       lookupTransformer(pm.transformationId)
       .undo(pm)
       .asInstanceOf[E]
     ))
+
+  override def manifest(event: E): String = ""
 
   private lazy val eventTransformer: Any <=> PersistentMsg = persistenceTransformerV1
 

@@ -8,6 +8,7 @@ object EventObjectMapper extends ObjectCodeMapperBase{
 
   override def objectCodeMapping: Map[Int, GeneratedMessageCompanion[_]] = Map(
     1 -> MsgAdded,
-    2 -> DeliveryAttemptRecorded
+    2 -> DeliveryAttemptRecorded,
+    3 -> PayloadDeleted
   )
 }

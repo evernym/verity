@@ -12,6 +12,7 @@ message MsgAdded {
     LegacyMsgData legacyMsgData = 2;
     string retentionPolicy = 3;
     StorageInfo storageInfo = 4;
+    repeated string outboxIds = 5;
 }
 
 message LegacyMsgData {
@@ -19,15 +20,19 @@ message LegacyMsgData {
     google.protobuf.StringValue refMsgId = 2;
 }
 
-message DeliveryAttemptRecorded {
-    string outboxId = 2;
-    string comMethodId = 3;
-    string status = 4;
-    DeliveryAttemptActivity activity = 5;
+message ComMethodActivity {
+    uint64 creationTimeInMillis = 1;
+    string comMethodId = 2;
+    string detail = 3;
+
 }
 
-message DeliveryAttemptActivity {
-    uint64 creationTimeInMillis = 1;
-    google.protobuf.StringValue detail = 2;
+message DeliveryAttemptRecorded {
+    string outboxId = 1;
+    string status = 2;
+    ComMethodActivity comMethodActivity = 3;
+}
+
+message PayloadDeleted {
 
 }

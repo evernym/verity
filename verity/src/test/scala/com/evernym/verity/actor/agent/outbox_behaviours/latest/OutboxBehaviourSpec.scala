@@ -11,7 +11,7 @@ class OutboxBehaviourSpec
 
     "when started for the first time" - {
       "should fetch required information from relationship actor" in {
-        //relationshipId and destinationId will be used by Outbox
+        //relationshipId will be used by Outbox
         // to reach back to the specific relationship actor to
         // fetch required information (destination specific com methods and wallet id etc)
         // and keep it in memory only
@@ -83,6 +83,12 @@ class OutboxBehaviourSpec
       //NOTE: this is against Message actor (and not the Outbox actor)
       "when checking the Message actors" - {
         "there should be delivery status found for this outbox" in {
+          pending
+        }
+      }
+
+      "when checking external storage (s3 etc) for payload" - {
+        "should be already deleted" - {
           pending
         }
       }

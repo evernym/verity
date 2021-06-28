@@ -4,9 +4,9 @@ import akka.actor.{Actor, ActorSystem}
 import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
-import com.evernym.verity.util.Util.logger
 import org.hyperledger.indy.sdk.metrics.Metrics
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
@@ -15,6 +15,8 @@ import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
 class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Actor {
+
+  private val logger = getLoggerByClass(getClass)
 
   final override def receive: Receive = {
     case CollectLibindyMetrics() => this.collectLibindyMetrics()

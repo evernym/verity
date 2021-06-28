@@ -39,7 +39,9 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
         LegacyRouteSet(sr.forDID, sr.actorAddressDetail.actorTypeId, sr.actorAddressDetail.address))
     case gr: LegacyGetRoute             => handleGetRoute(gr)
 
-    case GetRegisteredRouteSummary      => sender ! RegisteredRouteSummary(entityId, getAllRouteDIDs().size)
+    case GetRegisteredRouteSummary      =>
+      sender ! RegisteredRouteSummary(entityId, orderedRoutes.routes.size)
+
     case grd: GetRouteBatch             => handleGetRouteBatch(grd)
 
     case mp: MigratePending             => migratePending(mp)
@@ -57,7 +59,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
       val aad = ActorAddressDetail(rs.actorTypeId, rs.address)
       routes = routes.updated(rs.forDID, aad)
       pendingRouteMigration = pendingRouteMigration.updated(rs.forDID, aad)
-      routesByInsertionOrder = routesByInsertionOrder :+ (rs.forDID, aad.actorTypeId)
+      orderedRoutes.add(routes.size-1, rs)
 
     case m: RoutesMigrated =>
       m.routes.foreach { r =>
@@ -66,21 +68,9 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
       pendingRouteMigration = pendingRouteMigration -- m.routes
   }
 
-  var routesByInsertionOrder: List[(DID, Int)] = List.empty
-
-  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
-                      actorTypeIds: List[Int] = List.empty): List[String] = {
-    routesByInsertionOrder
-      .take(totalCandidates)
-      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
-      .map(_._1)
-  }
-
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
-    val candidates =
-      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
-      .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+    val candidates = orderedRoutes.getRouteBatch(grd)
     val resp = GetRouteBatchResult(entityId, candidates.toSet)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
@@ -91,7 +81,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
     val ri = routes.get(gr.forDID)
     logger.debug("get route result: " + ri)
     sndr ! ri
-    ri.foreach{ aad =>
+    ri.foreach { aad =>
       routeRegion ! ForIdentifier(gr.forDID, StoreRoute(aad))
     }
   }
@@ -152,6 +142,8 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   }
 
   var routes: Map[RouteId, ActorAddressDetail] = Map.empty
+  var orderedRoutes = new OrderedRoutes()
+
   var pendingRouteMigration: Map[RouteId, ActorAddressDetail] = Map.empty
   var migrationStatus: Map[RouteId, RouteMigrationStatus] = Map.empty
 
@@ -162,6 +154,22 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
 
 }
 
+class OrderedRoutes {
+  private var routesByInsertionOrder: Map[Int, DID] = Map.empty
+
+  def routes: List[DID] = routesByInsertionOrder.toSeq.sortBy(_._1).map(_._2).toList
+
+  def add(index: Int, lrs: LegacyRouteSet): Unit = {
+    routesByInsertionOrder += index -> lrs.forDID
+  }
+
+  def getRouteBatch(grd: GetRouteBatch): List[DID] = {
+    (grd.fromIndex until grd.fromIndex + grd.batchSize).flatMap { index =>
+      routesByInsertionOrder.get(index)
+    }.toList
+  }
+}
+
 object LegacyAgentRouteStore {
   def props(implicit appConfig: AppConfig): Props = Props(new LegacyAgentRouteStore)
 }
@@ -170,10 +178,8 @@ object LegacyAgentRouteStore {
 case class LegacySetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessage
 case class LegacyGetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
   extends ActorMessage
-case class GetRouteBatch(totalCandidates: Int,
-                         fromIndex: Int,
-                         batchSize: Int,
-                         actorTypeIds: List[Int] = List.empty) extends ActorMessage
+case class GetRouteBatch(fromIndex: Int,
+                         batchSize: Int) extends ActorMessage
 case object GetRegisteredRouteSummary extends ActorMessage
 
 //response msgs

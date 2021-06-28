@@ -145,7 +145,7 @@ class MsgProgressTracker(val appConfig: AppConfig)
 
   def handleConfigureTracking(ct: ConfigureTracking): Unit = {
     if (ct.stopNow) {
-      MsgProgressTrackerCache.stopProgressTracking(entityId)
+      MsgProgressTrackerCache(context.system).stopProgressTracking(entityId)
       sender ! TrackingConfigured("tracking stopped")
       stopTracking()
     } else {

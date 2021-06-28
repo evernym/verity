@@ -10,15 +10,15 @@ trait DefaultPersistenceEncryption {
 
   implicit def appConfig: AppConfig
 
-  def getEventEncryptionKeyWithoutWallet: String = {
-    DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(entityId, appConfig)
+  def getEventEncryptionKey: String = {
+    DefaultPersistenceEncryption.getEventEncryptionKey(entityId, appConfig)
   }
 
-  lazy val persistenceEncryptionKey: String = getEventEncryptionKeyWithoutWallet
+  lazy val persistenceEncryptionKey: String = getEventEncryptionKey
 }
 
 object DefaultPersistenceEncryption {
-  def getEventEncryptionKeyWithoutWallet(entityId: String, appConfig: AppConfig): String = {
+  def getEventEncryptionKey(entityId: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
     val secret = Util.saltedHashedName(entityId + "actor-wallet", appConfig)
     getEventEncKey(secret, appConfig)

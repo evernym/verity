@@ -8,6 +8,7 @@ import com.evernym.verity.actor.appStateManager.ErrorEvent
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.CommonConfig.ITEM_CONTAINER_MAPPER_CLASS
 
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
@@ -68,6 +69,20 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
     if (sender != self) {
       sender ! responseToBeSent
     }
+  }
+
+  protected def buildItemContainerEntityId(itemManagerEntityId: ItemManagerEntityId,
+                                           itemId: ItemId): ItemContainerEntityId = {
+    itemManagerEntityId + "-" + itemContainerMapper.getItemContainerId(itemId)
+  }
+
+  lazy val itemContainerMapper: ItemContainerMapper = {
+    val clazz = appConfig.getConfigStringReq(ITEM_CONTAINER_MAPPER_CLASS)
+    Class
+      .forName(clazz)
+      .getConstructor()
+      .newInstance()
+      .asInstanceOf[ItemContainerMapper]
   }
 }
 

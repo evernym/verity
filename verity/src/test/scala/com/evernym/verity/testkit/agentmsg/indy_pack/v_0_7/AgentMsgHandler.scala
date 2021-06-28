@@ -4,8 +4,8 @@ import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_7, CreateAgentProblemReport_MFV_0_7}
-import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 /**
@@ -14,6 +14,8 @@ import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 trait AgentMsgHandler{ this: AgentMsgHelper with MockAgent with HasCloudAgent =>
 
   object v_0_7_resp {
+
+    private val logger = getLoggerByClass(getClass)
 
     def handleCreateAgentProblemReport(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty)
     : CreateAgentProblemReport_MFV_0_7 = {

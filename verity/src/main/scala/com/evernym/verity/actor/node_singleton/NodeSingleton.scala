@@ -12,14 +12,16 @@ import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.util.Util._
 import com.typesafe.config.ConfigFactory
 
 
 class NodeSingleton(val appConfig: AppConfig)
   extends CoreActorExtended
     with HasActorResponseTimeout {
+
+  private val logger = getLoggerByClass(getClass)
 
   def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
     singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
@@ -63,27 +65,27 @@ class NodeSingleton(val appConfig: AppConfig)
       logger.debug(s"metrics data fetched !!")
 
     case uws: UpdateWarningStatus =>
-      ResourceWarningStatusMngrCache.processEvent(uws)
+      ResourceWarningStatusMngrCache(context.system).processEvent(uws)
       sender ! Done
 
     case cuws: UsageWarningStatusChunk =>
-      ResourceWarningStatusMngrCache.initWarningList(cuws)
+      ResourceWarningStatusMngrCache(context.system).initWarningList(cuws)
       sender ! Done
 
     case ubs: UpdateBlockingStatus =>
-      ResourceBlockingStatusMngrCache.processEvent(ubs)
+      ResourceBlockingStatusMngrCache(context.system).processEvent(ubs)
       sender ! Done
 
     case cubs: UsageBlockingStatusChunk =>
-      ResourceBlockingStatusMngrCache.initBlockingList(cubs)
+      ResourceBlockingStatusMngrCache(context.system).initBlockingList(cubs)
       sender ! Done
 
     case spt: StartProgressTracking =>
-      MsgProgressTrackerCache.startProgressTracking(spt.trackingId)
+      MsgProgressTrackerCache(context.system).startProgressTracking(spt.trackingId)
       sender ! Done
 
     case spt: StopProgressTracking =>
-      MsgProgressTrackerCache.stopProgressTracking(spt.trackingId)
+      MsgProgressTrackerCache(context.system).stopProgressTracking(spt.trackingId)
       sender ! Done
 
     case DrainNode =>

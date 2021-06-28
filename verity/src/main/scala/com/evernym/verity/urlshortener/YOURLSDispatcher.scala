@@ -12,8 +12,9 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_TIMEOUT_SECONDS, YOURLS_API_URL, YOURLS_API_USERNAME}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_YOURLS
 import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.OptionUtil
-import com.evernym.verity.util.Util.{buildHandledError, logger}
+import com.evernym.verity.util.Util.buildHandledError
 import org.json.JSONObject
 
 import scala.concurrent.duration._
@@ -23,6 +24,9 @@ import scala.concurrent.{Await, Future}
 class YOURLSSvc(val appConfig: AppConfig) extends YOURLSDispatcher
 
 trait YOURLSDispatcher extends URLShortenerAPI with ConfigSvc {
+
+  private val logger = getLoggerByName("YOURLSDispatcher")
+
   val providerId: String = URL_SHORTENER_PROVIDER_ID_YOURLS
 
   lazy val timeout: Duration = appConfig.getConfigIntOption(YOURLS_API_TIMEOUT_SECONDS).getOrElse(10).seconds

@@ -1,9 +1,12 @@
 package com.evernym.verity.itemmanager
 
+import akka.actor.ActorRef
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher
+import com.evernym.verity.actor.base.EntityIdentifier
+import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher.itemManagerEntityIdPrefix
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
+import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.typesafe.config.Config
@@ -17,7 +20,7 @@ class TimeBasedMovingItemManagerSpec
     watcherConfig
   }
 
-  final val itemManagerId = AgentActorWatcher.itemManagerEntityId
+  final val itemManagerId = versionedItemManagerEntityId(itemManagerEntityIdPrefix, appConfig)
 
   "ItemManager" - {
 
@@ -28,6 +31,7 @@ class TimeBasedMovingItemManagerSpec
             migrateItemsToNextLinkedContainer = true))
           expectMsgPF() {
             case ItemManagerConfigAlreadySet =>
+              checkItemManagerEntityId(lastSender)
           }
         }
       }
@@ -38,7 +42,8 @@ class TimeBasedMovingItemManagerSpec
         sendExternalCmdToItemManager(itemManagerEntityId1, UpdateItem(ITEM_ID_1, detailOpt=Option(ORIG_ITEM_DETAIL)))
         expectMsgPF() {
           case ItemCmdResponse(iu: ItemUpdated, senderEntityId) if iu.status == ITEM_STATUS_ACTIVE =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemManagerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_1, senderEntityId)
         }
       }
@@ -50,6 +55,7 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ims: ItemManagerStateDetail if ims.headContainerEntityId.isDefined && ims.tailContainerEntityId.isDefined &&
             ims.headContainerEntityId == ims.tailContainerEntityId =>
+            checkItemManagerEntityId(lastSender)
         }
       }
     }
@@ -59,7 +65,8 @@ class TimeBasedMovingItemManagerSpec
         sendExternalCmdToItemManager(itemManagerEntityId1, UpdateItem(ITEM_ID_2))
         expectMsgPF() {
           case ItemCmdResponse(iu: ItemUpdated, senderEntityId) if iu.status == ITEM_STATUS_ACTIVE =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemManagerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_2, senderEntityId)
         }
       }
@@ -72,6 +79,7 @@ class TimeBasedMovingItemManagerSpec
           expectMsgPF() {
             case bs: ItemManagerStateDetail if bs.headContainerEntityId.isDefined && bs.tailContainerEntityId.isDefined &&
               bs.headContainerEntityId == bs.tailContainerEntityId =>
+              checkItemManagerEntityId(lastSender)
           }
         }
       }
@@ -84,14 +92,16 @@ class TimeBasedMovingItemManagerSpec
         //the item may be in active or migrated state in last known container
         sendExternalCmdToItemContainer(getLastKnownItemContainerEntityId(ITEM_ID_1), GetItem(ITEM_ID_1))
         expectMsgPF() {
-          case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(ORIG_ITEM_DETAIL)), _) =>
+          case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(ORIG_ITEM_DETAIL)), senderEntityId) =>
+            checkItemContainerEntityId(senderEntityId)
         }
 
         //the item in the latest container should be always in active state
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE, _, Some(ORIG_ITEM_DETAIL)), senderEntityId) =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemContainerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_1, senderEntityId)
         }
       }
@@ -106,12 +116,14 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           //if it is migrated
           case ItemCmdResponse(ItemUpdated(ITEM_ID_1, ITEM_STATUS_ACTIVE, UPDATED_ITEM_DETAIL, true, _), senderEntityId) =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemManagerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_1, senderEntityId)
 
           //if it is not migrated (but it may have been directly sent to a new item container)
           case ItemCmdResponse(ItemUpdated(ITEM_ID_1, ITEM_STATUS_ACTIVE, UPDATED_ITEM_DETAIL, false, _), senderEntityId) =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemManagerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_1, senderEntityId)
         }
       }
@@ -125,14 +137,15 @@ class TimeBasedMovingItemManagerSpec
         //the item may be in active or migrated state in last known container
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(UPDATED_ITEM_DETAIL)), senderEntityId) =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemContainerEntityId(senderEntityId)
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
         //the item in latest container should be always in active state
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE, _, Some(UPDATED_ITEM_DETAIL)), senderEntityId) =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemContainerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_1, senderEntityId)
         }
       }
@@ -144,14 +157,16 @@ class TimeBasedMovingItemManagerSpec
         sendExternalCmdToItemContainer(item2LatestContainerId, GetItem(ITEM_ID_2))
         //the item may be in active or migrated state in last known container
         expectMsgPF() {
-          case ItemCmdResponse(ItemDetailResponse(ITEM_ID_2, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, None), _) =>
+          case ItemCmdResponse(ItemDetailResponse(ITEM_ID_2, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, None), senderEntityId) =>
+            checkItemContainerEntityId(senderEntityId)
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_2))
         //the item in latest container should be always in active state
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_2, ITEM_STATUS_ACTIVE, _, None), senderEntityId) =>
-            checkEntityIdPrefix(senderEntityId) shouldBe true
+            checkItemContainerEntityId(lastSender)
+            checkItemContainerEntityId(senderEntityId)
             updateLatestItemContainerEntityId(ITEM_ID_2, senderEntityId)
         }
       }
@@ -161,12 +176,14 @@ class TimeBasedMovingItemManagerSpec
       "should return updated value" in {
         sendExternalCmdToItemContainer(getLastKnownItemContainerEntityId(ITEM_ID_2), GetItem(ITEM_ID_3))
         expectMsgPF() {
-          case ItemCmdResponse(_: ItemNotFound, _)=>
+          case ItemCmdResponse(_: ItemNotFound, senderEntityId)=>
+            checkItemContainerEntityId(senderEntityId)
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_3))
         expectMsgPF() {
           case ItemCmdResponse(_: ItemNotFound, _) =>
+            checkItemContainerEntityId(lastSender)
         }
       }
     }
@@ -183,7 +200,8 @@ class TimeBasedMovingItemManagerSpec
           expectMsgPF() {
             case ItemCmdResponse(ItemDetailResponse(ITEM_ID_2, ITEM_STATUS_ACTIVE, true, None), senderEntityId)
               if item2OriginalContainerEntityId != senderEntityId =>
-              checkEntityIdPrefix(senderEntityId) shouldBe true
+              checkItemContainerEntityId(lastSender)
+              checkItemContainerEntityId(senderEntityId)
               updateLatestItemContainerEntityId(ITEM_ID_2, senderEntityId)
           }
         }
@@ -208,7 +226,8 @@ class TimeBasedMovingItemManagerSpec
           expectMsgPF() {
             case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE, _, Some(UPDATED_ITEM_DETAIL)), senderEntityId)
               if getOriginalItemContainerEntityId(ITEM_ID_1) != senderEntityId =>
-              checkEntityIdPrefix(senderEntityId) shouldBe true
+              checkItemContainerEntityId(lastSender)
+              checkItemContainerEntityId(senderEntityId)
           }
         }
       }
@@ -221,6 +240,7 @@ class TimeBasedMovingItemManagerSpec
           expectMsgPF() {
             case bs: ItemManagerStateDetail if bs.headContainerEntityId.isDefined && bs.tailContainerEntityId.isDefined &&
               bs.headContainerEntityId == bs.tailContainerEntityId =>
+              checkItemManagerEntityId(lastSender)
           }
         }
       }
@@ -232,6 +252,7 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case bs: ItemManagerStateDetail if bs.headContainerEntityId.isDefined && bs.tailContainerEntityId.isDefined &&
             bs.headContainerEntityId == bs.tailContainerEntityId =>
+            checkItemManagerEntityId(lastSender)
         }
       }
     }
@@ -255,7 +276,17 @@ class TimeBasedMovingItemManagerSpec
     }
   }
 
-  private def checkEntityIdPrefix(senderEntityId: EntityId): Boolean = {
-    senderEntityId.startsWith("watcher-v2-")
+  private def checkItemManagerEntityId(senderActorRef: ActorRef): Unit = {
+    val senderEntityId = EntityIdentifier.parsePath(senderActorRef.path).entityId
+    senderEntityId shouldBe "watcher-v2"
+  }
+
+  private def checkItemContainerEntityId(senderActorRef: ActorRef): Unit = {
+    checkItemContainerEntityId(EntityIdentifier.parsePath(senderActorRef.path).entityId)
+  }
+
+  private def checkItemContainerEntityId(senderEntityId: EntityId): Unit = {
+    val (prefix, suffix) = senderEntityId.splitAt(senderEntityId.lastIndexOf("-")+1)
+    (prefix == "watcher-v2-" && suffix.toLong > 1) shouldBe true
   }
 }

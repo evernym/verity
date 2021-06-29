@@ -8,7 +8,7 @@ import com.evernym.verity.actor.StorageInfo
 import com.evernym.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour
 import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour._
-import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour.{Commands, RespMsg}
+import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour.Commands
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
@@ -177,14 +177,32 @@ class MessageBehaviourSpec
         }
       }
 
-      //TODO: make this test running and passing
       "when message is marked as delivered for all outboxes" - {
-        "the external storage payload should be deleted" ignore {
+        "the external storage payload should be deleted" in {
           eventually (timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
             val fut = storageAPI.get(BUCKET_NAME, msgIdLifeCycleAddress)
             val result = Await.result(fut, 1.seconds)
             result.isEmpty shouldBe true
           }
+        }
+      }
+
+      "when sent Stop command again" - {
+        "should be stopped" in {
+          val probe = createTestProbe()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Stop)
+          probe.expectNoMessage()
+        }
+      }
+
+      "when send Get command again" - {
+        "should still respond with Message" in {
+          val probe = createTestProbe[StatusReply[RespMsg]]()
+          messageRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
+          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
+          msg.`type` shouldBe "credOffer"
+          msg.legacyData shouldBe None
+          msg.payload.isEmpty shouldBe true
         }
       }
     }

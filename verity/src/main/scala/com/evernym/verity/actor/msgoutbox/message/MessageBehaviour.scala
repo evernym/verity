@@ -129,10 +129,9 @@ object MessageBehaviour {
       val deliveryAttemptAdded = Events.DeliveryAttemptRecorded(ads.outboxId, ads.status, Option(deliveryActivity))
       Effect
         .persist(deliveryAttemptAdded)
+        //TODO: make below 'thenRun' working
         //.thenRun(newState => deletePayloadIfRequired(context, msgId, bucketName, storageAPI, newState))
         .thenReply(ads.replyTo)(_ => StatusReply.success(DeliveryAttemptRecorded))
-
-      //TODO: call 'deletePayloadIfRequired'
 
     case (_: States.Initialized, Commands.PayloadDeleted) =>
       Effect.persist(Events.PayloadDeleted()).thenNoReply()

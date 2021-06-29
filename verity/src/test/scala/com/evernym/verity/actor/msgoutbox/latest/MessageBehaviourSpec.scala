@@ -138,7 +138,17 @@ class MessageBehaviourSpec
         }
       }
 
-      "when sent RecordDeliveryAttempt (successful atempt) command" - {
+      "when message is not marked as delivered for all outboxes" - {
+        "the external storage payload should NOT be deleted" in {
+          eventually (timeout(Span(2, Seconds)), interval(Span(200, Millis))) {
+            val fut = storageAPI.get(BUCKET_NAME, msgIdLifeCycleAddress)
+            val result = Await.result(fut, 1.seconds)
+            result.isDefined shouldBe true
+          }
+        }
+      }
+
+      "when sent RecordDeliveryAttempt (successful attempt) command" - {
         "should respond with Acknowledgement" in {
           val probe = createTestProbe[StatusReply[DeliveryAttemptRecorded.type]]()
           messageRegion ! ShardingEnvelope(msgId,

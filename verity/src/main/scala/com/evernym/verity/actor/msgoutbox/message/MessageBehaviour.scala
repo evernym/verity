@@ -82,7 +82,7 @@ object MessageBehaviour {
     case object Uninitialized extends State
     case class Initialized(msg: Msg, deliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends State
 
-    //Process meaning the message has been processed by all outboxes
+    //Processed meaning the message has been processed by all outboxes
     // (either it would have been delivered or failed after exhausted all retry attempts)
     case class Processed(msg: Msg, deliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends State
   }
@@ -188,9 +188,10 @@ object MessageBehaviour {
                                       st: State): Unit = {
     st match {
       case i: Initialized =>
+        //checks and deleted if payload stored in external location (s3 etc) needs to be deleted
         val terminalStatusCode = List(Status.MSG_DELIVERY_STATUS_SENT, Status.MSG_DELIVERY_STATUS_FAILED).map(_.statusCode)
         if (i.deliveryStatus.forall(ds => terminalStatusCode.contains(ds._2.status))) {
-          lazy val msgIdLifeCycleAddress: String = BucketLifeCycleUtil.lifeCycleAddress(
+          lazy val msgIdLifeCycleAddress = BucketLifeCycleUtil.lifeCycleAddress(
             Option(i.msg.policy.elements.expiryDaysStr), msgId)
           val fut = storageAPI.delete(bucketName, msgIdLifeCycleAddress)
           context.pipeToSelf(fut) {

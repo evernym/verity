@@ -188,7 +188,7 @@ object MessageBehaviour {
                                       st: State): Unit = {
     st match {
       case i: Initialized =>
-        //checks and deleted if payload stored in external location (s3 etc) needs to be deleted
+        //checks and delete if payload stored in external location (s3 etc) is no longer needed
         val terminalStatusCode = List(Status.MSG_DELIVERY_STATUS_SENT, Status.MSG_DELIVERY_STATUS_FAILED).map(_.statusCode)
         if (i.deliveryStatus.forall(ds => terminalStatusCode.contains(ds._2.status))) {
           lazy val msgIdLifeCycleAddress = BucketLifeCycleUtil.lifeCycleAddress(

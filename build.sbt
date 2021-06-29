@@ -167,7 +167,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.13",
+  scalaVersion := "2.12.14",
 
   scalacOptions := Seq(
     "-feature",

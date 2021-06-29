@@ -23,6 +23,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
+//will be used as a child actor of Outbox actor
 class ReadOnlyMessageBehaviourSpec
   extends BehaviourSpecBase
     with BasicSpec {

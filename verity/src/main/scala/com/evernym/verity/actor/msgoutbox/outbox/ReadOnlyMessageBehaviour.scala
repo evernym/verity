@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.msgoutbox.outbox
 
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
+import akka.actor.typed.scaladsl.{Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
 import akka.pattern.StatusReply
@@ -9,13 +9,14 @@ import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour.{LegacyData, RespMsg}
-import com.evernym.verity.actor.msgoutbox.message.{EventObjectMapper, Events, MessageBehaviour}
+import com.evernym.verity.actor.msgoutbox.message.{Events, MessageBehaviour}
 import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.{Cmd, Msg}
 import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.Commands.{Get, Initialize}
 import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
+
 
 object ReadOnlyMessageBehaviour {
 
@@ -47,27 +48,17 @@ object ReadOnlyMessageBehaviour {
             storageAPI: StorageAPI): Behavior[Cmd] = {
     Behaviors.withStash(10) { buffer =>
       Behaviors.setup { context =>
-        uninitialized(buffer, context, msgId, bucketName, storageAPI)
+        context.spawn(ReadOnlyMessageCreator(msgId, bucketName, storageAPI, context.self), msgId)
+        initializing(buffer)
       }
     }
-  }
-
-  private def uninitialized(buffer: StashBuffer[Cmd],
-                            context: ActorContext[Cmd],
-                            msgId: MsgId,
-                            bucketName: String,
-                            storageAPI: StorageAPI): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
-    case cmd: Get =>
-      context.spawn(ReadOnlyMessageCreator(msgId, bucketName, storageAPI, context.self), msgId)
-      buffer.stash(cmd)
-      initializing(buffer)
   }
 
   private def initializing(buffer: StashBuffer[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case Initialize(msg, payload) =>
       buffer.unstashAll(initialized(msg.copy(payload = payload)))
-    case _ =>
-      Effect.stash()
+    case cmd =>
+      buffer.stash(cmd)
       Behaviors.same
   }
 
@@ -105,7 +96,7 @@ private object ReadOnlyMessageCreator {
     }
 
   private def commandHandler: (State, Cmd) => Effect[Any, State] = {
-    case (st: State, cmd) => throw new RuntimeException("cmd not supported: " + cmd)
+    case (_: State, cmd) => throw new RuntimeException("cmd not supported: " + cmd)
   }
 
   private val eventHandler: (State, Any) => State = {

@@ -5,7 +5,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 class OutboxRouterSpec
   extends BehaviourSpecBase
-    with BasicSpec{
+    with BasicSpec {
 
   "OutboxRouterBehaviour" - {
 

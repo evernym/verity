@@ -3,6 +3,7 @@
 2) Will we migrate anything from agent actors? (will depend on answer to #1 above)
 
 ## Main Integration changes
+Few things will depend on answer to above mentioned open questions.
 
 ### DeliveryMechanism management
 **RelationshipActors (UserAgent and UserAgentPairwise)**
@@ -11,6 +12,7 @@
   ActorState -> relationship -> DIDDoc -> Endpoints. 
 * As of today we only support one destination, in future when we have to support multiple destinations, 
   it may/will require some changes in the "relationship data model" and/or "OutgoingRouter".
+* Whenever com methods updates, it will have to make sure Outbox gets updated.
 
 ### Outgoing Message integration
 **ActorProtocolContainer**
@@ -25,7 +27,7 @@
   `OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 
 **AgentMsgProcessor**
-* for outgoing protocol message received from other domain (CAS)
+* for outgoing protocol message received from other domain (CAS)<br>
   `OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 * based on what/how we want to integrate, there will be more changes in this class.
 
@@ -33,8 +35,8 @@
 SendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol) **[command handler]**
   * Assumes that the jsonMsg already contains required fields (@type, ~thread etc)
   * (rel, to) = extract relationship DID and to (DID/agentId) from 'fromParticipantId' and 'toParticipantId'  
-  * relationship = get relationship state for 'rel' 
-  * outboxIds = based on 'relationship' and 'toDID', calculate outboxIds where this message needs to be sent.
+  * relState = get `relationshipState` from 'rel' actor 
+  * outboxIds = based on 'relState' and 'toDID', calculate outboxIds where this message needs to be sent.
   * payloadLocation = store payload to external storage (S3) 
   * creates a new `MessageActor` (**sharded persistent entity**) and sends below command:
       * `AddMsg(metadata, data-retention-policy, payload_location, outboxIds)`

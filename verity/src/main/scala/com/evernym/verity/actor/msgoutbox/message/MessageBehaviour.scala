@@ -76,7 +76,7 @@ object MessageBehaviour {
     case object Stop extends Cmd
   }
 
-  trait Event
+  trait Event   //all events would be defined in message-events.proto file
 
   trait State
   object States {

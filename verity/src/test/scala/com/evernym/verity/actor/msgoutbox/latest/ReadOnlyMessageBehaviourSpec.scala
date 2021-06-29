@@ -5,11 +5,10 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
 import com.evernym.verity.actor.StorageInfo
-import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour
+import com.evernym.verity.actor.msgoutbox.message.{MessageBehaviour, ReadOnlyMessageBehaviour}
 import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour.{AddMsgRespBase, Commands, MsgAdded}
-import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour
-import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.Commands.Get
-import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.{GetMsgRespBase, Msg}
+import ReadOnlyMessageBehaviour.Commands.Get
+import ReadOnlyMessageBehaviour.{GetMsgRespBase, Msg}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}

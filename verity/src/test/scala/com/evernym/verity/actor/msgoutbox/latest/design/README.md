@@ -1,15 +1,13 @@
-# Open questions
-1) What is the exact scope of this change (CAS/EAS/VAS, for all com methods?)
-2) Will we migrate anything from agent actors? (will depend on answer to #1 above)
+# Scope
+1) Current scope would be to have Outbox for 'webhooks' with 'Oauth' capability and integrate that change only for VAS
 
 ## Main Integration changes
-Few things will depend on answer to above mentioned open questions.
 
 ### DeliveryMechanism management
 **RelationshipActors (UserAgent and UserAgentPairwise)**
 
 * Has communication method details:<br>
-  ActorState -> relationship -> DIDDoc -> Endpoints. 
+  ActorState -> relationship -> DIDDoc -> Endpoints
 * As of today we only support one destination, in future when we have to support multiple destinations, 
   it may/will require some changes in the "relationship data model" and/or "OutgoingRouter".
 * Whenever com methods updates, it will have to make sure Outbox gets updated.
@@ -19,26 +17,26 @@ Few things will depend on answer to above mentioned open questions.
 * the synchronous response message (CAS/EAS/VAS):<br>
   will be sent back to AgentMsgProcessor as it does today (no changes here).
   
-* for async outgoing protocol message (CAS/EAS/VAS):<br> 
-  `OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
+* for async outgoing protocol message:<br> 
+  For CAS/EAS: no changes
+  For VAS    : `OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 
 **Driver**
-* for async outgoing signal message (CAS/EAS/VAS):<br>
-  `OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
+* for async outgoing signal message:<br>
+  For CAS/EAS: no changes
+  For VAS    :`OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
 
 **AgentMsgProcessor**
-* for outgoing protocol message received from other domain (CAS)<br>
-  `OutgoingRouter.sendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol)`
-* based on what/how we want to integrate, there will be more changes in this class.
+* shouldn't be any changes (still needs to be verified)
 
 ### OutgoingRouter (ephemeral actor for each new outgoing message)
 SendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol) **[command handler]**
   * Assumes that the jsonMsg already contains required fields (@type, ~thread etc)
-  * (rel, to) = extract relationship DID and to (DID/agentId) from 'fromParticipantId' and 'toParticipantId'  
+  * (rel, to) = extract `relationshipDID` and `to` (DID/agentId) from 'fromParticipantId' and 'toParticipantId'  
   * relState = get `relationshipState` from 'rel' actor 
-  * outboxIds = based on 'relState' and 'toDID', calculate outboxIds where this message needs to be sent.
+  * outboxIds = based on 'relState' and 'to', calculate outboxIds where this message needs to be sent.
   * payloadLocation = store payload to external storage (S3) 
-  * creates a new `MessageActor` (**sharded persistent entity**) and sends below command:
+  * creates a new `MessageActor` (**sharded persistent entity**) and send below command:
       * `AddMsg(metadata, data-retention-policy, payload_location, outboxIds)`
   * for each outboxIds ->
       * sends a message `AddMsg(msgId)` to the **sharded** `OutboxBehavior`
@@ -48,14 +46,17 @@ SendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol) *
 * After each activity it will check if the message is delivered (or permanently failed) to all attached outboxes
   and in that case it will delete the payload from external storage (S3) 
   and log that activity as well.
+* This won't have snapshot capability (at least to begin with)
 
 ### Outbox behaviour
 * 'entity-id' will be created by concatenating 'relationship-id' and 'destination-id'.
-* when started, calls `Relationship.getOutboxInitParam(relationship-id, destination-id)`
-* when receives OutboxInitParam, then only it starts processing message deliveries.
+* when started, sends a message to relationship actor: `GetOutboxParam`
+* when receives `OutboxInitParam`:
+  * if there are changes in received data vs its own state, then it will persist an event and change the state accordingly
 * it is supposed to create a **child** `ReadOnlyMessage` actor to get Message related data.
 * after any activity on message, it will send appropriate command to `Message` sharded actor.
 * post delivery, that message will/should disappear from outbox state.
+* have snapshotting capability from the beginning (so needs to use proto buf based state).
 
 ### ReadOnlyMessage behaviour (non-persistent)
 * Loads event (first event only) for given "Message" PersistenceId

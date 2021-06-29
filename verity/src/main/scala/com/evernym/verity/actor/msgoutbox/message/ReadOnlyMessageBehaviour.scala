@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.msgoutbox.outbox
+package com.evernym.verity.actor.msgoutbox.message
 
 import akka.actor.typed.scaladsl.{Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
@@ -9,9 +9,8 @@ import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.msgoutbox.message.MessageBehaviour.{LegacyData, RespMsg}
-import com.evernym.verity.actor.msgoutbox.message.{Events, MessageBehaviour}
-import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.{Cmd, Msg}
-import com.evernym.verity.actor.msgoutbox.outbox.ReadOnlyMessageBehaviour.Commands.{Get, Initialize}
+import com.evernym.verity.actor.msgoutbox.message.ReadOnlyMessageBehaviour.Commands.{Get, Initialize}
+import com.evernym.verity.actor.msgoutbox.message.ReadOnlyMessageBehaviour.{Cmd, Msg}
 import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.engine.MsgId

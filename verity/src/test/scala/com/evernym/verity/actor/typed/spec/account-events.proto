@@ -3,7 +3,7 @@ syntax = "proto3";
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
 
-package com.evernym.verity.actor.typed.persistence_effect.Events;
+package com.evernym.verity.actor.typed.spec.Events;
 
 message Opened {
     option (scalapb.message).extends = "com.evernym.verity.actor.typed.Encodable";

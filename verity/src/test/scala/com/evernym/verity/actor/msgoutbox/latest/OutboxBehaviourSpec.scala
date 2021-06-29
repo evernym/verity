@@ -124,6 +124,8 @@ class OutboxBehaviourSpec
           pending
         }
       }
+
+      //TODO: add tests around snapshotting
     }
   }
 

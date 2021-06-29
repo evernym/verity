@@ -1,12 +1,11 @@
 package com.evernym.verity.actor.msgoutbox.message
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
-import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
-
 import com.evernym.RetentionPolicy
 import com.evernym.verity.Status
 import com.evernym.verity.actor.msgoutbox.message.Events.{ComMethodActivity, LegacyMsgData}
@@ -82,6 +81,9 @@ object MessageBehaviour {
   object States {
     case object Uninitialized extends State
     case class Initialized(msg: Msg, deliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends State
+
+    //Processed meaning the message has been processed by all outboxes
+    // (either it would have been delivered or failed after exhausted all retry attempts)
     case class Processed(msg: Msg, deliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends State
   }
 
@@ -98,6 +100,7 @@ object MessageBehaviour {
           States.Uninitialized,
           commandHandler(context, entityContext.entityId, bucketName, storageAPI),
           eventHandler)
+        .receiveSignal(signalHandler(context, entityContext.entityId, bucketName, storageAPI))
         .eventAdapter(new EventPersistenceAdapter(entityContext.entityId, EventObjectMapper))
     }
   }
@@ -124,14 +127,14 @@ object MessageBehaviour {
     case (st: States.Initialized, Commands.GetDeliveryStatus(replyTo)) =>
       Effect.reply(replyTo)(StatusReply.success(MsgDeliveryStatus(st.deliveryStatus)))
 
-    case (st: States.Initialized, ads: Commands.RecordDeliveryAttempt) =>
+    case (_: States.Initialized, ads: Commands.RecordDeliveryAttempt) =>
       val deliveryActivity = ComMethodActivity(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime, ads.comMethodId, ads.activity)
       val deliveryAttemptAdded = Events.DeliveryAttemptRecorded(ads.outboxId, ads.status, Option(deliveryActivity))
       Effect
         .persist(deliveryAttemptAdded)
-        //TODO: make below 'thenRun' working
-        //.thenRun(newState => deletePayloadIfRequired(context, msgId, bucketName, storageAPI, newState))
+        .thenRun((state: State) => deletePayloadIfRequired(context, msgId, bucketName, storageAPI, state))
         .thenReply(ads.replyTo)(_ => StatusReply.success(DeliveryAttemptRecorded))
+
 
     case (_: States.Initialized, Commands.PayloadDeleted) =>
       Effect.persist(Events.PayloadDeleted()).thenNoReply()
@@ -139,26 +142,12 @@ object MessageBehaviour {
     case (st: States.Processed, Commands.GetDeliveryStatus(replyTo)) =>
       Effect.reply(replyTo)(StatusReply.success(MsgDeliveryStatus(st.deliveryStatus)))
 
+    case (st: States.Processed, Commands.Get(replyTo)) =>
+      Effect.reply(replyTo)(StatusReply.success(st.msg))
+
     case (_: State, Commands.Stop) =>
       Behaviors.stopped
       Effect.noReply
-  }
-
-  private def deletePayloadIfRequired(context: ActorContext[Cmd],
-                                      msgId: MsgId,
-                                      bucketName: String,
-                                      storageAPI: StorageAPI,
-                                      st: Initialized): Unit = {
-    val terminalStatusCode = List(Status.MSG_DELIVERY_STATUS_SENT, Status.MSG_DELIVERY_STATUS_FAILED).map(_.statusCode)
-    if (st.deliveryStatus.forall(ds => terminalStatusCode.contains(ds._2.status))) {
-      lazy val msgIdLifeCycleAddress: String = BucketLifeCycleUtil.lifeCycleAddress(
-        Option(st.msg.policy.elements.expiryDaysStr), msgId)
-      val fut = storageAPI.delete(bucketName, msgIdLifeCycleAddress)
-      context.pipeToSelf(fut) {
-        case Success(_)         => PayloadDeleted
-        case Failure(exception) => throw exception
-      }
-    }
   }
 
   private val eventHandler: (State, Event) => State = {
@@ -171,7 +160,8 @@ object MessageBehaviour {
     case (st: States.Initialized, dsa: Events.DeliveryAttemptRecorded) =>
 
       val updatedOutboxDeliveryStatus = {
-        val newActivity = dsa.comMethodActivity.map(a => Activity(a.comMethodId, a.detail, TimeZoneUtil.getUTCZonedDateTimeFromMillis(a.creationTimeInMillis)))
+        val newActivity = dsa.comMethodActivity.map(a =>
+          Activity(a.comMethodId, a.detail, TimeZoneUtil.getUTCZonedDateTimeFromMillis(a.creationTimeInMillis)))
         val outboxDeliveryStatus = st.deliveryStatus.getOrElse(dsa.outboxId, OutboxDeliveryStatus())
         outboxDeliveryStatus.copy(status = dsa.status, activities = outboxDeliveryStatus.activities ++ newActivity)
       }
@@ -181,6 +171,36 @@ object MessageBehaviour {
       st.copy(deliveryStatus = updatedDeliveryStatus)
 
     case (st: States.Initialized, _: Events.PayloadDeleted) => Processed(st.msg, st.deliveryStatus)
+  }
+
+  private def signalHandler(context: ActorContext[Cmd],
+                            msgId: MsgId,
+                            bucketName: String,
+                            storageAPI: StorageAPI): PartialFunction[(State, Signal), Unit] = {
+    case (st: States.Initialized, RecoveryCompleted) =>
+      deletePayloadIfRequired(context, msgId, bucketName, storageAPI, st)
+  }
+
+  private def deletePayloadIfRequired(context: ActorContext[Cmd],
+                                      msgId: MsgId,
+                                      bucketName: String,
+                                      storageAPI: StorageAPI,
+                                      st: State): Unit = {
+    st match {
+      case i: Initialized =>
+        //checks and delete if payload stored in external location (s3 etc) is no longer needed
+        val terminalStatusCode = List(Status.MSG_DELIVERY_STATUS_SENT, Status.MSG_DELIVERY_STATUS_FAILED).map(_.statusCode)
+        if (i.deliveryStatus.forall(ds => terminalStatusCode.contains(ds._2.status))) {
+          lazy val msgIdLifeCycleAddress = BucketLifeCycleUtil.lifeCycleAddress(
+            Option(i.msg.policy.elements.expiryDaysStr), msgId)
+          val fut = storageAPI.delete(bucketName, msgIdLifeCycleAddress)
+          context.pipeToSelf(fut) {
+            case Success(_)         => PayloadDeleted
+            case Failure(exception) => throw exception
+          }
+        }
+      case _ => //nothing to do
+    }
   }
 }
 

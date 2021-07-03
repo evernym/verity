@@ -5,8 +5,7 @@ import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
@@ -69,7 +68,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       case e: Exception =>
         val errorMsg = "error while creating ledger " +
           s"pool config file (detail => ${Exceptions.getErrorMsg(e)})"
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))(actorSystem)
+        AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
     }
   }
 

@@ -9,8 +9,7 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{CauseDetail, ErrorEvent, ListeningSuccessful, SeriousSystemError, StartDraining, SuccessEvent}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, CauseDetail, ErrorEvent, ListeningSuccessful, SeriousSystemError, StartDraining, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
@@ -61,12 +60,12 @@ class HttpServer(val platform: Platform, routes: Route)
           Signal.handle(new Signal("TERM"), new SignalHandler() {
             def handle(sig: Signal): Unit = {
               logger.info("Trapping SIGTERM and begin draining Akka node...")
-              publishEvent(StartDraining)
+              AppStateUpdateAPI(system).publishEvent(StartDraining)
             }
           })
           bindResults.foreach { br =>
             httpBinding = Option(br.serverBinding)
-            publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
+            AppStateUpdateAPI(system).publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,
               causeDetail = CauseDetail("agent-service-started", "agent-service-started-listening-successfully"),
               msg = Option(br.msg)))
           }
@@ -79,12 +78,12 @@ class HttpServer(val platform: Platform, routes: Route)
       }
     } catch {
       case e: UnableToCreateLogger =>
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(e.msg)))
+        AppStateUpdateAPI(system).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, e, Option(e.msg)))
         System.err.println(e.msg)
         System.exit(1)
       case e: Exception =>
         val errorMsg = s"Unable to start agent service: ${Exceptions.getErrorMsg(e)}"
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
+        AppStateUpdateAPI(system).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
         System.err.println(errorMsg)
         System.exit(1)
     }

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.actor.msgoutbox.outbox.States;
+
+//message Uninitialized {
+//    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.OutboxBehaviour.State";
+//}

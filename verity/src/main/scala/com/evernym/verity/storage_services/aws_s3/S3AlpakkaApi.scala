@@ -41,7 +41,7 @@ class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends Stor
     file.runWith(s3Sink).map(x => StorageInfo(x.location.toString(), "S3"))
   }
 
-  def get(bucketName: String, id: String): Future[Array[Byte]] = {
+  def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
     val s3File: Source[Option[(Source[ByteString, NotUsed], ObjectMetadata)], NotUsed] =
       S3 download(bucketName, id) withAttributes s3Attrs
 
@@ -49,10 +49,10 @@ class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends Stor
       case Some((data: Source[ByteString, _], _)) =>
         data.map(_.toByteBuffer.array())
           .runWith(Sink.seq)
-          .map(_.flatten.toArray)
-      case None => throw new S3Failure(S3_FAILURE.statusCode, Some(s"No object for id: $id in bucket: $bucketName"))
+          .map(d => Option(d.flatten.toArray))
+      case None =>
+        Future.successful(None)
     }
-
   }
 
   def getObjectMetadata(bucketName: String, id: String): Future[Map[String, String]] = {

@@ -6,12 +6,18 @@ import org.scalatest.freespec.{AnyFreeSpecLike, AsyncFreeSpecLike, FixtureAnyFre
 
 trait BasicSpecBase
   extends Matchers
-    with OptionValues
+    with OptionValues {
     /** the following trait helps in the troubleshooting
-      * process when isolating a failing test; can be
-      * commented out otherwise.
-      **/
+     * process when isolating a failing test; can be
+     * commented out otherwise.
+     **/
     //with CancelGloballyAfterFailure
+
+    def checkArrayEquality(expected: Option[Array[Byte]], actual: Option[Array[Byte]]) = {
+      expected.map(e => new String(e)) shouldBe actual.map(a => new String(a))
+    }
+}
+
 
 trait BasicSpec
   extends AnyFreeSpecLike

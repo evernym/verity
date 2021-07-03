@@ -1,39 +1,31 @@
-package com.evernym.verity.actor.typed.persistence_effect
+package com.evernym.verity.actor.typed.spec
 
 import akka.Done
-import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.cluster.sharding.typed.ShardingEnvelope
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, ReplyEffect}
-import com.evernym.verity.actor.typed.persistence_effect.Events._
-import com.evernym.verity.actor.typed.{Encodable, TypedTestKit}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import com.evernym.verity.actor.typed.spec.Events._
+import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.typed.poc.{EventSourcedBehaviorBuilder, PersistenceHandler}
+import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessageCompanion
 
 import java.util.UUID
 
 
-class PersistenceHandlerSpec
-  extends ScalaTestWithActorTestKit(
-    ActorTestKit(
-      "TestSystem",
-      TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
-    ))
+class PersistentBehaviourSpec
+  extends BehaviourSpecBase
     with BasicSpec {
 
   import Account._
-
-  val sharding = ClusterSharding(system)
-  val accountRegion = sharding.init(Entity(Account.TypeKey) { entityContext =>
-    Account(entityContext.entityId)
-  })
 
   "Account behaviour" - {
 
@@ -117,11 +109,16 @@ class PersistenceHandlerSpec
     prob.expectMessageType[State]
   }
 
+  lazy val sharding: ClusterSharding = ClusterSharding(system)
+  lazy val accountRegion: ActorRef[ShardingEnvelope[Cmd]] = sharding.init(Entity(Account.TypeKey) { entityContext =>
+    Account(entityContext)
+  })
+
 }
 
 object Account {
 
-  trait Cmd extends Encodable
+  trait Cmd
   object Commands {
     case class Open(name: String, balance: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
     case class Credit(amount: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
@@ -131,7 +128,7 @@ object Account {
     case class Stop(replyTo: ActorRef[StatusReply[Done]]) extends Cmd
   }
 
-  trait State extends Encodable
+  trait State
   object States {
     case object Empty extends State
     case class Opened(name: String, balance: Double) extends State
@@ -140,32 +137,35 @@ object Account {
 
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Account")
 
-  def apply(entityId: EntityId): Behavior[Cmd] = {
-    EventSourcedBehaviorBuilder
-      .withPersistenceHandler(PersistenceId(TypeKey.name, entityId), States.Empty, commandHandler, eventHandler)
-      .withObjectCodeMapper(TestObjectCodeMapper)
-      .build()
+  def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
+    val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
+    EventSourcedBehavior
+      .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
+      .eventAdapter(new EventPersistenceAdapter(entityContext.entityId, TestObjectCodeMapper))
+      .receiveSignal(signalHandler(persistenceId))
   }
 
-  def commandHandler(persistenceHandler: PersistenceHandler): (State, Cmd) => ReplyEffect[Any, State] = {
+  val logger: Logger = getLoggerByClass(getClass)
+
+  private def commandHandler: (State, Cmd) => ReplyEffect[Any, State] = {
 
     case (States.Empty, Commands.Open(name, balance, replyTo)) =>
-      persistenceHandler
+      Effect
         .persist(Events.Opened(name, balance))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Credit(amount, replyTo)) =>
-      persistenceHandler
+      Effect
         .persist(Events.Credited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Debit(amount, replyTo)) =>
-      persistenceHandler
+      Effect
         .persist(Events.Debited(amount))
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
     case (_:States.Opened, Commands.Close(replyTo)) =>
-      persistenceHandler
+      Effect
         .persist(Events.Closed())
         .thenReply(replyTo)(_ => StatusReply.Ack)
 
@@ -175,6 +175,10 @@ object Account {
     case (_: State, Commands.Stop(replyTo)) =>
       Behaviors.stopped
       Effect.reply(replyTo)(StatusReply.Ack)
+  }
+
+  private def signalHandler(persistenceId: PersistenceId): PartialFunction[(State, Signal), Unit] = {
+    case (_: State, PostStop) => logger.debug(s"[$persistenceId] behaviour stopped")
   }
 
   private val eventHandler: (State, Any) => State = {

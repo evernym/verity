@@ -476,6 +476,7 @@ message StorageInfo {
 }
 
 message StorageReferenceStored {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     int32 eventCode = 1;
     StorageInfo storageInfo = 2;
 }

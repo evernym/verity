@@ -10,7 +10,6 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.leveldb.LeveldbAPI
 import com.evernym.verity.testkit.BasicAsyncSpec
 import com.typesafe.config.{Config, ConfigValueFactory}
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.BeforeAndAfterAll
 
@@ -49,7 +48,7 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
       }
 
       "should succeed downloading" in {
-        leveldbAPI get(BUCKET, ID1) map { _ shouldBe OBJ1 }
+        leveldbAPI get(BUCKET, ID1) map { data => checkArrayEquality(Option(OBJ1), data) }
       }
 
       "should be able to delete it" in {
@@ -68,8 +67,9 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
       }
 
       "should succeed downloading" in {
-        leveldbAPI get(BUCKET, ID2) map { _ shouldBe OBJ2 }
+        leveldbAPI get(BUCKET, ID2) map { data => checkArrayEquality(Option(OBJ2), data) }
       }
     }
   }
+
 }

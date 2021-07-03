@@ -8,7 +8,7 @@ import com.evernym.verity.config.AppConfig
 import scala.concurrent.Future
 
 abstract class StorageAPI(val config: AppConfig) {
-  def get(bucketName: String, id: String): Future[Array[Byte]]
+  def get(bucketName: String, id: String): Future[Option[Array[Byte]]]
   def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo]
   def delete(bucketName: String, id: String): Future[Done]
 }

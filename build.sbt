@@ -63,7 +63,7 @@ val akkaVer         = "2.6.15"
 val akkaHttpVer     = "10.2.4"
 val akkaMgtVer      = "1.1.0"
 val alpAkkaVer      = "3.0.1"
-val kamonVer        = "2.2.0"
+val kamonVer        = "2.2.1"
 val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
@@ -167,7 +167,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.13",
+  scalaVersion := "2.12.14",
 
   scalacOptions := Seq(
     "-feature",
@@ -275,6 +275,10 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding" % akkaVer,
     akkaGrp %% "akka-http" % akkaHttpVer,
 
+    akkaGrp %% "akka-actor-typed" % akkaVer,
+    akkaGrp %% "akka-persistence-typed" % akkaVer,
+    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
+
     //akka persistence dependencies
     akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
 
@@ -344,10 +348,6 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-freespec" % scalatestVer,
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
-
-    akkaGrp %% "akka-actor-typed" % akkaVer,
-    akkaGrp %% "akka-persistence-typed" % akkaVer,
-    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,

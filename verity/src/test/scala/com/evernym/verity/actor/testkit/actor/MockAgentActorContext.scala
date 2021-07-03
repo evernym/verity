@@ -47,8 +47,8 @@ class MockAgentActorContext(val system: ActorSystem,
       Future { StorageInfo("https://s3-us-west-2.amazonaws.com") }
     }
 
-    override def get(bucketName: String, id: String): Future[Array[Byte]] = {
-      Future { storageMock(id) }
+    override def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
+      Future { storageMock.get(id) }
     }
 
     override def delete(bucketName: String, id: String): Future[Done] = {

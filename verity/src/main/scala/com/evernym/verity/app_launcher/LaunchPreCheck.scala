@@ -9,11 +9,10 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -54,7 +53,7 @@ object LaunchPreCheck {
     } catch {
       case e: TimeoutException =>
         val errorMsg = "no response from ledger pool: " + e.toString
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
+        AppStateUpdateAPI(as).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
           new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
         checkLedgerPoolConnection(aac, if (delay > 0) min(delay * 2, 60) else 1)
 
@@ -64,7 +63,7 @@ object LaunchPreCheck {
             "possible-causes: something wrong with genesis txn file, " +
             "ledger pool not reachable/up/responding etc, " +
             s"error-msg: ${Exceptions.getErrorMsg(e)})"
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
+        AppStateUpdateAPI(as).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
           new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
         // increase delay exponentially until 60s
         checkLedgerPoolConnection(aac, if (delay > 0) min(delay * 2, 60) else 1)
@@ -95,7 +94,7 @@ object LaunchPreCheck {
           "akka event storage connection check failed (" +
             "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
             s"error-msg: ${Exceptions.getErrorMsg(e)})"
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
+        AppStateUpdateAPI(as).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
         // increase delay exponentially until 60s
         checkAkkaEventStorageConnection(aac, if (delay > 0) min(delay * 2, 60) else 1)
     }
@@ -121,7 +120,7 @@ object LaunchPreCheck {
           "wallet storage connection check failed (" +
             "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
             s"error-msg: ${Exceptions.getErrorMsg(e)})"
-        publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
+        AppStateUpdateAPI(as).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
         // increase delay exponentially until 60s
         checkWalletStorageConnection(aac, if (delay > 0) min(delay * 2, 60) else 1)
     }

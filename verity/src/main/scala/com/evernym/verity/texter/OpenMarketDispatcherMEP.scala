@@ -29,11 +29,11 @@ trait OpenMarketMEPAPI extends SMSServiceProvider with ConfigSvc {
 
   lazy val providerId = SMS_PROVIDER_ID_OPEN_MARKET
 
-  lazy val userName: String = appConfig.getConfigStringReq(OPEN_MARKET_USER_NAME)
-  lazy val password: String = appConfig.getConfigStringReq(OPEN_MARKET_PASSWORD)
-  lazy val webApiHost: String = appConfig.getConfigStringReq(OPEN_MARKET_ENDPOINT_HOST)
-  lazy val webApiUrlPrefix: String = appConfig.getConfigStringReq(OPEN_MARKET_ENDPOINT_PATH_PREFIX)
-  lazy val serviceId: String = appConfig.getConfigStringReq(OPEN_MARKET_SERVICE_ID)
+  lazy val userName: String = appConfig.getStringReq(OPEN_MARKET_USER_NAME)
+  lazy val password: String = appConfig.getStringReq(OPEN_MARKET_PASSWORD)
+  lazy val webApiHost: String = appConfig.getStringReq(OPEN_MARKET_ENDPOINT_HOST)
+  lazy val webApiUrlPrefix: String = appConfig.getStringReq(OPEN_MARKET_ENDPOINT_PATH_PREFIX)
+  lazy val serviceId: String = appConfig.getStringReq(OPEN_MARKET_SERVICE_ID)
   lazy val webApiUrl: String = "https://" + webApiHost
   lazy val baseResourcePrefix: String = s"$webApiUrlPrefix"
   lazy val sendMsgResource: String = s"$webApiUrl/$baseResourcePrefix/$serviceId"

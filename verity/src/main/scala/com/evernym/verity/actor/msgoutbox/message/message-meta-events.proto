@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+import "outbox-common.proto";
+
+package com.evernym.verity.actor.msgoutbox.message.Events;
+
+message MsgAdded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.message.MessageMeta.Event";
+    string type = 1;
+    LegacyMsgData legacyMsgData = 2;
+    Packaging packaging = 3;
+    string retentionPolicy = 4;
+    repeated string targetOutboxIds = 5;
+}
+
+message LegacyMsgData {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.message.MessageMeta.Event";
+    string senderDID = 1;
+    string msgStatus = 2;
+    google.protobuf.StringValue refMsgId = 3;
+}
+
+message ComMethodActivity {
+    string comMethodId = 1;
+    string detail = 2;
+    google.protobuf.UInt64Value  creationTimeInMillis = 3;
+}
+
+message DeliveryAttemptRecorded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.message.MessageMeta.Event";
+    string outboxId = 1;
+    string status = 2;
+    ComMethodActivity comMethodActivity = 3;
+}
+
+message PayloadDeleted {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.message.MessageMeta.Event";
+}

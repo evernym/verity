@@ -15,8 +15,8 @@ class InitializingState extends AppState {
   override val name: String = STATUS_INITIALIZING
 
   var errorOccurrencesByCauseCode: Map[String, ErrorOccurrences] = Map.empty
-  lazy val maxRetryCount = AppConfigWrapper.getConfigIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT).getOrElse(10)
-  lazy val maxRetryDuration = AppConfigWrapper.getConfigIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION).getOrElse(240)
+  lazy val maxRetryCount = AppConfigWrapper.getIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT).getOrElse(10)
+  lazy val maxRetryDuration = AppConfigWrapper.getIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION).getOrElse(240)
 
   /**
    * When app state is 'InitializingState', it handles below events apart from

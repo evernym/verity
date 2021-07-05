@@ -1,5 +1,11 @@
+# TODOs
+* Event object mapper decision
+* Supplying config to behaviours
+* Metrics
+* Message payload storage info questions
+
 # Scope
-1) Current scope would be to have Outbox for 'webhooks' with 'Oauth' capability and integrate that change only for VAS
+* Current scope would be to have Outbox for 'webhooks' with 'OAuth' capability and integrate that change **only for VAS**
 
 ## Main Integration changes
 
@@ -36,12 +42,12 @@ SendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol) *
   * relState = get `relationshipState` from 'rel' actor 
   * outboxIds = based on 'relState' and 'to', calculate outboxIds where this message needs to be sent.
   * payloadLocation = store payload to external storage (S3) 
-  * creates a new `MessageActor` (**sharded persistent entity**) and send below command:
+  * creates a new `MessageMetaActor` (**sharded persistent entity**) and send below command:
       * `AddMsg(metadata, data-retention-policy, payload_location, outboxIds)`
   * for each outboxIds ->
       * sends a message `AddMsg(msgId)` to the **sharded** `OutboxBehavior`
 
-### Message behavior
+### MessageMeta behavior
 * Stores message metadata and delivery/activity data.
 * After each activity it will check if the message is delivered (or permanently failed) to all attached outboxes
   and in that case it will delete the payload from external storage (S3) 
@@ -53,14 +59,17 @@ SendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol) *
 * when started, sends a message to relationship actor: `GetOutboxParam`
 * when receives `OutboxInitParam`:
   * if there are changes in received data vs its own state, then it will persist an event and change the state accordingly
-* it is supposed to create a **child** `ReadOnlyMessage` actor to get Message related data.
-* after any activity on message, it will send appropriate command to `Message` sharded actor.
-* post delivery, that message will/should disappear from outbox state.
+* it is supposed to create a **child** `MessageDispatcher` actor to send/deliver the message over a given communication method.
+* after it receives delivery activity response from `MessageDispatcher`, 
+  it will send appropriate command back to `MessageMeta` sharded actor.
+* post delivery, that message will/should eventually disappear from the outbox state.
 * have snapshotting capability from the beginning (so needs to use proto buf based state).
 
-### ReadOnlyMessage behaviour (non-persistent)
-* Loads event (first event only) for given "Message" PersistenceId
-* Will be mainly used to get the message payload from external location (S3)
+### MessageDispatcher behaviour (non-persistent, child of Outbox)
+* Loads events for given "Message" PersistenceId
+* Will get the message payload from external location (S3) and have it part of its state
+* Will be responsible to send message over a given communication method based on supplied retry param
+  and report back success/failure status back to Outbox actor
 
 ### Possible Outboxes (for an identity owner)
 **For Legacy APIs**
@@ -76,7 +85,3 @@ SendMsg(fromParticipantId, toParticipantId, jsonMsg, metadata, binaryProtocol) *
 * Outbox/theirPairwiseRelId2-default   (for CAS/EAS/VAS)
 * ...
 * ...
-
-## Other Integration changes (will depend on scope/release cadence)
-* MsgStoreAPI (add, get etc) [will point to 'default' outbox]
-* MsgNotifier

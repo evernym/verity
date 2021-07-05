@@ -10,9 +10,9 @@ import com.evernym.verity.testkit.BasicSpec
 
 class FirebasePusherSpec extends BasicSpec with CancelGloballyAfterFailure {
 
-  val serverKey: String = AppConfigWrapper.getConfigStringReq(FCM_API_KEY)
-  val serverHost: String = AppConfigWrapper.getConfigStringReq(FCM_API_HOST)
-  val serverPath: String = AppConfigWrapper.getConfigStringReq(FCM_API_PATH)
+  val serverKey: String = AppConfigWrapper.getStringReq(FCM_API_KEY)
+  val serverHost: String = AppConfigWrapper.getStringReq(FCM_API_HOST)
+  val serverPath: String = AppConfigWrapper.getStringReq(FCM_API_PATH)
   val pusher = new FirebasePusher(FirebasePushServiceParam(serverKey, serverHost, serverPath))
   val cm = "foo"
   val regId = "This is an id registered with Firebase for Connect.Me"

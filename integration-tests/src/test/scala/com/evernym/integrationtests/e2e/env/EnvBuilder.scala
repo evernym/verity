@@ -101,8 +101,8 @@ trait IntegrationTestEnvBuilder {
   lazy val testEnv: IntegrationTestEnv = try {
     val ledgerConfig = prepareLedgerConfig
     val (verityInstanceMap, sdkMap) = prepareEnv(ledgerConfig)
-    val seedConflictCheck = integrationTestConfig.getConfigBooleanReq(SEED_CONFLICT_CHECK)
-    val timeout = testEnvConfigReadHelper.getConfigStringOption(ENV_TIMEOUT).map(Duration(_))
+    val seedConflictCheck = integrationTestConfig.getBooleanReq(SEED_CONFLICT_CHECK)
+    val timeout = testEnvConfigReadHelper.getStringOption(ENV_TIMEOUT).map(Duration(_))
     IntegrationTestEnv(sdkMap.values.toSet, verityInstanceMap.values.toSet, ledgerConfig, seedConflictCheck, timeout)
   } catch {
     case e: RuntimeException =>
@@ -181,8 +181,8 @@ trait IntegrationTestEnvBuilder {
       requireSponsor
     )
 
-    val sdks = new ConfigReadHelper(config)
-      .getConfigListOfStringOption(SDKS)
+    val sdks = ConfigReadHelper(config)
+      .getStringListOption(SDKS)
       .getOrElse(Seq.empty)
       .map { s =>
         prepareSdk(s, instance)
@@ -197,7 +197,7 @@ trait IntegrationTestEnvBuilder {
       integrationTestConfig.config.getConfig(s"$SDK_CONFIGS.$key")
     )
 
-    val sdkType = config.getConfigStringReq(SDK_TYPE)
+    val sdkType = config.getStringReq(SDK_TYPE)
     val name = stringReq(config, SDK_NAME, key)
     val version = stringOption(config, SDK_VERSION, key)
     val port = intOption(config,SDK_PORT, key)
@@ -211,7 +211,7 @@ trait IntegrationTestEnvBuilder {
   }
 
   def prepareLedgerConfig: LedgerConfig = {
-    val confName = testEnvConfigReadHelper.getConfigStringOption(LEDGER_CONFIG).getOrElse("default")
+    val confName = testEnvConfigReadHelper.getStringOption(LEDGER_CONFIG).getOrElse("default")
     val ledgerConfig = integrationTestConfig.config.getConfig(s"$LEDGER_CONFIGS.$confName")
     val conf = new ConfigReadHelper(ledgerConfig)
 
@@ -221,9 +221,9 @@ trait IntegrationTestEnvBuilder {
     val trusteeDID = stringReq(conf, LEDGER_GENESIS_SUBMITTER_DID, confName)
     val trusteeSeed = stringReq(conf, LEDGER_GENESIS_SUBMITTER_SEED, confName)
     val trusteeRole = stringReq(conf, LEDGER_GENESIS_SUBMITTER_ROLE, confName)
-    val timeout = conf.getConfigIntReq(LEDGER_TIMEOUT)
-    val extendedTimeout = conf.getConfigIntReq(LEDGER_EXTENDED_TIMEOUT)
-    val protocolVersion = conf.getConfigIntReq(LEDGER_PROTOCOL_VERSION)
+    val timeout = conf.getIntReq(LEDGER_TIMEOUT)
+    val extendedTimeout = conf.getIntReq(LEDGER_EXTENDED_TIMEOUT)
+    val protocolVersion = conf.getIntReq(LEDGER_PROTOCOL_VERSION)
     LedgerConfig(genesisFilePath, trusteeDID, trusteeSeed, trusteeRole, timeout, extendedTimeout, protocolVersion)
   }
 }
@@ -242,27 +242,27 @@ object IntegrationTestEnvBuilder {
   // These functions allow a simple environment variable to override config single value in environment.conf
 
   def stringReq(config: ConfigReadHelper, key: String, instanceKey: String): String = {
-    get(config.getConfigStringReq, identity, key, instanceKey)
+    get(config.getStringReq, identity, key, instanceKey)
   }
 
   def stringOption(config: ConfigReadHelper, key: String, instanceKey: String): Option[String] = {
-    get(config.getConfigStringOption, Option.apply, key, instanceKey)
+    get(config.getStringOption, Option.apply, key, instanceKey)
   }
 
   def booleanReq(config: ConfigReadHelper, key: String, instanceKey: String): Boolean = {
-    get(config.getConfigBooleanReq, _.toBoolean, key, instanceKey)
+    get(config.getBooleanReq, _.toBoolean, key, instanceKey)
   }
 
   def booleanOption(config: ConfigReadHelper, key: String, instanceKey: String): Option[Boolean] = {
-    get(config.getConfigBooleanOption, { x => Some(x.toBoolean)}, key, instanceKey)
+    get(config.getBooleanOption, { x => Some(x.toBoolean)}, key, instanceKey)
   }
 
   def intReq(config: ConfigReadHelper, key: String, instanceKey: String): Int = {
-    get(config.getConfigIntReq, _.toInt, key, instanceKey)
+    get(config.getIntReq, _.toInt, key, instanceKey)
   }
 
   def intOption(config: ConfigReadHelper, key: String, instanceKey: String): Option[Int] = {
-    get(config.getConfigIntOption, { x => Some(x.toInt)}, key, instanceKey)
+    get(config.getIntOption, { x => Some(x.toInt)}, key, instanceKey)
   }
 
   def resolveGenesisFile(conf: ConfigReadHelper, confName: String, tempDir: Path): String = {

@@ -12,10 +12,10 @@ import scala.concurrent.ExecutionContext.Implicits
 object ExecutionContextProvider {
 
   lazy val defaultFutureThreadPoolSize: Option[Int] =
-    AppConfigWrapper.getConfigIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+    AppConfigWrapper.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
 
   lazy val walletFutureThreadPoolSize: Option[Int] =
-    AppConfigWrapper.getConfigIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
+    AppConfigWrapper.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
 
   /**
    * custom thread pool executor

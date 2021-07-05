@@ -59,7 +59,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   def startExtensionIfEnabled[T <: Extension](t: ExtensionId[T], confPath: String)(start: T => Unit): Unit = {
     val isEnabled = appConfig
-      .getConfigBooleanOption(confPath)
+      .getBooleanOption(confPath)
       .getOrElse(false)
 
     if (isEnabled) {
@@ -256,7 +256,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   def passivateDuration(confName: String,
                         defaultDurationInSeconds: FiniteDuration): FiniteDuration = {
     //assumption is that the config duration is in seconds
-    appConfig.getConfigIntOption(confName) match {
+    appConfig.getIntOption(confName) match {
       case Some(duration) => duration.second
       case None           => defaultDurationInSeconds
     }

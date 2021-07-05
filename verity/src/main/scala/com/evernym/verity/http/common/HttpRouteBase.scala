@@ -34,7 +34,7 @@ trait HttpRouteBase
   def appConfig: AppConfig
 
   protected lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
-    var allowedIPs: List[String] = appConfig.getConfigListOfStringReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
+    var allowedIPs: List[String] = appConfig.getStringListReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
     if (allowedIPs.isEmpty) {
       val interfaces: JavaEnumeration[NetworkInterface] = NetworkInterface.getNetworkInterfaces
       while(interfaces.hasMoreElements)

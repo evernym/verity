@@ -217,7 +217,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
 
   }
 
-  lazy val httpPort: Int = appConfig.getConfigIntReq(HTTP_PORT)
+  lazy val httpPort: Int = appConfig.getIntReq(HTTP_PORT)
   lazy val INVITE_URL_REG_EX: Regex = s"""$inviteSenderName would like you to install Connect-Me for greater identity verification: https:\\/\\/connectme.app.link\\?t=(.*)""".r
   lazy val smsSender: SMSSender = platform.agentActorContext.smsSvc
 

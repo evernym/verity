@@ -43,9 +43,9 @@ trait CacheBase {
     val cacheParam =
       CaffeineCacheParam(
         fetcher.initialCapacity,
-        fetcher.expiryTimeInSeconds,
         fetcher.maxSize,
-        fetcher.maxWeightParam
+        fetcher.maxWeightParam,
+        fetcher.expiryTimeInSeconds
       )
     new CaffeineCacheProvider(cacheParam)
   }

@@ -16,13 +16,13 @@ trait PushNotifMsgBuilder extends HasAppConfig {
   def msgRecipientDID: DID
 
   lazy val msgTypesForAlertingPushNotificationOpt: Option[Set[String]] =
-    appConfig.getConfigSetOfStringOption(PUSH_NOTIF_MSG_TYPES_FOR_ALERT_PUSH_MSGS)
+    appConfig.getStringSetOption(PUSH_NOTIF_MSG_TYPES_FOR_ALERT_PUSH_MSGS)
 
   lazy val errResponseBodyTemplateOpt: Option[String] =
-    appConfig.getConfigStringOption(PUSH_NOTIF_ERROR_RESP_MSG_BODY_TEMPLATE)
+    appConfig.getStringOption(PUSH_NOTIF_ERROR_RESP_MSG_BODY_TEMPLATE)
 
   lazy val successResponseBodyTemplateOpt: Option[String] =
-    appConfig.getConfigStringOption(PUSH_NOTIF_SUCCESS_RESP_MSG_BODY_TEMPLATE)
+    appConfig.getStringOption(PUSH_NOTIF_SUCCESS_RESP_MSG_BODY_TEMPLATE)
 
   lazy val errorsForWhichComMethodShouldBeDeleted =
     Set(PUSH_COM_METHOD_NOT_REGISTERED_ERROR, PUSH_COM_METHOD_INVALID_REGISTRATION_ERROR,
@@ -57,16 +57,16 @@ trait PushNotifMsgBuilder extends HasAppConfig {
   }
 
   protected def getCommonPushNotifData(notifMsgDtl: NotifyMsgDetail, mds: Map[String, String] = Map.empty): Option[PushNotifData] = {
-    if (appConfig.getConfigBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
+    if (appConfig.getBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
       val rcvdSenderName = mds.get(NAME_KEY)
       val rcvdSenderLogoUrl = mds.get(LOGO_URL_KEY)
       val rcvdTitle = mds.get(TITLE)
       val rcvdDetail = mds.get(DETAIL)
       val bodyTemplate = mds.getOrElse(PUSH_NOTIF_BODY_TEMPLATE, throw new RuntimeException(s"not found: $PUSH_NOTIF_BODY_TEMPLATE"))
 
-      val titleTemplate = appConfig.getConfigStringReq(PUSH_NOTIF_GENERAL_MSG_TITLE_TEMPLATE)
-      val defaultSenderName = appConfig.getConfigStringReq(PUSH_NOTIF_DEFAULT_SENDER_NAME)
-      val defaultLogoUrl = appConfig.getConfigStringReq(PUSH_NOTIF_DEFAULT_LOGO_URL)
+      val titleTemplate = appConfig.getStringReq(PUSH_NOTIF_GENERAL_MSG_TITLE_TEMPLATE)
+      val defaultSenderName = appConfig.getStringReq(PUSH_NOTIF_DEFAULT_SENDER_NAME)
+      val defaultLogoUrl = appConfig.getStringReq(PUSH_NOTIF_DEFAULT_LOGO_URL)
       val defaultTitle = replaceVariables(titleTemplate, Map(TARGET_NAME -> DEFAULT_INVITE_RECEIVER_USER_NAME))
       val defaultDetail = replaceVariables(bodyTemplate, Map(SENDER_NAME -> rcvdSenderName.getOrElse(defaultSenderName),
         MSG_TYPE -> PusherUtil.getPushMsgType(notifMsgDtl.msgTypeWithoutFamilyQualifier), UID -> notifMsgDtl.uid))

@@ -48,5 +48,5 @@ trait AESEncryptor extends Encryptor {
 }
 
 object PersistentDataEncryptor extends AESEncryptor {
-  override lazy val salt: String = AppConfigWrapper.getConfigStringReq(SALT_EVENT_ENCRYPTION)
+  override lazy val salt: String = AppConfigWrapper.getStringReq(SALT_EVENT_ENCRYPTION)
 }

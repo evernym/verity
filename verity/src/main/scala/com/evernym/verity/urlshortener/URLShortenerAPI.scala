@@ -58,7 +58,7 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
 object DefaultURLShortener {
 
   def loadFromConfig(appConfig: AppConfig): Option[URLShortenerAPI] = {
-    appConfig.getConfigStringOption(URL_SHORTENER_SVC_SELECTED).map { clazz =>
+    appConfig.getStringOption(URL_SHORTENER_SVC_SELECTED).map { clazz =>
       Class
         .forName(clazz)
         .getConstructor(classOf[AppConfig])

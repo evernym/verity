@@ -24,7 +24,7 @@ trait AgentStateCleanupHelper {
 
   def cleanupCmdHandler: Receive = {
     case FixThreadMigrationState                  => fixThreadMigrationState()
-    case MigrateThreadContexts                    => migrateThreadContexts()
+    case MigrateThreadContexts                    => migrateThreadContextsByScheduledJob()
     case FixActorState(did, sndrActorRef)         => fixActorState(did, sndrActorRef)
     case cs: CheckActorStateCleanupState          => checkActorStateCleanupState(cs.sendCurrentStatus)
     case rss: RouteSetStatus                      => handleRouteSet(rss)
@@ -219,8 +219,6 @@ trait AgentStateCleanupHelper {
         }
       }
       migrateThreadContexts()
-    } else {
-
     }
     checkActorStateCleanupState(forceSendCurStatus = true)
   }
@@ -242,9 +240,16 @@ trait AgentStateCleanupHelper {
             threadContextMigrationStatus.count(_._2.isNotMigrated))
           if (rss.isSet && pendingThreadContextSize == 0) {
             finishThreadContextMigration()
+            finishActorStateCleanup()
           }
         }
       case _ => //nothing to do
+    }
+  }
+
+  def migrateThreadContextsByScheduledJob(): Unit = {
+    if (routeSetStatus.isEmpty) {   //this means the actor state clean up is not interacting with this agent actor
+      migrateThreadContexts()
     }
   }
 
@@ -258,16 +263,17 @@ trait AgentStateCleanupHelper {
 
   def finishThreadContextMigration(): Unit = {
     isThreadContextMigrationFinished = true
-
+    stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+    threadContextMigrationStatus = Map.empty
+    threadContextMigrationAttempt = Map.empty
     if (! isSnapshotTaken) {
       saveSnapshotStateIfAvailable()
       isSnapshotTaken = true
     }
+  }
 
+  def finishActorStateCleanup(): Unit = {
     if (! isStateCleanupCompleted) {
-      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
-      threadContextMigrationStatus = Map.empty
-      threadContextMigrationAttempt = Map.empty
       actorStateCleanupExecutor = None
       routeSetStatus = None
       isStateCleanupCompleted = true
@@ -318,6 +324,8 @@ trait AgentStateCleanupHelper {
       migrateThreadContextScheduledJobInterval,
       MigrateThreadContexts)
   }
+
+  scheduleThreadContextMigrationJobIfNotScheduled()
 
   self ! FixThreadMigrationState
 }

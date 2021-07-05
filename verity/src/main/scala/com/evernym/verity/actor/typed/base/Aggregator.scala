@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.msgoutbox.poc
+package com.evernym.verity.actor.typed.base
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}

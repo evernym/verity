@@ -19,12 +19,12 @@ trait HttpServerUtil extends CorsSupport {
 
   protected def startNewServer(routes: Route, appConfig: AppConfig): Future[Seq[HttpServerBindResult]] = {
     val httpBindFuture = try {
-      val sbFut = Http().newServerAt(appConfig.getConfigStringReq(HTTP_INTERFACE), appConfig.getConfigIntReq(HTTP_PORT)).bind(corsHandler(routes))
-      sbFut.map(sb => HttpServerBindResult(s"started listening on port ${appConfig.getConfigIntReq(HTTP_PORT)}", sb))
+      val sbFut = Http().newServerAt(appConfig.getStringReq(HTTP_INTERFACE), appConfig.getIntReq(HTTP_PORT)).bind(corsHandler(routes))
+      sbFut.map(sb => HttpServerBindResult(s"started listening on port ${appConfig.getIntReq(HTTP_PORT)}", sb))
     } catch {
       case e: Exception =>
         val errorMsg = "unable to bind to http port " +
-          s"${appConfig.getConfigIntReq(HTTP_PORT)} (detail => error-msg: ${Exceptions.getErrorMsg(e)})"
+          s"${appConfig.getIntReq(HTTP_PORT)} (detail => error-msg: ${Exceptions.getErrorMsg(e)})"
         AppStateUpdateAPI(system).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT, e, Option(errorMsg)))
         throw e
     }

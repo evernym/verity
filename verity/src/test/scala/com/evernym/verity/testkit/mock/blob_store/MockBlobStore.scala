@@ -25,17 +25,21 @@ class MockBlobStore(config: AppConfig)(implicit val as: ActorSystem) extends Sto
   }
 
   override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
-    val dbKey = calcKey(bucketName, id)
-    val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) ++ Map(dbKey -> data)
-    bucketStore += bucketName -> bucketItems
-    Future(StorageInfo(dbKey, "mock"))
+    synchronized {
+      val dbKey = calcKey(bucketName, id)
+      val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) ++ Map(dbKey -> data)
+      bucketStore += bucketName -> bucketItems
+      Future(StorageInfo(dbKey, "mock"))
+    }
   }
 
   override def delete(bucketName: String, id: String): Future[Done] = {
-    val dbKey = calcKey(bucketName, id)
-    val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) - dbKey
-    bucketStore += (bucketName -> bucketItems)
-    Future(Done)
+    synchronized {
+      val dbKey = calcKey(bucketName, id)
+      val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) - dbKey
+      bucketStore += (bucketName -> bucketItems)
+      Future(Done)
+    }
   }
 
   def getBlobObjectCount(keyStartsWith: String, bucketName: BucketName): Int = {

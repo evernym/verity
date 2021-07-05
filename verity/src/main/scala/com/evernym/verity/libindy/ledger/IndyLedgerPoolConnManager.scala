@@ -36,7 +36,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
   extends ConfigurableLedgerPoolConnManager(appConfig) {
 
   val openTimeout: Duration = Duration.apply(
-    appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT).getOrElse(60),
+    appConfig.getIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT).getOrElse(60),
     TimeUnit.SECONDS)
 
   override def connHandle: Option[Int] = poolConn.map(_.getPoolHandle)
@@ -44,10 +44,10 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
   private var heldPoolConn: Option[Pool] = None
 
   private def configName = poolConfigName
-    .getOrElse(appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_NAME))
+    .getOrElse(appConfig.getStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_NAME))
 
   val genesisTxnFilePath: String = genesisFile.getOrElse(
-    appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION))
+    appConfig.getStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION))
 
   val logger: Logger = getLoggerByClass(classOf[IndyLedgerPoolConnManager])
 
@@ -82,22 +82,22 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       Pool.setProtocolVersion(ledgerTxnProtocolVer).get
       // Start with an empty mutable Map, and add optional agency->libindy->ledger->pool-config
       val poolConfig: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-      appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_TIMEOUT) match {
+      appConfig.getIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_TIMEOUT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("timeout") = timeout
         case Some(_) => throw new RuntimeException("ledger pool config's timeout must be an integer greater than 0")
       }
-      appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_EXTENDED_TIMEOUT) match {
+      appConfig.getIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_EXTENDED_TIMEOUT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("extended_timeout") = timeout
         case Some(_) => throw new RuntimeException("ledger pool config's extended_timeout must be an integer greater than 0")
       }
-      appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_LIMIT) match {
+      appConfig.getIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_LIMIT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("conn_limit") = timeout
         case Some(_) => throw new RuntimeException("ledger pool config's conn_limit must be an integer greater than 0")
       }
-      appConfig.getConfigIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_ACTIVE_TIMEOUT) match {
+      appConfig.getIntOption(CommonConfig.LIB_INDY_LEDGER_POOL_CONFIG_CONN_ACTIVE_TIMEOUT) match {
         case None =>
         case Some(timeout: Int) if timeout > 0 => poolConfig("conn_active_timeout") = timeout
         case Some(_) => throw new RuntimeException("ledger pool config's conn_active_timeout must be an integer greater than 0")
@@ -147,7 +147,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       }.map { ledgerTaa: LedgerTAA =>
         val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
 
-        val autoAccept = appConfig.getConfigBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
+        val autoAccept = appConfig.getBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
         val configuredTaa:Option[TransactionAuthorAgreement] = if(!autoAccept) {
           findTAAConfig(appConfig, ledgerTaa.version)
         }

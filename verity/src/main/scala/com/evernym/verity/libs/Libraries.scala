@@ -19,7 +19,7 @@ object Libraries {
     val liLogger: Logger = getLoggerByClass(getClass)
 
     val libIndyDirPath: String = {
-      val lifp = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LIBRARY_DIR_LOCATION)
+      val lifp = appConfig.getStringReq(CommonConfig.LIB_INDY_LIBRARY_DIR_LOCATION)
       liLogger.debug("lib indy dir path: " + lifp)
       lifp
     }
@@ -35,8 +35,8 @@ object Libraries {
       }
     }
 
-    if (appConfig.getConfigStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL
-    && appConfig.getConfigStringReq(CommonConfig.LIB_INDY_FLAVOR) == LIBINDY_LEGACY_FLAVOR) {
+    if (appConfig.getStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL
+    && appConfig.getStringReq(CommonConfig.LIB_INDY_FLAVOR) == LIBINDY_LEGACY_FLAVOR) {
       try {
         if (MySqlStorageLib.api == null) {
           augmentJnaPath()

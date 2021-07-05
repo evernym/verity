@@ -293,29 +293,29 @@ trait AgentStateCleanupHelper {
 
   lazy val migrateThreadContextBatchSize: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
       .getOrElse(5)
 
   lazy val migrateThreadContextBatchItemSleepInterval: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5000)
 
   lazy val migrateThreadContextScheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   val MIGRATE_SCHEDULED_JOB_ID = "MigrateThreadContexts"
 
   lazy val migrateThreadContextMaxAttemptPerPinstProtoRef: Int =
     appConfig
-      .getConfigIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
+      .getIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
       .getOrElse(15)
 
   def isMigrateThreadContextsEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
+      .getBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
       .getOrElse(false)
 
   def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {

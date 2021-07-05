@@ -15,9 +15,9 @@ import scala.concurrent.SyncVar
 trait TwilioDispatcher extends SMSServiceProvider with ConfigSvc {
 
   lazy val providerId = SMS_PROVIDER_ID_TWILIO
-  lazy val from: String = appConfig.getConfigStringReq(TWILIO_DEFAULT_NUMBER)
-  lazy val token: String = appConfig.getConfigStringReq(TWILIO_TOKEN)
-  lazy val accountSid: String = appConfig.getConfigStringReq(TWILIO_ACCOUNT_SID)
+  lazy val from: String = appConfig.getStringReq(TWILIO_DEFAULT_NUMBER)
+  lazy val token: String = appConfig.getStringReq(TWILIO_TOKEN)
+  lazy val accountSid: String = appConfig.getStringReq(TWILIO_ACCOUNT_SID)
 
   lazy val client = {
     val trc = new SyncVar[TwilioRestClient]

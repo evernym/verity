@@ -67,7 +67,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   val resourceUsageTracker = new BucketBasedResourceUsageTracker
 
   override lazy val persistenceEncryptionKey: String =
-    appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
+    appConfig.getStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
 
   def getResourceUsages: ResourceUsages = try {
     val allResourceUsages = resourceUsageTracker.getAllResourceBuckets.map { case (resourceName, resourceBuckets) =>

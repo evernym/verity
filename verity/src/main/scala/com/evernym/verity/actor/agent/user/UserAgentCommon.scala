@@ -257,7 +257,7 @@ trait UserAgentCommon
       .getOrElse(
         agentActorContext
           .appConfig
-          .getConfigStringOption(PUSH_NOTIF_DEFAULT_LOGO_URL)
+          .getStringOption(PUSH_NOTIF_DEFAULT_LOGO_URL)
           .getOrElse(DEFAULT_INVITE_SENDER_LOGO_URL))
   }
 

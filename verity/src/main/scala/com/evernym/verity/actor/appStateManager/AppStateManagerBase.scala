@@ -223,11 +223,11 @@ trait AppStateManagerBase { this: Actor =>
       // TODO: Start a CoordinatedShutdown (rely on the ClusterDaemon addTask here) OR do the following?
       val cluster = Cluster(context.system)
       val f: Future[Boolean] = Future {
-        val delayBeforeLeavingCluster = appConfig.getConfigIntOption(
+        val delayBeforeLeavingCluster = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-        val delayBetweenStatusChecks = appConfig.getConfigIntOption(
+        val delayBetweenStatusChecks = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS).getOrElse(1)
-        val maxStatusCheckCount = appConfig.getConfigIntOption(
+        val maxStatusCheckCount = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT).getOrElse(20)
         logger.info(
           s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""

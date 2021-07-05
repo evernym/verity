@@ -16,12 +16,12 @@ import org.joda.time.{DateTime, DateTimeZone}
 object MetricsReader {
 
   private val lastResetTimestamp: String = getCurrentTimestamp
-  private val hostName: String = AppConfigWrapper.getConfigStringReq(KAMON_ENV_HOST)
+  private val hostName: String = AppConfigWrapper.getStringReq(KAMON_ENV_HOST)
 
   private var metricsReporter: Option[MetricsReporter] = None
 
   def initialize(appConfig: AppConfig): Unit = {
-    if (appConfig.getConfigStringOption(METRICS_ENABLED).forall(_ == YES)) {
+    if (appConfig.getStringOption(METRICS_ENABLED).forall(_ == YES)) {
       Kamon.loadModules()   //for system/jvm related metrics
       metricsReporter = Some(KamonPrometheusMetricsReporter)
     }

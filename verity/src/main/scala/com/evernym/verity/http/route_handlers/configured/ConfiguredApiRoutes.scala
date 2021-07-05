@@ -18,7 +18,7 @@ trait ConfiguredApiRoutes
       routeIfConfigEnabled(INTERNAL_API_PERSISTENT_DATA_ENABLED, persistentActorMaintenanceRoutes)
 
   def routeIfConfigEnabled(configName: String, route: Route): Route = {
-    val confValue = appConfig.getConfigBooleanOption(configName)
+    val confValue = appConfig.getBooleanOption(configName)
     if (confValue.contains(true)) route
     else RouteDirectives.reject
   }

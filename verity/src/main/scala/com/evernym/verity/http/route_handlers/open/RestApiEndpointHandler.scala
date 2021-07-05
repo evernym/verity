@@ -34,7 +34,7 @@ final case class `API-REQUEST-ID`(id: String) extends CustomHeader {
 
 trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
-  lazy val restApiEnabled: Boolean = appConfig.getConfigBooleanOption(REST_API_ENABLED).getOrElse(false)
+  lazy val restApiEnabled: Boolean = appConfig.getBooleanOption(REST_API_ENABLED).getOrElse(false)
 
   protected def checkIfRestApiEnabled(): Unit = {
     if (!restApiEnabled) {

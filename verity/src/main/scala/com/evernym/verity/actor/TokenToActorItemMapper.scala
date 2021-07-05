@@ -67,7 +67,7 @@ class TokenToActorItemMapper(val appConfig: AppConfig)
   var actorItemDetail: Option[ActorItemDetail] = None
 
   override lazy val persistenceEncryptionKey: String =
-    appConfig.getConfigStringReq(CommonConfig.SECRET_TOKEN_TO_ACTOR_ITEM_MAPPER)
+    appConfig.getStringReq(CommonConfig.SECRET_TOKEN_TO_ACTOR_ITEM_MAPPER)
 
   val receiveEvent: Receive = {
     case e: TokenToActorItemMappingAdded =>

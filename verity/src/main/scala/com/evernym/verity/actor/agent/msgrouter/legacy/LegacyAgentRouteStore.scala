@@ -147,7 +147,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   var pendingRouteMigration: Map[RouteId, ActorAddressDetail] = Map.empty
   var migrationStatus: Map[RouteId, RouteMigrationStatus] = Map.empty
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   val routeRegion: ActorRef = ClusterSharding(context.system).shardRegion(ROUTE_REGION_ACTOR_NAME)
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)

@@ -138,7 +138,7 @@ trait AgencyAgentCommon
   def identifySponsor(idSponsor: IdentifySponsor): Future[Option[ControlMsg]] = {
     val sponsorRequired = ConfigUtil.sponsorRequired(appConfig)
     val tokenWindow = Duration(appConfig.getLoadedConfig.getString(s"$PROVISIONING.token-window"))
-    val cacheUsedTokens = appConfig.getConfigBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
+    val cacheUsedTokens = appConfig.getBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
 
     logger.debug(s"identify sponsor: $sponsorRequired - token valid for $tokenWindow")
     val ctl: AgentProvisioningMsgFamily.Ctl = idSponsor.provisionDetails match {

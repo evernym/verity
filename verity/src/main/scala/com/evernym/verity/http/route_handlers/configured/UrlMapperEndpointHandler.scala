@@ -31,7 +31,7 @@ trait UrlMapperEndpointHandler
     val respFut = platform.urlStore ? AddUrl(url)
     respFut map {
       case _: UrlAdded =>
-        val urlTemplate = platform.agentActorContext.appConfig.getConfigStringReq(CONNECT_ME_MAPPED_URL_TEMPLATE)
+        val urlTemplate = platform.agentActorContext.appConfig.getStringReq(CONNECT_ME_MAPPED_URL_TEMPLATE)
         val newUrl = replaceVariables(urlTemplate, Map(TOKEN -> hashed))
         Url(newUrl)
       case e => e

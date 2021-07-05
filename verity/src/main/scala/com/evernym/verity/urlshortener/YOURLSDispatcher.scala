@@ -29,12 +29,12 @@ trait YOURLSDispatcher extends URLShortenerAPI with ConfigSvc {
 
   val providerId: String = URL_SHORTENER_PROVIDER_ID_YOURLS
 
-  lazy val timeout: Duration = appConfig.getConfigIntOption(YOURLS_API_TIMEOUT_SECONDS).getOrElse(10).seconds
+  lazy val timeout: Duration = appConfig.getIntOption(YOURLS_API_TIMEOUT_SECONDS).getOrElse(10).seconds
 
-  lazy val apiUrl: String = appConfig.getConfigStringReq(YOURLS_API_URL)
-  lazy val apiSignature: Option[String] = OptionUtil.blankFlattenOption(appConfig.getConfigStringOption(YOURLS_API_SIGNATURE))
-  lazy val apiUsername: String = appConfig.getConfigStringReq(YOURLS_API_USERNAME)
-  lazy val apiPassword: String = appConfig.getConfigStringReq(YOURLS_API_PASSWORD)
+  lazy val apiUrl: String = appConfig.getStringReq(YOURLS_API_URL)
+  lazy val apiSignature: Option[String] = OptionUtil.blankFlattenOption(appConfig.getStringOption(YOURLS_API_SIGNATURE))
+  lazy val apiUsername: String = appConfig.getStringReq(YOURLS_API_USERNAME)
+  lazy val apiPassword: String = appConfig.getStringReq(YOURLS_API_PASSWORD)
   lazy val formData: Map[String, String] = Map(
     "action" -> "shorturl",
     "format" -> "json"

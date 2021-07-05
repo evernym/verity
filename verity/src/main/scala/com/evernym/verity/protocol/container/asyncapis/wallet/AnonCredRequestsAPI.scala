@@ -24,7 +24,7 @@ trait AnonCredRequestsAPI
 
   lazy val masterSecretId: String = {
 
-    val salt = appConfig.getConfigStringReq(SALT_WALLET_NAME)
+    val salt = appConfig.getStringReq(SALT_WALLET_NAME)
     val msIdHex = HashUtil.hash(SHA256)(selfParticipantId + salt).hex
     //TODO: may want to optimize this (for now, every time a cred request is sent, it will do below check)
     Try(DEPRECATED_convertToSyncReq(walletApi.executeAsync[MasterSecretCreated](CreateMasterSecret(msIdHex)))) match {

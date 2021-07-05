@@ -147,7 +147,7 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
   override def appConfig: AppConfig = aac.appConfig
   def agentActorContext: AgentActorContext = aac
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_BLOCKING_STATUS_MNGR)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_RESOURCE_BLOCKING_STATUS_MNGR)
 
 }
 

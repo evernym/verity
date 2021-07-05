@@ -7,10 +7,12 @@ class OutboxRouterSpec
   extends BehaviourSpecBase
     with BasicSpec {
 
-  "OutboxRouterBehaviour" - {
+  "OutboxRouter" - {
 
     "when received a request to send a message" - {
       "should process it successfully" in {
+        //this will test that behaviour is able to fetch relationship data
+        // extracts/calculates target outbox ids
         pending
       }
     }

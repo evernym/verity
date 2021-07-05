@@ -46,7 +46,7 @@ class Pusher(config: AppConfig) extends CoreActorExtended {
               publishAppStateEvent(RecoverIfNeeded(CONTEXT_PUSH_NOTIF))
             } else {
               val pushNotifWarnOnErrorList: Set[String] =
-                config.getConfigSetOfStringOption(PUSH_NOTIF_WARN_ON_ERROR_LIST).
+                config.getStringSetOption(PUSH_NOTIF_WARN_ON_ERROR_LIST).
                   getOrElse(PUSH_COM_METHOD_WARN_ON_ERROR_LIST)
               if (pushNotifWarnOnErrorList.contains(r.detail.orNull)) {
                 // Do not degrade state for certain push notification errors
@@ -117,17 +117,17 @@ trait PushServiceProvider {
 object PusherUtil  {
 
   private def buildFirebasePusher(appConfig: AppConfig): Option[PushServiceProvider] = {
-    if (appConfig.getConfigBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
-      val key = appConfig.getConfigStringReq(FCM_API_KEY)
-      val host = appConfig.getConfigStringReq(FCM_API_HOST)
-      val path = appConfig.getConfigStringReq(FCM_API_PATH)
+    if (appConfig.getBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
+      val key = appConfig.getStringReq(FCM_API_KEY)
+      val host = appConfig.getStringReq(FCM_API_HOST)
+      val path = appConfig.getStringReq(FCM_API_PATH)
       Option(new FirebasePusher(FirebasePushServiceParam(key, host, path)))
     } else None
   }
 
   private def buildMockPusher(config: AppConfig): Option[PushServiceProvider] = {
     //This MCM (Mock Cloud Messaging) is only enabled in integration test
-    val isMCMEnabled = config.getConfigBooleanOption(MCM_ENABLED).getOrElse(false)
+    val isMCMEnabled = config.getBooleanOption(MCM_ENABLED).getOrElse(false)
     if (isMCMEnabled) Option(MockPusher) else None
   }
 

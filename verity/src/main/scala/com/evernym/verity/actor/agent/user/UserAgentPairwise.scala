@@ -396,7 +396,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   lazy val useAsyncPersistForMsgForward: Boolean =
-    appConfig.getConfigBooleanOption(PERSISTENCE_USE_ASYNC_MSG_FORWARD).getOrElse(false)
+    appConfig.getBooleanOption(PERSISTENCE_USE_ASYNC_MSG_FORWARD).getOrElse(false)
 
   def persistAndProcessSendRemoteMsg(papsrm: PersistAndProcessSendRemoteMsg): Unit = {
     runWithInternalSpan("persistAndProcessSendRemoteMsg", "UserAgentPairwise") {
@@ -878,7 +878,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   def mySelfRelDIDReq: DID = domainId
   def myPairwiseVerKey: VerKey = state.myDidAuthKeyReq.verKey
 
-  lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+  lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
 
   /**

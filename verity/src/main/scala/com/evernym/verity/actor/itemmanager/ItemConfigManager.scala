@@ -36,7 +36,7 @@ object ItemConfigManager {
   }
 
   private def getManagerVersionPrefix(itemManagerEntityId: ItemManagerEntityId, appConfig: AppConfig): String =
-    appConfig.getConfigStringOption(s"$VERITY.item-manager.$itemManagerEntityId.version")
+    appConfig.getStringOption(s"$VERITY.item-manager.$itemManagerEntityId.version")
       .getOrElse("v1")
 
 }

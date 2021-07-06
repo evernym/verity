@@ -155,7 +155,7 @@ trait AgentCommon
    */
   lazy val generalCache: Cache = agentActorContext.generalCache
 
-  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
+  lazy val defaultEndorserDid: String = appConfig.getStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
   def updateAgentWalletId(actorEntityId: String): Unit = {
     if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
@@ -333,7 +333,7 @@ trait AgentCommon
 
   lazy val isVAS: Boolean =
     appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 }
 

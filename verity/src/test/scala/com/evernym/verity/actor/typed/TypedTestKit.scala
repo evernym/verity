@@ -1,19 +1,28 @@
 package com.evernym.verity.actor.typed
 
+import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import akka.persistence.testkit.scaladsl.{EventSourcedBehaviorTestKit, PersistenceTestKit, SnapshotTestKit}
 import com.typesafe.config.{Config, ConfigFactory}
+
+
+abstract class BehaviourSpecBase
+  extends ScalaTestWithActorTestKit(
+    ActorTestKit(
+      "TestSystem",
+      TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
+    )
+  )
+
+abstract class EventSourcedBehaviourSpecBase
+  extends BehaviourSpecBase {
+  lazy val persTestKit: PersistenceTestKit = PersistenceTestKit(system)
+  lazy val snapTestKit: SnapshotTestKit = SnapshotTestKit(system)
+}
 
 object TypedTestKit {
 
-  val config: Config = ConfigFactory.parseString(
-    """
-    akka.actor {
-      serialization-bindings {
-        "com.evernym.verity.actor.typed.Encodable" = jackson-cbor
-      }
-    }
-    """)
+  val config: Config = ConfigFactory.empty
     .withFallback(EventSourcedBehaviorTestKit.config)
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
 

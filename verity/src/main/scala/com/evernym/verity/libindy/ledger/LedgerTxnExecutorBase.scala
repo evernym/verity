@@ -6,8 +6,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status
 import com.evernym.verity.Status.{TIMEOUT, UNHANDLED, _}
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
@@ -175,7 +174,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     val pr = getResultFromJson(response)
     pr.get(OP) match {
       case Some(op) if op.equals(REPLY) =>
-        publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+        AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
         pr
       case Some(op) if op.equals(REJECT) || op.equals(REQNACK) =>
         // TODO: get REASON_CODE/STATUS_CODE (whatever indy folks end up calling it) instead of REASON and change
@@ -206,36 +205,36 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     case e: StatusDetailException => throw e
     case e: TimeoutException =>
       val errorMsg = "no response from ledger pool: " + e.toString
-      publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION,
         new NoResponseFromLedgerPoolServiceException(Option(errorMsg)), Option(errorMsg)))
       throw StatusDetailException(TIMEOUT.withMessage(e.getMessage))
     case e: TaaConfiguredVersionInvalidError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_CONFIGURED_VERSION_INVALID Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_CONFIGURED_VERSION_INVALID)
     case e: TaaConfigurationForVersionNotFoundError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND)
     case e: TaaFailedToGetCurrentVersionError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_FAILED_TO_GET_CURRENT_VERSION Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_FAILED_TO_GET_CURRENT_VERSION)
     case e: TaaRequiredButDisabledError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_REQUIRED_BUT_DISABLED Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_REQUIRED_BUT_DISABLED)
     case e: UnknownTxnRejectReasonError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$LEDGER_UNKNOWN_REJECT_ERROR Details: ${e.getMessage}")))
       throw StatusDetailException(LEDGER_UNKNOWN_REJECT_ERROR )
     case e: UnhandledIndySdkException =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$INDY_SDK_UNHANDLED_EXCEPTION Details: ${e.getMessage}")))
       throw StatusDetailException(INDY_SDK_UNHANDLED_EXCEPTION)
     case e: Exception =>
       val errorMsg = "unhandled error/response while interacting with ledger: " + e.toString
-      publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
       throw StatusDetailException(UNHANDLED.withMessage( e.getMessage))
     case e =>
       logger.warn(e.getMessage)
@@ -271,7 +270,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   private def submitWriteRequest(submitterDetail: Submitter,
                                  reqDetail: LedgerRequest):Future[TxnResp] ={
     completeRequest(submitterDetail, reqDetail).map { resp =>
-      publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+      AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
       buildTxnRespForWriteOp(resp)
     }.recover {
       case e: StatusDetailException => throw e

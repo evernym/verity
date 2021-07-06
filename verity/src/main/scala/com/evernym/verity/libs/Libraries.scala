@@ -2,7 +2,7 @@ package com.evernym.verity.libs
 
 import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.AppStateConstants.{CONTEXT_LIB_INDY_INIT, CONTEXT_LIB_MYSQLSTORAGE_INIT}
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI.handleError
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.constants.Constants.{LIBINDY_LEGACY_FLAVOR, WALLET_TYPE_MYSQL}
@@ -19,7 +19,7 @@ object Libraries {
     val liLogger: Logger = getLoggerByClass(getClass)
 
     val libIndyDirPath: String = {
-      val lifp = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LIBRARY_DIR_LOCATION)
+      val lifp = appConfig.getStringReq(CommonConfig.LIB_INDY_LIBRARY_DIR_LOCATION)
       liLogger.debug("lib indy dir path: " + lifp)
       lifp
     }
@@ -35,8 +35,8 @@ object Libraries {
       }
     }
 
-    if (appConfig.getConfigStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL
-    && appConfig.getConfigStringReq(CommonConfig.LIB_INDY_FLAVOR) == LIBINDY_LEGACY_FLAVOR) {
+    if (appConfig.getStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL
+    && appConfig.getStringReq(CommonConfig.LIB_INDY_FLAVOR) == LIBINDY_LEGACY_FLAVOR) {
       try {
         if (MySqlStorageLib.api == null) {
           augmentJnaPath()

@@ -217,7 +217,7 @@ trait BasePersistentActor
 
   private val defaultWarnRecoveryTimeInMilliSeconds: Int = 1000
 
-  private lazy val warnRecoveryTime: Int = appConfig.getConfigIntOption(PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS)
+  private lazy val warnRecoveryTime: Int = appConfig.getIntOption(PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS)
     .getOrElse(defaultWarnRecoveryTimeInMilliSeconds)
 
   override def beforeStart(): Unit = {

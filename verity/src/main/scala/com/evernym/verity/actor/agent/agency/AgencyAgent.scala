@@ -175,7 +175,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def agencyLedgerDetail(): Ledgers = {
     // Architecture requested that this be future-proofed by assuming Agency will have more than one ledger.
     val genesis = try {
-      val genesisFileLocation = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
+      val genesisFileLocation = appConfig.getStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
       val genesisFileSource = Source.fromFile(genesisFileLocation)
       val lines = genesisFileSource.getLines().toList
       genesisFileSource.close()

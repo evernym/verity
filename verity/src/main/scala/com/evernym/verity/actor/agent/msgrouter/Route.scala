@@ -52,7 +52,7 @@ class Route(implicit val appConfig: AppConfig)
 
   val legacyRouteStoreActorRegion: ActorRef = ClusterSharding(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 }
 
 object Route {

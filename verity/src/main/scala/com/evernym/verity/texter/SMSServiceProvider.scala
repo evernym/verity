@@ -117,7 +117,7 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
    * @return
    */
   def servicesToBeUsedInOrder: List[SMSServiceProvider] = {
-    val preferredOrder = config.getConfigListOfStringReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
+    val preferredOrder = config.getStringListReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
     preferredOrder.flatMap(id => allServices.find(s => s.providerId == id))
   }
 

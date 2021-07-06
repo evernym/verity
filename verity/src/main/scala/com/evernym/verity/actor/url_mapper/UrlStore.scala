@@ -22,7 +22,7 @@ class UrlStore(val appConfig: AppConfig) extends BasePersistentActor {
 
   var url: Option[String] = None
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_URL_STORE)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_URL_STORE)
 
   // This is for event sourcing; it is called when the actor starts for the first
   // time (once for each event persisted from DynamoDB); after, all new events

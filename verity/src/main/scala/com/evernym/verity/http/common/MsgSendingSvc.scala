@@ -30,7 +30,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
   //TODO: we should change the below 'None' case behavior to either
   // 'sendByRequestLevelFlowAPI' or 'sendByRequestLevelFutureAPI'
   // once we have tested those api types and sure that it doesn't break any thing
-  protected val sendRequest = appConfig.getConfigStringOption(AKKA_HTTP_MSG_SENDING_SVC_API_TYPE) match {
+  protected val sendRequest = appConfig.getStringOption(AKKA_HTTP_MSG_SENDING_SVC_API_TYPE) match {
     case None                               => sendByConnectionLevelFlowAPI _
     case Some("connection-level-flow-api")  => sendByConnectionLevelFlowAPI _
     case Some("request-level-flow-api")     => sendByRequestLevelFlowAPI _

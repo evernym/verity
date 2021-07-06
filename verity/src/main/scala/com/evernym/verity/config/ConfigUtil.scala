@@ -64,7 +64,7 @@ object ConfigUtil {
   }
 
   def isTAAConfigEnabled(appConfig: AppConfig): Boolean = {
-    appConfig.getConfigBooleanOption(LIB_INDY_LEDGER_TAA_ENABLED).getOrElse(false)
+    appConfig.getBooleanOption(LIB_INDY_LEDGER_TAA_ENABLED).getOrElse(false)
   }
 
   def findTAAConfig(config: AppConfig, version: String): Option[TransactionAuthorAgreement] = {
@@ -88,9 +88,9 @@ object ConfigUtil {
 
     TransactionAuthorAgreement(
       version,
-      config.getConfigStringReq(s"$agreementVersionPath.digest").toLowerCase(),
-      config.getConfigStringReq(s"$agreementVersionPath.mechanism"),
-      config.getConfigStringReq(s"$agreementVersionPath.time-of-acceptance")
+      config.getStringReq(s"$agreementVersionPath.digest").toLowerCase(),
+      config.getStringReq(s"$agreementVersionPath.mechanism"),
+      config.getStringReq(s"$agreementVersionPath.time-of-acceptance")
     )
   }
 
@@ -103,7 +103,7 @@ object ConfigUtil {
 
   def sponsorRequired(appConfig: AppConfig): Boolean =
     appConfig
-      .getConfigBooleanReq(s"$PROVISIONING.sponsor-required")
+      .getBooleanReq(s"$PROVISIONING.sponsor-required")
 
   private def findSponsorConfig(lookupKey: String, lookupValue: String, appConfig: AppConfig): Option[SponsorDetails] =
       appConfig
@@ -126,7 +126,7 @@ object ConfigUtil {
     findSponsorConfig("id", id, appConfig)
 
   def findAgentSpecificConfig(key: String, domainId: Option[DomainId], appConfig: AppConfig): String = {
-    val default = appConfig.getConfigStringReq(key)
+    val default = appConfig.getStringReq(key)
     domainId match {
       case Some(domain) =>
         val (parent, targetKey) = parentKeySegment(key)
@@ -134,19 +134,19 @@ object ConfigUtil {
           if (StringUtils.isBlank(parent)) s"agent-specific.$domain.$targetKey"
           else s"$parent.agent-specific.$domain.$targetKey"
         }
-        val specific = appConfig.getConfigStringOption(specificKey)
+        val specific = appConfig.getStringOption(specificKey)
         specific.getOrElse(default)
       case _ => default
     }
   }
 
   private def _activity(config: AppConfig, key: String, behavior: Behavior): Set[ActiveWindowRules] = {
-    if (config.getConfigBooleanReq(s"$key.enabled")) {
-      val windows = config.getConfigListOfStringReq(s"$key.time-windows")
+    if (config.getBooleanReq(s"$key.enabled")) {
+      val windows = config.getStringListReq(s"$key.time-windows")
         .map(x => ActiveWindowRules(VariableDuration(x), behavior))
 
       val monthly =
-        if (config.getConfigBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))
+        if (config.getBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))
         else Set.empty
 
       (windows ++ monthly).toSet
@@ -161,10 +161,10 @@ object ConfigUtil {
   }
 
   def sponsorMetricTagEnabled(config: AppConfig): Boolean =
-    config.getConfigBooleanReq(PROTOCOL_TAG_USES_SPONSOR)
+    config.getBooleanReq(PROTOCOL_TAG_USES_SPONSOR)
 
   def sponseeMetricTagEnabled(config: AppConfig): Boolean =
-    config.getConfigBooleanReq(PROTOCOL_TAG_USES_SPONSEE)
+    config.getBooleanReq(PROTOCOL_TAG_USES_SPONSEE)
 
   def getSponsorRelTag(config: AppConfig, sponsorRel: SponsorRel): Map[String, String] = {
     var a: Map[String, String] = Map()
@@ -192,9 +192,9 @@ object ConfigUtil {
   }
 
   private def getPolicyFromConfig(config: Config, protoRef: String): RetentionPolicy = {
-    val retentionPolicyConfig = AppConfigWrapper.getConfigOption(config, emptyToUndefined(protoRef)) match {
+    val retentionPolicyConfig = ConfigReadHelper.getConfigOption(config, emptyToUndefined(protoRef)) match {
         case Some(x)  => x
-        case None     => AppConfigWrapper
+        case None     => ConfigReadHelper
           .getConfigOption(config, UNDEFINED_FALLBACK)
           .getOrElse(throw new ConfigException.Missing(s"Must define Data Retention Policy '$UNDEFINED_FALLBACK'"))
     }
@@ -205,8 +205,8 @@ object ConfigUtil {
   def getPolicyFromConfigStr(configStr: String): RetentionPolicy = {
     Try(new ConfigReadHelper(ConfigFactory.parseString(configStr))) match {
       case Success(retentionConfig) =>
-        val expireAfterDays = retentionConfig.getConfigStringReq(EXPIRE_AFTER_DAYS)
-        val expireAfterTerminalState = retentionConfig.getConfigBooleanOption(EXPIRE_AFTER_TERMINAL_STATE).getOrElse(false)
+        val expireAfterDays = retentionConfig.getStringReq(EXPIRE_AFTER_DAYS)
+        val expireAfterTerminalState = retentionConfig.getBooleanOption(EXPIRE_AFTER_TERMINAL_STATE).getOrElse(false)
         RetentionPolicy(
           configStr,
           PolicyElements(expireAfterDays, expireAfterTerminalState)
@@ -314,7 +314,7 @@ object ConfigUtil {
 
   private def safeGetAppConfigStringOption(key: String, appConfig: AppConfig): Option[String] =
     try {
-      appConfig.getConfigStringOption(safeKey(key))
+      appConfig.getStringOption(safeKey(key))
     } catch {
       case e: ConfigException =>
         logger.warn(s"exception during getting key: $key from config: $e")
@@ -324,7 +324,7 @@ object ConfigUtil {
 
   private def safeGetAppConfigBooleanOption(key: String, appConfig: AppConfig): Option[Boolean] =
     try {
-      appConfig.getConfigBooleanOption(safeKey(key))
+      appConfig.getBooleanOption(safeKey(key))
     } catch {
       case e: ConfigException =>
         logger.warn(s"exception during getting key: $key from config: $e")

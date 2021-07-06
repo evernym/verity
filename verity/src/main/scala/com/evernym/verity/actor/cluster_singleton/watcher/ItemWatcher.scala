@@ -134,11 +134,11 @@ class AgentActorWatcher(val appConfig: AppConfig)
       .getOrElse(throw new RuntimeException("entity type mapping not found for type: " + entityType))
   }
 
-  private lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+  private lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     s"$AGENT_ACTOR_WATCHER_SCHEDULED_JOB_INTERVAL_IN_SECONDS")
     .getOrElse(200)
 
-  private lazy val batchSize: Int = appConfig.getConfigIntOption(ITEM_WATCHER_BATCH_SIZE).getOrElse(100)
+  private lazy val batchSize: Int = appConfig.getIntOption(ITEM_WATCHER_BATCH_SIZE).getOrElse(100)
 
   private lazy val entityTypeMappings = EntityTypeMapper.buildEntityTypeMappings(appConfig)
   private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, context.system)

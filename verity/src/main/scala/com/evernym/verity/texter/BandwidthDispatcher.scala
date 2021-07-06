@@ -19,13 +19,13 @@ import scala.collection.JavaConverters._
 trait BandwidthDispatcher extends SMSServiceProvider with ConfigSvc {
 
   lazy val providerId = SMS_PROVIDER_ID_BANDWIDTH
-  lazy val from: String = appConfig.getConfigStringReq(BANDWIDTH_DEFAULT_NUMBER)
+  lazy val from: String = appConfig.getStringReq(BANDWIDTH_DEFAULT_NUMBER)
 
-  lazy val userId: String = appConfig.getConfigStringReq(BANDWIDTH_USER_ID)
-  lazy val token: String = appConfig.getConfigStringReq(BANDWIDTH_TOKEN)
-  lazy val secret: String = appConfig.getConfigStringReq(BANDWIDTH_SECRET)
-  lazy val webApiHost: String = appConfig.getConfigStringReq(BANDWIDTH_ENDPOINT_HOST)
-  lazy val webApiUrlPrefix: String = appConfig.getConfigStringReq(BANDWIDTH_ENDPOINT_PATH_PREFIX)
+  lazy val userId: String = appConfig.getStringReq(BANDWIDTH_USER_ID)
+  lazy val token: String = appConfig.getStringReq(BANDWIDTH_TOKEN)
+  lazy val secret: String = appConfig.getStringReq(BANDWIDTH_SECRET)
+  lazy val webApiHost: String = appConfig.getStringReq(BANDWIDTH_ENDPOINT_HOST)
+  lazy val webApiUrlPrefix: String = appConfig.getStringReq(BANDWIDTH_ENDPOINT_PATH_PREFIX)
   lazy val webApiUrl: String = "https://" + webApiHost
   lazy val baseResourcePrefix: String = s"$webApiUrlPrefix/$userId"
   lazy val sendMsgResource: String = s"$webApiUrl/$baseResourcePrefix/messages"

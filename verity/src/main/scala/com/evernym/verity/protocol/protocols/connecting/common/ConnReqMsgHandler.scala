@@ -125,9 +125,9 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   private def buildAndSendInviteSms(phoneNo: String, uid: MsgId): Unit = {
     logger.debug(s"[$uid] invite sms preparation started...")
-    val urlMapperSvcHost = appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_HOST)
-    val urlMapperSvcPort = appConfig.getConfigIntReq(URL_MAPPER_SVC_ENDPOINT_PORT)
-    val urlMapperPathPrefix = Option(appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
+    val urlMapperSvcHost = appConfig.getStringReq(URL_MAPPER_SVC_ENDPOINT_HOST)
+    val urlMapperSvcPort = appConfig.getIntReq(URL_MAPPER_SVC_ENDPOINT_PORT)
+    val urlMapperPathPrefix = Option(appConfig.getStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
     val urlMapperEndpoint = UrlParam(urlMapperSvcHost, urlMapperSvcPort, urlMapperPathPrefix)
     implicit val param: CreateAndSendTinyUrlParam = CreateAndSendTinyUrlParam(uid, phoneNo, urlMapperEndpoint)
     val domainId = ctx.getBackState.domainId
@@ -228,7 +228,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def buildActualInviteUrl(token: String): String = {
-    val url = appConfig.getConfigStringReq(SMS_MSG_TEMPLATE_INVITE_URL)
+    val url = appConfig.getStringReq(SMS_MSG_TEMPLATE_INVITE_URL)
     val baseUrl = buildAgencyUrl(appConfig, None)
     replaceVariables(url, Map(BASE_URL -> baseUrl.toString, TOKEN -> token))
   }

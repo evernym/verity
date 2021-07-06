@@ -270,21 +270,21 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
 
   lazy val scheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(AAS_CLEANUP_MANAGER_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(AAS_CLEANUP_MANAGER_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   lazy val registrationBatchSize: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_SIZE)
+    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_SIZE)
       .getOrElse(1)
   lazy val registrationBatchItemSleepIntervalInMillis: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5)
 
   lazy val processorBatchSize: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_SIZE)
+    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_SIZE)
       .getOrElse(5)
   lazy val processorBatchItemSleepIntervalInMillis: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)

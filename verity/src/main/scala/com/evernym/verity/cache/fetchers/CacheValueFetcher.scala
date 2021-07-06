@@ -33,11 +33,11 @@ trait CacheValueFetcher {
   def defaultExpiryTimeInSeconds: Option[Int] = None                //default expiry time
 
   final val expiryTimeInSeconds: Option[Int] = cacheConfigPath.flatMap { ccp =>
-    appConfig.getConfigIntOption(s"$ccp.expiration-time-in-seconds")} orElse defaultExpiryTimeInSeconds
+    appConfig.getIntOption(s"$ccp.expiration-time-in-seconds")} orElse defaultExpiryTimeInSeconds
   final lazy val initialCapacity: Option[Int] = cacheConfigPath.flatMap { ccp =>
-    appConfig.getConfigIntOption(s"$ccp.initial-capacity") } orElse defaultInitialCapacity
+    appConfig.getIntOption(s"$ccp.initial-capacity") } orElse defaultInitialCapacity
   final lazy val maxWeightInBytes: Option[Long] = cacheConfigPath.flatMap { ccp =>
-    appConfig.getConfigBytesOption(s"$ccp.max-weight")}  orElse defaultMaxWeightInBytes
+    appConfig.getBytesOption(s"$ccp.max-weight")}  orElse defaultMaxWeightInBytes
   final lazy val maxWeightParam: Option[MaxWeightParam] = maxWeightInBytes.map { mw =>
     MaxWeightParam(mw, weigher)
   }
@@ -45,7 +45,7 @@ trait CacheValueFetcher {
     if (maxWeightInBytes.isDefined) None    //max weight takes priority
     else {
       cacheConfigPath.flatMap { ccp =>
-        appConfig.getConfigIntOption(s"$ccp.max-size")
+        appConfig.getIntOption(s"$ccp.max-size")
       } orElse defaultMaxSize
     }
   }

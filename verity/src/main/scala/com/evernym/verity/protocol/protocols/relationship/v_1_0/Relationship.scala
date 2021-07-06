@@ -138,7 +138,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
                              publicDid: Option[DID]): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)
     val handshakeProtocols = Vector(s"${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/")
-    val service = if (AppConfigWrapper.getConfigBooleanReq(SERVICE_KEY_DID_FORMAT)) {
+    val service = if (AppConfigWrapper.getBooleanReq(SERVICE_KEY_DID_FORMAT)) {
       for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield ServiceFormatter(service).toDidKeyFormat()
     } else {
       DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service

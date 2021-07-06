@@ -138,7 +138,7 @@ class QuestionAnswerSpec
       |    }
       |  }
       |  blob-store {
-      |   storage-service = "com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore"
+      |   storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
       |
       |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
       |   bucket-name = "local-blob-store"

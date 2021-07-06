@@ -266,7 +266,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       case Some(t) => isExpired(msg.creationDateTime, t)
       case None =>
         val configName = expiryTimeInSecondConfigNameForMsgType(msg.getType)
-        appConfig.getConfigIntOption(configName).exists(s => isExpired(msg.creationDateTime, s))
+        appConfig.getIntOption(configName).exists(s => isExpired(msg.creationDateTime, s))
     }
     if (expired) {
       throw new BadRequestErrorException(MSG_VALIDATION_ERROR_EXPIRED.statusCode)

@@ -75,7 +75,7 @@ object Msg {
                                 ) extends Msg {
     val `@type`: String = MsgFamily.typeStrFromMsgType(OutOfBandMsgFamily.msgType(getClass))
 
-    val handshake_protocols: Vector[String] = Vector(s"${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/")
+    val handshake_protocols: Vector[String] = Vector(s"${MsgFamily.qualifierStrFromMsgQualifier(MsgFamily.COMMUNITY_QUALIFIER)}/connections/1.0/")
   }
 
   def prepareInviteUrl(invitation: OutOfBandInvitation, urlEndpoint: String): String = {

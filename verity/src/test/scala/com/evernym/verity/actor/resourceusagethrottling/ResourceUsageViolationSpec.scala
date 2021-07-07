@@ -696,16 +696,6 @@ class ResourceUsageViolationSpec
         }
       }
 
-      s"when sent UnblockCaller command for $user3IpAddress for all resources" - {
-        "should respond with CallerUnblocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(UnblockCaller(user3IpAddress,
-            Some(ZonedDateTime.now()), allBlockedResources = Option(YES)))
-          expectMsgPF() {
-            case uu: CallerUnblocked if uu.callerId == user3IpAddress =>
-          }
-        }
-      }
-
       s"when sent GetBlockedList command after unblocking $user3IpAddress for all blocked resources" - {
         s"should respond with blocked list without $user3IpAddress" in {
           eventually {
@@ -852,16 +842,6 @@ class ResourceUsageViolationSpec
             case rubd: UsageWarningStatusChunk if
             rubd.usageWarningStatus.size == 3 &&
               ! rubd.usageWarningStatus(user3IpAddress).resourcesStatus.contains("resource1") =>
-          }
-        }
-      }
-
-      s"when sent UnwarnCaller command for $user3IpAddress for all resources" - {
-        "should respond with CallerUnwarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(UnwarnCaller(user3IpAddress,
-            Some(ZonedDateTime.now()), allWarnedResources = Option(YES)))
-          expectMsgPF() {
-            case uu: CallerUnwarned if uu.callerId == user3IpAddress =>
           }
         }
       }

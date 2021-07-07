@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 import scala.concurrent.Future
 
-
 trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
 
   implicit val responseTimeout: Timeout
@@ -43,33 +42,33 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
         BlockCaller(id, blockPeriod = uvd.period, allBlockedResources = uvd.allResources))
     } else if (uvd.msgType == "unblock") {
       platform.singletonParentProxy ? ForResourceBlockingStatusMngr(
-        UnblockCaller(id, unblockPeriod = uvd.period, allBlockedResources = uvd.allResources))
+        UnblockCaller(id, unblockPeriod = uvd.period))
     } else if (uvd.msgType == "warn") {
       platform.singletonParentProxy ? ForResourceWarningStatusMngr(
         WarnCaller(id, warnPeriod = uvd.period, allWarnedResources = uvd.allResources))
     } else if (uvd.msgType == "unwarn") {
       platform.singletonParentProxy ? ForResourceWarningStatusMngr(
-        UnwarnCaller(id, unwarnPeriod = uvd.period, allWarnedResources = uvd.allResources))
+        UnwarnCaller(id, unwarnPeriod = uvd.period))
     } else {
       Future.successful(new BadRequestErrorException(UNSUPPORTED_MSG_TYPE.statusCode, Option(s"unsupported message type: ${uvd.msgType}")))
     }
   }
 
-  protected def updateResourceDetail(callerId: String, resource: String, urd: UpdateViolationDetail): Future[Any] = {
-    if (urd.msgType == "block") {
+  protected def updateResourceDetail(callerId: String, resource: String, uvd: UpdateViolationDetail): Future[Any] = {
+    if (uvd.msgType == "block") {
       platform.singletonParentProxy ? ForResourceBlockingStatusMngr(
-        BlockResourceForCaller(callerId, resource, blockPeriod = urd.period))
-    } else if (urd.msgType == "unblock") {
+        BlockResourceForCaller(callerId, resource, blockPeriod = uvd.period))
+    } else if (uvd.msgType == "unblock") {
       platform.singletonParentProxy ? ForResourceBlockingStatusMngr(
-        UnblockResourceForCaller(callerId, resource, unblockPeriod = urd.period))
-    } else if (urd.msgType == "warn") {
+        UnblockResourceForCaller(callerId, resource, unblockPeriod = uvd.period))
+    } else if (uvd.msgType == "warn") {
       platform.singletonParentProxy ? ForResourceWarningStatusMngr(
-        WarnResourceForCaller(callerId, resource, warnPeriod = urd.period))
-    } else if (urd.msgType == "unwarn") {
+        WarnResourceForCaller(callerId, resource, warnPeriod = uvd.period))
+    } else if (uvd.msgType == "unwarn") {
       platform.singletonParentProxy ? ForResourceWarningStatusMngr(
-        UnwarnResourceForCaller(callerId, resource, unwarnPeriod = urd.period))
+        UnwarnResourceForCaller(callerId, resource, unwarnPeriod = uvd.period))
     } else {
-      Future(new BadRequestErrorException(UNSUPPORTED_MSG_TYPE.statusCode, Option(s"unsupported message type: ${urd.msgType}")))
+      Future(new BadRequestErrorException(UNSUPPORTED_MSG_TYPE.statusCode, Option(s"unsupported message type: ${uvd.msgType}")))
     }
   }
 

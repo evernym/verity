@@ -8,7 +8,7 @@ import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.node_singleton.ResourceBlockingStatusMngrCache
+import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.config.{AppConfig, CommonConfig}
@@ -24,7 +24,6 @@ import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.config.CommonConfig.USAGE_RULES
 
 import scala.concurrent.Future
-
 
 class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor)
   extends BasePersistentActor
@@ -235,7 +234,9 @@ object ResourceUsageTracker {
       resourceNames.foreach { resourceName =>
         val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
         if (! isWhitelisted) {
-          if (! ResourceBlockingStatusMngrCache(as).isInUnblockingPeriod(entityId, resourceName)) {
+          if (! ResourceWarningStatusMngrCache(as).isInUnwarningPeriod(entityId, resourceName) &&
+            ! ResourceBlockingStatusMngrCache(as).isInUnblockingPeriod(entityId, resourceName))
+          {
             val aru = tracking.AddResourceUsage(resourceType, resourceName, sendBackAck)
             rut.tell(ForIdentifier(entityId, aru), Actor.noSender)
           }

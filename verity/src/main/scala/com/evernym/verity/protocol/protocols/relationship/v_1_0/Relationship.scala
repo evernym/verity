@@ -6,6 +6,7 @@ import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.engine.MsgFamily.QUALIFIER_FORMAT_HTTP
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
@@ -137,7 +138,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
                              verKey: VerKey, agencyVerKey: String, profileUrl: Option[String],
                              publicDid: Option[DID]): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)
-    val handshakeProtocols = Vector(s"${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/")
+    val handshakeProtocols = Vector((if(QUALIFIER_FORMAT_HTTP) "https://didcomm.org" else "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec").concat("/connections/1.0"))
     val service = if (AppConfigWrapper.getBooleanReq(SERVICE_KEY_DID_FORMAT)) {
       for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield ServiceFormatter(service).toDidKeyFormat()
     } else {

@@ -76,7 +76,7 @@ object Msg {
                                 ) extends Msg {
     val `@type`: String = MsgFamily.typeStrFromMsgType(OutOfBandMsgFamily.msgType(getClass))
 
-    val handshake_protocols: Vector[String] = Vector((if(QUALIFIER_FORMAT_HTTP) "https://didcomm.org" else "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec").concat("/connections/1.0/"))
+    val handshake_protocols: Vector[String] = Vector((if(QUALIFIER_FORMAT_HTTP) "https://didcomm.org" else "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec").concat("/connections/1.0"))
   }
 
   def prepareInviteUrl(invitation: OutOfBandInvitation, urlEndpoint: String): String = {

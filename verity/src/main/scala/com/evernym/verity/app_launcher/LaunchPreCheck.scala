@@ -5,17 +5,17 @@ import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.actor.ActorSystem
 import akka.util.Timeout
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Exceptions.NoResponseFromLedgerPoolServiceException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.WalletDoesNotExist
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.Exceptions
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future, TimeoutException}

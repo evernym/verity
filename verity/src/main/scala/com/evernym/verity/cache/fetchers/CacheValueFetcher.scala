@@ -1,9 +1,9 @@
 package com.evernym.verity.cache.fetchers
 
 import akka.util.Timeout
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail, getUnhandledError}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, getUnhandledError}
 import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.cache.providers.MaxWeightParam
 import com.evernym.verity.config.AppConfig

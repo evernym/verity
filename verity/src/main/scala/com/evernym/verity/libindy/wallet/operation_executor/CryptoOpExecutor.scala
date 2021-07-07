@@ -1,13 +1,13 @@
 package com.evernym.verity.libindy.wallet.operation_executor
 
-import com.evernym.verity.Exceptions
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
-import com.evernym.verity.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
 import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
 import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.vault.service._

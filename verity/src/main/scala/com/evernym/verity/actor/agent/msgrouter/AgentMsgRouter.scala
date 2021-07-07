@@ -9,10 +9,10 @@ import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.RouteId
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}

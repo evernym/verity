@@ -3,13 +3,13 @@ package com.evernym.integrationtests.e2e.env
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.CollectionUtil.containsDuplicates
+import com.evernym.verity.util2.UrlParam
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
 import org.apache.http.client.methods.HttpGet

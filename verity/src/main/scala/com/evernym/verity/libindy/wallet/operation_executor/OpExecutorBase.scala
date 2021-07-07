@@ -1,11 +1,10 @@
 package com.evernym.verity.libindy.wallet.operation_executor
 
 import java.util.concurrent.CompletableFuture
-
-import com.evernym.verity.Exceptions
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.GetVerKeyResp
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
 import org.hyperledger.indy.sdk.IndyException
 

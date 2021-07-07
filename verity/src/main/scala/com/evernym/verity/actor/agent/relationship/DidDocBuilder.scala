@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.relationship
 
 import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyOptResp}
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.AuthKey
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}

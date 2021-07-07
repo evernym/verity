@@ -1,10 +1,11 @@
 package com.evernym.verity.actor
 
 import akka.actor.ActorRef
-import com.evernym.verity.Exceptions.{HandledErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.{ActorResponse, Exceptions}
+import com.evernym.verity.Exceptions
+import com.evernym.verity.util2.{ActorResponse, Exceptions}
 
 object ExceptionHandler {
 

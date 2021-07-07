@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.directives.BasicDirectives.extract
 import akka.http.scaladsl.server.directives.HeaderDirectives.optionalHeaderValueByName
 import akka.http.scaladsl.server.{Directive1, Route}
 import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_REQUEST_ID_HTTP_HEADER}
-import com.evernym.verity.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
 import com.evernym.verity.actor.base.Done
@@ -20,7 +20,8 @@ import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
-import com.evernym.verity.{ActorErrorResp, Status}
+import com.evernym.verity.Status
+import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
 
 

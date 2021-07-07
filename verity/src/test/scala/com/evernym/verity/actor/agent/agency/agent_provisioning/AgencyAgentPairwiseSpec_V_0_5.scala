@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.agency.agent_provisioning
 
 import akka.actor.PoisonPill
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg

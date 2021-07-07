@@ -1,12 +1,11 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import java.util.UUID
-
 import akka.actor.ActorRef
-import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.{ActorErrorResp, Status}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
@@ -48,6 +47,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
+import com.evernym.verity.util2.{ActorErrorResp, Status}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.config.Config

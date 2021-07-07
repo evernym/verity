@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import akka.actor.Actor.Receive
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.Status.{getStatusMsgFromCode, _}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
@@ -33,7 +33,8 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
+import com.evernym.verity.Exceptions
+import com.evernym.verity.util2.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 

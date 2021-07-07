@@ -1,17 +1,17 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.testkit.TestWallet
-import com.evernym.verity.Status
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.WalletAPIParam
 import org.json.JSONObject
 

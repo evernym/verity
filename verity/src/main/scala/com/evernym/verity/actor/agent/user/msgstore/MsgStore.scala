@@ -3,8 +3,8 @@ package com.evernym.verity.actor.agent.user.msgstore
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.user.MsgHelper

@@ -2,7 +2,7 @@ package com.evernym.verity.cache.base
 
 import java.util.UUID
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, SyncCacheValueFetcher}
 import com.evernym.verity.cache.providers.{CacheProvider, CaffeineCacheParam, CaffeineCacheProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass

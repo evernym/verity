@@ -2,12 +2,12 @@ package com.evernym.verity.actor.msgoutbox.adapters
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.RetentionPolicy
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.msgoutbox.adapters.MsgStore.Commands.{DeletePayload, GetPayload, StorePayload}
 import com.evernym.verity.actor.msgoutbox.adapters.MsgStore.Replies.{PayloadDeleted, PayloadRetrieved, PayloadStored}
 import com.evernym.verity.actor.msgoutbox.outbox.MsgId
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
+import com.evernym.verity.util2.RetentionPolicy
 import org.slf4j.event.Level
 
 import scala.concurrent.duration.DurationInt

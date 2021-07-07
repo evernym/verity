@@ -2,9 +2,9 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler

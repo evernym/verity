@@ -1,7 +1,8 @@
-package com.evernym.verity
+package com.evernym.verity.util2
+
+import com.evernym.verity.util2.Status._
 
 import java.io.{PrintWriter, StringWriter}
-import com.evernym.verity.Status._
 
 object Exceptions {
 

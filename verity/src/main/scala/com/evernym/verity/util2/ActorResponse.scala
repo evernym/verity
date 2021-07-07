@@ -1,8 +1,8 @@
-package com.evernym.verity
+package com.evernym.verity.util2
 
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.Status._
 
 
 object ActorResponse {

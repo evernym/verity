@@ -1,4 +1,4 @@
-package com.evernym.verity
+package com.evernym.verity.util2
 
 import ch.qos.logback.classic.turbo.TurboFilter
 import ch.qos.logback.classic.{Level, Logger}

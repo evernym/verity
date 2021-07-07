@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.url_mapper
 
 import akka.actor.Props
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, HasProps}
 import com.evernym.verity.config.{AppConfig, CommonConfig}

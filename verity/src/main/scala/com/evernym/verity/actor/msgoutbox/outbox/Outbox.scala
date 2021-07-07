@@ -7,8 +7,7 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, Ent
 import akka.pattern.StatusReply
 import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
-import com.evernym.verity.Status
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.msgoutbox.ComMethod
 import com.evernym.verity.actor.msgoutbox.adapters.RelationshipResolver.Commands.SendOutboxParam
@@ -27,6 +26,7 @@ import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.TimeZoneUtil
+import com.evernym.verity.util2.Status
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 

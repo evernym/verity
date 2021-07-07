@@ -1,12 +1,8 @@
-package com.evernym.verity
+package com.evernym.verity.util2
 
 import com.evernym.verity.config.CommonConfig
-import com.evernym.verity.Exceptions.InternalServerErrorException
-import com.evernym.verity.Status.StatusDetail
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
-
-import scala.language.implicitConversions
 
 object Status extends Enumeration {
 
@@ -181,20 +177,26 @@ object Status extends Enumeration {
   }
 
   def getStatusMsgFromCode(code: String): String = getFromCode(code).statusMsg
-  def getUnhandledError(e: Any): StatusDetail = UNHANDLED.copy(statusMsg=e.toString)
+
+  def getUnhandledError(e: Any): StatusDetail = UNHANDLED.copy(statusMsg = e.toString)
+
   def buildStatusCode(prefix: String, number: Int): String = s"$prefix-$number"
+
   def buildStatusDetail(statusCode: String, statusMsg: String): StatusDetail = {
-    StatusDetailEnum(statusCode, statusMsg)    //temporary way to get rid of "Duplicate-id" issue
+    StatusDetailEnum(statusCode, statusMsg) //temporary way to get rid of "Duplicate-id" issue
     StatusDetail(statusCode, statusMsg)
   }
+
   def statusDetail(category: String, number: Int, message: String): StatusDetail =
     buildStatusDetail(buildStatusCode(category, number), message)
 
   protected case class StatusDetailEnum(statusCode: String, statusMsg: String) extends super.Val {
     def statusDetail: StatusDetail = StatusDetail(statusCode, statusMsg)
   }
+
   case class StatusDetail(statusCode: String, statusMsg: String) {
     def withMessage(msg: String): StatusDetail = StatusDetail(statusCode, statusMsg = msg)
+
     def hasStatusCode(sc: String): Boolean = statusCode == sc
   }
 

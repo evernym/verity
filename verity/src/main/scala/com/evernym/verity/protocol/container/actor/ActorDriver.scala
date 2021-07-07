@@ -13,7 +13,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, ProtocolRegistry, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.HasAppConfig
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.cache.base.Cache
 
 /**

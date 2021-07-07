@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.agentmsg
 
-import com.evernym.verity.Status.FORBIDDEN
+import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.Version
 import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.testkit.CommonSpecUtil

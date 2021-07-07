@@ -3,10 +3,10 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.{Exceptions, Status}
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.Status
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.SpanUtil._
@@ -61,6 +61,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
+import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
 
 import scala.concurrent.Future

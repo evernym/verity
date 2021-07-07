@@ -1,9 +1,8 @@
 package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.Exceptions
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -17,6 +16,7 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{HashUtil, Util}
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.pool.Pool

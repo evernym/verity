@@ -5,9 +5,9 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{FormData, HttpMethods, HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.URL_SHORTENING_FAILED
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_TIMEOUT_SECONDS, YOURLS_API_URL, YOURLS_API_USERNAME}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_YOURLS

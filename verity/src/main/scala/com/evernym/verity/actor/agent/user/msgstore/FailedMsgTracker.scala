@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.user.msgstore
 
-import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
+import com.evernym.verity.util2.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.MsgDeliveryStatusUpdated
 import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail}
 import com.evernym.verity.protocol.engine.{DID, MsgId}

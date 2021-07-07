@@ -1,11 +1,10 @@
-package com.evernym.verity
-
-import java.util.concurrent.Executors
+package com.evernym.verity.util2
 
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.CommonConfig.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
 import kamon.instrumentation.executor.ExecutorInstrumentation
 
+import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits
 
@@ -24,15 +23,15 @@ object ExecutionContextProvider {
     ExecutorInstrumentation.instrumentExecutionContext(
       defaultFutureThreadPoolSize match {
         case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
-        case _          => Implicits.global
+        case _ => Implicits.global
       },
-    "future-thread-executor")
+      "future-thread-executor")
 
   implicit val walletFutureExecutionContext: ExecutionContext =
     ExecutorInstrumentation.instrumentExecutionContext(
       walletFutureThreadPoolSize match {
         case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
-        case _          => futureExecutionContext
+        case _ => futureExecutionContext
       },
       "wallet-thread-executor")
 

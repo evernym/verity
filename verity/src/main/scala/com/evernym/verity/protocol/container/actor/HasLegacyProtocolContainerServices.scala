@@ -2,8 +2,7 @@ package com.evernym.verity.protocol.container.actor
 
 import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.Status
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, TokenToActorItemMapperProvider}
 import com.evernym.verity.actor.agent.{DidPair, SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -11,6 +10,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.engine.{MsgId, PinstId, ProtoRef, ProtocolContainer}
 import com.evernym.verity.protocol.legacy.services.{AgentEndpointServiceProvider, CreateAgentEndpointDetail, CreateKeyEndpointDetail, CreateKeyEndpointServiceProvider, LegacyProtocolServicesImpl, TokenToActorMappingProvider}
+import com.evernym.verity.util2.Status
 import com.github.ghik.silencer.silent
 
 import scala.concurrent.Future

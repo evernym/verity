@@ -1,4 +1,4 @@
-package com.evernym
+package com.evernym.verity.util2
 
 import akka.actor.{Actor, ActorRef}
 import com.evernym.verity.config.ConfigUtil.MAX_RETENTION_POLICY

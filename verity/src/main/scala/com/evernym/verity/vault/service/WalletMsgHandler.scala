@@ -3,7 +3,7 @@ package com.evernym.verity.vault.service
 
 import java.util.concurrent.ExecutionException
 
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._

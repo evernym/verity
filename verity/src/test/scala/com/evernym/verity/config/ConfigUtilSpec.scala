@@ -1,6 +1,6 @@
 package com.evernym.verity.config
 
-import com.evernym.RetentionPolicy
+import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.TestAppConfig

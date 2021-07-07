@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.Version
+import com.evernym.verity.util2.Version
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.CommonSpecUtil

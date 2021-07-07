@@ -26,7 +26,6 @@ import com.evernym.verity.urlshortener.UrlInfo
 import com.evernym.verity.util2.{PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.PolicyElements
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration.{DAYS, Duration}

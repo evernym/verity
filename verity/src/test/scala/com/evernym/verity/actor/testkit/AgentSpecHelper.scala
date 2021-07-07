@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{ActorRef, PoisonPill}
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.Version
+import com.evernym.verity.util2.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet, agentRegion}

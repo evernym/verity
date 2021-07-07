@@ -29,7 +29,7 @@ import com.evernym.verity.push_notification._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future

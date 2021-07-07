@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 import java.nio.charset.StandardCharsets
 import java.nio.{ByteBuffer, ByteOrder}
 import java.time.Instant
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE

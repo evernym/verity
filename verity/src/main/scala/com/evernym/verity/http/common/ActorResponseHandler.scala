@@ -11,7 +11,6 @@ import com.evernym.verity.util2.Status.{StatusDetail, TIMEOUT, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.ActorResponse
 import com.evernym.verity.util2.{ActorErrorResp, ActorResponse, DoNotLogError, Exceptions, Status}
 import com.typesafe.scalalogging.Logger
 

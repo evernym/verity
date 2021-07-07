@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.ActorErrorResp
 import org.scalatest.concurrent.Eventually
 

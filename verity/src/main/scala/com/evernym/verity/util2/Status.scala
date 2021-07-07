@@ -3,6 +3,8 @@ package com.evernym.verity.util2
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
+import com.evernym.verity.util2.Exceptions.InternalServerErrorException
+import scala.language.implicitConversions
 
 object Status extends Enumeration {
 

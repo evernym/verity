@@ -20,7 +20,6 @@ import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
-import com.evernym.verity.Status
 import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
 

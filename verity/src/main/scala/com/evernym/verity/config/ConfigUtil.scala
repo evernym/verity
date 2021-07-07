@@ -1,6 +1,5 @@
 package com.evernym.verity.config
 
-import com.evernym.PolicyElements
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._

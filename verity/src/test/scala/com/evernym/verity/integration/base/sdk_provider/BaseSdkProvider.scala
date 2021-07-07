@@ -24,7 +24,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI}
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail

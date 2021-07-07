@@ -27,7 +27,6 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.Exceptions
 import com.evernym.verity.util2.{Exceptions, UrlParam}
 
 import scala.concurrent.Future

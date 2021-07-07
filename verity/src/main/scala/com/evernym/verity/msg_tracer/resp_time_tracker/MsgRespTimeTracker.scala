@@ -1,6 +1,6 @@
 package com.evernym.verity.msg_tracer.resp_time_tracker
 
-import com.evernym.verity.ReqId
+import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.{NoResp, RespMode}
 
 

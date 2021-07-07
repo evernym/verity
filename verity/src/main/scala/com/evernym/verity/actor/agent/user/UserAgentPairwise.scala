@@ -3,7 +3,6 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Status
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._

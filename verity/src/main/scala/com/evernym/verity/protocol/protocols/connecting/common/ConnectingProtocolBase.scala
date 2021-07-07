@@ -33,7 +33,6 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.Exceptions
 import com.evernym.verity.util2.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject

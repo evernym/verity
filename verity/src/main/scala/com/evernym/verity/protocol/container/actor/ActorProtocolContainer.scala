@@ -22,7 +22,7 @@ import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID

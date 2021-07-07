@@ -15,7 +15,6 @@ import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig

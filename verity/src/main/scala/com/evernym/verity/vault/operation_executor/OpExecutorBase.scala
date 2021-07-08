@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy.wallet.operation_executor
+package com.evernym.verity.vault.operation_executor
 
 import java.util.concurrent.CompletableFuture
 import com.evernym.verity.ledger.LedgerPoolConnManager

@@ -31,7 +31,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWra
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
-import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
+import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._

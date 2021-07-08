@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.event.LoggingReceive
-import com.evernym.verity.RouteId
+import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.maintenance.{AlreadyCompleted, AlreadyRegistered, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, Migrated, RouteAlreadySet, RoutingAgentUtil, StoreFromLegacy, StoreRoute}
 import com.evernym.verity.actor.cluster_singleton.ForAgentRoutesMigrator

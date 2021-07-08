@@ -9,16 +9,16 @@ import akka.http.scaladsl.model.StatusCodes.{Accepted, BadRequest, GatewayTimeou
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
-import com.evernym.verity.{Exceptions, UrlParam}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util2.{Exceptions, UrlParam}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future

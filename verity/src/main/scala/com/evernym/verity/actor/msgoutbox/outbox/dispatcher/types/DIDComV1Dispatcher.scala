@@ -2,7 +2,6 @@ package com.evernym.verity.actor.msgoutbox.outbox.dispatcher.types
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.evernym.verity.Status
 import com.evernym.verity.actor.msgoutbox.Packaging
 import com.evernym.verity.actor.msgoutbox.adapters.HttpTransporter.Commands.SendBinary
 import com.evernym.verity.actor.msgoutbox.adapters.HttpTransporter.Replies.SendResponse
@@ -12,6 +11,7 @@ import com.evernym.verity.actor.msgoutbox.outbox._
 import com.evernym.verity.actor.msgoutbox.outbox.dispatcher.types.DIDComV1Dispatcher.Commands.{DeliverMsg, HttpTransportReplyAdapter, Stop, WalletReplyAdapter}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.urlshortener.UrlInfo
+import com.evernym.verity.util2.Status
 
 import scala.concurrent.duration._
 

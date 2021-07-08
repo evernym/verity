@@ -1,7 +1,7 @@
 package com.evernym.verity.metrics
 
-import com.evernym.verity.Exceptions.FeatureNotEnabledException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.FeatureNotEnabledException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{ActorMessage, MetricsFilterCriteria}
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.config.CommonConfig._

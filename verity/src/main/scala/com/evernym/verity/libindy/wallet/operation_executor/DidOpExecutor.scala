@@ -1,15 +1,14 @@
 package com.evernym.verity.libindy.wallet.operation_executor
 
 import java.util.concurrent.ExecutionException
-
-import com.evernym.verity.Exceptions
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletExt
 import org.hyperledger.indy.sdk.InvalidStructureException
 import org.hyperledger.indy.sdk.did.{Did, DidJSONParameters}

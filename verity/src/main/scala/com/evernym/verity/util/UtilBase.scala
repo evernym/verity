@@ -2,9 +2,8 @@ package com.evernym.verity.util
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import com.evernym.verity.Exceptions.{HandledErrorException, _}
-import com.evernym.verity.Status._
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, _}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
@@ -15,6 +14,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI

@@ -1,6 +1,6 @@
-package com.evernym.verity
+package com.evernym.verity.util2
 
-import com.evernym.verity.Exceptions.InvalidComMethodException
+import com.evernym.verity.util2.Exceptions.InvalidComMethodException
 
 import java.net.{MalformedURLException, URL}
 

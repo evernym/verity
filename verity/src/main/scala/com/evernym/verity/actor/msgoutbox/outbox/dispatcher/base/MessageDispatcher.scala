@@ -2,7 +2,6 @@ package com.evernym.verity.actor.msgoutbox.outbox.dispatcher.base
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.msgoutbox.{ComMethod, Packaging}
 import com.evernym.verity.actor.msgoutbox.adapters.{MsgStore, Transports, WalletOpExecutor}
@@ -12,6 +11,7 @@ import com.evernym.verity.actor.msgoutbox.outbox.dispatcher.base.MessageDispatch
 import com.evernym.verity.actor.msgoutbox.outbox.dispatcher.types.{BinaryPayloadParam, DIDComV1DispatchParam, DIDComV1Dispatcher, HttpTransportParam, IndyPackagingParam, PlainDispatchParam, PlainDispatcher, PlainPayloadParam}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.RetentionPolicy
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration._

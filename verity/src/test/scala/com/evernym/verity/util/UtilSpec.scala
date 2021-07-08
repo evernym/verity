@@ -1,7 +1,7 @@
 package com.evernym.verity.util
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.Status.INVALID_VALUE
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.Status.INVALID_VALUE
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.Util._

@@ -6,8 +6,6 @@ import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
-import com.evernym.RetentionPolicy
-import com.evernym.verity.Status
 import com.evernym.verity.actor.msgoutbox.message.Events.LegacyMsgData
 import com.evernym.verity.actor.msgoutbox.message.MessageMeta.Replies.Msg
 import com.evernym.verity.actor.msgoutbox.message.MessageMeta.States.{Initialized, Processed}
@@ -19,6 +17,7 @@ import com.evernym.verity.actor.msgoutbox.adapters.MsgStore
 import com.evernym.verity.actor.msgoutbox.message.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.util.TimeZoneUtil
+import com.evernym.verity.util2.{RetentionPolicy, Status}
 
 import java.time.ZonedDateTime
 import scala.concurrent.duration._

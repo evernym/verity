@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Extension, ExtensionId, PoisonP
 import akka.cluster.singleton._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity._
+import com.evernym.verity.util2._
 import com.evernym.verity.actor.ShardUtil._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}

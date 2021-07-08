@@ -4,9 +4,8 @@ import akka.Done
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
-import com.evernym.verity.Status
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.msgoutbox.{ComMethod, Packaging}
 import com.evernym.verity.actor.msgoutbox.adapters.HttpTransporter.Commands.{SendBinary, SendJson}
 import com.evernym.verity.actor.msgoutbox.adapters.HttpTransporter.Replies.SendResponse
@@ -24,9 +23,9 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
 import com.evernym.verity.urlshortener.UrlInfo
+import com.evernym.verity.util2.{PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.{PolicyElements, RetentionPolicy}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration.{DAYS, Duration}

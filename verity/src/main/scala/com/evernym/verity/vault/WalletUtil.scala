@@ -5,7 +5,7 @@ import java.util.UUID
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_ENCRYPTION
 import com.evernym.verity.config.{AppConfig, CommonConfig}
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.WalletParam
 import org.apache.commons.codec.digest.DigestUtils

@@ -2,7 +2,7 @@ package com.evernym.verity.actor.msgoutbox.outbox.dispatcher.types
 
 import akka.Done
 import akka.actor.typed.scaladsl.TimerScheduler
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.msgoutbox.outbox.Outbox.Commands.{RecordFailedAttempt, RecordSuccessfulAttempt}
 import com.evernym.verity.actor.msgoutbox.outbox.RetryParam
 

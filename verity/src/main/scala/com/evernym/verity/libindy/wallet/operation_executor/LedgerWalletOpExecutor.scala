@@ -2,7 +2,7 @@ package com.evernym.verity.libindy.wallet.operation_executor
 
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.vault.WalletExt
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import org.hyperledger.indy.sdk.ledger.Ledger.{multiSignRequest, signRequest}
 
 import scala.concurrent.Future

@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.PackedMsgRouteParam
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT

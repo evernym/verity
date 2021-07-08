@@ -2,8 +2,8 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
@@ -29,7 +29,8 @@ import com.evernym.verity.push_notification._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.{Exceptions, UrlParam}
+import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future
 

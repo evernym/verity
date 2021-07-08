@@ -2,7 +2,7 @@ package com.evernym.verity.cache.fetchers
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
 import com.evernym.verity.cache.KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}

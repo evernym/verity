@@ -2,7 +2,7 @@ package com.evernym.verity.actor.msgoutbox.adapters
 
 import akka.Done
 import akka.actor.typed.ActorRef
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.urlshortener.UrlInfo
 
 object HttpTransporter {

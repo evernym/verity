@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.util
 
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}

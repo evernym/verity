@@ -5,7 +5,6 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import com.evernym.verity.Status
 import com.evernym.verity.actor.msgoutbox.latest.base.BaseMsgOutboxSpec
 import com.evernym.verity.actor.msgoutbox.message.MessageMeta
 import com.evernym.verity.actor.msgoutbox.message.MessageMeta._
@@ -14,6 +13,7 @@ import com.evernym.verity.actor.msgoutbox.message.MessageMeta.Replies._
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.Status
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 

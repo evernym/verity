@@ -4,8 +4,8 @@ import java.time.ZonedDateTime
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.base.Done

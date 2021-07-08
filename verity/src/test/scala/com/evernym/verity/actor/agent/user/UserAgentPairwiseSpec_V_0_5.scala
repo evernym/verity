@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.{PoisonPill, ReceiveTimeout}
 import akka.cluster.sharding.ClusterSharding
 import akka.testkit.EventFilter
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}

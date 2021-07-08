@@ -2,7 +2,7 @@ package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
+import com.evernym.verity.util2.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec

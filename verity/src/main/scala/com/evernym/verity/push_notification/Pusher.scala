@@ -1,10 +1,9 @@
 package com.evernym.verity.push_notification
 
 import akka.actor.{ActorSystem, Props}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidComMethodException, PushNotifSendingFailedException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidComMethodException, PushNotifSendingFailedException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, RecoverIfNeeded}
@@ -20,6 +19,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.util.StrUtil.camelToCapitalize
 import com.evernym.verity.util.Util.getOptionalField
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future

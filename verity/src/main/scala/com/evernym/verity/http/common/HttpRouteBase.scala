@@ -8,8 +8,8 @@ import akka.http.scaladsl.model.MediaType.NotCompressible
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Directive1
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.FORBIDDEN
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.CommonConfig.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES

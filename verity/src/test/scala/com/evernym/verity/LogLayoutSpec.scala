@@ -4,7 +4,6 @@ import ch.qos.logback.classic.spi.{ILoggingEvent, LoggingEvent}
 import ch.qos.logback.classic.{Level, Logger}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util2.LogLayout
 import org.mockito.scalatest.MockitoSugar
 import org.slf4j.LoggerFactory
 

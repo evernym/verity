@@ -20,7 +20,7 @@
             <!-- TODO: if you want to put any cap on total log file sizes you can use totalSizeCap-->
         </rollingPolicy>
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="com.evernym.verity.util2.LogLayout" />
+            <layout class="com.evernym.verity.LogLayout" />
         </encoder>
     </appender>
 
@@ -35,7 +35,7 @@
             <!-- TODO: if you want to put any cap on total log file sizes you can use totalSizeCap-->
         </rollingPolicy>
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="com.evernym.verity.util2.LogLayout" />
+            <layout class="com.evernym.verity.LogLayout" />
         </encoder>
     </appender>
 
@@ -48,7 +48,7 @@
         <appender-ref ref="ROLLING-GENERAL"/>
     </root>
 
-    <turboFilter class="com.evernym.verity.util2.IgnoreLoggerFilter">
+    <turboFilter class="com.evernym.verity.IgnoreLoggerFilter">
         <LoggerNameContains>DynamoDBClient, DynamoDBJournal</LoggerNameContains>
     </turboFilter>
 

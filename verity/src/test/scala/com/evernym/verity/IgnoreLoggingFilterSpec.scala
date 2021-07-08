@@ -3,7 +3,6 @@ package com.evernym.verity
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.core.spi.FilterReply
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util2.IgnoreLoggerFilter
 import org.slf4j.LoggerFactory
 
 

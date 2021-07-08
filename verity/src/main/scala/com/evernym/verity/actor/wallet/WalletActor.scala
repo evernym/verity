@@ -14,7 +14,7 @@ import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionCo
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor.buildErrorDetail
+import com.evernym.verity.vault.operation_executor.CryptoOpExecutor.buildErrorDetail
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._

@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy.wallet.operation_executor
+package com.evernym.verity.vault.operation_executor
 
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.vault.WalletExt

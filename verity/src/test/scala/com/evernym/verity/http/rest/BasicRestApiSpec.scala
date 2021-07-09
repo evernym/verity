@@ -370,6 +370,4 @@ class BasicRestApiSpec
     }
   }
 
-  testMetrics()
-
 }

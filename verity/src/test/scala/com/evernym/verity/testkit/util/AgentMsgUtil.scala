@@ -1,7 +1,6 @@
 package com.evernym.verity.testkit.util
 
 import java.util.UUID
-
 import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
@@ -14,6 +13,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -202,7 +202,7 @@ object AgentPackMsgUtil {
   def preparePackedRequestForAgent(agentMsgParam: PackMsgParam)
                                   (implicit msgPackFormat: MsgPackFormat,
                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    awaitResult(AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam))
+    awaitResult(AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam)(agentMsgTransformer, wap, new MetricsWriterExtensionImpl)) //todo could probably fail!
   }
 
   def preparePackedRequestForRoutes(fwdMsgTypeVersion: String,
@@ -210,7 +210,7 @@ object AgentPackMsgUtil {
                                     fwdRoutes: List[FwdRouteMsg])
                                    (implicit msgPackFormat: MsgPackFormat,
                                     agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion))
+    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)(agentMsgTransformer, wap, new MetricsWriterExtensionImpl)) //todo could probably fail!
   }
 
   def awaitResult(fut: Future[PackedMsg]): PackedMsg = {

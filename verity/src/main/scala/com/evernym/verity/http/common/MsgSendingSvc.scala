@@ -12,20 +12,21 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.Exceptions.HandledErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
-import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
 import com.evernym.verity.{Exceptions, UrlParam}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.metrics.{ClientSpan, MetricsWriterExtensionImpl}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.util.{Left, Success, Try}
 
 
-class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) extends MsgSendingSvc {
+class AkkaHttpMsgSendingSvc(appConfig: AppConfig, metricsWriter: MetricsWriterExtensionImpl)
+                           (implicit system: ActorSystem) extends MsgSendingSvc {
 
   //TODO: we should change the below 'None' case behavior to either
   // 'sendByRequestLevelFlowAPI' or 'sendByRequestLevelFutureAPI'
@@ -40,7 +41,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
 
   def sendPlainTextMsg(payload: String, method: HttpMethod = HttpMethods.POST)
                       (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
-    runWithClientSpan("sendPlainTextMsg", getClass.getSimpleName) {
+    metricsWriter.get().runWithSpan("sendPlainTextMsg", getClass.getSimpleName, ClientSpan) {
       val req = HttpRequest(
         method = method,
         uri = up.url,
@@ -55,7 +56,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
 
   def sendJsonMsg(payload: String)
                  (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
-    runWithClientSpan("sendJsonMsg", getClass.getSimpleName) {
+    metricsWriter.get().runWithSpan("sendJsonMsg", getClass.getSimpleName, ClientSpan) {
       val req = HttpRequest(
         method = HttpMethods.POST,
         uri = up.url,
@@ -70,7 +71,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
 
   def sendBinaryMsg(payload: Array[Byte])
                    (implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
-    runWithClientSpan("sendBinaryMsg", getClass.getSimpleName) {
+    metricsWriter.get().runWithSpan("sendBinaryMsg", getClass.getSimpleName, ClientSpan) {
       val req = HttpRequest(
         method = HttpMethods.POST,
         uri = up.url,

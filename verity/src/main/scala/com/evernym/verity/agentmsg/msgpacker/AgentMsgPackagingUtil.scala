@@ -1,7 +1,6 @@
 package com.evernym.verity.agentmsg.msgpacker
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
@@ -15,6 +14,7 @@ import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNY
 import com.evernym.verity.protocol.engine.{DID, MsgFamilyQualifier, MsgName, VerKey}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriter, MetricsWriterExtensionImpl}
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
 
@@ -48,8 +48,8 @@ object AgentMsgPackagingUtil {
    */
   def buildAgentMsg(msgPackFormat: MsgPackFormat,
                     packMsgParam: PackMsgParam)
-                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
-    runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
+                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam, mw: MetricsWriterExtensionImpl): Future[PackedMsg] = {
+    mw.get().runWithSpan("buildAgentMsg", "AgentMsgPackagingUtil", InternalSpan) {
       val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
       agentMsgTransformer.packAsync(msgPackFormat, agentMsgJson, packMsgParam.encryptParam)
     }
@@ -69,7 +69,8 @@ object AgentMsgPackagingUtil {
                                           packMsgParam: PackMsgParam,
                                           fwdRoutes: List[FwdRouteMsg],
                                           fwdMsgTypeVersion: String = MTV_1_0)
-                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam,
+                                          mw: MetricsWriterExtensionImpl): Future[PackedMsg] = {
 
     buildAgentMsg(msgPackFormat, packMsgParam).flatMap { packedAgentMsg =>
       buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
@@ -90,8 +91,9 @@ object AgentMsgPackagingUtil {
                           packedMsg: PackedMsg,
                           fwdRoutes: List[FwdRouteMsg],
                           fwdMsgTypeVersion: String = MTV_1_0)
-                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
-    runWithInternalSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil") {
+                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam,
+                          mw: MetricsWriterExtensionImpl): Future[PackedMsg] = {
+    mw.get().runWithSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil", InternalSpan) {
       if (fwdRoutes.isEmpty) Future.successful(packedMsg)
       else {
         buildFwdMsg(msgPackFormat, packedMsg, fwdRoutes, fwdMsgTypeVersion)
@@ -187,8 +189,9 @@ object AgentMsgPackagingUtil {
                             msg: Array[Byte],
                             routingKeys: Seq[VerKey],
                             msgType: String)
-                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
-    runWithInternalSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil") {
+                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam,
+                            mw: MetricsWriterExtensionImpl): Future[PackedMsg] = {
+    mw.get().runWithSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil", InternalSpan) {
       routingKeys.size match {
         case 0 => Future.successful(PackedMsg(msg))
         case 1 => throw new RuntimeException("insufficient routing keys: " + routingKeys)

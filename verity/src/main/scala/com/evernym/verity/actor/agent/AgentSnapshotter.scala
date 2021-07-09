@@ -4,7 +4,7 @@ import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.state.base.AgentStateInterface
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotterExt}
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriterExtensionImpl}
 
 /**
  * a base agent snapshotter trait to be added/included in different agent actor
@@ -16,6 +16,8 @@ import com.evernym.verity.metrics.MetricsWriter
  */
 trait AgentSnapshotter[T <: State with AgentStateInterface]
   extends SnapshotterExt[T] { this: BasePersistentActor =>
+
+  def metricsWriter: MetricsWriterExtensionImpl
 
   var state: T
 
@@ -39,7 +41,7 @@ trait AgentSnapshotter[T <: State with AgentStateInterface]
     if (state.currentThreadContexts.isEmpty && isThreadContextMigrationFinished) {
       Option(state)
     } else {
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT)
+      metricsWriter.get().gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT)
       None
     }
   }

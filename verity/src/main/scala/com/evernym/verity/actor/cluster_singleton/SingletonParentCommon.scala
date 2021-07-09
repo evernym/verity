@@ -23,7 +23,6 @@ import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
 import com.evernym.verity.util.Util._
 import com.typesafe.scalalogging.Logger
 
@@ -50,7 +49,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
     case RefreshConfigOnAllNodes        => refreshConfigOnAllNodes()
     case oc: OverrideConfigOnAllNodes   => overrideConfigOnAllNodes(oc)
-    case sm: SendMetricsOfAllNodes      => sendMetricsOfAllNodes(sm)
   }
 
   override def sysCmdHandler: Receive = {
@@ -159,19 +157,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
       case Failure(e) =>
         handleException(e, sndr)
         logger.error(s"sending ${sc.cmd} command to node(s) failed", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-    }
-  }
-
-  private def sendMetricsOfAllNodes(sm: SendMetricsOfAllNodes): Unit = {
-    logger.debug(s"fetching metrics from nodes: $nodes")
-    val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(sm.filters))
-    val sndr = sender()
-    f.onComplete{
-      case Success(result) =>
-        sndr ! AllNodeMetricsData(result.asInstanceOf[Iterable[NodeMetricsData]].toList)
-      case Failure(e: Throwable) =>
-        logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-        handleException(e, sndr)
     }
   }
 

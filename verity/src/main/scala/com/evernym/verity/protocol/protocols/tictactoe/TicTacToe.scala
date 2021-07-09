@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
@@ -44,7 +45,7 @@ object TicTacToeProtoDef extends ProtocolDefinition[TicTacToe, Role, Any, Any, S
 
   override val roles: Set[Role] = Set(PlayerA(), PlayerB())
 
-  def create(ctx: ProtocolContextApi[TicTacToe, Role, Any, Any, State, String]): TicTacToe = { //TODO can this be generically implemented in the base class?
+  def create(ctx: ProtocolContextApi[TicTacToe, Role, Any, Any, State, String], mw: MetricsWriterExtensionImpl): TicTacToe = { //TODO can this be generically implemented in the base class?
     new TicTacToe(ctx)
   }
 

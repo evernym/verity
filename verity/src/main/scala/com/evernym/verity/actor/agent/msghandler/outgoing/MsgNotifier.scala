@@ -4,7 +4,6 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.MsgPackFormat._
@@ -21,7 +20,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
@@ -46,7 +45,7 @@ trait MsgNotifier {
   }
 
   def sendPushNotif(pcms: Set[ComMethodDetail], pnData: PushNotifData, sponsorId: Option[String]): Future[Any] = {
-    runWithInternalSpan("sendPushNotif", "MsgNotifier") {
+    metricsWriter.get().runWithSpan("sendPushNotif", "MsgNotifier", InternalSpan) {
       logger.debug("push com methods: " + pcms)
       val spn = SendPushNotif(pcms, pnData.sendAsAlertPushNotif, pnData.notifData, pnData.extraData, sponsorId)
       logger.debug("pn data: " + spn)
@@ -329,7 +328,7 @@ trait MsgNotifierForStoredMsgs
   }
 
   def sendPushNotif(pnData: PushNotifData, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    runWithInternalSpan("sendPushNotif", "MsgNotifierForStoredMsgs") {
+    metricsWriter.get().runWithSpan("sendPushNotif", "MsgNotifierForStoredMsgs", InternalSpan) {
       logger.debug("about to get push com methods to send push notification")
       withComMethods(allComMethods).map { comMethods =>
         val cms = comMethods.filterByTypes(Seq(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_SPR_PUSH))
@@ -339,23 +338,23 @@ trait MsgNotifierForStoredMsgs
           val pushStart = System.currentTimeMillis()
           val fut = sendPushNotif(cms, pnData, comMethods.sponsorId).map { r =>
             val duration = System.currentTimeMillis() - pushStart
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_DURATION, duration)
+            metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_DURATION, duration)
             handleErrorIfFailed(r)
             r match {
               case pnds: PushNotifResponse =>
                 val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, pnds.statusCode, pnds.statusDetail)
                 updatePushNotificationDeliveryStatus(umds)
                 if (pnds.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
-                  MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_SUCCEED_COUNT)
+                  metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_SUCCEED_COUNT)
                   Right(pnds)
                 } else {
-                  MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_FAILED_COUNT)
+                  metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
                   Left(pnds)
                 }
               case x =>
                 val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(x.toString))
                 updatePushNotificationDeliveryStatus(umds)
-                MetricsWriter.gaugeApi.increment(AS_SERVICE_FIREBASE_FAILED_COUNT)
+                metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
                 Left(x)
             }
           }

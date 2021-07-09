@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign}
@@ -20,8 +21,8 @@ object TokenizerDefinition
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(context: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String]):
-  Protocol[Tokenizer, Role, Msg, Any, TokenizerState, String] = {
+  override def create(context: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String],
+                      mw: MetricsWriterExtensionImpl): Protocol[Tokenizer, Role, Msg, Any, TokenizerState, String] = {
     new Tokenizer(context)
   }
 

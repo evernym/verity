@@ -5,7 +5,7 @@ import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.actor.MetricsFilterCriteria
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
-import com.evernym.verity.metrics.MetricsReader
+import com.evernym.verity.metrics.CustomMetrics
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 
@@ -22,10 +22,6 @@ class CollectionsMetricCollectorSpec extends TestKitBase
 
   val key1 = "KEY1"
   val key2 = "KEY2"
-
-  val metricMax = "collections_max"
-  val metricCount = "collections_count"
-  val metricSum = "collections_sum"
 
   val tag = "some-collection"
 
@@ -65,20 +61,14 @@ class CollectionsMetricCollectorSpec extends TestKitBase
   private def awaitForMetrics(max: Double, sum: Double, cnt: Double): Unit = {
     val criteria = MetricsFilterCriteria(filtered = false)
     awaitCond(
-      MetricsReader.getNodeMetrics(criteria).metrics.exists(metricDetail => {
-        metricDetail.name.contains(metricMax) &&
-          metricDetail.value.equals(max) &&
-          metricDetail.tags.get.values.exists(_.equals(tag))
+      testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_MAX).exists(entry => {
+          entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(max)
       }) &&
-        MetricsReader.getNodeMetrics(criteria).metrics.exists(metricDetail => {
-          metricDetail.name.contains(metricSum) &&
-            metricDetail.value.equals(sum) &&
-            metricDetail.tags.get.values.exists(_.equals(tag))
+        testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_SUM).exists(entry => {
+          entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(sum)
         }) &&
-        MetricsReader.getNodeMetrics(criteria).metrics.exists(metricDetail => {
-          metricDetail.name.contains(metricCount) &&
-            metricDetail.value.equals(cnt) &&
-            metricDetail.tags.get.values.exists(_.equals(tag))
+        testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_COUNT).exists(entry => {
+          entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(cnt)
         }),
       60.seconds
     )

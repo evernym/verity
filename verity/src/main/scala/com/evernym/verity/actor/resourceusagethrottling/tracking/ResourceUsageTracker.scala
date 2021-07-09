@@ -7,7 +7,6 @@ import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.node_singleton.ResourceBlockingStatusMngrCache
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.actor.resourceusagethrottling._
@@ -22,6 +21,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warnin
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceSimpleName, getResourceTypeName}
 import com.evernym.verity.config.CommonConfig.USAGE_RULES
+import com.evernym.verity.metrics.InternalSpan
 
 import scala.concurrent.Future
 
@@ -90,11 +90,11 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   }
 
   def addResourceUsage(aru: AddResourceUsage): Unit = {
-    runWithInternalSpan("addResourceUsage", "ResourceUsageTracker") {
+    metricsWriter.get().runWithSpan("addResourceUsage", "ResourceUsageTracker", InternalSpan) {
       ResourceUsageRuleHelper.loadResourceUsageRules()
       if (ResourceUsageRuleHelper.resourceUsageRules.applyUsageRules) {
         val persistUpdatedBucketEntries =
-          resourceUsageTracker.updateResourceUsage(entityId, aru.resourceType, aru.resourceName)
+          resourceUsageTracker.updateResourceUsage(entityId, aru.resourceType, aru.resourceName, metricsWriter)
         persistUpdatedBucketEntries.foreach { ube =>
           ube.entries.foreach(asyncWriteWithoutApply)
         }
@@ -138,7 +138,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
    * @param aru
    */
   def analyzeUsage(aru: AddResourceUsage): Unit = {
-    runWithInternalSpan("analyzeUsage", "ResourceUsageTracker") {
+    metricsWriter.get().runWithSpan("analyzeUsage", "ResourceUsageTracker", InternalSpan) {
       Future {
         ResourceUsageRuleHelper.getResourceUsageRule(entityId, aru.resourceType, aru.resourceName).foreach { usageRule =>
           val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)

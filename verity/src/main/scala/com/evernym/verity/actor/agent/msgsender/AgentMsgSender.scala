@@ -3,7 +3,6 @@ package com.evernym.verity.actor.agent.msgsender
 import com.evernym.verity.Exceptions._
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.Status._
-import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.appStateManager.{AppStateEvent, ErrorEvent, MildSystemError}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
@@ -17,6 +16,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriter, MetricsWriterExtensionImpl}
 import com.evernym.verity.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
@@ -34,17 +34,20 @@ trait AgentMsgSender
   def msgSendingSvc: MsgSendingSvc
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit
 
-  private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity): Future[CacheQueryResponse] = {
-    runWithInternalSpan("getAgencyIdentityFut", "AgentMsgSender") {
+  private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity,
+                                   mw: MetricsWriter): Future[CacheQueryResponse] = {
+
+    mw.runWithSpan("getAgencyIdentityFut", "AgentMsgSender", InternalSpan) {
       val gadp = GetAgencyIdentityCacheParam(localAgencyDID, gad)
       val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
       generalCache.getByParamAsync(gadfcParam)
     }
   }
 
-  private def theirAgencyEndpointFut(localAgencyDID:DID, theirAgencyDID: DID): Future[CacheQueryResponse] = {
+  private def theirAgencyEndpointFut(localAgencyDID:DID, theirAgencyDID: DID,
+                                     mw: MetricsWriter): Future[CacheQueryResponse] = {
     val gad = GetAgencyIdentity(theirAgencyDID, getVerKey = false)
-    getAgencyIdentityFut(localAgencyDID, gad)
+    getAgencyIdentityFut(localAgencyDID, gad, mw)
   }
 
   private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DID): Exception = {
@@ -57,10 +60,10 @@ trait AgentMsgSender
     LedgerSvcException(errorMsg)
   }
 
-  private def getRemoteAgencyEndpoint(implicit sm: SendMsgParam): Future[String] = {
+  private def getRemoteAgencyEndpoint(implicit sm: SendMsgParam, mw: MetricsWriter): Future[String] = {
     sm.theirRoutingParam.route match {
       case Left(theirAgencyDID) =>
-        theirAgencyEndpointFut(sm.localAgencyDID, theirAgencyDID).map { cqr =>
+        theirAgencyEndpointFut(sm.localAgencyDID, theirAgencyDID, mw).map { cqr =>
           cqr.getAgencyInfoReq(theirAgencyDID).endpointOpt.getOrElse(
             throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
           )
@@ -72,7 +75,7 @@ trait AgentMsgSender
     }
   }
 
-  def sendToTheirAgencyEndpoint(implicit sm: SendMsgParam): Future[Any] = {
+  def sendToTheirAgencyEndpoint(implicit sm: SendMsgParam, mw: MetricsWriter): Future[Any] = {
     logger.debug("msg about to be sent to their agent", (LOG_KEY_UID, sm.uid), (LOG_KEY_MSG_TYPE, sm.msgType))
     val epFut = getRemoteAgencyEndpoint
     epFut.flatMap { ep =>

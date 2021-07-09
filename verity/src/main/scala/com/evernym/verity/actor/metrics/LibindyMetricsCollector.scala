@@ -5,7 +5,7 @@ import com.evernym.verity.Exceptions
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
 import org.hyperledger.indy.sdk.metrics.Metrics
 
@@ -17,6 +17,8 @@ import scala.util.{Failure, Success, Try}
 class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Actor {
 
   private val logger = getLoggerByClass(getClass)
+
+  val metricsWriter = MetricsWriterExtension(context.system)
 
   final override def receive: Receive = {
     case CollectLibindyMetrics() => this.collectLibindyMetrics()
@@ -39,7 +41,7 @@ class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Act
                 val metricsList = metricsItem._2
                 metricsList foreach (
                   metricsRecord => {
-                    MetricsWriter.gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
+                    metricsWriter.get().gaugeUpdate(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
                   }
                   )
               })

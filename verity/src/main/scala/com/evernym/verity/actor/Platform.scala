@@ -31,7 +31,8 @@ import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.libs.Libraries
-import com.evernym.verity.metrics.MetricsReader
+import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.metrics.writer.KamonMetricsWriter
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -53,9 +54,8 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //initialize required libraries (libindy/libmysqlstorage etc)
   Libraries.initialize(appConfig)
 
-  //start prometheus reporter
-  // intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is validated as well
-  MetricsReader.initialize(appConfig)
+  // todo metrics initialization for kamon/etc/etc
+  MetricsWriterExtension(actorSystem).set(new KamonMetricsWriter)
 
   def startExtensionIfEnabled[T <: Extension](t: ExtensionId[T], confPath: String)(start: T => Unit): Unit = {
     val isEnabled = appConfig

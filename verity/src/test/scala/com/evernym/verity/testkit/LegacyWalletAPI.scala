@@ -2,7 +2,6 @@ package com.evernym.verity.testkit
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-
 import akka.actor.ActorRef
 import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet._
@@ -22,7 +21,8 @@ import scala.concurrent.Future
 
 class LegacyWalletAPI(appConfig: AppConfig,
                       walletProvider: WalletProvider,
-                      ledgerPoolManager: Option[LedgerPoolConnManager])
+                      ledgerPoolManager: Option[LedgerPoolConnManager],
+                      val metricsWriter: MetricsWriter)
   extends WalletAPI
     with AwaitResult {
 
@@ -65,7 +65,7 @@ class LegacyWalletAPI(appConfig: AppConfig,
     val curTime = LocalDateTime.now
     val millis = ChronoUnit.MILLIS.between(startTime, curTime)
     logger.debug(s"libindy api call finished ($opContext), time taken (in millis): $millis")
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_DURATION, millis)
+    metricsWriter.gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_DURATION, millis)
     result
   }
 

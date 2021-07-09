@@ -14,6 +14,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine._
@@ -30,7 +31,8 @@ import scala.util.Left
 
 
 //noinspection ScalaDeprecation
-class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String])
+class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String],
+                         override val metricsWriter: MetricsWriterExtensionImpl)
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
       with HasAppConfig
@@ -182,7 +184,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       keyCreatedRespMsg.foreach(m => ctx.signal(m))
     }
 
-    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param))
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param)(agentMsgTransformer, wap, metricsWriter))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

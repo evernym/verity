@@ -24,6 +24,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.LogUtil.logDuration
 import com.evernym.verity.util.Util._
@@ -76,7 +77,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   lazy val fetchers: Map[FetcherParam, CacheValueFetcher] = Map (
     ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig)
   )
-  lazy val routingCache: Cache = new Cache("RC", fetchers)
+  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system))
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)

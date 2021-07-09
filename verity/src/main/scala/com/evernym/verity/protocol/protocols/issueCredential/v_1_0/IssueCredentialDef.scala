@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine._
@@ -14,8 +15,8 @@ object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role,
 
   override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
-  override def create(context: ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, State, String]):
-  Protocol[IssueCredential, Role, ProtoMsg, Event, State, String] = {
+  override def create(context: ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, State, String],
+                      mw: MetricsWriterExtensionImpl): Protocol[IssueCredential, Role, ProtoMsg, Event, State, String] = {
     new IssueCredential()(context)
   }
 

@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.Exceptions
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 
 trait ProtocolTypes[P,R,M,E,S,I] {
@@ -28,7 +29,7 @@ trait ProtocolContainer[P,R,M,E,S,I] extends ProtocolTypes[P,R,M,E,S,I] with Pro
   //TODO: had to use lazy to get around some failures, we may wanna come back to it
   lazy val _services: Option[Services] = createServices
 
-  lazy val protocol: Protocol[P,R,M,E,S,I] = definition.create(this)
+  lazy val protocol: Protocol[P,R,M,E,S,I] = definition.create(this, metricsWriter)
 
   def protoRef: ProtoRef = definition.msgFamily.protoRef
 

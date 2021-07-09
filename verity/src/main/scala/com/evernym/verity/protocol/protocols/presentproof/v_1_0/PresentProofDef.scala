@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants.{NAME, _}
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine._
@@ -17,9 +18,10 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
 
   override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
-  override def create(context: ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]):
+  override def create(context: ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String],
+                      mw: MetricsWriterExtensionImpl):
   Protocol[PresentProof, Role, ProtoMsg, Event, State, String] = {
-    new PresentProof()(context)
+    new PresentProof(mw)(context)
   }
 
   override val initParamNames: Set[ParameterName] = Set(

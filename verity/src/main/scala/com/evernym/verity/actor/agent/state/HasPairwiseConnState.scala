@@ -17,6 +17,7 @@ import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
 import scala.concurrent.Future
@@ -181,7 +182,8 @@ trait PairwiseConnStateBase {
   def buildReqMsgForTheirRoutingService(msgPackFormat: MsgPackFormat,
                                         agentMsgs: List[Any],
                                         wrapInBundledMsgs: Boolean,
-                                        msgType: String): Future[PackedMsg] = {
+                                        msgType: String,
+                                        mw: MetricsWriterExtensionImpl): Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(_: LegacyRoutingDetail)) =>
         val encryptParam =
@@ -193,14 +195,15 @@ trait PairwiseConnStateBase {
         AgentMsgPackagingUtil.buildAgentMsg(
           msgPackFormat,
           packMsgParam
-        )(agentMsgTransformer, wap).flatMap { pm =>
-          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType)
+        )(agentMsgTransformer, wap, mw).flatMap { pm =>
+          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType, mw)
         }
       case x => throw new RuntimeException("unsupported routing detail (for unpacked msg): " + x)
     }
   }
 
-  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String):
+  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String,
+                                                 mw: MetricsWriterExtensionImpl):
   Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>
@@ -210,7 +213,7 @@ trait PairwiseConnStateBase {
           msgPackFormat,
           PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),
           List(fwdRouteForAgentPairwiseActor)
-        )(agentMsgTransformer, wap)
+        )(agentMsgTransformer, wap, mw)
       case Some(Right(rd: RoutingDetail)) =>
         val routingKeys = AgentMsgPackagingUtil.buildRoutingKeys(rd.verKey, rd.routingKeys)
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -218,7 +221,7 @@ trait PairwiseConnStateBase {
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap)
+        )(agentMsgTransformer, wap, mw)
       case x => throw new RuntimeException("unsupported routing detail (for packed msg): " + x)
     }
   }

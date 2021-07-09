@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Scope.RelProvisioning
 import com.evernym.verity.protocol.engine._
@@ -9,7 +10,7 @@ object OutOfBandDef extends ProtocolDefinition[OutOfBand, Role, Msg, OutOfBandEv
   override val msgFamily: MsgFamily = OutOfBandMsgFamily
 
   override def create(context: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent,
-    State, String]): Protocol[OutOfBand, Role, Msg, OutOfBandEvent, State, String] = {
+    State, String], mw: MetricsWriterExtensionImpl): Protocol[OutOfBand, Role, Msg, OutOfBandEvent, State, String] = {
     new OutOfBand(context)
   }
 

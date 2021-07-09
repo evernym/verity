@@ -1,13 +1,12 @@
-package com.evernym.verity.metrics
+package com.evernym.verity.metrics_deprecated
 
 import java.time.{Duration => JavaDuration}
-
 import akka.testkit.TestKit
 import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, SponsorRel}
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
-import com.evernym.verity.metrics.MetricHelpers._
-import com.evernym.verity.metrics.TestReporter.awaitReport
+import com.evernym.verity.metrics.TestMetricsWriter
+import com.evernym.verity.metrics_deprecated.MetricHelpers._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.TimeUtil
 import com.typesafe.config.{Config, ConfigFactory}
@@ -312,6 +311,7 @@ object MetricHelpers {
   val DEFAULT_ACTIVITY_TYPE: String = "action-taken"
 
   def getMetricWithTags(names: Set[String]): Map[String, MetricWithTags] = {
+    // todo use testMetricWriter
     val report = awaitReport(JavaDuration.ofSeconds(5))
     assert(report != null)
     report

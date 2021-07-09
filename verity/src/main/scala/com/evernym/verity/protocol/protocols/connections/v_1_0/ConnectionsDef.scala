@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify}
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
@@ -16,7 +17,8 @@ object ConnectionsDef extends ProtocolDefinition[Connections, Role, Msg, Event, 
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p)
 
-  override def create(context: ProtocolContextApi[Connections, Role, Msg, Event, State, String]): Connections = {
+  override def create(context: ProtocolContextApi[Connections, Role, Msg, Event, State, String],
+                      mw: MetricsWriterExtensionImpl): Connections = {
     new Connections(context)
   }
 

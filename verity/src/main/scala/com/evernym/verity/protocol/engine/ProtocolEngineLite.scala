@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriterExtensionImpl}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -77,6 +78,9 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
       )
       handleMsg(definition.createInitMsg(params))
     }
+
+
+    override def metricsWriter: MetricsWriterExtensionImpl = ??? // todo
 
     override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
       def storeSegment(segmentAddress: SegmentAddress,

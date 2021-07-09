@@ -12,6 +12,7 @@ import com.evernym.verity.http.base.AgentReqBuilder
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.PlatformServiceProvider
 import com.evernym.verity.http.route_handlers.open.PackedMsgEndpointHandler
+import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriterExtensionImpl}
 import com.evernym.verity.testkit.BasicSpec
 
 
@@ -25,6 +26,8 @@ class RequestSizeSpec
     with AgentReqBuilder {
 
   def endpointRoutes: Route = ignoreTrailingSlash { packedMsgRoute }
+
+  override def metricsWriter: MetricsWriterExtensionImpl = MetricsWriterExtension(platform.actorSystem)
 
   val MAX_ALLOWED_PAYLOAD_SIZE = 17825792   //TODO: to be finalized
 

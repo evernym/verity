@@ -4,13 +4,13 @@ import akka.actor.ActorRef
 import com.evernym.verity.Exceptions.BadRequestErrorException
 import com.evernym.verity.MsgPayloadStoredEventBuilder
 import com.evernym.verity.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, GetMsgsReqMsg, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
@@ -32,7 +32,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
    * @param reqMsgContext req msg context
    */
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleGetMsgs", "UserAgentCommon") {
+    metricsWriter.get().runWithSpan("handleGetMsgs", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
       val resourceName = ResourceUsageUtil.getMessageResourceName(amw.msgType)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -44,14 +44,14 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   }
 
   def handleGetMsgsInternal(gmr: GetMsgsReqMsg): Unit = {
-    runWithInternalSpan("handleGetMsgsInternal", "UserAgentCommon") {
+    metricsWriter.get().runWithSpan("handleGetMsgsInternal", "UserAgentCommon", InternalSpan) {
       sender ! GetMsgRespInternal(msgStore.getMsgs(gmr))
     }
   }
 
   private def buildAndSendGetMsgsResp(filteredMsgs: List[MsgDetail], sndr: ActorRef)
                              (implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("buildAndSendGetMsgsResp", "UserAgentCommon") {
+    metricsWriter.get().runWithSpan("buildAndSendGetMsgsResp", "UserAgentCommon", InternalSpan) {
       val getMsgsRespMsg = GetMsgsMsgHelper.buildRespMsg(filteredMsgs)(reqMsgContext.agentMsgContext)
 
       val encParam = EncryptParam(
@@ -62,7 +62,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       logger.debug(s"filtered get msgs: $logPrefix" + filteredMsgs.mkString(logPrefix))
       logger.debug("get msgs response: " + getMsgsRespMsg)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg("GetMsgsResp", rp, sndr)
     }
   }
@@ -86,7 +86,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
     sendRespMsg("MsgStatusUpdatedResp", rp)
   }
 

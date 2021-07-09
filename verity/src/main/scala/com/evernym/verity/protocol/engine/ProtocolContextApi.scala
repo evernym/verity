@@ -1,17 +1,15 @@
 package com.evernym.verity.protocol.engine
 
 import java.util.concurrent.TimeUnit
-
 import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
-import kamon.metric.MeasurementUnit
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
@@ -79,11 +77,11 @@ trait ProtocolContextApi[P,R,M,E,S,I]
 
   @silent
   def DEPRECATED_convertAsyncToSync[T](fut: Future[T]): T = {
-    MetricsWriter.histogramApi.recordWithTag(
+    metricsWriter.get().histogramUpdate(
       AS_BLOCKING_WALLET_API_CALL_COUNT,
-      MeasurementUnit.none,
+      MetricsUnit.None,
       1,
-      "protocol" -> definition.msgFamily.protoRef.toString,
+      Map("protocol" -> definition.msgFamily.protoRef.toString),
     )
     Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
   }

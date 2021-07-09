@@ -14,7 +14,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.ActorErrorResp
@@ -166,7 +165,7 @@ class AgentActorWatcher(val appConfig: AppConfig)
 
   private def updateFetchedItems(fai: FetchedActiveItems): Unit = {
     activeItems = activeItems ++ fai.items
-    MetricsWriter.gaugeApi.updateWithTags(activeRegisteredItemMetricsName, activeItems.size)
+    metricsWriter.get().gaugeUpdate(activeRegisteredItemMetricsName, activeItems.size)
     processOneBatchOfFetchedActiveItems()
   }
 
@@ -176,7 +175,7 @@ class AgentActorWatcher(val appConfig: AppConfig)
         sendMsgToWatchedItem(itemId)
         activeItems = activeItems - itemId
       }
-      MetricsWriter.gaugeApi.updateWithTags(pendingActiveRegisteredItemMetricsName, activeItems.size)
+      metricsWriter.get().gaugeUpdate(pendingActiveRegisteredItemMetricsName, activeItems.size)
     }
   }
 

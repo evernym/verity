@@ -13,7 +13,6 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
@@ -28,12 +27,11 @@ import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam,
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriterExtension, MetricsWriterExtensionImpl}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
-import kamon.metric.MeasurementUnit
 
 import scala.concurrent.Future
 
@@ -48,6 +46,7 @@ trait AgentCommon
     with HasMsgProgressTracker
     with ResourceUsageCommon { this: AgentPersistentActor =>
 
+  def metricsWriter : MetricsWriterExtensionImpl
 
   def agentCommonCmdReceiver[A]: Receive = {
     case _: AgentActorDetailSet    => //nothing to do
@@ -148,7 +147,7 @@ trait AgentCommon
   /**
    * per agent actor cache
    */
-  lazy val agentCache = new Cache("AC", cacheFetchers)
+  lazy val agentCache = new Cache("AC", cacheFetchers, metricsWriter)
 
   /**
    * general/global (per actor system) cache
@@ -230,11 +229,11 @@ trait AgentCommon
     try {
       val stateSize = s.serializedSize
       if (stateSize >= 0) { // so only states that can calculate size are part the metric
-        MetricsWriter.histogramApi.recordWithTag(
+        metricsWriter.get().histogramUpdate(
           AS_ACTOR_AGENT_STATE_SIZE,
-          MeasurementUnit.information.bytes,
+          MetricsUnit.Information.Bytes,
           stateSize,
-          "actor_class" -> this.getClass.getSimpleName,
+          Map("actor_class" -> this.getClass.getSimpleName)
         )
       }
     } catch {
@@ -254,7 +253,7 @@ trait AgentCommon
   }
 
   def fixAgentState(): Unit = {
-    runWithInternalSpan("fixAgentState", s"${getClass.getSimpleName}") {
+    metricsWriter.get().runWithSpan("fixAgentState", s"${getClass.getSimpleName}", InternalSpan) {
       val sndr = sender()
       val preAddedAuthKeys = _addedAuthKeys
       val preAgencyDidPair = state.agencyDIDPair

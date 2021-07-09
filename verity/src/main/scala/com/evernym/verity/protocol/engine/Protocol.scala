@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateProtoDef
 import com.evernym.verity.protocol.engine.util.?=>
@@ -49,7 +50,7 @@ trait ProtocolDefinition[P,R,M,E,S,I] extends SegmentedStateProtoDef[S] {
 
   val requiredAccess: Set[AccessRight] = Set.empty
 
-  def create(context: ProtocolContextApi[P,R,M,E,S,I]): Protocol[P,R,M,E,S,I]
+  def create(context: ProtocolContextApi[P,R,M,E,S,I], mw: MetricsWriterExtensionImpl): Protocol[P,R,M,E,S,I]
 
   def initialState: S
 

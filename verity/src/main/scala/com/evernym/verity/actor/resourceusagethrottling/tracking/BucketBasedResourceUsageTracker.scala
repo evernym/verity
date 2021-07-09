@@ -1,13 +1,12 @@
 package com.evernym.verity.actor.resourceusagethrottling.tracking
 
 import java.time.ZonedDateTime
-
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.resourceusagethrottling.{tracking, _}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, ResourceUsageRule, ResourceUsageRuleHelper}
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtensionImpl}
 import com.evernym.verity.util.TimeZoneUtil._
 import com.typesafe.scalalogging.Logger
 
@@ -124,9 +123,10 @@ class BucketBasedResourceUsageTracker extends ResourceUsageProvider {
     }
   }
 
-  def updateResourceUsage(entityId: EntityId, resourceType: ResourceType, resourceName: ResourceName):
+  def updateResourceUsage(entityId: EntityId, resourceType: ResourceType, resourceName: ResourceName,
+                          metricsWriter: MetricsWriterExtensionImpl):
   Option[PersistUpdatedBucketState] = {
-    runWithInternalSpan("updateResourceUsage", "BucketBasedResourceUsageTracker") {
+    metricsWriter.get().runWithSpan("updateResourceUsage", "BucketBasedResourceUsageTracker", InternalSpan) {
       val curDate = getCurrentUTCZonedDateTime
       ResourceUsageRuleHelper.getResourceUsageRule(entityId, resourceType, resourceName).map { usageRule =>
         val curResourceUsages = resourceUsages.get(resourceName).map(_.buckets).getOrElse(Map.empty)

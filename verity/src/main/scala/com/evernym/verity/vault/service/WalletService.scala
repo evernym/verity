@@ -3,7 +3,6 @@ package com.evernym.verity.vault.service
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
-
 import akka.actor.ActorRef
 import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
@@ -12,7 +11,7 @@ import com.evernym.verity.actor.wallet.{WalletCmdErrorResponse, WalletCommand}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtensionImpl}
 import com.typesafe.scalalogging.Logger
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
@@ -23,6 +22,8 @@ import scala.reflect.ClassTag
 
 
 trait WalletService {
+
+  def metricsWriter : MetricsWriterExtensionImpl
 
   protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
@@ -42,7 +43,7 @@ trait WalletService {
     logger.debug(s"[$walletId] [${cmd.id}] wallet service about to start execution of wallet cmd: ${cmd.name}")
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
+        metricsWriter.get().gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         if (BAD_REQ_ERRORS.map(_.statusCode).contains(wer.sd.statusCode)) {
           throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         } else {
@@ -61,7 +62,7 @@ trait WalletService {
         .withTag("operation", s"${cmd.name}")
         .withTag("component", "WalletService")
         .record(seconds)
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+      metricsWriter.get().gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
       logger.debug(s"[$walletId] [${cmd.id}] wallet service about to send response back: ${resp.getClass.getSimpleName}")
       resp
     }

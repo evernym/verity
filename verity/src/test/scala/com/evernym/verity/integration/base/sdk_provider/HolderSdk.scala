@@ -15,6 +15,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTra
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
+import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.{DID, DIDDoc, MsgId, ThreadId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
@@ -263,7 +264,7 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecuto
       packedMsg,
       routingKeys,
       fwdMsgType
-    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam)
+    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam, new MetricsWriterExtensionImpl()) //todo  could probably fail!
     awaitFut(future).msg
   }
 

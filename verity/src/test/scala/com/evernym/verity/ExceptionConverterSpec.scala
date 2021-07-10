@@ -4,8 +4,9 @@ import akka.http.scaladsl.model.{StatusCodes => HttpStatusCodes}
 import akka.persistence.dynamodb.journal.{DynamoDBJournalFailure, DynamoDBJournalRejection}
 import com.amazonaws.AmazonServiceException
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util.Util
+import com.evernym.verity.util2.{ExceptionConverter, Status}
 import org.mockito.scalatest.MockitoSugar
 
 class ExceptionConverterSpec extends BasicSpec with MockitoSugar {

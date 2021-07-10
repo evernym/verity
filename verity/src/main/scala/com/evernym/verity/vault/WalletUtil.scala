@@ -5,7 +5,7 @@ import java.util.UUID
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_ENCRYPTION
 import com.evernym.verity.config.{AppConfig, CommonConfig}
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.WalletParam
 import org.apache.commons.codec.digest.DigestUtils
@@ -15,14 +15,14 @@ import scala.concurrent.Future
 object WalletUtil {
 
   def buildWalletConfig(appConfig: AppConfig): WalletConfig = {
-    if (appConfig.getConfigStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
-      val readHost = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_READ_HOST)
-      val writeHost = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_WRITE_HOST)
-      val port = appConfig.getConfigIntReq(CommonConfig.WALLET_STORAGE_HOST_PORT)
-      val userName = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_CRED_USERNAME)
-      val password = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_CRED_PASSWORD)
-      val dbName = appConfig.getConfigStringReq(CommonConfig.WALLET_STORAGE_DB_NAME)
-      val connectionLimit = appConfig.getConfigIntOption(CommonConfig.WALLET_STORAGE_CONNECTION_LIMIT)
+    if (appConfig.getStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
+      val readHost = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_READ_HOST)
+      val writeHost = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_WRITE_HOST)
+      val port = appConfig.getIntReq(CommonConfig.WALLET_STORAGE_HOST_PORT)
+      val userName = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_CRED_USERNAME)
+      val password = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_CRED_PASSWORD)
+      val dbName = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_DB_NAME)
+      val connectionLimit = appConfig.getIntOption(CommonConfig.WALLET_STORAGE_CONNECTION_LIMIT)
       new MySqlWalletConfig(readHost, writeHost, port, userName, password, dbName, connectionLimit)
     } else new DefaultWalletConfig
   }
@@ -69,7 +69,7 @@ object WalletUtil {
 
   private def getWalletKeySeed(id: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
-    val salt = appConfig.getConfigStringReq(SALT_WALLET_ENCRYPTION)
+    val salt = appConfig.getStringReq(SALT_WALLET_ENCRYPTION)
     buildWalletKeySeed(id, salt)
   }
 

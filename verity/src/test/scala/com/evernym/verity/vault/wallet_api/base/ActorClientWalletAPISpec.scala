@@ -68,7 +68,7 @@ class MockAgentActor(walletAPI: WalletAPI)
   extends CoreActor
     with UserWalletSetupHelper {
 
-  import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 
   override def receiveCmd: Receive = {
     case _: StartWalletSetup => setupUser()

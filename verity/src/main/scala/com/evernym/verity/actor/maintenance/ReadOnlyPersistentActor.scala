@@ -63,7 +63,7 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
 
   override def getEventEncryptionKey: String =
     actorParam.persEncKey match {
-      case Some(pk) => appConfig.getConfigStringOption(pk).getOrElse(pk)
+      case Some(pk) => appConfig.getStringOption(pk).getOrElse(pk)
       case None     => super.getEventEncryptionKey
     }
 

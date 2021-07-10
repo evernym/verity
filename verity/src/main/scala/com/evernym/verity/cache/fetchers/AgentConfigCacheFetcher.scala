@@ -1,6 +1,6 @@
 package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.{AgentConfigs, GetConfigs}
 import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER

@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.agent.user
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgReceivedOrdersDetail, MsgStatusUpdated, MsgThreadDetail}
 import com.evernym.verity.actor.agent.{AgentCommon, Msg, Thread}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
 import com.evernym.verity.protocol.engine._

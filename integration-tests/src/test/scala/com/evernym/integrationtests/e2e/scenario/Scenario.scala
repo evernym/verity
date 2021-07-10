@@ -7,11 +7,11 @@ import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
 import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, VerityInstance}
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.util2.UrlParam
 
 import java.nio.file.Path
 import scala.concurrent.duration.Duration

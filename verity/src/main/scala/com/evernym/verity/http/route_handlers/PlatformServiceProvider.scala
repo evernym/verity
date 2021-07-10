@@ -1,7 +1,7 @@
 package com.evernym.verity.http.route_handlers
 
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}

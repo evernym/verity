@@ -17,7 +17,7 @@ import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.evernym.verity.texter.SMSSender
 
 import scala.concurrent.Future
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 
 /**
  *

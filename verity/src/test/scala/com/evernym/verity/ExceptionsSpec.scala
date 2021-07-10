@@ -2,6 +2,7 @@ package com.evernym.verity
 
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.protocol.engine.util.SimpleLogger
+import com.evernym.verity.util2.Exceptions
 
 
 class ExceptionsSpec extends BasicSpec {

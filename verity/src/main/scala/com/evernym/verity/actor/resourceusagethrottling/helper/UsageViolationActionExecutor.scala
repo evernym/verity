@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException}
+import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{WarnCaller, WarnResourceForCaller}

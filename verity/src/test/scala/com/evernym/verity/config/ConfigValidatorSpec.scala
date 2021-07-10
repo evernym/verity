@@ -1,6 +1,6 @@
 package com.evernym.verity.config
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.validator.base.ConfDetail

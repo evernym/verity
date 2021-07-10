@@ -1,7 +1,7 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.SHORTEN_URL
 import com.evernym.verity.config.AppConfig
@@ -58,7 +58,7 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
 object DefaultURLShortener {
 
   def loadFromConfig(appConfig: AppConfig): Option[URLShortenerAPI] = {
-    appConfig.getConfigStringOption(URL_SHORTENER_SVC_SELECTED).map { clazz =>
+    appConfig.getStringOption(URL_SHORTENER_SVC_SELECTED).map { clazz =>
       Class
         .forName(clazz)
         .getConstructor(classOf[AppConfig])

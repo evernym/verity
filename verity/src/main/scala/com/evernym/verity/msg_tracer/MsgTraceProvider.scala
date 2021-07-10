@@ -3,7 +3,7 @@ package com.evernym.verity.msg_tracer
 import java.time.Instant
 
 import akka.actor.ActorSystem
-import com.evernym.verity.{ReqId, RespMsgId}
+import com.evernym.verity.util2.{ReqId, RespMsgId}
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 
 /**

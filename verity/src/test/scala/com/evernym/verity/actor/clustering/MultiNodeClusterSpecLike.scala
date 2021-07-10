@@ -1,15 +1,14 @@
 package com.evernym.verity.actor.clustering
 
 import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAgentActorContext, MockPlatformServices}
 import com.evernym.verity.actor.{Platform, agentRegion}
 import com.evernym.verity.testkit.{BasicSpec, CleansUpIndyClientFirst}
-import com.evernym.verity.ActorErrorResp
+import com.evernym.verity.util2.ActorErrorResp
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.reflect.ClassTag

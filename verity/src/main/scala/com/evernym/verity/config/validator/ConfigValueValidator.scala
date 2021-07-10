@@ -40,7 +40,7 @@ class ConfigValueValidator (val config: Config) extends ConfigValidator {
     }
 
     def checkIfFileExistIfConfigured(confName: String): Unit = {
-      getConfigStringOption(confName).foreach { path =>
+      getStringOption(confName).foreach { path =>
         if (! Files.exists(Paths.get(path))) {
           val cv = config.getValue(confName)
           val problem = s"no file exists at given path '$path' for config: $confName"
@@ -51,7 +51,7 @@ class ConfigValueValidator (val config: Config) extends ConfigValidator {
 
 
     def checkIfResourceExistIfConfigured(confName: String): Unit = {
-      getConfigStringOption(confName).foreach { path =>
+      getStringOption(confName).foreach { path =>
         if (! Files.exists(Paths.get(path))) {
           val cv = config.getValue(confName)
           val problem = s"no file exists at given path '$path' for config: $confName"
@@ -64,7 +64,7 @@ class ConfigValueValidator (val config: Config) extends ConfigValidator {
       val confNames = List(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
       confNames.foreach { cn =>
         try {
-          getConfigListOfStringOption(cn).getOrElse(List.empty).foreach(ip => new SubnetUtilsExt(ip))
+          getStringListOption(cn).getOrElse(List.empty).foreach(ip => new SubnetUtilsExt(ip))
         } catch {
           case _: IllegalArgumentException =>
             val cv = config.getValue(cn)

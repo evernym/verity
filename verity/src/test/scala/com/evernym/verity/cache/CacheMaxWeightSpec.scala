@@ -2,7 +2,7 @@ package com.evernym.verity.cache
 
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail, KeyMapping}
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicAsyncSpec
@@ -95,7 +95,7 @@ class CacheMaxWeightSpec
 class MockMaxWeightCacheFetcher(val appConfig: AppConfig)
   extends AsyncCacheValueFetcher {
 
-  import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 
   lazy val fetcherParam: FetcherParam = FetcherParam(-1, "mock-cache")
   lazy val cacheConfigPath: Option[String] = None

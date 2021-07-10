@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.agent.state
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.Exceptions.InvalidValueException
-import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._

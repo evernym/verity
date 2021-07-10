@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.testkit.actor
 
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.texter.{SMSSender, SmsInfo}
 
@@ -12,7 +12,7 @@ trait MockSMSSenderExt extends SMSSender {
 
 class MockSMSSender(val appConfig: AppConfig) extends MockSMSSenderExt {
   var phoneTexts = Map.empty[String, String]
-  import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 
   override def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]] = {
     phoneTexts += (smsInfo.to -> smsInfo.text)

@@ -2,6 +2,39 @@ syntax = "proto3";
 
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
-import "google/protobuf/wrappers.proto";
+import "outbox-common.proto";
 
-//package com.evernym.verity.actor.msgoutbox.outbox.Events;
+package com.evernym.verity.actor.msgoutbox.outbox.Events;
+
+message OutboxParamUpdated {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.Event";
+    string walletId = 1;
+    string senderVerKey = 2;
+    // map of comMethodId and ComMethod
+    map<string, ComMethod> comMethods = 3;
+}
+
+message MsgAdded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.Event";
+    uint64 creationTimeInMillis = 1;
+    string msgId = 2;
+}
+
+message MsgSentSuccessfully {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.Event";
+    string msgId = 1;
+    string comMethodId = 2;
+    bool isDelivered = 3;
+}
+
+message MsgSendingFailed {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.Event";
+    string msgId = 1;
+    string comMethodId = 2;
+    bool isDeliveryFailed = 3;
+}
+
+message MsgRemoved {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.Event";
+    string msgId = 1;
+}

@@ -1,7 +1,7 @@
 {
   "components": {
     "verity-pool": {
-      "image": "gitlab.corp.evernym.com:4567/dev/containers/indy-pool:1.12.3_1.0.8",
+      "image": "gitlab.corp.evernym.com:4567/dev/containers/indy-pool:1.12.4_1.0.9",
       "mounts": [
         ":/devlab"
       ],

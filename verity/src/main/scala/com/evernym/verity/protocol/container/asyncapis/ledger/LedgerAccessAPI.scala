@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.container.asyncapis.ledger
 
-import com.evernym.verity.Exceptions.NotFoundErrorException
+import com.evernym.verity.util2.Exceptions.NotFoundErrorException
 import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}

@@ -3,8 +3,8 @@ package com.evernym.verity.actor.agent
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.Exceptions.{HandledErrorException, SmsSendingFailedException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer

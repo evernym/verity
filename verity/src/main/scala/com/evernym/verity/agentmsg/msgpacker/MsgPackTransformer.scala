@@ -3,7 +3,7 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackedMsg, UnpackedMsg}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.vault.wallet_api.WalletAPI

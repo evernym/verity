@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.agency
 
 import akka.pattern.ask
 import akka.event.LoggingReceive
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
@@ -138,7 +138,7 @@ trait AgencyAgentCommon
   def identifySponsor(idSponsor: IdentifySponsor): Future[Option[ControlMsg]] = {
     val sponsorRequired = ConfigUtil.sponsorRequired(appConfig)
     val tokenWindow = Duration(appConfig.getLoadedConfig.getString(s"$PROVISIONING.token-window"))
-    val cacheUsedTokens = appConfig.getConfigBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
+    val cacheUsedTokens = appConfig.getBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
 
     logger.debug(s"identify sponsor: $sponsorRequired - token valid for $tokenWindow")
     val ctl: AgentProvisioningMsgFamily.Ctl = idSponsor.provisionDetails match {

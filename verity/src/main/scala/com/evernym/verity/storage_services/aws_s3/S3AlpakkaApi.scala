@@ -7,9 +7,9 @@ import akka.stream.alpakka.s3.scaladsl.S3
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.S3_FAILURE
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.S3_FAILURE
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI

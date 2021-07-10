@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.container.actor
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -22,7 +22,7 @@ import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
-import com.evernym.verity.{ActorResponse, ServiceEndpoint}
+import com.evernym.verity.util2.ServiceEndpoint
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -38,6 +38,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.util2.ActorResponse
 
 import scala.concurrent.duration._
 import scala.concurrent.Future

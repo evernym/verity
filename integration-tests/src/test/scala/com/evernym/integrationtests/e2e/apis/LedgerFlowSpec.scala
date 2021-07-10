@@ -2,7 +2,6 @@ package com.evernym.integrationtests.e2e.apis
 
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
-import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -16,6 +15,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
+import com.evernym.verity.util2.Status
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory, ConfigUtil => TypesafeConfigUtil}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterEach

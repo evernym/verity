@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager

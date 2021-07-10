@@ -2,7 +2,7 @@ package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.constants.Constants.LOGO_URL_KEY
-import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, AGENT_NOT_YET_CREATED, ALREADY_REGISTERED, CONN_STATUS_ALREADY_CONNECTED, INVALID_VALUE, MISSING_REQ_FIELD, NOT_REGISTERED, UNSUPPORTED_MSG_TYPE}
+import com.evernym.verity.util2.Status.{AGENT_ALREADY_CREATED, AGENT_NOT_YET_CREATED, ALREADY_REGISTERED, CONN_STATUS_ALREADY_CONNECTED, INVALID_VALUE, MISSING_REQ_FIELD, NOT_REGISTERED, UNSUPPORTED_MSG_TYPE}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec

@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives.{as, complete, entity, extractReques
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.CustomExceptionHandler._
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import scala.concurrent.Future
 
 trait PushNotifMsgHttpListener

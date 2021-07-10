@@ -77,7 +77,7 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
   }
 
   lazy val itemContainerMapper: ItemContainerMapper = {
-    val clazz = appConfig.getConfigStringReq(ITEM_CONTAINER_MAPPER_CLASS)
+    val clazz = appConfig.getStringReq(ITEM_CONTAINER_MAPPER_CLASS)
     Class
       .forName(clazz)
       .getConstructor()

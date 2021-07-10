@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.clustering
 
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.agency.{CreateKey, GetLocalAgencyIdentity}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -19,8 +19,8 @@ class BasicMultiNodeClusterSpec extends MultiNodeClusterSpecLike  {
 
     "validates cluster configuration" in {
       //this confirms that both the nodes are running on different ports
-      node1.appConfig.getConfigStringReq("akka.remote.artery.canonical.port") should not be
-        node2.appConfig.getConfigStringReq("akka.remote.artery.canonical.port")
+      node1.appConfig.getStringReq("akka.remote.artery.canonical.port") should not be
+        node2.appConfig.getStringReq("akka.remote.artery.canonical.port")
     }
 
     "when sent get agency identity before creating key" in {

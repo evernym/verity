@@ -73,7 +73,7 @@ val sdnotifyVer     = "1.3"
 val scalatestVer    = "3.2.9"
 val mockitoVer      = "1.16.37"
 val veritySdkVer    = "0.4.9-1024e509"
-val vcxWrapperVer   = "0.10.1.1131"
+val vcxWrapperVer   = "0.10.1.1216"
 
 // compiler plugin versions
 val silencerVersion = "1.7.5"

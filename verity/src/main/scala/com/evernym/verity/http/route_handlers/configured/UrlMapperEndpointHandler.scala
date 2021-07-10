@@ -4,8 +4,8 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives.{complete, handleExceptions, logRequestResult, pathPrefix, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.NotFoundErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.NotFoundErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.url_mapper.{AddUrl, GetActualUrl}
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.http.common.CustomExceptionHandler._
@@ -31,7 +31,7 @@ trait UrlMapperEndpointHandler
     val respFut = platform.urlStore ? AddUrl(url)
     respFut map {
       case _: UrlAdded =>
-        val urlTemplate = platform.agentActorContext.appConfig.getConfigStringReq(CONNECT_ME_MAPPED_URL_TEMPLATE)
+        val urlTemplate = platform.agentActorContext.appConfig.getStringReq(CONNECT_ME_MAPPED_URL_TEMPLATE)
         val newUrl = replaceVariables(urlTemplate, Map(TOKEN -> hashed))
         Url(newUrl)
       case e => e

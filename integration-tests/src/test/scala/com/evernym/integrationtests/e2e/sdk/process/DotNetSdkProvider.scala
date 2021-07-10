@@ -473,22 +473,12 @@ object DotNetSdkProvider {
                          |<configuration>
                          |  <packageSources>
                          |    <add key="public" value="https://api.nuget.org/v3/index.json" />
-                         |    <add key="EvernymDev" value="https://gitlab.corp.evernym.com/api/v4/projects/419/packages/nuget/index.json" />
+                         |    <add key="EvernymDev" value="https://gitlab.com/api/v4/projects/26760306/packages/nuget/index.json" />
                          |  </packageSources>
-                         |  <packageSourceCredentials>
-                         |    <EvernymDev>
-                         |      <add key="Username" value="%VERITY_SDK_PACKAGE_REGISTRY_USERNAME%" />
-                         |      <add key="ClearTextPassword" value="%VERITY_SDK_PACKAGE_REGISTRY_PASSWORD%" />
-                         |    </EvernymDev>
-                         |  </packageSourceCredentials>
                          |</configuration>
                          |""".stripMargin
 
-
-    val file = new File(cwd.resolve("NuGet.Config").toString)
-    val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(fileContent)
-    bw.close()
+    ProcessSdkProvider.writeConfigFile(cwd, "NuGet.Config", fileContent)
   }
 
   def buildScript(imports: String, context: String, cmd: String, sdkVersion: String): String = {

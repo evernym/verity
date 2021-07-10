@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.container.asyncapis.wallet
 
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.CommonConfig.SALT_WALLET_NAME
-import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
+import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredAsyncOps
 import com.evernym.verity.util.HashAlgorithm.SHA256
@@ -24,7 +24,7 @@ trait AnonCredRequestsAPI
 
   lazy val masterSecretId: String = {
 
-    val salt = appConfig.getConfigStringReq(SALT_WALLET_NAME)
+    val salt = appConfig.getStringReq(SALT_WALLET_NAME)
     val msIdHex = HashUtil.hash(SHA256)(selfParticipantId + salt).hex
     //TODO: may want to optimize this (for now, every time a cred request is sent, it will do below check)
     Try(DEPRECATED_convertToSyncReq(walletApi.executeAsync[MasterSecretCreated](CreateMasterSecret(msIdHex)))) match {

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
-import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
+import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agentRegion

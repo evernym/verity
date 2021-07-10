@@ -1,15 +1,15 @@
 package com.evernym.verity.config
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, ConfigLoadingFailedException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ConfigLoadingFailedException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI.handleError
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.validator.DefaultConfigValidatorCreator
 import com.evernym.verity.config.validator.base.{ConfigReaderHelper, ConfigValidatorCreator, ConfigValidatorHelper}
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.config._
 import com.typesafe.scalalogging.Logger
 

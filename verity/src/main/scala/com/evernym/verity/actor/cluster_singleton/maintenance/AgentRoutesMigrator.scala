@@ -168,35 +168,35 @@ class AgentRoutesMigrator(val appConfig: AppConfig)
 
   lazy val scheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(AGENT_ROUTES_MIGRATOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(AGENT_ROUTES_MIGRATOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   lazy val migrationEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(AGENT_ROUTES_MIGRATOR_ENABLED)
+      .getBooleanOption(AGENT_ROUTES_MIGRATOR_ENABLED)
       .getOrElse(false)
 
   //how many parallel "legacy agent route store actor" to ask for registration
   lazy val registrationBatchSize: Int =
     appConfig
-      .getConfigIntOption(AGENT_ROUTES_MIGRATOR_REGISTRATION_BATCH_SIZE)
+      .getIntOption(AGENT_ROUTES_MIGRATOR_REGISTRATION_BATCH_SIZE)
       .getOrElse(5)
 
   //how many parallel "legacy agent route store actor" to be processed for migration
   lazy val processingBatchSize: Int =
     appConfig
-      .getConfigIntOption(AGENT_ROUTES_MIGRATOR_PROCESSING_BATCH_SIZE)
+      .getIntOption(AGENT_ROUTES_MIGRATOR_PROCESSING_BATCH_SIZE)
       .getOrElse(2)
 
   //how many parallel routes "per legacy agent route actor" to be migrated
   lazy val routesBatchSize: Int =
     appConfig
-      .getConfigIntOption(AGENT_ROUTES_MIGRATOR_ROUTES_BATCH_SIZE)
+      .getIntOption(AGENT_ROUTES_MIGRATOR_ROUTES_BATCH_SIZE)
       .getOrElse(5)
 
   lazy val routesBatchItemIntervalInMillis: Int =
     appConfig
-      .getConfigIntOption(AGENT_ROUTES_MIGRATOR_ROUTES_BATCH_ITEM_INTERVAL_IN_MILLIS)
+      .getIntOption(AGENT_ROUTES_MIGRATOR_ROUTES_BATCH_ITEM_INTERVAL_IN_MILLIS)
       .getOrElse(0)
 
   scheduleJob("migrate", scheduledJobInterval, RunMigration)

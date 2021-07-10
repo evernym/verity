@@ -3,7 +3,7 @@ package com.evernym.verity.actor.testkit
 import java.util.UUID
 import akka.actor.ActorRef
 import akka.testkit.TestKitBase
-import com.evernym.verity.Status.APP_STATUS_UPDATE_MANUAL
+import com.evernym.verity.util2.Status.APP_STATUS_UPDATE_MANUAL
 import com.evernym.verity.actor.appStateManager.AppStateConstants.{CONTEXT_MANUAL_UPDATE, STATUS_LISTENING}
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateManager, CauseDetail, GetCurrentState, GetDetailedAppState, ListeningSuccessful, ManualUpdate, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.state.{AppState, InitializingState, ListeningState}

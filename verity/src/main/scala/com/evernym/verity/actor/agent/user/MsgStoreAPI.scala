@@ -1,9 +1,8 @@
 package com.evernym.verity.actor.agent.user
 
 import akka.actor.ActorRef
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.MsgPayloadStoredEventBuilder
-import com.evernym.verity.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor._
@@ -16,6 +15,7 @@ import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
+import com.evernym.verity.util2.MsgPayloadStoredEventBuilder
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.util.Left

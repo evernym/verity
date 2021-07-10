@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.event.LoggingReceive
-import com.evernym.verity.RouteId
+import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.maintenance.{AlreadyCompleted, AlreadyRegistered, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, Migrated, RouteAlreadySet, RoutingAgentUtil, StoreFromLegacy, StoreRoute}
 import com.evernym.verity.actor.cluster_singleton.ForAgentRoutesMigrator
@@ -147,7 +147,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   var pendingRouteMigration: Map[RouteId, ActorAddressDetail] = Map.empty
   var migrationStatus: Map[RouteId, RouteMigrationStatus] = Map.empty
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   val routeRegion: ActorRef = ClusterSharding(context.system).shardRegion(ROUTE_REGION_ACTOR_NAME)
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)

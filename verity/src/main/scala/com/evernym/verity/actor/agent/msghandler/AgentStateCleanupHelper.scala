@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
@@ -24,7 +24,7 @@ trait AgentStateCleanupHelper {
 
   def cleanupCmdHandler: Receive = {
     case FixThreadMigrationState                  => fixThreadMigrationState()
-    case MigrateThreadContexts                    => migrateThreadContexts()
+    case MigrateThreadContexts                    => migrateThreadContextsByScheduledJob()
     case FixActorState(did, sndrActorRef)         => fixActorState(did, sndrActorRef)
     case cs: CheckActorStateCleanupState          => checkActorStateCleanupState(cs.sendCurrentStatus)
     case rss: RouteSetStatus                      => handleRouteSet(rss)
@@ -219,8 +219,6 @@ trait AgentStateCleanupHelper {
         }
       }
       migrateThreadContexts()
-    } else {
-
     }
     checkActorStateCleanupState(forceSendCurStatus = true)
   }
@@ -242,9 +240,16 @@ trait AgentStateCleanupHelper {
             threadContextMigrationStatus.count(_._2.isNotMigrated))
           if (rss.isSet && pendingThreadContextSize == 0) {
             finishThreadContextMigration()
+            finishActorStateCleanup()
           }
         }
       case _ => //nothing to do
+    }
+  }
+
+  def migrateThreadContextsByScheduledJob(): Unit = {
+    if (routeSetStatus.isEmpty) {   //this means the actor state clean up is not interacting with this agent actor
+      migrateThreadContexts()
     }
   }
 
@@ -258,16 +263,17 @@ trait AgentStateCleanupHelper {
 
   def finishThreadContextMigration(): Unit = {
     isThreadContextMigrationFinished = true
-
+    stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+    threadContextMigrationStatus = Map.empty
+    threadContextMigrationAttempt = Map.empty
     if (! isSnapshotTaken) {
       saveSnapshotStateIfAvailable()
       isSnapshotTaken = true
     }
+  }
 
+  def finishActorStateCleanup(): Unit = {
     if (! isStateCleanupCompleted) {
-      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
-      threadContextMigrationStatus = Map.empty
-      threadContextMigrationAttempt = Map.empty
       actorStateCleanupExecutor = None
       routeSetStatus = None
       isStateCleanupCompleted = true
@@ -287,29 +293,29 @@ trait AgentStateCleanupHelper {
 
   lazy val migrateThreadContextBatchSize: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
       .getOrElse(5)
 
   lazy val migrateThreadContextBatchItemSleepInterval: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5000)
 
   lazy val migrateThreadContextScheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   val MIGRATE_SCHEDULED_JOB_ID = "MigrateThreadContexts"
 
   lazy val migrateThreadContextMaxAttemptPerPinstProtoRef: Int =
     appConfig
-      .getConfigIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
+      .getIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
       .getOrElse(15)
 
   def isMigrateThreadContextsEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
+      .getBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
       .getOrElse(false)
 
   def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {
@@ -318,6 +324,8 @@ trait AgentStateCleanupHelper {
       migrateThreadContextScheduledJobInterval,
       MigrateThreadContexts)
   }
+
+  scheduleThreadContextMigrationJobIfNotScheduled()
 
   self ! FixThreadMigrationState
 }

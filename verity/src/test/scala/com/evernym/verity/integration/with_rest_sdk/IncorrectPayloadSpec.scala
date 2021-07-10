@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_rest_sdk
 
 import akka.http.scaladsl.model.StatusCodes.BadRequest
-import com.evernym.verity.Status.INVALID_VALUE
+import com.evernym.verity.util2.Status.INVALID_VALUE
 import com.evernym.verity.http.route_handlers.open.RestErrorResponse
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider

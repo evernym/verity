@@ -170,11 +170,11 @@ trait ItemContainerBase
 
   lazy val itemManagerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_MANAGER_REGION_ACTOR_NAME)
 
-  lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+  lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     ITEM_CONTAINER_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
-  lazy val itemMigrationChunkSize: Int = appConfig.getConfigIntOption(
+  lazy val itemMigrationChunkSize: Int = appConfig.getIntOption(
     ITEM_CONTAINER_MIGRATION_CHUNK_SIZE).getOrElse(20)
-  lazy val itemMigrationCheckResultHistorySize: Int = appConfig.getConfigIntOption(
+  lazy val itemMigrationCheckResultHistorySize: Int = appConfig.getIntOption(
     ITEM_CONTAINER_MIGRATION_CHECK_RESULT_HISTORY_SIZE).getOrElse(20)
   //determines after how many tries scheduled job should be stopped if there is no more work.
   val disableScheduleJobAfterTriesWithoutWork = 20

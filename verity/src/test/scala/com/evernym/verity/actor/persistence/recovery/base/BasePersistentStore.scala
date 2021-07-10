@@ -33,8 +33,8 @@ trait BasePersistentStore
     with HasTestWalletAPI {
 
   lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)
-  lazy val keyValueMapperEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_KEY_VALUE_MAPPER)
-  lazy val agentRouteStoreEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  lazy val keyValueMapperEncKey = appConfig.getStringReq(CommonConfig.SECRET_KEY_VALUE_MAPPER)
+  lazy val agentRouteStoreEncKey = appConfig.getStringReq(CommonConfig.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())(WalletAPIParam(walletId))

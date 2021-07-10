@@ -2,9 +2,8 @@ package com.evernym.verity.util
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import com.evernym.verity.Exceptions.{HandledErrorException, _}
-import com.evernym.verity.Status._
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, _}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
@@ -15,6 +14,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.AsyncToSync
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -182,7 +182,7 @@ trait UtilBase extends AsyncToSync {
 
   def getEventEncKey(secret: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
-    val salt = appConfig.getConfigStringReq(SALT_EVENT_ENCRYPTION)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
     DigestUtils.sha512Hex(secret + salt)
   }
 
@@ -195,13 +195,13 @@ trait UtilBase extends AsyncToSync {
   def buildAgencyEndpoint(appConfig: AppConfig): UrlParam = {
     buildAgencyUrl(
       appConfig,
-      appConfig.getConfigStringOption(VERITY_ENDPOINT_PATH_PREFIX)
+      appConfig.getStringOption(VERITY_ENDPOINT_PATH_PREFIX)
     )
   }
 
   def buildAgencyUrl(appConfig: AppConfig, pathPrefix: Option[String]): UrlParam = {
-    val host = appConfig.getConfigStringReq(VERITY_ENDPOINT_HOST)
-    val port = appConfig.getConfigIntReq(VERITY_ENDPOINT_PORT)
+    val host = appConfig.getStringReq(VERITY_ENDPOINT_HOST)
+    val port = appConfig.getIntReq(VERITY_ENDPOINT_PORT)
     UrlParam(
       host,
       port,
@@ -249,7 +249,7 @@ trait UtilBase extends AsyncToSync {
 
   def getLedgerTxnProtocolVersion(appConfig: AppConfig): Int = {
     val supportedVersions = Set(LEDGER_TXN_PROTOCOL_V1, LEDGER_TXN_PROTOCOL_V2)
-    appConfig.getConfigIntOption(LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION) match {
+    appConfig.getIntOption(LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION) match {
       case None => LEDGER_TXN_PROTOCOL_V2
       case Some(v: Int) if supportedVersions.contains(v) => v
       case Some(x) => throw new RuntimeException(s"ledger txn protocol version $x not yet supported")
@@ -274,7 +274,7 @@ trait UtilBase extends AsyncToSync {
   }
 
   def getTimeoutValue(appConfig: AppConfig, confName: String, default: Int): Int = {
-    appConfig.getConfigIntOption(confName).getOrElse(default)
+    appConfig.getIntOption(confName).getOrElse(default)
   }
 
   def buildDuration(appConfig: AppConfig, confName: String, default: Int): FiniteDuration = {
@@ -333,6 +333,6 @@ trait UtilBase extends AsyncToSync {
   def saltedHashedName(name: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
     // TODO we should not concate string before hashing, should use safeMultiHash
-    HashUtil.hash(SHA256)(name + appConfig.getConfigStringReq(SALT_WALLET_NAME)).hex
+    HashUtil.hash(SHA256)(name + appConfig.getStringReq(SALT_WALLET_NAME)).hex
   }
 }

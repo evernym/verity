@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockingDetail, EntityBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.node_singleton.ResourceBlockingStatusMngrCache
 import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleConfig, ResourceUsageRuleHelper, UsageRule, ViolationActions}

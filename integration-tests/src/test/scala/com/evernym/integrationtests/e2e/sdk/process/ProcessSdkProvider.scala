@@ -221,6 +221,13 @@ object ProcessSdkProvider {
   def versionToModule(version: String) = {
     "v" + version.replace('.', '_')
   }
+
+  def writeConfigFile(cwd: Path, fileName: String, contents: String) = {
+    val file = new File(cwd.resolve(fileName).toString)
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(contents)
+    bw.close()
+  }
 }
 
 

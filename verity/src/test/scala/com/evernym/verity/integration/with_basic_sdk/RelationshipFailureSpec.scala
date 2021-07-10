@@ -2,7 +2,7 @@ package com.evernym.verity.integration.with_basic_sdk
 
 import akka.http.scaladsl.model.HttpEntity
 import akka.http.scaladsl.model.StatusCodes.BadRequest
-import com.evernym.verity.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
+import com.evernym.verity.util2.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg

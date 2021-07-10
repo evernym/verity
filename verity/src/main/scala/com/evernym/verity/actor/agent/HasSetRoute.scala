@@ -6,7 +6,7 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.protocol.engine.DID
 
 import scala.concurrent.Future
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 
 
 trait HasSetRoute { this: AgentPersistentActor =>

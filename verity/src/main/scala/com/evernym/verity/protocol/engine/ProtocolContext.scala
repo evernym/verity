@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.RetentionPolicy
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
@@ -19,6 +18,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
+import com.evernym.verity.util2.RetentionPolicy
 import com.github.ghik.silencer.silent
 import com.typesafe.scalalogging.Logger
 import org.slf4j.Marker

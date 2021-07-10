@@ -3,10 +3,9 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.{Exceptions, Status}
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.SpanUtil._
@@ -61,6 +60,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
+import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -396,7 +396,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   lazy val useAsyncPersistForMsgForward: Boolean =
-    appConfig.getConfigBooleanOption(PERSISTENCE_USE_ASYNC_MSG_FORWARD).getOrElse(false)
+    appConfig.getBooleanOption(PERSISTENCE_USE_ASYNC_MSG_FORWARD).getOrElse(false)
 
   def persistAndProcessSendRemoteMsg(papsrm: PersistAndProcessSendRemoteMsg): Unit = {
     runWithInternalSpan("persistAndProcessSendRemoteMsg", "UserAgentPairwise") {
@@ -878,7 +878,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   def mySelfRelDIDReq: DID = domainId
   def myPairwiseVerKey: VerKey = state.myDidAuthKeyReq.verKey
 
-  lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+  lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
 
   /**

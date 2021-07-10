@@ -302,7 +302,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   lazy val nextSeqNoForDeletion: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
+    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
       .getOrElse(5)
 
   val legacyAgentRouteStoreRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
@@ -313,7 +313,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
 
   lazy val scheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)

@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, DidPair, SetupAgentEndpoint}
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
@@ -12,9 +12,9 @@ import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestComMethod
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
 
 

@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, SendPushNotif, SendUnStoredMsgToMyDomain, SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent

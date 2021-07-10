@@ -12,8 +12,8 @@ object AgentAuthKeyUtil {
    * @return set of configured authorized keys
    */
   def keysForSelfRelDID(config: AppConfig, domainId: DID): Set[VerKey] = {
-    if (config.getConfigBooleanReq(s"$AGENT_AUTHENTICATION_ENABLED")) {
-      config.getConfigSetOfStringOption(s"$AGENT_AUTHENTICATION_KEYS.$domainId").getOrElse(Set.empty)
+    if (config.getBooleanReq(s"$AGENT_AUTHENTICATION_ENABLED")) {
+      config.getStringSetOption(s"$AGENT_AUTHENTICATION_KEYS.$domainId").getOrElse(Set.empty)
     } else Set.empty
   }
 

@@ -1,7 +1,7 @@
 package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.cache.LEDGER_GET_VER_KEY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig

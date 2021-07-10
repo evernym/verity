@@ -21,9 +21,9 @@ class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec 
   val notifData = Map(BODY -> "notif-body", BADGE_COUNT -> 1)
   val regTokenId = "c9Opl8rgyRs:APA91bF73AeSM5_godAIs-s3CzucLDcIDrz8Idfb9X6CQlhMoBkeqBK9tB7SgY8jiFN6eQheDqdiwzl9kNSh36jQ4XzrnjvlfO-eGPE7nphYEimt-r9QdIThVpta3fi5x0_nZrRhLV_Z"
 
-  val serverKey: String = AppConfigWrapper.getConfigStringReq(FCM_API_KEY)
-  val serverHost: String = AppConfigWrapper.getConfigStringReq(FCM_API_HOST)
-  val serverPath: String = AppConfigWrapper.getConfigStringReq(FCM_API_PATH)
+  val serverKey: String = AppConfigWrapper.getStringReq(FCM_API_KEY)
+  val serverHost: String = AppConfigWrapper.getStringReq(FCM_API_HOST)
+  val serverPath: String = AppConfigWrapper.getStringReq(FCM_API_PATH)
   val pusher = new FirebasePusher(FirebasePushServiceParam(serverKey, serverHost, serverPath))
 
   "FCM pusher" - {

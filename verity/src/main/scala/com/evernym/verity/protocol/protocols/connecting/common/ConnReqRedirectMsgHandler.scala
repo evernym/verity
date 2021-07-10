@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.{MSG_STATUS_REDIRECTED, REDIRECTED_CONN_REQ_EXISTS}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.{MSG_STATUS_REDIRECTED, REDIRECTED_CONN_REQ_EXISTS}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}

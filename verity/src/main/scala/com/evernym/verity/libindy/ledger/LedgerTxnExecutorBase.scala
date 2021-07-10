@@ -1,10 +1,9 @@
 package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status
-import com.evernym.verity.Status.{TIMEOUT, UNHANDLED, _}
+import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED, _}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
@@ -22,6 +21,7 @@ import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
 import com.evernym.verity.util.Util.getJsonStringFromMap
 import com.evernym.verity.util.{TAAUtil, Util}
+import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.IndyException

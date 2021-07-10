@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.Question
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol.Nonce
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionResponse
-import com.evernym.verity.AgentId
+import com.evernym.verity.util2.AgentId
 import com.evernym.verity.protocol.engine.{MsgId, MsgTypeStr}
 
 case class QuestionAnswerQuestion(`@type`: MsgTypeStr,

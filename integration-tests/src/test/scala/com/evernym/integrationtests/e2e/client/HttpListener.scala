@@ -5,10 +5,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, path, post, reject}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.UrlParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.HttpServerUtil
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.immutable.Queue
@@ -80,7 +80,7 @@ class HttpListener(val appConfig: AppConfig,
   val bindFuture = Http().newServerAt("localhost", listeningPort).bind(corsHandler(route))
 
   def stopHttpListener(): Unit = {
-    import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+    import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
     bindFuture.flatMap(_.unbind())
   }
 }

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.ServiceDecorator

@@ -1,6 +1,6 @@
 package com.evernym.verity.util
 
-import com.evernym.verity.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 

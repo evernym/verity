@@ -1,6 +1,6 @@
 package com.evernym.verity.util
 
-import com.evernym.verity.AgentId
+import com.evernym.verity.util2.AgentId
 import com.evernym.verity.protocol.engine.{DID, ParticipantId}
 
 object ParticipantUtil {

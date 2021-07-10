@@ -2,7 +2,7 @@ package com.evernym.verity.apphealth
 
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateUpdateAPI, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
 import com.evernym.verity.actor.testkit.{ActorSpec, AppStateManagerTestKit}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._

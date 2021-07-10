@@ -41,7 +41,7 @@ class MockActorRecoveryFailure(val appConfig: AppConfig)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
-  lazy val exceptionSleepTimeInMillis = appConfig.getConfigIntOption("akka.mock.actor.exceptionSleepTimeInMillis").getOrElse(0)
+  lazy val exceptionSleepTimeInMillis = appConfig.getIntOption("akka.mock.actor.exceptionSleepTimeInMillis").getOrElse(0)
 
   override def receiveCmd: Receive = {
     case GenerateRecoveryFailure => //nothing to do

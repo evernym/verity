@@ -1,7 +1,7 @@
 package com.evernym.verity.cache.base
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException, NotFoundErrorException}
-import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, UNHANDLED}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException, NotFoundErrorException}
+import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, UNHANDLED}
 import com.evernym.verity.actor.agent.agency.AgencyInfo
 import com.evernym.verity.actor.agent.msgrouter.ActorAddressDetail
 import com.evernym.verity.actor.agent.user.AgentConfigs

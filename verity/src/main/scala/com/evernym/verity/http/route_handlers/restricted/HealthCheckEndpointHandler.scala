@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.{AllEvents, AppStateDetailed, CauseDetail, GetDetailedAppState, GetEvents, ManualUpdate, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.http.common.CustomExceptionHandler._

@@ -4,7 +4,7 @@ import java.time.zone.ZoneRulesException
 import java.time.{DateTimeException, Instant, ZoneId, ZonedDateTime}
 
 import com.evernym.verity.constants.Constants.UTC
-import com.evernym.verity.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._

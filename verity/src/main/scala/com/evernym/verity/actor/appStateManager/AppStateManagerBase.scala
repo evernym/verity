@@ -1,12 +1,11 @@
 package com.evernym.verity.actor.appStateManager
 
 import java.time.ZonedDateTime
-
 import akka.actor.Actor
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.state._
@@ -15,7 +14,8 @@ import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_DRAINING_
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.{AppVersion, ExceptionConverter, Exceptions}
+import com.evernym.verity.AppVersion
+import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -53,7 +53,7 @@ trait AppStateManagerBase { this: Actor =>
   }
 
   protected def getHeartbeat: StatusDetailResp = {
-    import com.evernym.verity.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
+    import com.evernym.verity.util2.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
     val currentState: AppState = getState
     currentState match {
       case _: InitializingState
@@ -223,11 +223,11 @@ trait AppStateManagerBase { this: Actor =>
       // TODO: Start a CoordinatedShutdown (rely on the ClusterDaemon addTask here) OR do the following?
       val cluster = Cluster(context.system)
       val f: Future[Boolean] = Future {
-        val delayBeforeLeavingCluster = appConfig.getConfigIntOption(
+        val delayBeforeLeavingCluster = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-        val delayBetweenStatusChecks = appConfig.getConfigIntOption(
+        val delayBetweenStatusChecks = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS).getOrElse(1)
-        val maxStatusCheckCount = appConfig.getConfigIntOption(
+        val maxStatusCheckCount = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT).getOrElse(20)
         logger.info(
           s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""

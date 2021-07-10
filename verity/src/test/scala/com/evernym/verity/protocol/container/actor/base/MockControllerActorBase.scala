@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.container.actor.base
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessSignalMsg

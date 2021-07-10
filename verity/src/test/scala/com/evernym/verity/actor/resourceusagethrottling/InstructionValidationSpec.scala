@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import com.evernym.verity.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.actor.resourceusagethrottling.helper.LogLevelValidator.WARN_RESOURCE_INSTRUCTION
 import com.evernym.verity.actor.resourceusagethrottling.helper.{EntityTypesValidator, LogLevelValidator, PeriodValidator}
 import com.evernym.verity.config.CommonConfig.VIOLATION_ACTION

@@ -3,9 +3,9 @@ package com.evernym.verity.logging
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.AgentIdentity
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI.handleError
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 

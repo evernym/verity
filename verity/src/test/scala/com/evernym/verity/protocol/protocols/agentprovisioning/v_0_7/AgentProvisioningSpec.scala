@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
 import com.evernym.verity.protocol.engine.VerKey

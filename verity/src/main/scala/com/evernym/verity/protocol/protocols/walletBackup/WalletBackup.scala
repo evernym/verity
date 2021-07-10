@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.BAD_REQUEST
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.BAD_REQUEST
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.msg.PersistenceFailure

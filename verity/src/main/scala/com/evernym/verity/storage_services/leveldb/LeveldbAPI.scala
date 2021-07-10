@@ -2,9 +2,9 @@ package com.evernym.verity.storage_services.leveldb
 
 import akka.actor.ActorSystem
 import akka.Done
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.DATA_NOT_FOUND
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI

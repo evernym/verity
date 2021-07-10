@@ -1,8 +1,8 @@
 package com.evernym.verity.libindy
 
-import com.evernym.verity.Exceptions.InvalidValueException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{StatusDetail, StatusDetailException}
+import com.evernym.verity.util2.Exceptions.InvalidValueException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}

@@ -6,6 +6,7 @@ import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
@@ -26,7 +27,7 @@ trait ClientWalletAPISpecBase
   // if corresponding code is enabled in 'HasThreadStarvationDetector'
   // keep overriding in implementing class as needed
   implicit val testCodeExecutionContext: ExecutionContext = {
-    com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+    ExecutionContextProvider.futureExecutionContext
     //comment above and uncomment/modify below to use custom thread pool
     //ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
   }

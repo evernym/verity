@@ -213,7 +213,7 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
   }
 
   lazy val maxItemSize: Int =
-    appConfig.getConfigIntOption(PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES)
+    appConfig.getIntOption(PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES)
       .getOrElse(190000)
 
   final override def receiveRecover: Receive =

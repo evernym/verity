@@ -10,13 +10,13 @@ class AppConfigSpec extends BasicSpec with ConfigUtilBaseSpec with CommonSpecUti
   "Config Wrapper" - {
     "when asked to refresh config" - {
       "should be able to refresh config changes" taggedAs (UNSAFE_IgnoreLog) in {
-        assert(AppConfigWrapper.getConfigStringReq("verity.test.http-route-timeout-in-seconds") == "20")
+        assert(AppConfigWrapper.getStringReq("verity.test.http-route-timeout-in-seconds") == "20")
         withChangedConfigFileContent(
           configFile,
           "http-route-timeout-in-seconds = 20",
           "http-route-timeout-in-seconds = 21", {
             AppConfigWrapper.reload()
-            assert(AppConfigWrapper.getConfigStringReq("verity.test.http-route-timeout-in-seconds") == "21")
+            assert(AppConfigWrapper.getStringReq("verity.test.http-route-timeout-in-seconds") == "21")
           })
       }
     }

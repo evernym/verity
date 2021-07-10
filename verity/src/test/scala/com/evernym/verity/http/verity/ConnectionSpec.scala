@@ -1,8 +1,8 @@
 package com.evernym.verity.http.verity
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.Exceptions.InvalidValueException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.actor.testkit.actor.MockSMSSender
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -217,7 +217,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
 
   }
 
-  lazy val httpPort: Int = appConfig.getConfigIntReq(HTTP_PORT)
+  lazy val httpPort: Int = appConfig.getIntReq(HTTP_PORT)
   lazy val INVITE_URL_REG_EX: Regex = s"""$inviteSenderName would like you to install Connect-Me for greater identity verification: https:\\/\\/connectme.app.link\\?t=(.*)""".r
   lazy val smsSender: SMSSender = platform.agentActorContext.smsSvc
 

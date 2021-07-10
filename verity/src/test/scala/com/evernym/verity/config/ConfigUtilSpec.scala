@@ -1,11 +1,12 @@
 package com.evernym.verity.config
 
-import com.evernym.{PolicyElements, RetentionPolicy}
+import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 
 
 class ConfigUtilSpec extends BasicSpec {

@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent
 import java.util.UUID
 
 import akka.testkit.TestKitBase
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}

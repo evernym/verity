@@ -79,11 +79,11 @@ class MsgRespTimeMetricsRecorder(appConfig: AppConfig) {
 
   lazy val isHistogramLatencyRecordingEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(METRICS_LATENCY_RECORDING_HISTOGRAM)
+      .getBooleanOption(METRICS_LATENCY_RECORDING_HISTOGRAM)
       .getOrElse(true)
 
   lazy val isSpanLatencyRecordingEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(METRICS_LATENCY_RECORDING_SPAN)
+      .getBooleanOption(METRICS_LATENCY_RECORDING_SPAN)
       .getOrElse(false)   //due to serialization issue, default value is false
 }

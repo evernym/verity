@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.ReqId
+import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache

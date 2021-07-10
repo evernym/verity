@@ -139,7 +139,7 @@ class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
 
   lazy val isVAS: Boolean =
     appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 }
 

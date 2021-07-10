@@ -9,16 +9,16 @@ import akka.http.scaladsl.model.StatusCodes.{Accepted, BadRequest, GatewayTimeou
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.buildHandledError
-import com.evernym.verity.{Exceptions, UrlParam}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util2.{Exceptions, UrlParam}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -30,7 +30,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig)(implicit system: ActorSystem) 
   //TODO: we should change the below 'None' case behavior to either
   // 'sendByRequestLevelFlowAPI' or 'sendByRequestLevelFutureAPI'
   // once we have tested those api types and sure that it doesn't break any thing
-  protected val sendRequest = appConfig.getConfigStringOption(AKKA_HTTP_MSG_SENDING_SVC_API_TYPE) match {
+  protected val sendRequest = appConfig.getStringOption(AKKA_HTTP_MSG_SENDING_SVC_API_TYPE) match {
     case None                               => sendByConnectionLevelFlowAPI _
     case Some("connection-level-flow-api")  => sendByConnectionLevelFlowAPI _
     case Some("request-level-flow-api")     => sendByRequestLevelFlowAPI _

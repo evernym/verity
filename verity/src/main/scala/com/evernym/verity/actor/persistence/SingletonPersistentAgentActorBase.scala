@@ -9,5 +9,5 @@ trait SingletonPersistentAgentActorBase extends SingletonPersistentActorBase {
   def appConfig: AppConfig = agentActorContext.appConfig
 
   def secretConfigKeyName: String
-  override lazy val persistenceEncryptionKey: String = agentActorContext.appConfig.getConfigStringReq(secretConfigKeyName)
+  override lazy val persistenceEncryptionKey: String = agentActorContext.appConfig.getStringReq(secretConfigKeyName)
 }

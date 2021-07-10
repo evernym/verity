@@ -1,9 +1,8 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{ALREADY_EXISTS, DATA_NOT_FOUND, MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_PENDING, MSG_DELIVERY_STATUS_SENT}
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, DATA_NOT_FOUND, MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_PENDING, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.actor.{AgentKeyDlgProofSet, MsgDetailAdded}
@@ -22,6 +21,7 @@ import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util._
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.concurrent.Future
@@ -125,9 +125,9 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
 
   private def buildAndSendInviteSms(phoneNo: String, uid: MsgId): Unit = {
     logger.debug(s"[$uid] invite sms preparation started...")
-    val urlMapperSvcHost = appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_HOST)
-    val urlMapperSvcPort = appConfig.getConfigIntReq(URL_MAPPER_SVC_ENDPOINT_PORT)
-    val urlMapperPathPrefix = Option(appConfig.getConfigStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
+    val urlMapperSvcHost = appConfig.getStringReq(URL_MAPPER_SVC_ENDPOINT_HOST)
+    val urlMapperSvcPort = appConfig.getIntReq(URL_MAPPER_SVC_ENDPOINT_PORT)
+    val urlMapperPathPrefix = Option(appConfig.getStringReq(URL_MAPPER_SVC_ENDPOINT_PATH_PREFIX))
     val urlMapperEndpoint = UrlParam(urlMapperSvcHost, urlMapperSvcPort, urlMapperPathPrefix)
     implicit val param: CreateAndSendTinyUrlParam = CreateAndSendTinyUrlParam(uid, phoneNo, urlMapperEndpoint)
     val domainId = ctx.getBackState.domainId
@@ -228,7 +228,7 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   }
 
   private def buildActualInviteUrl(token: String): String = {
-    val url = appConfig.getConfigStringReq(SMS_MSG_TEMPLATE_INVITE_URL)
+    val url = appConfig.getStringReq(SMS_MSG_TEMPLATE_INVITE_URL)
     val baseUrl = buildAgencyUrl(appConfig, None)
     replaceVariables(url, Map(BASE_URL -> baseUrl.toString, TOKEN -> token))
   }

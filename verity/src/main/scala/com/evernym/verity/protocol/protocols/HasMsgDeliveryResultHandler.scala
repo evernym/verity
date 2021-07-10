@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msgsender.{MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.protocol.Control

@@ -39,9 +39,9 @@ class CaffeineCacheProvider(cacheParam: CaffeineCacheParam)
 }
 
 case class CaffeineCacheParam(initialCapacity: Option[Int],
-                              expiryTimeInSeconds: Option[Int],
                               maxSize: Option[Int],
-                              maxWeightParam: Option[MaxWeightParam]) {
+                              maxWeightParam: Option[MaxWeightParam],
+                              expiryTimeInSeconds: Option[Int]) {
   require(initialCapacity.forall(_> 0), "cache initial capacity can't be 0")
   require(maxSize.isEmpty || maxWeightParam.isEmpty, "cache max size and max weight both can't be set")
   require(maxSize.forall(_> 0), "cache max size can't be 0")

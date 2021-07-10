@@ -1,6 +1,6 @@
 package com.evernym.verity.metrics
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec}
 import kamon.Kamon

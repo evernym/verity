@@ -3,10 +3,10 @@ package com.evernym.verity.actor.testkit.actor
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.appStateManager.{SysServiceNotifier, SysShutdownProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 

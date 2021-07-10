@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.{Msg, PayloadMetadata}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
 import com.evernym.verity.protocol.engine.{DID, MsgId}

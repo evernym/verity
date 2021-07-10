@@ -103,7 +103,7 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
   }
 
   val DEFAULT_TARGET = "unknown"
-  lazy val targetConnector: String = AppConfigWrapper.getConfigStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")
+  lazy val targetConnector: String = AppConfigWrapper.getStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")
 
   //only exists for tests purposes
   // (may be we should find better way to handle a need to reset metrics reporter before each test)
@@ -115,7 +115,7 @@ object KamonPrometheusMetricsReporter extends MetricsReporter {
 trait TargetBuilder {
   import com.evernym.verity.metrics.reporter.KamonPrometheusMetricsReporter.targetConnector
 
-  def getConfiguredTagsByTargetType(typ: String): Option[Set[String]] = AppConfigWrapper.getConfigSetOfStringOption(typ)
+  def getConfiguredTagsByTargetType(typ: String): Option[Set[String]] = AppConfigWrapper.getStringSetOption(typ)
 
   def getTagsKeyByType(typ: String, defaultKeys: Set[String]): Set[String] =
     getConfiguredTagsByTargetType(typ).getOrElse(defaultKeys).filter(_.nonEmpty)

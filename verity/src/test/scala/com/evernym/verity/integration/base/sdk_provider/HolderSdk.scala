@@ -2,8 +2,7 @@ package com.evernym.verity.integration.base.sdk_provider
 
 import akka.http.scaladsl.model.{HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.OK
-import com.evernym.verity.Status
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
@@ -27,6 +26,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.{Presentatio
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.{credentialsToUse, extractAttachment}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 

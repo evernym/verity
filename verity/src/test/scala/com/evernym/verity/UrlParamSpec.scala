@@ -1,7 +1,8 @@
 package com.evernym.verity
 
-import com.evernym.verity.Exceptions.InvalidComMethodException
+import com.evernym.verity.util2.Exceptions.InvalidComMethodException
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.UrlParam
 
 class UrlParamSpec
   extends BasicSpec {

@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{AgentDetail, DidPair}
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, TheirKeyStored}

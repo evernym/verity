@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
@@ -11,7 +11,8 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
-import com.evernym.verity.{ActorErrorResp, UrlParam}
+import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.ActorErrorResp
 import org.scalatest.concurrent.Eventually
 
 

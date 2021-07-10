@@ -1,8 +1,8 @@
 package com.evernym.verity.libindy.wallet
 
 import com.evernym.verity.actor.wallet.WalletCreated
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
-import com.evernym.verity.libindy.wallet.operation_executor.FutureConverter
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.vault.operation_executor.FutureConverter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.vault.{WalletExt, _}

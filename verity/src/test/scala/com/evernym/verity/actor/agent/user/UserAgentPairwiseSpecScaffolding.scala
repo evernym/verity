@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import akka.actor.PoisonPill
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
@@ -19,12 +19,12 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
+import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 

@@ -8,7 +8,7 @@ trait ActorStateCleanupBase { this: BasePersistentActor =>
 
   def isActorStateCleanupEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(CommonConfig.AGENT_ACTOR_STATE_CLEANUP_ENABLED)
+      .getBooleanOption(CommonConfig.AGENT_ACTOR_STATE_CLEANUP_ENABLED)
       .getOrElse(false)
 
   //this is internal actor for short period of time and doesn't contain any sensitive data

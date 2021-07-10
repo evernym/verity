@@ -1,6 +1,6 @@
 package com.evernym.verity.util
 
-import com.evernym.verity.Exceptions._
+import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 
 import java.math.BigInteger

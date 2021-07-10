@@ -30,8 +30,8 @@ trait LegacyRegionActors extends LegacyRegionNames { this: Platform =>
 
 trait HasLegacyRegionNames {
   def appConfig: AppConfig
-  lazy val LEGACY_USER_AGENT_REGION_ACTOR_NAME: String = appConfig.getConfigStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT)
-  lazy val LEGACY_USER_AGENT_PAIRWISE_REGION_ACTOR_NAME: String = appConfig.getConfigStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE)
+  lazy val LEGACY_USER_AGENT_REGION_ACTOR_NAME: String = appConfig.getStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+  lazy val LEGACY_USER_AGENT_PAIRWISE_REGION_ACTOR_NAME: String = appConfig.getStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE)
 }
 
 

@@ -1,8 +1,8 @@
 package com.evernym.verity.testkit.mock.agent
 
 import akka.actor.ActorSystem
-import com.evernym.verity.UrlParam
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util2.UrlParam
 
 case class MockEnv(name: String,
                    edgeAgent: MockEdgeAgent,

@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.agent.msgsender
 
-import com.evernym.verity.Exceptions._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions._
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.appStateManager.{AppStateEvent, ErrorEvent, MildSystemError}
@@ -17,7 +17,8 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
-import com.evernym.verity.{Exceptions, UrlParam}
+import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future
 import scala.util.Left

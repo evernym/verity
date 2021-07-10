@@ -44,9 +44,9 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       Seq(
         s"$interpreterWorkingDir/bin/pip3",
         "install",
-        "--trusted-host",
-        "repo.corp.evernym.com",
-        packageUrl("python", sdkVersion, "tar.gz")
+        "--extra-index-url",
+        "https://gitlab.com/api/v4/projects/26760306/packages/pypi/simple",
+        s"verity-sdk==$sdkVersion"
       ),
       interpreterWorkingDir.toFile,
       envVars.toArray: _*

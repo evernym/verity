@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail, StatusDetailException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, StatusDetailException}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess

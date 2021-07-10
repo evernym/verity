@@ -1,9 +1,9 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.ActorSystem
-import com.evernym.verity.Exceptions
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_IN_IDENTITY
+import com.evernym.verity.util2.Exceptions
 
 
 class IdentityUrlShortener(val appConfig: AppConfig)

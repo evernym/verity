@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine.{DID, Parameters, UNINITIALIZED, VerKey}
 import com.evernym.verity.protocol.protocols._

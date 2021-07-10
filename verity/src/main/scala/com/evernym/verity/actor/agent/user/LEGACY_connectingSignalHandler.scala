@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.Thread
 import com.evernym.verity.actor.{Evt, MsgAnswered}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}

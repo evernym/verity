@@ -3,8 +3,8 @@ package com.evernym.verity.actor
 import akka.actor.{ActorRef, Props}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.SerializationExtension
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
 import com.evernym.verity.config.AppConfig

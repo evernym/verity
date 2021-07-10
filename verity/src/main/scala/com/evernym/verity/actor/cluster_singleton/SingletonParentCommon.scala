@@ -5,8 +5,7 @@ import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.Exceptions
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
@@ -25,6 +24,7 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
 import com.evernym.verity.util.Util._
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future

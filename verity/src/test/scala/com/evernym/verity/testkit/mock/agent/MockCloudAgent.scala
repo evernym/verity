@@ -1,11 +1,11 @@
 package com.evernym.verity.testkit.mock.agent
 
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.base.RemoteAgentAndAgencyIdentity
 import com.evernym.verity.testkit.AgentWithMsgHelper
+import com.evernym.verity.util2.UrlParam
 
 /**
  * a mock cloud agent

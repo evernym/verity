@@ -2,8 +2,8 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
@@ -29,7 +29,8 @@ import com.evernym.verity.push_notification._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.{Exceptions, UrlParam}
+import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future
 
@@ -82,7 +83,7 @@ trait MsgNotifierForStoredMsgs
   case class NoPushMethodWarning(agentDID: DID) extends MsgNotifierMessages
 
   private val generalNewMsgBodyTemplateOpt: Option[String] =
-    appConfig.getConfigStringOption(PUSH_NOTIF_GENERAL_NEW_MSG_BODY_TEMPLATE)
+    appConfig.getStringOption(PUSH_NOTIF_GENERAL_NEW_MSG_BODY_TEMPLATE)
 
   private def getAllComMethods: Future[CommunicationMethods] =
     agentMsgRouter.execute(InternalMsgRouteParam(ownerAgentKeyDIDReq, GetAllComMethods)).mapTo[CommunicationMethods]
@@ -145,7 +146,7 @@ trait MsgNotifierForStoredMsgs
       }
     }
     val msgTypeBasedTemplateConfigName = s"$formattedMsgType-new-msg-body-template"
-    val msgTypeBasedTemplate = appConfig.getConfigStringOption(msgTypeBasedTemplateConfigName)
+    val msgTypeBasedTemplate = appConfig.getStringOption(msgTypeBasedTemplateConfigName)
 
     msgTypeBasedTemplate match {
       case Some(t: String) => t
@@ -272,7 +273,7 @@ trait MsgNotifierForStoredMsgs
         if (pnr.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode) {
           logger.error(s"push notification failed (userDID: $selfRelDID): $pnr")
           val invalidTokenErrorCodes =
-            agentActorContext.appConfig.getConfigSetOfStringOption(PUSH_NOTIF_INVALID_TOKEN_ERROR_CODES).
+            agentActorContext.appConfig.getStringSetOption(PUSH_NOTIF_INVALID_TOKEN_ERROR_CODES).
               getOrElse(errorsForWhichComMethodShouldBeDeleted)
           if (pnr.statusDetail.exists(invalidTokenErrorCodes.contains)) {
             agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(ownerAgentKeyDIDReq,

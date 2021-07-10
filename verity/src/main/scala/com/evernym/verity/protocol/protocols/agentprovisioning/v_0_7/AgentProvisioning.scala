@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}

@@ -5,6 +5,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableProblemReport, ProblemDescription}
+import com.evernym.verity.protocol.engine.MsgFamily.QUALIFIER_FORMAT_HTTP
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.{Base64Util, MsgIdProvider}
 
@@ -75,7 +76,7 @@ object Msg {
                                 ) extends Msg {
     val `@type`: String = MsgFamily.typeStrFromMsgType(OutOfBandMsgFamily.msgType(getClass))
 
-    val handshake_protocols: Vector[String] = Vector(s"${MsgFamily.COMMUNITY_QUALIFIER}/connections/1.0/")
+    val handshake_protocols: Vector[String] = Vector((if(QUALIFIER_FORMAT_HTTP) "https://didcomm.org" else "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec").concat("/connections/1.0"))
   }
 
   def prepareInviteUrl(invitation: OutOfBandInvitation, urlEndpoint: String): String = {

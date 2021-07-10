@@ -52,7 +52,7 @@ object InviteUtil {
       goalCode,
       goal,
       Vector(attachment),
-      if (AppConfigWrapper.getConfigBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
+      if (AppConfigWrapper.getBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
       logoUrl,
       publicDid.map("did:sov:"+_),
       id

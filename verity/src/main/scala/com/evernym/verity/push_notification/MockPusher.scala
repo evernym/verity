@@ -5,11 +5,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Sink, Source}
-import com.evernym.verity.Status.MSG_DELIVERY_STATUS_SENT
+import com.evernym.verity.util2.Status.MSG_DELIVERY_STATUS_SENT
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.UrlParam
 import com.evernym.verity.config.CommonConfig.MCM_SEND_MSG
+import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -18,7 +18,7 @@ import scala.concurrent.Future
  * this is disabled by default and only enabled via configuration for integration tests
  */
 object MockPusher extends PushServiceProvider {
-  import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
   val logger: Logger = getLoggerByClass(classOf[Pusher])
 
   override lazy val comMethodPrefix = "MCM"

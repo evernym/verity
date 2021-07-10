@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.Status.{CONN_STATUS_ALREADY_CONNECTED, UNSUPPORTED_MSG_TYPE}
+import com.evernym.verity.util2.Status.{CONN_STATUS_ALREADY_CONNECTED, UNSUPPORTED_MSG_TYPE}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.util.PackedMsgWrapper

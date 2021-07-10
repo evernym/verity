@@ -5,8 +5,8 @@ import java.net.HttpURLConnection._
 import javax.ws.rs.client.{Client, ClientBuilder, Entity}
 import javax.ws.rs.core.MediaType
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.http.common.ConfigSvc
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -19,13 +19,13 @@ import scala.collection.JavaConverters._
 trait BandwidthDispatcher extends SMSServiceProvider with ConfigSvc {
 
   lazy val providerId = SMS_PROVIDER_ID_BANDWIDTH
-  lazy val from: String = appConfig.getConfigStringReq(BANDWIDTH_DEFAULT_NUMBER)
+  lazy val from: String = appConfig.getStringReq(BANDWIDTH_DEFAULT_NUMBER)
 
-  lazy val userId: String = appConfig.getConfigStringReq(BANDWIDTH_USER_ID)
-  lazy val token: String = appConfig.getConfigStringReq(BANDWIDTH_TOKEN)
-  lazy val secret: String = appConfig.getConfigStringReq(BANDWIDTH_SECRET)
-  lazy val webApiHost: String = appConfig.getConfigStringReq(BANDWIDTH_ENDPOINT_HOST)
-  lazy val webApiUrlPrefix: String = appConfig.getConfigStringReq(BANDWIDTH_ENDPOINT_PATH_PREFIX)
+  lazy val userId: String = appConfig.getStringReq(BANDWIDTH_USER_ID)
+  lazy val token: String = appConfig.getStringReq(BANDWIDTH_TOKEN)
+  lazy val secret: String = appConfig.getStringReq(BANDWIDTH_SECRET)
+  lazy val webApiHost: String = appConfig.getStringReq(BANDWIDTH_ENDPOINT_HOST)
+  lazy val webApiUrlPrefix: String = appConfig.getStringReq(BANDWIDTH_ENDPOINT_PATH_PREFIX)
   lazy val webApiUrl: String = "https://" + webApiHost
   lazy val baseResourcePrefix: String = s"$webApiUrlPrefix/$userId"
   lazy val sendMsgResource: String = s"$webApiUrl/$baseResourcePrefix/messages"

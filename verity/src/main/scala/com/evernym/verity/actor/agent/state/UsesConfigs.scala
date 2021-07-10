@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.agent.state
 
 import java.time.ZonedDateTime
-import com.evernym.verity.Exceptions.InternalServerErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.getUnhandledError
+import com.evernym.verity.util2.Exceptions.InternalServerErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.getUnhandledError
 import com.evernym.verity.actor.agent.user.{AgentConfig, AgentConfigs, GetConfigDetail, GetConfigs}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER

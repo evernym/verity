@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.legacy.services
 
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 
 import scala.concurrent.Future
 

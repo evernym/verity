@@ -3,9 +3,10 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent._
@@ -51,7 +52,8 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.{ActorErrorResp, UrlParam, actor}
+import com.evernym.verity.actor
+import com.evernym.verity.util2.ActorErrorResp
 import kamon.metric.MeasurementUnit
 
 import scala.concurrent.Future

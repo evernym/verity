@@ -21,7 +21,7 @@ class IgnoreLoggerFilter extends TurboFilter {
 
   lazy val configReadHelper = new ConfigReadHelper(ConfigFactory.load())
   lazy val defaultIgnoreLoggerNames: Set[String] =
-    configReadHelper.getConfigListOfStringOption(LOGGING_IGNORE_FILTER_NAMES).getOrElse(Seq.empty).toSet
+    configReadHelper.getStringListOption(LOGGING_IGNORE_FILTER_NAMES).getOrElse(Seq.empty).toSet
 
   private var loggerNameContainsSet: Set[String] = Set.empty[String]
 

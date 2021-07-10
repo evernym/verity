@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.routing
 
-import com.evernym.verity.Exceptions.MissingReqFieldException
+import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._

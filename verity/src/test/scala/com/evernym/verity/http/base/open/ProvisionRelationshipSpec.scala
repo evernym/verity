@@ -1,7 +1,7 @@
 package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.Status.KEY_ALREADY_CREATED
+import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.http.base.{EdgeEndpointBaseSpec, RemoteAgentAndAgencyIdentity}

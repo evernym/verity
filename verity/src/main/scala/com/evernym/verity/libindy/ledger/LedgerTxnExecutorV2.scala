@@ -1,7 +1,7 @@
 package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.Exceptions.MissingReqFieldException
+import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}

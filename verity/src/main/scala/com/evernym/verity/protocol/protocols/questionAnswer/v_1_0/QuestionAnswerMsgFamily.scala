@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.messages.{AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._

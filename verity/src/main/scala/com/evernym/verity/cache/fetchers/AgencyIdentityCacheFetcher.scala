@@ -1,6 +1,6 @@
 package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter._
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER

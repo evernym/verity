@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.agency
 
 import akka.event.LoggingReceive
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}

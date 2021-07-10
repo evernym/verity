@@ -3,8 +3,8 @@ package com.evernym.verity.actor.agent.user.msgstore
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.user.MsgHelper
@@ -273,22 +273,22 @@ class MsgStore(appConfig: AppConfig,
    */
   private lazy val isMsgAckNeeded: Boolean =
     ! appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 
   private lazy val timeToRetainDeliveredMsgsInDays: Int =
     appConfig
-      .getConfigIntOption(AGENT_STATE_MESSAGES_CLEANUP_DAYS_TO_RETAIN_DELIVERED_MSGS).getOrElse(14)
+      .getIntOption(AGENT_STATE_MESSAGES_CLEANUP_DAYS_TO_RETAIN_DELIVERED_MSGS).getOrElse(14)
 
   private lazy val totalMsgsToRetain: Int =
     appConfig
-      .getConfigIntOption(AGENT_STATE_MESSAGES_CLEANUP_TOTAL_MSGS_TO_RETAIN).getOrElse(75)
+      .getIntOption(AGENT_STATE_MESSAGES_CLEANUP_TOTAL_MSGS_TO_RETAIN).getOrElse(75)
 
   private lazy val isStateMessagesCleanupEnabled: Boolean =
-    appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
+    appConfig.getBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
 
   private lazy val getMsgsLimit: Int =
-    appConfig.getConfigIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(920000)
+    appConfig.getIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(920000)
 }
 
 trait MsgStateAPIProvider {

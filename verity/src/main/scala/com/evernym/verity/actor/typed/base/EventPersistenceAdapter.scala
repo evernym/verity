@@ -7,6 +7,8 @@ import com.evernym.verity.transformations.transformers.{<=>, IdentityTransformer
 import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORMATION_ID_V1, createPersistenceTransformerV1}
 
 
+//does event transformation (serialization, encryption etc) during persistence
+// and un-transformation during recovery
 class EventPersistenceAdapter[E](encryptionKey: String,
                                  objectCodeMapper: ObjectCodeMapperBase) extends EventAdapter[E,PersistentMsg] {
 

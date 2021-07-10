@@ -3,8 +3,8 @@ package com.evernym.verity.urlshortener
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpMethods.POST
 import akka.http.scaladsl.model._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.URL_SHORTENING_FAILED
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.Util.buildHandledError

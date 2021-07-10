@@ -4,7 +4,7 @@ import akka.pattern.ask
 import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.util.Timeout
-import com.evernym.verity.AgentId
+import com.evernym.verity.util2.AgentId
 
 import scala.concurrent.Future
 

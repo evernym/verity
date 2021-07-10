@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols
 import java.time.ZoneId
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}

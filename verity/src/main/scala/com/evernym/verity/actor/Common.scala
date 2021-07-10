@@ -1,12 +1,12 @@
 package com.evernym.verity.actor
 
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.node_singleton.TrackingParam
 import com.evernym.verity.protocol.engine.{DID, Ledgers, VerKey}
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util._
-import com.evernym.verity.Status
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.util2.Status
 import scalapb.GeneratedMessage
 
 /**

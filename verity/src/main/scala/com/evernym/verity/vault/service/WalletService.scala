@@ -5,9 +5,9 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorRef
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.{WalletCmdErrorResponse, WalletCommand}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil

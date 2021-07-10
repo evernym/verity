@@ -20,7 +20,7 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     commonConfigsToBeValidated ++ conditionalConfigsToBeValidated
 
   def conditionalConfigsToBeValidated: Set[ConfDetail] = {
-    if (getConfigBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
+    if (getBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
       Set (
         ConfDetail(PUSH_NOTIF_GENERAL_MSG_TITLE_TEMPLATE),
         ConfDetail(PUSH_NOTIF_DEFAULT_LOGO_URL),

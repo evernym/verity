@@ -2,9 +2,36 @@ syntax = "proto3";
 
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
+import "outbox-common.proto";
 
 package com.evernym.verity.actor.msgoutbox.outbox.States;
 
-//message Uninitialized {
-//    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.OutboxBehaviour.State";
-//}
+message Uninitialized {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.State";
+}
+
+message Initialized {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.State";
+    string walletId = 1;
+    string senderVerKey = 2;
+
+    // map of comMethodId and ComMethod
+    map<string, ComMethod> comMethods = 3;
+
+    // map of msgId and Message
+    map<string, Message> messages = 4;
+}
+
+message Message {
+    option (scalapb.message).extends = "com.evernym.verity.actor.msgoutbox.outbox.Outbox.MessageBase";
+    uint64 creationTimeInMillis = 1;
+    string deliveryStatus = 3;
+
+    // map of comMethodId and its delivery attempt detail
+    map <string, MsgDeliveryAttempt> deliveryAttempts = 4;
+}
+
+message MsgDeliveryAttempt {
+    int32 successCount = 1;
+    int32 failedCount = 2;
+}

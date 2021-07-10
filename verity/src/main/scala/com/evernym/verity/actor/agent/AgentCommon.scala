@@ -2,9 +2,9 @@ package com.evernym.verity.actor.agent
 
 import java.time.ZonedDateTime
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.InternalServerErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.InternalServerErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{ActorMessage, AuthKeyAdded, FirstProtoMsgSent, ProtoMsgReceivedOrderIncremented, ProtoMsgSenderOrderIncremented, ProtocolIdDetailSet, ThreadContextStored}
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
@@ -17,7 +17,6 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
@@ -30,6 +29,7 @@ import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AG
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
@@ -155,7 +155,7 @@ trait AgentCommon
    */
   lazy val generalCache: Cache = agentActorContext.generalCache
 
-  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
+  lazy val defaultEndorserDid: String = appConfig.getStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
   def updateAgentWalletId(actorEntityId: String): Unit = {
     if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
@@ -333,7 +333,7 @@ trait AgentCommon
 
   lazy val isVAS: Boolean =
     appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 }
 

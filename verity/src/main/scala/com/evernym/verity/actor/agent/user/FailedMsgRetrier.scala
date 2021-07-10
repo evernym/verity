@@ -132,9 +132,9 @@ trait FailedMsgRetrier
 
   private var isRegistered: Boolean = false
   private var retryFailedMsgsJob: Option[JobId] = None
-  private lazy val defaultBatchSize: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_BATCH_SIZE).getOrElse(30)
+  private lazy val defaultBatchSize: Int = appConfig.getIntOption(FAILED_MSG_RETRIER_BATCH_SIZE).getOrElse(30)
 
-  lazy val maxRetryCount: Int = appConfig.getConfigIntOption(FAILED_MSG_RETRIER_MAX_RETRY_COUNT).getOrElse(5)
+  lazy val maxRetryCount: Int = appConfig.getIntOption(FAILED_MSG_RETRIER_MAX_RETRY_COUNT).getOrElse(5)
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class

@@ -2,16 +2,14 @@ package com.evernym.verity.actor.persistence
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-
 import akka.actor.{Kill, Stash}
 import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
 import com.evernym.agency.common.actor.{TransformedEvent, TransformedMultiEvents}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.Exceptions._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.UNSUPPORTED_MSG_TYPE
+import com.evernym.verity.util2.Exceptions._
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
@@ -28,6 +26,7 @@ import com.evernym.verity.actor.persistence.transformer_registry.HasTransformati
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.transformations.transformers.<=>
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
@@ -217,7 +216,7 @@ trait BasePersistentActor
 
   private val defaultWarnRecoveryTimeInMilliSeconds: Int = 1000
 
-  private lazy val warnRecoveryTime: Int = appConfig.getConfigIntOption(PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS)
+  private lazy val warnRecoveryTime: Int = appConfig.getIntOption(PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS)
     .getOrElse(defaultWarnRecoveryTimeInMilliSeconds)
 
   override def beforeStart(): Unit = {

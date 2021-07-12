@@ -1,6 +1,5 @@
-package com.evernym.verity.actor.resourceusagethrottling
+package com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking
 
-import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.BlockingDetail
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 
@@ -11,6 +10,7 @@ class BlockingDetailSpec
   var bd: BlockingDetail = emptyBlockingDetail
 
   "BlockingDetail" - {
+
     "when only blockFrom is set" - {
       "and tested isBlocked method for few future times" - {
         "should respond with true" in {
@@ -26,8 +26,10 @@ class BlockingDetailSpec
       "and tested isBlocked method for few future times" - {
         "should respond accordingly" in {
           val curDateTime = getCurrentUTCZonedDateTime
-          bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime),
-            blockTill = Some(curDateTime.plusSeconds(10)))
+          bd = emptyBlockingDetail.copy(
+            blockFrom = Some(curDateTime),
+            blockTill = Some(curDateTime.plusSeconds(10))
+          )
           bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe true
           bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe false
         }
@@ -39,9 +41,8 @@ class BlockingDetailSpec
         "should respond accordingly" in {
           val curDateTime = getCurrentUTCZonedDateTime
           bd = emptyBlockingDetail.copy(unblockFrom = Some(curDateTime))
-          bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe false
-          bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-          bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false
+          bd.isUnblocked(curDateTime.plusSeconds(1)) shouldBe true
+          bd.isUnblocked(curDateTime.plusSeconds(11)) shouldBe true
         }
       }
     }
@@ -50,14 +51,12 @@ class BlockingDetailSpec
       "and tested few helper methods for few future times" - {
         "should respond accordingly" in {
           val curDateTime = getCurrentUTCZonedDateTime
-          bd = emptyBlockingDetail.copy(unblockFrom = Some(curDateTime),
-            unblockTill = Option(curDateTime.plusSeconds(10)))
-          bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe false
-          bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-          bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false
-          bd.isInBlockingPeriod(curDateTime.plusSeconds(11)) shouldBe false
-          bd.isInUnblockingPeriod(curDateTime.plusSeconds(11)) shouldBe false
-          bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe false
+          bd = emptyBlockingDetail.copy(
+            unblockFrom = Some(curDateTime),
+            unblockTill = Option(curDateTime.plusSeconds(10))
+          )
+          bd.isUnblocked(curDateTime.plusSeconds(1)) shouldBe true
+          bd.isUnblocked(curDateTime.plusSeconds(11)) shouldBe false
         }
       }
     }
@@ -66,10 +65,14 @@ class BlockingDetailSpec
       "and tested few helper methods for few future times" - {
         "should respond accordingly" in {
           val curDateTime = getCurrentUTCZonedDateTime
-          bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime), unblockFrom = Some(curDateTime))
+          bd = emptyBlockingDetail.copy(
+            blockFrom = Some(curDateTime),
+            unblockFrom = Some(curDateTime)
+          )
           bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
           bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-          bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false //unblocking period takes precedence
+          bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false // unblocking period takes precedence
+          bd.isUnblocked(curDateTime.plusSeconds(1)) shouldBe true // unblocking period takes precedence
         }
       }
     }
@@ -78,14 +81,19 @@ class BlockingDetailSpec
       "and tested few helper methods for few future times" - {
         "should respond accordingly" in {
           val curDateTime = getCurrentUTCZonedDateTime
-          bd = emptyBlockingDetail.copy(blockFrom = Some(curDateTime), unblockFrom = Some(curDateTime),
-            unblockTill = Some(curDateTime.plusSeconds(10)))
-          bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-          bd.isInBlockingPeriod(curDateTime.plusSeconds(11)) shouldBe true
-          bd.isInUnblockingPeriod(curDateTime.plusSeconds(11)) shouldBe false
+          bd = emptyBlockingDetail.copy(
+            blockFrom = Some(curDateTime),
+            unblockFrom = Some(curDateTime),
+            unblockTill = Some(curDateTime.plusSeconds(10))
+          )
+          bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false
+          bd.isUnblocked(curDateTime.plusSeconds(1)) shouldBe true
           bd.isBlocked(curDateTime.plusSeconds(11)) shouldBe true
+          bd.isUnblocked(curDateTime.plusSeconds(11)) shouldBe false
         }
       }
     }
+
   }
+
 }

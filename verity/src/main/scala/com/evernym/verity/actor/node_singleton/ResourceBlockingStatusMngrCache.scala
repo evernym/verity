@@ -36,13 +36,13 @@ class ResourceBlockingStatusMngrCacheImpl extends ResourceBlockingStatusMngrComm
     }
   }
 
-  def isInUnblockingPeriod(entityId: EntityId, resourceName: ResourceName): Boolean = {
+  def isUnblocked(entityId: EntityId, resourceName: ResourceName): Boolean = {
     val curDateTime = getCurrentUTCZonedDateTime
 
     entityBlockingStatus.find(_._1 == entityId).exists { case (_, ubs) =>
-      ubs.status.isInUnblockingPeriod(curDateTime) ||
+      ubs.status.isUnblocked(curDateTime) ||
         ubs.resourcesStatus.find(_._1 == resourceName).exists { case (_, urbd) =>
-          urbd.isInUnblockingPeriod(curDateTime)
+          urbd.isUnblocked(curDateTime)
         }
     }
   }

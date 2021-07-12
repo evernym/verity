@@ -234,8 +234,8 @@ object ResourceUsageTracker {
       resourceNames.foreach { resourceName =>
         val isWhitelisted = ResourceUsageRuleHelper.resourceUsageRules.isWhitelisted(ipAddress, entityId)
         if (! isWhitelisted) {
-          if (! ResourceWarningStatusMngrCache(as).isInUnwarningPeriod(entityId, resourceName) &&
-            ! ResourceBlockingStatusMngrCache(as).isInUnblockingPeriod(entityId, resourceName))
+          if (! ResourceWarningStatusMngrCache(as).isUnwarned(entityId, resourceName) &&
+            ! ResourceBlockingStatusMngrCache(as).isUnblocked(entityId, resourceName))
           {
             val aru = tracking.AddResourceUsage(resourceType, resourceName, sendBackAck)
             rut.tell(ForIdentifier(entityId, aru), Actor.noSender)

@@ -15,13 +15,13 @@ class ResourceWarningStatusMngrCacheImpl extends ResourceWarningStatusMngrCommon
     }
   }
 
-  def isInUnwarningPeriod(userToken: String, resourceName: String): Boolean = {
+  def isUnwarned(userToken: String, resourceName: String): Boolean = {
     val curDateTime = getCurrentUTCZonedDateTime
 
     entityWarningStatus.find(_._1 == userToken).exists { case (_, uws) =>
-      uws.status.isInUnwarningPeriod(curDateTime) ||
+      uws.status.isUnwarned(curDateTime) ||
         uws.resourcesStatus.find(_._1 == resourceName).exists { case (_, urwd) =>
-          urwd.isInUnwarningPeriod(curDateTime)
+          urwd.isUnwarned(curDateTime)
         }
     }
   }

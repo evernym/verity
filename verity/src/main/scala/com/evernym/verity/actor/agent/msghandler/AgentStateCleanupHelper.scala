@@ -12,6 +12,7 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.{DID, PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
+import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
@@ -138,60 +139,65 @@ trait AgentStateCleanupHelper {
   }
 
   def migrateThreadContexts(): Unit = {
-    logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
-    if (isMigrateThreadContextsEnabled && ! isThreadContextMigrationFinished) {
-      val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
-      if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
-        finishThreadContextMigration()
-      } else {
-        scheduleThreadContextMigrationJobIfNotScheduled()
-        candidateThreadContexts.foreach { case (pinstId, tcd) =>
-          val candidateProtoActors = com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
-            val migrationStatus = threadContextMigrationStatus.get(pinstId)
-            val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
-            val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
-            val respReceivedFromProtoActors = successResp ++ nonSuccessResp
+    try {
+      logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
+      if (isMigrateThreadContextsEnabled && !isThreadContextMigrationFinished) {
+        val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
+        if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
+          finishThreadContextMigration()
+        } else {
+          scheduleThreadContextMigrationJobIfNotScheduled()
+          candidateThreadContexts.foreach { case (pinstId, tcd) =>
+            val candidateProtoActors = com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
+              val migrationStatus = threadContextMigrationStatus.get(pinstId)
+              val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
+              val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
+              val respReceivedFromProtoActors = successResp ++ nonSuccessResp
 
-            if (! respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
-              val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
-              val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
-              if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
-                val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, state.thisAgentKeyDID)
-                if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
-                  threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
-                  val cmd = ForIdentifier(
-                    pinstId,
-                    ProtocolCmd(SetThreadContext(tcd), None)
-                  )
-                  e -> Option(cmd)
-                } else e -> None
-              } else {
-                handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
-                e -> None
-              }
-            } else e -> None
-          }.filter(_._2.isDefined).map(r => r._1 -> r._2.get)
+              if (!respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
+                val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
+                val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
+                if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
+                  val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, state.thisAgentKeyDID)
+                  if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
+                    threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
+                    val cmd = ForIdentifier(
+                      pinstId,
+                      ProtocolCmd(SetThreadContext(tcd), None)
+                    )
+                    e -> Option(cmd)
+                  } else e -> None
+                } else {
+                  handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
+                  e -> None
+                }
+              } else e -> None
+            }.filter(_._2.isDefined).map(r => r._1 -> r._2.get)
 
-          if (! threadContextMigrationStatus.contains(pinstId)) {
-            val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
-            val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
-            logger.debug(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
-            val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
-            cleanupEventReceiver(event)
-            writeWithoutApply(event)
-          }
+            if (!threadContextMigrationStatus.contains(pinstId)) {
+              val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
+              val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
+              logger.debug(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
+              val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
+              cleanupEventReceiver(event)
+              writeWithoutApply(event)
+            }
 
-          logger.info(s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
-          candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
-            val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
-            val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
-            val timeout = Duration(migrateThreadContextBatchItemSleepInterval* index, MILLISECONDS)
-            timers.startSingleTimer(key, SendCmd(toActor, entry._2), timeout)
+            logger.info(s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
+            candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
+              val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
+              val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
+              val timeout = Duration(migrateThreadContextBatchItemSleepInterval * index, MILLISECONDS)
+              timers.startSingleTimer(key, SendCmd(toActor, entry._2), timeout)
+            }
           }
         }
+      } else {
+        stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
       }
-    } else {
-      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+    } catch {
+      case e: Throwable =>
+        logger.error("error while thread context migration: " + Exceptions.getStackTraceAsSingleLineString(e))
     }
   }
 

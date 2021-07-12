@@ -37,6 +37,11 @@ object DidOpExecutor extends OpExecutorBase {
     Did
       .createAndStoreMyDid(we.wallet, didJson)
       .map(r => NewKeyCreated(r.getDid, r.getVerkey))
+      .recover {
+        case e: Throwable =>
+          logger.error("error while creating new DID: " + Exceptions.getStackTraceAsSingleLineString(e))
+          throw e
+      }
   }
 
   def handleCreateNewKey(cnk: CreateNewKey)(implicit we: WalletExt): Future[NewKeyCreated] = {
@@ -48,7 +53,7 @@ object DidOpExecutor extends OpExecutorBase {
         .map( r => NewKeyCreated(r.getDid, r.getVerkey))
         .recover {
           case e: Throwable =>
-            logger.error("error while creating new key" + Exceptions.getErrorMsg(e))
+            logger.error("error while creating new key: " + Exceptions.getStackTraceAsSingleLineString(e))
             throw e
         }
     } catch {
@@ -80,7 +85,7 @@ object DidOpExecutor extends OpExecutorBase {
       .map(_ =>TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))
         .recover {
           case e: Throwable =>
-            logger.error("error while storing their key" + Exceptions.getErrorMsg(e))
+            logger.error("error while storing their key: " + Exceptions.getStackTraceAsSingleLineString(e))
             throw e
         }
     } catch {

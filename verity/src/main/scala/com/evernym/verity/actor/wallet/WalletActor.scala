@@ -297,9 +297,13 @@ case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submi
 case class Close() extends WalletCommand
 
 //responses
-trait WalletCmdSuccessResponse extends ActorMessage
+
+trait Reply extends ActorMessage
+
+case class WalletCmdErrorResponse(sd: StatusDetail) extends Reply
+
+trait WalletCmdSuccessResponse extends Reply
 case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCreated) extends WalletCmdSuccessResponse
-case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase

@@ -20,6 +20,9 @@ import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
+import com.evernym.verity.msgoutbox.DestId
+import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.wallet._
@@ -119,7 +122,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
     case GetSponsorRel                           => sendSponsorDetails()
-
+    //case GetOutboxParam(destId)                  => sendOutboxParam(destId)
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
   }
@@ -150,6 +153,20 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case ads: AgentDetailSet               =>
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
   }
+
+//  def sendOutboxParam(destId: DestId): Unit = {
+//    if (destId == "default") {
+//      val comMethods =
+//        state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
+//          .map { ep =>
+//            val packaging = com.evernym.verity.msgoutbox.RecipPackaging(MPF_INDY_PACK.toString, state.myDidAuthKey.map(_.verKey).toSeq)
+//            ep.id -> com.evernym.verity.msgoutbox.ComMethod(ep.`type`, ep.value, Option(packaging))
+//          }.toMap
+//      sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+//    } else {
+//      throw new RuntimeException("destId not supported: " + destId)
+//    }
+//  }
 
   def handleRemoveComMethod(cmd: ComMethodDeleted): Unit = {
     state = state.copy(relationship = state.relWithEndpointRemoved(cmd.id))

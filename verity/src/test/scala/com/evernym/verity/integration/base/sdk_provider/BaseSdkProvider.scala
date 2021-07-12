@@ -189,7 +189,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
     val json = parseHttpResponseAsString(resp)
     require(resp.status.intValue() == expected.intValue,
-      s"http response ${resp.status.intValue()} was not equal to expected ${expected.value}: $json")
+      s"http response '${resp.status}' was not equal to expected '${expected.value}': $json")
     resp
   }
 

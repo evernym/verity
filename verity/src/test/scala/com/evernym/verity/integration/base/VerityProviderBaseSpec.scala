@@ -141,19 +141,23 @@ trait VerityProviderBaseSpec
 
   private val VAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """
-      |sharding-region-name {
+      |akka {
+      |  sharding-region-name {
       |    user-agent = "VerityAgent"
       |    user-agent-pairwise = "VerityAgentPairwise"
       |  }
+      |}
       |""".stripMargin
   )
 
   private val CAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """
-      |sharding-region-name {
+      |akka {
+      |  sharding-region-name {
       |    user-agent = "ConsumerAgent"
       |    user-agent-pairwise = "ConsumerAgentPairwise"
       |  }
+      |}
       |""".stripMargin
   )
 

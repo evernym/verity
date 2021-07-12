@@ -40,7 +40,7 @@ spec:
           failureThreshold: 20
         readinessProbe:
           httpGet:
-            path: /agency/heartbeat
+            path: /agency
             port: 9000
         livenessProbe:
           httpGet:

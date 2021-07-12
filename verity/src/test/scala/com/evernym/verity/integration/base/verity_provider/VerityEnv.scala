@@ -84,23 +84,23 @@ case class VerityEnv(seed: String,
     nodes.foreach(_.restart())
   }
 
+  def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
+    }
+  }
+
+  lazy val mockBlobStore: MockBlobStore =
+    nodes.head.serviceParam.flatMap(_.storageAPI).map(_.asInstanceOf[MockBlobStore]).getOrElse(
+      throw new RuntimeException("mock blob store not set")
+    )
+
   def init(): Unit = {
     if (! isVerityBootstrapped) {
       nodes.headOption.foreach { node =>
         VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost)
         isVerityBootstrapped = true
       }
-    }
-  }
-
-  lazy val mockBlobStore =
-    nodes.head.serviceParam.flatMap(_.storageAPI).map(_.asInstanceOf[MockBlobStore]).getOrElse(
-    throw new RuntimeException("mock blob store api not set")
-  )
-
-  def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
-    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
     }
   }
 

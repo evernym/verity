@@ -4,8 +4,8 @@ import akka.http.scaladsl.model.{HttpMethod, HttpMethods}
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
 
 import scala.concurrent.Future

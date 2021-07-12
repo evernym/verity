@@ -181,6 +181,7 @@ trait AgentStateCleanupHelper {
             writeWithoutApply(event)
           }
 
+          logger.info(s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
           candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
             val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
             val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
@@ -204,9 +205,10 @@ trait AgentStateCleanupHelper {
         s"isThreadContextMigrationFinished: $isThreadContextMigrationFinished"
     )
 
+    actorStateCleanupExecutor = Option(sndrActorRef)
+
     if (routeSetStatus.isEmpty) {
       isStateCleanupCompleted = false
-      actorStateCleanupExecutor = Option(sndrActorRef)
       val isRouteSet = state.myDid.isEmpty || ! state.myDid.contains(did)
       routeSetStatus = Option(RouteSetStatus(did, isSet = isRouteSet))
       sndrActorRef ! InitialActorState(did, isRouteSet, getTotalThreadContextSize)

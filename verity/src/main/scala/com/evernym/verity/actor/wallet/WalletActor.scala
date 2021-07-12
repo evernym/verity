@@ -17,6 +17,7 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.vault.operation_executor.CryptoOpExecutor.buildErrorDetail
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
@@ -41,11 +42,11 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     case swp: SetWalletParam  =>
       walletParamOpt = Option(swp.wp)
       wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, Option(poolManager)))
-      tryOpeningWalletIfExists()
+      openWalletIfExists()
   }
 
   /**
-   * in this receiver it will only entertain 'CreateWallet' command
+   * in this receiver it will only entertain 'CreateWallet' or 'SetupNewAgentWallet' command
    * @return
    */
   def postInitReceiver: Receive = {
@@ -55,13 +56,14 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
       val fut = WalletMsgHandler.handleCreateWalletASync()
       sendRespWhenResolved(cmd.id, sndr, fut)
         .map { _ =>
-          tryOpeningWalletIfExists()
+          openWalletIfExists()
         }
 
     case snw: SetupNewAgentWallet =>
       val sndr = sender()
+      setNewReceiveBehaviour(openWalletCallbackReceiver)
       WalletMsgHandler.handleCreateWalletASync().map { _ =>
-        tryOpeningWalletIfExists()
+        openWalletIfExists()
         self.tell(snw, sndr)
       }
   }
@@ -108,14 +110,24 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     val ownerKeyFut =
       snw.ownerDidPair match {
         case Some(odp) =>
-          val stk = StoreTheirKey(odp.DID, odp.verKey)
-          WalletMsgHandler.executeAsync(stk).mapTo[TheirKeyStored].map(_.didPair)
+          WalletMsgHandler
+            .executeAsync(StoreTheirKey(odp.DID, odp.verKey))
+            .recover {
+              case e: Throwable =>
+                logger.error("error while setup new agent wallet (store their key): " + Exceptions.getErrorMsg(e))
+            }
+            .mapTo[TheirKeyStored].map(_.didPair)
         case None =>
-          WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated].map(_.didPair)
+          WalletMsgHandler
+            .executeAsync(CreateNewKey())
+            .recover {
+              case e: Throwable =>
+                logger.error("error while setup new agent wallet (create new key): " + Exceptions.getErrorMsg(e))
+            }
+            .mapTo[NewKeyCreated].map(_.didPair)
       }
 
     val createNewKeyFut = WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
-
     val fut = for (
       odp <- ownerKeyFut;
       nks <- createNewKeyFut
@@ -145,11 +157,6 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
         logger.error(s"[$actorId] [$id] unhandled error while wallet operation: " + buildErrorDetail(e))
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
     }
-  }
-
-  private def tryOpeningWalletIfExists(): Unit = {
-    setNewReceiveBehaviour(openWalletCallbackReceiver)
-    openWalletIfExists()
   }
 
   def openWallet(): Future[WalletExt] = {

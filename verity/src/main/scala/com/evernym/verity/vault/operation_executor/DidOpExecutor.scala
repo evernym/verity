@@ -2,7 +2,7 @@ package com.evernym.verity.vault.operation_executor
 
 import java.util.concurrent.ExecutionException
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED}
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED, logger}
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.ledger.LedgerPoolConnManager
@@ -34,7 +34,8 @@ object DidOpExecutor extends OpExecutorBase {
 
   def handleCreateDID(d: CreateDID)(implicit we: WalletExt): Future[NewKeyCreated] = {
     val didJson = s"""{"crypto_type": "${d.keyType}"}"""
-    Did.createAndStoreMyDid(we.wallet, didJson)
+    Did
+      .createAndStoreMyDid(we.wallet, didJson)
       .map(r => NewKeyCreated(r.getDid, r.getVerkey))
   }
 
@@ -42,10 +43,14 @@ object DidOpExecutor extends OpExecutorBase {
     try {
       val DIDJson = new DidJSONParameters.CreateAndStoreMyDidJSONParameter(
         cnk.DID.orNull, cnk.seed.orNull, null, null)
-      Did.createAndStoreMyDid(we.wallet, DIDJson.toJson)
-      .map { r =>
-        NewKeyCreated(r.getDid, r.getVerkey)
-      }
+      Did
+        .createAndStoreMyDid(we.wallet, DIDJson.toJson)
+        .map( r => NewKeyCreated(r.getDid, r.getVerkey))
+        .recover {
+          case e: Throwable =>
+            logger.error("error while creating new key" + Exceptions.getErrorMsg(e))
+            throw e
+        }
     } catch {
       case e: ExecutionException =>
         e.getCause match {
@@ -73,6 +78,11 @@ object DidOpExecutor extends OpExecutorBase {
       val DIDJson = s"""{\"did\":\"${stk.theirDID}\",\"verkey\":\"${stk.theirDIDVerKey}\"}"""
       Did.storeTheirDid(we.wallet, DIDJson)
       .map(_ =>TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))
+        .recover {
+          case e: Throwable =>
+            logger.error("error while storing their key" + Exceptions.getErrorMsg(e))
+            throw e
+        }
     } catch {
       case e: Exception if stk.ignoreIfAlreadyExists && e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
         Future(TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))

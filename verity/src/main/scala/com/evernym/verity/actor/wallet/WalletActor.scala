@@ -17,7 +17,6 @@ import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.vault.operation_executor.CryptoOpExecutor.buildErrorDetail
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
-import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
@@ -112,18 +111,10 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
         case Some(odp) =>
           WalletMsgHandler
             .executeAsync(StoreTheirKey(odp.DID, odp.verKey))
-            .recover {
-              case e: Throwable =>
-                logger.error("error while setup new agent wallet (store their key): " + Exceptions.getErrorMsg(e))
-            }
             .mapTo[TheirKeyStored].map(_.didPair)
         case None =>
           WalletMsgHandler
             .executeAsync(CreateNewKey())
-            .recover {
-              case e: Throwable =>
-                logger.error("error while setup new agent wallet (create new key): " + Exceptions.getErrorMsg(e))
-            }
             .mapTo[NewKeyCreated].map(_.didPair)
       }
 

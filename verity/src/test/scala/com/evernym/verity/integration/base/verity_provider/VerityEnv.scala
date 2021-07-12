@@ -117,9 +117,9 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 
 object PortProfile {
   def random(): PortProfile = {
-    val arteryPort    = PortProvider.getUnusedPort(2000)
-    val akkaMgmtPort  = PortProvider.getUnusedPort(8000)
-    val httpPort      = PortProvider.getUnusedPort(9000)
+    val arteryPort    = PortProvider.generateUnusedPort(2000)
+    val akkaMgmtPort  = PortProvider.generateUnusedPort(8000)
+    val httpPort      = PortProvider.generateUnusedPort(9000)
     PortProfile(httpPort, arteryPort, akkaMgmtPort)
   }
 }

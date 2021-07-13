@@ -69,8 +69,6 @@ class BlockingDetailSpec
             blockFrom = Some(curDateTime),
             unblockFrom = Some(curDateTime)
           )
-          bd.isInBlockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
-          bd.isInUnblockingPeriod(curDateTime.plusSeconds(1)) shouldBe true
           bd.isBlocked(curDateTime.plusSeconds(1)) shouldBe false // unblocking period takes precedence
           bd.isUnblocked(curDateTime.plusSeconds(1)) shouldBe true // unblocking period takes precedence
         }

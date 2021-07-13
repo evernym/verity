@@ -209,10 +209,10 @@ object GetWarnedList extends ActorMessage {
 case class WarningDetail(warnFrom: Option[ZonedDateTime], warnTill: Option[ZonedDateTime],
                          unwarnFrom: Option[ZonedDateTime], unwarnTill: Option[ZonedDateTime]) {
 
-  private[warning] def isInWarningPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInWarningPeriod(cdt: ZonedDateTime): Boolean =
     warnFrom.exists(_.isBefore(cdt)) && warnTill.forall(_.isAfter(cdt))
 
-  private[warning] def isInUnwarningPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInUnwarningPeriod(cdt: ZonedDateTime): Boolean =
     unwarnFrom.exists(_.isBefore(cdt)) && unwarnTill.forall(_.isAfter(cdt))
 
   def isNeutral(cdt: ZonedDateTime): Boolean =

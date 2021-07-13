@@ -69,8 +69,6 @@ class WarningDetailSpec
             warnFrom = Some(curDateTime),
             unwarnFrom = Some(curDateTime)
           )
-          wd.isInWarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
-          wd.isInUnwarningPeriod(curDateTime.plusSeconds(1)) shouldBe true
           wd.isWarned(curDateTime.plusSeconds(1)) shouldBe false // unwarning period takes precedence
           wd.isUnwarned(curDateTime.plusSeconds(1)) shouldBe true // unwarning period takes precedence
         }

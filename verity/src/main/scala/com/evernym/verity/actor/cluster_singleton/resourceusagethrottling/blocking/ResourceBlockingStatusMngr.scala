@@ -210,10 +210,10 @@ object GetBlockedList extends ActorMessage {
 case class BlockingDetail(blockFrom: Option[ZonedDateTime], blockTill: Option[ZonedDateTime],
                           unblockFrom: Option[ZonedDateTime], unblockTill: Option[ZonedDateTime]) {
 
-  private[blocking] def isInBlockingPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInBlockingPeriod(cdt: ZonedDateTime): Boolean =
     blockFrom.exists(_.isBefore(cdt)) && blockTill.forall(_.isAfter(cdt))
 
-  private[blocking] def isInUnblockingPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInUnblockingPeriod(cdt: ZonedDateTime): Boolean =
     unblockFrom.exists(_.isBefore(cdt)) && unblockTill.forall(_.isAfter(cdt))
 
   def isNeutral(cdt: ZonedDateTime): Boolean =

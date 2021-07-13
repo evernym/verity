@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.node_singleton
 
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.USAGE_BLOCKED
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.USAGE_BLOCKED
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UsageBlockingStatusChunk
 import com.evernym.verity.actor.resourceusagethrottling.blocking.ResourceBlockingStatusMngrCommon
 import com.evernym.verity.actor.resourceusagethrottling.{EntityId, ResourceName}

@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import java.time.{ZoneId, ZonedDateTime}
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, RESOURCE_NAME_ALL, RESOURCE_NAME_ENDPOINT_ALL, RESOURCE_NAME_MESSAGE_ALL, RESOURCE_TYPE_ENDPOINT, RESOURCE_TYPE_MESSAGE, RESOURCE_TYPE_NAME_ENDPOINT, RESOURCE_TYPE_NAME_MESSAGE, ResourceName, ResourceType, ResourceTypeName}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_CREATE_MSG
 import com.evernym.verity.agentmsg.msgpacker.MsgFamilyDetail

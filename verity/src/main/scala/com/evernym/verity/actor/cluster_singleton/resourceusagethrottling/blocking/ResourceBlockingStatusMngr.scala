@@ -2,8 +2,8 @@ package com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.block
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.base.Done
@@ -178,7 +178,7 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
   override def appConfig: AppConfig = aac.appConfig
   def agentActorContext: AgentActorContext = aac
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_BLOCKING_STATUS_MNGR)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_RESOURCE_BLOCKING_STATUS_MNGR)
 
 }
 

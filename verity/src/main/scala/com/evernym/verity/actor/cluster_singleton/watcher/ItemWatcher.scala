@@ -3,7 +3,7 @@ package com.evernym.verity.actor.cluster_singleton.watcher
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.ForWatcherManagerChild
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
@@ -17,10 +17,10 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.HasAppConfig
-import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
+import com.evernym.verity.util2.ActorErrorResp
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -134,11 +134,11 @@ class AgentActorWatcher(val appConfig: AppConfig)
       .getOrElse(throw new RuntimeException("entity type mapping not found for type: " + entityType))
   }
 
-  private lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+  private lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     s"$AGENT_ACTOR_WATCHER_SCHEDULED_JOB_INTERVAL_IN_SECONDS")
     .getOrElse(200)
 
-  private lazy val batchSize: Int = appConfig.getConfigIntOption(ITEM_WATCHER_BATCH_SIZE).getOrElse(100)
+  private lazy val batchSize: Int = appConfig.getIntOption(ITEM_WATCHER_BATCH_SIZE).getOrElse(100)
 
   private lazy val entityTypeMappings = EntityTypeMapper.buildEntityTypeMappings(appConfig)
   private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, context.system)

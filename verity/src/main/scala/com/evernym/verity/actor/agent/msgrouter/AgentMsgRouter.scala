@@ -1,6 +1,8 @@
 package com.evernym.verity.actor.agent.msgrouter
 
 
+import akka.Done
+
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import akka.actor.{ActorRef, ActorSystem}
@@ -9,10 +11,10 @@ import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.RouteId
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.RouteId
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
@@ -131,8 +133,11 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   private def sendCmdToGivenActor(to: ActorRef, cmd: ForIdentifier)
                                  (implicit senderOpt: Option[ActorRef]): AskResp = {
     val fut = senderOpt match {
-      case Some(sndr) => (to ? cmd).map { r => sndr ! r }
-      case None => to ? cmd
+      case Some(sndr) =>
+        to.tell(cmd, sndr)
+        Future(Done)
+      case None =>
+        to ? cmd
     }
     AskResp(fut, Option(s"region actor: $to, route: ${cmd.id}, cmd class: ${cmd.msg.getClass.getSimpleName}"))
   }

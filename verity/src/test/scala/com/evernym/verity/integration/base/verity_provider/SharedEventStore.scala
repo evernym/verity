@@ -19,7 +19,7 @@ import java.nio.file.{Files, Path}
  */
 class SharedEventStore(tempDir: Path) {
 
-  val arteryPort: Int = PortProvider.getUnusedPort(4000)
+  val arteryPort: Int = PortProvider.generateUnusedPort(4000)
 
   val actorSystem: ActorSystem = {
     val parts = Seq(

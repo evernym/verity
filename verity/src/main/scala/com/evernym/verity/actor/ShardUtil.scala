@@ -43,7 +43,7 @@ case class ShardIdExtractor(appConfig: AppConfig, regionName: String) {
 
   lazy val numberOfShards: Int =
     appConfig
-      .getConfigIntOption(s"akka.cluster.region.$normalizedRegionName.total-shards")
+      .getIntOption(s"akka.cluster.region.$normalizedRegionName.total-shards")
       .getOrElse(100)
 
   def getShardId(entityId: String): String =

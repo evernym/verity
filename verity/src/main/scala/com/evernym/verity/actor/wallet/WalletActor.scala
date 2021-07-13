@@ -3,18 +3,18 @@ package com.evernym.verity.actor.wallet
 import java.util.UUID
 import akka.pattern.pipe
 import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor.buildErrorDetail
+import com.evernym.verity.vault.operation_executor.CryptoOpExecutor.buildErrorDetail
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
@@ -41,11 +41,11 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     case swp: SetWalletParam  =>
       walletParamOpt = Option(swp.wp)
       wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, Option(poolManager)))
-      tryOpeningWalletIfExists()
+      openWalletIfExists()
   }
 
   /**
-   * in this receiver it will only entertain 'CreateWallet' command
+   * in this receiver it will only entertain 'CreateWallet' or 'SetupNewAgentWallet' command
    * @return
    */
   def postInitReceiver: Receive = {
@@ -55,13 +55,14 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
       val fut = WalletMsgHandler.handleCreateWalletASync()
       sendRespWhenResolved(cmd.id, sndr, fut)
         .map { _ =>
-          tryOpeningWalletIfExists()
+          openWalletIfExists()
         }
 
     case snw: SetupNewAgentWallet =>
       val sndr = sender()
+      setNewReceiveBehaviour(openWalletCallbackReceiver)
       WalletMsgHandler.handleCreateWalletASync().map { _ =>
-        tryOpeningWalletIfExists()
+        openWalletIfExists()
         self.tell(snw, sndr)
       }
   }
@@ -108,14 +109,16 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     val ownerKeyFut =
       snw.ownerDidPair match {
         case Some(odp) =>
-          val stk = StoreTheirKey(odp.DID, odp.verKey)
-          WalletMsgHandler.executeAsync(stk).mapTo[TheirKeyStored].map(_.didPair)
+          WalletMsgHandler
+            .executeAsync(StoreTheirKey(odp.DID, odp.verKey))
+            .mapTo[TheirKeyStored].map(_.didPair)
         case None =>
-          WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated].map(_.didPair)
+          WalletMsgHandler
+            .executeAsync(CreateNewKey())
+            .mapTo[NewKeyCreated].map(_.didPair)
       }
 
     val createNewKeyFut = WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
-
     val fut = for (
       odp <- ownerKeyFut;
       nks <- createNewKeyFut
@@ -145,11 +148,6 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
         logger.error(s"[$actorId] [$id] unhandled error while wallet operation: " + buildErrorDetail(e))
         WalletCmdErrorResponse(UNHANDLED.copy(statusMsg = e.getMessage))
     }
-  }
-
-  private def tryOpeningWalletIfExists(): Unit = {
-    setNewReceiveBehaviour(openWalletCallbackReceiver)
-    openWalletIfExists()
   }
 
   def openWallet(): Future[WalletExt] = {
@@ -297,9 +295,13 @@ case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submi
 case class Close() extends WalletCommand
 
 //responses
-trait WalletCmdSuccessResponse extends ActorMessage
+
+trait Reply extends ActorMessage
+
+case class WalletCmdErrorResponse(sd: StatusDetail) extends Reply
+
+trait WalletCmdSuccessResponse extends Reply
 case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCreated) extends WalletCmdSuccessResponse
-case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase

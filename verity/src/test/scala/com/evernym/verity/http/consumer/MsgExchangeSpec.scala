@@ -1,7 +1,7 @@
 package com.evernym.verity.http.consumer
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_STATUS_ACCEPTED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_STATUS_ACCEPTED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED, CREATE_MSG_TYPE_CRED_OFFER, CREATE_MSG_TYPE_CRED_REQ}
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.http.base.open.{ExpectedMsgCriteria, ExpectedMsgDetail}

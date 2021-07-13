@@ -9,7 +9,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.model.{HttpEntity, RemoteAddress}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import com.evernym.verity.ReqId
+import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker.{NoResp, RespMode}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog

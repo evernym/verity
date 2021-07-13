@@ -17,8 +17,8 @@ object EntityTypeMapper {
 
   def buildEntityTypeMappings(appConfig: AppConfig): Map[Int, AttrValue] = {
     val legacyEntityMapping = Map (
-      LEGACY_ACTOR_TYPE_USER_AGENT_ACTOR          -> appConfig.getConfigStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT),
-      LEGACY_ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR -> appConfig.getConfigStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE)
+      LEGACY_ACTOR_TYPE_USER_AGENT_ACTOR          -> appConfig.getStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT),
+      LEGACY_ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR -> appConfig.getStringReq(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE)
     )
     entityTypeMapping ++ legacyEntityMapping
   }

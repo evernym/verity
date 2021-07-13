@@ -3,9 +3,9 @@ package com.evernym.verity.actor.resourceusagethrottling.tracking
 import java.time.ZonedDateTime
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
@@ -15,13 +15,13 @@ import com.evernym.verity.config.{AppConfig, CommonConfig}
 import com.evernym.verity.http.route_handlers.restricted.{UpdateResourcesUsageCounter, UpdateResourcesUsageLimit}
 import com.evernym.verity.actor.resourceusagethrottling.helper._
 import com.evernym.verity.util.TimeZoneUtil._
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.UpdateBlockingStatus
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceSimpleName, getResourceTypeName}
 import com.evernym.verity.config.CommonConfig.USAGE_RULES
+import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future
 
@@ -66,7 +66,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   val resourceUsageTracker = new BucketBasedResourceUsageTracker
 
   override lazy val persistenceEncryptionKey: String =
-    appConfig.getConfigStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
+    appConfig.getStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
 
   def getResourceUsages: ResourceUsages = try {
     val allResourceUsages = resourceUsageTracker.getAllResourceBuckets.map { case (resourceName, resourceBuckets) =>

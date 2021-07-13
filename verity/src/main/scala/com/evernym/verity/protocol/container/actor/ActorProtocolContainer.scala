@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.container.actor
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -22,12 +22,17 @@ import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
-import com.evernym.verity.{ActorResponse, ServiceEndpoint}
+import com.evernym.verity.util2.ServiceEndpoint
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
 import akka.util.Timeout
+import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
+import com.evernym.verity.actor.typed.base.SendMsgToOutbox
+import com.evernym.verity.agentmsg.buildAgentMsg
+import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
+import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
@@ -38,6 +43,8 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
+import com.evernym.verity.util2.ActorResponse
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -252,6 +259,7 @@ class ActorProtocolContainer[
       agentActorContext.generalCache, agentActorContext.agentMsgRouter, msgForwarder)
     agentActorContext.protocolRegistry.generateDriver(definition, parameter)
   }
+
   val sendsMsgs = new MsgSender
 
   //TODO move agentActorContext.smsSvc to be handled here (uses a future)
@@ -263,6 +271,13 @@ class ActorProtocolContainer[
       // from where it was came earlier to this actor
       //TODO-amp: shall we find better solution
       msgForwarder.forwarder.foreach(_ ! pom)
+//      if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
+//        val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
+//        val retPolicy = RetentionPolicy(
+//          """{"expire-after-days":20 days,"expire-after-terminal-state":true}""",
+//          PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true))
+//        classicActor ! SendMsgToOutbox(pom.from, pom.to, agentMsg.jsonStr, agentMsg.msgType.toString, retPolicy)
+//      }
     }
 
     //dhh It surprises me to see this feature exposed here. I would have expected it
@@ -446,6 +461,46 @@ class ActorProtocolContainer[
       }
     }
   }
+
+//  def createAgentMsg(msg: Any,
+//                     protoDef: ProtoDef,
+//                     threadContextDetail: ThreadContextDetail,
+//                     msgTypeFormat: Option[TypeFormat]=None,
+//                     isSignalMsg: Boolean=false): AgentJsonMsg = {
+//
+//    def getNewMsgId: MsgId = UUID.randomUUID().toString
+//
+//    val (msgId, mtf, msgOrders) = {
+//      val mId = if (threadContextDetail.msgOrders.exists(_.senderOrder == 0)
+//        && threadContextDetail.msgOrders.exists(_.receivedOrders.isEmpty) ){
+//        //this is temporary workaround to solve an issue between how
+//        // thread id is determined by libvcx (and may be by other third parties) vs verity/agency
+//        // here, we are basically checking if this msg is 'first' protocol msg and in that case
+//        // the @id of the msg is assigned the thread id itself
+//        threadContextDetail.threadId
+//      } else {
+//        getNewMsgId
+//      }
+//      (mId, msgTypeFormat.getOrElse(threadContextDetail.msgTypeFormat), threadContextDetail.msgOrders)
+//    }
+//
+//    //need to find better way to handle this
+//    //during connections protocol, when first message 'request' is received from other side,
+//    //that participant is unknown and hence it is stored as 'unknown_sender_participant_id' in the thread context
+//    //and when it responds with 'response' message, it just adds that in thread object
+//    //but for recipient it may look unfamiliar and for now filtering it.
+//    val updatedMsgOrders = msgOrders.map { pmd =>
+//      pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID))
+//    }
+//    buildAgentMsg(msg, msgId, threadContextDetail.threadId, protoDef, mtf, updatedMsgOrders)
+//  }
+//
+//  lazy val classicActor: ActorRef = Util.getActorRefFromSelection("/user/classic", context.system)(appConfig)
+//
+//  lazy val isVAS: Boolean =
+//    appConfig
+//      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+//      .contains("VerityAgent")
 }
 
 trait ProtoMsg extends MsgBase

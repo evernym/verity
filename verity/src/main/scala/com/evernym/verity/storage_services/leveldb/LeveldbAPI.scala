@@ -2,9 +2,9 @@ package com.evernym.verity.storage_services.leveldb
 
 import akka.actor.ActorSystem
 import akka.Done
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.DATA_NOT_FOUND
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
@@ -31,7 +31,7 @@ class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends Storag
     .paranoidChecks(true)
     .verifyChecksums(true)
 
-  def withDB[T](f: DB => T): T = {
+  def withDB[T](f: DB => T): T = synchronized {
     val db = Iq80DBFactory.factory.open(new File(path), options)
     val result = f(db)
     db.close()

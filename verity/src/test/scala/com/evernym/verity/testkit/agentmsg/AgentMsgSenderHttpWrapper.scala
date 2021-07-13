@@ -23,7 +23,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.AllNodeMetricsData
+import com.evernym.verity.metrics.{AllNodeMetricsData, MetricsWriterExtension, TestMetricsWriter}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -730,6 +730,11 @@ trait AgentMsgSenderHttpWrapper
     // Todo this one is used in integration tests!
     // We need to dump metrics somehow
     //todo this is temp method
+    val testMetricsWriter = MetricsWriterExtension(system).get() match {
+      case t: TestMetricsWriter => t
+      case x => throw new IllegalStateException(s"Tests should use TestMetricsWriter, ${x.getClass.getName} was found.")
+    }
+    // todo collect data from TestMetricsWriter
     AllNodeMetricsData(List.empty)
   }
 

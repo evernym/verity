@@ -175,6 +175,7 @@ class ActivityTrackerSpec
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, Some(REL_ID2), timestamp = baseTimeStamp)
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, Some(REL_ID3), timestamp = baseTimeStamp)
         var metricKeys = windows.map(_.activityType.metricBase)
+        Thread.sleep(500) // todo
         var metrics = getMetricWithTags(metricKeys, testMetricsWriter)
         assert(extractTagCount(metrics, windowMonthRel, activityTracker, Some(sponsorRel6.sponseeId)) == 4.0)
 
@@ -285,15 +286,6 @@ class ActivityTrackerSpec
   }
 }
 
-@Deprecated
-case class MetricWithTags2(name: String, totalValue: Double, tags: Map[TagSet, Double]) {
-  def tag(window: ActiveWindowRules, id: String, relId: Option[String] = None): Option[Double] = {
-    val baseMap = Map("frequency" -> window.activityFrequency.toString, window.activityType.idType -> id)
-    val optRelMap = relId.map(x => Map("sponseeId" -> x)).getOrElse(Map.empty) ++ baseMap
-    tags.get(TagSet.from(optRelMap))
-  }
-}
-
 case class MetricWithTags(name: String, totalValue: Double, tags: Map[Map[String, String], Double]) {
   def tag(window: ActiveWindowRules, id: String, relId: Option[String] = None): Option[Double] = {
     val baseMap = Map("frequency" -> window.activityFrequency.toString, window.activityType.idType -> id)
@@ -317,28 +309,7 @@ object MetricHelpers {
   val REL_ID3: String = "rel-3"
   val DEFAULT_ACTIVITY_TYPE: String = "action-taken"
 
-  @Deprecated()
-  def getMetricWithTags2(names: Set[String]): Map[String, MetricWithTags] = {
-    // todo use testMetricWriter
-    /*val report = awaitReport(JavaDuration.ofSeconds(5))
-    assert(report != null)
-    report
-      .gauges
-      .filter(x => names.contains(x.name))
-      .map(g => g.name -> {
-        val totalMetricCount = g.instruments.map(_.value).sum
-        val tags = g.instruments
-          .filter(!_.tags.isEmpty())
-          .map(x => x.tags -> x.value)
-          .toMap
-
-        MetricWithTags( g.name, totalMetricCount, tags)
-      }).toMap*/
-    Map.empty
-  }
-
   def getMetricWithTags(names: Set[String], tmw: TestMetricsWriter): Map[String, MetricWithTags] = {
-    //todo rework?
     tmw.allGaugeMetrics()
       .filter(e => names.contains(e._1.name))
       .groupBy(_._1.name)

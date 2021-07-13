@@ -10,7 +10,7 @@ class TestMetricsWriter extends MetricsWriter {
 
   // todo use concurrent collections
   val gaugesMap = new mutable.HashMap[TestMetricHead, Double]()
-  val histogramsMap = new mutable.HashMap[TestMetricHead, mutable.MutableList[Long]]
+  val histogramsMap = new mutable.HashMap[TestMetricHead, HistogramEntry]
 
   //todo this is temporary implementations for testing!
   override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
@@ -26,14 +26,10 @@ class TestMetricsWriter extends MetricsWriter {
 
   override def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
-    val cur = histogramsMap.get(key) match {
-      case Some(list) => list
-      case None =>
-        val newList = new mutable.MutableList[Long]
-        histogramsMap.put(key, newList)
-        newList
-    }
-    cur += value
+    val cur = histogramsMap.getOrElse(key, HistogramEntry())
+    cur.count += 1
+    cur.sum += value
+    histogramsMap.put(key, cur)
   }
 
 
@@ -50,7 +46,7 @@ class TestMetricsWriter extends MetricsWriter {
     gaugesMap.filter(_._1.name.startsWith(prefix)).toMap
   }
 
-  def filterHistogramMetrics(prefix: String): Map[TestMetricHead, mutable.MutableList[Long]] = this.synchronized {
+  def filterHistogramMetrics(prefix: String): Map[TestMetricHead, HistogramEntry] = this.synchronized {
     histogramsMap.filter(_._1.name.startsWith(prefix)).toMap
   }
 
@@ -58,7 +54,7 @@ class TestMetricsWriter extends MetricsWriter {
     gaugesMap.toMap
   }
 
-  def allHistogramMetrics(): Map[TestMetricHead, mutable.MutableList[Long]] = this.synchronized {
+  def allHistogramMetrics(): Map[TestMetricHead, HistogramEntry] = this.synchronized {
     histogramsMap.toMap
   }
 
@@ -77,10 +73,10 @@ case class TestMetricHead(val name: String, val tags: Map[String, String]) {
       }
       case _ => false
     }
-
   }
 }
 
+case class HistogramEntry(var count: Long = 0, var sum: Double = 0.0)
 
 //TODO TEMp removeremove
 @Deprecated

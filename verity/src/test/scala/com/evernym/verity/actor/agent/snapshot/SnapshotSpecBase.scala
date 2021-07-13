@@ -24,10 +24,8 @@ trait SnapshotSpecBase
         testMetricsWriter.filterHistogramMetrics(AS_ACTOR_AGENT_STATE_SIZE)
           .filter(_._1.tags.exists( _ == ("actor_class",actorClass)))
 
-      stateSizeMetrics.size shouldBe 12 //histogram metrics
-      stateSizeMetrics.find(_._1.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
-        checkStateSizeSum(v._2.sum, expectSize)
-      }
+      stateSizeMetrics.size shouldBe 1 //histogram metrics
+      checkStateSizeSum(stateSizeMetrics.head._2.sum, expectSize)
     }
   }
 

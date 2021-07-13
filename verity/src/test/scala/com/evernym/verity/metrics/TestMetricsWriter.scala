@@ -1,5 +1,7 @@
 package com.evernym.verity.metrics
 
+import com.evernym.verity.actor.ActorMessage
+
 import java.time.Instant
 import scala.collection.mutable
 
@@ -7,24 +9,31 @@ import scala.collection.mutable
 class TestMetricsWriter extends MetricsWriter {
 
   // todo use concurrent collections
-  val gaugesMap = new mutable.HashMap[TestMetricHead, Double]().withDefault(_ => 0)
-  val histogramsMap = new mutable.HashMap[TestMetricHead, mutable.MutableList[Long]].withDefault(_ => new mutable.MutableList[Long])
+  val gaugesMap = new mutable.HashMap[TestMetricHead, Double]()
+  val histogramsMap = new mutable.HashMap[TestMetricHead, mutable.MutableList[Long]]
 
   //todo this is temporary implementations for testing!
   override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
-    val tmp = gaugesMap(key)
-    gaugesMap(key) += value
+    val cur = gaugesMap.getOrElse(key, 0.0)
+    gaugesMap.put(key, cur + value)
   }
 
   override def gaugeUpdate(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
-    gaugesMap(key) = value
+    gaugesMap.put(key, value)
   }
 
   override def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
-    histogramsMap(key) += value
+    val cur = histogramsMap.get(key) match {
+      case Some(list) => list
+      case None =>
+        val newList = new mutable.MutableList[Long]
+        histogramsMap.put(key, newList)
+        newList
+    }
+    cur += value
   }
 
 
@@ -71,4 +80,23 @@ case class TestMetricHead(val name: String, val tags: Map[String, String]) {
 
   }
 }
+
+
+//TODO TEMp removeremove
+@Deprecated
+case class MetaData(nodeName: String, timestamp: String, lastResetTimestamp: String)
+
+@Deprecated
+case class NodeMetricsData(metadata: Option[MetaData], metrics: List[MetricDetail]) extends ActorMessage
+
+@Deprecated
+case class AllNodeMetricsData(data: List[NodeMetricsData]) extends ActorMessage
+
+@Deprecated
+case class MetricDetail(name: String, target: String, value: Double, tags: Option[Map[String, String]]) {
+  def isNameStartsWith(x: String) = false
+
+  def isName(x: String) = false
+}
+
 

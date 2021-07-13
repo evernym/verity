@@ -163,7 +163,7 @@ trait UserAgentCommon
   }
 
   def handleUpdateConfigPackedReq(updateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    metricsWriter.get().runWithSpan("handleUpdateConfigPackedReq", "UserAgentCommon", InternalSpan) {
+    metricsWriter.runWithSpan("handleUpdateConfigPackedReq", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
         .getOrElse(MSG_TYPE_UPDATE_CONFIGS)
@@ -190,7 +190,7 @@ trait UserAgentCommon
   def encParamFromThisAgentToOwner: EncryptParam
 
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    metricsWriter.get().runWithSpan("handleRemoveConfigMsg", "UserAgentCommon", InternalSpan) {
+    metricsWriter.runWithSpan("handleRemoveConfigMsg", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       val resourceName = ResourceUsageUtil.getMessageResourceName(removeConf.msgFamilyDetail)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -210,7 +210,7 @@ trait UserAgentCommon
   }
 
   def handleGetConfigsMsg(getConfs: GetConfigsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    metricsWriter.get().runWithSpan("handleGetConfigsMsg", "UserAgentCommon", InternalSpan) {
+    metricsWriter.runWithSpan("handleGetConfigsMsg", "UserAgentCommon", InternalSpan) {
       val confs = getFilteredConfigs(getConfs.configs)
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg, reqMsgContext.wrapInBundledMsg)

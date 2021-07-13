@@ -102,11 +102,13 @@ case class StopProgressTracking(trackingId: String) extends ActorMessage
 case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage
 
-case class MetricsFilterCriteria(includeMetaData: Boolean = true,
+//todo remove
+@Deprecated case class MetricsFilterCriteria(includeMetaData: Boolean = true,
                                  includeTags: Boolean = true,
                                  filtered: Boolean = true)
 
-object MetricsFilterCriteria {
+// todo remove
+@Deprecated object MetricsFilterCriteria {
 
   def apply(includeMetaData: String, includeTags: String, filtered: String): MetricsFilterCriteria = {
     MetricsFilterCriteria(

@@ -165,7 +165,7 @@ class AgentActorWatcher(val appConfig: AppConfig)
 
   private def updateFetchedItems(fai: FetchedActiveItems): Unit = {
     activeItems = activeItems ++ fai.items
-    metricsWriter.get().gaugeUpdate(activeRegisteredItemMetricsName, activeItems.size)
+    metricsWriter.gaugeUpdate(activeRegisteredItemMetricsName, activeItems.size)
     processOneBatchOfFetchedActiveItems()
   }
 
@@ -175,7 +175,7 @@ class AgentActorWatcher(val appConfig: AppConfig)
         sendMsgToWatchedItem(itemId)
         activeItems = activeItems - itemId
       }
-      metricsWriter.get().gaugeUpdate(pendingActiveRegisteredItemMetricsName, activeItems.size)
+      metricsWriter.gaugeUpdate(pendingActiveRegisteredItemMetricsName, activeItems.size)
     }
   }
 

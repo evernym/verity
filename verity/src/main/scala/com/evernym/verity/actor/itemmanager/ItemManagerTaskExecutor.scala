@@ -68,7 +68,7 @@ class ItemManagerTaskExecutor(val appConfig: AppConfig, val itemManagerEntityId:
 
   def recordMetrics(): Unit = {
     import com.evernym.verity.metrics.CustomMetrics._
-    metricsWriter.get().gaugeUpdate(AS_USER_AGENT_PAIRWISE_WATCHER_ACTIVE_CONTAINER_COUNT,
+    metricsWriter.gaugeUpdate(AS_USER_AGENT_PAIRWISE_WATCHER_ACTIVE_CONTAINER_COUNT,
       responses.size, Map(TAG_KEY_ID -> itemManagerEntityId))
   }
 

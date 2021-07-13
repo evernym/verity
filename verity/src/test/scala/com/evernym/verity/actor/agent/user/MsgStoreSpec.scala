@@ -9,7 +9,7 @@ import com.evernym.verity.Status._
 import com.evernym.verity.actor.agent.user.msgstore.{MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsWriterExtensionImpl, TestMetricsWriter}
+import com.evernym.verity.metrics.TestMetricsWriter
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.MsgIdProvider
@@ -26,11 +26,11 @@ class MsgStoreSpec
     with Eventually {
 
   val testMetricsWriter = new TestMetricsWriter
-  val mwei = new MetricsWriterExtensionImpl(testMetricsWriter)
 
   override protected def beforeEach(): Unit = {
-    super.beforeEach()
     testMetricsWriter.reset()
+    testMetricsWriter.allHistogramMetrics().size shouldBe 0
+    super.beforeEach()
   }
 
   "MgsStore" - {
@@ -192,9 +192,9 @@ class MsgStoreSpec
 
     eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
 
-      val retainedMsgsSumMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}_sum")
-      val removedMsgsSumMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}_sum")
-      val totalActorWithRemovedMsgMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}_sum")
+      val retainedMsgsSumMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}")
+      val removedMsgsSumMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}")
+      val totalActorWithRemovedMsgMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}")
 
       if (expectedRemovedMsgsSum > 0) {
         retainedMsgsSumMetrics.size shouldBe 1
@@ -215,7 +215,7 @@ class MsgStoreSpec
                     noOfDeliveredNonAckMsgs: Int = 0,
                     noOfUnDeliveredMsgs: Int = 0,
                     message: ByteString = ByteString.EMPTY): MsgStore = {
-    val msgStore = new MsgStore(new TestAppConfig(Option(config)), new MockMsgStateAPIProvider, None, mwei)
+    val msgStore = new MsgStore(new TestAppConfig(Option(config)), new MockMsgStateAPIProvider, None, testMetricsWriter)
     addDeliveredAckMsgs(config, msgStore, noOfDeliveredAckMsgs)
     addDeliveredNonAckMsgs(config, msgStore, noOfDeliveredNonAckMsgs)
     addUndeliveredMsgs(config, msgStore, noOfUnDeliveredMsgs, message)

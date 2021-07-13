@@ -5,14 +5,14 @@ import com.evernym.verity.actor.msg_tracer.resp_time_tracker._
 import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.{METRICS_LATENCY_RECORDING_HISTOGRAM, METRICS_LATENCY_RECORDING_SPAN}
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 import kamon.Kamon
 
 /**
  * class responsible to keep state related to one msg tracking
  * @param appConfig
  */
-class MsgRespTimeMetricsRecorder(appConfig: AppConfig, metricsWriter: MetricsWriterExtensionImpl) {
+class MsgRespTimeMetricsRecorder(appConfig: AppConfig, metricsWriter: MetricsWriter) {
 
   private var reqReceivedAtEpochMillis: Option[Long] = None
   private var respMode: Option[RespMode] = None
@@ -49,7 +49,7 @@ class MsgRespTimeMetricsRecorder(appConfig: AppConfig, metricsWriter: MetricsWri
     if (isSpanLatencyRecordingEnabled) {
       val tags = Map(TAG_NAME_MSG_TYPE -> msgTypeName, TAG_NAME_NEXT_HOP -> nextHop)
       val start = Instant.ofEpochMilli(startedTimeEpochMillis)
-      metricsWriter.get().taggedSpan("msg-latency", start, tags)
+      metricsWriter.taggedSpan("msg-latency", start, tags)
     }
   }
 
@@ -57,7 +57,7 @@ class MsgRespTimeMetricsRecorder(appConfig: AppConfig, metricsWriter: MetricsWri
     if (isHistogramLatencyRecordingEnabled) {
       val metricsName = "histogram.processing.time.millis"
       val tags = Map (TAG_NAME_MSG_TYPE -> msgTypeName, TAG_NAME_NEXT_HOP -> nextHop)
-      metricsWriter.get().histogramUpdate(metricsName, MetricsUnit.None, timeTakenInMillis, tags)
+      metricsWriter.histogramUpdate(metricsName, MetricsUnit.None, timeTakenInMillis, tags)
     }
   }
 

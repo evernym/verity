@@ -5,7 +5,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_5
@@ -85,7 +85,7 @@ object ConnectingProtoDef
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(context: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String], mw: MetricsWriterExtensionImpl):
+  override def create(context: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String], mw: MetricsWriter):
   Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
     new ConnectingProtocol(context, mw)
 

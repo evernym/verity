@@ -36,7 +36,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
     //agent-msg-processor-actor -> this actor
     case um: UnhandledMsg                 =>
-      metricsWriter.get().runWithSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler", InternalSpan) {
+      metricsWriter.runWithSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler", InternalSpan) {
         try {
           if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
             recordInMsgEvent(um.rmc.id,

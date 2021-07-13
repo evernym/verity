@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AnonCreds, LedgerReadAccess, LedgerWriteAccess}
@@ -27,7 +27,7 @@ trait WriteSchemaDefTrait extends ProtocolDefinition[WriteSchema, Role, Msg, Any
   }
 
   override def create(context: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String],
-                      mw: MetricsWriterExtensionImpl): WriteSchema = {
+                      mw: MetricsWriter): WriteSchema = {
     new WriteSchema(context)
   }
 

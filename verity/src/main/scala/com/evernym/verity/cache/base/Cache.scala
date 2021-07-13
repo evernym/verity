@@ -6,7 +6,7 @@ import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetc
 import com.evernym.verity.cache.providers.{CacheProvider, CaffeineCacheParam, CaffeineCacheProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -27,7 +27,7 @@ trait CacheBase {
 
   def fetchers: Map[FetcherParam, CacheValueFetcher]
 
-  def metricsWriter: MetricsWriterExtensionImpl
+  def metricsWriter: MetricsWriter
 
   //initializes/creates cache provider object for each registered fetchers
   private val cacheByFetcher: Map[FetcherParam, CacheProvider] =
@@ -95,10 +95,10 @@ trait CacheBase {
   private def collectMetrics(): Unit = {
     cacheByFetcher.foreach { case (fetcherParam, cacheProvider) =>
       val tags = Map("cache_name" -> name, "fetcher_id" -> fetcherParam.id.toString, "fetcher_name" -> fetcherParam.name)
-      metricsWriter.get().gaugeUpdate(AS_CACHE_TOTAL_SIZE, allCacheSize, tags)
-      metricsWriter.get().gaugeUpdate(AS_CACHE_HIT_COUNT, allCacheHitCount, tags)
-      metricsWriter.get().gaugeUpdate(AS_CACHE_MISS_COUNT, allCacheMissCount, tags)
-      metricsWriter.get().gaugeUpdate(AS_CACHE_SIZE, cacheProvider.size, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_TOTAL_SIZE, allCacheSize, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_HIT_COUNT, allCacheHitCount, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_MISS_COUNT, allCacheMissCount, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_SIZE, cacheProvider.size, tags)
     }
   }
 
@@ -210,7 +210,7 @@ trait CacheBase {
 case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
 
 class Cache(override val name: String, override val fetchers: Map[FetcherParam, CacheValueFetcher],
-            override val metricsWriter: MetricsWriterExtensionImpl) extends CacheBase
+            override val metricsWriter: MetricsWriter) extends CacheBase
 
 /**
  *

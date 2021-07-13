@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AnonCreds, LedgerReadAccess, LedgerWriteAccess}
@@ -27,7 +27,7 @@ trait CredDefDefinitionTrait extends ProtocolDefinition[WriteCredDef, Role, Msg,
   }
 
   override def create(context: ProtocolContextApi[WriteCredDef, Role, Msg, Any, CredDefState, String],
-                      mw: MetricsWriterExtensionImpl): WriteCredDef = {
+                      mw: MetricsWriter): WriteCredDef = {
     new WriteCredDef(context)
   }
 

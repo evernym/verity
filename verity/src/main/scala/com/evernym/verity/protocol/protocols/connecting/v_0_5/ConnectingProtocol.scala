@@ -15,12 +15,12 @@ import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 
 
 //noinspection ScalaDeprecation
 class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String],
-                         override val metricsWriter: MetricsWriterExtensionImpl)
+                         override val metricsWriter: MetricsWriter)
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
       with HasAppConfig

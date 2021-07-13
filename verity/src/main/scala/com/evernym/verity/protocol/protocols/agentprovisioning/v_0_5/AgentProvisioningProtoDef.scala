@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._
@@ -63,7 +63,7 @@ object AgentProvisioningProtoDef
   }
 
   override def create(context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String],
-                      mw: MetricsWriterExtensionImpl): Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
+                      mw: MetricsWriter): Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
     new AgentProvisioningProtocol(context)
 
   override def initialState: State = State.Uninitialized()

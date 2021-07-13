@@ -209,7 +209,7 @@ class ActorProtocolContainer[
   def handleSponsorRel(s: SponsorRel): Unit = {
     if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
     val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
-    metricsWriter.get().gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
+    metricsWriter.gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
   }
 
   /**

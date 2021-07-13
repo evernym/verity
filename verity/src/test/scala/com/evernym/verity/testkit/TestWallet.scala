@@ -7,7 +7,6 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCommand, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter
 import com.evernym.verity.vault.{AgentWalletAPI, WalletAPIParam}
 import com.evernym.verity.vault.service.ActorWalletService

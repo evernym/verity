@@ -17,7 +17,7 @@ import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
 import scala.concurrent.Future
@@ -183,7 +183,7 @@ trait PairwiseConnStateBase {
                                         agentMsgs: List[Any],
                                         wrapInBundledMsgs: Boolean,
                                         msgType: String,
-                                        mw: MetricsWriterExtensionImpl): Future[PackedMsg] = {
+                                        mw: MetricsWriter): Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(_: LegacyRoutingDetail)) =>
         val encryptParam =
@@ -203,7 +203,7 @@ trait PairwiseConnStateBase {
   }
 
   def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String,
-                                                 mw: MetricsWriterExtensionImpl):
+                                                 mw: MetricsWriter):
   Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>

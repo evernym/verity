@@ -27,7 +27,7 @@ import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam,
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
-import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriterExtension, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriterExtension, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
@@ -46,7 +46,7 @@ trait AgentCommon
     with HasMsgProgressTracker
     with ResourceUsageCommon { this: AgentPersistentActor =>
 
-  def metricsWriter : MetricsWriterExtensionImpl
+  def metricsWriter : MetricsWriter
 
   def agentCommonCmdReceiver[A]: Receive = {
     case _: AgentActorDetailSet    => //nothing to do
@@ -229,7 +229,7 @@ trait AgentCommon
     try {
       val stateSize = s.serializedSize
       if (stateSize >= 0) { // so only states that can calculate size are part the metric
-        metricsWriter.get().histogramUpdate(
+        metricsWriter.histogramUpdate(
           AS_ACTOR_AGENT_STATE_SIZE,
           MetricsUnit.Information.Bytes,
           stateSize,
@@ -253,7 +253,7 @@ trait AgentCommon
   }
 
   def fixAgentState(): Unit = {
-    metricsWriter.get().runWithSpan("fixAgentState", s"${getClass.getSimpleName}", InternalSpan) {
+    metricsWriter.runWithSpan("fixAgentState", s"${getClass.getSimpleName}", InternalSpan) {
       val sndr = sender()
       val preAddedAuthKeys = _addedAuthKeys
       val preAgencyDidPair = state.agencyDIDPair

@@ -10,7 +10,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.protocol.protocols.MsgDetail
 import org.slf4j.LoggerFactory
@@ -23,7 +23,7 @@ import scala.collection.immutable.ListSet
 class MsgStore(appConfig: AppConfig,
                msgStateAPIProvider: MsgStateAPIProvider,
                failedMsgTracker: Option[FailedMsgTracker],
-               val metricsWriter: MetricsWriterExtensionImpl) {
+               val metricsWriter: MetricsWriter) {
   /**
    * imagine below collection of messages (each of the below line is a message record with different fields)
    * uid1, conReq,       refMsgId=uid2 ,...
@@ -255,9 +255,9 @@ class MsgStore(appConfig: AppConfig,
 
   def updateMsgStateMetrics(): Unit = {
     if (removedMsgsCount > 0) {
-      metricsWriter.get().histogramUpdate(AS_AKKA_ACTOR_AGENT_RETAINED_MSGS, MetricsUnit.None, allMsgs.size)
-      metricsWriter.get().histogramUpdate(AS_AKKA_ACTOR_AGENT_REMOVED_MSGS, MetricsUnit.None, removedMsgsCount)
-      metricsWriter.get().histogramUpdate(AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED, MetricsUnit.None, 1)
+      metricsWriter.histogramUpdate(AS_AKKA_ACTOR_AGENT_RETAINED_MSGS, MetricsUnit.None, allMsgs.size)
+      metricsWriter.histogramUpdate(AS_AKKA_ACTOR_AGENT_REMOVED_MSGS, MetricsUnit.None, removedMsgsCount)
+      metricsWriter.histogramUpdate(AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED, MetricsUnit.None, 1)
     }
   }
 

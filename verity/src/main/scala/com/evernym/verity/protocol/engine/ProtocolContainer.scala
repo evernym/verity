@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.Exceptions
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 
 trait ProtocolTypes[P,R,M,E,S,I] {

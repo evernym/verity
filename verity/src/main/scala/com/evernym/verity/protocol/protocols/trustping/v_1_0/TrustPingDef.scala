@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.trustping.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.util.?=>
@@ -43,7 +43,7 @@ object TrustPingDefinition extends ProtocolDefinition[TrustPingProtocol, Role, M
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p.paramValueRequired(SELF_ID), p.paramValueRequired(OTHER_ID))
 
   override def create(context: ProtocolContextApi[TrustPingProtocol, Role, Msg, Event, State, String],
-                      mw: MetricsWriterExtensionImpl):
+                      mw: MetricsWriter):
   TrustPingProtocol = {
     new TrustPingProtocol()(context)
   }

@@ -78,26 +78,26 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
       case Left(_) =>
         providerId match {
           case SMS_PROVIDER_ID_TWILIO =>
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_TWILIO_DURATION, duration)
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_TWILIO_FAILED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_FAILED_COUNT)
           case SMS_PROVIDER_ID_BANDWIDTH =>
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_BANDWIDTH_DURATION, duration)
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_BANDWIDTH_FAILED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_FAILED_COUNT)
 	        case SMS_PROVIDER_ID_OPEN_MARKET =>
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_OPEN_MARKET_FAILED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_FAILED_COUNT)
         }
       case Right(_) =>
         providerId match {
           case SMS_PROVIDER_ID_TWILIO =>
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_TWILIO_DURATION, duration)
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_TWILIO_SUCCEED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_SUCCEED_COUNT)
           case SMS_PROVIDER_ID_BANDWIDTH =>
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_BANDWIDTH_DURATION, duration)
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_BANDWIDTH_SUCCEED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_SUCCEED_COUNT)
 	        case SMS_PROVIDER_ID_OPEN_MARKET =>
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_OPEN_MARKET_SUCCEED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_SUCCEED_COUNT)
         }
     }
   }

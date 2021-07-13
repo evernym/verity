@@ -8,7 +8,7 @@ import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
-import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -22,7 +22,7 @@ trait CoreActor
     with EntityIdentifier
     with ActorLogging {
 
-  val metricsWriter = MetricsWriterExtension(context.system)
+  val metricsWriter : MetricsWriter = MetricsWriterExtension(context.system).get()
 
   override def receive: Receive = coreCommandHandler(cmdHandler)
 
@@ -78,7 +78,7 @@ trait CoreActor
 
   override def preStart(): Unit = {
     if (recordStartCountMetrics)
-      metricsWriter.get.gaugeIncrement(
+      metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX",
         tags = Map("entity-type"-> entityTypeTagName))
     log.debug(s"[$actorId]: in pre start")
@@ -88,7 +88,7 @@ trait CoreActor
 
   override def postStop(): Unit = {
     if (recordStopCountMetrics)
-      metricsWriter.get.gaugeIncrement(
+      metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX",
         tags = Map("entity-type"-> entityTypeTagName)
       )
@@ -99,7 +99,7 @@ trait CoreActor
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     if (recordRestartCountMetrics)
-      metricsWriter.get.gaugeIncrement(
+      metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX",
         tags = Map("entity-type"-> entityTypeTagName)
       )

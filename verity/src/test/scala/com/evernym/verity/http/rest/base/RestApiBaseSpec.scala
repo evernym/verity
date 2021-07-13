@@ -2,7 +2,6 @@ package com.evernym.verity.http.rest.base
 
 import java.time.LocalDateTime
 import java.util.UUID
-
 import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
@@ -15,6 +14,7 @@ import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitation
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.open.RestAcceptedResponse
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
@@ -42,6 +42,8 @@ trait RestApiBaseSpec
     testCode
     overrideRestEnable = true
   }
+
+  override def metricsWriter: MetricsWriter = MetricsWriterExtension(platform.actorSystem).get()
 
   // Disable rest api by default, we will override it in the test, when needed,
   // but this way we may check if it responds correctly when disabled.

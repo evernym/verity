@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy
 
 import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.util.?=>
@@ -24,7 +24,7 @@ trait PresentProofLegacy
 
   override implicit val ctx: PresentProof.PresentProofContext
 
-  def metricsWriter: MetricsWriterExtensionImpl
+  def metricsWriter: MetricsWriter
 
   // TODO: Remove All Legacy control, protocol, and events during Ticket=VE-2605
   def legacyApplyEvent: ApplyEvent = {
@@ -145,7 +145,7 @@ trait PresentProofLegacy
 
         retrieveLedgerElementsLegacy(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
           case Success((schemaJson, credDefJson)) =>
-            metricsWriter.get().runWithSpan("processPresentation","PresentProof", InternalSpan) {
+            metricsWriter.runWithSpan("processPresentation","PresentProof", InternalSpan) {
               ctx.wallet.verifyProof(
                 proofRequestJson,
                 presentationJson,

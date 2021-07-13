@@ -31,7 +31,6 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}

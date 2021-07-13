@@ -18,14 +18,14 @@ import com.evernym.verity.{Exceptions, UrlParam}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.{ClientSpan, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{ClientSpan, MetricsWriter}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.util.{Left, Success, Try}
 
 
-class AkkaHttpMsgSendingSvc(appConfig: AppConfig, metricsWriter: MetricsWriterExtensionImpl)
+class AkkaHttpMsgSendingSvc(appConfig: AppConfig, metricsWriter: MetricsWriter)
                            (implicit system: ActorSystem) extends MsgSendingSvc {
 
   //TODO: we should change the below 'None' case behavior to either
@@ -41,7 +41,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig, metricsWriter: MetricsWriterEx
 
   def sendPlainTextMsg(payload: String, method: HttpMethod = HttpMethods.POST)
                       (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
-    metricsWriter.get().runWithSpan("sendPlainTextMsg", getClass.getSimpleName, ClientSpan) {
+    metricsWriter.runWithSpan("sendPlainTextMsg", getClass.getSimpleName, ClientSpan) {
       val req = HttpRequest(
         method = method,
         uri = up.url,
@@ -56,7 +56,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig, metricsWriter: MetricsWriterEx
 
   def sendJsonMsg(payload: String)
                  (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
-    metricsWriter.get().runWithSpan("sendJsonMsg", getClass.getSimpleName, ClientSpan) {
+    metricsWriter.runWithSpan("sendJsonMsg", getClass.getSimpleName, ClientSpan) {
       val req = HttpRequest(
         method = HttpMethods.POST,
         uri = up.url,
@@ -71,7 +71,7 @@ class AkkaHttpMsgSendingSvc(appConfig: AppConfig, metricsWriter: MetricsWriterEx
 
   def sendBinaryMsg(payload: Array[Byte])
                    (implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
-    metricsWriter.get().runWithSpan("sendBinaryMsg", getClass.getSimpleName, ClientSpan) {
+    metricsWriter.runWithSpan("sendBinaryMsg", getClass.getSimpleName, ClientSpan) {
       val req = HttpRequest(
         method = HttpMethods.POST,
         uri = up.url,

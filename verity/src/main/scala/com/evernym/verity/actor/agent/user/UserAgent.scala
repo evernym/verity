@@ -639,7 +639,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   def handleGetMsgsByConns(getMsgsByConnsReq: GetMsgsByConnsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val sndr = sender()
     val connectionSize = getMsgsByConnsReq.pairwiseDIDs.map(_.size).getOrElse(0)
-    metricsWriter.get().histogramUpdate(
+    metricsWriter.histogramUpdate(
       AS_USER_AGENT_API_GET_MSGS_BY_CONNS_PCS_COUNT,
       MetricsUnit.None,
       connectionSize)
@@ -673,7 +673,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
-    AgentActivityTracker.newAgent(sponsorRel, metricsWriter.get())
+    AgentActivityTracker.newAgent(sponsorRel, metricsWriter)
     setRouteFut map {
       case _: RouteSet          => sndr ! resp
       case ras: RouteAlreadySet => sndr ! ras

@@ -1,14 +1,13 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
-import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupProtoDef.msgFamily
 
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = BasicMessageMsgFamily
@@ -24,7 +23,7 @@ object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg
   override val requiredAccess: Set[AccessRight] = Set()
 
   override def create(context: ProtocolContextApi[BasicMessage, Role, Msg, Event, State, String],
-                      mw: MetricsWriterExtensionImpl): BasicMessage = {
+                      mw: MetricsWriter): BasicMessage = {
     new BasicMessage(context)
   }
 

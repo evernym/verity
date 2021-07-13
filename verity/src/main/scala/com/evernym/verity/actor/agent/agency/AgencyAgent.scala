@@ -295,7 +295,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   override def preAgentStateFix(): Future[Any] = {
-    metricsWriter.get().runWithSpan("preAgentStateFix", "AgencyAgent", InternalSpan) {
+    metricsWriter.runWithSpan("preAgentStateFix", "AgencyAgent", InternalSpan) {
       state.myDidAuthKey.map { ak =>
         self ? SetAgentActorDetail(DidPair(ak.keyId, ak.verKeyOpt.getOrElse("")), entityId)
       }.getOrElse {

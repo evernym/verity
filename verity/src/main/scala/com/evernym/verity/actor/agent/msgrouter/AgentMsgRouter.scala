@@ -77,7 +77,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   lazy val fetchers: Map[FetcherParam, CacheValueFetcher] = Map (
     ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig)
   )
-  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system))
+  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system).get())
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)

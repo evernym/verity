@@ -16,7 +16,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
@@ -45,7 +45,7 @@ trait AgentActorContext extends ActorContext {
     new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig)
   ).map(f => f.fetcherParam -> f).toMap
 
-  lazy val metricsWriter: MetricsWriterExtensionImpl = MetricsWriterExtension(system)
+  lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter)
   lazy val msgSendingSvc: MsgSendingSvcType = new AkkaHttpMsgSendingSvc(appConfig, metricsWriter)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry

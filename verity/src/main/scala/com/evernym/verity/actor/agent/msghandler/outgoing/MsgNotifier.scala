@@ -45,7 +45,7 @@ trait MsgNotifier {
   }
 
   def sendPushNotif(pcms: Set[ComMethodDetail], pnData: PushNotifData, sponsorId: Option[String]): Future[Any] = {
-    metricsWriter.get().runWithSpan("sendPushNotif", "MsgNotifier", InternalSpan) {
+    metricsWriter.runWithSpan("sendPushNotif", "MsgNotifier", InternalSpan) {
       logger.debug("push com methods: " + pcms)
       val spn = SendPushNotif(pcms, pnData.sendAsAlertPushNotif, pnData.notifData, pnData.extraData, sponsorId)
       logger.debug("pn data: " + spn)
@@ -328,7 +328,7 @@ trait MsgNotifierForStoredMsgs
   }
 
   def sendPushNotif(pnData: PushNotifData, allComMethods: Option[CommunicationMethods]): Future[Any] = {
-    metricsWriter.get().runWithSpan("sendPushNotif", "MsgNotifierForStoredMsgs", InternalSpan) {
+    metricsWriter.runWithSpan("sendPushNotif", "MsgNotifierForStoredMsgs", InternalSpan) {
       logger.debug("about to get push com methods to send push notification")
       withComMethods(allComMethods).map { comMethods =>
         val cms = comMethods.filterByTypes(Seq(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_SPR_PUSH))
@@ -338,23 +338,23 @@ trait MsgNotifierForStoredMsgs
           val pushStart = System.currentTimeMillis()
           val fut = sendPushNotif(cms, pnData, comMethods.sponsorId).map { r =>
             val duration = System.currentTimeMillis() - pushStart
-            metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_FIREBASE_DURATION, duration)
             handleErrorIfFailed(r)
             r match {
               case pnds: PushNotifResponse =>
                 val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, pnds.statusCode, pnds.statusDetail)
                 updatePushNotificationDeliveryStatus(umds)
                 if (pnds.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
-                  metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_SUCCEED_COUNT)
+                  metricsWriter.gaugeIncrement(AS_SERVICE_FIREBASE_SUCCEED_COUNT)
                   Right(pnds)
                 } else {
-                  metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
+                  metricsWriter.gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
                   Left(pnds)
                 }
               case x =>
                 val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(x.toString))
                 updatePushNotificationDeliveryStatus(umds)
-                metricsWriter.get().gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
+                metricsWriter.gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
                 Left(x)
             }
           }

@@ -51,7 +51,7 @@ trait BaseRecoverySpecLike
 
   //todo rework~~~~~~~~~~
   def getStableWalletAPISucceedCountMetric: Double = {
-    val testMetricsWriter : TestMetricsWriter = MetricsWriterExtension(system).get().asInstanceOf // todo ugly!
+    val testMetricsWriter : TestMetricsWriter = MetricsWriterExtension(system).get().asInstanceOf[TestMetricsWriter] // todo ugly!
     var apiCallCount: Double =
       testMetricsWriter.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT).headOption.map(_._2).getOrElse(0)
     var timesFoundSameCount: Int = 0    //how many times the metrics count was found same (stable count)

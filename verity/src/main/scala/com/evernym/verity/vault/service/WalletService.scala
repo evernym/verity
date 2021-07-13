@@ -11,7 +11,7 @@ import com.evernym.verity.actor.wallet.{WalletCmdErrorResponse, WalletCommand}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 import kamon.Kamon
 import kamon.metric.MeasurementUnit
@@ -23,7 +23,7 @@ import scala.reflect.ClassTag
 
 trait WalletService {
 
-  def metricsWriter : MetricsWriterExtensionImpl
+  def metricsWriter : MetricsWriter
 
   protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
@@ -43,7 +43,7 @@ trait WalletService {
     logger.debug(s"[$walletId] [${cmd.id}] wallet service about to start execution of wallet cmd: ${cmd.name}")
     execute(walletId, cmd).map {
       case wer: WalletCmdErrorResponse => //wallet service will/should return this in case of any error
-        metricsWriter.get().gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
+        metricsWriter.gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT)
         if (BAD_REQ_ERRORS.map(_.statusCode).contains(wer.sd.statusCode)) {
           throw new BadRequestErrorException(wer.sd.statusCode, Option(wer.sd.statusMsg))
         } else {
@@ -62,7 +62,7 @@ trait WalletService {
         .withTag("operation", s"${cmd.name}")
         .withTag("component", "WalletService")
         .record(seconds)
-      metricsWriter.get().gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
       logger.debug(s"[$walletId] [${cmd.id}] wallet service about to send response back: ${resp.getClass.getSimpleName}")
       resp
     }

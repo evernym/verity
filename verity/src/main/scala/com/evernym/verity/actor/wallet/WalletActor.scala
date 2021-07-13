@@ -158,7 +158,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
   }
 
   def openWalletIfExists(): Unit = {
-    metricsWriter.get().runWithSpan(s"openWallet", "WalletActor", InternalSpan) {
+    metricsWriter.runWithSpan(s"openWallet", "WalletActor", InternalSpan) {
       openWallet()
         .map(w => SetWallet(Option(w)))
         .recover {
@@ -185,7 +185,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     if (walletExtOpt.isEmpty) {
       logger.debug("WalletActor try to close not opened wallet")
     } else {
-      metricsWriter.get().runWithSpan("closeWallet", "WalletActor", InternalSpan) {
+      metricsWriter.runWithSpan("closeWallet", "WalletActor", InternalSpan) {
         walletProvider.close(walletExt)
       }
     }

@@ -3,6 +3,7 @@ package com.evernym.integrationtests.e2e.flow
 import com.evernym.integrationtests.e2e.scenario.ApplicationAdminExt
 import com.evernym.integrationtests.e2e.util.ReportDumpUtil
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.metrics.MetricDetail
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually

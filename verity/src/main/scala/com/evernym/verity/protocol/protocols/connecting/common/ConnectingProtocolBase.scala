@@ -20,7 +20,7 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, G
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -68,7 +68,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   val logger: Logger = ctx.logger
 
-  def metricsWriter: MetricsWriterExtensionImpl
+  def metricsWriter: MetricsWriter
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
     ctx.SERVICES_DEPRECATED.publishAppStateEvent(event)
@@ -226,7 +226,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     try {
       val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
       val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
-      sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg), metricsWriter.get())
+      sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg), metricsWriter)
     } catch {
       case e: Exception =>
         logger.error("sending invite answered msg to remote agency failed", Exceptions.getErrorMsg(e))

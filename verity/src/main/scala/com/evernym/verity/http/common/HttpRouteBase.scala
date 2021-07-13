@@ -14,7 +14,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.CommonConfig.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
-import com.evernym.verity.metrics.MetricsWriterExtensionImpl
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util.SubnetUtilsExt
 import com.typesafe.scalalogging.Logger
 
@@ -32,7 +32,7 @@ trait HttpRouteBase
   def logger: Logger
   def appConfig: AppConfig
 
-  def metricsWriter: MetricsWriterExtensionImpl
+  def metricsWriter: MetricsWriter
 
   protected lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
     var allowedIPs: List[String] = appConfig.getStringListReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
@@ -111,10 +111,10 @@ trait HttpRouteBase
   def clientIpAddress(implicit remoteAddress: RemoteAddress): String =
     remoteAddress.getAddress().get.getHostAddress
 
-  def incrementAgentMsgCount: Unit = metricsWriter.get().gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
-  def incrementAgentMsgSucceedCount: Unit = metricsWriter.get().gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
+  def incrementAgentMsgCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
+  def incrementAgentMsgSucceedCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
   def incrementAgentMsgFailedCount(tags: Map[String, String] = Map.empty): Unit =
-    metricsWriter.get().gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags = tags)
+    metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags = tags)
 }
 
 

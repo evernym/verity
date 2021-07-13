@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_FAMILY_UNKNOWN
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.engine.Constants.MFV_UNKNOWN
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
@@ -81,7 +82,7 @@ class ProtocolRegistrySpec extends BasicSpec {
 
     val msgFamily: MsgFamily = TestMsgFamily1
 
-    def create(ctx: ProtocolContextApi[TestProto1, String, String, String, String, String]): TestProto1 = {
+    def create(ctx: ProtocolContextApi[TestProto1, String, String, String, String, String], mw: MetricsWriter): TestProto1 = {
       new TestProto1(ctx)
     }
 
@@ -120,7 +121,7 @@ class ProtocolRegistrySpec extends BasicSpec {
 
     override val msgFamily: MsgFamily = TestMsgFamily2
 
-    def create(ctx: ProtocolContextApi[TestProto2, String, String, String, String, String]): TestProto2 = {
+    def create(ctx: ProtocolContextApi[TestProto2, String, String, String, String, String], mw: MetricsWriter): TestProto2 = {
       new TestProto2(ctx)
     }
 

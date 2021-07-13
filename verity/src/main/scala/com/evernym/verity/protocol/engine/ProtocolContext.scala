@@ -8,7 +8,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtensionImpl}
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
@@ -49,7 +49,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def _storageId: Option[StorageId] = getBackState.storageId
   def _storageId_! : StorageId = _storageId getOrElse { throw new RuntimeException("storage id is required") }
 
-  def metricsWriter: MetricsWriterExtensionImpl
+  def metricsWriter: MetricsWriter
 
   lazy val logger: Logger = getLoggerByName(s"${definition.msgFamily.protoRef.toString}")
   lazy val journalContext: JournalContext = JournalContext(pinstId.take(5))
@@ -197,7 +197,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
     case Envelope1(msg: M, to, frm, msgId, tid) =>
       //TODO deal with tid (threadId)
-      metricsWriter.get().runWithSpan("proto-msg:" + msg.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
+      metricsWriter.runWithSpan("proto-msg:" + msg.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
         withShadowAndRecord {
 
           participantMsg.add(to, msgId)
@@ -224,7 +224,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       }
 
     case cenv: CtlEnvelope[_] =>
-      metricsWriter.get().runWithSpan("control-msg:" + cenv.msg.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
+      metricsWriter.runWithSpan("control-msg:" + cenv.msg.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
         withShadowAndRecord {
           val sender = getRoster.selfSender
           setupInflightMsg(Option(cenv.msgId), Option(cenv.threadId), sender) {
@@ -235,7 +235,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
     //TODO this one is needed for Init... maybe we can wrap init in a CtlEnvelope
     case ctl: Control =>
-      metricsWriter.get().runWithSpan("control-msg:" + ctl.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
+      metricsWriter.runWithSpan("control-msg:" + ctl.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
         withShadowAndRecord {
           setupInflightMsg(None, None, getRoster.selfSender) {
             handleControl(ctl)
@@ -244,7 +244,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       }
 
     case sys: SystemMsg =>
-      metricsWriter.get().runWithSpan("system-msg:" + sys.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
+      metricsWriter.runWithSpan("system-msg:" + sys.getClass.getSimpleName, "ProtocolContext", InternalSpan) {
         val id = Some(getNewMsgUniqueId)
         withShadowAndRecord {
           sys match {

@@ -32,7 +32,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
    * @param reqMsgContext req msg context
    */
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    metricsWriter.get().runWithSpan("handleGetMsgs", "UserAgentCommon", InternalSpan) {
+    metricsWriter.runWithSpan("handleGetMsgs", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
       val resourceName = ResourceUsageUtil.getMessageResourceName(amw.msgType)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -44,14 +44,14 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   }
 
   def handleGetMsgsInternal(gmr: GetMsgsReqMsg): Unit = {
-    metricsWriter.get().runWithSpan("handleGetMsgsInternal", "UserAgentCommon", InternalSpan) {
+    metricsWriter.runWithSpan("handleGetMsgsInternal", "UserAgentCommon", InternalSpan) {
       sender ! GetMsgRespInternal(msgStore.getMsgs(gmr))
     }
   }
 
   private def buildAndSendGetMsgsResp(filteredMsgs: List[MsgDetail], sndr: ActorRef)
                              (implicit reqMsgContext: ReqMsgContext): Unit = {
-    metricsWriter.get().runWithSpan("buildAndSendGetMsgsResp", "UserAgentCommon", InternalSpan) {
+    metricsWriter.runWithSpan("buildAndSendGetMsgsResp", "UserAgentCommon", InternalSpan) {
       val getMsgsRespMsg = GetMsgsMsgHelper.buildRespMsg(filteredMsgs)(reqMsgContext.agentMsgContext)
 
       val encParam = EncryptParam(

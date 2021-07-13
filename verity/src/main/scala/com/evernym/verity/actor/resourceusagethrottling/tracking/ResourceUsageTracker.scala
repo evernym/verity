@@ -90,7 +90,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   }
 
   def addResourceUsage(aru: AddResourceUsage): Unit = {
-    metricsWriter.get().runWithSpan("addResourceUsage", "ResourceUsageTracker", InternalSpan) {
+    metricsWriter.runWithSpan("addResourceUsage", "ResourceUsageTracker", InternalSpan) {
       ResourceUsageRuleHelper.loadResourceUsageRules()
       if (ResourceUsageRuleHelper.resourceUsageRules.applyUsageRules) {
         val persistUpdatedBucketEntries =
@@ -138,7 +138,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
    * @param aru
    */
   def analyzeUsage(aru: AddResourceUsage): Unit = {
-    metricsWriter.get().runWithSpan("analyzeUsage", "ResourceUsageTracker", InternalSpan) {
+    metricsWriter.runWithSpan("analyzeUsage", "ResourceUsageTracker", InternalSpan) {
       Future {
         ResourceUsageRuleHelper.getResourceUsageRule(entityId, aru.resourceType, aru.resourceName).foreach { usageRule =>
           val actualUsages = resourceUsageTracker.getResourceUsageByBuckets(aru.resourceName)

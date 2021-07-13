@@ -77,7 +77,7 @@ trait ProtocolContextApi[P,R,M,E,S,I]
 
   @silent
   def DEPRECATED_convertAsyncToSync[T](fut: Future[T]): T = {
-    metricsWriter.get().histogramUpdate(
+    metricsWriter.histogramUpdate(
       AS_BLOCKING_WALLET_API_CALL_COUNT,
       MetricsUnit.None,
       1,

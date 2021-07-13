@@ -23,6 +23,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.metrics.AllNodeMetricsData
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -725,9 +726,11 @@ trait AgentMsgSenderHttpWrapper
     require(metrics.contains(expectedMetricName), "expected metrics not found: " + expectedMetricName)
   }
 
-  def getAllNodeMetrics(): Unit = {
+  def getAllNodeMetrics(): AllNodeMetricsData = {
     // Todo this one is used in integration tests!
     // We need to dump metrics somehow
+    //todo this is temp method
+    AllNodeMetricsData(List.empty)
   }
 
   def getMetrics(fetchFromAllNodes: Boolean): String = {

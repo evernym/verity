@@ -10,8 +10,7 @@ import com.evernym.integrationtests.e2e.flow.SetupFlow
 import com.evernym.integrationtests.e2e.msg.MsgMap
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.integrationtests.e2e.util.HttpListenerUtil
-import com.evernym.verity.Status._
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.msghandler.outgoing.FwdMsg
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
@@ -33,6 +32,7 @@ import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, Pus
 import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.util._
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}

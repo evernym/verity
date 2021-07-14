@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.mock.blob_store
 
 import akka.Done
 import akka.actor.ActorSystem
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI

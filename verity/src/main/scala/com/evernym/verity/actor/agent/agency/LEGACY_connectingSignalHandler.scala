@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.protocol.protocols.connecting.common.LegacyConnectingSignal
 

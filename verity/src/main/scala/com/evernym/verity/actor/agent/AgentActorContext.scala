@@ -3,8 +3,8 @@ package com.evernym.verity.actor.agent
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.Exceptions.{HandledErrorException, SmsSendingFailedException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
@@ -13,7 +13,6 @@ import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValue
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriter}
@@ -22,6 +21,8 @@ import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
+import com.evernym.verity.transports.http.AkkaHttpMsgSendingSvc
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
@@ -34,8 +35,6 @@ trait AgentActorContext extends ActorContext {
   implicit def appConfig: AppConfig
   implicit def system: ActorSystem
 
-  type MsgSendingSvcType = MsgSendingSvc
-
   lazy val generalCacheFetchers: Map[FetcherParam, CacheValueFetcher] = List (
     new KeyValueMapperFetcher(system, appConfig),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
@@ -47,7 +46,7 @@ trait AgentActorContext extends ActorContext {
 
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter)
-  lazy val msgSendingSvc: MsgSendingSvcType = new AkkaHttpMsgSendingSvc(appConfig, metricsWriter)
+  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
   lazy val smsSvc: SMSSender = createSmsSender()
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter

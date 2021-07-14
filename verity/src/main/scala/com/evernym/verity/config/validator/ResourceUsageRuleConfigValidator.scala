@@ -1,7 +1,7 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
-import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceUniqueName, isUserIdOrPattern}
 import com.evernym.verity.actor.resourceusagethrottling.{DEFAULT_USAGE_RULE_NAME, ENTITY_ID_GLOBAL}
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, Instruction, InstructionDetail, ResourceTypeUsageRule, ResourceUsageRule, ResourceUsageRuleConfig, UsageRule, UsageViolationActionExecutorValidator, ViolationActions}

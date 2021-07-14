@@ -2,8 +2,8 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.MsgPackFormat._
@@ -18,17 +18,18 @@ import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.push_notification._
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.{Exceptions, UrlParam}
+import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future
 

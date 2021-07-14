@@ -1,7 +1,7 @@
 package com.evernym.verity.config.validator.base
 
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
-import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.{Config, ConfigException, ConfigObject}
 

@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import akka.actor.Actor.Receive
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.Status.{getStatusMsgFromCode, _}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
@@ -18,9 +18,8 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.http.common.MsgSendingSvc
-import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -29,12 +28,13 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 import com.evernym.verity.protocol.{Control, HasMsgType}
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifMsgBuilder}
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
+import com.evernym.verity.util2.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 

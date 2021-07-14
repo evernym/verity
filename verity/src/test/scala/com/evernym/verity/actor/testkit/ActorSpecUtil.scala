@@ -4,7 +4,6 @@ import akka.actor.typed
 import akka.persistence.testkit.scaladsl.{PersistenceTestKit, SnapshotTestKit}
 import akka.testkit.{ImplicitSender, TestEventListener, TestKit, TestKitBase}
 import akka.{actor => classic}
-import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
@@ -17,6 +16,7 @@ import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
 import java.util.concurrent.TimeUnit
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.util2.ActorErrorResp
 import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension, TestMetricsWriter}
 
 import scala.concurrent.duration.Duration

@@ -1,7 +1,10 @@
 package com.evernym.verity.actor.agent.user.msgstore
 
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
+
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.user.MsgHelper
@@ -26,12 +29,12 @@ class MsgStore(appConfig: AppConfig,
                val metricsWriter: MetricsWriter) {
   /**
    * imagine below collection of messages (each of the below line is a message record with different fields)
-   * uid1, conReq,       refMsgId=uid2 ,...
-   * uid2, conReqAnswer, ...           ,...
+   *  uid1, conReq,       refMsgId=uid2 ,...
+   *  uid2, conReqAnswer, ...           ,...
    *
    *
    * for above example use case, the 'refMsgIdToMsgId' mapping will look like this:
-   * uid2 -> uid1
+   *  uid2 -> uid1
    */
   private var refMsgIdToMsgId: Map[RefMsgId, MsgId] = Map.empty
   private var unseenMsgIds: Set[MsgId] = Set.empty
@@ -93,7 +96,7 @@ class MsgStore(appConfig: AppConfig,
       )
     }
       .toSeq
-      .sortWith(_.creationTimeInMillis < _.creationTimeInMillis) //sorting by creation order
+      .sortWith(_.creationTimeInMillis < _.creationTimeInMillis)    //sorting by creation order
       .foldLeft(AccumulatedMsgs(msgs = List.empty[MsgDetail], totalPayloadSize = 0)) { case (accumulated, next) =>
         if (accumulated.totalPayloadSize + next.payloadSize < getMsgsLimit) {
           accumulated.withNextAdded(next)

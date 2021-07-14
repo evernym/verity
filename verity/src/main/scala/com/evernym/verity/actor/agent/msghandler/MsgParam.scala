@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
-import com.evernym.verity.Exceptions.InternalServerErrorException
-import com.evernym.verity.Status.UNHANDLED
+import com.evernym.verity.util2.Exceptions.InternalServerErrorException
+import com.evernym.verity.util2.Status.UNHANDLED
 
 trait MsgParam {
 

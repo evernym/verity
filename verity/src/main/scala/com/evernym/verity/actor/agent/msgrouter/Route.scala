@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.msgrouter
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.event.LoggingReceive
-import com.evernym.verity.RouteId
+import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.msgrouter.legacy.LegacyGetRoute
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, RouteSet}

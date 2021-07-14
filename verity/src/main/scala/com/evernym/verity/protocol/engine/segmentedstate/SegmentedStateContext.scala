@@ -5,6 +5,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.util.ParticipantUtil
+import com.evernym.verity.util2.Exceptions
 
 import java.util.UUID
 import scala.util.{Failure, Success, Try}
@@ -44,8 +45,7 @@ trait SegmentedStateContext[P,R,M,E,S,I]
         case Failure(e) =>
           logger.error(s"error while storing segment: " +
             s"protoRef: $getProtoRef, " +
-            s"state: ${getState.getClass.getSimpleName}, " +
-            s"error: ${e.getMessage}")
+            s"error: ${Exceptions.getErrorMsg(e)}")
       }
       handler(result)
     }
@@ -65,13 +65,11 @@ trait SegmentedStateContext[P,R,M,E,S,I]
             case Success(None)  =>
               logger.info(s"requested segmented data not found (never stored or already removed or expired): " +
                 s"protoRef: $getProtoRef, " +
-                s"state: ${getState.getClass.getSimpleName}, " +
                 s"policy: ${dataRetentionPolicy.map(_.configString)}")
             case Failure(e) =>
               logger.error(s"error while retrieving segment: " +
                 s"protoRef: $getProtoRef, " +
-                s"state: ${getState.getClass.getSimpleName}, " +
-                s"error: " + e.getMessage)
+                s"error: " + {Exceptions.getErrorMsg(e)})
           }
           handler(result)
         }
@@ -90,8 +88,7 @@ trait SegmentedStateContext[P,R,M,E,S,I]
         case Failure(e) =>
           logger.error(s"error while removing segment: " +
             s"protoRef: $getProtoRef, " +
-            s"state: ${getState.getClass.getSimpleName}, " +
-            s"error: " + e.getMessage)
+            s"error: " + {Exceptions.getErrorMsg(e)})
       }
       handler(result)
     }

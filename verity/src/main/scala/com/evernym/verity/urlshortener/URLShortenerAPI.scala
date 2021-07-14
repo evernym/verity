@@ -1,7 +1,7 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.SHORTEN_URL
 import com.evernym.verity.config.AppConfig

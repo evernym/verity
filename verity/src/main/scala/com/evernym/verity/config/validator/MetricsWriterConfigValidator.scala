@@ -1,10 +1,10 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
-import com.evernym.verity.Status.VALIDATION_FAILED
 import com.evernym.verity.config.CommonConfig
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
 import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.typesafe.config.Config
 
 object MetricsWriterConfigValidator extends ConfigValidatorCreator {

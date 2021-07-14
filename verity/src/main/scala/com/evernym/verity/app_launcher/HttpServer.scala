@@ -4,7 +4,6 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager._
@@ -14,6 +13,7 @@ import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
 import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 import sun.misc.{Signal, SignalHandler}
 

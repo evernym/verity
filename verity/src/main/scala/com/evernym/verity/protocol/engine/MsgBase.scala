@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 
 import scala.util.Try
 

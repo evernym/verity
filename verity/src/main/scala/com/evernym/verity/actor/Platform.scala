@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Extension, ExtensionId, PoisonP
 import akka.cluster.singleton._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity._
+import com.evernym.verity.util2._
 import com.evernym.verity.actor.ShardUtil._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}
@@ -30,6 +30,7 @@ import com.evernym.verity.util.Util._
 import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
+import com.evernym.verity.actor.typed.base.Classic
 import com.evernym.verity.libs.Libraries
 import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.metrics.writer.KamonMetricsWriter

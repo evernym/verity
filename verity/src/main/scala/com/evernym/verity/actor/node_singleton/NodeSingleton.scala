@@ -2,7 +2,7 @@ package com.evernym.verity.actor.node_singleton
 
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}

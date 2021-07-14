@@ -179,7 +179,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
   }
 
   val msgListener: PackedMsgListener = {
-    val port = PortProvider.getUnusedPort(7000)
+    val port = PortProvider.generateUnusedPort(7000)
     new PackedMsgListener(port)(system)
   }
 
@@ -314,7 +314,7 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
   }
 
   val msgListener: PlainMsgListener = {
-    val port = PortProvider.getUnusedPort(7000)
+    val port = PortProvider.generateUnusedPort(7000)
     new PlainMsgListener(port)(system)
   }
 }

@@ -1,7 +1,6 @@
 package com.evernym.verity.config
 
-import com.evernym.{PolicyElements, RetentionPolicy}
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -11,6 +10,7 @@ import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.SponsorDetails
 import com.evernym.verity.util.TAAUtil.taaAcceptanceDatePattern
+import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 import com.typesafe.config.{Config, ConfigException, ConfigFactory, ConfigRenderOptions}
 import com.typesafe.config.ConfigUtil.{joinPath, splitPath}
 import org.apache.commons.lang3.StringUtils

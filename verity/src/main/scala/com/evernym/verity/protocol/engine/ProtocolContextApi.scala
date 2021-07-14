@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import java.util.concurrent.TimeUnit
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess

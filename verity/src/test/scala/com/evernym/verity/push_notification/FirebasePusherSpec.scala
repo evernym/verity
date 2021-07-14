@@ -1,7 +1,7 @@
 package com.evernym.verity.push_notification
 
 import com.evernym.verity.constants.Constants.PUSH_COM_METHOD_MISMATCH_SENDER_ID_ERROR
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig.{FCM_API_HOST, FCM_API_KEY, FCM_API_PATH}
 import com.evernym.verity.testkit.CancelGloballyAfterFailure

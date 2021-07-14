@@ -12,8 +12,8 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.{ActorMessage, SendCmdToAllNodes, StopProgressTracking}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.Util.getActorRefFromSelection
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.ReqId
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics}
 import com.evernym.verity.protocol.engine.MsgId
 import org.apache.http.conn.util.InetAddressUtils

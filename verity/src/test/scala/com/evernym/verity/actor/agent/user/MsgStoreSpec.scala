@@ -5,7 +5,7 @@ import com.evernym.verity.actor.{Evt, MsgCreated, MsgDeliveryStatusUpdated, MsgD
 import com.evernym.verity.actor.agent.MsgAndDelivery
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.user.msgstore.{MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.metrics.CustomMetrics._

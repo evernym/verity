@@ -5,8 +5,8 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, pathPrefix, post, put, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
-import com.evernym.verity.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
-import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, StatusDetail, getUnhandledError}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
+import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, StatusDetail, getUnhandledError}
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint, UpdateEndpoint}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}

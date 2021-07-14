@@ -7,9 +7,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
@@ -32,6 +31,7 @@ import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually

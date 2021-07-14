@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter

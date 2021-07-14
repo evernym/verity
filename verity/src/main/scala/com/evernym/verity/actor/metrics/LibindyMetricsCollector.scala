@@ -1,12 +1,12 @@
 package com.evernym.verity.actor.metrics
 
 import akka.actor.{Actor, ActorSystem}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
+import com.evernym.verity.util2.Exceptions
 import org.hyperledger.indy.sdk.metrics.Metrics
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}

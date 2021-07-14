@@ -2,8 +2,8 @@ package com.evernym.verity.texter
 
 import akka.actor.Props
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
@@ -14,9 +14,9 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util._
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future

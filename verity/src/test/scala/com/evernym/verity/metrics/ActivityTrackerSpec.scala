@@ -8,7 +8,6 @@ import com.evernym.verity.metrics.MetricHelpers._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.TimeUtil
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.tag.TagSet
 import org.scalatest.BeforeAndAfterEach
 
 import scala.concurrent.duration.Duration

@@ -3,10 +3,9 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.{Exceptions, Status}
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
@@ -23,6 +22,9 @@ import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryElig
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
+import com.evernym.verity.msgoutbox.{DestId, RoutePackaging}
+import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
 import com.evernym.verity.actor.persistence.InternalReqHelperData
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
@@ -61,6 +63,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtension, MetricsWriter}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
+import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -129,6 +132,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     case ppgm: ProcessPersistedSendRemoteMsg                => processPersistedSendRemoteMsg(ppgm)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
+    //case GetOutboxParam(destId)                             => sendOutboxParam(destId)
   }
 
   override final def receiveAgentEvent: Receive =
@@ -204,6 +208,34 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   val agentSpecificEventReceiver: Receive = {
     case _ =>
   }
+
+//  def sendOutboxParam(destId: DestId): Unit = {
+//    if (destId == "default") {
+//      theirRoutingDetail match {
+//        case Some(Right(rd: RoutingDetail)) =>
+//          val recipPackaging = com.evernym.verity.msgoutbox.RecipPackaging(
+//            MPF_INDY_PACK.toString,
+//            state.theirDidAuthKey.map(_.verKey).toSeq
+//          )
+//          val comMethods = Map(
+//            "0" -> com.evernym.verity.msgoutbox.ComMethod(
+//                COM_METHOD_TYPE_HTTP_ENDPOINT,
+//                rd.endpoint,
+//                Option(recipPackaging),
+//                Option(RoutePackaging(
+//                  MPF_INDY_PACK.toString,
+//                  Seq(rd.verKey),
+//                  rd.routingKeys))
+//              )
+//          )
+//          sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+//        case _ =>
+//          throw new RuntimeException("no pairwise connection found")
+//      }
+//    } else {
+//      throw new RuntimeException("destId not supported: " + destId)
+//    }
+//  }
 
   def encParamFromThisAgentToOwner: EncryptParam =
     encParamBuilder

@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.Exceptions
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
+import com.evernym.verity.util2.Exceptions
 
 trait ProtocolTypes[P,R,M,E,S,I] {
   type Proto = Protocol[P,R,M,E,S,I]

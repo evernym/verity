@@ -3,9 +3,9 @@ package com.evernym.verity.actor.agent.agency
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
@@ -27,7 +27,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.{Exceptions, UrlParam}
+import com.evernym.verity.util2.{Exceptions, UrlParam}
 
 import scala.concurrent.Future
 import scala.io.Source

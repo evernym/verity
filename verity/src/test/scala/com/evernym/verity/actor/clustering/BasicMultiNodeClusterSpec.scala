@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.clustering
 
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.agency.{CreateKey, GetLocalAgencyIdentity}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog

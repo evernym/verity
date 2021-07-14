@@ -78,21 +78,5 @@ case class TestMetricHead(val name: String, val tags: Map[String, String]) {
 
 case class HistogramEntry(var count: Long = 0, var sum: Double = 0.0)
 
-//TODO TEMp removeremove
-@Deprecated
-case class MetaData(nodeName: String, timestamp: String, lastResetTimestamp: String)
-
-@Deprecated
-case class NodeMetricsData(metadata: Option[MetaData], metrics: List[MetricDetail]) extends ActorMessage
-
-@Deprecated
-case class AllNodeMetricsData(data: List[NodeMetricsData]) extends ActorMessage
-
-@Deprecated
-case class MetricDetail(name: String, target: String, value: Double, tags: Option[Map[String, String]]) {
-  def isNameStartsWith(x: String) = false
-
-  def isName(x: String) = false
-}
 
 

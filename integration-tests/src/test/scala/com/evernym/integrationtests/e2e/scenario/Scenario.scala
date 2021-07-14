@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.AdminClient
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
-import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, VerityInstance}
+import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv, SdkConfig, VerityInstance}
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
 import com.evernym.verity.UrlParam
@@ -36,6 +36,13 @@ class ApplicationAdminExt(val scenario: Scenario,
   def `sdk_!`: VeritySdkProvider = sdk.get
 
   def name: String = instance.name
+
+  //todo TODO!
+  val metricsHost : String = instance.appType match {
+    case AppInstance.Consumer => "localhost:9101"
+    case AppInstance.Enterprise => "localhost:9102"
+    case AppInstance.Verity => "localhost:9103"
+  }
 }
 
 case class ScenarioAppEnvironment(scenario: Scenario, testEnv: IntegrationTestEnv) {

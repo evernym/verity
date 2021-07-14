@@ -38,10 +38,8 @@ class KamonMetricsWriter extends MetricsWriter {
     Kamon.runWithSpan(spanBuilder.start())(fn)
   }
 
-  override def setup(): Unit = {
-    // todo init kamon modules?
-  }
+  override def setup(): Unit = Kamon.init()
 
-  override def shutdown(): Unit = {}
+  override def shutdown(): Unit = Kamon.stop()
 
 }

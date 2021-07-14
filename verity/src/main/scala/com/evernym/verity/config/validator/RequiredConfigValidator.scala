@@ -80,7 +80,7 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     ConfDetail(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES),
 
     ConfDetail(KAMON_ENV_HOST),
-    ConfDetail(KAMON_PROMETHEUS_START_HTTP_SERVER, allowedValues = Set("no")),
+    ConfDetail(KAMON_PROMETHEUS_START_HTTP_SERVER, allowedValues = Set("yes", "no")),
 
     ConfDetail(AKKA_SHARDING_REGION_NAME_USER_AGENT),
     ConfDetail(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE),

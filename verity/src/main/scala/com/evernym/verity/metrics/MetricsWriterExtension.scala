@@ -1,6 +1,8 @@
 package com.evernym.verity.metrics
 
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
+import com.evernym.verity.config.CommonConfig.{METRICS_ENABLED, METRICS_WRITER}
+import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter
 import com.typesafe.config.Config
@@ -8,14 +10,19 @@ import com.typesafe.config.Config
 class MetricsWriterExtensionImpl(config: Config) extends Extension {
 
   private val logger = getLoggerByName("MetricsWriterExtension")
-  private val writerConfigPath = "verity.metrics.writer"
 
   private var metricsWriter: MetricsWriter = try {
-    val className = config.getString(writerConfigPath)
-    Class.forName(className).newInstance().asInstanceOf[MetricsWriter]
+    if (config.getString(METRICS_ENABLED) == YES) {
+      val className = config.getString(METRICS_WRITER)
+      val writer = Class.forName(className).newInstance().asInstanceOf[MetricsWriter]
+      writer.setup()
+      writer
+    } else {
+      new NoOpMetricsWriter
+    }
   } catch {
     case e: Throwable =>
-      logger.warn(s"Could not create instance of metric writer: ${e.getMessage}. Using NoOpMetrics writer instead.")
+      logger.warn(s"Error occured during metric writer extension init: ${e.getMessage}. Using fallback NoOpMetrics writer.")
       new NoOpMetricsWriter
   }
 

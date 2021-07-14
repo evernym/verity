@@ -61,7 +61,7 @@ class ResourceBlockingStatusMngrSpec
 
     "initially" - {
 
-      "when sent GetBlockedList command" - {
+      "when sent GetBlockedList command initially" - {
         "should respond with no resources/callers ever blocked or unblocked" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(

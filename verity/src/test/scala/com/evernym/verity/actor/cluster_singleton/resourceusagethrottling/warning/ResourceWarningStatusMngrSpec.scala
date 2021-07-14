@@ -61,7 +61,7 @@ class ResourceWarningStatusMngrSpec
 
     "initially" - {
 
-      "when sent GetWarnedList command" - {
+      "when sent GetWarnedList command initially" - {
         "should respond with no resources/callers ever warned or unwarned" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(

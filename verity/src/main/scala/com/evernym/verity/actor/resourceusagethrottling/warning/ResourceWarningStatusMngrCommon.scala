@@ -53,7 +53,7 @@ trait ResourceWarningStatusMngrCommon {
     val filteredByActiveRsrc = wl.map { urw =>
       val filtered = urw._2.resourcesStatus.filter { case (_, wd) =>
         curDateTimeOpt.forall { cdt =>
-          wd.isInWarningPeriod(cdt) || wd.isInUnwarningPeriod(cdt)
+          wd.isWarned(cdt) || wd.isUnwarned(cdt)
         }
       }
       urw._1 -> urw._2.copy(resourcesStatus = filtered)
@@ -62,8 +62,8 @@ trait ResourceWarningStatusMngrCommon {
     // now filter all active entities (which are either warned/unwarned or has NON empty active resources)
     filteredByActiveRsrc.filter { case (_, ur) =>
       curDateTimeOpt.forall { cdt =>
-        ur.status.isInWarningPeriod(cdt) ||
-          ur.status.isInUnwarningPeriod(cdt) ||
+        ur.status.isWarned(cdt) ||
+          ur.status.isUnwarned(cdt) ||
           ur.resourcesStatus.nonEmpty
       }
     }
@@ -108,7 +108,7 @@ trait ResourceWarningStatusMngrCommon {
     val filteredByUnwarnedRsrc = wl.map { urw =>
       val filtered = urw._2.resourcesStatus.filter { case (_, wd) =>
         curDateTimeOpt.map { cdt =>
-          wd.isInUnwarningPeriod(cdt)
+          wd.isUnwarned(cdt)
         }.getOrElse {
           wd.unwarnFrom.isDefined
         }
@@ -117,7 +117,7 @@ trait ResourceWarningStatusMngrCommon {
     }
     filteredByUnwarnedRsrc.filter { case (_, ur) =>
       curDateTimeOpt.map { cdt =>
-        ur.status.isInUnwarningPeriod(cdt)
+        ur.status.isUnwarned(cdt)
       }.getOrElse {
         ur.status.unwarnFrom.isDefined
       } || ur.resourcesStatus.nonEmpty

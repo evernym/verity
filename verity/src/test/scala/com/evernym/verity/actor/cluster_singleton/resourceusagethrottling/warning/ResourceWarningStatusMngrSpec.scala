@@ -90,6 +90,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user1IpAddress && urw.resourceName == "resource1" && urw.warnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -118,6 +120,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user1IpAddress && urw.resourceName == "resource2" && urw.warnPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -148,6 +152,8 @@ class ResourceWarningStatusMngrSpec
             case uw: CallerWarned if
               uw.callerId == user1IpAddress && uw.warnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -178,6 +184,8 @@ class ResourceWarningStatusMngrSpec
             case uw: CallerWarned if
               uw.callerId == user1IpAddress && uw.warnPeriod == 0 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -208,6 +216,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user1IpAddress && urw.resourceName == "resource1" && urw.warnPeriod == 0 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -242,6 +252,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user2IpAddress && urw.resourceName == "resource1" && urw.warnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -270,6 +282,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user2IpAddress && urw.resourceName == "resource2" && urw.warnPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -300,6 +314,8 @@ class ResourceWarningStatusMngrSpec
             case uruw: CallerResourceUnwarned if
               uruw.callerId == user2IpAddress && uruw.resourceName == "resource2" && uruw.unwarnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -330,6 +346,8 @@ class ResourceWarningStatusMngrSpec
             case uw: CallerWarned if
               uw.callerId == user2IpAddress && uw.warnPeriod == 600 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -360,6 +378,8 @@ class ResourceWarningStatusMngrSpec
             case uw: CallerWarned if
               uw.callerId == user2IpAddress && uw.warnPeriod == 0 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -390,6 +410,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user2IpAddress && urw.resourceName == "resource1" && urw.warnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -420,6 +442,8 @@ class ResourceWarningStatusMngrSpec
             case uuw: CallerUnwarned if
               uuw.callerId == user2IpAddress && uuw.unwarnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -467,6 +491,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user3IpAddress && urw.resourceName == "resource1" && urw.warnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -495,6 +521,8 @@ class ResourceWarningStatusMngrSpec
             case urw: CallerResourceWarned if
               urw.callerId == user3IpAddress && urw.resourceName == "resource2" && urw.warnPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = true,
@@ -525,6 +553,8 @@ class ResourceWarningStatusMngrSpec
             case uruw: CallerResourceUnwarned if
               uruw.callerId == user3IpAddress && uruw.resourceName == "resource1" && uruw.unwarnPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -553,6 +583,8 @@ class ResourceWarningStatusMngrSpec
             case uw: CallerWarned if
               uw.callerId == user3IpAddress && uw.warnPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -597,6 +629,8 @@ class ResourceWarningStatusMngrSpec
             case uuw: CallerUnwarned if
               uuw.callerId == user3IpAddress && uuw.unwarnPeriod == 600 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,
@@ -641,6 +675,8 @@ class ResourceWarningStatusMngrSpec
             case uw: CallerWarned if
               uw.callerId == user3IpAddress && uw.warnPeriod == 600 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceWarningStatusMngr(
             GetWarnedList(
               onlyWarned = false,

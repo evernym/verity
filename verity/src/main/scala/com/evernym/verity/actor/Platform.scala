@@ -30,7 +30,6 @@ import com.evernym.verity.util.Util._
 import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
-import com.evernym.verity.actor.typed.base.Classic
 import com.evernym.verity.libs.Libraries
 import com.evernym.verity.metrics.MetricsReader
 

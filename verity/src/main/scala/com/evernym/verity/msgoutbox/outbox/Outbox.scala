@@ -16,13 +16,14 @@ import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, ProcessDelivery, RelResolverReplyAdapter}
 import com.evernym.verity.msgoutbox.outbox.States.{Message, MsgDeliveryAttempt}
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
-import com.evernym.verity.msgoutbox.outbox.msg_packager.Packagers
-import com.evernym.verity.msgoutbox.outbox.msg_transporter.Transports
+import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
+import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
 import com.typesafe.config.Config
@@ -84,10 +85,11 @@ object Outbox {
 
   def apply(entityContext: EntityContext[Cmd],
             config: Config,
+            oauthAccessTokenRefreshers: AccessTokenRefreshers,
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
-            packagers: Packagers,
-            transports: Transports): Behavior[Cmd] = {
+            msgPackagers: MsgPackagers,
+            msgTransports: MsgTransports): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       Behaviors.withTimers { timer =>
         timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(config))
@@ -97,10 +99,11 @@ object Outbox {
 
           val dispatcher = new Dispatcher(
             actorContext,
+            oauthAccessTokenRefreshers,
             config,
             msgStore,
-            packagers,
-            transports
+            msgPackagers,
+            msgTransports
           )
           val setup = SetupOutbox(actorContext,
             entityContext,
@@ -146,6 +149,17 @@ object Outbox {
       if (st.senderVerKey != reply.senderVerKey || st.comMethods != reply.comMethods) {
         Effect
           .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
+          .thenNoReply()
+      } else {
+        Effect
+          .noReply
+      }
+
+    case (st: States.Initialized, Commands.UpdateOutboxParam(walletId, senderVerKey, comMethods)) =>
+
+      if (st.senderVerKey != senderVerKey || st.comMethods != comMethods) {
+        Effect
+          .persist(OutboxParamUpdated(walletId, senderVerKey, comMethods))
           .thenNoReply()
       } else {
         Effect
@@ -474,7 +488,7 @@ object OutboxIdParam {
     val tokens = entityId.split("-", 3)
     if (tokens.size != 3) {
       Behaviors.stopped
-      throw new RuntimeException("invalid outbox id: " + entityId)
+      throw new RuntimeException("invalid outbox entity id: " + entityId)
     }
     OutboxIdParam(tokens(0), tokens(1), tokens(2))
   }

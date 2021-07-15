@@ -4,9 +4,9 @@
 * Message payload "storage info" question (only retention policy required for further msg store operations)
 * Default packaging provided to Outbox (during GetOutboxParam)
 * Legacy data and msg recip overriding
-* Outbox Id  
+* Confirm the delete payload logic (when to trigger etc)
+* Outbox entity-id format confirmation (relId-recipId-destId) 
 * Any new metrics
-* Confirm the payload deletion logic (when to delete)
 * StatusReply wrapper vs without it
 
 

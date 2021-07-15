@@ -159,7 +159,7 @@ trait UserAgentCommon
   def validateConfigValues(cds: Set[ConfigDetail]): Unit = {
     cds.find(_.name == PUSH_COM_METHOD).foreach { pcmConfig =>
       PusherUtil.checkIfValidPushComMethod(
-        ComMethodDetail(COM_METHOD_TYPE_PUSH, pcmConfig.value),
+        ComMethodDetail(COM_METHOD_TYPE_PUSH, pcmConfig.value, hasAuthEnabled = false),
         appConfig
       )
     }

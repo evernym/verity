@@ -11,7 +11,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
-import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -31,7 +31,7 @@ class HttpServer(val platform: Platform, routes: Route)
   implicit lazy val system: ActorSystem = platform.agentActorContext.system
   lazy implicit val executor: ExecutionContextExecutor = system.dispatcher
 
-  val metricsWriter = MetricsWriterExtension(system)
+  lazy val metricsWriter : MetricsWriter = MetricsWriterExtension(system).get()
 
   var httpBinding: Option[ServerBinding] = None
 
@@ -72,8 +72,8 @@ class HttpServer(val platform: Platform, routes: Route)
           }
           val serviceStartFinishTime = LocalDateTime.now
           val millis = ChronoUnit.MILLIS.between(serviceStartTime, serviceStartFinishTime)
-          metricsWriter.get().gaugeUpdate(AS_START_TIME, millis)
-          initGaugeMetrics(metricsWriter.get())
+          metricsWriter.gaugeUpdate(AS_START_TIME, millis)
+          initGaugeMetrics(metricsWriter)
         case Failure(e) =>
           throw e
       }

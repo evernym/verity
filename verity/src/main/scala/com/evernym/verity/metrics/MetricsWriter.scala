@@ -14,7 +14,7 @@ trait MetricsWriter {
 
   def taggedSpan(name: String, start: Instant, tags: TagMap = Map.empty)
 
-  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType = DefaultSpan)(fn: => T): T // TBD we currently have internal and client kamon spans, so we probably need a span type as parameter
+  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType = DefaultSpan)(fn: => T): T
 
   def setup()
 

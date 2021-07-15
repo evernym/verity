@@ -198,11 +198,9 @@ class MsgStoreSpec
 
       if (expectedRemovedMsgsSum > 0) {
         retainedMsgsSumMetrics.size shouldBe 1
-        //todo
         retainedMsgsSumMetrics.head._2.sum shouldBe expectedRetainedMsgsSum
 
         removedMsgsSumMetrics.size shouldBe 1
-        //todo
         removedMsgsSumMetrics.head._2.sum shouldBe expectedRemovedMsgsSum
 
         totalActorWithRemovedMsgMetrics.size shouldBe 1

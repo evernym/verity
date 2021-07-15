@@ -23,7 +23,7 @@ trait HasTestWalletAPI {
   val testAppConfig: AppConfig = new TestAppConfig
   lazy val testWalletAPI: LegacyWalletAPI = {
     val walletProvider = LibIndyWalletProvider
-    new LegacyWalletAPI(testAppConfig, walletProvider, None, new NoOpMetricsWriter) //todo  could probably fail!!
+    new LegacyWalletAPI(testAppConfig, walletProvider, None, new NoOpMetricsWriter)
   }
 }
 

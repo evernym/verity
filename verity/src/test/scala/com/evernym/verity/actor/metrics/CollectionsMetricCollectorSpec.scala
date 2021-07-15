@@ -2,7 +2,6 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.actor.MetricsFilterCriteria
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.metrics.CustomMetrics
@@ -59,7 +58,6 @@ class CollectionsMetricCollectorSpec extends TestKitBase
   }
 
   private def awaitForMetrics(max: Double, sum: Double, cnt: Double): Unit = {
-    val criteria = MetricsFilterCriteria(filtered = false)
     awaitCond(
       testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_MAX).exists(entry => {
           entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(max)

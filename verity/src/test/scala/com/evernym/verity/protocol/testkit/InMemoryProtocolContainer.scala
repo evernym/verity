@@ -54,7 +54,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     with HasInbox[Any,Any] {
 
 
-  override def metricsWriter: MetricsWriter = new NoOpMetricsWriter // todo check it works!
+  override def metricsWriter: MetricsWriter = new NoOpMetricsWriter
 
   override val _threadId: Option[ThreadId] = pce.threadId
   override val _storageId: Option[StorageId] = Some(pce.pinstId)

@@ -1,11 +1,8 @@
 package com.evernym.verity.metrics
 
-sealed trait MetricsUnit { // todo rename? sounds like a metric system
-  // todo do we really need this one?
-}
+sealed trait MetricsUnit
 
 object MetricsUnit {
-  // TODO: add metric units
   object None extends MetricsUnit
 
   object Information {

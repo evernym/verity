@@ -104,7 +104,7 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
     overrideConfig
   )
   lazy val metricsWriter: MetricsWriter = new TestMetricsWriter
-  implicit lazy val system: classic.ActorSystem = { //todo what is this?!!
+  implicit lazy val system: classic.ActorSystem = {
     MetricsWriterExtension(as).set(metricsWriter)
     as
   }

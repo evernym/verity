@@ -3,7 +3,6 @@ package com.evernym.verity.actor.metrics
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.util2.ReqId
-import com.evernym.verity.actor.MetricsFilterCriteria
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.testkit.BasicSpec
@@ -29,7 +28,6 @@ class LibindyMetricsCollectorSpec
       "should be sent to Kamon" in {
         libindyMetricsCollector ! CollectLibindyMetrics()
         expectMsgType[CollectLibindySuccess]
-        val criteria = MetricsFilterCriteria(filtered = false)
         awaitCond(
           testMetricsWriter.filterGaugeMetrics("libindy_command_duration_ms_count").exists(entry =>
             entry._2.isValidInt &&

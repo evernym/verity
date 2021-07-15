@@ -8,10 +8,12 @@ import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv, Sd
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.util2.UrlParam
+import com.typesafe.config.ConfigFactory
 
 import java.nio.file.Path
 import scala.concurrent.duration.Duration
@@ -37,11 +39,16 @@ class ApplicationAdminExt(val scenario: Scenario,
 
   def name: String = instance.name
 
-  //todo TODO!
-  val metricsHost : String = instance.appType match {
-    case AppInstance.Consumer => "localhost:9101"
-    case AppInstance.Enterprise => "localhost:9102"
-    case AppInstance.Verity => "localhost:9103"
+  lazy val conf : ConfigReadHelper = ConfigReadHelper(ConfigFactory.load(s"${instance.appType.toString}/application.conf"))
+
+
+  lazy val metricsHost : String = {
+    val host = conf.getStringReq("kamon.prometheus.embedded-server.hostname") match {
+      case "0.0.0.0" => "localhost"
+      case x => x
+    }
+    val port = conf.getIntReq("kamon.prometheus.embedded-server.port")
+    s"$host:$port"
   }
 }
 

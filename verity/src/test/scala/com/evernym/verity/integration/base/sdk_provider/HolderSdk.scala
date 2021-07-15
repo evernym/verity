@@ -265,7 +265,7 @@ case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecuto
       packedMsg,
       routingKeys,
       fwdMsgType
-    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam, new NoOpMetricsWriter) //todo  could probably fail!
+    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam, new NoOpMetricsWriter)
     awaitFut(future).msg
   }
 

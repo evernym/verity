@@ -45,20 +45,14 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
     Option(new MockAgentMsgRouter(actorTypeToRegions)(appConfig, system))
   }
 
-  //lazy val platform: Platform = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider))
-
-  lazy val platform : Platform = { //todo ugly! try set with config??
+  lazy val platform : Platform = {
     val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider))
     MetricsWriterExtension(plt.actorSystem).set(testMetricsWriter)
     plt
   }
 
   lazy val agentActorContext: AgentActorContext = platform.agentActorContext
-  // todo
-  //lazy val testMetricsWriter: TestMetricsWriter = MetricsWriterExtension.get(platform.actorSystem).asInstanceOf[TestMetricsWriter]
   lazy val testMetricsWriter: TestMetricsWriter = new TestMetricsWriter
-  // todo stuff below won't work because of laziness
-  //MetricsWriterExtension(platform.actorSystem).set(testMetricsWriter)
 
   lazy val walletAPI: WalletAPI = platform.agentActorContext.walletAPI
   lazy val singletonParentProxy: ActorRef = platform.singletonParentProxy

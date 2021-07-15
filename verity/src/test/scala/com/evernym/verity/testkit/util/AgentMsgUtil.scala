@@ -203,7 +203,7 @@ object AgentPackMsgUtil {
   def preparePackedRequestForAgent(agentMsgParam: PackMsgParam)
                                   (implicit msgPackFormat: MsgPackFormat,
                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    awaitResult(AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam)(agentMsgTransformer, wap, new NoOpMetricsWriter)) //todo could probably fail!
+    awaitResult(AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam)(agentMsgTransformer, wap, new NoOpMetricsWriter))
   }
 
   def preparePackedRequestForRoutes(fwdMsgTypeVersion: String,
@@ -211,7 +211,7 @@ object AgentPackMsgUtil {
                                     fwdRoutes: List[FwdRouteMsg])
                                    (implicit msgPackFormat: MsgPackFormat,
                                     agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)(agentMsgTransformer, wap, new NoOpMetricsWriter)) //todo could probably fail!
+    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)(agentMsgTransformer, wap, new NoOpMetricsWriter))
   }
 
   def awaitResult(fut: Future[PackedMsg]): PackedMsg = {

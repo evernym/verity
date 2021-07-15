@@ -55,9 +55,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //initialize required libraries (libindy/libmysqlstorage etc)
   Libraries.initialize(appConfig)
 
-  // todo metrics initialization for kamon/etc/etc
-  //MetricsWriterExtension(actorSystem).set(new KamonMetricsWriter) todo remove - configured by app config
-
   def startExtensionIfEnabled[T <: Extension](t: ExtensionId[T], confPath: String)(start: T => Unit): Unit = {
     val isEnabled = appConfig
       .getBooleanOption(confPath)

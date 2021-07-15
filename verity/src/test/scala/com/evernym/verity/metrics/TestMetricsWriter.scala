@@ -1,18 +1,13 @@
 package com.evernym.verity.metrics
 
-import com.evernym.verity.actor.ActorMessage
-
 import java.time.Instant
 import scala.collection.mutable
 
-// todo This is non-finished design for test metrics writer
 class TestMetricsWriter extends MetricsWriter {
 
-  // todo use concurrent collections
   val gaugesMap = new mutable.HashMap[TestMetricHead, Double]()
   val histogramsMap = new mutable.HashMap[TestMetricHead, HistogramEntry]
 
-  //todo this is temporary implementations for testing!
   override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
     val cur = gaugesMap.getOrElse(key, 0.0)
@@ -32,7 +27,6 @@ class TestMetricsWriter extends MetricsWriter {
     histogramsMap.put(key, cur)
   }
 
-
   override def taggedSpan(name: String, start: Instant, tags: TagMap): Unit = ()
 
   override def runWithSpan[T](opName: String, componentName: String, spanType: SpanType)(fn: => T): T = fn
@@ -41,7 +35,6 @@ class TestMetricsWriter extends MetricsWriter {
 
   override def shutdown(): Unit = ()
 
-  //todo metrics reader
   def filterGaugeMetrics(prefix: String): Map[TestMetricHead, Double] = this.synchronized {
     gaugesMap.filter(_._1.name.startsWith(prefix)).toMap
   }
@@ -64,19 +57,13 @@ class TestMetricsWriter extends MetricsWriter {
   }
 }
 
-case class TestMetricHead(val name: String, val tags: Map[String, String]) {
+case class TestMetricHead(name: String, tags: Map[String, String]) {
   override def equals(o: Any): Boolean = {
     o match {
-      case TestMetricHead(otherName, otherTags) => {
-        // todo rework!
-        otherName == name && tags.map { case (k, v) => k + ":" + v }.mkString("||") == otherTags.map { case (k, v) => k + ":" + v }.mkString("||")
-      }
+      case TestMetricHead(otherName, otherTags) => otherName == name && tags.toSet == otherTags.toSet
       case _ => false
     }
   }
 }
 
 case class HistogramEntry(var count: Long = 0, var sum: Double = 0.0)
-
-
-

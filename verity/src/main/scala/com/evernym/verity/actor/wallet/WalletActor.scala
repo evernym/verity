@@ -9,7 +9,6 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
@@ -22,12 +21,14 @@ import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, Walle
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
+class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, executionContext: ExecutionContext)
   extends CoreActor
     with Stash {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override def receiveCmd: Receive = preInitReceiver orElse openWalletCallbackReceiver
 
@@ -52,7 +53,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     case cmd: CreateWallet =>
       logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
       val sndr = sender()
-      val fut = WalletMsgHandler.handleCreateWalletASync()
+      val fut = WalletMsgHandler.handleCreateWalletAsync()
       sendRespWhenResolved(cmd.id, sndr, fut)
         .map { _ =>
           openWalletIfExists()
@@ -61,7 +62,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     case snw: SetupNewAgentWallet =>
       val sndr = sender()
       setNewReceiveBehaviour(openWalletCallbackReceiver)
-      WalletMsgHandler.handleCreateWalletASync().map { _ =>
+      WalletMsgHandler.handleCreateWalletAsync().map { _ =>
         openWalletIfExists()
         self.tell(snw, sndr)
       }

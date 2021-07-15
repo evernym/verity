@@ -1,9 +1,15 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
 import org.scalatest.PrivateMethodTester
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class EvilCoinFlip(override val ctx: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String]) extends CoinFlip(ctx) {
@@ -20,7 +26,7 @@ class EvilCoinFlip(override val ctx: ProtocolContextApi[CoinFlip, Role, Msg, Eve
 
 
 object EvilCoinFlipDefinition extends CoinFlipDefTrait {
-  override def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String]):
+  override def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String], executionContext: ExecutionContext):
   Protocol[CoinFlip, Role, Msg, Event, CoinFlipState, String] =
     new EvilCoinFlip(context)
 
@@ -59,4 +65,10 @@ class CoinFlipEvilSpec extends TestsProtocolsImpl(EvilCoinFlipDefinition) with B
     }
 
   }
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

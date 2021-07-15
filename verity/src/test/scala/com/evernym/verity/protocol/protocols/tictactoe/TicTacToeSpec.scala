@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
+import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine.{DebugProtocols, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{O, X}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{AcceptOffer, MakeOffer, _}
@@ -9,12 +10,14 @@ import com.evernym.verity.protocol.testkit.{InteractionController, ProtocolTestK
 import com.evernym.verity.util.Conversions._
 import com.evernym.verity.testkit.BasicSpec
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits
 import scala.language.postfixOps
 
 
 
 class TicTacToeSpec
-  extends ProtocolTestKit(TicTacToeProtoDef)
+  extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global)
     with BasicSpec
     with SpecHelper
     with DebugProtocols {
@@ -162,14 +165,15 @@ class TicTacToeSpec
 
       implicit val system = new TestSystem()
 
-      val controllerProvider = { i: SimpleControllerProviderInputType =>
-        new InteractionController(i) {
-          override def signal[A]: SignalHandler[A] = {
-            case SignalEnvelope(_: AskAccept, _, _, _, _) => Some(AcceptOffer())
-            case SignalEnvelope(_,_,_,_,_) => None
+      val controllerProvider: DriverGen[SimpleControllerProviderInputType] =
+        Some({ (i: SimpleControllerProviderInputType, ex: ExecutionContext) =>
+          new InteractionController(i) {
+            override def signal[A]: SignalHandler[A] = {
+              case SignalEnvelope(_: AskAccept, _, _, _, _) => Some(AcceptOffer())
+              case SignalEnvelope(_,_,_,_,_) => None
+            }
           }
-        }
-      }
+        })
 
       val alice = setup("alice")
       val bob = setup("bob", controllerProvider)
@@ -187,16 +191,17 @@ class TicTacToeSpec
 
       implicit val system = new TestSystem()
 
-      val controllerProvider = { i: SimpleControllerProviderInputType =>
-        new InteractionController(i) {
-          override def signal[A]: SignalHandler[A] = {
-            case SignalEnvelope(_: AskAccept, _, _, _, _) =>
-              control(AcceptOffer())
-              None
-            case SignalEnvelope(_,_,_,_,_) => None
+      val controllerProvider: DriverGen[SimpleControllerProviderInputType] =
+        Some({ (i: SimpleControllerProviderInputType, ex: ExecutionContext) =>
+          new InteractionController(i) {
+            override def signal[A]: SignalHandler[A] = {
+              case SignalEnvelope(_: AskAccept, _, _, _, _) =>
+                control(AcceptOffer())
+                None
+              case SignalEnvelope(_,_,_,_,_) => None
+            }
           }
-        }
-      }
+        })
 
       val alice = setup("alice")
       val bob = setup("bob", controllerProvider)

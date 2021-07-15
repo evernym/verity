@@ -6,7 +6,6 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.http.scaladsl.model.HttpHeader
 import akka.http.scaladsl.model.headers.RawHeader
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Commands.{OAuthAccessTokenHolderReplyAdapter, SendBinaryMsg, SendCmdBase, SendJsonMsg}
 import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Replies.SendMsgResp
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
@@ -20,7 +19,7 @@ import com.evernym.verity.util2.Status.{UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.util2.UrlParam
 
 import scala.collection.immutable
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 //this actor gets created for each new outgoing message and responsible to send
 // that message (with or without oauth) to given endpoint
@@ -59,15 +58,17 @@ object LegacyMsgSender {
 
   def apply(selfRelId: String,
             agentMsgRouter: AgentMsgRouter,
-            msgSendingSvc: MsgSendingSvc): Behavior[Cmd] = {
+            msgSendingSvc: MsgSendingSvc,
+            executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val setup = Setup(selfRelId, agentMsgRouter, msgSendingSvc, withRefreshedToken = false)
-      initialized(setup)(actorContext)
+      initialized(setup)(actorContext, executionContext)
     }
   }
 
   private def initialized(setup: Setup)
-                         (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
+                         (implicit actorContext: ActorContext[Cmd],
+                          executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
     case scb: SendCmdBase =>
       if (scb.withAuthHeader) {
         gettingOAuthAccessToken(setup, scb)
@@ -81,7 +82,8 @@ object LegacyMsgSender {
 
   private def gettingOAuthAccessToken(setup: Setup,
                                       cmd: SendCmdBase)
-                                     (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = {
+                                     (implicit actorContext: ActorContext[Cmd],
+                                      executionContext: ExecutionContext): Behavior[Cmd] = {
     val oAuthAccessTokenHolderReplyAdapter = actorContext.messageAdapter(reply => OAuthAccessTokenHolderReplyAdapter(reply))
     setup.agentMsgRouter.forward(InternalMsgRouteParam(setup.selfRelId,
       GetTokenForUrl(cmd.toUrl, GetToken(cmd.withRefreshedToken, oAuthAccessTokenHolderReplyAdapter))),
@@ -91,7 +93,8 @@ object LegacyMsgSender {
 
   private def waitingForOAuthAccessToken(setup: Setup,
                                          cmd: SendCmdBase)
-                                         (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] =
+                                         (implicit actorContext: ActorContext[Cmd],
+                                          executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
 
     case OAuthAccessTokenHolderReplyAdapter(reply: AuthToken) =>
@@ -106,7 +109,7 @@ object LegacyMsgSender {
   }
 
   private def sendingMsg(setup: Setup, headers: immutable.Seq[HttpHeader])
-                         (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
+                         (implicit actorContext: ActorContext[Cmd], executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
     case sb @ SendBinaryMsg(msg, toUrl, _, withRefreshedToken, replyTo) =>
       val sendFut = setup.msgSendingSvc.sendBinaryMsg(msg, headers)(UrlParam(toUrl))
       handleSendResp(setup, sendFut, withRefreshedToken, sb.copy(withRefreshedToken=true), replyTo)
@@ -123,7 +126,7 @@ object LegacyMsgSender {
                              withRefreshedToken: Boolean,
                              retryCmd: Cmd,
                              replyTo: ActorRef[Reply])
-                             (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = {
+                             (implicit actorContext: ActorContext[Cmd], executionContext: ExecutionContext): Behavior[Cmd] = {
     sendMsgResp.map {
       case Left(he) if he.respCode == UNAUTHORIZED.statusCode && ! withRefreshedToken =>
         actorContext.self ! retryCmd

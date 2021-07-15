@@ -1,6 +1,5 @@
 package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.{AgentConfigs, GetConfigs}
 import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER
@@ -9,10 +8,14 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.AGENT_CONFIG_CACHE
 import com.evernym.verity.protocol.engine.DID
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class AgentConfigCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
+class AgentConfigCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConfig: AppConfig, executionContext: ExecutionContext)
+  extends AsyncCacheValueFetcher{
+
+  override def futureExecutionContext: ExecutionContext = executionContext
+  private implicit val executionContextImplc: ExecutionContext = executionContext
 
   lazy val fetcherParam: FetcherParam = AGENT_ACTOR_CONFIG_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(AGENT_CONFIG_CACHE)

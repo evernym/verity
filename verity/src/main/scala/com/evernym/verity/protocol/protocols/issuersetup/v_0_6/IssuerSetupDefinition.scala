@@ -5,6 +5,8 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight}
 import com.evernym.verity.protocol.engine._
 
+import scala.concurrent.ExecutionContext
+
 object IssuerSetupDefinition extends ProtocolDefinition[IssuerSetup, Role, Msg, Event, State, String] {
 
   override val msgFamily: MsgFamily = IssuerSetupMsgFamily
@@ -22,7 +24,10 @@ object IssuerSetupDefinition extends ProtocolDefinition[IssuerSetup, Role, Msg, 
   override def createInitMsg(params: Parameters): Control = InitMsg(params.paramValueRequired(SELF_ID))
   override def initParamNames: Set[ParameterName] = Set(SELF_ID)
 
-  override def create(context: ProtocolContextApi[IssuerSetup, Role, Msg, Event, State, String]):
+  override def create(
+                       context: ProtocolContextApi[IssuerSetup, Role, Msg, Event, State, String],
+                       executionContext: ExecutionContext
+                     ):
   Protocol[IssuerSetup, Role, Msg, Event, State, String] = new IssuerSetup()(context)
 
   override def initialState: State = State.Uninitialized()

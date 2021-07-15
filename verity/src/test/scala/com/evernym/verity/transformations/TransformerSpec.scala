@@ -1,5 +1,6 @@
 package com.evernym.verity.transformations
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.persistence.object_code_mapper.DefaultObjectCodeMapper
@@ -127,6 +128,8 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     }
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 case class NestedTestClass(i: Int, name: String)

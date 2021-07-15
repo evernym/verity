@@ -10,7 +10,9 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class ProtocolContainerSpec extends BasicSpec {
@@ -62,6 +64,12 @@ class ProtocolContainerSpec extends BasicSpec {
           override def urlShortening: UrlShorteningAccess = ???
 
           override def runAsyncOp(op: => Any): Unit = ???
+
+          /**
+           * custom thread pool executor
+           */
+          lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
+          override def futureExecutionContext: ExecutionContext = executionContext
         }
 
         val container = new TestProtocolContainer[TicTacToe, TicTacToeRole, Any, Any, State, String](TicTacToeProtoDef)

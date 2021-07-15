@@ -16,6 +16,8 @@ import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 import com.typesafe.config.Config
 
+import scala.concurrent.ExecutionContext
+
 
 //one instance gets created for each outbox at the time of outbox actor start
 // responsible for
@@ -27,7 +29,8 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                  config: Config,
                  msgStore: ActorRef[MsgStore.Cmd],
                  msgPackagers: MsgPackagers,
-                 msgTransports: MsgTransports) {
+                 msgTransports: MsgTransports,
+                 executionContext: ExecutionContext) {
 
   def dispatch(msgId: MsgId, deliveryAttempts: Map[String, MsgDeliveryAttempt]): Unit = {
     currentDispatcher.dispatch(msgId, deliveryAttempts)
@@ -97,7 +100,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
       case Some(ar: ActorRef[_]) =>
         ar.toClassic ! OAuthAccessTokenHolder.Commands.UpdateParams(
           auth.data,
-          OAuthAccessTokenRefresher.getRefresher(auth.version)
+          OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext)
         )
         ar.asInstanceOf[ActorRef[OAuthAccessTokenHolder.Cmd]]     //TODO: any alternative
       case other => throw new RuntimeException("unexpected type of oauth token holder: " + other)

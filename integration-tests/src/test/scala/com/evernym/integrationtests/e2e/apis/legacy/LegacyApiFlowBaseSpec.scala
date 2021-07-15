@@ -32,12 +32,13 @@ import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, Pus
 import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.util._
-import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, HasWalletExecutionContextProvider, UrlParam}
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 
@@ -61,17 +62,19 @@ trait LegacyApiFlowBaseSpec
   lazy val ledgerUtil = new LedgerUtil(
     appConfig,
     None,
+    executionContextProvider.futureExecutionContext,
+    executionContextProvider.walletFutureExecutionContext,
     taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
     genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
   )
 
   val edgeHttpEndpointForPackedMsg: PackedMsgHttpListener = {
     val edgeAgent= testEnv.sdk_!("eas-edge-agent")
-    new EdgeHttpListenerForPackedMsg(appConfig, edgeAgent.endpoint.get)
+    new EdgeHttpListenerForPackedMsg(appConfig, edgeAgent.endpoint.get, executionContextProvider.futureExecutionContext)
   }
 
   val edgeHttpEndpointForPushNotif: PushNotifMsgHttpListener = {
-    new EdgeHttpListenerForPushNotifMsg(appConfig, UrlParam("localhost:3456/json-msg"))
+    new EdgeHttpListenerForPushNotifMsg(appConfig, UrlParam("localhost:3456/json-msg"), executionContextProvider.futureExecutionContext)
   }
 
   val edgeHtppEndpointForSponsors: PushNotifMsgHttpListener = edgeHttpEndpointForPushNotif
@@ -1011,27 +1014,35 @@ trait LegacyApiFlowBaseSpec
   val agencyAdminEnv: AgencyAdminEnvironment = AgencyAdminEnvironment(
     agencyScenario,
     casVerityInstance = testEnv.instance_!(appNameCAS),
-    easVerityInstance = testEnv.instance_!(appNameEAS))
+    easVerityInstance = testEnv.instance_!(appNameEAS),
+    executionContextProvider
+  )
+  def executionContextProvider: ExecutionContextProvider
 
   //agency environment detail
   setupAgency(agencyAdminEnv)
 }
 
-class EdgeHttpListenerForPackedMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam) extends PackedMsgHttpListener
-class EdgeHttpListenerForPushNotifMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam) extends PushNotifMsgHttpListener
+class EdgeHttpListenerForPackedMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam, executionContext: ExecutionContext) extends PackedMsgHttpListener {
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
+class EdgeHttpListenerForPushNotifMsg(val appConfig: AppConfig, val listeningEndpoint: UrlParam, ec: ExecutionContext) extends PushNotifMsgHttpListener {
+  override def futureExecutionContext: ExecutionContext = ec
+}
 
-class EnterpriseAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance)
-  extends ApplicationAdminExt(scenario, verityInstance)
+class EnterpriseAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance, ecp: ExecutionContextProvider)
+  extends ApplicationAdminExt(scenario, verityInstance, ecp)
     with AdminClient
 
-class ConsumerAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance)
-  extends ApplicationAdminExt(scenario, verityInstance)
+class ConsumerAgencyAdminExt (scenario: Scenario, verityInstance: VerityInstance, ecp: ExecutionContextProvider)
+  extends ApplicationAdminExt(scenario, verityInstance, ecp)
     with AdminClient
 
 
 case class AgencyAdminEnvironment (scenario: Scenario,
                                    casVerityInstance: VerityInstance,
-                                   easVerityInstance: VerityInstance) {
-  val consumerAgencyAdmin = new ConsumerAgencyAdminExt(scenario, casVerityInstance)
-  val enterpriseAgencyAdmin = new EnterpriseAgencyAdminExt(scenario, easVerityInstance)
+                                   easVerityInstance: VerityInstance,
+                                   ecp: ExecutionContextProvider) {
+  val consumerAgencyAdmin = new ConsumerAgencyAdminExt(scenario, casVerityInstance, ecp)
+  val enterpriseAgencyAdmin = new EnterpriseAgencyAdminExt(scenario, easVerityInstance, ecp)
 }

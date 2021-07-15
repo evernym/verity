@@ -10,6 +10,8 @@ import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.ITEM_CONTAINER_MAPPER_CLASS
 
+import scala.concurrent.ExecutionContext
+
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 
@@ -87,17 +89,27 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 }
 
 object ItemManager {
-  def props(implicit conf: AppConfig): Props = Props(new ItemManager)
+  def props(executionContext: ExecutionContext)(implicit conf: AppConfig): Props = Props(new ItemManager(executionContext))
 }
 
-class ItemManager(implicit val appConfig: AppConfig) extends ItemManagerBase
+class ItemManager(executionContext: ExecutionContext)(implicit val appConfig: AppConfig) extends ItemManagerBase {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 
 
 object ItemContainer {
-  def props(implicit conf: AppConfig): Props = Props(new ItemContainer)
+  def props(executionContext: ExecutionContext)(implicit conf: AppConfig): Props = Props(new ItemContainer(executionContext))
 }
 
-class ItemContainer(implicit val appConfig: AppConfig) extends ItemContainerBase
+class ItemContainer(executionContext: ExecutionContext)(implicit val appConfig: AppConfig) extends ItemContainerBase {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 
 trait ItemCmdWrapperBase extends ActorMessage {
   def msg: Any

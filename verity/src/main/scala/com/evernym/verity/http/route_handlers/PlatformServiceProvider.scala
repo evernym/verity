@@ -1,7 +1,6 @@
 package com.evernym.verity.http.route_handlers
 
 import akka.pattern.ask
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}
@@ -14,7 +13,7 @@ import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * provides access to platform objects
@@ -24,6 +23,7 @@ trait PlatformServiceProvider
   extends AgencyIdUtil
     with MsgRespTimeTracker
     with HasActorResponseTimeout {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def appConfig: AppConfig
   def platform: Platform

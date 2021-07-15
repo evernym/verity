@@ -17,6 +17,8 @@ import com.evernym.verity.msgoutbox.router.OutboxRouter
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ParticipantId
 
+import scala.concurrent.ExecutionContext
+
 
 //top level typed user guardian actor
 // all user typed actors should be children of this one
@@ -32,7 +34,7 @@ object UserGuardian {
 
   }
 
-  def apply(agentActorContext: AgentActorContext): Behavior[Cmd] = {
+  def apply(agentActorContext: AgentActorContext, executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val appConfig: AppConfig = agentActorContext.appConfig
       val sharding: ClusterSharding = ClusterSharding(actorContext.system)
@@ -43,7 +45,7 @@ object UserGuardian {
           .getConfig("verity.blob-store")
           .getString("bucket-name")
 
-        actorContext.spawn(MsgStore(blobStoreBucket, agentActorContext.storageAPI), "msg-store")
+        actorContext.spawn(MsgStore(blobStoreBucket, agentActorContext.storageAPI, executionContext), "msg-store")
       }
 
       val relResolver: Behavior[RelationshipResolver.Cmd] = RelationshipResolver(agentActorContext.agentMsgRouter)
@@ -51,7 +53,7 @@ object UserGuardian {
       val msgPackagers: MsgPackagers = new MsgPackagers {
         override val didCommV1Packager: Behavior[DIDCommV1Packager.Cmd] = {
           val walletOpExecutor: Behavior[WalletOpExecutor.Cmd] = didcom_v1.WalletOpExecutor(agentActorContext.walletAPI)
-          DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor, agentActorContext.metricsWriter)
+          DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor, agentActorContext.metricsWriter, executionContext)
         }
       }
 
@@ -64,7 +66,7 @@ object UserGuardian {
 
       sharding.init(Entity(Outbox.TypeKey) { entityContext =>
         val msgTransports: MsgTransports = new MsgTransports {
-          override val httpTransporter: Behavior[HttpTransporter.Cmd] = HttpTransporter.apply(agentActorContext.msgSendingSvc)
+          override val httpTransporter: Behavior[HttpTransporter.Cmd] = HttpTransporter.apply(agentActorContext.msgSendingSvc, executionContext)
         }
 
         Outbox(
@@ -74,7 +76,8 @@ object UserGuardian {
           relResolver,
           msgStore,
           msgPackagers,
-          msgTransports
+          msgTransports,
+          executionContext
         )
       })
 

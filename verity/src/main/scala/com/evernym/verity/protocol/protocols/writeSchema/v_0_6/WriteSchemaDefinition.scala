@@ -7,6 +7,8 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AnonCreds, Ledg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.Undefined
 
+import scala.concurrent.ExecutionContext
+
 object WriteSchemaDefinition extends WriteSchemaDefTrait
 
 trait WriteSchemaDefTrait extends ProtocolDefinition[WriteSchema, Role, Msg, Any, WriteSchemaState, String] {
@@ -25,7 +27,10 @@ trait WriteSchemaDefTrait extends ProtocolDefinition[WriteSchema, Role, Msg, Any
     case _: SchemaControl =>
   }
 
-  override def create(context: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String]): WriteSchema = {
+  override def create(
+                       context: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String],
+                       ec: ExecutionContext
+                     ): WriteSchema = {
     new WriteSchema(context)
   }
 

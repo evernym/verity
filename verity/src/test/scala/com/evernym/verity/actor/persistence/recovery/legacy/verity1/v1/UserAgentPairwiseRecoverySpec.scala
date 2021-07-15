@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.legacy.verity1.v1
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship._
@@ -10,6 +11,8 @@ import com.evernym.verity.actor.persistence.recovery.legacy.verity1.{AgencyAgent
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.util2.Status
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 class UserAgentPairwiseRecoverySpec
   extends BaseRecoveryActorSpec
@@ -126,4 +129,7 @@ class UserAgentPairwiseRecoverySpec
          }
       """)
   )
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.agency.agent_provisioning
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
@@ -9,6 +10,8 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
+
+import scala.concurrent.ExecutionContext
 
 
 class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eventually {
@@ -98,4 +101,17 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
       }
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

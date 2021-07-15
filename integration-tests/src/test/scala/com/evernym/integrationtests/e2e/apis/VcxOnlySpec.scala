@@ -22,9 +22,11 @@ import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-
 import java.util.UUID
 import java.util.concurrent.ExecutionException
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -48,6 +50,7 @@ class VcxOnlySpec
 
   def specifySdkType(env: IntegrationTestEnv) = env
   def appEnv: IntegrationTestEnv = specifySdkType(testEnv)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appEnv.config)
 
   val cas1 = testEnv.instance_!(APP_NAME_CAS_1).appInstance
 
@@ -60,13 +63,15 @@ class VcxOnlySpec
 
     lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
       appEnv.config,
+      ecp.futureExecutionContext,
+      ecp.walletFutureExecutionContext,
       Option(appEnv.ledgerConfig.submitterDID),
       Option(appEnv.ledgerConfig.submitterSeed),
       appEnv.ledgerConfig.submitterRole,
       genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)
     )
 
-    val apps = ScenarioAppEnvironment(scenario, testEnv)
+    val apps = ScenarioAppEnvironment(scenario, testEnv, ecp)
 
     apps.forEachApplication(availableSdk)
 

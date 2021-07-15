@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 import akka.actor.Actor
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
@@ -18,11 +18,13 @@ import com.evernym.verity.AppVersion
 import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-trait AppStateManagerBase { this: Actor =>
+trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
+
+  private implicit val ex: ExecutionContext = futureExecutionContext
 
   val appConfig: AppConfig
   val appVersion: AppVersion

@@ -2,7 +2,7 @@ package com.evernym.verity.push_notification
 
 import akka.actor.{ActorSystem, Props}
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidComMethodException, PushNotifSendingFailedException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.user.ComMethodDetail
@@ -22,18 +22,19 @@ import com.evernym.verity.util.Util.getOptionalField
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
 
-class Pusher(config: AppConfig) extends CoreActorExtended {
+class Pusher(config: AppConfig, executionContext: ExecutionContext) extends CoreActorExtended with HasExecutionContextProvider {
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
   val logger: Logger = getLoggerByClass(classOf[Pusher])
 
   def receiveCmd: Receive = {
     case spn: SendPushNotif =>
       spn.comMethods.foreach { cm =>
         try {
-          val (pusher, regId) = PusherUtil.extractServiceProviderAndRegId(cm, config, spn.sponsorId)
+          val (pusher, regId) = PusherUtil.extractServiceProviderAndRegId(cm, config, futureExecutionContext, spn.sponsorId)
           logger.info(s"[sponsorId: ${spn.sponsorId}] about to send push notification", (LOG_KEY_REG_ID, regId))
           val notifParam = PushNotifParam(cm.value, regId, spn.sendAsAlertPushNotif, spn.notifData, spn.extraData)
           val pushFutureResp = pusher.push(notifParam)(context.system)
@@ -116,33 +117,34 @@ trait PushServiceProvider {
 
 object PusherUtil  {
 
-  private def buildFirebasePusher(appConfig: AppConfig): Option[PushServiceProvider] = {
+  private def buildFirebasePusher(appConfig: AppConfig, executionContext: ExecutionContext): Option[PushServiceProvider] = {
     if (appConfig.getBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
       val key = appConfig.getStringReq(FCM_API_KEY)
       val host = appConfig.getStringReq(FCM_API_HOST)
       val path = appConfig.getStringReq(FCM_API_PATH)
-      Option(new FirebasePusher(FirebasePushServiceParam(key, host, path)))
+      Option(new FirebasePusher(FirebasePushServiceParam(key, host, path), executionContext))
     } else None
   }
 
-  private def buildMockPusher(config: AppConfig): Option[PushServiceProvider] = {
+  private def buildMockPusher(config: AppConfig, executionContext: ExecutionContext): Option[PushServiceProvider] = {
     //This MCM (Mock Cloud Messaging) is only enabled in integration test
     val isMCMEnabled = config.getBooleanOption(MCM_ENABLED).getOrElse(false)
-    if (isMCMEnabled) Option(MockPusher) else None
+    if (isMCMEnabled) Option(new MockPusher(config, executionContext)) else None
   }
 
-  private def supportedPushNotifProviders(config: AppConfig): PushNotifProviders = {
-    val providers = (buildFirebasePusher(config) ++ buildMockPusher(config)).toList
+  private def supportedPushNotifProviders(config: AppConfig, executionContext: ExecutionContext): PushNotifProviders = {
+    val providers = (buildFirebasePusher(config, executionContext) ++ buildMockPusher(config, executionContext)).toList
     val providerId = providers.map(_.comMethodPrefix).mkString("|")
     PushNotifProviders(s"($providerId):(.*)".r, providers)
   }
 
   def extractServiceProviderAndRegId(comMethod: ComMethodDetail,
                                      config: AppConfig,
+                                     executionContext: ExecutionContext,
                                      sponsorId: Option[String]=None): (PushServiceProvider, String) = {
     comMethod.`type` match {
       case COM_METHOD_TYPE_PUSH =>
-        val pushNotifProviders = supportedPushNotifProviders(config)
+        val pushNotifProviders = supportedPushNotifProviders(config, executionContext)
         val comVal = comMethod.value
         val result = pushNotifProviders
           .providers
@@ -156,7 +158,7 @@ object PusherUtil  {
         val sponsorIdVal = sponsorId
           .getOrElse( throw new InvalidComMethodException(Some("Sponsor Id not Given -- COM_METHOD_TYPE_SPR_PUSH" +
             " requires a Sponsor Id")))
-        val pushProvider = sponsorPushProvider(config, sponsorIdVal)
+        val pushProvider = sponsorPushProvider(config, sponsorIdVal, executionContext)
           .getOrElse( throw new InvalidComMethodException(Some(s"Push provider for sponsor Id '$sponsorIdVal' did not" +
             "produce a valid push provider")))
         (pushProvider, comMethod.value)
@@ -165,21 +167,21 @@ object PusherUtil  {
     }
   }
 
-  def sponsorPushProvider(config: AppConfig, sponsorId: String): Option[PushServiceProvider]  = {
+  def sponsorPushProvider(config: AppConfig, sponsorId: String, executionContext: ExecutionContext): Option[PushServiceProvider]  = {
     ConfigUtil.findSponsorConfigWithId(sponsorId, config)
       .orElse(throw new InvalidComMethodException(Some("Unable to find sponsor details, unable to push to sponsor push service")))
       .flatMap(_.pushService)
       .map { x =>
         x.service match {
-          case "fcm"  => new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path))
-          case "mock" => MockPusher
+          case "fcm"  => new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path), executionContext)
+          case "mock" => new MockPusher(config, executionContext)
           case t      => throw new InvalidComMethodException(Some(s"Unexpected push service type '$t', this type is not supported"))
         }
       }
   }
 
-  def checkIfValidPushComMethod(comMethodValue: ComMethodDetail, config: AppConfig): Unit =
-    extractServiceProviderAndRegId(comMethodValue, config)
+  def checkIfValidPushComMethod(comMethodValue: ComMethodDetail, config: AppConfig, executionContext: ExecutionContext): Unit =
+    extractServiceProviderAndRegId(comMethodValue, config, executionContext)
 
   def getPushMsgType(msgType: String): String = {
     val msgTypeToBeUsed = msgType match {
@@ -204,7 +206,7 @@ object PusherUtil  {
 }
 
 object Pusher {
-  def props(config: AppConfig): Props = Props(new Pusher(config))
+  def props(config: AppConfig, executionContext: ExecutionContext): Props = Props(new Pusher(config, executionContext))
 }
 
 case class PushNotifResponse(comMethodValue: String,

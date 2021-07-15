@@ -8,6 +8,8 @@ import WalletBackupMsgFamily.{BackupMsg, Init}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 
+import scala.concurrent.ExecutionContext
+
 
 /** Protocols are defined in pairs, a protocol definition, and a protocol
   * instance. This is a protocol definition for the Wallet backup protocol.
@@ -25,7 +27,7 @@ object WalletBackupProtoDef extends ProtocolDefinition[WalletBackup, Role, Backu
 
   override val roles: Set[Role] = Set(Exporter, Persister, Recoverer)
 
-  def create(ctx: ProtocolContextApi[WalletBackup, Role, BackupMsg, BackupEvt, BackupState, String]): WalletBackup = { //TODO can this be generically implemented in the base class?
+  def create(ctx: ProtocolContextApi[WalletBackup, Role, BackupMsg, BackupEvt, BackupState, String], ec: ExecutionContext): WalletBackup = { //TODO can this be generically implemented in the base class?
     new WalletBackup(ctx)
   }
 

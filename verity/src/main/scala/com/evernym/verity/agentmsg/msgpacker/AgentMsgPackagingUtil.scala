@@ -5,7 +5,8 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdReqMsg_MFV_0_5, FwdReqMsg_MFV_1_0_1}
@@ -73,7 +74,8 @@ object AgentMsgPackagingUtil {
                                           fwdMsgTypeVersion: String = MTV_1_0)
                                          (implicit agentMsgTransformer: AgentMsgTransformer,
                                           wap: WalletAPIParam,
-                                          mw: MetricsWriter): Future[PackedMsg] = {
+                                          mw: MetricsWriter,
+                                          ec: ExecutionContext): Future[PackedMsg] = {
 
     buildAgentMsg(msgPackFormat, packMsgParam).flatMap { packedAgentMsg =>
       buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
@@ -96,7 +98,8 @@ object AgentMsgPackagingUtil {
                           fwdMsgTypeVersion: String = MTV_1_0)
                          (implicit agentMsgTransformer: AgentMsgTransformer,
                           wap: WalletAPIParam,
-                          mw: MetricsWriter): Future[PackedMsg] = {
+                          mw: MetricsWriter,
+                          ec: ExecutionContext): Future[PackedMsg] = {
     mw.runWithSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil", InternalSpan) {
       if (fwdRoutes.isEmpty) Future.successful(packedMsg)
       else {
@@ -110,7 +113,8 @@ object AgentMsgPackagingUtil {
                           fwdRoutes: List[FwdRouteMsg],
                           fwdMsgTypeVersion: String = MTV_1_0)
                           (implicit agentMsgTransformer: AgentMsgTransformer,
-                           wap: WalletAPIParam): Future[PackedMsg] = {
+                           wap: WalletAPIParam,
+                           ec: ExecutionContext): Future[PackedMsg] = {
     if (fwdRoutes.isEmpty) throw new RuntimeException("empty fwdRoutes not supported")
     buildFwdMsgForRoute(msgPackFormat, packedMsg, fwdRoutes.head, fwdMsgTypeVersion).flatMap { pm =>
       fwdRoutes match {
@@ -197,7 +201,8 @@ object AgentMsgPackagingUtil {
                             msgType: String)
                            (implicit agentMsgTransformer: AgentMsgTransformer,
                             wap: WalletAPIParam,
-                            mw: MetricsWriter): Future[PackedMsg] = {
+                            mw: MetricsWriter,
+                            ec: ExecutionContext): Future[PackedMsg] = {
     mw.runWithSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil", InternalSpan) {
       routingKeys.size match {
         case 0 => Future.successful(PackedMsg(msg))

@@ -1,5 +1,8 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
@@ -8,7 +11,10 @@ import com.evernym.verity.protocol.testkit.InteractionType.OneParty
 import com.evernym.verity.protocol.testkit.{InteractionController, InteractionType, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.protocol.{Control, HasMsgType}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.Assertions.fail
+
+import scala.concurrent.ExecutionContext
 
 class ProtocolContextSpec extends TestsProtocolsImpl(TestProtoDef2) with BasicFixtureSpec {
 
@@ -19,7 +25,7 @@ class ProtocolContextSpec extends TestsProtocolsImpl(TestProtoDef2) with BasicFi
 
     "will not send signal messages if the protocol throws an exception" in { f =>
 
-      val alwaysFailDriver: DriverGen[SimpleControllerProviderInputType] = Option { i: SimpleControllerProviderInputType =>
+      val alwaysFailDriver: DriverGen[SimpleControllerProviderInputType] = Option { (i: SimpleControllerProviderInputType, ec: ExecutionContext) =>
         new InteractionController(i) {
           override def signal[A]: SignalHandler[A] = {
             case SignalEnvelope(_: TestSignalMsg, _, _, _, _) => fail()
@@ -34,6 +40,11 @@ class ProtocolContextSpec extends TestsProtocolsImpl(TestProtoDef2) with BasicFi
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }
 
 case class TestSignalMsg()
@@ -94,7 +105,7 @@ object TestProtoDef2 extends ProtocolDefinition[TestProto2, Role, String, String
     case _ =>
   }
 
-  def create(ctx: ProtocolContextApi[TestProto2, Role, String, String, String, String]): TestProto2 = {
+  def create(ctx: ProtocolContextApi[TestProto2, Role, String, String, String, String], executionContext: ExecutionContext): TestProto2 = {
     new TestProto2(ctx)
   }
 

@@ -6,9 +6,12 @@ import com.evernym.verity.{AppVersion, BuildInfo}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.config.AppConfig
 
+import scala.concurrent.ExecutionContext
+
 class AppStateManager(val appConfig: AppConfig,
                       val notifierService: SysServiceNotifier,
-                      val shutdownService: SysShutdownProvider)
+                      val shutdownService: SysShutdownProvider,
+                      executionContext: ExecutionContext)
   extends CoreActorExtended
     with AppStateManagerBase
     with ActorLogging {
@@ -43,6 +46,11 @@ class AppStateManager(val appConfig: AppConfig,
   override def beforeStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[AppStateEvent])
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 trait AppStateRequest extends ActorMessage
@@ -52,6 +60,7 @@ trait AppStateEvent extends ActorMessage
 object AppStateManager {
   def props(appConfig: AppConfig,
             sysServiceNotifier: SysServiceNotifier,
-            shutdownService: SysShutdownProvider): Props =
-    Props(new AppStateManager(appConfig, sysServiceNotifier, shutdownService))
+            shutdownService: SysShutdownProvider,
+            executionContext: ExecutionContext): Props =
+    Props(new AppStateManager(appConfig, sysServiceNotifier, shutdownService, executionContext))
 }

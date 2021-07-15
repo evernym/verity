@@ -7,6 +7,8 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AnonCreds, Ledg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.State.Undefined
 
+import scala.concurrent.ExecutionContext
+
 object CredDefDefinition extends CredDefDefinitionTrait
 
 trait CredDefDefinitionTrait extends ProtocolDefinition[WriteCredDef, Role, Msg, Any, CredDefState, String] {
@@ -25,7 +27,7 @@ trait CredDefDefinitionTrait extends ProtocolDefinition[WriteCredDef, Role, Msg,
     case _: CredDefControl =>
   }
 
-  override def create(context: ProtocolContextApi[WriteCredDef, Role, Msg, Any, CredDefState, String]): WriteCredDef = {
+  override def create(context: ProtocolContextApi[WriteCredDef, Role, Msg, Any, CredDefState, String], ec: ExecutionContext): WriteCredDef = {
     new WriteCredDef(context)
   }
 

@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
@@ -16,19 +17,27 @@ import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResul
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusReport => WSStatusReport}
 import com.typesafe.config.{Config, ConfigFactory}
-
 import java.util.UUID
+
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -181,4 +190,11 @@ class RestIssuerSdkSpec
          verity.rest-api.enabled = true
         """.stripMargin
     )
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

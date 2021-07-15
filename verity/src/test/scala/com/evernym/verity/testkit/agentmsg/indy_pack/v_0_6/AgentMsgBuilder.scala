@@ -1,6 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6
 
 import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
@@ -25,12 +26,14 @@ import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.json.JSONObject
 
+import scala.concurrent.ExecutionContext
 import scala.util.Left
 
 
-trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
+trait AgentMsgBuilder extends HasExecutionContextProvider { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
 
   object v_0_6_req {
+    implicit val executionContext: ExecutionContext = futureExecutionContext
 
     private val logger = getLoggerByClass(getClass)
 

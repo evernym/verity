@@ -24,9 +24,11 @@ import com.typesafe.scalalogging.Logger
 import org.json.{JSONArray, JSONObject}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-
 import java.time.Instant
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 import scala.util.Random
@@ -41,6 +43,7 @@ trait BaseVcxFlowSpec
 
   override val logger: Logger = getLoggerByName("VcxFlowSpec")
 
+
   def appNameCAS: String = APP_NAME_CAS_1
   def appNameEAS: String = APP_NAME_EAS_1
 
@@ -53,7 +56,9 @@ trait BaseVcxFlowSpec
   val agencyAdminEnv: AgencyAdminEnvironment = AgencyAdminEnvironment(
     agencyScenario,
     casVerityInstance = testEnv.instance_!(appNameCAS),
-    easVerityInstance = testEnv.instance_!(appNameEAS))
+    easVerityInstance = testEnv.instance_!(appNameEAS),
+    executionContextProvider
+  )
 
   setupAgency(agencyAdminEnv)
 
@@ -74,6 +79,8 @@ trait BaseVcxFlowSpec
   lazy val ledgerUtil = new LedgerUtil(
     appConfig,
     None,
+    executionContextProvider.futureExecutionContext,
+    executionContextProvider.walletFutureExecutionContext,
     taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
     genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
   )
@@ -296,7 +303,7 @@ trait BaseVcxFlowSpec
 
   type IdentityOwnerName = String
   private var vcxConfigMapping: Map[IdentityOwnerName, IdentityOwner] = Map.empty
-
+  def executionContextProvider: ExecutionContextProvider
 }
 
 case class IdentityOwner(config: JSONObject) {

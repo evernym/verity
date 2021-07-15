@@ -1,9 +1,11 @@
 package com.evernym.verity.libindy
 
 import akka.actor.ActorRef
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
@@ -11,9 +13,10 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessPack, Ac
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessController}
 import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
-import com.evernym.verity.util.ParticipantUtil
+import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
 import com.typesafe.scalalogging.Logger
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 class WalletAccessAPISpec
@@ -109,4 +112,11 @@ class WalletAccessAPISpec
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}
   override def logger: Logger = getLoggerByName(getClass.getSimpleName)
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

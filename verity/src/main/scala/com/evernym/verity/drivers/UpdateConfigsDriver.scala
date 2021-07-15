@@ -9,7 +9,9 @@ import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.{ConfigResult, UpdateConfig}
 
-class UpdateConfigsDriver(cp: ActorDriverGenParam) extends ActorDriver(cp) {
+import scala.concurrent.ExecutionContext
+
+class UpdateConfigsDriver(cp: ActorDriverGenParam, ec: ExecutionContext) extends ActorDriver(cp, ec) {
 
   override def signal[A]: SignalHandler[A] = {
 

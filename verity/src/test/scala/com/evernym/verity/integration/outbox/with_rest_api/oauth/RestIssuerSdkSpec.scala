@@ -16,19 +16,27 @@ import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResul
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusReport => WSStatusReport}
 import com.typesafe.config.{Config, ConfigFactory}
-
 import java.util.UUID
+
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  lazy val walletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, Option(OAuthParam(5.seconds)))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(OAuthParam(5.seconds)))
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, walletExecutionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -183,4 +191,11 @@ class RestIssuerSdkSpec
          verity.rest-api.enabled = true
         """.stripMargin
     )
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

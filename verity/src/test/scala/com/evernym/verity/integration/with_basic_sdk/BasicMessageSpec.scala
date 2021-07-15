@@ -8,16 +8,24 @@ import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class BasicMessageSpec extends VerityProviderBaseSpec
   with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -75,4 +83,10 @@ class BasicMessageSpec extends VerityProviderBaseSpec
     }
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

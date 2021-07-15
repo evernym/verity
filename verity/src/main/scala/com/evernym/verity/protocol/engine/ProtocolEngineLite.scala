@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLoggerLike}
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 
@@ -39,10 +40,10 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     container.handleMsg(msg)
   }
 
-  def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any): PinstId = {
+  def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any, ec: ExecutionContext): PinstId = {
     val safeThreadId = cryptoFunctions.computeSafeThreadId(myDID, threadId)
     val pinstId = calcPinstId(safeThreadId, protoRef, msg)
-    val container = getOrCreateContainer(myDID, theirDID, pinstId, protoRef)
+    val container = getOrCreateContainer(myDID, theirDID, pinstId, protoRef, ec)
     container.handleMsg(msg)
     pinstId
   }
@@ -64,8 +65,11 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
                                            val segmentStoreStrategy: Option[SegmentStoreStrategy],
                                            recordsEvents: RecordsEvents,
                                            msgSender: SendsMsgs,
-                                           _driver: Driver) extends ProtocolContainer[P,R,M,E,S,I] {
+                                           _driver: Driver,
+                                           executionContext: ExecutionContext
+                                          ) extends ProtocolContainer[P,R,M,E,S,I] {
 
+    override def futureExecutionContext: ExecutionContext = executionContext
     override def eventRecorder: RecordsEvents = recordsEvents
     override def sendsMsgs: SendsMsgs = msgSender
     override def driver: Option[Driver] = Option(_driver)
@@ -112,13 +116,13 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
   }
 
   //TODO merge with next
-  private def getOrCreateContainer(myDID: DID, theirDID: DID, pinstId: PinstId, protoRef: ProtoRef): Container = {
-    containers.getOrElse(pinstId, createContainer(myDID, theirDID, pinstId, extension_!(protoRef)))
+  private def getOrCreateContainer(myDID: DID, theirDID: DID, pinstId: PinstId, protoRef: ProtoRef, ec: ExecutionContext): Container = {
+    containers.getOrElse(pinstId, createContainer(myDID, theirDID, pinstId, extension_!(protoRef), ec))
   }
 
 
-  private def createContainer[P,R,M,E,S,I](myDID: DID, theirDID: DID, pinstId: PinstId, reg: Registration): Container = {
-    val container = new BaseProtocolContainer(myDID, theirDID, pinstId, reg._1, reg._5, reg._2(), reg._3, reg._4())
+  private def createContainer[P,R,M,E,S,I](myDID: DID, theirDID: DID, pinstId: PinstId, reg: Registration, ec: ExecutionContext): Container = {
+    val container = new BaseProtocolContainer(myDID, theirDID, pinstId, reg._1, reg._5, reg._2(), reg._3, reg._4(), ec)
     containers = containers + (pinstId -> container)
     container.recoverOrInit()
     container

@@ -2,7 +2,7 @@ package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED, _}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
@@ -30,7 +30,7 @@ import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.{LedgerNotFoundException, Pool}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.{Future, Promise, TimeoutException}
+import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
@@ -75,7 +75,8 @@ object SubmitToLedger extends SubmitToLedger {
   def submitRequest(pool: Pool, request: String): Future[RawLedgerResponse] = toFuture(Ledger.submitRequest(pool, request))
 }
 
-trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
+trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextProvider {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   implicit def actorSystem: ActorSystem
   def appConfig: AppConfig

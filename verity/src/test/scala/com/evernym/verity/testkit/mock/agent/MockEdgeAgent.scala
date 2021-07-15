@@ -6,6 +6,8 @@ import com.evernym.verity.testkit.AgentWithMsgHelper
 import com.evernym.verity.util2.UrlParam
 import org.json.JSONObject
 
+import scala.concurrent.ExecutionContext
+
 object MockEdgeAgent {
   val INVITE_URL = "inviteUrl"
   val INVITE_JSON_OBJECT = "inviteJsonObject"
@@ -15,10 +17,14 @@ object MockEdgeAgent {
  */
 class MockEdgeAgent(override val agencyEndpoint: UrlParam,
                     override val appConfig: AppConfig,
+                    executionContextParam: ExecutionContext,
+                    walletExecutionContextParam: ExecutionContext,
                     override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail()
                    ) extends AgentWithMsgHelper {
 
   import MockEdgeAgent._
+
+  override def futureExecutionContext: ExecutionContext = executionContextParam
 
   private var data = Map.empty[String, Any]
 
@@ -29,4 +35,8 @@ class MockEdgeAgent(override val agencyEndpoint: UrlParam,
   def inviteUrl: String = get[String](INVITE_URL)
   def inviteJsonObject: JSONObject = get[JSONObject](INVITE_JSON_OBJECT)
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContextParam
 }

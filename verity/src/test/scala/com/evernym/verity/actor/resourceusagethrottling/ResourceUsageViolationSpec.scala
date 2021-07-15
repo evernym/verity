@@ -16,6 +16,9 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 import org.scalatest.time.{Seconds, Span}
 
+import com.evernym.verity.util2.ExecutionContextProvider
+
+
 class ResourceUsageViolationSpec
   extends BaseResourceUsageTrackerSpec {
 
@@ -535,6 +538,9 @@ class ResourceUsageViolationSpec
   }
 
   resourceUsageTrackerSpec()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 case class ResourceUsageParam(resourceName: String,

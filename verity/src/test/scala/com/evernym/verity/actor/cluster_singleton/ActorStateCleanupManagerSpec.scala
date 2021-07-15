@@ -1,8 +1,10 @@
 package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
+
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.cluster.sharding.ShardRegion.EntityId
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus, StartJob, StopJob}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
 import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRouteBatch, GetRouteBatchResult, LegacySetRoute}
@@ -185,6 +187,8 @@ class ActorStateCleanupManagerSpec
          """.stripMargin
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class DummyAgentActor extends CoreActorExtended {

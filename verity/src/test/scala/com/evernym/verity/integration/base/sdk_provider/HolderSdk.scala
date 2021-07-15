@@ -34,9 +34,9 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
-
 import java.util.UUID
-import scala.concurrent.{Await, Future}
+
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -49,7 +49,11 @@ import scala.util.{Failure, Success, Try}
  */
 case class HolderSdk(param: SdkParam,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                     oauthParam: Option[OAuthParam]=None) extends SdkBase(param) {
+                     override val ec: ExecutionContext,
+                     wec: ExecutionContext,
+                     oauthParam: Option[OAuthParam]=None
+                    ) extends SdkBase(param, ec, wec) {
+  implicit val executionContext: ExecutionContext = ec
 
   def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {
       val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
@@ -277,7 +281,16 @@ case class HolderSdk(param: SdkParam,
       packedMsg,
       routingKeys,
       fwdMsgType
-    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam, NoOpMetricsWriter())
+    )(
+      new AgentMsgTransformer(
+        testWalletAPI,
+        testAppConfig,
+        executionContext
+      ),
+      walletAPIParam,
+      NoOpMetricsWriter(),
+      executionContext
+    )
     awaitFut(future).msg
   }
 

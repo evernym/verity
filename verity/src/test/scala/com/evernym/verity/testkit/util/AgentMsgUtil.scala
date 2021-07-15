@@ -16,7 +16,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.metrics.NoOpMetricsWriter
 
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 case class TypedMsg(`@type`: TypeDetail)
@@ -211,9 +211,22 @@ object AgentPackMsgUtil {
                                     packMsgParam: PackMsgParam,
                                     fwdRoutes: List[FwdRouteMsg])
                                    (implicit msgPackFormat: MsgPackFormat,
-                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)(
-      agentMsgTransformer, wap, NoOpMetricsWriter()))
+                                    agentMsgTransformer: AgentMsgTransformer,
+                                    wap: WalletAPIParam,
+                                    executionContext: ExecutionContext): PackedMsg = {
+    awaitResult(
+      AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(
+        msgPackFormat,
+        packMsgParam,
+        fwdRoutes,
+        fwdMsgTypeVersion
+      )(
+        agentMsgTransformer,
+        wap,
+        NoOpMetricsWriter(),
+        executionContext
+      )
+    )
   }
 
   def awaitResult(fut: Future[PackedMsg]): PackedMsg = {

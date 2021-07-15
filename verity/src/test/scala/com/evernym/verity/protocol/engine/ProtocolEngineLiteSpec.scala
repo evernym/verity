@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.ThreadContextDetail
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.drivers.TicTacToeAI
 import com.evernym.verity.protocol.{CtlEnvelope, engine}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
@@ -8,15 +10,15 @@ import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLogger, S
 import com.evernym.verity.protocol.protocols.tictactoe.Board.X
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{protoRef, _}
 import com.evernym.verity.protocol.protocols.tictactoe.{Board, State, TicTacToeProtoDef}
-import com.evernym.verity.util.intTimes
+import com.evernym.verity.util.{TestExecutionContextProvider, intTimes}
 import org.scalatest.concurrent.Eventually
 import com.evernym.verity.testkit.BasicSpec
 
-
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
   val logger: SimpleLoggerLike = SimpleLogger(classOf[ProtocolEngineLiteSpec])
+  val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 
   val threadId = "0"
 
@@ -42,12 +44,12 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
       }
 
       val aliceEngine = new ProtocolEngineLite(aliceSendsMsgs, cryptoFunctions, logger)
-      val bobEngine = new TestProtocolEngine("bob", bobSendsMsgs, cryptoFunctions, logger)
+      val bobEngine = new TestProtocolEngine("bob", bobSendsMsgs, cryptoFunctions, logger, executionContext)
       aliceSendsMsgs.setOutbox(bobEngine.inbox)
       aliceEngine.register(TicTacToeProtoDef, controllerProvider, recordsEventsProvider, None)
 
       val ctlEnvelope = CtlEnvelope(MakeOffer(), "msgId", threadId)
-      aliceEngine.handleMsg("toDID", "fromDID", threadId, protoRef, ctlEnvelope)
+      aliceEngine.handleMsg("toDID", "fromDID", threadId, protoRef, ctlEnvelope, executionContext)
     }
 
     "should be able to run the TicTacToe protocol" in {
@@ -90,11 +92,11 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
         }
 
         val aliceSendsMsgs = buildSendsMsgs(threadId)
-        val aliceEngine = new TestProtocolEngine("alice", aliceSendsMsgs, cryptoFunctions, logger)
+        val aliceEngine = new TestProtocolEngine("alice", aliceSendsMsgs, cryptoFunctions, logger, executionContext)
         aliceEngine.register(TicTacToeProtoDef, controllerProvider, recordsEventsProvider, None)
 
         val bobSendsMsgs = buildSendsMsgs(threadId)
-        val bobEngine = new TestProtocolEngine("bob", bobSendsMsgs, cryptoFunctions, logger)
+        val bobEngine = new TestProtocolEngine("bob", bobSendsMsgs, cryptoFunctions, logger, executionContext)
         bobEngine.register(TicTacToeProtoDef, controllerProvider, recordsEventsProvider, None)
 
         aliceSendsMsgs.setOutbox(bobEngine.inbox)
@@ -102,14 +104,14 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
 
         val ctlEnvelope1 = CtlEnvelope(MakeOffer(), "msgId", threadId)
 
-        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope1)
+        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope1, executionContext)
         aliceEngine.processAllBoxes()
         bobEngine.inbox.process() // Handle Offer message
         bobEngine.processAllBoxes()
         aliceEngine.inbox.process() // Handle Accept message
 
         val ctlEnvelope2 = CtlEnvelope(MakeMove(X, "b2"), "msgId", threadId)
-        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope2)
+        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope2, executionContext)
         eventually {
           aliceEngine.processAllBoxes()
           bobEngine.inbox.process() // Handle move message, send move
@@ -140,7 +142,7 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
   }
 }
 
-class Inbox(engine: ProtocolEngineLite, val nickname: String) extends BoxLike[ProtocolOutgoingMsg, Any] {
+class Inbox(engine: ProtocolEngineLite, val nickname: String, val ec: ExecutionContext) extends BoxLike[ProtocolOutgoingMsg, Any] {
   override def name: String = this.nickname + "ProtocolEngine.inbox"
 
   override def itemType: String = "ProtocolOutgoingMsg"
@@ -148,7 +150,7 @@ class Inbox(engine: ProtocolEngineLite, val nickname: String) extends BoxLike[Pr
   override protected def processOneItem(pom: ProtocolOutgoingMsg): Any = {
     pom match {
       case pmfp: ProtocolOutgoingMsg
-                          => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadContextDetail.threadId, protoRef, pmfp.envelope)
+                          => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadContextDetail.threadId, protoRef, pmfp.envelope, ec)
       case _              => throw new RuntimeException("not supported")
     }
 
@@ -163,17 +165,17 @@ trait SendsMsgsExt extends SendsMsgs {
   }
 }
 
-class TestProtocolEngine(name: String, sendsMsgs: SendsMsgs, cryptoFunctions: CryptoFunctions, logger: SimpleLoggerLike) extends ProtocolEngineLite(sendsMsgs, cryptoFunctions, logger) {
-  val inbox = new Inbox(this, name)
+class TestProtocolEngine(name: String, sendsMsgs: SendsMsgs, cryptoFunctions: CryptoFunctions, logger: SimpleLoggerLike, ec: ExecutionContext) extends ProtocolEngineLite(sendsMsgs, cryptoFunctions, logger) {
+  val inbox = new Inbox(this, name, ec)
 
   override def handleMsg(pinstId: PinstId, msg: Any): Any = {
     super.handleMsg(pinstId, msg)
     inbox.process()
   }
 
-  override def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any): PinstId = {
+  override def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any, executionContext: ExecutionContext): PinstId = {
     //TODO-rk: confirm few changes done here in fixing the merge conflicts
-    val pinstId = super.handleMsg(myDID, theirDID, threadId, protoRef, msg)
+    val pinstId = super.handleMsg(myDID, theirDID, threadId, protoRef, msg, executionContext)
     inbox.process()
     pinstId
   }

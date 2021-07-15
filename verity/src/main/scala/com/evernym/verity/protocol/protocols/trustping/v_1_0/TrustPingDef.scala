@@ -6,6 +6,8 @@ import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
 
+import scala.concurrent.ExecutionContext
+
 sealed trait Role
 
 object Role {
@@ -41,7 +43,10 @@ object TrustPingDefinition extends ProtocolDefinition[TrustPingProtocol, Role, M
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p.paramValueRequired(SELF_ID), p.paramValueRequired(OTHER_ID))
 
-  override def create(context: ProtocolContextApi[TrustPingProtocol, Role, Msg, Event, State, String]):
+  override def create(
+                       context: ProtocolContextApi[TrustPingProtocol, Role, Msg, Event, State, String],
+                       executionContext: ExecutionContext
+                     ):
   TrustPingProtocol = {
     new TrustPingProtocol()(context)
   }

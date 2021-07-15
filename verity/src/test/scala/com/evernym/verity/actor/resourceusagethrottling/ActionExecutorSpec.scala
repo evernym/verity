@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, UsageViolationActionExecutor, ViolatedRule}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
@@ -94,4 +95,7 @@ class ActionExecutorSpec
       entityId, RESOURCE_TYPE_MESSAGE, resourceNameGetMsgs, None)
     ViolatedRule(entityId, resourceNameGetMsgs, rulePath, 300, bucketRule, 5)
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -11,6 +11,8 @@ import com.evernym.verity.protocol.engine.{MsgName, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 import com.evernym.verity.util.Util.getNewActorId
 
+import scala.concurrent.ExecutionContext
+
 object AgentProvisioningMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
   override val name: MsgFamilyName = MSG_FAMILY_AGENT_PROVISIONING
@@ -61,7 +63,10 @@ object AgentProvisioningProtoDef
     }
   }
 
-  override def create(context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String]): Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
+  override def create(
+                       context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String],
+                       executionContext: ExecutionContext
+                     ): Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
     new AgentProvisioningProtocol(context)
 
   override def initialState: State = State.Uninitialized()

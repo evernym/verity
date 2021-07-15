@@ -1,9 +1,11 @@
 package com.evernym.verity.actor.agent.agency
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.wallet.PackedMsg
 
+import scala.concurrent.ExecutionContext
 class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
 
   agencyAgentSpec()
@@ -70,4 +72,13 @@ class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
     }
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

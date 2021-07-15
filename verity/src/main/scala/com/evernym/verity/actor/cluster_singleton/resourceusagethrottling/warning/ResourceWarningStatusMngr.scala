@@ -19,11 +19,14 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.{getActorRefFromSelection, strToBoolean}
 
 import java.time.ZonedDateTime
+import scala.concurrent.ExecutionContext
 
-class ResourceWarningStatusMngr(val aac: AgentActorContext)
+class ResourceWarningStatusMngr(val aac: AgentActorContext, executionContext: ExecutionContext)
   extends SingletonChildrenPersistentActor
     with ResourceWarningStatusMngrCommon
     with ResourceUsageCommon {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case wu: WarnCaller               => handleWarnCaller(wu)
@@ -263,6 +266,6 @@ case class UsageWarningStatusChunk(usageWarningStatus: Map[EntityId, EntityWarni
 
 object ResourceWarningStatusMngr {
   val name: String = RESOURCE_WARNING_STATUS_MNGR
-  def props(agentActorContext: AgentActorContext): Props =
-    Props(new ResourceWarningStatusMngr(agentActorContext))
+  def props(agentActorContext: AgentActorContext, executionContext: ExecutionContext): Props =
+    Props(new ResourceWarningStatusMngr(agentActorContext, executionContext))
 }

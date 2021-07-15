@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.container.actor
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -43,7 +42,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.util2.ActorResponse
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 /**
  *
@@ -63,7 +62,8 @@ class ActorProtocolContainer[
   I]
 (
   val agentActorContext: AgentActorContext,
-  val definition: PD
+  val definition: PD,
+  val executionContext: ExecutionContext
 )
   extends ProtocolContainer[P,R,M,E,S,I]
     with HasLegacyProtocolContainerServices[M,E,I]
@@ -74,6 +74,8 @@ class ActorProtocolContainer[
     with HasWallet
     with ProtocolSnapshotter[S]
     with HasLogger {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -128,7 +130,8 @@ class ActorProtocolContainer[
               appConfig,
               entityType,
               fromPinstId,
-              self
+              self,
+              executionContext
             ),
             s"ExtractEventsActor-${UUID.randomUUID().toString}"
           )
@@ -243,7 +246,7 @@ class ActorProtocolContainer[
   lazy val driver: Option[Driver] = {
     val parameter = ActorDriverGenParam(context.system, appConfig, agentActorContext.protocolRegistry,
       agentActorContext.generalCache, agentActorContext.agentMsgRouter, msgForwarder)
-    agentActorContext.protocolRegistry.generateDriver(definition, parameter)
+    agentActorContext.protocolRegistry.generateDriver(definition, parameter, futureExecutionContext)
   }
 
   val sendsMsgs = new MsgSender
@@ -267,7 +270,9 @@ class ActorProtocolContainer[
       )(
         agentActorContext.appConfig,
         agentActorContext.smsSvc,
-        agentActorContext.msgSendingSvc)
+        agentActorContext.msgSendingSvc,
+        futureExecutionContext
+      )
     }
   }
 
@@ -323,7 +328,7 @@ class ActorProtocolContainer[
   override lazy val urlShortening =
     new UrlShorteningAccessController(
       grantedAccessRights,
-      new UrlShorteningAPI()
+      new UrlShorteningAPI(executionContext)
     )
 
   override lazy val segmentStore =

@@ -6,6 +6,8 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.coinflip.TypeState
 
+import scala.concurrent.ExecutionContext
+
 object SimpleCountMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = EVERNYM_QUALIFIER
   override val name: MsgFamilyName = "SimpleCount"
@@ -30,7 +32,7 @@ object SimpleCountDefinition extends ProtocolDefinition[SimpleCount, Role, Msg, 
     case m: Msg =>
   }
 
-  override def create(context: ProtocolContextApi[SimpleCount, Role, Msg, Event, State, String]):
+  override def create(context: ProtocolContextApi[SimpleCount, Role, Msg, Event, State, String], executionContext: ExecutionContext):
   Protocol[SimpleCount, Role, Msg, Event, State, String] =
     new SimpleCount(context)
 

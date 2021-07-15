@@ -1,11 +1,16 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.NewKeyCreated
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.util.Success
 
 class IssuerSetupSpec
@@ -65,4 +70,9 @@ class IssuerSetupSpec
     }
 
   }
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

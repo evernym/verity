@@ -7,11 +7,13 @@ import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, LegacyConnectingSignal, NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint, StatusReport}
 
+import scala.concurrent.ExecutionContext
+
 /**
  * this is used for legacy connecting 0.5 and 0.6 protocol
  * @param cp: an ActorDriverConstructionParameter
  */
-class ConnectingDriver (cp: ActorDriverGenParam) extends ActorDriver(cp) {
+class ConnectingDriver (cp: ActorDriverGenParam, ec: ExecutionContext) extends ActorDriver(cp, ec) {
   /**
     * Takes a SignalEnvelope and returns an optional Control message.
     *

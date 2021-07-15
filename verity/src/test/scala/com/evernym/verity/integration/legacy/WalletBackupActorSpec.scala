@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.testkit.AkkaTestBasic
+import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -19,20 +19,23 @@ import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.agent.{MockEdgeAgent, MockEnvUtil}
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.typesafe.config.Config
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 class WalletBackupActorSpec
   extends UserAgentSpecScaffolding {
 
-  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
-  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent)
+  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureWalletExecutionContext)
 
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
@@ -218,6 +221,18 @@ class WalletBackupActorSpec
     mockEdgeAgent.v_0_5_resp.handleGetMsgsResp(pm)
   }
 
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class CloudAgentDetail(did: DID, verKey: VerKey) {
@@ -225,7 +240,7 @@ case class CloudAgentDetail(did: DID, verKey: VerKey) {
 }
 
 
-class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent) extends DeadDropSpecUtil {
+class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, walletExecutionContext: ExecutionContext) extends DeadDropSpecUtil {
 
   override def appConfig: AppConfig = mockEdgeAgent.appConfig
 
@@ -241,5 +256,9 @@ class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent) extends DeadDropSpecUti
 
   def setRecoveredCloudAddress(cad: CloudAgentDetail) = recoveredCloudAddress = cad
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 }
 

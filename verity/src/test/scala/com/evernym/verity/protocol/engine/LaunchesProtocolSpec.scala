@@ -5,6 +5,8 @@ import com.evernym.verity.protocol.engine.PinstIdResolution.V0_2
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
 import com.evernym.verity.testkit.BasicSpec
 
+import scala.concurrent.ExecutionContext
+
 
 class LaunchesProtocolSpec extends BasicSpec {
 
@@ -43,7 +45,7 @@ class LaunchesProtocolSpec extends BasicSpec {
   class TestDef(familyName: String) extends ProtocolDefinition[String, String, String, String, String, String] {
     override def supportedMsgs: ProtoReceive = { case _ => }
 
-    override def create(context: ProtocolContextApi[String, String, String, String, String, String]):
+    override def create(context: ProtocolContextApi[String, String, String, String, String, String], executionContext: ExecutionContext):
       Protocol[String, String, String, String, String, String] = ???
 
     override def initialState: String = ???

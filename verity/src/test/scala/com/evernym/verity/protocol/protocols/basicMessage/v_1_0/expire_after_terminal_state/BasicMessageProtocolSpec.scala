@@ -15,8 +15,12 @@ import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.{BasicMessageDef
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
 
@@ -26,7 +30,11 @@ class BasicMessageSpec
 
   import TestingVars._
 
-  lazy val config: AppConfig = new TestAppConfig
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   private implicit def EnhancedScenario(s: Scenario) = new {
     val alice: TestEnvir = s(PARTICIPATOR)
@@ -173,7 +181,7 @@ class BasicMessageSpec
   override val containerNames: Set[ContainerName] = Set(TestingVars.PARTICIPATOR, TestingVars.PARTICIPATOR)
 }
 
-object TestingVars extends CommonSpecUtil {
+object TestingVars {
   val PARTICIPATOR = "participator"
   val MESSAGE_CONTENT = "Hello, World!"
   val LOCALIZATION = l10n(locale = Some("en"))

@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
@@ -25,18 +24,22 @@ import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 
 //noinspection ScalaDeprecation
-class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String])
+class ConnectingProtocol(
+                          val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String],
+                          executionContext: ExecutionContext)
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
       with HasAppConfig
       with AgentMsgSender
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   lazy val myPairwiseDIDReq: DID = ctx.getState.myPairwiseDIDReq
   lazy val myPairwiseVerKeyReq: VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey

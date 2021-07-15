@@ -10,6 +10,8 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.On
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.OptionUtil.blankOption
 
+import scala.concurrent.ExecutionContext
+
 object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, Event, State, String] {
 
   override val roles: Set[Role] = Set(Role.Prover, Role.Verifier)
@@ -17,8 +19,10 @@ object PresentProofDef extends ProtocolDefinition[PresentProof, Role, ProtoMsg, 
 
   override def segmentStoreStrategy: Option[SegmentStoreStrategy] = Some(OneToOne)
 
-  override def create(context: ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String]):
-  Protocol[PresentProof, Role, ProtoMsg, Event, State, String] = {
+  override def create(
+                       context: ProtocolContextApi[PresentProof, Role, ProtoMsg, Event, State, String],
+                       executionContext: ExecutionContext
+                     ): Protocol[PresentProof, Role, ProtoMsg, Event, State, String] = {
     new PresentProof()(context)
   }
 

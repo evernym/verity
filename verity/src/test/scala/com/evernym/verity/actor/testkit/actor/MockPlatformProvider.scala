@@ -3,6 +3,7 @@ package com.evernym.verity.actor.testkit.actor
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.appStateManager.{SysServiceNotifier, SysShutdownProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension, TestMetricsBackend}
@@ -12,8 +13,8 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 
 
-class MockPlatform(agentActorContext: AgentActorContext)
-  extends Platform(agentActorContext, MockPlatformServices)
+class MockPlatform(agentActorContext: AgentActorContext, executionContextProvider: ExecutionContextProvider)
+  extends Platform(agentActorContext, MockPlatformServices, executionContextProvider)
 
 object MockPlatformServices extends PlatformServices {
   override def sysServiceNotifier: SysServiceNotifier = MockNotifierService
@@ -38,15 +39,17 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   implicit val system: ActorSystem
 
+  def executionContextProvider: ExecutionContextProvider
+
   def localAgencyEndpoint: String = "localhost:9000"
 
   def actorTypeToRegions: Map[Int, ActorRef] = Map.empty
   def mockAgentMsgRouterProvider(): Option[MockAgentMsgRouter] = {
-    Option(new MockAgentMsgRouter(actorTypeToRegions)(appConfig, system))
+    Option(new MockAgentMsgRouter(executionContextProvider.futureExecutionContext, actorTypeToRegions)(appConfig, system))
   }
 
   lazy val platform : Platform = {
-    val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider))
+    val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider), executionContextProvider)
     MetricsWriterExtension(plt.actorSystem).updateMetricsBackend(testMetricsBackend)
     plt
   }
@@ -72,7 +75,12 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
   lazy val itemContainerRegionActor: ActorRef = platform.itemContainerRegion
 
   lazy val mockAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam(localAgencyEndpoint), platform.agentActorContext.appConfig)
+    new MockEdgeAgent(
+      UrlParam(localAgencyEndpoint),
+      platform.agentActorContext.appConfig,
+      executionContextProvider.futureExecutionContext,
+      executionContextProvider.walletFutureExecutionContext
+    )
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
     platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalBinaryMsgsSent

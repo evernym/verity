@@ -8,21 +8,27 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.testkit.util.LedgerUtil
 
+import scala.concurrent.ExecutionContext
+
 trait LedgerClient extends HasAppConfig {
   import LedgerClient._
 
-  def createLedgerUtil(configOpt: Option[AppConfig]=None,
+  def createLedgerUtil(ec: ExecutionContext,
+                       wec: ExecutionContext,
+                       configOpt: Option[AppConfig]=None,
                        submitterDID: Option[DID]=None,
                        submitterKeySeed: Option[String]=None,
                        submitterRole: String = "STEWARD",
                        taa: Option[TransactionAuthorAgreement]=None): LedgerUtil = {
     val confToUse = configOpt.getOrElse(appConfig)
-    buildLedgerUtil(confToUse, submitterDID, submitterKeySeed, submitterRole, taa)
+    buildLedgerUtil(confToUse, ec, wec, submitterDID, submitterKeySeed, submitterRole, taa)
   }
 }
 
 object LedgerClient {
   def buildLedgerUtil(config: AppConfig,
+                      ec: ExecutionContext,
+                      wec: ExecutionContext,
                       submitterDID: Option[DID]=None,
                       submitterKeySeed: Option[String]=None,
                       submitterRole: String = "STEWARD",
@@ -31,8 +37,8 @@ object LedgerClient {
 
     val poolConfigName: Option[String] = Some(UUID.randomUUID().toString)
     (submitterDID, submitterKeySeed, submitterRole) match {
-      case (Some(tDID), Some(tSeed), role)  => new LedgerUtil(config, poolConfigName, tDID, tSeed, role, taa, genesisTxnPath = genesisTxnPath)
-      case _                                => new LedgerUtil(config, poolConfigName, taa = taa, genesisTxnPath = genesisTxnPath)
+      case (Some(tDID), Some(tSeed), role)  => new LedgerUtil(config, poolConfigName, ec, wec, tDID, tSeed, role, taa, genesisTxnPath = genesisTxnPath)
+      case _                                => new LedgerUtil(config, poolConfigName, ec, wec, taa = taa, genesisTxnPath = genesisTxnPath)
     }
   }
 }

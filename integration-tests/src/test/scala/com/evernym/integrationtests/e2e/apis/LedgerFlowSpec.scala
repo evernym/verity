@@ -21,8 +21,10 @@ import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
-
 import java.util.UUID
+
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
+
 import scala.collection.JavaConverters._
 
 @Integration
@@ -56,6 +58,7 @@ class LedgerFlowSpec extends BasicSpec
     val pc = new IndyLedgerPoolConnManager(
       ActorSystemVanilla("test"),
       appConfig,
+      TestExecutionContextProvider.ecp.futureExecutionContext,
       genesisFile = Some(testEnv.ledgerConfig.genesisFilePath)
     )
     pc.open()
@@ -66,6 +69,8 @@ class LedgerFlowSpec extends BasicSpec
     val taa = if(enabled) ConfigUtil.findTAAConfig(appConfig, version) else None
     buildLedgerUtil(
       appConfig,
+      TestExecutionContextProvider.ecp.futureExecutionContext,
+      TestExecutionContextProvider.ecp.walletFutureExecutionContext,
       taa = taa,
       genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
     )

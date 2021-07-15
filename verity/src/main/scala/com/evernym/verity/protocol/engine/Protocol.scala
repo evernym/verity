@@ -8,6 +8,7 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 
+import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
 import scala.util.matching.Regex
 
@@ -49,7 +50,7 @@ trait ProtocolDefinition[P,R,M,E,S,I] extends SegmentedStateProtoDef[S] {
 
   val requiredAccess: Set[AccessRight] = Set.empty
 
-  def create(context: ProtocolContextApi[P,R,M,E,S,I]): Protocol[P,R,M,E,S,I]
+  def create(context: ProtocolContextApi[P,R,M,E,S,I], executionContext: ExecutionContext): Protocol[P,R,M,E,S,I]
 
   def initialState: S
 

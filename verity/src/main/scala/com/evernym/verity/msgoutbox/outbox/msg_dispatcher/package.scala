@@ -1,8 +1,9 @@
 package com.evernym.verity.msgoutbox.outbox
 
-import akka.actor.typed.ActorRef
-import com.evernym.verity.msgoutbox.outbox.msg_packager.Packagers
+import akka.actor.typed.{ActorRef, Behavior}
+import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
+import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter
 import com.evernym.verity.msgoutbox.{ComMethodId, MsgId, RecipPackaging, RoutePackaging, VerKey, WalletId}
 
 import scala.concurrent.duration.FiniteDuration
@@ -37,7 +38,9 @@ package object msg_dispatcher {
                                senderVerKey: VerKey,
                                recipPackaging: Option[RecipPackaging],
                                routePackaging: Option[RoutePackaging],
-                               packagers: Packagers)
+                               msgPackagers: MsgPackagers)
 
   case class WebhookParam(url: String)
+
+  case class MsgTransportParam(httpTransporter: Behavior[HttpTransporter.Cmd])
 }

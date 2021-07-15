@@ -13,7 +13,7 @@ trait MockPushNotifListener {
   this: BasicSpecBase with Eventually =>
 
   def withExpectNewPushNotif[T](atAddress: String, f : => T): (T, Option[PushNotifPayload]) = {
-    val mockComMethod = ComMethodDetail(COM_METHOD_TYPE_PUSH, atAddress)
+    val mockComMethod = ComMethodDetail(COM_METHOD_TYPE_PUSH, atAddress, hasAuthEnabled = false)
     val actualAddress = PusherUtil.extractServiceProviderAndRegId(mockComMethod, appConfig)._2
     val (currentCount, _) = getLatestPushNotifPayload(actualAddress)
     val result = f

@@ -2,7 +2,6 @@ package com.evernym.verity.msgoutbox.outbox
 
 import com.evernym.verity.msgoutbox.outbox.Events.{MsgAdded, MsgRemoved, MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.msgoutbox.outbox.States.Initialized
 import scalapb.GeneratedMessageCompanion
 
 //should only contain event mapping for Outbox actor

@@ -11,10 +11,10 @@ import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
-import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
+import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.integration.base.PortProvider
-import com.evernym.verity.integration.base.sdk_provider.msg_listener.{MsgListenerBase, PackedMsgListener, PlainMsgListener}
+import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.{MsgFamily, VerKey}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
@@ -31,9 +31,9 @@ import java.util.UUID
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
-abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
+abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends SdkBase(param) {
 
-  def registerWebhook(): ComMethodUpdated
+  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
 
@@ -93,8 +93,10 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
     expectMsgOnWebhook[ConfigResult]().msg
   }
 
-  protected def registerWebhookBase(packaging: Option[ComMethodPackaging]): ComMethodUpdated = {
-    val updateComMethod = UpdateComMethodReqMsg(ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.endpoint, packaging))
+  protected def registerWebhookBase(packaging: Option[ComMethodPackaging],
+                                    authentication: Option[ComMethodAuthentication]): ComMethodUpdated = {
+    val updateComMethod = UpdateComMethodReqMsg(
+      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authentication))
     val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
     val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
     val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
@@ -106,8 +108,25 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
     jsonMsgParam.forRelDID(relationship.verityAgentDIDPair.get.DID)
   }
 
+  def defaultAuthentication: Option[ComMethodAuthentication] = oauthParam.map { _ =>
+    ComMethodAuthentication(
+      "OAuth2",
+      "v1",
+      Map(
+        "url" -> msgListener.oAuthAccessTokenEndpoint,
+        "grant_type"    -> "client_credentials",
+        "client_id"     -> "client_id",           //dummy data
+        "client_secret" -> "client_secret"    //dummy data
+      )
+    )
+  }
+
   def msgListener: MsgListenerBase[_]
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
+
+  def resetPlainMsgsCounter: ReceivedMsgCounter = msgListener.resetPlainMsgsCounter
+  def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
+  def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
 }
 
 /**
@@ -115,11 +134,11 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
  *
  * @param param sdk parameters
  */
-abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
+abstract class IssuerVerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends VeritySdkBase(param, oauthParam) {
 
-  def registerWebhook(): ComMethodUpdated = {
+  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
-    registerWebhookBase(packaging)
+    registerWebhookBase(packaging, authentication orElse defaultAuthentication)
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
@@ -178,23 +197,23 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
     unpackMsg(msg)
   }
 
-  val msgListener: PackedMsgListener = {
+  val msgListener: MsgListenerBase[Array[Byte]] = {
     val port = PortProvider.generateUnusedPort(7000)
-    new PackedMsgListener(port)(system)
+    new PackedMsgListener(port, oauthParam.isDefined, oauthParam.map(_.tokenExpiresDuration))(system)
   }
 
 }
 
-case class IssuerSdk(param: SdkParam) extends IssuerVerifierSdk(param)
+case class IssuerSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends IssuerVerifierSdk(param, oauthParam)
 
-case class VerifierSdk(param: SdkParam) extends IssuerVerifierSdk(param)
+case class VerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends IssuerVerifierSdk(param, oauthParam)
 
-case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
+case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends VeritySdkBase(param, oauthParam) {
   import scala.collection.immutable
 
-  def registerWebhook(): ComMethodUpdated = {
+  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     val packaging = Option(ComMethodPackaging(MPF_PLAIN.toString, None))
-    registerWebhookBase(packaging)
+    registerWebhookBase(packaging, authentication orElse defaultAuthentication)
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
@@ -313,9 +332,9 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
     ReceivedMsgParam(msg)
   }
 
-  val msgListener: PlainMsgListener = {
+  val msgListener: MsgListenerBase[String] = {
     val port = PortProvider.generateUnusedPort(7000)
-    new PlainMsgListener(port)(system)
+    new JsonMsgListener(port, oauthParam.isDefined, oauthParam.map(_.tokenExpiresDuration))(system)
   }
 }
 

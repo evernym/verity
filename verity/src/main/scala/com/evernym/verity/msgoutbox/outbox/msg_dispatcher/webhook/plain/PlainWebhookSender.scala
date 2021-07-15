@@ -13,8 +13,11 @@ import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
 
 import scala.concurrent.duration.DurationInt
+import scala.collection.immutable
 
-//responsible to send given message to webhook,
+
+//responsible to
+// send given message to webhook,
 // retry based on given parameter,
 // report back each delivery attempt status to outbox and
 // stop when message is delivered or can't be delivered after attempting given retries
@@ -24,7 +27,7 @@ object PlainWebhookSender {
   object Commands {
     case object Send extends Cmd
     trait PackedMsg extends Cmd
-    case class NoPackedMsg(msg: String) extends PackedMsg
+    case class UnPackedMsg(msg: String) extends PackedMsg
     case class DIDCommV1PackedMsg(msg: Array[Byte]) extends PackedMsg
 
     case object Ack extends Cmd
@@ -44,8 +47,8 @@ object PlainWebhookSender {
         val packagerRef = actorContext.spawnAnonymous(packager)
         val packagerReplyAdapter = actorContext.messageAdapter { reply: Packager.Reply =>
           reply match {
-            case Packager.Replies.NoPackedMsg(msg)        => Commands.NoPackedMsg(msg)
-            case Packager.Replies.DIDCommV1PackedMsg(msg)  => Commands.DIDCommV1PackedMsg(msg)
+            case Packager.Replies.UnPackedMsg(msg)        => Commands.UnPackedMsg(msg)
+            case Packager.Replies.DIDCommV1PackedMsg(msg) => Commands.DIDCommV1PackedMsg(msg)
           }
         }
         packagerRef ! Packager.Commands.PackMsg(dispatchParam.msgId, packagerReplyAdapter)
@@ -81,21 +84,21 @@ object PlainWebhookSender {
     case Commands.Send =>
 
       packedMsg match {
-        case Commands.NoPackedMsg(msg) =>
+        case Commands.UnPackedMsg(msg) =>
           sendMsgParam.httpTransporterRef ! HttpTransporter.Commands.SendJson(
-            msg, sendMsgParam.webhookParam.url, sendMsgParam.httpTransporterReplyAdapter)
+            msg, sendMsgParam.webhookParam.url, immutable.Seq.empty, sendMsgParam.httpTransporterReplyAdapter)
           Behaviors.same
 
         case Commands.DIDCommV1PackedMsg(msg) =>
           sendMsgParam.httpTransporterRef ! HttpTransporter.Commands.SendBinary(
-            msg, sendMsgParam.webhookParam.url, sendMsgParam.httpTransporterReplyAdapter)
+            msg, sendMsgParam.webhookParam.url, immutable.Seq.empty, sendMsgParam.httpTransporterReplyAdapter)
           Behaviors.same
       }
 
     case HttpTransporterReplyAdapter(reply: SendResponse) =>
       ResponseHandler.handleResp[Cmd](sendMsgParam.dispatchParam, reply.resp, Commands.Send)(timer) match {
         case Some(retryParam) => sendingMsg(packedMsg, sendMsgParam.withRetryParam(retryParam))
-        case None             => sendingFinished
+        case None             => msgSendingFinished
       }
 
     case Commands.TimedOut =>
@@ -108,7 +111,7 @@ object PlainWebhookSender {
           isAnyRetryAttemptsLeft = false,
           Status.UNHANDLED
         )
-        sendingFinished
+        msgSendingFinished
       } else {
         actorContext.self ! Commands.Send
         sendingMsg(
@@ -118,9 +121,9 @@ object PlainWebhookSender {
       }
   }
 
-  private def sendingFinished: Behavior[Cmd] = Behaviors.receiveMessage {
+  private def msgSendingFinished: Behavior[Cmd] = Behaviors.receiveMessage {
     case Commands.Ack       => Behaviors.stopped
-    case Commands.TimedOut      => Behaviors.stopped
+    case Commands.TimedOut  => Behaviors.stopped
   }
 }
 

@@ -41,23 +41,36 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
 import scala.reflect.ClassTag
 import scala.util.Try
 
 
 trait SdkProvider { this: BasicSpec =>
 
-  def setupIssuerSdk(verityEnv: VerityEnv): IssuerSdk =
-    IssuerSdk(buildSdkParam(verityEnv))
-  def setupIssuerRestSdk(verityEnv: VerityEnv): IssuerRestSDK =
-    IssuerRestSDK(buildSdkParam(verityEnv))
-  def setupVerifierSdk(verityEnv: VerityEnv): VerifierSdk =
-    VerifierSdk(buildSdkParam(verityEnv))
-  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor))
-  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor)
+  def setupIssuerSdk(verityEnv: VerityEnv, oauthParam: Option[OAuthParam]=None): IssuerSdk =
+    IssuerSdk(buildSdkParam(verityEnv), oauthParam)
+  def setupIssuerRestSdk(verityEnv: VerityEnv, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
+    IssuerRestSDK(buildSdkParam(verityEnv), oauthParam)
+  def setupVerifierSdk(verityEnv: VerityEnv, oauthParam: Option[OAuthParam]=None): VerifierSdk =
+    VerifierSdk(buildSdkParam(verityEnv), oauthParam)
+
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), None)
+
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, None)
+
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     oauthParam: OAuthParam): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), None, Option(oauthParam))
+
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                     oauthParam: Option[OAuthParam]): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, oauthParam)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
@@ -67,7 +80,8 @@ trait SdkProvider { this: BasicSpec =>
     sdk.fetchAgencyKey()
     sdk.provisionVerityEdgeAgent()
     sdk.registerWebhook()
-    sdk.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
+    sdk.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"),
+      ConfigDetail("logoUrl", "issuer-logo-url"))))
   }
 
   def provisionCloudAgent(holderSDK: HolderSdk): Unit = {
@@ -535,3 +549,5 @@ object MsgFamilyHelper {
 }
 
 case class TheirServiceDetail(verKey: VerKey, routingKeys: Vector[VerKey], serviceEndpoint: ServiceEndpoint)
+
+case class OAuthParam(tokenExpiresDuration: FiniteDuration)

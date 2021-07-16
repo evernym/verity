@@ -1,11 +1,9 @@
 package com.evernym.verity.msgoutbox.latest
 
-import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.testkit.BasicSpec
 
 class OutboxRouterSpec
-  extends BehaviourSpecBase
-    with BasicSpec {
+  extends BasicSpec {
 
   "OutboxRouter" - {
 

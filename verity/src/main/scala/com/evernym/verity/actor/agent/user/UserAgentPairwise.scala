@@ -61,6 +61,7 @@ import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.msgoutbox
 import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtension, MetricsWriter}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.util2.{Exceptions, Status}
@@ -209,33 +210,33 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     case _ =>
   }
 
-//  def sendOutboxParam(destId: DestId): Unit = {
-//    if (destId == "default") {
-//      theirRoutingDetail match {
-//        case Some(Right(rd: RoutingDetail)) =>
-//          val recipPackaging = com.evernym.verity.msgoutbox.RecipPackaging(
-//            MPF_INDY_PACK.toString,
-//            state.theirDidAuthKey.map(_.verKey).toSeq
-//          )
-//          val comMethods = Map(
-//            "0" -> com.evernym.verity.msgoutbox.ComMethod(
-//                COM_METHOD_TYPE_HTTP_ENDPOINT,
-//                rd.endpoint,
-//                Option(recipPackaging),
-//                Option(RoutePackaging(
-//                  MPF_INDY_PACK.toString,
-//                  Seq(rd.verKey),
-//                  rd.routingKeys))
-//              )
-//          )
-//          sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
-//        case _ =>
-//          throw new RuntimeException("no pairwise connection found")
-//      }
-//    } else {
-//      throw new RuntimeException("destId not supported: " + destId)
-//    }
-//  }
+  def sendOutboxParam(destId: DestId): Unit = {
+    if (destId == "default") {
+      theirRoutingDetail match {
+        case Some(Right(rd: RoutingDetail)) =>
+          val recipPackaging = msgoutbox.RecipPackaging(
+            MPF_INDY_PACK.toString,
+            state.theirDidAuthKey.map(_.verKey).toSeq
+          )
+          val comMethods = Map(
+            "0" -> msgoutbox.ComMethod(
+                COM_METHOD_TYPE_HTTP_ENDPOINT,
+                rd.endpoint,
+                Option(recipPackaging),
+                Option(RoutePackaging(
+                  MPF_INDY_PACK.toString,
+                  Seq(rd.verKey),
+                  rd.routingKeys))
+              )
+          )
+          sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+        case _ =>
+          throw new RuntimeException("no pairwise connection found")
+      }
+    } else {
+      throw new RuntimeException("destId not supported: " + destId)
+    }
+  }
 
   def encParamFromThisAgentToOwner: EncryptParam =
     encParamBuilder

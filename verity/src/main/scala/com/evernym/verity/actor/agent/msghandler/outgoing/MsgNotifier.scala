@@ -1,16 +1,20 @@
 package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.ActorRef
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.pattern.ask
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.MsgPackFormat._
+import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Commands.{SendBinaryMsg, SendJsonMsg}
+import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Replies.SendMsgResp
 import com.evernym.verity.actor.agent.user._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, MsgEvent}
-import com.evernym.verity.actor.persistence.AgentPersistentActor
+import com.evernym.verity.actor.persistence.{AgentPersistentActor, HasActorResponseTimeout}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
@@ -30,6 +34,7 @@ import com.evernym.verity.util.StrUtil.camelToKebab
 import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 
 import scala.concurrent.Future
 
@@ -57,7 +62,8 @@ trait MsgNotifier {
 
 trait MsgNotifierForStoredMsgs
   extends MsgNotifier
-    with PushNotifMsgBuilder {
+    with PushNotifMsgBuilder
+    with HasActorResponseTimeout {
 
   this: AgentPersistentActor with MsgAndDeliveryHandler with HasMsgProgressTracker with HasLogger =>
 
@@ -182,10 +188,11 @@ trait MsgNotifierForStoredMsgs
           logger.debug(s"about to send message to endpoint: " + hcm)
           val fut = pw.metadata.map(_.msgPackFormat) match {
             case None | Some(MPF_INDY_PACK | MPF_MSG_PACK) =>
-              msgSendingSvc.sendBinaryMsg(pw.msg)(UrlParam(hcm.value))
+              sendBinaryMsg(pw.msg, hcm.value, withAuthHeader = hcm.hasAuthEnabled)
             case Some(MPF_PLAIN) =>
-              msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
-            case Some(Unrecognized(_)) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
+              sendJsonMsg(new String(pw.msg), hcm.value, withAuthHeader = hcm.hasAuthEnabled)
+            case Some(Unrecognized(_)) =>
+              throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
           recordDeliveryState(notifDetail.uid, notifDetail.msgType, s"registered endpoint legacy: ${hcm.value}", fut)
           logger.debug("message sent to endpoint (legacy): " + hcm)
@@ -205,7 +212,7 @@ trait MsgNotifierForStoredMsgs
           val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
           val fut = pkgType match {
             case MPF_PLAIN =>
-              msgSendingSvc.sendJsonMsg(new String(pw.msg))(UrlParam(hcm.value))
+              sendJsonMsg(new String(pw.msg), hcm.value, hcm.hasAuthEnabled)
             case MPF_INDY_PACK | MPF_MSG_PACK =>
               val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
               // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
@@ -214,7 +221,7 @@ trait MsgNotifierForStoredMsgs
                 case _ => defaultSelfRecipKeys
               }
               msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).flatMap { packedMsg =>
-                msgSendingSvc.sendBinaryMsg(packedMsg.msg)(UrlParam(hcm.value))
+                sendBinaryMsg(packedMsg.msg, hcm.value, hcm.hasAuthEnabled)
               }
             case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
@@ -384,8 +391,29 @@ trait MsgNotifierForStoredMsgs
     }
   }
 
+  import akka.actor.typed.scaladsl.adapter._
+  implicit val typedSystem: ActorSystem[_] = agentActorContext.system.toTyped
+
+  private def sendBinaryMsg(msg: Array[Byte], toUrl: String, withAuthHeader: Boolean)
+  : Future[Either[HandledErrorException, Any]] = {
+    newLegacyMsgSender.ask(ref => SendBinaryMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
+      .mapTo[SendMsgResp]
+      .map(_.resp)
+  }
+
+  private def sendJsonMsg(msg: String, toUrl: String, withAuthHeader: Boolean)
+  : Future[Either[HandledErrorException, Any]] = {
+    newLegacyMsgSender.ask(ref => SendJsonMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
+      .mapTo[SendMsgResp]
+      .map(_.resp)
+  }
+
+  private def newLegacyMsgSender: akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] =
+    context.spawnAnonymous(LegacyMsgSender(selfRelDID, agentMsgRouter, msgSendingSvc))
+
   private def updatePushNotificationDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit =
     self ! umds
+
 }
 
 /**

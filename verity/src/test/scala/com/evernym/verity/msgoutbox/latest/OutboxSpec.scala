@@ -10,7 +10,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.MsgDeliveryStatus
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.outbox.Outbox.{Commands, Replies, TypeKey}
-import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{AddMsg, GetDeliveryStatus, GetOutboxParam}
+import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{AddMsg, GetDeliveryStatus, GetOutboxParam, UpdateOutboxParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
@@ -151,6 +151,38 @@ class OutboxSpec
         }
       }
     }
+
+    "when received UpdateOutboxParam" - {
+      "should update its details" in {
+        outboxRegion ! ShardingEnvelope(outboxId,
+          UpdateOutboxParam(testWallet.walletId, myKey1.verKey, Map("1" -> oAuthIndyWebhookComMethod))
+        )
+      }
+    }
+
+    "when sent AddMsg(msg, ...) few times" - {
+      "should be successful" in {
+        (1 to 3).foreach { _ =>
+          val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
+          val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
+          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, probe.ref))
+          probe.expectMessage(StatusReply.success(Replies.MsgAdded))
+          checkRetention(expectedSnapshots = 2, expectedEvents = 1)
+        }
+      }
+    }
+
+    "when periodically checking outbox status" - {
+      "eventually those messages should disappear" in {
+        val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
+        eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+          outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(probe.ref))
+          val messages = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+          messages.size shouldBe 0
+          checkRetention(expectedSnapshots = 2, expectedEvents = 1)
+        }
+      }
+    }
   }
 
   def checkRetention(expectedSnapshots: Int, expectedEvents: Int): Unit = {
@@ -170,8 +202,8 @@ class OutboxSpec
       |""".stripMargin
   }
 
-  lazy val outboxIdParam = OutboxIdParam("relDID-to-default")
   lazy val outboxId = outboxIdParam.outboxId
+  lazy val outboxIdParam = OutboxIdParam("relId-recipId-default")
   lazy val outboxPersistenceId = PersistenceId(TypeKey.name, outboxId).id
 
   lazy val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =
@@ -179,10 +211,11 @@ class OutboxSpec
       Outbox(
         entityContext,
         appConfig.config.withFallback(SNAPSHOT_CONFIG),
-        testRelResolverBehavior,
+        testAccessTokenRefreshers,
+        testRelResolver,
         testMsgStore,
-        testPackagers,
-        testTransports
+        testMsgPackagers,
+        testMsgTransports
       )
     })
 }

@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent
 
+import akka.actor.typed.Behavior
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -15,6 +16,8 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
 import com.evernym.verity.metrics.{MetricsWriterExtension, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
@@ -55,6 +58,13 @@ trait AgentActorContext extends ActorContext {
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig)
+
+  //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
+  val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
+    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] = Map(
+      OAUTH2_VERSION_1 -> OAuthAccessTokenRefresherImplV1()
+    )
+  }
 
   def createActorSystem(): ActorSystem = {
     ActorSystem("verity", appConfig.getLoadedConfig)

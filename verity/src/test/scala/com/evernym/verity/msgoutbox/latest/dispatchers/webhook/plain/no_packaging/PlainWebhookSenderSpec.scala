@@ -26,7 +26,7 @@ class PlainWebhookSenderSpec
   "PlainWebhookSender" - {
 
     "when tried to send message with no retry param" - {
-      "should respond accordingly" in {
+      "should be successful in first attempt" in {
         val probe = createTestProbe[Outbox.Cmd]()
         val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
         sendMsgToWebhookSender(
@@ -41,12 +41,12 @@ class PlainWebhookSenderSpec
           probe.ref
         )
         probe.expectMessageType[RecordSuccessfulAttempt]
-        probe.expectNoMessage() //not expecting any further messages
+        probe.expectNoMessage()
       }
     }
 
     "when sent DeliverMsg command with no retry parameter with one purposeful failure attempt" - {
-      "should respond appropriately" in {
+      "should attempt only once and that will be a failure attempt" in {
         val probe = createTestProbe[Outbox.Cmd]()
         val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
         sendMsgToWebhookSender(
@@ -61,12 +61,12 @@ class PlainWebhookSenderSpec
           probe.ref
         )
         probe.expectMessageType[RecordFailedAttempt]
-        probe.expectNoMessage() //not expecting any further messages
+        probe.expectNoMessage()
       }
     }
 
     "when sent DeliverMsg command with retry parameter" - {
-      "should respond appropriately" in {
+      "should be successful in first attempt" in {
         val probe = createTestProbe[Outbox.Cmd]()
         val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
         sendMsgToWebhookSender(
@@ -81,12 +81,12 @@ class PlainWebhookSenderSpec
           probe.ref
         )
         probe.expectMessageType[RecordSuccessfulAttempt]
-        probe.expectNoMessage() //not expecting any further messages
+        probe.expectNoMessage()
       }
     }
 
     "when sent DeliverMsg command with retry parameter with few purposeful failure attempts" - {
-      "should respond appropriately" in {
+      "should fail few times followed by a successful attempt" in {
         val probe = createTestProbe[Outbox.Cmd]()
         val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
         sendMsgToWebhookSender(
@@ -104,12 +104,12 @@ class PlainWebhookSenderSpec
         probe.expectMessageType[RecordFailedAttempt]
         probe.expectMessageType[RecordFailedAttempt]
         probe.expectMessageType[RecordSuccessfulAttempt]
-        probe.expectNoMessage() //not expecting any further messages
+        probe.expectNoMessage()
       }
     }
 
     "when sent DeliverMsg command with retry parameter with all purposeful failure attempts" - {
-      "should respond appropriately" in {
+      "should result into exhausting all retry attempts without any success" in {
         val probe = createTestProbe[Outbox.Cmd]()
         val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
         sendMsgToWebhookSender(
@@ -128,13 +128,13 @@ class PlainWebhookSenderSpec
         probe.expectMessageType[RecordFailedAttempt]
         probe.expectMessageType[RecordFailedAttempt]
         probe.expectMessageType[RecordFailedAttempt]
-        probe.expectNoMessage() //not expecting any further messages
+        probe.expectNoMessage()
       }
     }
   }
 
-  lazy val outboxIdParam = OutboxIdParam("relDID-to-default")
   lazy val outboxId = outboxIdParam.outboxId
+  lazy val outboxIdParam = OutboxIdParam("relId-recipId-default")
   lazy val outboxPersistenceId = PersistenceId(TypeKey.name, outboxId).id
 
   def sendMsgToWebhookSender(msgId: MsgId,
@@ -153,14 +153,14 @@ class PlainWebhookSenderSpec
       myKey1.verKey,
       comMethod.recipPackaging,
       comMethod.routePackaging,
-      testPackagers)
+      testMsgPackagers)
 
     val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam)
     val sender = PlainWebhookSender(
       dispatchParam,
       packager,
       WebhookParam(comMethod.value),
-      testTransports.httpTransporter
+      testMsgTransports.httpTransporter
     )
     spawn(sender)
   }

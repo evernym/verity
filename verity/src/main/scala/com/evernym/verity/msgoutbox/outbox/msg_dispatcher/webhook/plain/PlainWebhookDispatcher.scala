@@ -5,7 +5,7 @@ import akka.actor.typed.scaladsl.ActorContext
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.{Outbox, msg_packager}
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{DispatchParam, DispatcherType, MsgPackagingParam, MsgStoreParam, RetryParam, WebhookParam}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{DispatchParam, DispatcherType, MsgPackagingParam, MsgStoreParam, MsgTransportParam, RetryParam, WebhookParam}
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
 import com.typesafe.config.Config
 
@@ -69,6 +69,4 @@ class PlainWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
       initialInterval
     )
   }
-
-
 }

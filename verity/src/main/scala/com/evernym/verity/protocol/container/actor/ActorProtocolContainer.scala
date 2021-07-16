@@ -28,7 +28,7 @@ import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
-import com.evernym.verity.actor.typed.base.SendMsgToOutbox
+import com.evernym.verity.actor.typed.base.UserGuarding.Commands.SendMsgToOutbox
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.AgentJsonMsg
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
@@ -275,7 +275,7 @@ class ActorProtocolContainer[
 //        val retPolicy = RetentionPolicy(
 //          """{"expire-after-days":20 days,"expire-after-terminal-state":true}""",
 //          PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true))
-//        classicActor ! SendMsgToOutbox(pom.from, pom.to, agentMsg.jsonStr, agentMsg.msgType.toString, retPolicy)
+//        userGuardian ! SendMsgToOutbox(pom.from, pom.to, agentMsg.jsonStr, agentMsg.msgType.toString, retPolicy)
 //      }
     }
 
@@ -494,7 +494,7 @@ class ActorProtocolContainer[
 //    buildAgentMsg(msg, msgId, threadContextDetail.threadId, protoDef, mtf, updatedMsgOrders)
 //  }
 //
-//  lazy val classicActor: ActorRef = Util.getActorRefFromSelection("/user/classic", context.system)(appConfig)
+//  lazy val userGuardian: ActorRef = Util.getActorRefFromSelection("/user/guardian", context.system)(appConfig)
 //
 //  lazy val isVAS: Boolean =
 //    appConfig

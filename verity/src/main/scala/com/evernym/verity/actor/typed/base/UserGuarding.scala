@@ -15,6 +15,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_transporter.{HttpTransporter, Msg
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.router.OutboxRouter
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.engine.ParticipantId
 
 
@@ -36,6 +37,7 @@ object UserGuarding {
     Behaviors.setup { actorContext =>
       val appConfig: AppConfig = agentActorContext.appConfig
       val sharding: ClusterSharding = ClusterSharding(actorContext.system)
+      val metricsWriter: MetricsWriter = MetricsWriterExtension(actorContext.system).get()
 
       val msgStore: ActorRef[MsgStore.Cmd] = {
         val blobStoreBucket: String = appConfig
@@ -51,7 +53,7 @@ object UserGuarding {
       val msgPackagers: MsgPackagers = new MsgPackagers {
         override val didCommV1Packager: Behavior[DIDCommV1Packager.Cmd] = {
           val walletOpExecutor: Behavior[WalletOpExecutor.Cmd] = didcom_v1.WalletOpExecutor(agentActorContext.walletAPI)
-          DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor)
+          DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor, metricsWriter)
         }
       }
 

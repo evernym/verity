@@ -85,7 +85,8 @@ trait AgencyAgentScaffolding
       }
       "when sent get-token msg" - {
         "should respond with token" in {
-          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId", ComMethodDetail(1, validTestPushNotifToken))
+          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId",
+            ComMethodDetail(1, validTestPushNotifToken, hasAuthEnabled = false))
           aa ! ProcessPackedMsg(msg, reqMsgContext)
           val packedMsg = expectMsgType[PackedMsg]
           val token = mockEdgeAgent.v_0_1_resp.handleSendToken(packedMsg, mockAgencyAdmin.agencyPublicDid.get.DID)

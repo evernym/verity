@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
+import com.evernym.verity.actor.ComMethodAuthentication
 import com.evernym.verity.actor.agent._
 
 import scala.language.implicitConversions
@@ -110,6 +111,11 @@ trait PackagingContextCompanion {
     PackagingContext(MsgPackFormat.fromString(packVersion))
 }
 
+trait AuthenticationCompanion {
+  def apply(cmAuth: ComMethodAuthentication): Authentication =
+    Authentication(cmAuth.`type`, cmAuth.version, cmAuth.data)
+}
+
 trait EndpointLike extends EndpointType {
 
   /**
@@ -202,6 +208,7 @@ trait PushEndpointLike
  */
 trait HttpEndpointType extends EndpointType {
   def `type`: Int = EndpointType.HTTP
+  def authentication: Option[Authentication]
 }
 
 /**

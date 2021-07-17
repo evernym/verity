@@ -33,6 +33,8 @@ import com.evernym.verity.vault._
 
 import java.time.ZonedDateTime
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, MsgStateAPIProvider, MsgStore}
+import com.evernym.verity.msgoutbox.rel_resolver.GetRelParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.RelParamResp
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
@@ -96,6 +98,7 @@ trait UserAgentCommon
     //internal messages exchanged between actors
     case gmr: GetMsgsReqMsg               => handleGetMsgsInternal(gmr)
     case ums: UpdateMsgStatusReqMsg       => handleUpdateMsgStatusInternal(ums)
+    //case GetRelParam                      => sender ! RelParamResp(selfRelDID, state.relationship)
   }
 
   override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
@@ -156,7 +159,7 @@ trait UserAgentCommon
   def validateConfigValues(cds: Set[ConfigDetail]): Unit = {
     cds.find(_.name == PUSH_COM_METHOD).foreach { pcmConfig =>
       PusherUtil.checkIfValidPushComMethod(
-        ComMethodDetail(COM_METHOD_TYPE_PUSH, pcmConfig.value),
+        ComMethodDetail(COM_METHOD_TYPE_PUSH, pcmConfig.value, hasAuthEnabled = false),
         appConfig
       )
     }

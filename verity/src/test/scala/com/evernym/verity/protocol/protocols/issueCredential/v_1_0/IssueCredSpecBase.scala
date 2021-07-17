@@ -50,7 +50,6 @@ abstract class IssueCredSpecBase
 
   def assertProposalReceivedState(env: TestEnvir): Unit = {
     val proposalReceived = env expect state[State.ProposalReceived]
-    println(s"proposalReceived: $proposalReceived")
     assertCredProposedSegment(env, proposalReceived.credProposedRef)
   }
 
@@ -70,7 +69,6 @@ abstract class IssueCredSpecBase
 
   def assertOfferSentState(env: TestEnvir): Unit = {
     val offerSent = env expect state[State.OfferSent]
-    println(s"offerSent: $offerSent")
     assertCredOfferedSegment(env, offerSent.credOfferRef)
   }
 
@@ -89,7 +87,6 @@ abstract class IssueCredSpecBase
 
   def assertRequestSentState(env: TestEnvir): Unit = {
     val requestSent = env expect state[State.RequestSent]
-    println(s"requestSent: $requestSent")
     assertCredRequestedSegment(env, requestSent.credRequestRef)
   }
 
@@ -99,7 +96,6 @@ abstract class IssueCredSpecBase
 
   def assertRequestReceivedState(env: TestEnvir): Unit = {
     val requestReceived = env expect state[State.RequestReceived]
-    println(s"requestReceived: $requestReceived")
     assertCredRequestedSegment(env, requestReceived.credRequestRef)
   }
 
@@ -109,7 +105,6 @@ abstract class IssueCredSpecBase
 
   def assertCredSentState(env: TestEnvir): Unit = {
     val credSent = env expect state[State.CredSent]
-    println(s"credSent: $credSent")
     assertCredIssuedSegment(env, credSent.credIssuedRef)
   }
 
@@ -119,7 +114,6 @@ abstract class IssueCredSpecBase
 
   def assertCredReceivedState(env: TestEnvir): Unit = {
     val credReceived = env expect state[State.CredReceived]
-    println(s"credReceived: $credReceived")
     assertCredReceivedSegment(env, credReceived.credIssuedRef)
   }
 

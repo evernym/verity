@@ -20,7 +20,7 @@ class PusherSpec
     "when sent 'SendPushNotif' command with 'InvalidRegistration' token" - {
       "should not change app state" in {
         val currentAppState = asmTestKit.currentAppState
-        val cmd = ComMethodDetail(EndpointType.PUSH, "FCM:12345")
+        val cmd = ComMethodDetail(EndpointType.PUSH, "FCM:12345", hasAuthEnabled = false)
         val spn = SendPushNotif(Set(cmd), sendAsAlertPushNotif = true, Map.empty, Map.empty)
         pusher ! spn
         Thread.sleep(5000)
@@ -31,7 +31,10 @@ class PusherSpec
     "when sent 'SendPushNotif' command with 'NotRegistered' token" - {
       "should not change app state" in {
         val currentAppState = asmTestKit.currentAppState
-        val cmd = ComMethodDetail(EndpointType.PUSH, "FCM:c5zcR5qjD3k:APA91bHwCoqBJCcUS0JrWYlQy6cvvoHnjAukQjHVAfbjQvp5zgof7v1rX6yt10qWVKd7BshK_M5y3h7RbSte35TeEGHz9BriMCpYZbzXvHToMbFdYDHRQS8c0PIyoFChaHswmey2mpV6")
+        val cmd = ComMethodDetail(
+          EndpointType.PUSH,
+          "FCM:c5zcR5qjD3k:APA91bHwCoqBJCcUS0JrWYlQy6cvvoHnjAukQjHVAfbjQvp5zgof7v1rX6yt10qWVKd7BshK_M5y3h7RbSte35TeEGHz9BriMCpYZbzXvHToMbFdYDHRQS8c0PIyoFChaHswmey2mpV6",
+          hasAuthEnabled = false)
         val spn = SendPushNotif(Set(cmd), sendAsAlertPushNotif = true, Map.empty, Map.empty)
         pusher ! spn
         Thread.sleep(5000)

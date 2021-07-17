@@ -18,7 +18,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
@@ -28,6 +27,7 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 import com.evernym.verity.protocol.{Control, HasMsgType}
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifMsgBuilder}
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._

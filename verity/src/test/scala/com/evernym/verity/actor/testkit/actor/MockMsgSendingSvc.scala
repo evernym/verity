@@ -1,13 +1,14 @@
 package com.evernym.verity.actor.testkit.actor
 
-import akka.http.scaladsl.model.{HttpMethod, HttpMethods}
+import akka.http.scaladsl.model.{HttpHeader, HttpMethod, HttpMethods}
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.http.common.MsgSendingSvc
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
 
+import scala.collection.immutable
 import scala.concurrent.Future
 import scala.util.{Success, Try}
 
@@ -38,7 +39,9 @@ object MockMsgSendingSvc extends MockMsgSendingSvc {
 
   case class MockUrlMapperMessage(url: String, hashedUrl: String)
 
-  def sendPlainTextMsg(payload: String, method: HttpMethod = HttpMethods.POST)
+  def sendPlainTextMsg(payload: String,
+                       method: HttpMethod = HttpMethods.POST,
+                       headers: immutable.Seq[HttpHeader] = immutable.Seq.empty)
                       (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     Try(DefaultMsgCodec.fromJson[MockUrlMapperMessage](payload)) match {
       case Success(m) => mappedUrls = mappedUrls + (m.hashedUrl -> m.url)
@@ -47,13 +50,15 @@ object MockMsgSendingSvc extends MockMsgSendingSvc {
     Future(Right(payload))
   }
 
-  def sendJsonMsg(payload: String)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
+  def sendJsonMsg(payload: String,
+                  headers: immutable.Seq[HttpHeader] = immutable.Seq.empty)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     totalRestAgentMsgsSent = totalRestAgentMsgsSent + 1
     lastRestMsgSent = Option(payload)
     Future(Right(payload))
   }
 
-  def sendBinaryMsg(payload: Array[Byte])(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
+  def sendBinaryMsg(payload: Array[Byte],
+                    headers: immutable.Seq[HttpHeader] = immutable.Seq.empty)(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
     totalBinaryMsgsSent = totalBinaryMsgsSent + 1
     lastBinaryMsgSent = Option(payload)
     Future(Right(PackedMsg(payload)))

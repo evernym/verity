@@ -5,8 +5,6 @@ deployment:
   containerPort: 9000
   vault:
     enable: true
-    authRole: "verity-eks"
-    basePath: "sharedpass/dev/kubernetes"
 k8sService:
   type: NodePort
   port: 80

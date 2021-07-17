@@ -19,7 +19,7 @@ class OutgoingMsgSenderSpec
     with PersistentActorSpec
     with Eventually {
 
-  lazy val agentActor = system.actorOf(MockAgentActor.props(appConfig, self))
+  lazy val agentActor: ActorRef = system.actorOf(MockAgentActor.props(appConfig, self))
 
   "OutgoingMsgSender" - {
     "when asked to SendMsgToMyDomain" - {

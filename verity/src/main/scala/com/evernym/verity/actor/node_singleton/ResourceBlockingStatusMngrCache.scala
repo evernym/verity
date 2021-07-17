@@ -26,22 +26,24 @@ class ResourceBlockingStatusMngrCacheImpl extends ResourceBlockingStatusMngrComm
     val curDateTime = getCurrentUTCZonedDateTime
     val filteredEntityId = entityBlockingStatus.filter(_._1 == entityId)
     val filteredBlockedResources = filterBlockedUserResources(filteredEntityId, Option(curDateTime)).values.headOption
-    val isBlocked = filteredBlockedResources.exists { urbs =>
-      val isEntityIdBlocked = urbs.status.isBlocked(curDateTime)
-      val isResourceBlocked = urbs.resourcesStatus.get(resourceName).exists(_.isBlocked(curDateTime))
-      isEntityIdBlocked || isResourceBlocked
+    val isBlocked = filteredBlockedResources.exists { ubs =>
+      val isEntityBlocked = ubs.status.isBlocked(curDateTime)
+      val isResourceBlocked = ubs.resourcesStatus.get(resourceName).exists(_.isBlocked(curDateTime))
+      isEntityBlocked || isResourceBlocked
     }
     if (isBlocked) {
       throw new BadRequestErrorException(USAGE_BLOCKED.statusCode, Option("usage blocked"))
     }
   }
 
-  def isInUnblockingPeriod(entityId: EntityId, resourceName: ResourceName): Boolean = {
+  def isUnblocked(entityId: EntityId, resourceName: ResourceName): Boolean = {
     val curDateTime = getCurrentUTCZonedDateTime
-    entityBlockingStatus.find(_._1 == entityId).exists { case (_, ubd) =>
-      ubd.resourcesStatus.find(_._1 == resourceName).exists { case (_, urbd) =>
-        urbd.isInUnblockingPeriod(curDateTime)
-      }
+
+    entityBlockingStatus.find(_._1 == entityId).exists { case (_, ubs) =>
+      ubs.status.isUnblocked(curDateTime) ||
+        ubs.resourcesStatus.find(_._1 == resourceName).exists { case (_, urbd) =>
+          urbd.isUnblocked(curDateTime)
+        }
     }
   }
 }

@@ -140,7 +140,7 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
   override def executeOnStateChangePostRecovery(): Unit = {
     snapshotConfig.snapshotEveryNEvents match {
       case Some(n) if n > 0 && lastSequenceNr % n == 0 => saveSnapshotStateIfAvailable()
-      case _                                           => None
+      case _                                           => //nothing to do
     }
   }
 

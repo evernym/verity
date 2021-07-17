@@ -3,6 +3,7 @@ package com.evernym.verity.actor.typed
 import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.{EventSourcedBehaviorTestKit, PersistenceTestKit, SnapshotTestKit}
+import com.evernym.verity.integration.base.PortProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
 
@@ -26,8 +27,11 @@ object TypedTestKit {
     .withFallback(EventSourcedBehaviorTestKit.config)
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
 
-  val clusterConfig: Config = ConfigFactory.parseString(
-    """
+  def clusterConfig: Config = {
+    val randomPort = PortProvider.generateUnusedPort(2000)
+
+    ConfigFactory.parseString(
+      s"""
     akka {
       actor {
         provider = "cluster"
@@ -35,16 +39,18 @@ object TypedTestKit {
       remote.artery {
         canonical {
           hostname = "127.0.0.1"
-          port = 2551
+          port = $randomPort
         }
       }
 
       cluster {
         seed-nodes = [
-          "akka://TestSystem@127.0.0.1:2551",
+          "akka://TestSystem@127.0.0.1:$randomPort",
         ]
         downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
+        jmx.multi-mbeans-in-same-jvm = on
       }
     }
     """)
+  }
 }

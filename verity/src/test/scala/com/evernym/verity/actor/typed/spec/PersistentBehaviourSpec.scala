@@ -12,7 +12,7 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffec
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.actor.typed.base.EventPersistenceAdapter
+import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.scalalogging.Logger
@@ -141,7 +141,7 @@ object Account {
     val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
     EventSourcedBehavior
       .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
-      .eventAdapter(new EventPersistenceAdapter(entityContext.entityId, TestObjectCodeMapper))
+      .eventAdapter(new PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper))
       .receiveSignal(signalHandler(persistenceId))
   }
 

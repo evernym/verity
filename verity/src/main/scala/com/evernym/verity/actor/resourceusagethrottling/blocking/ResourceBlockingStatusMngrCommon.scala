@@ -54,7 +54,7 @@ trait ResourceBlockingStatusMngrCommon {
     val filteredActiveRsrc = bl.map { case (entityId, blockingStatus) =>
       val activeResources = blockingStatus.resourcesStatus.filter { case (_, bd) =>
         curDateTimeOpt.forall { cdt =>
-          bd.isInBlockingPeriod(cdt) || bd.isInUnblockingPeriod(cdt)
+          bd.isBlocked(cdt) || bd.isUnblocked(cdt)
         }
       }
       entityId -> blockingStatus.copy(resourcesStatus = activeResources)
@@ -63,8 +63,8 @@ trait ResourceBlockingStatusMngrCommon {
     // now filter all active entities (which are either blocked/unblocked or has NON empty active resources)
     filteredActiveRsrc.filter { case (_, ebs) =>
       curDateTimeOpt.forall { cdt =>
-        ebs.status.isInBlockingPeriod(cdt) ||
-          ebs.status.isInUnblockingPeriod(cdt) ||
+        ebs.status.isBlocked(cdt) ||
+          ebs.status.isUnblocked(cdt) ||
           ebs.resourcesStatus.nonEmpty
       }
     }
@@ -108,7 +108,7 @@ trait ResourceBlockingStatusMngrCommon {
     val filteredByUnblockedRsrc = bl.map { urb =>
       val filtered = urb._2.resourcesStatus.filter { case (_, bd) =>
         curDateTimeOpt.map { cdt =>
-          bd.isInUnblockingPeriod(cdt)
+          bd.isUnblocked(cdt)
         }.getOrElse {
           bd.unblockFrom.isDefined
         }
@@ -117,7 +117,7 @@ trait ResourceBlockingStatusMngrCommon {
     }
     filteredByUnblockedRsrc.filter { case (_, ur) =>
       curDateTimeOpt.map { cdt =>
-        ur.status.isInUnblockingPeriod(cdt)
+        ur.status.isUnblocked(cdt)
       }.getOrElse {
         ur.status.unblockFrom.isDefined
       } || ur.resourcesStatus.nonEmpty

@@ -18,6 +18,7 @@ import com.evernym.verity.texter.SMSSender
 
 import scala.concurrent.Future
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.transports.MsgSendingSvc
 
 /**
  *
@@ -32,7 +33,7 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val smsSvc: SMSSender = new MockSMSSender(appConfig)
   override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(system)
 
-  override lazy val msgSendingSvc: MsgSendingSvcType = MockMsgSendingSvc
+  override lazy val msgSendingSvc: MsgSendingSvc = MockMsgSendingSvc
   override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager()(system.dispatcher)
   override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouterProvider().getOrElse(
     new MockAgentMsgRouter(Map.empty)(appConfig, system)

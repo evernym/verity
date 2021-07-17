@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vars-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  name: vars-{{ template "verity.fullname" . }}
 data:
 {{ toYaml .Values.vars | indent 2 }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: file-{{ .Values.service }}-{{ .Values.name }}-{{ .Values.env }}
+  name: file-{{ template "verity.fullname" . }}
 data:
   customers.conf: |
     {{- if .Values.customers }}
@@ -65,6 +65,15 @@ data:
     "verity": {
       "metrics":
 {{ toPrettyJson .Values.tracking | indent 8 }}
+      }
+    }
+    {{- end }}
+  usage-rules.conf: |
+    {{- if .Values.usageRules }}
+    {
+    "verity": {
+      "resource-usage-rules":
+{{ toPrettyJson .Values.usageRules | indent 8 }}
       }
     }
     {{- end }}

@@ -31,7 +31,7 @@ class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends Storag
     .paranoidChecks(true)
     .verifyChecksums(true)
 
-  def withDB[T](f: DB => T): T = {
+  def withDB[T](f: DB => T): T = synchronized {
     val db = Iq80DBFactory.factory.open(new File(path), options)
     val result = f(db)
     db.close()

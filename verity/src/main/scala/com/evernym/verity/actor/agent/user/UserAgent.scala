@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
+import akka.actor.typed.scaladsl.adapter._
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
@@ -20,6 +21,9 @@ import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
+import com.evernym.verity.msgoutbox.DestId
+import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.wallet._
@@ -52,12 +56,16 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.actor
+import com.evernym.verity.{actor, msgoutbox}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
 import com.evernym.verity.util2.ActorErrorResp
 import kamon.metric.MeasurementUnit
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /**
  Represents user's agent
@@ -119,7 +127,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
     case GetSponsorRel                           => sendSponsorDetails()
-
+    case GetTokenForUrl(forUrl, cmd)             => sendToOAuthAccessTokenHolder(forUrl, cmd)
+    //case GetOutboxParam(destId)                  => sendOutboxParam(destId)
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
   }
@@ -151,6 +160,32 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
   }
 
+  def sendOutboxParam(destId: DestId): Unit = {
+    if (destId == "default") {
+      val comMethods =
+        state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
+          .map { ep =>
+            val packaging = msgoutbox.RecipPackaging(MPF_INDY_PACK.toString, state.myDidAuthKey.map(_.verKey).toSeq)
+            val authentication = ep.endpointADTX match {
+              case hp: HttpEndpointType => hp.authentication.map(a => msgoutbox.Authentication(a.`type`, a.version, a.data))
+              case _                    => None
+            }
+            ep.id -> msgoutbox.ComMethod(ep.`type`, ep.value, Option(packaging), authentication = authentication)
+          }.toMap
+      sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+    } else {
+      throw new RuntimeException("destId not supported: " + destId)
+    }
+  }
+
+  def sendToOAuthAccessTokenHolder(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd): Unit = {
+    httpComMethodsWithAuth.filter(_.value == forUrl).foreach { hc =>
+      context.child(oAuthHolderKey(hc)).foreach { actorRef =>
+        actorRef ! cmd
+      }
+    }
+  }
+
   def handleRemoveComMethod(cmd: ComMethodDeleted): Unit = {
     state = state.copy(relationship = state.relWithEndpointRemoved(cmd.id))
   }
@@ -166,13 +201,15 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
     val allAuthKeyIds = (authKeyIds ++ existingEdgeAuthKeys.map(_.keyId)).toSeq
     val packagingContext = cmu.packaging.map(p => PackagingContext(p.pkgType))
+    val authentication = cmu.authentication.map (a => Authentication(a))
     val endpoint: EndpointADTUntyped = cmu.typ match {
       case EndpointType.PUSH        => PushEndpoint(cmu.id, cmu.value)
       case EndpointType.SPR_PUSH    => SponsorPushEndpoint(cmu.id, cmu.value)
-      case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
+      case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext, authentication)
       case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
     }
     state = state.copy(relationship = state.relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint))
+    updateOAuthAccessTokenHolder()
   }
 
   def handleOwnerDIDSet(did: DID, verKey: VerKey): Unit = {
@@ -282,8 +319,9 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
         .filterByKeyIds(ep.authKeyIds)
         .map(_.verKey).toSet
-      val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
-      ComMethodDetail(ep.`type`, ep.value, cmp)
+      val hasAuthEnabled = Try(ep.endpointADTX.asInstanceOf[HttpEndpointType].authentication.isDefined).getOrElse(false)
+      val packaging = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
+      ComMethodDetail(ep.`type`, ep.value, hasAuthEnabled, packaging)
     }
     CommunicationMethods(comMethods.toSet, withSponsorId)
   }
@@ -459,6 +497,13 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
               pkg.pkgType,
               pkg.recipientKeys.getOrElse(Set.empty).toSeq
             )
+          },
+          comMethod.authentication.map { auth =>
+            actor.ComMethodAuthentication(
+              auth.`type`,
+              auth.version,
+              auth.data
+            )
           }
         )
       )
@@ -485,13 +530,23 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   def validatedComMethod(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): ComMethod = {
+    if (! isVAS && ucm.comMethod.authentication.isDefined) {
+      throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+        Option("authentication not supported"))
+    }
+
     try {
       ucm.comMethod.`type` match {
         case COM_METHOD_TYPE_PUSH =>
           PusherUtil.checkIfValidPushComMethod(
-            ComMethodDetail(COM_METHOD_TYPE_PUSH, ucm.comMethod.value), appConfig)
+            ComMethodDetail(COM_METHOD_TYPE_PUSH, ucm.comMethod.value, hasAuthEnabled = ucm.comMethod.authentication.isDefined),
+            appConfig
+          )
           ucm.comMethod
-        case COM_METHOD_TYPE_HTTP_ENDPOINT => UrlParam(ucm.comMethod.value); ucm.comMethod
+        case COM_METHOD_TYPE_HTTP_ENDPOINT =>
+          ucm.comMethod.authentication.foreach(_.validate())
+          UrlParam(ucm.comMethod.value)
+          ucm.comMethod
         case COM_METHOD_TYPE_FWD_PUSH =>
           if (state.sponsorRel.isEmpty) {
             throw new BadRequestErrorException(INVALID_VALUE.statusCode,
@@ -769,6 +824,44 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId)
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
+
+  private def updateOAuthAccessTokenHolder(): Unit = {
+    httpComMethodsWithAuth.foreach { hc =>
+      hc.authentication match {
+        case Some(auth) if auth.`type` == AUTH_TYPE_OAUTH2 =>
+          context.child(oAuthHolderKey(hc)) match {
+            case Some(child) =>
+              child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version))
+            case None =>
+              context.spawn(
+                OAuthAccessTokenHolder(
+                  appConfig.config,
+                  auth.data,
+                  agentActorContext.oAuthAccessTokenRefreshers.refreshers(auth.version)
+                ),
+                oAuthHolderKey(hc)
+              )
+          }
+        case None => //nothing to do
+      }
+    }
+  }
+
+  private def httpComMethodsWithAuth: Seq[HttpEndpoint] = {
+    state.relationship.map { rel =>
+      val endpoints = rel.myDidDoc.flatMap(_.endpoints).map(_.endpoints).getOrElse(Seq.empty)
+      endpoints
+        .filter(_.`type` == COM_METHOD_TYPE_HTTP_ENDPOINT)
+        .map(_.endpointADTX)
+        .flatMap {
+          case he: HttpEndpoint if he.authentication.isDefined => Option(he)
+          case _                => None
+        }
+    }.getOrElse(Seq.empty)
+  }
+
+  private def oAuthHolderKey(hc: HttpEndpoint): String = hc.id + hc.value.hashCode
+
 }
 
 object UserAgent {
@@ -793,7 +886,7 @@ case class DeleteComMethod(value: String, reason: String) extends ActorMessage
 //response msgs
 case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessage
 case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessage
-case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessage
+case class ComMethodDetail(`type`: Int, value: String, hasAuthEnabled: Boolean, packaging: Option[ComMethodsPackaging]=None) extends ActorMessage
 case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessage
 
 case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Option[String]=None) extends ActorMessage {
@@ -889,3 +982,7 @@ trait UserAgentStateUpdateImpl
 }
 
 case class HandleCreateKeyWithThisAgentKey(thisAgentKey: NewKeyCreated, createKeyReqMsg: CreateKeyReqMsg, reqMsgContext: ReqMsgContext) extends ActorMessage
+
+//NOTE: the 'forUrl' is only needed in case anybody has registered more than one webhook
+// (ideally there shouldn't be more than one)
+case class GetTokenForUrl(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd) extends ActorMessage

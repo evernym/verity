@@ -538,7 +538,7 @@ trait AgentMsgSenderHttpWrapper
       mockClientAgent.v_0_1_req.prepareGetTokenRoute(
         id,
         sponsorId,
-        ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod)),
+        ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod, hasAuthEnabled = false)),
       Option(mockClientAgent.v_0_1_resp.handleSendTokenResp))
 
     logApiFinish(s"get token finished: " + r)

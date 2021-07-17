@@ -203,24 +203,4 @@ class ResourceUsageTrackerSpec
     }
   }
 
-  def checkUsage(entityId: EntityId,
-                 expectedUsages: ResourceUsages): Unit = {
-    sendToResourceUsageTrackerRegion(entityId, GetAllResourceUsages)
-    val actualUsages = expectMsgType[ResourceUsages]
-    expectedUsages.usages.foreach { expResourceUsage =>
-      val actualResourceUsageOpt = actualUsages.usages.get(expResourceUsage._1)
-      actualResourceUsageOpt.isDefined shouldBe true
-      val actualResourceUsage = actualResourceUsageOpt.get
-      expResourceUsage._2.foreach { case (expBucketId, expBucketExt) =>
-        val actualBucketExtOpt = actualResourceUsage.get(expBucketId)
-        actualBucketExtOpt.isDefined shouldBe true
-        val actualBucketExt = actualBucketExtOpt.get
-        actualBucketExt.usedCount shouldBe expBucketExt.usedCount
-        actualBucketExt.allowedCount shouldBe expBucketExt.allowedCount
-        actualBucketExt.startDateTime.isDefined shouldBe true
-        actualBucketExt.endDateTime.isDefined shouldBe true
-      }
-    }
-  }
-
 }

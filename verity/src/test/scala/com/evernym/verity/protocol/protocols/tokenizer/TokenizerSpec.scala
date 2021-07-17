@@ -36,7 +36,7 @@ class TokenizerSpec
     "should fail signing token" in {s =>
       interaction (s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Failure(SigningTokenErr))
-        s.requester ~ AskForToken(ID, SPONSOR_ID, Option(ComMethodDetail(1, "12345")))
+        s.requester ~ AskForToken(ID, SPONSOR_ID, Option(ComMethodDetail(1, "12345", hasAuthEnabled = false)))
         s.tokenizer.state shouldBe a[TokenFailed]
         s.requester.state shouldBe a[TokenFailed]
         val tokenizerFailure = s.tokenizer.state.asInstanceOf[TokenFailed]
@@ -46,7 +46,7 @@ class TokenizerSpec
     "should generate a token" in {s =>
       interaction (s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignedMsg("SIGN".getBytes, "V1")))
-        s.requester ~ AskForToken(ID, SPONSOR_ID, Option(ComMethodDetail(1, "12345")))
+        s.requester ~ AskForToken(ID, SPONSOR_ID, Option(ComMethodDetail(1, "12345", hasAuthEnabled = false)))
         s.requester.role shouldBe Requester
         s.tokenizer.role shouldBe Tokenizer
         s.tokenizer.state shouldBe a[TokenCreated]
@@ -59,14 +59,14 @@ class TokenizerSpec
     "should generate a token again" in {s =>
       interaction (s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignedMsg("SIGN".getBytes, "V1")))
-        s.requester ~ AskForToken(ID, SPONSOR_ID, Option(ComMethodDetail(1, "12345")))
+        s.requester ~ AskForToken(ID, SPONSOR_ID, Option(ComMethodDetail(1, "12345", hasAuthEnabled = false)))
         s.tokenizer.role shouldBe Tokenizer
         s.tokenizer.state shouldBe a[TokenCreated]
         val token = s.requester.state.asInstanceOf[TokenReceived]
         token.token.sponseeId shouldBe ID
 
         val id2 = ID + 2
-        s.requester ~ AskForToken(id2, SPONSOR_ID, Option(ComMethodDetail(1, "12345")))
+        s.requester ~ AskForToken(id2, SPONSOR_ID, Option(ComMethodDetail(1, "12345", hasAuthEnabled = false)))
         s.tokenizer.state shouldBe a[TokenCreated]
         val token2 = s.requester.state.asInstanceOf[TokenReceived]
         token2.token.sponseeId shouldBe id2
@@ -89,7 +89,7 @@ class TokenizerSpec
     "should fail if value protocol message contains null" in { s =>
       interaction(s.requester, s.tokenizer) {
         s.tokenizer walletAccess MockableWalletAccess.alwaysSignAs(Try(SignedMsg("SIGN".getBytes, "V1")))
-        s.requester ~ AskForToken(null, SPONSOR_ID, Option(ComMethodDetail(1, "12345")))
+        s.requester ~ AskForToken(null, SPONSOR_ID, Option(ComMethodDetail(1, "12345", hasAuthEnabled = false)))
         assertFailedState(s.tokenizer.state, "missing argName: sponseeId")
       }
     }

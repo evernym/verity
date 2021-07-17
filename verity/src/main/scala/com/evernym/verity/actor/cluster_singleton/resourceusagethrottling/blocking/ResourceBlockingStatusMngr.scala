@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking
 
-import java.time.ZonedDateTime
-
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
@@ -20,6 +18,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.{getActorRefFromSelection, strToBoolean}
 
+import java.time.ZonedDateTime
 
 class ResourceBlockingStatusMngr(val aac: AgentActorContext)
   extends SingletonChildrenPersistentActor
@@ -29,8 +28,8 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case bu: BlockCaller                => handleBlockCaller(bu)
     case bur: BlockResourceForCaller    => handleBlockResourceForCaller(bur)
-    case uu: UnblockCaller              => handleUnblockCaller(uu)
-    case uur: UnblockResourceForCaller  => handleUnblockResourceForCaller(uur)
+    case ubu: UnblockCaller              => handleUnblockCaller(ubu)
+    case ubur: UnblockResourceForCaller  => handleUnblockResourceForCaller(ubur)
     case gbl: GetBlockedList            => sendBlockedList(gbl)
     case Done                           => // do nothing
   }
@@ -45,13 +44,25 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
     val curDate = getCurrentUTCZonedDateTime
     val blockFrom = getMillisFromZonedDateTime(bu.blockFrom.getOrElse(curDate))
 
-    // At first, clear blocks on all resources for this source ID if period is 0 and allResources is Y/y
+    // If period is 0 and allResources is Y/y then, at first, clear blocks on all blocked resources for this source ID
+    // (and reset usage counters for these resources)
     if (bu.blockPeriod.contains(0) && bu.allBlockedResources.map(_.toUpperCase).contains(YES)) {
       entityBlockingStatus.get(bu.entityId).foreach { ebs =>
         ebs.resourcesStatus.filter(_._2.isBlocked(curDate)).foreach { case (rn, _) =>
           resetResourceUsageCounts(bu.entityId, rn)
 
           val resourceEvent = CallerResourceBlocked(bu.entityId, rn, blockFrom, 0)
+          writeAndApply(resourceEvent)
+          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
+        }
+      }
+    }
+
+    // If period is not 0 then, at first, clear unblocks on all unblocked resources for this source ID
+    if (! bu.blockPeriod.contains(0)) {
+      entityBlockingStatus.get(bu.entityId).foreach { ebs =>
+        ebs.resourcesStatus.filter(_._2.isUnblocked(curDate)).foreach { case (rn, _) =>
+          val resourceEvent = CallerResourceUnblocked(bu.entityId, rn, blockFrom, 0)
           writeAndApply(resourceEvent)
           singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
         }
@@ -66,46 +77,66 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext)
   def handleBlockResourceForCaller(bur: BlockResourceForCaller): Unit = {
     logger.debug("received block caller resource request: " + bur)
 
-    // At first, reset this resource usage counts for this source ID if period is 0
+    val ubs = entityBlockingStatus.getOrElse(bur.entityId, EntityBlockingStatus(buildEmptyBlockingDetail, Map.empty))
+    val blockFrom = bur.blockFrom.getOrElse(getCurrentUTCZonedDateTime)
+
+    if (ubs.status.isUnblocked(blockFrom)) {
+      throw new BadRequestErrorException(
+        BAD_REQUEST.statusCode, Option("Resource cannot be blocked for entity because entity is unblocked"))
+    }
+
+    // If period is 0 then, at first, reset this resource usage counters for this source ID
     if (bur.blockPeriod.contains(0)) {
       resetResourceUsageCounts(bur.entityId, bur.resourceName)
     }
 
-    val blockFrom = getMillisFromZonedDateTime(bur.blockFrom.getOrElse(getCurrentUTCZonedDateTime))
-
-    val event = CallerResourceBlocked(bur.entityId, bur.resourceName, blockFrom, getTimePeriodInSeconds(bur.blockPeriod))
+    val event = CallerResourceBlocked(
+      bur.entityId,
+      bur.resourceName,
+      getMillisFromZonedDateTime(blockFrom),
+      getTimePeriodInSeconds(bur.blockPeriod)
+    )
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
-  def handleUnblockCaller(uu: UnblockCaller): Unit = {
-    logger.debug("received unblock caller request: " + uu)
+  def handleUnblockCaller(ubu: UnblockCaller): Unit = {
+    logger.debug("received unblock caller request: " + ubu)
 
     val curDate = getCurrentUTCZonedDateTime
-    val unblockFrom = getMillisFromZonedDateTime(uu.unblockFrom.getOrElse(curDate))
+    val unblockFrom = getMillisFromZonedDateTime(ubu.unblockFrom.getOrElse(curDate))
 
-    // At first, unblock all resources for this source ID if allResources is Y/y
-    if (uu.allBlockedResources.map(_.toUpperCase).contains(YES)) {
-      entityBlockingStatus.get(uu.entityId).foreach { ebs =>
-        ebs.resourcesStatus.filter(_._2.isBlocked(curDate)).foreach { case (rn, _) =>
-          val resourceEvent = CallerResourceUnblocked(uu.entityId, rn, unblockFrom, getTimePeriodInSeconds(uu.unblockPeriod))
-          writeAndApply(resourceEvent)
-          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
-        }
+    // At first, clear blocks on all blocked resources for this source ID (but preserve usage counters)
+    entityBlockingStatus.get(ubu.entityId).foreach { ebs =>
+      ebs.resourcesStatus.filter(_._2.isBlocked(curDate)).foreach { case (rn, _) =>
+        val resourceEvent = CallerResourceBlocked(ubu.entityId, rn, unblockFrom, 0)
+        writeAndApply(resourceEvent)
+        singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
       }
     }
 
-    val event = CallerUnblocked(uu.entityId, unblockFrom, getTimePeriodInSeconds(uu.unblockPeriod))
+    val event = CallerUnblocked(ubu.entityId, unblockFrom, getTimePeriodInSeconds(ubu.unblockPeriod))
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
-  def handleUnblockResourceForCaller(uur: UnblockResourceForCaller): Unit = {
-    logger.debug("received unblock caller resource request: " + uur)
+  def handleUnblockResourceForCaller(ubur: UnblockResourceForCaller): Unit = {
+    logger.debug("received unblock caller resource request: " + ubur)
 
-    val unblockFrom = getMillisFromZonedDateTime(uur.unblockFrom.getOrElse(getCurrentUTCZonedDateTime))
+    val ubs = entityBlockingStatus.getOrElse(ubur.entityId, EntityBlockingStatus(buildEmptyBlockingDetail, Map.empty))
+    val unblockFrom = ubur.unblockFrom.getOrElse(getCurrentUTCZonedDateTime)
 
-    val event = CallerResourceUnblocked(uur.entityId, uur.resourceName, unblockFrom, getTimePeriodInSeconds(uur.unblockPeriod))
+    if (ubs.status.isBlocked(unblockFrom)) {
+      throw new BadRequestErrorException(
+        BAD_REQUEST.statusCode, Option("Resource cannot be unblocked for entity because entity is blocked"))
+    }
+
+    val event = CallerResourceUnblocked(
+      ubur.entityId,
+      ubur.resourceName,
+      getMillisFromZonedDateTime(unblockFrom),
+      getTimePeriodInSeconds(ubur.unblockPeriod)
+    )
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
@@ -179,17 +210,20 @@ object GetBlockedList extends ActorMessage {
 case class BlockingDetail(blockFrom: Option[ZonedDateTime], blockTill: Option[ZonedDateTime],
                           unblockFrom: Option[ZonedDateTime], unblockTill: Option[ZonedDateTime]) {
 
-  def isInBlockingPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInBlockingPeriod(cdt: ZonedDateTime): Boolean =
     blockFrom.exists(_.isBefore(cdt)) && blockTill.forall(_.isAfter(cdt))
 
-  def isInUnblockingPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInUnblockingPeriod(cdt: ZonedDateTime): Boolean =
     unblockFrom.exists(_.isBefore(cdt)) && unblockTill.forall(_.isAfter(cdt))
 
+  def isNeutral(cdt: ZonedDateTime): Boolean =
+    !isInBlockingPeriod(cdt) && !isInUnblockingPeriod(cdt)
+
   def isBlocked(cdt: ZonedDateTime): Boolean =
-    isInBlockingPeriod(cdt) &&
-      //this below line is only useful if we want to allow overlapping blocking/unblocking
-      // (right now we don't allow overlapping blocking/unblocking, but below check won't hurt us anyway)
-      ! isInUnblockingPeriod(cdt)
+    isInBlockingPeriod(cdt) && !isInUnblockingPeriod(cdt)
+
+  def isUnblocked(cdt: ZonedDateTime): Boolean =
+    isInUnblockingPeriod(cdt)
 }
 
 /**
@@ -212,8 +246,7 @@ case class BlockResourceForCaller(entityId: EntityId,
 
 case class UnblockCaller(entityId: EntityId,
                          unblockFrom: Option[ZonedDateTime]=None,
-                         unblockPeriod: Option[Long]=None,
-                         allBlockedResources: Option[String]=None) extends ActorMessage
+                         unblockPeriod: Option[Long]=None) extends ActorMessage
 
 case class UnblockResourceForCaller(entityId: EntityId,
                                     resourceName: ResourceName,

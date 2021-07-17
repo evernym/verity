@@ -25,7 +25,7 @@ trait DataRetentionBaseSpec { this: VerityProviderBaseSpec =>
       .withLedgerTxnExecutor(ledgerTxnExecutor)
       .withStorageApi(StorageAPI.loadFromConfig(appConfig))
 
-  val arteryPort: Int = PortProvider.getUnusedPort(3000)
+  val arteryPort: Int = PortProvider.generateUnusedPort(3000)
 
   implicit lazy val actorSystem: ActorSystem = {
     val parts = Seq(akkaConfig(arteryPort))

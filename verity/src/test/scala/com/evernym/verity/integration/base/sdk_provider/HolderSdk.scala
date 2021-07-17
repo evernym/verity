@@ -2,19 +2,23 @@ package com.evernym.verity.integration.base.sdk_provider
 
 import akka.http.scaladsl.model.{HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.OK
+import com.evernym.verity.actor.ComMethodUpdated
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_COM_METHOD}
+import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsByConnsReqMsg_MFV_0_6, GetMsgsByConnsRespMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.protocol.engine.Constants.MFV_0_6
+import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.{DID, DIDDoc, MsgId, ThreadId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
@@ -42,7 +46,16 @@ import scala.util.{Failure, Success, Try}
  * @param param sdk parameters
  * @param ledgerTxnExecutor ledger txn executor
  */
-case class HolderSdk(param: SdkParam, ledgerTxnExecutor: Option[LedgerTxnExecutor]) extends SdkBase(param) {
+case class HolderSdk(param: SdkParam,
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                     oauthParam: Option[OAuthParam]=None) extends SdkBase(param) {
+
+  def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {
+      val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+      val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+      val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
+      parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
 
   def provisionVerityCloudAgent(): AgentCreated = {
     val reqKeys = RequesterKeys(localAgentDidPair.DID, localAgentDidPair.verKey)

@@ -1,6 +1,8 @@
 package com.evernym.verity.actor.agent.msgrouter
 
 
+import akka.Done
+
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import akka.actor.{ActorRef, ActorSystem}
@@ -131,8 +133,11 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   private def sendCmdToGivenActor(to: ActorRef, cmd: ForIdentifier)
                                  (implicit senderOpt: Option[ActorRef]): AskResp = {
     val fut = senderOpt match {
-      case Some(sndr) => (to ? cmd).map { r => sndr ! r }
-      case None => to ? cmd
+      case Some(sndr) =>
+        to.tell(cmd, sndr)
+        Future(Done)
+      case None =>
+        to ? cmd
     }
     AskResp(fut, Option(s"region actor: $to, route: ${cmd.id}, cmd class: ${cmd.msg.getClass.getSimpleName}"))
   }

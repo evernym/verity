@@ -70,6 +70,7 @@ message HttpEndpoint {
     string value = 2;
     repeated string authKeyIds = 3;
     PackagingContext packagingContext = 4;
+    Authentication authentication = 5;
 }
 
 message ForwardPushEndpoint {
@@ -114,6 +115,13 @@ message LegacyRoutingServiceEndpoint {
 message PackagingContext {
     option (scalapb.message).companion_extends = "PackagingContextCompanion";
     MsgPackFormat packFormat = 1;
+}
+
+message Authentication {
+    option (scalapb.message).companion_extends = "AuthenticationCompanion";
+    string type = 1;
+    string version = 2;
+    map<string, string> data = 3;
 }
 
 enum Tags {

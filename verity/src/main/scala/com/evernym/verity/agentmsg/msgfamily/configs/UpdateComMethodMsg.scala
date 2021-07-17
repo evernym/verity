@@ -5,9 +5,13 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.{AUTH_TYPE_OAUTH2, OAUTH2_VERSION_1}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.INVALID_VALUE
 
 case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]) extends MsgBase {
   override def validate(): Unit = {
@@ -21,7 +25,31 @@ case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]
   }
 }
 
-case class ComMethod(id: String, `type`: Int, value: String, packaging: Option[ComMethodPackaging]) extends MsgBase {
+case class ComMethodAuthentication(`type`: String, version: String, data: Map[String, String]) {
+  def validate(): Unit = {
+    if (`type` != AUTH_TYPE_OAUTH2) {
+      throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+        Option("authentication type not supported: " + `type`))
+    }
+    if (! OAuthAccessTokenRefresher.SUPPORTED_VERSIONS.contains(version)) {
+      throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+        Option("authentication version not supported: " + version))
+    }
+    if (version == OAUTH2_VERSION_1) {
+      val notFound = Seq("grant_type", "client_id", "client_secret").filter(f => ! data.get(f).exists(_.nonEmpty))
+      if (notFound.nonEmpty) {
+        throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+          Option("authentication data required fields missing or invalid: " + notFound.mkString(", ")))
+      }
+    }
+  }
+}
+
+case class ComMethod(id: String,
+                     `type`: Int,
+                     value: String,
+                     packaging: Option[ComMethodPackaging],
+                     authentication: Option[ComMethodAuthentication]=None) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("id", id)
     checkRequired("type", `type`)

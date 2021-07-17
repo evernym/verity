@@ -18,12 +18,7 @@ import scala.util.Random
 // which may/will cause issues sooner or later
 // if try to use multi node cluster in single JVM (like what this VerityProviderBaseSpec does)
 //    1. AppConfigWrapper
-//    2. ResourceBlockingStatusMngrCache
-//    3. ResourceWarningStatusMngrCache
-//    4. MsgProgressTrackerCache
-//    5. MetricsReader and KamonPrometheusMetricsReporter
-//    6. ItemConfigManager
-//    7. AppStateUpdateAPI
+//    2. MetricsReader and KamonPrometheusMetricsReporter
 
 /**
  * base class for specs to use LocalVerity
@@ -141,19 +136,23 @@ trait VerityProviderBaseSpec
 
   private val VAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """
-      |sharding-region-name {
+      |akka {
+      |  sharding-region-name {
       |    user-agent = "VerityAgent"
       |    user-agent-pairwise = "VerityAgentPairwise"
       |  }
+      |}
       |""".stripMargin
   )
 
   private val CAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """
-      |sharding-region-name {
+      |akka {
+      |  sharding-region-name {
       |    user-agent = "ConsumerAgent"
       |    user-agent-pairwise = "ConsumerAgentPairwise"
       |  }
+      |}
       |""".stripMargin
   )
 

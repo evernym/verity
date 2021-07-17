@@ -2,7 +2,6 @@ package com.evernym.verity.ledger
 
 import java.time.ZonedDateTime
 import akka.actor.ActorSystem
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.DidPair

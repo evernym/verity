@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent
 
+import akka.actor.typed.Behavior
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -13,14 +14,17 @@ import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValue
 import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
+import com.evernym.verity.transports.http.AkkaHttpMsgSendingSvc
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
@@ -33,8 +37,6 @@ trait AgentActorContext extends ActorContext {
   implicit def appConfig: AppConfig
   implicit def system: ActorSystem
 
-  type MsgSendingSvcType = MsgSendingSvc
-
   lazy val generalCacheFetchers: Map[FetcherParam, CacheValueFetcher] = List (
     new KeyValueMapperFetcher(system, appConfig),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
@@ -45,7 +47,7 @@ trait AgentActorContext extends ActorContext {
   ).map(f => f.fetcherParam -> f).toMap
 
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
-  lazy val msgSendingSvc: MsgSendingSvcType = new AkkaHttpMsgSendingSvc(appConfig)
+  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
   lazy val smsSvc: SMSSender = createSmsSender()
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
@@ -54,6 +56,13 @@ trait AgentActorContext extends ActorContext {
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig)
+
+  //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
+  val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
+    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] = Map(
+      OAUTH2_VERSION_1 -> OAuthAccessTokenRefresherImplV1()
+    )
+  }
 
   def createActorSystem(): ActorSystem = {
     ActorSystem("verity", appConfig.getLoadedConfig)

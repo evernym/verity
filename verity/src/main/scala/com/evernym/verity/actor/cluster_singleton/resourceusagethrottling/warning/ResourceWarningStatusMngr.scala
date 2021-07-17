@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning
 
-import java.time.ZonedDateTime
-
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
@@ -20,6 +18,8 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.{getActorRefFromSelection, strToBoolean}
 
+import java.time.ZonedDateTime
+
 class ResourceWarningStatusMngr(val aac: AgentActorContext)
   extends SingletonChildrenPersistentActor
     with ResourceWarningStatusMngrCommon
@@ -28,8 +28,8 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case wu: WarnCaller               => handleWarnCaller(wu)
     case wur: WarnResourceForCaller   => handleWarnResourceForCaller(wur)
-    case uu: UnwarnCaller             => handleUnwarnCaller(uu)
-    case uur: UnwarnResourceForCaller => handleUnwarnResourceForCaller(uur)
+    case uwu: UnwarnCaller             => handleUnwarnCaller(uwu)
+    case uwur: UnwarnResourceForCaller => handleUnwarnResourceForCaller(uwur)
     case gwl: GetWarnedList           => sendWarnedList(gwl)
     case Done                         => // do nothing
   }
@@ -44,13 +44,25 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
     val curDate = getCurrentUTCZonedDateTime
     val warnFrom = getMillisFromZonedDateTime(wu.warnFrom.getOrElse(curDate))
 
-    // At first, clear warnings on all resources for this source ID if period is 0 and allResources is Y/y
+    // If period is 0 and allResources is Y/y then, at first, clear warnings on all warned resources for this source ID
+    // (and reset usage counters for these resources)
     if (wu.warnPeriod.contains(0) && wu.allWarnedResources.map(_.toUpperCase).contains(YES)) {
       entityWarningStatus.get(wu.entityId).foreach { ews =>
         ews.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
           resetResourceUsageCounts(wu.entityId, rn)
 
           val resourceEvent = CallerResourceWarned(wu.entityId, rn, warnFrom, 0)
+          writeAndApply(resourceEvent)
+          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
+        }
+      }
+    }
+
+    // If period is not 0 then, at first, clear unwarnings on all unwarned resources for this source ID
+    if (! wu.warnPeriod.contains(0)) {
+      entityWarningStatus.get(wu.entityId).foreach { ews =>
+        ews.resourcesStatus.filter(_._2.isUnwarned(curDate)).foreach { case (rn, _) =>
+          val resourceEvent = CallerResourceUnwarned(wu.entityId, rn, warnFrom, 0)
           writeAndApply(resourceEvent)
           singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
         }
@@ -65,46 +77,66 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
   def handleWarnResourceForCaller(wur: WarnResourceForCaller): Unit = {
     logger.debug("received warn caller resource request: " + wur)
 
-    // At first, reset this resource usage counts for this source ID if period is 0
+    val uws = entityWarningStatus.getOrElse(wur.entityId, EntityWarningStatus(buildEmptyWarningDetail, Map.empty))
+    val warnFrom = wur.warnFrom.getOrElse(getCurrentUTCZonedDateTime)
+
+    if (uws.status.isUnwarned(warnFrom)) {
+      throw new BadRequestErrorException(
+        BAD_REQUEST.statusCode, Option("Resource cannot be warned for entity because entity is unwarned"))
+    }
+
+    // If period is 0 then, at first, reset this resource usage counters for this source ID
     if (wur.warnPeriod.contains(0)) {
       resetResourceUsageCounts(wur.entityId, wur.resourceName)
     }
 
-    val warnFrom = getMillisFromZonedDateTime(wur.warnFrom.getOrElse(getCurrentUTCZonedDateTime))
-
-    val event = CallerResourceWarned(wur.entityId, wur.resourceName, warnFrom, getTimePeriodInSeconds(wur.warnPeriod))
+    val event = CallerResourceWarned(
+      wur.entityId,
+      wur.resourceName,
+      getMillisFromZonedDateTime(warnFrom),
+      getTimePeriodInSeconds(wur.warnPeriod)
+    )
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
-  def handleUnwarnCaller(uu: UnwarnCaller): Unit = {
-    logger.debug("received unwarn caller request: " + uu)
+  def handleUnwarnCaller(uwu: UnwarnCaller): Unit = {
+    logger.debug("received unwarn caller request: " + uwu)
 
     val curDate = getCurrentUTCZonedDateTime
-    val unwarnFrom = getMillisFromZonedDateTime(uu.unwarnFrom.getOrElse(curDate))
+    val unwarnFrom = getMillisFromZonedDateTime(uwu.unwarnFrom.getOrElse(curDate))
 
-    // At first, unwarn all resources for this source ID if allResources is Y/y
-    if (uu.allWarnedResources.map(_.toUpperCase).contains(YES)) {
-      entityWarningStatus.get(uu.entityId).foreach { ews =>
-        ews.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
-          val resourceEvent = CallerResourceUnwarned(uu.entityId, rn, unwarnFrom, getTimePeriodInSeconds(uu.unwarnPeriod))
-          writeAndApply(resourceEvent)
-          singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
-        }
+    // At first, clear warnings on all warned resources for this source ID (but preserve usage counters)
+    entityWarningStatus.get(uwu.entityId).foreach { ews =>
+      ews.resourcesStatus.filter(_._2.isWarned(curDate)).foreach { case (rn, _) =>
+        val resourceEvent = CallerResourceWarned(uwu.entityId, rn, unwarnFrom, 0)
+        writeAndApply(resourceEvent)
+        singletonParentProxyActor ! SendCmdToAllNodes(resourceEvent)
       }
     }
 
-    val event = CallerUnwarned(uu.entityId, unwarnFrom, getTimePeriodInSeconds(uu.unwarnPeriod))
+    val event = CallerUnwarned(uwu.entityId, unwarnFrom, getTimePeriodInSeconds(uwu.unwarnPeriod))
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
 
-  def handleUnwarnResourceForCaller(uur: UnwarnResourceForCaller): Unit = {
-    logger.debug("received unwarn caller resource request: " + uur)
+  def handleUnwarnResourceForCaller(uwur: UnwarnResourceForCaller): Unit = {
+    logger.debug("received unwarn caller resource request: " + uwur)
 
-    val unwarnFrom = getMillisFromZonedDateTime(uur.unwarnFrom.getOrElse(getCurrentUTCZonedDateTime))
+    val uws = entityWarningStatus.getOrElse(uwur.entityId, EntityWarningStatus(buildEmptyWarningDetail, Map.empty))
+    val unwarnFrom = uwur.unwarnFrom.getOrElse(getCurrentUTCZonedDateTime)
 
-    val event = CallerResourceUnwarned(uur.entityId, uur.resourceName, unwarnFrom, getTimePeriodInSeconds(uur.unwarnPeriod))
+    if (uws.status.isWarned(unwarnFrom)) {
+      throw new BadRequestErrorException(
+        BAD_REQUEST.statusCode, Option("Resource cannot be unwarned for entity because entity is warned"))
+    }
+
+    val event = CallerResourceUnwarned(
+      uwur.entityId,
+      uwur.resourceName,
+      getMillisFromZonedDateTime(unwarnFrom),
+      getTimePeriodInSeconds(uwur.unwarnPeriod)
+    )
     writeApplyAndSendItBack(event)
     singletonParentProxyActor ! SendCmdToAllNodes(event)
   }
@@ -177,15 +209,20 @@ object GetWarnedList extends ActorMessage {
 case class WarningDetail(warnFrom: Option[ZonedDateTime], warnTill: Option[ZonedDateTime],
                          unwarnFrom: Option[ZonedDateTime], unwarnTill: Option[ZonedDateTime]) {
 
-  def isInWarningPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInWarningPeriod(cdt: ZonedDateTime): Boolean =
     warnFrom.exists(_.isBefore(cdt)) && warnTill.forall(_.isAfter(cdt))
 
-  def isInUnwarningPeriod(cdt: ZonedDateTime): Boolean =
+  private def isInUnwarningPeriod(cdt: ZonedDateTime): Boolean =
     unwarnFrom.exists(_.isBefore(cdt)) && unwarnTill.forall(_.isAfter(cdt))
 
-  def isWarned(cdt: ZonedDateTime): Boolean =
-    isInWarningPeriod(cdt) && ! isInUnwarningPeriod(cdt)
+  def isNeutral(cdt: ZonedDateTime): Boolean =
+    !isInWarningPeriod(cdt) && !isInUnwarningPeriod(cdt)
 
+  def isWarned(cdt: ZonedDateTime): Boolean =
+    isInWarningPeriod(cdt) && !isInUnwarningPeriod(cdt)
+
+  def isUnwarned(cdt: ZonedDateTime): Boolean =
+    isInUnwarningPeriod(cdt)
 }
 
 /**
@@ -207,8 +244,7 @@ case class WarnResourceForCaller(entityId: EntityId,
 
 case class UnwarnCaller(entityId: EntityId,
                         unwarnFrom: Option[ZonedDateTime]=None,
-                        unwarnPeriod: Option[Long]=None,
-                        allWarnedResources: Option[String]=None) extends ActorMessage
+                        unwarnPeriod: Option[Long]=None) extends ActorMessage
 
 case class UnwarnResourceForCaller(entityId: EntityId,
                                    resourceName: ResourceName,

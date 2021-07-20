@@ -1,12 +1,12 @@
 package com.evernym.verity.logging
 
 import com.evernym.verity.actor.agent.AgentIdentity
-import com.evernym.verity.protocol.engine.DomainIdFieldName
 import org.slf4j.{Logger, Marker}
 
 import scala.util.Try
 
 class AgentIdentityLoggerWrapper(val identityProvider: AgentIdentity, wrapped: Logger) extends Logger{
+  import AgentIdentityLoggerWrapper._
   def idTuple(): (String, String) = (DomainIdFieldName, Try(identityProvider.domainId).getOrElse("unknown"))
 
   def conditionSeq(s: Seq[Any]): Array[AnyRef] =
@@ -174,6 +174,8 @@ class AgentIdentityLoggerWrapper(val identityProvider: AgentIdentity, wrapped: L
 }
 
 object AgentIdentityLoggerWrapper {
+  val DomainIdFieldName = "domain_did"
+
   def apply(identityProvider: AgentIdentity, wrapped: Logger): AgentIdentityLoggerWrapper =
     new AgentIdentityLoggerWrapper(identityProvider, wrapped)
 }

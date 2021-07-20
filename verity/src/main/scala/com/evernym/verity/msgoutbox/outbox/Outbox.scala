@@ -281,66 +281,69 @@ object Outbox {
 
   private def signalHandler(implicit setup: SetupOutbox): PartialFunction[(State, Signal), Unit] = {
     case (st: State, RecoveryCompleted) =>
-      updateDispatcherIfRequired(setup.dispatcher, st)
+      updateDispatcher(setup.dispatcher, st)
       val outboxIdParam = OutboxIdParam(setup.entityContext.entityId)
       fetchOutboxParam(outboxIdParam)
 
     case (_: States.Initialized, sc: SnapshotCompleted) =>
-      logger.info(s"[${setup.entityContext.entityId}] snapshot completed: " + sc)
+      logger.debug(s"[${setup.entityContext.entityId}] snapshot completed: " + sc)
     case (_, sf: SnapshotFailed) =>
       logger.error(s"[${setup.entityContext.entityId}] snapshot failed with error: " + sf.failure.getMessage)
     case (_, dsf: DeleteSnapshotsFailed) =>
       logger.error(s"[${setup.entityContext.entityId}] delete snapshot failed with error: " + dsf.failure.getMessage)
 
     case (_, dc: DeleteEventsCompleted) =>
-      logger.info(s"[${setup.entityContext.entityId}] delete events completed: " + dc)
+      logger.debug(s"[${setup.entityContext.entityId}] delete events completed: " + dc)
     case (_, df: DeleteEventsFailed) =>
       logger.info(s"[${setup.entityContext.entityId}] delete events failed with error: " + df.failure.getMessage)
   }
 
-  private def updateDispatcherIfRequired(dispatcher: Dispatcher, state: State): Unit = {
+  private def updateDispatcher(dispatcher: Dispatcher, state: State): Unit = {
     state match {
       case i: States.Initialized => dispatcher.updateDispatcher(i.walletId, i.senderVerKey, i.comMethods)
       case _ => //nothing to do
     }
   }
 
-  //after a successful attempt, decides if the message can be considered as delivered
+  //after a successful attempt, decide if the message delivery can be considered as successful
   private def isMsgDelivered(comMethodId: String,
                              isItANotification: Boolean,
                              st: States.Initialized): Boolean = {
     //TODO: check/confirm this logic
 
-    if (isItANotification) false    //successful notification doesn't mean message is delivered
-    else {
-      val comMethodOpt = st.comMethods.get(comMethodId)
-      comMethodOpt match {
+    if (isItANotification) {
+      false  //successful notification doesn't mean message is delivered
+    } else {
+      st.comMethods.get(comMethodId) match {
         case None =>
           // NOTE: it may happen that com methods got updated (while delivery was in progress) in such a way
           // that there is no com method with 'comMethodId' hence below logic handles it instead of failing
-          true    //assumption is that this must be either webhook or websocket
+          // assumption is that this must be either webhook or websocket
+          true
         case Some(cm) =>
-          //for "http" or "websocket" com method type, the successful message sending can be considered as delivered
+          //for "http" or "websocket" com method type,
+          // the successful message sending can be considered as delivered
           cm.typ == COM_METHOD_TYPE_HTTP_ENDPOINT
       }
     }
   }
 
-  //after a failed attempt, decides if the message can be considered as failed (permanently)
+  //after a failed attempt, decide if the message delivery can be considered as failed (permanently)
   private def isMsgDeliveryFailed(comMethodId: String,
                                   isItANotification: Boolean,
                                   isAnyRetryAttemptLeft: Boolean,
                                   st: States.Initialized)
                                  (implicit config: Config): Boolean = {
     //TODO: check/confirm this logic
-    if (isItANotification) false    //failed notification doesn't mean message delivery is failed
-    else {
-      val comMethodOpt = st.comMethods.get(comMethodId)
-      comMethodOpt match {
+    if (isItANotification) {
+      false  //failed notification doesn't mean message delivery is failed
+    } else {
+      st.comMethods.get(comMethodId) match {
         case None =>
           // NOTE: it may happen that com methods got updated (while delivery was in progress) in such a way
           // that there is no com method with 'comMethodId' hence below logic handles it instead of failing
-          true
+          // assumption is that this must be either webhook or websocket
+          false
         case Some(cm) =>
           cm.typ == COM_METHOD_TYPE_HTTP_ENDPOINT && ! isAnyRetryAttemptLeft
       }
@@ -387,11 +390,13 @@ object Outbox {
   }
 
   private def processDelivery(st: States.Initialized)(implicit setup: SetupOutbox): Unit = {
-    //remove processed messages(either delivered or permanently failed) in case left uncleaned
+    //process pending deliveries
+    processPendingDeliveries(st)
+
+    //remove processed messages (either delivered or permanently failed)
     removeProcessedMsgs(st)
 
-    //process pending webhook deliveries
-    processPendingDeliveries(st)
+    //TODO: how/where to handle undelivered expired (as per retention policy) messages
   }
 
   private def removeProcessedMsgs(st: State)(implicit setup: SetupOutbox): Unit = {
@@ -494,6 +499,12 @@ object OutboxIdParam {
   }
 }
 
+/**
+ *
+ * @param relId used to query delivery mechanism information
+ * @param recipId used to limit/filter delivery mechanism information for this recipId
+ * @param destId to be used to limit/filter delivery mechanism information for this destination id
+ */
 case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
   val outboxId: OutboxId = relId + "-" + recipId + "-" + destId
 }

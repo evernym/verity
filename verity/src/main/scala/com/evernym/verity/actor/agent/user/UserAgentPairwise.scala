@@ -63,6 +63,7 @@ import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.msgoutbox
+import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
@@ -209,13 +210,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def sendOutboxParam(destId: DestId): Unit = {
-    if (destId == "default") {
+    if (destId == DESTINATION_ID_DEFAULT) {
+      val recipPackaging = msgoutbox.RecipPackaging(
+        MPF_INDY_PACK.toString,
+        state.theirDidAuthKey.map(_.verKey).toSeq
+      )
       theirRoutingDetail match {
         case Some(Right(rd: RoutingDetail)) =>
-          val recipPackaging = msgoutbox.RecipPackaging(
-            MPF_INDY_PACK.toString,
-            state.theirDidAuthKey.map(_.verKey).toSeq
-          )
           val comMethods = Map(
             "0" -> msgoutbox.ComMethod(
                 COM_METHOD_TYPE_HTTP_ENDPOINT,
@@ -228,6 +229,20 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
               )
           )
           sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+
+        case Some(Left(lrd: LegacyRoutingDetail)) =>
+//          val comMethods = Map(
+//            "0" -> msgoutbox.ComMethod(
+//              COM_METHOD_TYPE_HTTP_ENDPOINT,
+//              lrd.endpoint,     //TODO: no endpoint available in legacy routing connection
+//              Option(recipPackaging),
+//              Option(RoutePackaging(
+//                MPF_INDY_PACK.toString,
+//                Seq(lrd.agentKeyDID),
+//                Seq(lrd.agencyDID)))
+//            )
+//          )
+          throw new RuntimeException("legacy routing detail not yet supported for outbox")
         case _ =>
           throw new RuntimeException("no pairwise connection found")
       }

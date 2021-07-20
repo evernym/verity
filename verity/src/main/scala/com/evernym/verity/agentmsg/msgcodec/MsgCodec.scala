@@ -3,6 +3,7 @@ package com.evernym.verity.agentmsg.msgcodec
 import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, Thread}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
+import com.evernym.verity.agentmsg.AgentJsonMsg
 import com.evernym.verity.protocol.engine._
 
 import scala.reflect.ClassTag
@@ -144,5 +145,4 @@ case class MsgMetadata(msgId: Option[MsgId], msgThread: Thread, forRelationship:
   def threadId: ThreadId = msgThread.thid.getOrElse(msgId.getOrElse(DEFAULT_THREAD_ID))
 }
 
-case class AgentJsonMsg(jsonStr: String, msgType: MsgType)
 

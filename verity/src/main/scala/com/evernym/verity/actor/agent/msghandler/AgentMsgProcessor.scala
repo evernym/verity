@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.agent.msghandler
 
-import java.util.UUID
 import akka.actor.ActorRef
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
@@ -21,8 +20,9 @@ import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.resourceusagethrottling.{RESOURCE_TYPE_MESSAGE, UserId}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.{AgentJsonMsg, MsgCodecException}
+import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
+import com.evernym.verity.agentmsg.AgentJsonMsg
+import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -172,8 +172,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     logger.debug(s"preparing outgoing agent message: $om")
     logger.debug(s"outgoing msg: native msg: " + om.msg)
 
-    val agentMsg = createAgentMsg(om.msg, om.protoDef,
-      om.context.threadContextDetail, isSignalMsg=isSignalMsg)
+    val agentMsg = createAgentMsg(om.msg, om.protoDef, om.context.threadContextDetail)
     logger.debug("outgoing msg: prepared agent msg: " + om.context.threadContextDetail)
 
     if (!isSignalMsg) {
@@ -386,39 +385,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         sendToAgentActor(SendPushNotif(Set(sd.deliveryMethod), pnd, Some(pushToken.msg.sponsorId)))
       case x => throw new RuntimeException("unsupported Service Decorator: " + x)
     }
-  }
-
-  def createAgentMsg(msg: Any,
-                     protoDef: ProtoDef,
-                     threadContextDetail: ThreadContextDetail,
-                     msgTypeFormat: Option[TypeFormat]=None,
-                     isSignalMsg: Boolean=false): AgentJsonMsg = {
-
-    def getNewMsgId: MsgId = UUID.randomUUID().toString
-
-    val (msgId, mtf, msgOrders) = {
-      val mId = if (threadContextDetail.msgOrders.exists(_.senderOrder == 0)
-        && threadContextDetail.msgOrders.exists(_.receivedOrders.isEmpty) ){
-        //this is temporary workaround to solve an issue between how
-        // thread id is determined by libvcx (and may be by other third parties) vs verity/agency
-        // here, we are basically checking if this msg is 'first' protocol msg and in that case
-        // the @id of the msg is assigned the thread id itself
-        threadContextDetail.threadId
-      } else {
-        getNewMsgId
-      }
-      (mId, msgTypeFormat.getOrElse(threadContextDetail.msgTypeFormat), threadContextDetail.msgOrders)
-    }
-
-    //need to find better way to handle this
-    //during connections protocol, when first message 'request' is received from other side,
-    //that participant is unknown and hence it is stored as 'unknown_sender_participant_id' in the thread context
-    //and when it responds with 'response' message, it just adds that in thread object
-    //but for recipient it may look unfamiliar and for now filtering it.
-    val updatedMsgOrders = msgOrders.map { pmd =>
-      pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID))
-    }
-    buildAgentMsg(msg, msgId, threadContextDetail.threadId, protoDef, mtf, updatedMsgOrders)
   }
 
   def handleProcessPackedMsg(implicit ppm: ProcessPackedMsg): Unit = {

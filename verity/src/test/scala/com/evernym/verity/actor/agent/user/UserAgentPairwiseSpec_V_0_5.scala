@@ -21,6 +21,7 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_M
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateMsg_MFV_0_5, TestConfigDetail, TestUtil}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.util.Util
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
@@ -181,7 +182,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
     def checkCreateInviteResponse(resp: PackedMsg, connId: String): Boolean = {
       val icr = handleInviteCreatedResp(resp, buildConnIdMap(connId))
-      TestUtil.encodedUrl(icr.md.urlToInviteDetail) == icr.md.urlToInviteDetailEncoded
+      Util.encodedUrl(icr.md.urlToInviteDetail) == icr.md.urlToInviteDetailEncoded
     }
 
     s"when sent GET_MSGS msg after sending invite" - {

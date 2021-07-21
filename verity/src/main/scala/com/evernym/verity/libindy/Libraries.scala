@@ -1,4 +1,4 @@
-package com.evernym.verity.libs
+package com.evernym.verity.libindy
 
 import com.evernym.verity.actor.appStateManager.AppStateConstants.{CONTEXT_LIB_INDY_INIT, CONTEXT_LIB_MYSQLSTORAGE_INIT}
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI.handleError
@@ -6,7 +6,7 @@ import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.Constants.{LIBINDY_LEGACY_FLAVOR, WALLET_TYPE_MYSQL}
 import com.evernym.verity.libindy.wallet.MySqlStorageLib
-import com.evernym.verity.libs.JnaPath._
+import JnaPath._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger

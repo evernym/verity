@@ -1,7 +1,7 @@
 package com.evernym.verity.config
 
 
-trait CommonConfig {
+object ConfigConstants {
 
   val VERITY = "verity"
 
@@ -398,5 +398,3 @@ trait CommonConfig {
   val EXPIRE_AFTER_TERMINAL_STATE = "expire-after-terminal-state"
 
 }
-
-object CommonConfig extends CommonConfig

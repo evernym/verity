@@ -18,7 +18,7 @@ import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.cache.{LEDGER_GET_ENDPOINT_CACHE_FETCHER, LEDGER_GET_VER_KEY_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetEndpointParam, GetVerKeyParam}
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
@@ -175,14 +175,14 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def agencyLedgerDetail(): Ledgers = {
     // Architecture requested that this be future-proofed by assuming Agency will have more than one ledger.
     val genesis = try {
-      val genesisFileLocation = appConfig.getStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
+      val genesisFileLocation = appConfig.getStringReq(ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
       val genesisFileSource = Source.fromFile(genesisFileLocation)
       val lines = genesisFileSource.getLines().toList
       genesisFileSource.close()
       lines
     } catch {
       case e: Exception =>
-        logger.error(s"Could not read config ${CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION}. Reason: $e")
+        logger.error(s"Could not read config ${ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION}. Reason: $e")
         List()
     }
     val taaEnabledOnLedger: Boolean = try {

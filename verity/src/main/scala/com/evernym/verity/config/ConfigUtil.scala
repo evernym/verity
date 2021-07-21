@@ -4,7 +4,7 @@ import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId

@@ -7,7 +7,7 @@ import javax.ws.rs.core.MediaType
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.http.common.ConfigSvc
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider

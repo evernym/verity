@@ -9,7 +9,6 @@ import com.evernym.verity.testkit.util.TestUtil.getSigningKey
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.WalletUtil._
-import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 

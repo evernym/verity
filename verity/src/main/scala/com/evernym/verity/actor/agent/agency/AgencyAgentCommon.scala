@@ -13,7 +13,7 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKey, GetVerKeyResp, SetupNewAgentWallet}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.PROVISIONING
+import com.evernym.verity.config.ConfigConstants.PROVISIONING
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.InitParamConstants._

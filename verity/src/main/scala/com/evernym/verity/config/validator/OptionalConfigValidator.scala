@@ -1,6 +1,6 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.config.CommonConfig.AKKA_HTTP_MSG_SENDING_SVC_API_TYPE
+import com.evernym.verity.config.ConfigConstants.AKKA_HTTP_MSG_SENDING_SVC_API_TYPE
 import com.evernym.verity.config.validator.base.{ConfDetail, ConfigValidator, ConfigValidatorBase, ConfigValidatorCreator}
 import com.typesafe.config.Config
 

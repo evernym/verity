@@ -19,7 +19,7 @@ import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTr
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
 import com.evernym.verity.actor.wallet.WalletActor
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._

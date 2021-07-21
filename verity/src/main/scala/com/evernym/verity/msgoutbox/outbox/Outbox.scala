@@ -8,6 +8,7 @@ import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, Delete
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.msgoutbox._
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.MsgActivity
@@ -23,6 +24,7 @@ import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentSt
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.RetryParam
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
@@ -105,13 +107,15 @@ object Outbox {
             msgPackagers,
             msgTransports
           )
+
           val setup = SetupOutbox(actorContext,
             entityContext,
             config,
             buffer,
             relResolver,
             relResolverReplyAdapter,
-            dispatcher
+            dispatcher,
+            new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system)
           )
           EventSourcedBehavior
             .withEnforcedReplies(
@@ -205,6 +209,7 @@ object Outbox {
         rfa.isItANotification, rfa.isAnyRetryAttemptsLeft, st)(setup.config)
       Effect
         .persist(MsgSendingFailed(rfa.msgId, rfa.comMethodId, isDeliveryFailed))
+        .thenRun((_: State) => setup.itemManagerEntityHelper.register())
         .thenRun((_: State) => if (rfa.sendAck) setup.dispatcher.ack(rfa.msgId))
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rfa.msgId, rfa.comMethodId, Option(rfa.statusDetail)))
         .thenNoReply()
@@ -218,10 +223,20 @@ object Outbox {
           .thenNoReply()
       } else Effect.noReply
 
-    case (_: State, Commands.TimedOut) =>
-      Effect
-        .stop()
-        .thenNoReply()
+    case (st: State, Commands.TimedOut) =>
+      val pendingMsgsCount = getPendingMsgs(st).size
+
+      if (pendingMsgsCount > 0 ) {
+        logger.info(s"[${setup.entityContext.entityId}] unusual situation found, outbox actor timed out with pending messages")
+        processPendingDeliveries(st)
+        Effect
+          .noReply
+      } else {
+        Effect
+          .stop()
+          .thenRun((_: State) => setup.itemManagerEntityHelper.deregister())
+          .thenNoReply()
+      }
   }
 
   private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
@@ -359,11 +374,14 @@ object Outbox {
       case i: States.Initialized =>
         val msg = i.messages(msgId)
         val deliveryAttempt = msg.deliveryAttempts(comMethodId)
+        val comMethodDetail = i.comMethods.get(comMethodId).map(cm => s"$comMethodId:${cm.value}").getOrElse("n/a")
         val activityDetail =
-          s"comMethodId: $comMethodId, " +
-          s"successCount: ${deliveryAttempt.successCount}, " +
+          s"comMethod: $comMethodDetail, " +
+            s"successCount: ${deliveryAttempt.successCount}, " +
             s"failedCount: ${deliveryAttempt.failedCount}" +
-            statusDetail.map(sd => s", statusDetail => code: ${sd.statusCode}, msg: ${sd.statusMsg}").getOrElse("")
+            statusDetail
+              .map(sd => s", statusDetail => code: ${sd.statusCode}, msg: ${sd.statusMsg}")
+              .getOrElse("")
         val msgActivity = Option(MsgActivity(activityDetail))
         val cmd = MessageMeta.Commands.RecordMsgActivity(
           setup.entityContext.entityId,
@@ -413,15 +431,34 @@ object Outbox {
   }
 
   private def processPendingDeliveries(st: State)(implicit setup: SetupOutbox): Unit = {
+    val pendingMsgs = getPendingMsgs(st)
     st match {
       case i: States.Initialized =>
-        i.messages
-          .filter(_._2.deliveryStatus == Status.MSG_DELIVERY_STATUS_PENDING.statusCode)
+        pendingMsgs
           .toSeq
           .sortBy(_._2.creationTimeInMillis)    //TODO: any issue with sorting here?
           .take(batchSize(setup.config))
-          .foreach{ case (msgId, _) => sendToDispatcher(msgId, i)}
-      case _ => //nothing to do
+          .foreach{case (msgId, _) => sendToDispatcher(msgId, i)}
+      case _                     =>
+        //nothing to do
+    }
+  }
+
+  private def getPendingMsgs(st: State)(implicit setup: SetupOutbox): Map[MsgId, Message] = {
+    st match {
+      case i: States.Initialized =>
+        i
+          .messages
+          .filter { case (_, msg) =>
+            msg.deliveryStatus == Status.MSG_DELIVERY_STATUS_PENDING.statusCode &&
+              msg.deliveryAttempts.forall { case (comMethodId, msgDeliveryAttempt) =>
+                i.comMethods.get(comMethodId).exists { cm =>
+                  val rp = prepareRetryParam(cm.typ, msgDeliveryAttempt.failedCount, setup.config)
+                  msgDeliveryAttempt.failedCount < rp.maxRetries
+                }
+              }
+          }
+      case _ => Map.empty  //nothing to do
     }
   }
 
@@ -432,7 +469,7 @@ object Outbox {
       outboxIdParam.relId, outboxIdParam.destId, setup.relResolverReplyAdapter)
   }
 
-  val logger: Logger = getLoggerByClass(getClass)
+  private val logger: Logger = getLoggerByClass(getClass)
 
   private def batchSize(config: Config): Int = {
     ConfigReadHelper(config)
@@ -472,6 +509,30 @@ object Outbox {
       RetentionCriteria.snapshotEvery(numberOfEvents = afterEveryEvents, keepNSnapshots = keepSnapshots)
     if (deleteEventOnSnapshot) retentionCriteria.withDeleteEventsOnSnapshot
     else retentionCriteria
+  }
+
+  def prepareRetryParam(comMethodType: Int,
+                        failedAttemptCount: Int,
+                        config: Config): RetryParam = {
+    val comMethodTypeStr = comMethodType match {
+      case COM_METHOD_TYPE_HTTP_ENDPOINT  => "webhook"
+      case _                              => "default"
+    }
+    val maxRetries =
+      ConfigReadHelper(config)
+        .getIntOption(s"verity.outbox.$comMethodTypeStr.retry-policy.max-retries")
+        .getOrElse(5)
+
+    val initialInterval =
+      ConfigReadHelper(config)
+        .getDurationOption(s"verity.outbox.$comMethodTypeStr.retry-policy.initial-interval")
+        .getOrElse(FiniteDuration(5, SECONDS))
+
+    RetryParam(
+      failedAttemptCount,
+      maxRetries,
+      initialInterval
+    )
   }
 
   //TODO: finalize this (idea is to have one dispatcher based on com method as part of state)
@@ -515,4 +576,5 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        buffer: StashBuffer[Cmd],
                        relResolver: Behavior[RelationshipResolver.Cmd],
                        relResolverReplyAdapter: ActorRef[RelationshipResolver.Reply],
-                       dispatcher: Dispatcher)
+                       dispatcher: Dispatcher,
+                       itemManagerEntityHelper: ItemManagerEntityHelper)

@@ -4,8 +4,8 @@ import akka.event.LoggingReceive
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.{HasSingletonParentProxy, MsgPackFormat}
-import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, CheckWatchedItem, ForEntityItemWatcher, RemoveItem}
-import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
+import com.evernym.verity.actor.cluster_singleton.watcher.CheckWatchedItem
+import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.CommonConfig._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
@@ -61,7 +61,7 @@ trait FailedMsgRetrier
       retryFailedMsgsJob = None
       logger.debug(s"[$persistenceId]: no failed message to retry, scheduled job stopped")
     }
-    removeItemFromWatcherIfNotAlreadyDone()
+    removeItemFromWatcher()
   }
 
   private def resendUndeliveredMsgsIfAny(): Unit = {
@@ -77,24 +77,10 @@ trait FailedMsgRetrier
     }
   }
 
-  private def removeItemFromWatcherIfNotAlreadyDone(): Unit = {
-    if (isRegistered) {
-      removeItemFromWatcher(entityId)
-      isRegistered = false
-    }
-  }
-
-  private def addItemToWatcherIfNotAlreadyDone(): Unit = {
-    if (! isRegistered) {
-      addItemToWatcher(entityId)
-      isRegistered = true
-    }
-  }
-
   override def postCommandExecution(cmd: Any): Unit = {
     cmd match {
       case uds: UpdateMsgDeliveryStatus if uds.isFailed =>
-        addItemToWatcherIfNotAlreadyDone()
+        addItemToWatcher()
         scheduleRetryFailedMsgsJobIfNotAlreadyScheduled()
       case _ => //nothing to do
     }
@@ -111,7 +97,7 @@ trait FailedMsgRetrier
     val pms = getMsgIdsEligibleForRetries
     logger.debug(s"[$persistenceId] during receive timeout, failed msgs to be retried: " + pms)
     if (pms.isEmpty) {
-      removeItemFromWatcherIfNotAlreadyDone()
+      removeItemFromWatcher()
       logger.debug(s"[$persistenceId] actor will be stopped", (LOG_KEY_PERSISTENCE_ID, entityId))
       true
     } else {
@@ -120,14 +106,14 @@ trait FailedMsgRetrier
     }
   }
 
-  def addItemToWatcher(itemId: ItemId): Unit = {
-    singletonParentProxyActor ! ForEntityItemWatcher(AddItem(itemId, entityType))
-    log.debug("item added to watcher: " + itemId)
+  def addItemToWatcher(): Unit = {
+    itemManagerEntityHelper.register()
+    log.debug("item added to watcher: " + entityId)
   }
 
-  def removeItemFromWatcher(itemId: ItemId): Unit = {
-    singletonParentProxyActor ! ForEntityItemWatcher(RemoveItem(itemId, entityType))
-    log.debug("item removed from watcher: " + itemId)
+  def removeItemFromWatcher(): Unit = {
+    itemManagerEntityHelper.deregister()
+    log.debug("item removed from watcher: " + entityId)
   }
 
   private var isRegistered: Boolean = false
@@ -135,6 +121,9 @@ trait FailedMsgRetrier
   private lazy val defaultBatchSize: Int = appConfig.getIntOption(FAILED_MSG_RETRIER_BATCH_SIZE).getOrElse(30)
 
   lazy val maxRetryCount: Int = appConfig.getIntOption(FAILED_MSG_RETRIER_MAX_RETRY_COUNT).getOrElse(5)
+
+  import akka.actor.typed.scaladsl.adapter._
+  lazy val itemManagerEntityHelper = new ItemManagerEntityHelper(entityId, entityType, context.system.toTyped)
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class

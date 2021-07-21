@@ -101,11 +101,13 @@ trait OutboxRouterSpecBase
     }
   }
 
-  val SNAPSHOT_CONFIG: Config = ConfigFactory.parseString {
+  val OVERRIDE_CONFIG: Config = ConfigFactory.parseString {
     """
       |verity.outbox.retention-criteria.snapshot.after-every-events = 1
       |verity.outbox.retention-criteria.snapshot.keep-snapshots = 1
       |verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots = true
+      |
+      |verity.outbox.scheduled-job-interval = 5 millis
       |""".stripMargin
   }
 

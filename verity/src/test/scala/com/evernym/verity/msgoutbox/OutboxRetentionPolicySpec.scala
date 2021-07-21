@@ -104,15 +104,12 @@ class OutboxRetentionPolicySpec
   }
 
 
-  val SNAPSHOT_CONFIG = ConfigFactory.parseString{
+  val OVERRIDE_CONFIG = ConfigFactory.parseString{
     """
       |verity.outbox.retention-criteria.snapshot.after-every-events = 1
       |verity.outbox.retention-criteria.snapshot.keep-snapshots = 1
       |verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots = true
       |
-      |verity.outbox.scheduled-job-interval = 5 millis
-      |
-      |verity.outbox.webhook.retry-policy.max-retries = 5
       |verity.outbox.webhook.retry-policy.initial-interval = 2 millis
       |""".stripMargin
   }
@@ -140,7 +137,7 @@ class OutboxRetentionPolicySpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(SNAPSHOT_CONFIG),
+        appConfig.config.withFallback(OVERRIDE_CONFIG),
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

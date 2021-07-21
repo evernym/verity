@@ -39,7 +39,7 @@ class OutboxRouterSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(SNAPSHOT_CONFIG),
+        appConfig.config.withFallback(OVERRIDE_CONFIG),
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,
@@ -48,9 +48,6 @@ class OutboxRouterSpec
       )
     })
 }
-
-
-
 
 object TestAgentRelResolver {
   def apply(destParams: Map[DestId, DestParam]): Behavior[RelationshipResolver.Cmd] = {

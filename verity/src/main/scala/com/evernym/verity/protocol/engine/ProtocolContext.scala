@@ -129,7 +129,7 @@ trait ProtocolContext[P,R,M,E,S,I]
           protocol.applyEvent(getState, getRoster, e)
         } catch {
           case _: MatchError =>
-            throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.toString)
+            throw new NoEventHandler(state.toString, getRoster.selfRole.map(_.toString).getOrElse(""), event.getClass.getSimpleName)
         }
         val (updatedState, updatedRoster) = Option(result).getOrElse(throw new InvalidState("applyEvent"))
         updatedState.foreach { newState   => shadowState = Option(newState) }

@@ -23,7 +23,7 @@ import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtension, MetricsWriter}
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -49,8 +49,6 @@ trait BasePersistentActor
   var totalPersistedEvents: Int = 0
   var totalRecoveredEvents: Int = 0
   var isAnySnapshotApplied: Boolean = false
-
-  override val metricsWriter : MetricsWriter = MetricsWriterExtension(context.system).get()
 
   def incrementTotalPersistedEvents(by: Int = 1): Unit = {
     totalPersistedEvents = totalPersistedEvents + by

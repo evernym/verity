@@ -87,7 +87,6 @@ trait EdgeEndpointBaseSpec
 
   def emptyPackedMsgWrapper: PackedMsg = PackedMsg(Array[Byte]())
   def responseTo[T: ClassTag]: T = DefaultMsgCodec.fromJson(responseAs[String])
-  lazy val util: UtilBase = TestUtil
 
   override protected def createActorSystem(): ActorSystem = {
     val port = appConfig.getIntReq("akka.remote.artery.canonical.port")

@@ -47,7 +47,10 @@ trait MsgListenerBase[T]
   protected def startHttpServer(): Unit = {
     Http().newServerAt("localhost", port).bind(edgeRoute)
   }
-  private lazy val edgeRoute: Route = msgRoute ~ (if (checkAuthToken) oAuthAccessTokenRoute else RouteDirectives.reject)
+
+  private def edgeRoute: Route =
+    (if (rejectMessages) RouteDirectives.reject else msgRoute) ~
+      (if (checkAuthToken) oAuthAccessTokenRoute else RouteDirectives.reject)
 
   def resetPlainMsgsCounter: ReceivedMsgCounter = {
     val curCount = _plainMsgsSinceLastReset
@@ -66,6 +69,12 @@ trait MsgListenerBase[T]
     _failedAuthedMsgSinceLastReset = 0
     ReceivedMsgCounter(_plainMsgsSinceLastReset, _authedMsgSinceLastReset, curCount)
   }
+
+  def setRejectMessages(value: Boolean): Unit = {
+    rejectMessages = value
+  }
+
+  private var rejectMessages = false
 
   protected var _plainMsgsSinceLastReset: Int = 0
 

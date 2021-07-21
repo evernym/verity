@@ -90,6 +90,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user1IpAddress && urb.resourceName == "resource1" && urb.blockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -118,6 +120,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user1IpAddress && urb.resourceName == "resource2" && urb.blockPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -148,6 +152,8 @@ class ResourceBlockingStatusMngrSpec
             case ub: CallerBlocked if
               ub.callerId == user1IpAddress && ub.blockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -178,6 +184,8 @@ class ResourceBlockingStatusMngrSpec
             case ub: CallerBlocked if
               ub.callerId == user1IpAddress && ub.blockPeriod == 0 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -208,6 +216,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user1IpAddress && urb.resourceName == "resource1" && urb.blockPeriod == 0 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -242,6 +252,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user2IpAddress && urb.resourceName == "resource1" && urb.blockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -270,6 +282,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user2IpAddress && urb.resourceName == "resource2" && urb.blockPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -300,6 +314,8 @@ class ResourceBlockingStatusMngrSpec
             case urub: CallerResourceUnblocked if
               urub.callerId == user2IpAddress && urub.resourceName == "resource2" && urub.unblockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -330,6 +346,8 @@ class ResourceBlockingStatusMngrSpec
             case ub: CallerBlocked if
               ub.callerId == user2IpAddress && ub.blockPeriod == 600 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -360,6 +378,8 @@ class ResourceBlockingStatusMngrSpec
             case ub: CallerBlocked if
               ub.callerId == user2IpAddress && ub.blockPeriod == 0 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -390,6 +410,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user2IpAddress && urb.resourceName == "resource1" && urb.blockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -420,6 +442,8 @@ class ResourceBlockingStatusMngrSpec
             case uub: CallerUnblocked if
               uub.callerId == user2IpAddress && uub.unblockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -467,6 +491,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user3IpAddress && urb.resourceName == "resource1" && urb.blockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -495,6 +521,8 @@ class ResourceBlockingStatusMngrSpec
             case urb: CallerResourceBlocked if
               urb.callerId == user3IpAddress && urb.resourceName == "resource2" && urb.blockPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = true,
@@ -525,6 +553,8 @@ class ResourceBlockingStatusMngrSpec
             case urub: CallerResourceUnblocked if
               urub.callerId == user3IpAddress && urub.resourceName == "resource1" && urub.unblockPeriod == 300 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -553,6 +583,8 @@ class ResourceBlockingStatusMngrSpec
             case ub: CallerBlocked if
               ub.callerId == user3IpAddress && ub.blockPeriod == -1 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -597,6 +629,8 @@ class ResourceBlockingStatusMngrSpec
             case uub: CallerUnblocked if
               uub.callerId == user3IpAddress && uub.unblockPeriod == 600 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,
@@ -641,6 +675,8 @@ class ResourceBlockingStatusMngrSpec
             case ub: CallerBlocked if
               ub.callerId == user3IpAddress && ub.blockPeriod == 600 =>
           }
+          Thread.sleep(100)
+
           singletonParentProxy ! ForResourceBlockingStatusMngr(
             GetBlockedList(
               onlyBlocked = false,

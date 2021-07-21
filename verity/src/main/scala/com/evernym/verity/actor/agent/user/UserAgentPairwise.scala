@@ -354,7 +354,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
         case DEFAULT_ENDORSER_DID                   => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
 
-        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
+        case DATA_RETENTION_POLICY                  => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
       }
     }
   }

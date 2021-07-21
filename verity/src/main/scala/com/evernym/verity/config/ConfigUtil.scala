@@ -176,10 +176,34 @@ object ConfigUtil {
 
   private def emptyToUndefined(x: String): String = if (x.trim.nonEmpty) x else "undefined"
 
+  def getProtoStateRetentionPolicy(config: AppConfig,
+                                   domainId: String,
+                                   protoRef: String): RetentionPolicy = {
+    try {
+      //TODO: for backward compatibility (in case corresponding new config changes is not rolled out)
+      getRetentionPolicy(config, RETENTION_POLICY, domainId, protoRef)
+    } catch {
+      case _: ConfigException.Missing =>
+        getRetentionPolicy(config, RETENTION_POLICY_PROTOCOL_STATE, domainId, protoRef)
+    }
+  }
+
+  def getOutboxStateRetentionPolicyForIntraDomain(config: AppConfig,
+                                                  domainId: String,
+                                                  protoRef: String): RetentionPolicy = {
+    getRetentionPolicy(config, RETENTION_POLICY_OUTBOX_STATE_INTRA_DOMAIN, domainId, protoRef)
+  }
+
+  def getOutboxStateRetentionPolicyForInterDomain(config: AppConfig,
+                                                  domainId: String,
+                                                  protoRef: String): RetentionPolicy = {
+    getRetentionPolicy(config, RETENTION_POLICY_OUTBOX_STATE_INTER_DOMAIN, domainId, protoRef)
+  }
+
   def getRetentionPolicy(config: AppConfig,
+                         basePath: String,
                          domainId: String,
                          protoRef: String): RetentionPolicy = {
-    val basePath = RETENTION_POLICY
     val domainConfig = config.getConfigOption(s"$basePath.${emptyToUndefined(domainId)}")
     val defaultConfig = config.config.getConfig(s"$basePath.default")
 
@@ -193,10 +217,10 @@ object ConfigUtil {
 
   private def getPolicyFromConfig(config: Config, protoRef: String): RetentionPolicy = {
     val retentionPolicyConfig = ConfigReadHelper.getConfigOption(config, emptyToUndefined(protoRef)) match {
-        case Some(x)  => x
-        case None     => ConfigReadHelper
-          .getConfigOption(config, UNDEFINED_FALLBACK)
-          .getOrElse(throw new ConfigException.Missing(s"Must define Data Retention Policy '$UNDEFINED_FALLBACK'"))
+      case Some(x)  => x
+      case None     => ConfigReadHelper
+        .getConfigOption(config, UNDEFINED_FALLBACK)
+        .getOrElse(throw new ConfigException.Missing(s"Must define Data Retention Policy '$UNDEFINED_FALLBACK'"))
     }
     getPolicyFromConfigStr(retentionPolicyConfig.root().render(ConfigRenderOptions.concise()))
   }
@@ -211,11 +235,10 @@ object ConfigUtil {
           configStr,
           PolicyElements(expireAfterDays, expireAfterTerminalState)
         )
-      case Failure(e: ConfigException.Parse) =>
+      case Failure(_: ConfigException.Parse) =>
         //this is to handle the initial/older retention policy format which used to be just number of days
         // instead of a valid concise typesafe config string
         getPolicyFromConfigStr(s"""{"expire-after-days":"$configStr"}""")
-
       case Failure(e) => throw e
     }
   }

@@ -27,7 +27,6 @@ import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
 import akka.util.Timeout
-import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.typed.base.UserGuarding.Commands.SendMsgToOutbox
 import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
@@ -446,9 +445,8 @@ class ActorProtocolContainer[
   def sendToOutboxRouter(pom: ProtocolOutgoingMsg): Unit = {
     if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
       val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
-      val retPolicy = RetentionPolicy(      //TODO: this is temporary, to be finalized
-        """{"expire-after-days":20 days,"expire-after-terminal-state":true}""",
-        PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true))
+      val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
+        appConfig, domainId, definition.msgFamily.protoRef.toString)
 
       //TODO: will below approach become choke point?
       userGuardian ! SendMsgToOutbox(

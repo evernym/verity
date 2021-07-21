@@ -96,7 +96,7 @@ trait AgencyAgentCommon
           case MY_PUBLIC_DID => Parameter(MY_PUBLIC_DID, "")
           case MY_SELF_REL_DID => Parameter(MY_SELF_REL_DID, "")
           case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY,
-            ConfigUtil.getRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
+            ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
         }
 
     lazy val newActorId = getNewActorId

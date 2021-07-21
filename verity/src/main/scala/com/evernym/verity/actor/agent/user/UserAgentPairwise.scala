@@ -132,7 +132,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     case ppgm: ProcessPersistedSendRemoteMsg                => processPersistedSendRemoteMsg(ppgm)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
-    //case GetOutboxParam(destId)                             => sendOutboxParam(destId)
+    case GetOutboxParam(destId)                             => sendOutboxParam(destId)
   }
 
   override final def receiveAgentEvent: Receive =

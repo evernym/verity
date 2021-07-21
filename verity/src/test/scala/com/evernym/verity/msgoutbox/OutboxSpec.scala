@@ -78,10 +78,10 @@ class OutboxSpec
         "should be successful" in {
           val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
           val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
-          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, probe.ref))
+          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
 
-          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, probe.ref))
+          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAlreadyAdded))
 
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
@@ -92,7 +92,7 @@ class OutboxSpec
         "should be successful" in {
           val msgId = storeAndAddToMsgMetadataActor("cred-request", Set(outboxId))
           val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
-          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, probe.ref))
+          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
@@ -102,7 +102,7 @@ class OutboxSpec
         "should be successful" in {
           val msgId = storeAndAddToMsgMetadataActor("cred", Set(outboxId))
           val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
-          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, probe.ref))
+          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
@@ -165,7 +165,7 @@ class OutboxSpec
         (1 to 3).foreach { _ =>
           val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
           val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
-          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, probe.ref))
+          outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }

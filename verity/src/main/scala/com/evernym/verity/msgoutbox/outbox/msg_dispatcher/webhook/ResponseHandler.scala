@@ -18,7 +18,9 @@ object ResponseHandler {
         None
 
       case Left(sd: StatusDetail) =>
-        val isAnyRetryAttemptsLeft = param.retryParam.exists(_.isRetryAttemptsLeft)
+
+        val isAnyRetryAttemptsLeft = param.retryParam.map(_.withFailedAttemptIncremented).exists(_.isRetryAttemptsLeft)
+
         param.replyTo ! RecordFailedAttempt(
           param.msgId,
           param.comMethodId,
@@ -27,7 +29,8 @@ object ResponseHandler {
           isAnyRetryAttemptsLeft = isAnyRetryAttemptsLeft,
           sd
         )
-        param.retryParam
+        param
+          .retryParam
           .map(_.withFailedAttemptIncremented)
           .filter(_.isRetryAttemptsLeft)
           .map { rp =>

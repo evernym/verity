@@ -127,21 +127,21 @@ object OutboxRouter {
         None,
         msgMetaReplyAdapter
       )
-      handleMsgMetaStored(msgId, outboxIdParams, replyTo)
+      handleMsgMetaStored(msgId, retentionPolicy, outboxIdParams, replyTo)
   }
 
   def handleMsgMetaStored(msgId: MsgId,
+                          retentionPolicy: RetentionPolicy,
                           outboxIdParams: Seq[OutboxIdParam],
                           replyTo:Option[ActorRef[Reply]])
                          (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
     case MessageMetaReplyAdapter(Success(MessageMeta.Replies.MsgAdded)) =>
       //TODO: finalize below logic
       val clusterSharding = ClusterSharding(actorContext.system)
-
       val outboxReplyAdapter = actorContext.messageAdapter(reply => OutboxReplyAdapter(reply))
       outboxIdParams.foreach { outboxIdParam =>
         val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.outboxId)
-        outboxEntityRef ! Outbox.Commands.AddMsg(msgId, outboxReplyAdapter)
+        outboxEntityRef ! Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, outboxReplyAdapter)
       }
       waitingForOutboxReply(msgId, outboxIdParams.map(_.outboxId), 0, replyTo)
   }

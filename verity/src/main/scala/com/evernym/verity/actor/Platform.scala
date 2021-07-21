@@ -30,7 +30,7 @@ import com.evernym.verity.util.Util._
 import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
-import com.evernym.verity.actor.typed.base.UserGuarding
+import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libs.Libraries
 import com.evernym.verity.metrics.MetricsReader
 
@@ -231,7 +231,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")
 
   import akka.actor.typed.scaladsl.adapter._
-  actorSystem.spawn(UserGuarding(agentActorContext), "guarding")
+  actorSystem.spawn(UserGuardian(agentActorContext), "guardian")
 
   def createCusterSingletonManagerActor(singletonProps: Props): ActorRef = {
     agentActorContext.system.actorOf(

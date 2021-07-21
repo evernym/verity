@@ -31,7 +31,7 @@ import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuarding
-import com.evernym.verity.libs.Libraries
+import com.evernym.verity.libindy.Libraries
 import com.evernym.verity.metrics.MetricsReader
 
 import scala.concurrent.Future

@@ -5,7 +5,6 @@ import com.evernym.verity.protocol.engine.Scope.ProtocolScope
 import com.evernym.verity.protocol.engine._
 import State.Uninitialized
 import WalletBackupMsgFamily.{BackupMsg, Init}
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 
@@ -26,8 +25,7 @@ object WalletBackupProtoDef extends ProtocolDefinition[WalletBackup, Role, Backu
 
   override val roles: Set[Role] = Set(Exporter, Persister, Recoverer)
 
-  def create(ctx: ProtocolContextApi[WalletBackup, Role, BackupMsg, BackupEvt, BackupState, String],
-             mw: MetricsWriter): WalletBackup = { //TODO can this be generically implemented in the base class?
+  def create(ctx: ProtocolContextApi[WalletBackup, Role, BackupMsg, BackupEvt, BackupState, String]): WalletBackup = { //TODO can this be generically implemented in the base class?
     new WalletBackup(ctx)
   }
 

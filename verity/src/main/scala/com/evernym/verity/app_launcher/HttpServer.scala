@@ -11,7 +11,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -31,7 +31,7 @@ class HttpServer(val platform: Platform, routes: Route)
   implicit lazy val system: ActorSystem = platform.agentActorContext.system
   lazy implicit val executor: ExecutionContextExecutor = system.dispatcher
 
-  lazy val metricsWriter : MetricsWriter = MetricsWriterExtension(system).get()
+  lazy val metricsWriter : MetricsWriter = platform.agentActorContext.metricsWriter
 
   var httpBinding: Option[ServerBinding] = None
 

@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
 import org.scalatest.PrivateMethodTester
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
@@ -21,7 +20,7 @@ class EvilCoinFlip(override val ctx: ProtocolContextApi[CoinFlip, Role, Msg, Eve
 
 
 object EvilCoinFlipDefinition extends CoinFlipDefTrait {
-  override def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String], mw: MetricsWriter):
+  override def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String]):
   Protocol[CoinFlip, Role, Msg, Event, CoinFlipState, String] =
     new EvilCoinFlip(context)
 

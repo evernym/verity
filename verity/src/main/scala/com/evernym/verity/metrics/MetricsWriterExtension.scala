@@ -14,7 +14,7 @@ class MetricsWriterExtensionImpl(config: Config) extends Extension {
   private var metricsWriter: MetricsWriter = try {
     if (config.getString(METRICS_ENABLED) == YES) {
       val className = config.getString(METRICS_WRITER)
-      val writer = Class.forName(className).newInstance().asInstanceOf[MetricsWriter]
+      val writer = Class.forName(className).getConstructor().newInstance().asInstanceOf[MetricsWriter]
       writer.setup()
       writer
     } else {
@@ -22,7 +22,7 @@ class MetricsWriterExtensionImpl(config: Config) extends Extension {
     }
   } catch {
     case e: Throwable =>
-      logger.warn(s"Error occured during metric writer extension init: ${e.getMessage}. Using fallback NoOpMetrics writer.")
+      logger.warn(s"Error occurred during metric writer extension init: ${e.getMessage}. Using fallback NoOpMetrics writer.")
       new NoOpMetricsWriter
   }
 

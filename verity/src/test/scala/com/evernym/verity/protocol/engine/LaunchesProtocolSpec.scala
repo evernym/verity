@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.PinstIdResolution.V0_2
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
@@ -44,7 +43,7 @@ class LaunchesProtocolSpec extends BasicSpec {
   class TestDef(familyName: String) extends ProtocolDefinition[String, String, String, String, String, String] {
     override def supportedMsgs: ProtoReceive = { case _ => }
 
-    override def create(context: ProtocolContextApi[String, String, String, String, String, String], mw: MetricsWriter):
+    override def create(context: ProtocolContextApi[String, String, String, String, String, String]):
       Protocol[String, String, String, String, String, String] = ???
 
     override def initialState: String = ???

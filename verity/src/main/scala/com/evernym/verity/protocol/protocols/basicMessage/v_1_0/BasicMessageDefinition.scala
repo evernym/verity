@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
@@ -22,8 +21,7 @@ object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg
 
   override val requiredAccess: Set[AccessRight] = Set()
 
-  override def create(context: ProtocolContextApi[BasicMessage, Role, Msg, Event, State, String],
-                      mw: MetricsWriter): BasicMessage = {
+  override def create(context: ProtocolContextApi[BasicMessage, Role, Msg, Event, State, String]): BasicMessage = {
     new BasicMessage(context)
   }
 

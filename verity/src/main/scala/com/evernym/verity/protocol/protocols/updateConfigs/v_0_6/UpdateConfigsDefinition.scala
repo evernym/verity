@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtoReceive, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.InitMsg
@@ -24,8 +23,7 @@ trait UpdateConfigsDefTrait extends ProtocolDefinition[UpdateConfigs, Role, Prot
 
   override val roles: Set[Role] = Role.roles
 
-  override def create(context: ProtocolContextApi[UpdateConfigs, Role, ProtoMsg, Event, State, String],
-                      mw: MetricsWriter): UpdateConfigs = {
+  override def create(context: ProtocolContextApi[UpdateConfigs, Role, ProtoMsg, Event, State, String]): UpdateConfigs = {
     new UpdateConfigs(context)
   }
 

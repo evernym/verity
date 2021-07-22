@@ -5,7 +5,6 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.{MockLedgerSvc, MockLedgerTxnExecutor}
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.ledger._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI

@@ -5,7 +5,6 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
 import AgentProvisioningMsgFamily._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerify}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
@@ -25,8 +24,7 @@ object AgentProvisioningDefinition
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(context: ProtocolContextApi[AgentProvisioning, Role, Msg, Any, AgentProvisioningState, String]
-                      , mw: MetricsWriter):
+  override def create(context: ProtocolContextApi[AgentProvisioning, Role, Msg, Any, AgentProvisioningState, String]):
   Protocol[AgentProvisioning, Role, Msg, Any, AgentProvisioningState, String] = {
     new AgentProvisioning(context)
   }

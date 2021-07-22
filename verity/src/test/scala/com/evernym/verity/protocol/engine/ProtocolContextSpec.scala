@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
@@ -95,7 +94,7 @@ object TestProtoDef2 extends ProtocolDefinition[TestProto2, Role, String, String
     case _ =>
   }
 
-  def create(ctx: ProtocolContextApi[TestProto2, Role, String, String, String, String], mw: MetricsWriter): TestProto2 = {
+  def create(ctx: ProtocolContextApi[TestProto2, Role, String, String, String, String]): TestProto2 = {
     new TestProto2(ctx)
   }
 

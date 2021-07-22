@@ -42,7 +42,9 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   def send[T](msg: M, toRole: Option[R]=None, fromRole: Option[R]=None): Unit
 
   def serviceEndpoint: ServiceEndpoint
-  
+
+  def metricsWriter: MetricsWriter
+
   //TODO how a message is sent should probably be abstracted; would like to fold this into the general send method above
   //TODO we shouldn't be exposing general sms capabilities to protocol authors
   def sendSMS(toPhoneNumber: String, msg: String): Future[String]
@@ -73,7 +75,8 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   //it is only being used by few existing protocols and sooner we should get rid of usages of the services
   // noinspection ScalaDeprecation
   @silent
-  def SERVICES_DEPRECATED: ProtocolServices[M,E,I] = _services.getOrElse(throw new RuntimeException("services are not available"))
+  def SERVICES_DEPRECATED: ProtocolServices[M,E,I] = _services.getOrElse(
+    throw new RuntimeException("services are not available"))
 
   @silent
   def DEPRECATED_convertAsyncToSync[T](fut: Future[T]): T = {

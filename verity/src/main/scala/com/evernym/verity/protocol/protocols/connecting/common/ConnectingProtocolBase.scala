@@ -18,7 +18,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
@@ -67,8 +66,6 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
 
   val logger: Logger = ctx.logger
-
-  def metricsWriter: MetricsWriter
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
     ctx.SERVICES_DEPRECATED.publishAppStateEvent(event)
@@ -226,7 +223,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     try {
       val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
       val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
-      sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg), metricsWriter)
+      sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg), ctx.metricsWriter)
     } catch {
       case e: Exception =>
         logger.error("sending invite answered msg to remote agency failed", Exceptions.getErrorMsg(e))
@@ -376,7 +373,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def getEncryptForDID: DID
 
   def buildAgentPackedMsg(msgPackFormat: MsgPackFormat, param: PackMsgParam): PackedMsg = {
-    val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)(agentMsgTransformer, wap, metricsWriter)
+    val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)(agentMsgTransformer, wap, ctx.metricsWriter)
     awaitResult(fut)
   }
 
@@ -420,7 +417,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           encryptionParamBuilder.withRecipDID(ctx.getState.theirAgentKeyDIDReq)
             .withSenderVerKey(ctx.getState.thisAgentVerKeyReq).encryptParam,
           agentMsgs, wrapInBundledMsgs)
-        val packedMsgFut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap, metricsWriter)
+        val packedMsgFut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap, ctx.metricsWriter)
         val packedMsg = awaitResult(packedMsgFut)
         buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, packedMsg.msg, msgType)
       case x => throw new RuntimeException("unsupported routing detail" + x)
@@ -434,7 +431,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL).verKey)))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
-          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, metricsWriter)
+          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, ctx.metricsWriter)
       case (None, Some(v2: RoutingDetail)) =>
         val routingKeys = if (v2.routingKeys.nonEmpty) Vector(v2.verKey) ++ v2.routingKeys else v2.routingKeys
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -442,7 +439,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap, metricsWriter)
+        )(agentMsgTransformer, wap, ctx.metricsWriter)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
     awaitResult(result)

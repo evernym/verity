@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.simplecount
 
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
@@ -31,7 +30,7 @@ object SimpleCountDefinition extends ProtocolDefinition[SimpleCount, Role, Msg, 
     case m: Msg =>
   }
 
-  override def create(context: ProtocolContextApi[SimpleCount, Role, Msg, Event, State, String], mw: MetricsWriter):
+  override def create(context: ProtocolContextApi[SimpleCount, Role, Msg, Event, State, String]):
   Protocol[SimpleCount, Role, Msg, Event, State, String] =
     new SimpleCount(context)
 

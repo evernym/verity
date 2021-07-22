@@ -13,7 +13,6 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter
 
 import scala.concurrent.{Await, Future}

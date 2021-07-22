@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine._
@@ -50,7 +49,7 @@ trait CoinFlipDefTrait extends ProtocolDefinition[CoinFlip, Role, Msg, Event, Co
     case _: CoinFlipControl =>
   }
 
-  def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String], mw: MetricsWriter):
+  def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String]):
     Protocol[CoinFlip, Role, Msg, Event, CoinFlipState, String] =
       new CoinFlip(context)
 

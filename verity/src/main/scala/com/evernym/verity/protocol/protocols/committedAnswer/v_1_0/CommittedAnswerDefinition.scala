@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, AccessVerify}
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition}
@@ -18,8 +17,7 @@ object CommittedAnswerDefinition extends ProtocolDefinition[CommittedAnswerProto
 
   override val requiredAccess: Set[AccessRight] = Set(AccessSign, AccessVerify)
 
-  override def create(context: ProtocolContextApi[CommittedAnswerProtocol, Role, Msg, Event, State, String],
-                      mw: MetricsWriter): CommittedAnswerProtocol = {
+  override def create(context: ProtocolContextApi[CommittedAnswerProtocol, Role, Msg, Event, State, String]): CommittedAnswerProtocol = {
     new CommittedAnswerProtocol(context)
   }
 

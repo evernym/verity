@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, Protocol, ProtocolContextApi, ProtocolDefinition, Scope}
@@ -10,8 +9,7 @@ import com.evernym.verity.protocol.engine.Scope.RelProvisioning
 object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, RelationshipEvent, State, String] {
   override val msgFamily: MsgFamily = RelationshipMsgFamily
 
-  override def create(context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent,
-    State, String], mw: MetricsWriter): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
+  override def create(context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String]): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
     new Relationship(context)
   }
 

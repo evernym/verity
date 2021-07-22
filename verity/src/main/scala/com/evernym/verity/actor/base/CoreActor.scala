@@ -22,7 +22,7 @@ trait CoreActor
     with EntityIdentifier
     with ActorLogging {
 
-  val metricsWriter : MetricsWriter = MetricsWriterExtension(context.system).get()
+  val metricsWriter: MetricsWriter = MetricsWriterExtension(context.system).get()
 
   override def receive: Receive = coreCommandHandler(cmdHandler)
 

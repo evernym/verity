@@ -6,18 +6,16 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
-import com.evernym.verity.actor.agent.relationship.{AuthorizedKey, AuthorizedKeys, DidDoc, EndpointADT, Endpoints, HttpEndpoint, Relationship, RoutingServiceEndpoint}
-import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
 import com.evernym.verity.util2.{PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.{AddMsgReply, MsgAdded}
-import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, DestId, OutboxId, RecipPackaging, RelId, VerKey, WalletId}
+import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, DestId, OutboxId, RecipPackaging, VerKey, WalletId}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Commands.{SendBinary, SendJson}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
-import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{GetRelParam, SendOutboxParam}
-import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.SendOutboxParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.OutboxParam
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Reply
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore

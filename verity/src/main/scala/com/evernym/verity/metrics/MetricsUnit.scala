@@ -10,4 +10,8 @@ object MetricsUnit {
 
     case object Kilobytes extends MetricsUnit
   }
+
+  object TimeUnit {
+    case object Seconds extends MetricsUnit
+  }
 }

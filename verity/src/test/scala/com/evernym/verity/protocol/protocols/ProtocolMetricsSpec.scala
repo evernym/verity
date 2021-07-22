@@ -6,8 +6,6 @@ import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.metrics.MetricHelpers.{SPONSOR_ID, SPONSOR_ID2, getMetricWithTags}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING}
 import com.typesafe.config.{Config, ConfigFactory}
-import kamon.tag.TagSet
-
 
 trait ProtocolMetricsSpec
 

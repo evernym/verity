@@ -2,13 +2,14 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.{Actor, ActorSystem}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.metrics.{CustomMetrics, MetricsWriterExtension}
+import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter, MetricsWriterExtension}
 
 import scala.collection.mutable
 
 class CollectionsMetricCollector(implicit val actorSystem: ActorSystem) extends Actor {
 
-  val metricsWriter = MetricsWriterExtension(actorSystem)
+  val metricsWriter: MetricsWriter = MetricsWriterExtension(actorSystem).get()
+
   // todo add metrics to self
   val size: mutable.Map[String, mutable.Map[String, Int]] = mutable.Map.empty
   var max: mutable.Map[String, Int] = mutable.Map.empty.withDefaultValue(0)
@@ -45,9 +46,9 @@ class CollectionsMetricCollector(implicit val actorSystem: ActorSystem) extends 
   }
 
   private def writeMetrics(group: String, max: Int, count: Int, sum: Int): Unit = {
-    metricsWriter.get.gaugeUpdate(CustomMetrics.AS_COLLECTIONS_SUM, sum, Map("group" -> group))
-    metricsWriter.get.gaugeUpdate(CustomMetrics.AS_COLLECTIONS_COUNT, count, Map("group" -> group))
-    metricsWriter.get.gaugeUpdate(CustomMetrics.AS_COLLECTIONS_MAX, max, Map("group" -> group))
+    metricsWriter.gaugeUpdate(CustomMetrics.AS_COLLECTIONS_SUM, sum, Map("group" -> group))
+    metricsWriter.gaugeUpdate(CustomMetrics.AS_COLLECTIONS_COUNT, count, Map("group" -> group))
+    metricsWriter.gaugeUpdate(CustomMetrics.AS_COLLECTIONS_MAX, max, Map("group" -> group))
   }
 }
 

@@ -9,6 +9,8 @@ import com.typesafe.config.Config
 
 class MetricsWriterExtensionImpl(config: Config) extends Extension {
 
+  //TODO: how to make sure this extension is thread safe?
+
   private val logger = getLoggerByName("MetricsWriterExtension")
 
   private var metricsWriter: MetricsWriter = try {
@@ -30,8 +32,8 @@ class MetricsWriterExtensionImpl(config: Config) extends Extension {
 
   def set(mw: MetricsWriter): Unit = {
     metricsWriter.shutdown()
+    mw.setup()
     metricsWriter = mw
-    metricsWriter.setup()
   }
 
 }

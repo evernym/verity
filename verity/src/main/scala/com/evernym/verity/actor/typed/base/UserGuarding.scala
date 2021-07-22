@@ -15,7 +15,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_transporter.{HttpTransporter, Msg
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.router.OutboxRouter
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.engine.ParticipantId
 
 

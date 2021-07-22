@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorSystem}
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
 import com.evernym.verity.util2.Exceptions
 import org.hyperledger.indy.sdk.metrics.Metrics
@@ -18,7 +18,7 @@ class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Act
 
   private val logger = getLoggerByClass(getClass)
 
-  val metricsWriter = MetricsWriterExtension(context.system)
+  val metricsWriter: MetricsWriter = MetricsWriterExtension(context.system).get()
 
   final override def receive: Receive = {
     case CollectLibindyMetrics() => this.collectLibindyMetrics()
@@ -42,9 +42,9 @@ class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Act
                 metricsList foreach (
                   metricsRecord => {
                     //TODO: need to fix this soon (VE-2763)
-                    //metricsWriter.get().gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
+                    //metricsWriter.gaugeUpdate(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
                   }
-                  )
+                )
               })
             }
           }

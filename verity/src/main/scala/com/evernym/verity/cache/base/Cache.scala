@@ -209,7 +209,8 @@ trait CacheBase {
  */
 case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
 
-class Cache(override val name: String, override val fetchers: Map[FetcherParam, CacheValueFetcher],
+class Cache(override val name: String,
+            override val fetchers: Map[FetcherParam, CacheValueFetcher],
             override val metricsWriter: MetricsWriter) extends CacheBase
 
 /**

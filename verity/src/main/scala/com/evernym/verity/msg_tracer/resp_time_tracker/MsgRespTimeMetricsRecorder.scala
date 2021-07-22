@@ -6,11 +6,11 @@ import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.CommonConfig.{METRICS_LATENCY_RECORDING_HISTOGRAM, METRICS_LATENCY_RECORDING_SPAN}
 import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
-import kamon.Kamon
 
 /**
  * class responsible to keep state related to one msg tracking
- * @param appConfig
+ * @param appConfig application config
+ * @param metricsWriter metrics writer
  */
 class MsgRespTimeMetricsRecorder(appConfig: AppConfig, metricsWriter: MetricsWriter) {
 

@@ -7,7 +7,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT
-import com.evernym.verity.metrics.{MetricsWriterExtension, TestMetricsWriter}
+import com.evernym.verity.metrics.TestMetricsWriter
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -49,9 +49,10 @@ trait BaseRecoverySpecLike
   extends BasePersistentStore
     with Eventually { this: BasicSpec =>
 
-  //todo rework~~~~~~~~~~
+  def testMetricsWriter : TestMetricsWriter
+
+  //TODO: may wanna rework this?
   def getStableWalletAPISucceedCountMetric: Double = {
-    val testMetricsWriter : TestMetricsWriter = MetricsWriterExtension(system).get().asInstanceOf[TestMetricsWriter] // todo ugly!
     var apiCallCount: Double =
       testMetricsWriter.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT).headOption.map(_._2).getOrElse(0)
     var timesFoundSameCount: Int = 0    //how many times the metrics count was found same (stable count)

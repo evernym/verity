@@ -17,10 +17,8 @@ import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
-import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.util._
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
 import org.scalatest.concurrent.Eventually
 
@@ -41,7 +39,7 @@ trait EdgeEndpointBaseSpec
     with AriesInvitationDecodingSpec
     with AppStatusHealthCheckSpec {
 
-  override def metricsWriter: MetricsWriter = MetricsWriterExtension(platform.actorSystem).get()
+  override def metricsWriter: MetricsWriter = platform.agentActorContext.metricsWriter
 
   lazy val (mockEntEdgeEnv, mockUserEdgeEnv) = {
     val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg")

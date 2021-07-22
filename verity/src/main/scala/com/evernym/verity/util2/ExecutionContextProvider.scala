@@ -2,6 +2,8 @@ package com.evernym.verity.util2
 
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.CommonConfig.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
+
+//TODO: do we want to abstract this kamon instrumentation api as well as we did for metrics api?
 import kamon.instrumentation.executor.ExecutorInstrumentation
 
 import java.util.concurrent.Executors

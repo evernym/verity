@@ -63,7 +63,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.ActorErrorResp
-import kamon.metric.MeasurementUnit
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}

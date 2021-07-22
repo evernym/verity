@@ -4,7 +4,6 @@ import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.state.base.AgentStateInterface
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotterExt}
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_DYNAMODB_SNAPSHOT_THREAD_CONTEXT_SIZE_EXCEEDED_CURRENT_COUNT
-import com.evernym.verity.metrics.MetricsWriter
 
 /**
  * a base agent snapshotter trait to be added/included in different agent actor
@@ -16,8 +15,6 @@ import com.evernym.verity.metrics.MetricsWriter
  */
 trait AgentSnapshotter[T <: State with AgentStateInterface]
   extends SnapshotterExt[T] { this: BasePersistentActor =>
-
-  def metricsWriter: MetricsWriter
 
   var state: T
 

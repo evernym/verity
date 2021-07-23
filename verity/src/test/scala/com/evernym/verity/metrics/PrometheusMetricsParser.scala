@@ -1,7 +1,7 @@
 package com.evernym.verity.metrics
 
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricDetail.convertToProviderName
 import com.evernym.verity.metrics.PrometheusMetricsParser.targetConnector

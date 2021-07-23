@@ -78,44 +78,76 @@ class ComMethodAuthenticationSpec
 
     "when tried to update com method without sufficient data" - {
       "should respond with error" in {
-        val ex = intercept[IllegalArgumentException] {
-          issuerSDK.registerWebhook(
-            Option(
-              ComMethodAuthentication(
-                "OAuth2",
-                "v1",
-                Map(
-                  "url" -> "url",
-                  "client_id" -> "client_id",
-                  "client_secret" -> "client_secret"
+        val invalidData = Seq(
+          Map("grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "client_id" -> "client_id", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "client_credentials", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "client_credentials", "client_id" -> "client_id")
+        )
+        invalidData.foreach { data =>
+          val ex = intercept[IllegalArgumentException] {
+            issuerSDK.registerWebhook(
+              Option(
+                ComMethodAuthentication(
+                  "OAuth2",
+                  "v1",
+                  data
                 )
               )
             )
-          )
+          }
+          ex.getMessage.contains("authentication data required fields missing or invalid") shouldBe true
         }
-        ex.getMessage.contains("authentication data required fields missing or invalid") shouldBe true
       }
     }
 
     "when tried to update com method with empty data for required fields" - {
       "should respond with error" in {
-        val ex = intercept[IllegalArgumentException] {
-          issuerSDK.registerWebhook(
-            Option(
-              ComMethodAuthentication(
-                "OAuth2",
-                "v1",
-                Map(
-                  "url" -> "url",
-                  "grant_type" -> "",
-                  "client_id" -> "client_id",
-                  "client_secret" -> "client_secret"
+        val invalidData = Seq(
+          Map("url" -> "", "grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "", "client_id" -> "client_id", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "client_credentials", "client_id" -> "", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "")
+        )
+        invalidData.foreach { data =>
+          val ex = intercept[IllegalArgumentException] {
+            issuerSDK.registerWebhook(
+              Option(
+                ComMethodAuthentication(
+                  "OAuth2",
+                  "v1",
+                  data
                 )
               )
             )
-          )
+          }
+          ex.getMessage.contains("authentication data required fields missing or invalid") shouldBe true
         }
-        ex.getMessage.contains("authentication data required fields missing or invalid") shouldBe true
+      }
+    }
+
+    "when tried to update com method with null data for required fields" - {
+      "should respond with error" in {
+        val invalidData = Seq(
+          Map("url" -> null, "grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> null, "client_id" -> "client_id", "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "client_credentials", "client_id" -> null, "client_secret" -> "client_secret"),
+          Map("url" -> "url", "grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> null)
+        )
+        invalidData.foreach { data =>
+          val ex = intercept[IllegalArgumentException] {
+            issuerSDK.registerWebhook(
+              Option(
+                ComMethodAuthentication(
+                  "OAuth2",
+                  "v1",
+                  data
+                )
+              )
+            )
+          }
+          ex.getMessage.contains("authentication data required fields missing or invalid") shouldBe true
+        }
       }
     }
   }

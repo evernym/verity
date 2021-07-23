@@ -9,7 +9,7 @@ import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNAUTHORIZED, UNHANDLED}

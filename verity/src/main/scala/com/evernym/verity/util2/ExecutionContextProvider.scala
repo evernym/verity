@@ -1,7 +1,7 @@
 package com.evernym.verity.util2
 
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
+import com.evernym.verity.config.ConfigConstants.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits

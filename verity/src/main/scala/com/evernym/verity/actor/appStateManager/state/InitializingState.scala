@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 import com.evernym.verity.util2.Exceptions.TransitionHandlerNotProvidedException
 import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, DrainingStarted, ErrorOccurrences, EventParam, ListeningSuccessful, MildSystemError, RecoveredFromCause, SeriousSystemError}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
+import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
 import com.evernym.verity.config.AppConfigWrapper
 
 

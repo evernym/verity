@@ -1,6 +1,6 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
@@ -17,8 +17,8 @@ class MetricsWriterConfigValidator(val config: Config) extends ConfigValidator {
 
   override def validateConfig(): Unit = {
 
-    if (config.hasPath(CommonConfig.METRICS_WRITER)) {
-      val className = config.getString(CommonConfig.METRICS_WRITER)
+    if (config.hasPath(ConfigConstants.METRICS_WRITER)) {
+      val className = config.getString(ConfigConstants.METRICS_WRITER)
       val mwClass = try {
         Class.forName(className)
       } catch {

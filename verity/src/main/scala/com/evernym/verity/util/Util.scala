@@ -7,7 +7,7 @@ import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof

@@ -16,7 +16,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
@@ -98,7 +98,7 @@ trait UserAgentCommon
     //internal messages exchanged between actors
     case gmr: GetMsgsReqMsg               => handleGetMsgsInternal(gmr)
     case ums: UpdateMsgStatusReqMsg       => handleUpdateMsgStatusInternal(ums)
-    //case GetRelParam                      => sender ! RelParamResp(selfRelDID, state.relationship)
+    case GetRelParam                      => sender ! RelParamResp(selfRelDID, state.relationship)
   }
 
   override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
@@ -280,8 +280,6 @@ trait UserAgentCommon
     handleCommonSignalMsgs orElse handleSpecificSignalMsgs
 
   override def selfParticipantId: ParticipantId = ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID)
-
-
 
   def msgAndDeliveryReq: MsgAndDelivery
 }

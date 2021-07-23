@@ -1,7 +1,7 @@
 package com.evernym.verity.metrics
 
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
-import com.evernym.verity.config.CommonConfig.{METRICS_ENABLED, METRICS_WRITER}
+import com.evernym.verity.config.ConfigConstants.{METRICS_ENABLED, METRICS_WRITER}
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.writer.NoOpMetricsWriter

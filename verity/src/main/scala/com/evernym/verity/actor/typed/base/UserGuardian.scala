@@ -18,9 +18,9 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ParticipantId
 
 
-//top level typed user guarding actor
+//top level typed user guardian actor
 // all user typed actors should be children of this one
-object UserGuarding {
+object UserGuardian {
 
   trait Cmd extends ActorMessage
   object Commands {

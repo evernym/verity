@@ -10,7 +10,7 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}

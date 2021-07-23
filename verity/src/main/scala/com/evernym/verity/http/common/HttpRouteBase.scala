@@ -11,7 +11,7 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
+import com.evernym.verity.config.ConfigConstants.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter
@@ -122,10 +122,16 @@ object HttpCustomTypes {
 
   private val HTTP_MEDIA_TYPE_APPLICATION = "application"
   private val HTTP_MEDIA_SUB_TYPE_SSI_AGENT_WIRE = "ssi-agent-wire"
+  private val HTTP_MEDIA_SUB_TYPE_DIDCOMM_ENVELOPE_ENC = "didcomm-envelope-enc"
 
   lazy val MEDIA_TYPE_SSI_AGENT_WIRE = MediaType.customBinary(
     HTTP_MEDIA_TYPE_APPLICATION,
     HTTP_MEDIA_SUB_TYPE_SSI_AGENT_WIRE,
+    NotCompressible)
+
+  lazy val MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC = MediaType.customBinary(
+    HTTP_MEDIA_TYPE_APPLICATION,
+    HTTP_MEDIA_SUB_TYPE_DIDCOMM_ENVELOPE_ENC,
     NotCompressible)
 }
 

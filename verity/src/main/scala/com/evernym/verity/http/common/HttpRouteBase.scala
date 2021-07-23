@@ -12,7 +12,7 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
+import com.evernym.verity.config.ConfigConstants.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter

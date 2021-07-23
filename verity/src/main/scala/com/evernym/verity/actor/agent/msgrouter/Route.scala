@@ -7,7 +7,7 @@ import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.msgrouter.legacy.LegacyGetRoute
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, RouteSet}
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 
 /**
@@ -52,7 +52,7 @@ class Route(implicit val appConfig: AppConfig)
 
   val legacyRouteStoreActorRegion: ActorRef = ClusterSharding(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 }
 
 object Route {

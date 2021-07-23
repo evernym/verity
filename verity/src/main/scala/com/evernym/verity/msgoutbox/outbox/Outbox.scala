@@ -14,7 +14,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.MsgActivity
 import com.evernym.verity.msgoutbox.outbox.Events.{MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
 import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
-import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, ProcessDelivery, RelResolverReplyAdapter}
+import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery, RelResolverReplyAdapter}
 import com.evernym.verity.msgoutbox.outbox.States.{Message, MsgDeliveryAttempt}
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
@@ -45,7 +45,7 @@ object Outbox {
     case class UpdateOutboxParam(walletId: String, senderVerKey: VerKey, comMethods: Map[ComMethodId, ComMethod]) extends Cmd
     case class GetOutboxParam(replyTo: ActorRef[StatusReply[RelationshipResolver.Replies.OutboxParam]]) extends Cmd
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.DeliveryStatus]]) extends Cmd
-    case class AddMsg(msgId: MsgId, replyTo: ActorRef[StatusReply[Replies.MsgAddedReply]]) extends Cmd
+    case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[StatusReply[Replies.MsgAddedReply]]) extends Cmd
 
     case class RecordSuccessfulAttempt(msgId: MsgId,
                                        comMethodId: String,
@@ -58,10 +58,11 @@ object Outbox {
                                    isItANotification: Boolean,
                                    isAnyRetryAttemptsLeft: Boolean,
                                    statusDetail: StatusDetail) extends Cmd
-    case class RemoveMsg(msgId:MsgId, deliveryStatus: String) extends Cmd
 
     case class RelResolverReplyAdapter(reply: RelationshipResolver.Reply) extends Cmd
+    case class MessageMetaReplyAdapter(reply: MessageMeta.Reply) extends Cmd
 
+    case class RemoveMsg(msgId: MsgId) extends Cmd
     case object ProcessDelivery extends Cmd     //sent by scheduled job
     case object TimedOut extends Cmd
   }
@@ -87,7 +88,7 @@ object Outbox {
 
   def apply(entityContext: EntityContext[Cmd],
             config: Config,
-            oauthAccessTokenRefreshers: AccessTokenRefreshers,
+            accessTokenRefreshers: AccessTokenRefreshers,
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
             msgPackagers: MsgPackagers,
@@ -98,10 +99,10 @@ object Outbox {
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
           actorContext.setReceiveTimeout(receiveTimeout(config), Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
-
+          val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
             actorContext,
-            oauthAccessTokenRefreshers,
+            accessTokenRefreshers,
             config,
             msgStore,
             msgPackagers,
@@ -112,9 +113,10 @@ object Outbox {
             entityContext,
             config,
             buffer,
+            dispatcher,
             relResolver,
             relResolverReplyAdapter,
-            dispatcher,
+            messageMetaReplyAdapter,
             new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system)
           )
           EventSourcedBehavior
@@ -176,13 +178,13 @@ object Outbox {
           RelationshipResolver.Replies.OutboxParam(st.walletId, st.senderVerKey, st.comMethods))
         )
 
-    case (st: States.Initialized, Commands.AddMsg(msgId, replyTo)) =>
+    case (st: States.Initialized, Commands.AddMsg(msgId, expiryDuration, replyTo)) =>
       if (st.messages.contains(msgId)) {
         Effect
           .reply(replyTo)(StatusReply.success(Replies.MsgAlreadyAdded))
       } else {
         Effect
-          .persist(Events.MsgAdded(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime, msgId))
+          .persist(Events.MsgAdded(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime, expiryDuration.toMillis, msgId))
           .thenRun((st: State) => processPendingDeliveries(st))
           .thenReply(replyTo)((_: State) => StatusReply.success(Replies.MsgAdded))
       }
@@ -214,12 +216,17 @@ object Outbox {
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rfa.msgId, rfa.comMethodId, Option(rfa.statusDetail)))
         .thenNoReply()
 
-    case (st: States.Initialized, Commands.RemoveMsg(msgId, deliveryStatus)) =>
+    case (st: States.Initialized, MessageMetaReplyAdapter(reply: MessageMeta.Replies.RemoveMsg)) =>
+      if (st.messages.contains(reply.msgId)) {
+        Effect
+          .persist(Events.MsgRemoved(reply.msgId))
+          .thenNoReply()
+      } else Effect.noReply
+
+    case (st: States.Initialized, Commands.RemoveMsg(msgId)) =>
       if (st.messages.contains(msgId)) {
         Effect
           .persist(Events.MsgRemoved(msgId))
-          .thenRun((_: State) => sendMsgRemovedToMessageMeta(
-            msgId, deliveryStatus, Option(MsgActivity("removed from outbox: " + setup.entityContext.entityId))))
           .thenNoReply()
       } else Effect.noReply
 
@@ -245,7 +252,11 @@ object Outbox {
       States.Initialized(walletId, senderVerKey, comMethods)
 
     case (st: States.Initialized, ma: Events.MsgAdded) =>
-      val msg = Message(ma.creationTimeInMillis,Status.MSG_DELIVERY_STATUS_PENDING.statusCode, Map.empty)
+      val msg = Message(
+        ma.creationTimeInMillis,
+        ma.expiresAfterMillis,
+        Status.MSG_DELIVERY_STATUS_PENDING.statusCode,
+        Map.empty)
       st.copy(messages = st.messages ++ Map(ma.msgId -> msg))
 
     case (st: States.Initialized, mss: MsgSentSuccessfully) =>
@@ -333,10 +344,10 @@ object Outbox {
         case None =>
           // NOTE: it may happen that com methods got updated (while delivery was in progress) in such a way
           // that there is no com method with 'comMethodId' hence below logic handles it instead of failing
-          // assumption is that this must be either webhook or websocket
+          // assumption is that this must be either "webhook" or "websocket"
           true
         case Some(cm) =>
-          //for "http" or "websocket" com method type,
+          //for "webhook" or "websocket" com method type,
           // the successful message sending can be considered as delivered
           cm.typ == COM_METHOD_TYPE_HTTP_ENDPOINT
       }
@@ -374,7 +385,7 @@ object Outbox {
       case i: States.Initialized =>
         val msg = i.messages(msgId)
         val deliveryAttempt = msg.deliveryAttempts(comMethodId)
-        val comMethodDetail = i.comMethods.get(comMethodId).map(cm => s"$comMethodId:${cm.value}").getOrElse("n/a")
+        val comMethodDetail = i.comMethods.get(comMethodId).map(cm => s"$comMethodId [${cm.value}]").getOrElse("n/a")
         val activityDetail =
           s"comMethod: $comMethodDetail, " +
             s"successCount: ${deliveryAttempt.successCount}, " +
@@ -394,27 +405,12 @@ object Outbox {
     }
   }
 
-  private def sendMsgRemovedToMessageMeta(msgId: MsgId,
-                                          deliveryStatus: String,
-                                          msgActivity: Option[MsgActivity])
-                                         (implicit setup: SetupOutbox): Unit = {
-    val cmd = MessageMeta.Commands.MsgRemovedFromOutbox(
-      setup.entityContext.entityId,
-      deliveryStatus,
-      msgActivity
-    )
-    val entityRef = ClusterSharding(setup.actorContext.system).entityRefFor(MessageMeta.TypeKey, msgId)
-    entityRef ! cmd
-  }
-
   private def processDelivery(st: States.Initialized)(implicit setup: SetupOutbox): Unit = {
     //process pending deliveries
     processPendingDeliveries(st)
 
-    //remove processed messages (either delivered or permanently failed)
+    //remove processed messages (either delivered or permanently failed or expired)
     removeProcessedMsgs(st)
-
-    //TODO: how/where to handle undelivered expired (as per retention policy) messages
   }
 
   private def removeProcessedMsgs(st: State)(implicit setup: SetupOutbox): Unit = {
@@ -422,11 +418,21 @@ object Outbox {
     st match {
       case i: States.Initialized =>
         i.messages
-          .filter(m => processedMsgStatusCodes.contains(m._2.deliveryStatus))
-          .foreach { case (msgId, msg) =>
-            setup.actorContext.self ! Commands.RemoveMsg(msgId, msg.deliveryStatus)
+          .filter { case (_, msg) =>
+            val expiryTimeInMillis = msg.creationTimeInMillis + msg.expiresAfterMillis
+            val isExpired = expiryTimeInMillis < TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
+            isExpired || processedMsgStatusCodes.contains(msg.deliveryStatus)
+          }.foreach { case (msgId, msg) =>
+            val expiryDetail = if (!processedMsgStatusCodes.contains(msg.deliveryStatus)) s" (expired: true)" else ""
+            val entityRef = ClusterSharding(setup.actorContext.system).entityRefFor(MessageMeta.TypeKey, msgId)
+            entityRef ! MessageMeta.Commands.ProcessedForOutbox(
+              setup.entityContext.entityId,
+              msg.deliveryStatus,
+              Option(MsgActivity(s"processed for outbox$expiryDetail: " + setup.entityContext.entityId)),
+              setup.messageMetaReplyAdapter
+            )
           }
-      case _ =>
+      case _ => //nothing to do
     }
   }
 
@@ -439,8 +445,7 @@ object Outbox {
           .sortBy(_._2.creationTimeInMillis)    //TODO: any issue with sorting here?
           .take(batchSize(setup.config))
           .foreach{case (msgId, _) => sendToDispatcher(msgId, i)}
-      case _                     =>
-        //nothing to do
+      case _                       => //nothing to do
     }
   }
 
@@ -449,16 +454,19 @@ object Outbox {
       case i: States.Initialized =>
         i
           .messages
-          .filter { case (_, msg) =>
-            msg.deliveryStatus == Status.MSG_DELIVERY_STATUS_PENDING.statusCode &&
-              msg.deliveryAttempts.forall { case (comMethodId, msgDeliveryAttempt) =>
-                i.comMethods.get(comMethodId).exists { cm =>
-                  val rp = prepareRetryParam(cm.typ, msgDeliveryAttempt.failedCount, setup.config)
-                  msgDeliveryAttempt.failedCount < rp.maxRetries
+          .filter { case (msgId, msg) =>
+            val expiryTime = msg.creationTimeInMillis + msg.expiresAfterMillis
+            val isExpired = expiryTime < TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
+            ! isExpired &&
+              msg.deliveryStatus == Status.MSG_DELIVERY_STATUS_PENDING.statusCode &&
+                msg.deliveryAttempts.forall { case (comMethodId, msgDeliveryAttempt) =>
+                  i.comMethods.get(comMethodId).exists { cm =>
+                    val rp = prepareRetryParam(cm.typ, msgDeliveryAttempt.failedCount, setup.config)
+                    msgDeliveryAttempt.failedCount < rp.maxRetries
+                  }
                 }
-              }
           }
-      case _ => Map.empty  //nothing to do
+      case _ => Map.empty
     }
   }
 
@@ -488,7 +496,7 @@ object Outbox {
     //TODO: finalize this
     ConfigReadHelper(config)
       .getDurationOption("verity.outbox.scheduled-job-interval")
-      .getOrElse(FiniteDuration(5, MILLISECONDS))
+      .getOrElse(FiniteDuration(5, SECONDS))
   }
 
   private def retentionCriteria(config: Config): RetentionCriteria = {
@@ -574,7 +582,8 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
                        config: Config,
                        buffer: StashBuffer[Cmd],
+                       dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],
                        relResolverReplyAdapter: ActorRef[RelationshipResolver.Reply],
-                       dispatcher: Dispatcher,
+                       messageMetaReplyAdapter: ActorRef[MessageMeta.Reply],
                        itemManagerEntityHelper: ItemManagerEntityHelper)

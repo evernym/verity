@@ -1,15 +1,21 @@
 package com.evernym.verity.msgoutbox
 
+import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
+import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
+import com.evernym.verity.msgoutbox.message_meta.MessageMeta._
+import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands
+import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies._
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
-import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies._
-import com.evernym.verity.msgoutbox.message_meta.MessageMeta.{Commands, _}
+import com.evernym.verity.msgoutbox.message_meta.MessageMeta
+import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.Status
+import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -163,11 +169,15 @@ class MessageMetaSpec
 
       "when sent MsgRemovedFromOutbox command" - {
         "should be recorded successfully" in {
+          val probe = createTestProbe[MessageMeta.Reply]()
           val preEventCount = persTestKit.persistedInStorage(msgPersistenceId).size
-          val probe = createTestProbe()
           messageMetaRegion ! ShardingEnvelope(msgId,
-            Commands.MsgRemovedFromOutbox(outboxId, Status.MSG_DELIVERY_STATUS_SENT.statusCode,
-              Option(MsgActivity("removed from outbox: " + outboxId))))
+            Commands.ProcessedForOutbox(
+              outboxId,
+              Status.MSG_DELIVERY_STATUS_SENT.statusCode,
+              Option(MsgActivity("removed from outbox: " + outboxId)),
+              probe.ref
+              ))
           probe.expectNoMessage()
           val postEventCount = persTestKit.persistedInStorage(msgPersistenceId).size
           postEventCount shouldBe preEventCount + 2 //1 extra for message payload deletion
@@ -238,6 +248,26 @@ class MessageMetaSpec
   lazy val msgIdLifeCycleAddress: String = BucketLifeCycleUtil.lifeCycleAddress(
     Option(retentionPolicy.elements.expiryDaysStr), msgId)
 
-  lazy val outboxId: String = "did-default"
+  lazy val outboxId: String = "relId-recipId-default"
 
+  val SNAPSHOT_CONFIG = ConfigFactory.parseString{
+    """
+      |verity.outbox.retention-criteria.snapshot.after-every-events = 1
+      |verity.outbox.retention-criteria.snapshot.keep-snapshots = 1
+      |verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots = true
+      |""".stripMargin
+  }
+
+  val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =
+    sharding.init(Entity(Outbox.TypeKey) { entityContext =>
+      Outbox(
+        entityContext,
+        appConfig.config.withFallback(SNAPSHOT_CONFIG),
+        testAccessTokenRefreshers,
+        testRelResolver,
+        testMsgStore,
+        testMsgPackagers,
+        testMsgTransports
+      )
+    })
 }

@@ -62,7 +62,7 @@ class PlainWebhookSenderSpec
           None,
           probe.ref
         )
-        probe.expectMessageType[RecordFailedAttempt]
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe false
         probe.expectNoMessage()
       }
     }
@@ -104,9 +104,9 @@ class PlainWebhookSenderSpec
           Option(RetryParam(0, 5, 100.millis)),
           probe.ref
         )
-        probe.expectMessageType[RecordFailedAttempt]
-        probe.expectMessageType[RecordFailedAttempt]
-        probe.expectMessageType[RecordFailedAttempt]
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
         probe.expectMessageType[RecordSuccessfulAttempt]
         probe.expectNoMessage()
       }
@@ -128,11 +128,11 @@ class PlainWebhookSenderSpec
           Option(RetryParam(0, 5, 100.millis)),
           probe.ref
         )
-        probe.expectMessageType[RecordFailedAttempt]
-        probe.expectMessageType[RecordFailedAttempt]
-        probe.expectMessageType[RecordFailedAttempt]
-        probe.expectMessageType[RecordFailedAttempt]
-        probe.expectMessageType[RecordFailedAttempt]
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe true
+        probe.expectMessageType[RecordFailedAttempt].isAnyRetryAttemptsLeft shouldBe false
         probe.expectNoMessage()
       }
     }

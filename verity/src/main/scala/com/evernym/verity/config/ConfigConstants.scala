@@ -1,7 +1,7 @@
 package com.evernym.verity.config
 
 
-trait CommonConfig {
+object ConfigConstants {
 
   val VERITY = "verity"
 
@@ -393,10 +393,14 @@ trait CommonConfig {
     s"$AGENT_ROUTES_MIGRATOR_ROUTES.batch-item-interval-in-millis"
 
   val RETENTION_POLICY = s"$VERITY.retention-policy"
+
+  val RETENTION_POLICY_PROTOCOL_STATE = s"$RETENTION_POLICY.protocol-state"
+  private val RETENTION_POLICY_OUTBOX_STATE = s"$RETENTION_POLICY.outbox-state"
+  val RETENTION_POLICY_OUTBOX_STATE_INTER_DOMAIN = s"$RETENTION_POLICY_OUTBOX_STATE.inter-domain"
+  val RETENTION_POLICY_OUTBOX_STATE_INTRA_DOMAIN = s"$RETENTION_POLICY_OUTBOX_STATE.intra-domain"
+
   val UNDEFINED_FALLBACK = "undefined-fallback"
   val EXPIRE_AFTER_DAYS = "expire-after-days"
   val EXPIRE_AFTER_TERMINAL_STATE = "expire-after-terminal-state"
 
 }
-
-object CommonConfig extends CommonConfig

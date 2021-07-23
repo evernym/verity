@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.{HasSingletonParentProxy, MsgPackFormat}
 import com.evernym.verity.actor.cluster_singleton.watcher.CheckWatchedItem
 import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.HasAppConfig

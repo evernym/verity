@@ -3,7 +3,7 @@ package com.evernym.verity.actor.itemmanager
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util.TimeZoneUtil._
 
 /**

@@ -12,7 +12,7 @@ import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, RouteSet}
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
@@ -33,8 +33,8 @@ trait BasePersistentStore
     with HasTestWalletAPI {
 
   lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)
-  lazy val keyValueMapperEncKey = appConfig.getStringReq(CommonConfig.SECRET_KEY_VALUE_MAPPER)
-  lazy val agentRouteStoreEncKey = appConfig.getStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  lazy val keyValueMapperEncKey = appConfig.getStringReq(ConfigConstants.SECRET_KEY_VALUE_MAPPER)
+  lazy val agentRouteStoreEncKey = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())(WalletAPIParam(walletId))

@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AGENT, AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE}
+import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.msgoutbox.outbox.Outbox
 

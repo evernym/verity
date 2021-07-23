@@ -7,7 +7,7 @@ import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.actor.testkit.actor.MockSMSSender
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER}
-import com.evernym.verity.config.CommonConfig.HTTP_PORT
+import com.evernym.verity.config.ConfigConstants.HTTP_PORT
 import com.evernym.verity.http.base.open.{ExpectedMsgCriteria, ExpectedMsgDetail}
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.texter.SMSSender

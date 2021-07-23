@@ -17,7 +17,7 @@ import com.evernym.verity.actor.cluster_singleton.watcher.WatcherManager
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.cluster_singleton.maintenance.AgentRoutesMigrator
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._

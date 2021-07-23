@@ -129,7 +129,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
     case GetSponsorRel                           => sendSponsorDetails()
     case GetTokenForUrl(forUrl, cmd)             => sendToOAuthAccessTokenHolder(forUrl, cmd)
-    //case GetOutboxParam(destId)                  => sendOutboxParam(destId)
+    case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender)
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
   }
@@ -161,9 +161,10 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
   }
 
-  def sendOutboxParam(destId: DestId): Unit = {
+  def sendOutboxParam(destId: DestId, sndr: ActorRef): Unit = {
     //NOTE: below logic will have to be changed once we start supporting multiple destinations
     if (destId == DESTINATION_ID_DEFAULT) {
+      outboxActorRefs += destId -> sender
       val comMethods =
         state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
           .map { ep =>
@@ -174,7 +175,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
             }
             ep.id -> msgoutbox.ComMethod(ep.`type`, ep.value, Option(packaging), authentication = authentication)
           }.toMap
-      sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+      sndr ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
     } else {
       throw new RuntimeException("destId not supported: " + destId)
     }
@@ -528,6 +529,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
+    outboxActorRefs.foreach { case (destId, sender) => sendOutboxParam(destId, sender)}
     buildAndSendComMethodUpdatedRespMsg(comMethod)
   }
 
@@ -776,7 +778,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse(""))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
-      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
+      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
     }
 
     agencyDidPairFut().map(adp => paramMap(adp.verKey))
@@ -800,6 +802,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   updateAgentWalletId(entityId)
+
+  var outboxActorRefs: Map[DestId, ActorRef] = Map.empty
 
   /**
    * this is in-memory state only

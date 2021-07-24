@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.actor.resourceusagethrottling._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.http.route_handlers.restricted.{UpdateResourcesUsageCounter, UpdateResourcesUsageLimit}
 import com.evernym.verity.actor.resourceusagethrottling.helper._
 import com.evernym.verity.util.TimeZoneUtil._
@@ -20,7 +20,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocki
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.getRuleNameByEntityId
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceSimpleName, getResourceTypeName}
-import com.evernym.verity.config.CommonConfig.USAGE_RULES
+import com.evernym.verity.config.ConfigConstants.USAGE_RULES
 import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.Future
@@ -66,7 +66,7 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
   val resourceUsageTracker = new BucketBasedResourceUsageTracker
 
   override lazy val persistenceEncryptionKey: String =
-    appConfig.getStringReq(CommonConfig.SECRET_RESOURCE_USAGE_TRACKER)
+    appConfig.getStringReq(ConfigConstants.SECRET_RESOURCE_USAGE_TRACKER)
 
   def getResourceUsages: ResourceUsages = try {
     val allResourceUsages = resourceUsageTracker.getAllResourceBuckets.map { case (resourceName, resourceBuckets) =>

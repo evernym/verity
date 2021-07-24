@@ -7,7 +7,7 @@ import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, getUnhandl
 import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.cache.providers.MaxWeightParam
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_RESPONSE_TIMEOUT_IN_SECONDS
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.ObjectSizeUtil

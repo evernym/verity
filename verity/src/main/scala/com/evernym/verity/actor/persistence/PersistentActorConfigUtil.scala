@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.persistence
 
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtil.{getConfBooleanValue, getConfDoubleValue, getConfIntValue, getConfStringValue}
 
 object PersistentActorConfigUtil {

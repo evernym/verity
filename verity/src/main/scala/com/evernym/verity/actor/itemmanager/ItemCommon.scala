@@ -8,7 +8,7 @@ import com.evernym.verity.actor.appStateManager.ErrorEvent
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.ITEM_CONTAINER_MAPPER_CLASS
+import com.evernym.verity.config.ConfigConstants.ITEM_CONTAINER_MAPPER_CLASS
 
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>

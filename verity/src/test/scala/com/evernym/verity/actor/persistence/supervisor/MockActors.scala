@@ -5,7 +5,7 @@ import akka.persistence.AtomicWrite
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SupervisorUtil}
 import com.evernym.verity.actor.{ActorMessage, KeyCreated, TestJournal}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.PERSISTENT_ACTOR_BASE
+import com.evernym.verity.config.ConfigConstants.PERSISTENT_ACTOR_BASE
 
 import scala.collection.immutable
 import scala.concurrent.Future

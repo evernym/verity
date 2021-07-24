@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence
 
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 
 /**
  * base class for all singleton child actor (which is created under 'SingletonParentCommon' actor)

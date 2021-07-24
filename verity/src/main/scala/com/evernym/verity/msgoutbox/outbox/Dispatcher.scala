@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 // * dispatching messages via the current dispatcher set
 
 class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
-                 oauthAccessTokenRefreshers: AccessTokenRefreshers,
+                 accessTokenRefreshers: AccessTokenRefreshers,
                  config: Config,
                  msgStore: ActorRef[MsgStore.Cmd],
                  msgPackagers: MsgPackagers,
@@ -90,7 +90,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
           OAuthAccessTokenHolder(
             config,
             auth.data,
-            oauthAccessTokenRefreshers.refreshers(auth.version)
+            accessTokenRefreshers.refreshers(auth.version)
           ),
           uniqueOAuthAccessTokenHolderId
         )

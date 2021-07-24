@@ -330,7 +330,7 @@ lazy val commonLibraryDependencies = {
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
-    "org.fusesource.jansi" % "jansi" % "2.3.2",    //used by protocol engine for customized logging
+    "org.fusesource.jansi" % "jansi" % "2.3.4",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.4",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",

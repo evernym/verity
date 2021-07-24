@@ -120,7 +120,7 @@ trait PackedMsgEndpointHandler
     logIncoming(HttpMethods.POST)
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
     req.entity.contentType.mediaType match {
-      case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
+      case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE | HttpCustomTypes.MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC =>
         handleAgentMsgReqForOctetStreamContentType
       case _ =>
         logger.info(s"[${reqMsgContext.id}] [outgoing response] content type not supported")

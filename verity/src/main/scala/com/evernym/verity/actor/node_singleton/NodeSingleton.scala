@@ -1,9 +1,11 @@
 package com.evernym.verity.actor.node_singleton
 
+import akka.actor.typed.eventstream.EventStream.Subscribe
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
@@ -14,26 +16,21 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsReader
+import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.config.ConfigFactory
 
 
 class NodeSingleton(val appConfig: AppConfig)
   extends CoreActorExtended
-    with HasActorResponseTimeout {
+    with HasActorResponseTimeout
+    with HasSingletonParentProxy
+    with HasAppConfig {
 
   private val logger = getLoggerByClass(getClass)
 
-  def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
-    singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
-      onlyActive = true, inChunks = true))
-  }
+  override def receiveCmd: Receive = handleEvents orElse handleCmds
 
-  def sendGetWarningList(singletonActorRef: ActorRef): Unit =  {
-    singletonActorRef ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = false, onlyUnwarned = false,
-      onlyActive = true, inChunks = true))
-  }
-
-  def receiveCmd: Receive = {
+  def handleCmds: Receive = {
 
     case NodeAddedToClusterSingleton =>
       logger.info(s"sending blocked/warned started...")
@@ -101,8 +98,28 @@ class NodeSingleton(val appConfig: AppConfig)
       fut.map(r => sndr ! r)
   }
 
-  def getRequiredActor(props: Props, name: String): ActorRef =
+  //handles published events
+  private def handleEvents: Receive = {
+    case SingletonProxyEvent(cmd: ActorMessage)   => singletonParentProxyActor ! cmd
+  }
+
+  private def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
+    singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
+      onlyActive = true, inChunks = true))
+  }
+
+  private def sendGetWarningList(singletonActorRef: ActorRef): Unit =  {
+    singletonActorRef ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = false, onlyUnwarned = false,
+      onlyActive = true, inChunks = true))
+  }
+
+  private def getRequiredActor(props: Props, name: String): ActorRef =
     context.child(name).getOrElse(context.actorOf(props, name))
+
+  override def beforeStart(): Unit = {
+    import akka.actor.typed.scaladsl.adapter._
+    context.system.toTyped.eventStream ! Subscribe[SingletonProxyEvent](self)
+  }
 }
 
 case object DrainNode extends ActorMessage
@@ -113,3 +130,5 @@ case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
 object NodeSingleton {
   def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
 }
+
+case class SingletonProxyEvent(cmd: ActorMessage) extends ActorMessage

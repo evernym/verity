@@ -59,7 +59,7 @@ class FailedMsgRetrierSpec
       "should register itself with watcher" in {
         //doesn't matter how many times a failure occur for same message or different messages,
         // that actor should be registered only once
-        EventFilter.debug(pattern = "item added to watcher: .*", occurrences = 1) intercept {
+        EventFilter.debug(pattern = "item added to watcher: .*", occurrences = 2) intercept {
           sendToMockActor(UpdateMsgDeliveryStatus("msg-id-1", "to", Status.MSG_DELIVERY_STATUS_FAILED.statusCode, None))
           expectMsgType[Done.type]
           sendToMockActor(UpdateMsgDeliveryStatus("msg-id-2", "to", Status.MSG_DELIVERY_STATUS_FAILED.statusCode, None))

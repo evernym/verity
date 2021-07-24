@@ -12,7 +12,7 @@ import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.resourceusagethrottling.warning.ResourceWarningStatusMngrCommon
 import com.evernym.verity.actor.resourceusagethrottling.{EntityId, ResourceName}
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util.TimeZoneUtil._
@@ -178,7 +178,7 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext)
   override def appConfig: AppConfig = aac.appConfig
   def agentActorContext: AgentActorContext = aac
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
-  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(CommonConfig.SECRET_RESOURCE_WARNING_STATUS_MNGR)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(ConfigConstants.SECRET_RESOURCE_WARNING_STATUS_MNGR)
 }
 
 trait UpdateWarningStatus extends ActorMessage

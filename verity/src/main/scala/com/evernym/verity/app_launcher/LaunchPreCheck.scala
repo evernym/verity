@@ -48,6 +48,7 @@ object LaunchPreCheck {
         .recover {
           case e: Throwable =>
             logger.error("error while checking ledger connection: " + Exceptions.getStackTraceAsSingleLineString(e))
+            throw e
         }
       Await.result(pcFut, timeout.duration)
     } catch {
@@ -85,6 +86,7 @@ object LaunchPreCheck {
           .recover {
             case e: Throwable =>
               logger.error("error while checking akka event storage connection: " + Exceptions.getStackTraceAsSingleLineString(e))
+              throw e
           }
       Await.result(fut, timeout.duration)
       aac.system.stop(keyValueMapper)

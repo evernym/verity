@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.EntityIdentifier
-import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher.itemManagerEntityIdPrefix
+import com.evernym.verity.actor.cluster_singleton.watcher.ActorWatcher.itemManagerEntityIdPrefix
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.actor.itemmanager._

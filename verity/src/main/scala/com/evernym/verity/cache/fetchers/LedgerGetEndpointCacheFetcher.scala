@@ -6,7 +6,7 @@ import com.evernym.verity.util2.Status._
 import com.evernym.verity.cache.LEDGER_GET_ENDPOINT_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{AttribResult, LedgerSvc, Submitter}
 import com.evernym.verity.protocol.engine.DID
 

@@ -46,7 +46,7 @@ class ClusterSingletonEntityIdentifierSpec
         "should respond with correct entity identifiers" in {
           clusterSingletonProxy ! ForEntityItemWatcher(GetActorDetail)
           val actualDetail = expectMsgType[ActorDetail]
-          val expectedDetail = ActorDetail("watcher-managerChild", "AgentActorWatcher", s"watcher-managerChild-AgentActorWatcher")
+          val expectedDetail = ActorDetail("watcher-managerChild", "ActorWatcher", s"watcher-managerChild-ActorWatcher")
           assertActorDetail(actualDetail, expectedDetail)
         }
       }

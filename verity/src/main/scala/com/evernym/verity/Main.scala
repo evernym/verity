@@ -4,7 +4,7 @@ import akka.management.cluster.bootstrap.ClusterBootstrap
 import akka.management.scaladsl.AkkaManagement
 import com.evernym.verity.app_launcher.{HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig.{AKKA_MNGMNT_CLUSTER_BOOTSTRAP_ENABLED, AKKA_MNGMNT_HTTP_ENABLED}
+import com.evernym.verity.config.ConfigConstants.{AKKA_MNGMNT_CLUSTER_BOOTSTRAP_ENABLED, AKKA_MNGMNT_HTTP_ENABLED}
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
 
 

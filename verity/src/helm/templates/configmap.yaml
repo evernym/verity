@@ -35,13 +35,25 @@ data:
 
         {{- if .retentionPolicies }}
       retention-policy {
-        {{ .domainDid }} {
-          {{ if .retentionPolicies.fallback }}undefined-fallback = {{.retentionPolicies.fallback | quote }}{{- end }}
-          {{- if .retentionPolicies.protocols }}
-            {{- range .retentionPolicies.protocols }}
-          {{ .ref | quote }} = {{ .time | quote }}
+        protocol-state {
+          {{ .domainDid }} {
+            {{ if .retentionPolicies.fallback }}undefined-fallback = {{.retentionPolicies.fallback | quote }}{{- end }}
+            {{- if .retentionPolicies.protocols }}
+              {{- range .retentionPolicies.protocols }}
+            {{ .ref | quote }} = {{ .time | quote }}
+              {{- end }}
             {{- end }}
-          {{- end }}
+          }
+        }
+        outbox-state {
+          {{ .domainDid }} {
+            {{ if .retentionPolicies.fallback }}undefined-fallback = {{.retentionPolicies.fallback | quote }}{{- end }}
+            {{- if .retentionPolicies.outbox }}
+              {{- range .retentionPolicies.outbox }}
+            {{ .ref | quote }} = {{ .time | quote }}
+              {{- end }}
+            {{- end }}
+          }
         }
       }
         {{- end }}

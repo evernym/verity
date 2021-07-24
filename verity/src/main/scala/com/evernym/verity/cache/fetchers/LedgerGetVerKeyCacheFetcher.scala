@@ -5,7 +5,7 @@ import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.cache.LEDGER_GET_VER_KEY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{LedgerSvc, Submitter}
 import com.evernym.verity.protocol.engine.DID
 

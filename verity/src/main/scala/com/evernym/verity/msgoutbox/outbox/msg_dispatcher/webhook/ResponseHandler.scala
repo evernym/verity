@@ -18,7 +18,9 @@ object ResponseHandler {
         None
 
       case Left(sd: StatusDetail) =>
-        val isAnyRetryAttemptsLeft = param.retryParam.exists(_.isRetryAttemptsLeft)
+        val updatedRetryParam = param.retryParam.map(_.withFailedAttemptIncremented)
+        val isAnyRetryAttemptsLeft = updatedRetryParam.exists(_.isRetryAttemptsLeft)
+
         param.replyTo ! RecordFailedAttempt(
           param.msgId,
           param.comMethodId,
@@ -27,8 +29,8 @@ object ResponseHandler {
           isAnyRetryAttemptsLeft = isAnyRetryAttemptsLeft,
           sd
         )
-        param.retryParam
-          .map(_.withFailedAttemptIncremented)
+
+        updatedRetryParam
           .filter(_.isRetryAttemptsLeft)
           .map { rp =>
             timer.startSingleTimer(param.msgId, retryMsg, rp.nextInterval)

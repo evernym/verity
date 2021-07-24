@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRo
 import com.evernym.verity.cache.ROUTING_DETAIL_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
 
 import scala.concurrent.Future

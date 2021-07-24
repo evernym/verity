@@ -1,6 +1,6 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.validator.base._
 import com.evernym.verity.constants.Constants.{WALLET_TYPE_DEFAULT, WALLET_TYPE_MYSQL, YES}
 import com.typesafe.config.Config

@@ -6,14 +6,14 @@ import akka.cluster.sharding.ClusterSharding
 import akka.util.Timeout
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.util.TokenProvider
 
 import scala.concurrent.Future
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.util.Util.buildDuration
@@ -67,7 +67,7 @@ class TokenToActorItemMapper(val appConfig: AppConfig)
   var actorItemDetail: Option[ActorItemDetail] = None
 
   override lazy val persistenceEncryptionKey: String =
-    appConfig.getStringReq(CommonConfig.SECRET_TOKEN_TO_ACTOR_ITEM_MAPPER)
+    appConfig.getStringReq(ConfigConstants.SECRET_TOKEN_TO_ACTOR_ITEM_MAPPER)
 
   val receiveEvent: Receive = {
     case e: TokenToActorItemMappingAdded =>

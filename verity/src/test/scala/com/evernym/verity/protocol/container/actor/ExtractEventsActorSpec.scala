@@ -27,7 +27,7 @@ class ExtractEventsActorSpec
 
     "empty event stream should return ExtractionComplete imminently" in {
       EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
-        ConfigUtil.getRetentionPolicy(appConfig, "", "")
+        ConfigUtil.getProtoStateRetentionPolicy(appConfig, "", "")
         system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor))
         expectMsgPF() {
           case ProtocolCmd(e: ExtractionComplete, None) => e

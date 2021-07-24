@@ -8,8 +8,8 @@ import com.evernym.verity.actor.agent.msgrouter.legacy.GetRegisteredRouteSummary
 import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.persistence.SingletonChildrenPersistentActor
 import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForIdentifier, Registered, SendCmd, StatusUpdated}
-import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.protocol.engine.DID
 
@@ -274,17 +274,17 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       .getOrElse(300)
 
   lazy val registrationBatchSize: Int =
-    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_SIZE)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_SIZE)
       .getOrElse(1)
   lazy val registrationBatchItemSleepIntervalInMillis: Int =
-    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_MANAGER_REGISTRATION_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5)
 
   lazy val processorBatchSize: Int =
-    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_SIZE)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_SIZE)
       .getOrElse(5)
   lazy val processorBatchItemSleepIntervalInMillis: Int =
-    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_MANAGER_PROCESSOR_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)

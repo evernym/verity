@@ -7,7 +7,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.NotFoundErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.url_mapper.{AddUrl, GetActualUrl}
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.PlatformServiceProvider

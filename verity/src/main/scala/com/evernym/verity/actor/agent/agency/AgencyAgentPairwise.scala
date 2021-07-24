@@ -134,7 +134,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
       case SELF_ID     => Parameter(SELF_ID, ParticipantUtil.participantId(state.myDid_!, None))
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
       case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY,
-        ConfigUtil.getRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
+        ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
     }
 
     for (

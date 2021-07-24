@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.util2.Status.MSG_DELIVERY_STATUS_SENT
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.config.CommonConfig.MCM_SEND_MSG
+import com.evernym.verity.config.ConfigConstants.MCM_SEND_MSG
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 

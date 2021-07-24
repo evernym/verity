@@ -6,7 +6,7 @@ import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.typesafe.config.ConfigException
 
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, FiniteDuration, MILLISECONDS}
 import scala.util.{Failure, Success, Try}
 
 package object util2 {
@@ -45,14 +45,14 @@ package object util2 {
   object PolicyElements {
     def apply(expireAfterDays: String, expireAfterTerminalState: Boolean): PolicyElements = {
       Try (Duration(expireAfterDays)) match {
-        case Success(ed) => PolicyElements(ed, expireAfterTerminalState)
+        case Success(ed) => PolicyElements(FiniteDuration(ed.toMillis, MILLISECONDS), expireAfterTerminalState)
         case Failure(e)  =>
           throw new ConfigException.BadValue(expireAfterDays, s"Couldn't parse $expireAfterDays with exception: $e")
       }
     }
   }
 
-  case class PolicyElements(expiryDuration: Duration, expireAfterTerminalState: Boolean) {
+  case class PolicyElements(expiryDuration: FiniteDuration, expireAfterTerminalState: Boolean) {
     val expiryDaysStr = s"${expiryDuration.toDays}d"
     if (expiryDuration.toDays > MAX_RETENTION_POLICY)
       throw new ConfigException.BadValue(

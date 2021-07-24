@@ -19,7 +19,7 @@ import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTr
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
 import com.evernym.verity.actor.wallet.WalletActor
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
@@ -30,7 +30,8 @@ import com.evernym.verity.util.Util._
 import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
-import com.evernym.verity.libs.Libraries
+import com.evernym.verity.actor.typed.base.UserGuardian
+import com.evernym.verity.libindy.Libraries
 import com.evernym.verity.metrics.MetricsReader
 
 import scala.concurrent.Future
@@ -228,6 +229,9 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")
+
+  import akka.actor.typed.scaladsl.adapter._
+  actorSystem.spawn(UserGuardian(agentActorContext), "guardian")
 
   def createCusterSingletonManagerActor(singletonProps: Props): ActorRef = {
     agentActorContext.system.actorOf(

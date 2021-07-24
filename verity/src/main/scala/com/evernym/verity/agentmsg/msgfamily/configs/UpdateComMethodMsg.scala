@@ -36,7 +36,7 @@ case class ComMethodAuthentication(`type`: String, version: String, data: Map[St
         Option("authentication version not supported: " + version))
     }
     if (version == OAUTH2_VERSION_1) {
-      val notFound = Seq("grant_type", "client_id", "client_secret").filter(f => ! data.get(f).exists(_.nonEmpty))
+      val notFound = Seq("url", "grant_type", "client_id", "client_secret").filter(f => ! data.get(f).exists(_.nonEmpty))
       if (notFound.nonEmpty) {
         throw new BadRequestErrorException(INVALID_VALUE.statusCode,
           Option("authentication data required fields missing or invalid: " + notFound.mkString(", ")))

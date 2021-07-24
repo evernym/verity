@@ -25,6 +25,7 @@ message Initialized {
 message Message {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.MessageBase";
     uint64 creationTimeInMillis = 1;
+    uint64 expiresAfterMillis = 2;
     string deliveryStatus = 3;
 
     // map of comMethodId and its delivery attempt detail

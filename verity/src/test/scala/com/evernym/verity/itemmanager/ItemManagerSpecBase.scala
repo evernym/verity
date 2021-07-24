@@ -1,7 +1,7 @@
 package com.evernym.verity.itemmanager
 
 import com.evernym.verity.actor.ForIdentifier
-import com.evernym.verity.actor.cluster_singleton.watcher.AgentActorWatcher.itemManagerEntityIdPrefix
+import com.evernym.verity.actor.cluster_singleton.watcher.ActorWatcher.itemManagerEntityIdPrefix
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId}
 import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.actor.itemmanager.{ExternalCmdWrapper, ItemContainerMapper}

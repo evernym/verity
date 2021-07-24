@@ -5,7 +5,7 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.SHORTEN_URL
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.URL_SHORTENER_SVC_SELECTED
+import com.evernym.verity.config.ConfigConstants.URL_SHORTENER_SVC_SELECTED
 import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.getJsonStringFromMap

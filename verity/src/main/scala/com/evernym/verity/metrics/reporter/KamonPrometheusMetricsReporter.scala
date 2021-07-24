@@ -1,7 +1,7 @@
 package com.evernym.verity.metrics.reporter
 
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 import kamon.Kamon

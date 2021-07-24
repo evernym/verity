@@ -10,7 +10,7 @@ import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.ConfigUtil.findTAAConfig
-import com.evernym.verity.config.{AppConfig, CommonConfig, ConfigUtil}
+import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -108,8 +108,8 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
               throw new TaaConfiguredVersionInvalidError(errorMsg + " Error details: " + taaFailure.getMessage)
             case None =>
               val errorMsg = s"No Valid TAA -- TAA version $currentVersion is not configured. You must add " +
-                s"the digest, mechanism, and time-of-acceptance to ${CommonConfig.LIB_INDY_LEDGER_TAA_AGREEMENTS} " +
-                s"for TAA version $currentVersion AND enable ${CommonConfig.LIB_INDY_LEDGER_TAA}."
+                s"the digest, mechanism, and time-of-acceptance to ${ConfigConstants.LIB_INDY_LEDGER_TAA_AGREEMENTS} " +
+                s"for TAA version $currentVersion AND enable ${ConfigConstants.LIB_INDY_LEDGER_TAA}."
               throw new TaaConfigurationForVersionNotFoundError(errorMsg + " Error details: " + taaFailure.getMessage)
           }
         }.recover {

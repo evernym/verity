@@ -2,7 +2,7 @@ package com.evernym.verity.msgoutbox.message_meta
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
-import akka.cluster.sharding.typed.scaladsl.{EntityContext, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
@@ -15,6 +15,7 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
 
@@ -39,9 +40,10 @@ object MessageMeta {
                                  deliveryStatus: String,
                                  msgActivity: Option[MsgActivity]) extends Cmd
 
-    case class MsgRemovedFromOutbox(outboxId: String,
-                                    deliveryStatus: String,
-                                    msgActivity: Option[MsgActivity]) extends Cmd
+    case class ProcessedForOutbox(outboxId: String,
+                                  deliveryStatus: String,
+                                  msgActivity: Option[MsgActivity],
+                                  replyTo: ActorRef[Reply]) extends Cmd
 
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.MsgDeliveryStatus]]) extends Cmd
 
@@ -81,14 +83,17 @@ object MessageMeta {
 
     case class MsgDeliveryStatus(isProcessed: Boolean,
                                  outboxDeliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends Reply
+
+    case class RemoveMsg(msgId: MsgId) extends Reply
   }
 
   //common objects used by state and replies
 
-  case class MsgDetail(`type`: String,
-                       policy: RetentionPolicy,
-                       legacyData: Option[LegacyData],
+  case class MsgDetail(creationTime: ZonedDateTime,
+                       `type`: String,
+                       retentionPolicy: RetentionPolicy,
                        recipPackaging: Option[RecipPackaging],
+                       legacyData: Option[LegacyData],
                        payload: Option[Array[Byte]] = None) {
 
     def buildMsg(msgId: MsgId): Msg = Msg(msgId, `type`, legacyData, payload)
@@ -132,7 +137,15 @@ object MessageMeta {
 
     case (States.Uninitialized, c: Commands.Add) =>
       Effect
-        .persist(Events.MsgAdded(c.`type`, c.retentionPolicy, c.targetOutboxIds.toSeq, c.legacyMsgData, c.recipPackaging))
+        .persist(
+          Events.MsgAdded(
+            TimeZoneUtil.getMillisForCurrentUTCZonedDateTime,
+            c.`type`,
+            c.retentionPolicy,
+            c.targetOutboxIds.toSeq,
+            c.recipPackaging,
+            c.legacyMsgData
+          ))
         .thenReply(c.replyTo)(_ => StatusReply.success(Replies.MsgAdded))
 
     case (_: States.Initialized, c: Commands.Add) =>
@@ -158,22 +171,35 @@ object MessageMeta {
         .persist(msgActivityRecorded)
         .thenNoReply()
 
-    case (_: States.Initialized, mrfo: Commands.MsgRemovedFromOutbox) =>
+    case (_: States.Initialized, pfo: Commands.ProcessedForOutbox) =>
       val msgActivityRecorded = {
-        val msgActivity = mrfo.msgActivity.map { ma =>
+        val msgActivity = pfo.msgActivity.map { ma =>
           Events.MsgActivity(ma.detail, Option(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime))
         }
-        Events.MsgActivityRecorded(mrfo.outboxId, mrfo.deliveryStatus, msgActivity)
+        Events.MsgActivityRecorded(pfo.outboxId, pfo.deliveryStatus, msgActivity)
       }
       Effect
         .persist(msgActivityRecorded)
-        .thenRun((state: State) => deletePayloadIfRequired(msgId, msgStoreAdapter, state))
+        .thenRun{ (state: State) =>
+          val sentForDeletion = deletePayloadIfRequired(msgId, msgStoreAdapter, state)
+          if (! sentForDeletion) pfo.replyTo ! Replies.RemoveMsg(msgId)
+        }
         .thenNoReply()
 
-    case (_: States.Initialized, Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted)) =>
+    case (st: States.Initialized, Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted)) =>
       Effect
         .persist(Events.PayloadDeleted())
+        .thenRun{ (_: State) =>
+          st.deliveryStatus.keySet.foreach { outboxId =>
+            val entityRef = ClusterSharding(context.system).entityRefFor(Outbox.TypeKey, outboxId)
+            entityRef ! Outbox.Commands.RemoveMsg(msgId)
+          }
+        }
         .thenNoReply()
+
+    case (_: States.Processed, pfo: Commands.ProcessedForOutbox) =>
+      Effect
+        .reply(pfo.replyTo)(Replies.RemoveMsg(msgId))
 
     case (st: States.Processed, Commands.GetDeliveryStatus(replyTo)) =>
       Effect
@@ -191,9 +217,15 @@ object MessageMeta {
 
   private val eventHandler: (State, Event) => State = {
 
-    case (States.Uninitialized, Events.MsgAdded(typ, policy, targetOutboxIds, legacyMsgData, recipPackaging))  =>
-      val msgDetail = MsgDetail(typ, ConfigUtil.getPolicyFromConfigStr(policy), legacyMsgData.map(LegacyData(_)), recipPackaging)
-      val statusByOutboxes = targetOutboxIds.map (id => id -> OutboxDeliveryStatus()).toMap
+    case (States.Uninitialized, ma: Events.MsgAdded)  =>
+      val msgDetail = MsgDetail(
+        TimeZoneUtil.getUTCZonedDateTimeFromMillis(ma.creationTimeInMillis),
+        ma.`type`,
+        ConfigUtil.getPolicyFromConfigStr(ma.retentionPolicy),
+        ma.recipPackaging,
+        ma.legacyMsgData.map(LegacyData(_))
+      )
+      val statusByOutboxes = ma.targetOutboxIds.map (id => id -> OutboxDeliveryStatus()).toMap
       States.Initialized(msgDetail, statusByOutboxes)
 
     case (st: States.Initialized, dsa: Events.MsgActivityRecorded) =>
@@ -202,7 +234,10 @@ object MessageMeta {
         val newActivity = dsa.msgActivity.map(a =>
           MsgActivity(a.detail, a.creationTimeInMillis.map(TimeZoneUtil.getUTCZonedDateTimeFromMillis)))
         val outboxDeliveryStatus = st.deliveryStatus.getOrElse(dsa.outboxId, OutboxDeliveryStatus())
-        outboxDeliveryStatus.copy(status = dsa.deliveryStatus, msgActivities = outboxDeliveryStatus.msgActivities ++ newActivity)
+        outboxDeliveryStatus.copy(
+          status = dsa.deliveryStatus,
+          msgActivities = outboxDeliveryStatus.msgActivities ++ newActivity
+        )
       }
 
       val updatedDeliveryStatus = st.deliveryStatus ++ Map(dsa.outboxId -> updatedOutboxDeliveryStatus)
@@ -224,13 +259,15 @@ object MessageMeta {
                                       msgStore: ActorRef[MsgStore.Cmd],
                                       st: State)
                                      (implicit actorContext: ActorContext[Cmd],
-                                      msgStoreReplyAdapter: ActorRef[MsgStore.Reply]): Unit = {
+                                      msgStoreReplyAdapter: ActorRef[MsgStore.Reply]): Boolean = {
     st match {
       case i: Initialized =>
         //if message delivery status is one of the 'terminal state'
         // then only delete the payload stored in external location (s3 etc)
-        val terminalStatusCode = List(Status.MSG_DELIVERY_STATUS_SENT)
-          .map(_.statusCode)
+        val isExpired =
+          i.msgDetail.creationTime.plusDays(i.msgDetail.retentionPolicy.elements.expiryDuration.toDays)
+            .isBefore(TimeZoneUtil.getCurrentUTCZonedDateTime)
+        val terminalStatusCode = List(Status.MSG_DELIVERY_STATUS_SENT).map(_.statusCode)
         val isProcessedForAllOutboxes = {
           i.deliveryStatus.nonEmpty &&
             i.deliveryStatus.forall { ds =>
@@ -238,10 +275,11 @@ object MessageMeta {
             }
         }
 
-        if (isProcessedForAllOutboxes) {
-          msgStore ! MsgStore.Commands.DeletePayload(msgId, i.msgDetail.policy, msgStoreReplyAdapter)
-        }
-      case _ => //nothing to do
+        if (isProcessedForAllOutboxes || isExpired) {
+          msgStore ! MsgStore.Commands.DeletePayload(msgId, i.msgDetail.retentionPolicy, msgStoreReplyAdapter)
+          true
+        } else false
+      case _ => false
     }
   }
 }

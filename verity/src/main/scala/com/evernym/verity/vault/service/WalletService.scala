@@ -75,11 +75,3 @@ trait WalletService {
    */
   protected def execute(walletId: String, cmd: WalletCommand): Future[Any]
 }
-
-trait AsyncToSync {
-
-  def DEPRECATED_convertToSyncReq[T](fut: Future[T]): T = {
-    //TODO: finalize timeout
-    Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
-  }
-}

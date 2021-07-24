@@ -1,7 +1,7 @@
 package com.evernym.verity.metrics
 
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.reporter.MetricDetail
 import com.typesafe.config.ConfigException.Missing

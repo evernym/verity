@@ -3,7 +3,7 @@ package com.evernym.verity.texter
 import java.net.HttpURLConnection._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util.Util._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.common.ConfigSvc

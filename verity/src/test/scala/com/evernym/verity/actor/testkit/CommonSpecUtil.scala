@@ -5,11 +5,10 @@ import java.util.concurrent.TimeUnit
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
 import com.evernym.verity.testkit.LegacyWalletAPI
-import com.evernym.verity.testkit.util.TestUtil.getSigningKey
+import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.WalletUtil._
-import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -47,7 +46,7 @@ trait CommonSpecUtil {
 
   def generateNewAgentDIDDetail(nameOpt: Option[String]=None, seedOpt: Option[String]=None): AgentDIDDetail = {
     val seed = getSeed(seedOpt)
-    val sk = getSigningKey(seed)
+    val sk = TestUtil.getSigningKey(seed)
     val vk = sk.getVerifyKey.toBytes
     val verKey = Base58Util.encode(vk)
     val did = Base58Util.encode(vk.take(16))

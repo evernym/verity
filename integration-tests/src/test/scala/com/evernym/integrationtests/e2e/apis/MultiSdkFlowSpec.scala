@@ -7,7 +7,7 @@ import com.evernym.integrationtests.e2e.flow.{AdminFlow, InteractiveSdkFlow, Set
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtilBaseSpec
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass

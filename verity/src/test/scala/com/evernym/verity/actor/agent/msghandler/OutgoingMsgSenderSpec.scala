@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.{HasOutgoingMsgSender,
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.AKKA_SHARDING_REGION_NAME_USER_AGENT
+import com.evernym.verity.config.ConfigConstants.AKKA_SHARDING_REGION_NAME_USER_AGENT
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.testkit.BasicSpec

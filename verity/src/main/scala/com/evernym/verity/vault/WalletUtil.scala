@@ -3,8 +3,8 @@ package com.evernym.verity.vault
 import java.util.UUID
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.config.CommonConfig.SALT_WALLET_ENCRYPTION
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.ConfigConstants.SALT_WALLET_ENCRYPTION
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.WalletParam
@@ -15,14 +15,14 @@ import scala.concurrent.Future
 object WalletUtil {
 
   def buildWalletConfig(appConfig: AppConfig): WalletConfig = {
-    if (appConfig.getStringReq(CommonConfig.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
-      val readHost = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_READ_HOST)
-      val writeHost = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_WRITE_HOST)
-      val port = appConfig.getIntReq(CommonConfig.WALLET_STORAGE_HOST_PORT)
-      val userName = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_CRED_USERNAME)
-      val password = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_CRED_PASSWORD)
-      val dbName = appConfig.getStringReq(CommonConfig.WALLET_STORAGE_DB_NAME)
-      val connectionLimit = appConfig.getIntOption(CommonConfig.WALLET_STORAGE_CONNECTION_LIMIT)
+    if (appConfig.getStringReq(ConfigConstants.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
+      val readHost = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_READ_HOST)
+      val writeHost = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_WRITE_HOST)
+      val port = appConfig.getIntReq(ConfigConstants.WALLET_STORAGE_HOST_PORT)
+      val userName = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_CRED_USERNAME)
+      val password = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_CRED_PASSWORD)
+      val dbName = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_DB_NAME)
+      val connectionLimit = appConfig.getIntOption(ConfigConstants.WALLET_STORAGE_CONNECTION_LIMIT)
       new MySqlWalletConfig(readHost, writeHost, port, userName, password, dbName, connectionLimit)
     } else new DefaultWalletConfig
   }

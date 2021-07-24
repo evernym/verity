@@ -17,7 +17,8 @@ message OutboxParamUpdated {
 message MsgAdded {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
     uint64 creationTimeInMillis = 1;
-    string msgId = 2;
+    uint64 expiresAfterMillis = 2;
+    string msgId = 3;
 }
 
 message MsgSentSuccessfully {

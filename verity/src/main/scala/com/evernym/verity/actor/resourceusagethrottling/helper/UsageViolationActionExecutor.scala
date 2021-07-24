@@ -7,7 +7,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocki
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{WarnCaller, WarnResourceForCaller}
 import com.evernym.verity.actor.resourceusagethrottling.{ENTITY_ID_GLOBAL, EntityId}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.actor.resourceusagethrottling.helper.LogLevelValidator._

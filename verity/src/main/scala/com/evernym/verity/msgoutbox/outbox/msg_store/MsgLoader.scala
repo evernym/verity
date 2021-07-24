@@ -65,7 +65,7 @@ object MsgLoader {
   }
 
   private val eventHandler: (State, Any) => State = {
-    case (States.Uninitialized, Events.MsgAdded(typ, policy, targetOutboxIds, legacyMsgData, recipPackaging)) =>
+    case (States.Uninitialized, Events.MsgAdded(creationTimeInMillis, typ, policy, targetOutboxIds, recipPackaging, legacyMsgData)) =>
       States.Initialized(
         Msg(typ, ConfigUtil.getPolicyFromConfigStr(policy), legacyMsgData.map(LegacyData(_)), recipPackaging)
       )

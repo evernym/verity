@@ -1,11 +1,10 @@
 package com.evernym.verity.testkit.util
 
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.util.UtilBase
 import org.abstractj.kalium.keys.SigningKey
 import org.iq80.leveldb.util.FileUtils
 
-object TestUtil extends UtilBase {
+object TestUtil {
 
   private val logger = getLoggerByClass(getClass)
 

@@ -5,7 +5,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
 import com.evernym.verity.util2.Exceptions.EventDecryptionErrorException
-import com.evernym.verity.config.CommonConfig.SALT_EVENT_ENCRYPTION
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.config.AppConfigWrapper
 
 

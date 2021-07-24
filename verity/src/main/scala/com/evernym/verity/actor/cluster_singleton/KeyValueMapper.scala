@@ -5,7 +5,7 @@ import akka.event.LoggingReceive
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.persistence.SingletonPersistentAgentActorBase
 import com.evernym.verity.actor.{ActorMessage, MappingAdded}
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 
 
@@ -35,7 +35,7 @@ object KeyValueMapper{
 
 trait KeyValueMapperBase extends SingletonPersistentAgentActorBase {
 
-  lazy val secretConfigKeyName: String = CommonConfig.SECRET_KEY_VALUE_MAPPER
+  lazy val secretConfigKeyName: String = ConfigConstants.SECRET_KEY_VALUE_MAPPER
 
   var mapping: Map[String, String] = Map.empty
 

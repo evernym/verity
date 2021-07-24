@@ -9,11 +9,12 @@ package com.evernym.verity.msgoutbox.message_meta.Events;
 
 message MsgAdded {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.message_meta.MessageMeta.Event";
-    string type = 1;
-    string retentionPolicy = 2;
-    repeated string targetOutboxIds = 3;
-    LegacyMsgData legacyMsgData = 4;
+    uint64 creationTimeInMillis = 1;
+    string type = 2;
+    string retentionPolicy = 3;
+    repeated string targetOutboxIds = 4;
     RecipPackaging recipPackaging = 5;
+    LegacyMsgData legacyMsgData = 6;
 }
 
 message LegacyMsgData {

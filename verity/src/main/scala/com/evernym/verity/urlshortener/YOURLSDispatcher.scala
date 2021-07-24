@@ -9,7 +9,7 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_TIMEOUT_SECONDS, YOURLS_API_URL, YOURLS_API_USERNAME}
+import com.evernym.verity.config.ConfigConstants.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_TIMEOUT_SECONDS, YOURLS_API_URL, YOURLS_API_USERNAME}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_YOURLS
 import com.evernym.verity.http.common.ConfigSvc
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName

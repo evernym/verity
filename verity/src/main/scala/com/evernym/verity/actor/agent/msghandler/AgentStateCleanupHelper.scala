@@ -7,8 +7,8 @@ import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
 import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.config.CommonConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.{DID, PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
@@ -318,12 +318,12 @@ trait AgentStateCleanupHelper {
 
   lazy val migrateThreadContextMaxAttemptPerPinstProtoRef: Int =
     appConfig
-      .getIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
+      .getIntOption(ConfigConstants.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
       .getOrElse(15)
 
   def isMigrateThreadContextsEnabled: Boolean =
     appConfig
-      .getBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
+      .getBooleanOption(ConfigConstants.MIGRATE_THREAD_CONTEXTS_ENABLED)
       .getOrElse(false)
 
   def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {

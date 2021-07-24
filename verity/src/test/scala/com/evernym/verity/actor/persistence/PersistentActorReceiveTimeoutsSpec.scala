@@ -9,7 +9,7 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}

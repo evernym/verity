@@ -1,6 +1,6 @@
 package com.evernym.verity.util2
 
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 import com.evernym.verity.util2.Exceptions.InternalServerErrorException
@@ -119,7 +119,7 @@ object Status extends Enumeration {
   val TAA_CONFIGURED_VERSION_INVALID              = statusDetail(TAA_PREFIX, 105, "Configured version of Transaction Author Agreement is invalid. Misconfigured or needs to be accepted/hashed again?")
   val TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND     = statusDetail(TAA_PREFIX, 106, "Configuration for current Transaction Author Agreement not found. TAA not yet accepted?")
   val TAA_FAILED_TO_GET_CURRENT_VERSION           = statusDetail(TAA_PREFIX, 107, "Failed to get Transaction Author Agreement information from the ledger")
-  val TAA_REQUIRED_BUT_DISABLED                   = statusDetail(TAA_PREFIX, 108, s"TAA is enabled on the ledger, but ${CommonConfig.LIB_INDY_LEDGER_TAA_ENABLED} is set to false in the configuration file")
+  val TAA_REQUIRED_BUT_DISABLED                   = statusDetail(TAA_PREFIX, 108, s"TAA is enabled on the ledger, but ${ConfigConstants.LIB_INDY_LEDGER_TAA_ENABLED} is set to false in the configuration file")
   val TAA_NOT_REQUIRED_BUT_INCLUDED               = statusDetail(TAA_PREFIX, 109, "TAA is not enabled on the ledger, but was included in a write transaction")
   val TXN_UNKNOWN_REJECT_REASON                   = statusDetail(TAA_PREFIX, 111, "unknown reject reason")
 

@@ -14,7 +14,7 @@ import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.agent.Thread
-import com.evernym.verity.config.CommonConfig.REST_API_ENABLED
+import com.evernym.verity.config.ConfigConstants.REST_API_ENABLED
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform

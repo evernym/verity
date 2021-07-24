@@ -11,8 +11,8 @@ import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ActorStateCleaned, ActorStateStored, BatchSizeRecorded, Completed, ForIdentifier, StatusUpdated}
-import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.Util.getActorRefFromSelection
@@ -302,7 +302,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   lazy val nextSeqNoForDeletion: Int =
-    appConfig.getIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
       .getOrElse(5)
 
   val legacyAgentRouteStoreRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)

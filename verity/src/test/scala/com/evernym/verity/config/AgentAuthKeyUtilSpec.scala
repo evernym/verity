@@ -1,6 +1,6 @@
 package com.evernym.verity.config
 
-import com.evernym.verity.config.CommonConfig.AGENT_AUTHENTICATION_ENABLED
+import com.evernym.verity.config.ConfigConstants.AGENT_AUTHENTICATION_ENABLED
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigValueFactory
 

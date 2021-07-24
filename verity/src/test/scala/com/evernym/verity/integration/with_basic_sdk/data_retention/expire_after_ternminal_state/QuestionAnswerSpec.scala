@@ -130,10 +130,12 @@ class QuestionAnswerSpec
     """
       |verity {
       |  retention-policy {
-      |    default {
-      |      undefined-fallback {
-      |        expire-after-days = 2 day
-      |        expire-after-terminal-state = true
+      |    protocol-state {
+      |      default {
+      |        undefined-fallback {
+      |          expire-after-days = 2 day
+      |          expire-after-terminal-state = true
+      |        }
       |      }
       |    }
       |  }

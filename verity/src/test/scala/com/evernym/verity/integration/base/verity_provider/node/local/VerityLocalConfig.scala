@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.base.verity_provider.node.local
 
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
-import com.evernym.verity.config.CommonConfig.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
+import com.evernym.verity.config.ConfigConstants.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore}
 import com.typesafe.config.{Config, ConfigFactory}
 

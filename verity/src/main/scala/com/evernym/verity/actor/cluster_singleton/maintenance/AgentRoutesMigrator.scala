@@ -10,7 +10,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, MigrationCandidatesRecorded, MigrationStatusRecorded}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME, SINGLETON_PARENT_PROXY}
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.util.Util.getActorRefFromSelection

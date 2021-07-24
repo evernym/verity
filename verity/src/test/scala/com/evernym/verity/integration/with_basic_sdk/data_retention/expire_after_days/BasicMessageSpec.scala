@@ -91,11 +91,13 @@ class BasicMessageSpec
     """
       |verity {
       |  retention-policy {
-      |    default {
-      |     undefined-fallback {
-      |       expire-after-days = 4 day
-      |       expire-after-terminal-state = false
-      |     }
+      |    protocol-state {
+      |      default {
+      |       undefined-fallback {
+      |         expire-after-days = 4 day
+      |         expire-after-terminal-state = false
+      |       }
+      |      }
       |    }
       |  }
       |  blob-store {

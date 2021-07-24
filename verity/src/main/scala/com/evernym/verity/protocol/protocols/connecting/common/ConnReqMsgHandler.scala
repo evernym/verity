@@ -10,7 +10,7 @@ import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqMsg, ConnReqMsgHelper}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._

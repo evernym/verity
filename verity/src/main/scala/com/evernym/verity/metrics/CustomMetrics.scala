@@ -148,12 +148,12 @@ object CustomMetrics {
 
   //**NOTE**: We should not add any metrics in this below collection in general,
   // there should be very specific reason to add it to initialize it with value 0
-  def initGaugeMetrics(): Unit = {
+  def initGaugeMetrics(metricsWriter: MetricsWriter): Unit = {
     val metricsToBeInitialized = Set(
       AS_ACTIVE_USER_AGENT_COUNT,
       AS_USER_AGENT_ACTIVE_RELATIONSHIPS,
       AS_NEW_PROTOCOL_COUNT
     )
-    metricsToBeInitialized.foreach(MetricsWriter.gaugeApi.updateWithTags(_, value = 0))
+    metricsToBeInitialized.foreach(metricsWriter.gaugeUpdate(_, value = 0))
   }
 }

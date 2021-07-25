@@ -7,8 +7,8 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT
-import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.testkit.{BasicSpec, MetricsReadHelper}
+import com.evernym.verity.metrics.TestMetricsWriter
+import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -27,7 +27,6 @@ trait BaseRecoveryActorSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    MetricsReader.initialize(appConfig)
   }
 
   def restartActor(ar: agentRegion, times: Int = 1): Unit = {
@@ -48,17 +47,18 @@ trait BaseRecoveryActorSpec
 
 trait BaseRecoverySpecLike
   extends BasePersistentStore
-    with MetricsReadHelper
     with Eventually { this: BasicSpec =>
 
+  def testMetricsWriter : TestMetricsWriter
+
+  //TODO: may wanna rework this?
   def getStableWalletAPISucceedCountMetric: Double = {
     var apiCallCount: Double =
-      getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
-        .map(_.value).getOrElse(0)
+      testMetricsWriter.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT).headOption.map(_._2).getOrElse(0)
     var timesFoundSameCount: Int = 0    //how many times the metrics count was found same (stable count)
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      val newCount: Double = getFilteredMetric(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
-        .map(_.value).getOrElse(0)
+      val newCount: Double = testMetricsWriter.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+        .headOption.map(_._2).getOrElse(0)
       if (apiCallCount == newCount) timesFoundSameCount = timesFoundSameCount + 1
       else timesFoundSameCount = 0
       val isStable = apiCallCount == newCount && timesFoundSameCount >= 5

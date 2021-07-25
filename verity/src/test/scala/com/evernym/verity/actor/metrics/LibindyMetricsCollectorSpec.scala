@@ -3,10 +3,8 @@ package com.evernym.verity.actor.metrics
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.util2.ReqId
-import com.evernym.verity.actor.MetricsFilterCriteria
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
-import com.evernym.verity.metrics.MetricsReader
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 
@@ -30,13 +28,11 @@ class LibindyMetricsCollectorSpec
       "should be sent to Kamon" ignore {      //TODO: need to fix this soon (VE-2763)
         libindyMetricsCollector ! CollectLibindyMetrics()
         expectMsgType[CollectLibindySuccess]
-        val criteria = MetricsFilterCriteria(filtered = false)
         awaitCond(
-          MetricsReader.getNodeMetrics(criteria).metrics.exists(
-            metricDetail => metricDetail.name.contains("libindy_command_duration_ms_count") &&
-              metricDetail.value.isValidInt &&
-              metricDetail.tags.get.contains("command") &&
-              metricDetail.tags.get.contains("stage")
+          testMetricsWriter.filterGaugeMetrics("libindy_command_duration_ms_count").exists(entry =>
+            entry._2.isValidInt &&
+              entry._1.tags.contains("command") &&
+              entry._1.tags.contains("stage")
           ),
           60.seconds
         )

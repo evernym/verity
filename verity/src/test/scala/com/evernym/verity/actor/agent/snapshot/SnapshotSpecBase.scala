@@ -6,7 +6,8 @@ import com.evernym.verity.actor.persistence.stdPersistenceId
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec}
+import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
+import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.transformations.transformers.v1.createPersistenceTransformerV1
 import com.evernym.verity.util.Util
 import org.scalatest.concurrent.Eventually
@@ -15,20 +16,16 @@ import org.scalatest.time.{Millis, Seconds, Span}
 trait SnapshotSpecBase
   extends AgentSpecHelper
     with HasTransformationRegistry
-    with MetricsReadHelper
     with Eventually { this: PersistentActorSpec with BasicSpec =>
 
   def checkStateSizeMetrics(actorClass: String, expectSize: Double): Unit = {
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       val stateSizeMetrics =
-        getFilteredMetrics(
-          "as.akka.actor.agent.state",
-          Map("actor_class" -> actorClass))
+        testMetricsWriter.filterHistogramMetrics(AS_ACTOR_AGENT_STATE_SIZE)
+          .filter(_._1.tags.exists( _ == ("actor_class",actorClass)))
 
-      stateSizeMetrics.size shouldBe 12 //histogram metrics
-      stateSizeMetrics.find(_.name == "as_akka_actor_agent_state_size_sum").foreach { v =>
-        checkStateSizeSum(v.value, expectSize)
-      }
+      stateSizeMetrics.size shouldBe 1 //histogram metrics
+      checkStateSizeSum(stateSizeMetrics.head._2.sum, expectSize)
     }
   }
 

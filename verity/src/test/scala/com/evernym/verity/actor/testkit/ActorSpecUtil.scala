@@ -17,6 +17,7 @@ import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 import java.util.concurrent.TimeUnit
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension, TestMetricsWriter}
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -102,7 +103,11 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
-  implicit lazy val system: classic.ActorSystem = as
+  lazy val metricsWriter: MetricsWriter = new TestMetricsWriter
+  implicit lazy val system: classic.ActorSystem = {
+    MetricsWriterExtension(as).set(metricsWriter)
+    as
+  }
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
 }
 

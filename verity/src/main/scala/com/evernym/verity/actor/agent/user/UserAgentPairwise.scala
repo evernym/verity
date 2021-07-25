@@ -8,7 +8,6 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
-import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
@@ -64,6 +63,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.msgoutbox
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriterExtension, MetricsWriter}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
@@ -387,7 +387,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleCreateMsgGeneral(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleCreateMsgGeneral", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("handleCreateMsgGeneral", "UserAgentPairwise", InternalSpan) {
       val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
       val resourceName = ResourceUsageUtil.getCreateMsgReqMsgName(createMsgReq.mtype)
@@ -405,7 +405,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleSendRemoteMsg(sendRemoteMsg: SendRemoteMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleSendRemoteMsg", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("handleSendRemoteMsg", "UserAgentPairwise", InternalSpan) {
       recordInMsgEvent(reqMsgContext.id, MsgEvent(sendRemoteMsg.id, sendRemoteMsg.mtype))
       validateAndProcessSendRemoteMsg(ValidateAndProcessSendRemoteMsg(sendRemoteMsg, getInternalReqHelperData))
     }
@@ -428,7 +428,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def processPersistedSendRemoteMsg(ppsrm: ProcessPersistedSendRemoteMsg): Unit = {
-    runWithInternalSpan("processPersistedSendRemoteMsg", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("processPersistedSendRemoteMsg", "UserAgentPairwise", InternalSpan) {
       recordOutMsgEvent(ppsrm.reqHelperData.reqMsgContext.id,
         MsgEvent(ppsrm.msgCreated.uid, ppsrm.msgCreated.typ,
           OptionUtil.emptyOption(ppsrm.msgCreated.refMsgId).map(rmid => s"refMsgId: $rmid")))
@@ -438,7 +438,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
       val param = AgentMsgPackagingUtil.buildPackMsgParam(getEncParamBasedOnMsgSender, msgCreatedResp ++ otherRespMsgs, reqMsgContext.wrapInBundledMsg)
       logger.debug("param (during general proof/cred msgs): " + param)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg("SendRemoteMsgResp", rp, sender)
     }
   }
@@ -447,7 +447,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     appConfig.getBooleanOption(PERSISTENCE_USE_ASYNC_MSG_FORWARD).getOrElse(false)
 
   def persistAndProcessSendRemoteMsg(papsrm: PersistAndProcessSendRemoteMsg): Unit = {
-    runWithInternalSpan("persistAndProcessSendRemoteMsg", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("persistAndProcessSendRemoteMsg", "UserAgentPairwise", InternalSpan) {
       implicit val reqMsgContext: ReqMsgContext = papsrm.reqHelperData.reqMsgContext
 
       val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.latestMsgSenderVerKeyReq)
@@ -472,7 +472,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def validateAndProcessSendRemoteMsg(vapsrm: ValidateAndProcessSendRemoteMsg): Unit = {
-    runWithInternalSpan("validateAndProcessSendRemoteMsg", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("validateAndProcessSendRemoteMsg", "UserAgentPairwise", InternalSpan) {
       implicit val reqMsgContext: ReqMsgContext = vapsrm.reqHelperData.reqMsgContext
       checkIfTheirDidDocExists()
       checkMsgSenderIfConnectionIsNotYetEstablished(reqMsgContext.latestMsgSenderVerKeyReq)
@@ -488,7 +488,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
     sendRespMsg("SendMsgResp", rp, sender)
   }
 
@@ -500,7 +500,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def sendMsgV1(uids: List[String])(implicit reqMsgContext: ReqMsgContext): List[Any] = {
-    runWithInternalSpan("sendMsgV1", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("sendMsgV1", "UserAgentPairwise", InternalSpan) {
       uids.foreach { uid =>
         val msg = getMsgReq(uid)
         logErrorsIfFutureFails(Future(sendGeneralMsg(uid)),
@@ -512,7 +512,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   def sendGeneralMsg(uid: MsgId)
                     (implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("sendGeneralMsg", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("sendGeneralMsg", "UserAgentPairwise", InternalSpan) {
       getMsgOpt(uid).foreach { msg =>
         val sentBySelf = msg.senderDID == state.myDid_!
         if (sentBySelf) {
@@ -529,7 +529,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def buildLegacySendRemoteMsg_MFV_0_5(uid: MsgId, fc: AgentConfigs): List[Any] = {
-    runWithInternalSpan("buildLegacySendRemoteMsg_MFV_0_5", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("buildLegacySendRemoteMsg_MFV_0_5", "UserAgentPairwise", InternalSpan) {
       val msg = getMsgReq(uid)
       val replyToMsgId = msgStore.getReplyToMsgId(uid)
       val mds = getMsgDetails(uid)
@@ -560,7 +560,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def buildSendRemoteMsg_MFV_0_6(uid: MsgId): List[Any] = {
-    runWithInternalSpan("buildSendRemoteMsg_MFV_0_6", "UserAgentPairwise") {
+    metricsWriter.runWithSpan("buildSendRemoteMsg_MFV_0_6", "UserAgentPairwise", InternalSpan) {
       val msg = getMsgReq(uid)
       val replyToMsgId = msgStore.getReplyToMsgId(uid)
       val mds = getMsgDetails(uid)
@@ -599,7 +599,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
           }
           buildAndSendMsgToTheirRoutingService(uid, msg.getType, agentMsgs, mpf)
         case (Some(Right(_: RoutingDetail)), Some(p)) =>
-          buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`).map { pm =>
+          buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`, metricsWriter).map { pm =>
             val smp = buildSendMsgParam(uid, msg.getType, pm.msg, isItARetryAttempt = false)
             sendFinalPackedMsgToTheirRoutingService(pm, smp)
           }
@@ -623,9 +623,9 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
                                                   thread: Option[Thread]=None): Future[Any] = {
     val packedMsgFut = if (smp.theirRoutingParam.route.isLeft) {
       val agentMsgs = buildLegacySendRemoteMsg_MFV_0_5(smp.uid, smp.msgType, smp.msg, None, Map.empty, thread)
-      buildReqMsgForTheirRoutingService(MPF_MSG_PACK, agentMsgs, wrapInBundledMsgs = true, smp.msgType)
+      buildReqMsgForTheirRoutingService(MPF_MSG_PACK, agentMsgs, wrapInBundledMsgs = true, smp.msgType, metricsWriter)
     } else {
-      buildRoutedPackedMsgForTheirRoutingService(MPF_INDY_PACK, smp.msg, smp.msgType)
+      buildRoutedPackedMsgForTheirRoutingService(MPF_INDY_PACK, smp.msg, smp.msgType, metricsWriter)
     }
     packedMsgFut.map { pm =>
       sendFinalPackedMsgToTheirRoutingService(pm, smp.copy(msg = pm.msg))
@@ -637,8 +637,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
                                            msgType: String,
                                            agentMsgs: List[Any],
                                            msgPackFormat: MsgPackFormat): Future[Any] = {
-    runWithInternalSpan("buildAndSendMsgToTheirRoutingService", "UserAgentPairwise") {
-      val packedMsgFut = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, wrapInBundledMsgs = true, msgType)
+    metricsWriter.runWithSpan("buildAndSendMsgToTheirRoutingService", "UserAgentPairwise", InternalSpan) {
+      val packedMsgFut = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, wrapInBundledMsgs = true, msgType, metricsWriter)
       logger.debug("agency msg prepared", (LOG_KEY_UID, uid))
       packedMsgFut.map { pm =>
         val smp = buildSendMsgParam(uid, msgType, pm.msg, isItARetryAttempt = false)
@@ -649,7 +649,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   private def sendFinalPackedMsgToTheirRoutingService(packedMsg: PackedMsg,
                                                       smp: SendMsgParam): Future[Any] = {
-    sendToTheirAgencyEndpoint(smp.copy(msg = packedMsg.msg)).map {
+    sendToTheirAgencyEndpoint(smp.copy(msg = packedMsg.msg), metricsWriter).map {
       case Left(e) =>
         recordOutMsgDeliveryEvent(smp.uid, MsgEvent.withTypeAndDetail(smp.msgType,
           s"FAILED [outgoing message to their routing service (${smp.theirRoutingParam.routingTarget}) (error: ${e.toString})]"))
@@ -686,7 +686,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     writeAndApply(ConnStatusUpdated(updateConnStatus.statusCode))
     val connectionStatusUpdatedRespMsg = UpdateConnStatusMsgHelper.buildRespMsg(updateConnStatus.statusCode)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, connectionStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
     sendRespMsg("ConnStatusUpdatedResp", rp)
   }
 

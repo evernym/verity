@@ -2,6 +2,8 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.ServiceEndpoint
+import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.writer.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -77,6 +79,9 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
       )
       handleMsg(definition.createInitMsg(params))
     }
+
+    // todo assuming this class is used in tests only, we don't need to pass actual metricsWriter
+    override def metricsWriter: MetricsWriter = new NoOpMetricsWriter
 
     override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
       def storeSegment(segmentAddress: SegmentAddress,

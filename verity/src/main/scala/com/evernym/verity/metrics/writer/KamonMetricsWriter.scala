@@ -12,6 +12,10 @@ class KamonMetricsWriter extends MetricsWriter {
     Kamon.gauge(name).withTags(TagSet.from(tags)).increment(value)
   }
 
+  override def gaugeDecrement(name: String, value: Double, tags: TagMap): Unit = {
+    Kamon.gauge(name).withTags(TagSet.from(tags)).decrement(value)
+  }
+
   override def gaugeUpdate(name: String, value: Double, tags: TagMap): Unit = {
     Kamon.gauge(name).withTags(TagSet.from(tags)).update(value)
   }

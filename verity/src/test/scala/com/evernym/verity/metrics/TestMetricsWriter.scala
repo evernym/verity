@@ -14,6 +14,12 @@ class TestMetricsWriter extends MetricsWriter {
     gaugesMap.put(key, cur + value)
   }
 
+  override def gaugeDecrement(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
+    val key = TestMetricHead(name, tags)
+    val cur = gaugesMap.getOrElse(key, 0.0)
+    gaugesMap.put(key, cur - value)
+  }
+
   override def gaugeUpdate(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
     gaugesMap.put(key, value)

@@ -88,7 +88,7 @@ class OutboxSpec
           probe.expectMessage(StatusReply.success(Replies.MsgAlreadyAdded))
 
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
-          checkMsgDeliveryMetrics(1, 0, 0)
+          checkMsgDeliveryMetrics(0, 0, 1)
         }
       }
 
@@ -99,7 +99,7 @@ class OutboxSpec
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
-          checkMsgDeliveryMetrics(2, 0, 0)
+          checkMsgDeliveryMetrics(0, 0, 2)
         }
       }
 
@@ -110,7 +110,7 @@ class OutboxSpec
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
-          checkMsgDeliveryMetrics(3, 0, 0)
+          checkMsgDeliveryMetrics(0, 0, 3)
         }
       }
 
@@ -122,7 +122,7 @@ class OutboxSpec
             val messages = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
             messages.size shouldBe 0
             checkRetention(expectedSnapshots = 2, expectedEvents = 1)
-            checkMsgDeliveryMetrics(0, 3, 0)
+            checkMsgDeliveryMetrics(3, 0, 0)
           }
         }
       }
@@ -176,7 +176,6 @@ class OutboxSpec
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
-        checkMsgDeliveryMetrics(3, 3, 0)
       }
     }
 
@@ -189,7 +188,7 @@ class OutboxSpec
           messages.size shouldBe 0
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
-        checkMsgDeliveryMetrics(0, 6, 0)
+        checkMsgDeliveryMetrics(6, 0, 0)
       }
     }
   }
@@ -203,17 +202,19 @@ class OutboxSpec
     }
   }
 
-  def checkMsgDeliveryMetrics(expectedPending: Int,
-                              expectedSuccessful: Int,
-                              expectedFailed: Int): Unit = {
+  def checkMsgDeliveryMetrics(expectedSuccessful: Int,
+                              expectedFailed: Int,
+                              expectedPending: Int): Unit = {
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       val outboxMsgDeliveryMetrics = testMetricsWriter.filterGaugeMetrics(AS_OUTBOX_MSG_DELIVERY)
+
+      val successfulCount = outboxMsgDeliveryMetrics.filter(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT).values.sum
+      val failedCount = outboxMsgDeliveryMetrics.filter(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT).values.sum
       val pendingCount = outboxMsgDeliveryMetrics.find(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT).map(_._2).getOrElse(0)
-      val successfulCount = outboxMsgDeliveryMetrics.find(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT).map(_._2).getOrElse(0)
-      val failedCount = outboxMsgDeliveryMetrics.find(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT).map(_._2).getOrElse(0)
-      pendingCount shouldBe expectedPending
+
       successfulCount shouldBe expectedSuccessful
       failedCount shouldBe expectedFailed
+      pendingCount shouldBe expectedPending
     }
   }
 

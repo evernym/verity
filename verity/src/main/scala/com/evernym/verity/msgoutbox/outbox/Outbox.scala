@@ -208,7 +208,7 @@ object Outbox {
         .persist(MsgSentSuccessfully(rsa.msgId, rsa.comMethodId, isDelivered))
         .thenRun((_: State) => if (rsa.sendAck) setup.dispatcher.ack(rsa.msgId))
         .thenRun((_: State) => if (isDelivered && ! rsa.isItANotification) {
-          setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT)
+          setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT, tags = comMethodTypeTags(st.comMethods.get(rsa.comMethodId)))
           setup.metricsWriter.gaugeDecrement(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT)
         })
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rsa.msgId, rsa.comMethodId, None))
@@ -222,7 +222,7 @@ object Outbox {
         .thenRun((_: State) => setup.itemManagerEntityHelper.register())
         .thenRun((_: State) => if (rfa.sendAck) setup.dispatcher.ack(rfa.msgId))
         .thenRun((_: State) => if (isDeliveryFailed && ! rfa.isItANotification) {
-          setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT)
+          setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, tags = comMethodTypeTags(st.comMethods.get(rfa.comMethodId)))
           setup.metricsWriter.gaugeDecrement(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT)
         })
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rfa.msgId, rfa.comMethodId, Option(rfa.statusDetail)))
@@ -530,6 +530,17 @@ object Outbox {
       RetentionCriteria.snapshotEvery(numberOfEvents = afterEveryEvents, keepNSnapshots = keepSnapshots)
     if (deleteEventOnSnapshot) retentionCriteria.withDeleteEventsOnSnapshot
     else retentionCriteria
+  }
+
+  private def comMethodTypeTags(comMethod: Option[ComMethod]): Map[String, String] = {
+    val comMethodTypeStr =
+      comMethod.map(_.typ) match {
+        case Some(COM_METHOD_TYPE_HTTP_ENDPOINT) =>
+          "webhook-" + comMethod.flatMap(_.authentication).map(_.`type`).getOrElse("plain")
+        case _ =>
+          "unknown"
+      }
+    Map("com-method-type" -> comMethodTypeStr)
   }
 
   def prepareRetryParam(comMethodType: Int,

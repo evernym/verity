@@ -6,6 +6,7 @@ import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
+import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.MsgDeliveryStatus
@@ -37,6 +38,7 @@ class OutboxSpec
         val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()
         outboxRegion ! ShardingEnvelope("outboxId", GetOutboxParam(probe.ref))
         probe.expectNoMessage()
+        checkMsgDeliveryMetrics(0, 0, 0)
       }
     }
 
@@ -71,6 +73,7 @@ class OutboxSpec
           outboxParam.walletId shouldBe testWallet.walletId
           outboxParam.comMethods shouldBe defaultDestComMethods
           checkRetention(expectedSnapshots = 1, expectedEvents = 1)
+          checkMsgDeliveryMetrics(0, 0, 0)
         }
       }
 
@@ -85,6 +88,7 @@ class OutboxSpec
           probe.expectMessage(StatusReply.success(Replies.MsgAlreadyAdded))
 
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
+          checkMsgDeliveryMetrics(1, 0, 0)
         }
       }
 
@@ -95,6 +99,7 @@ class OutboxSpec
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
+          checkMsgDeliveryMetrics(2, 0, 0)
         }
       }
 
@@ -105,6 +110,7 @@ class OutboxSpec
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
+          checkMsgDeliveryMetrics(3, 0, 0)
         }
       }
 
@@ -116,6 +122,7 @@ class OutboxSpec
             val messages = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
             messages.size shouldBe 0
             checkRetention(expectedSnapshots = 2, expectedEvents = 1)
+            checkMsgDeliveryMetrics(0, 3, 0)
           }
         }
       }
@@ -169,6 +176,7 @@ class OutboxSpec
           probe.expectMessage(StatusReply.success(Replies.MsgAdded))
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
+        checkMsgDeliveryMetrics(3, 3, 0)
       }
     }
 
@@ -181,6 +189,7 @@ class OutboxSpec
           messages.size shouldBe 0
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
+        checkMsgDeliveryMetrics(0, 6, 0)
       }
     }
   }
@@ -191,6 +200,20 @@ class OutboxSpec
     eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
       persTestKit.persistedInStorage(outboxPersistenceId).size shouldBe expectedEvents
       snapTestKit.persistedInStorage(outboxPersistenceId).size shouldBe expectedSnapshots
+    }
+  }
+
+  def checkMsgDeliveryMetrics(expectedPending: Int,
+                              expectedSuccessful: Int,
+                              expectedFailed: Int): Unit = {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      val outboxMsgDeliveryMetrics = testMetricsWriter.filterGaugeMetrics(AS_OUTBOX_MSG_DELIVERY)
+      val pendingCount = outboxMsgDeliveryMetrics.find(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT).map(_._2).getOrElse(0)
+      val successfulCount = outboxMsgDeliveryMetrics.find(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT).map(_._2).getOrElse(0)
+      val failedCount = outboxMsgDeliveryMetrics.find(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT).map(_._2).getOrElse(0)
+      pendingCount shouldBe expectedPending
+      successfulCount shouldBe expectedSuccessful
+      failedCount shouldBe expectedFailed
     }
   }
 

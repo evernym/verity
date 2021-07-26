@@ -142,6 +142,12 @@ object CustomMetrics {
   final val AS_CACHE_HIT_COUNT = s"$AS_CACHE.hit.count"
   final val AS_CACHE_MISS_COUNT = s"$AS_CACHE.miss.count"
 
+  final val AS_OUTBOX = s"$AS.outbox"
+  final val AS_OUTBOX_MSG_DELIVERY = s"$AS_OUTBOX.msgs.delivery"
+  final val AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT = s"$AS_OUTBOX_MSG_DELIVERY.pending.count"
+  final val AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT = s"$AS_OUTBOX_MSG_DELIVERY.successful.count"
+  final val AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT = s"$AS_OUTBOX_MSG_DELIVERY.failed.count"
+
   final val TAG_KEY_PATH = "path"
   final val TAG_KEY_TYPE = "type"
   final val TAG_KEY_ID = "id"

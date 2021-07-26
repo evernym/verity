@@ -7,6 +7,7 @@ import java.time.Instant
 class MetricsWriter(config: Config, mb: MetricsBackend) {
 
   private var metricsBackend: MetricsBackend = mb
+  private val metricsFilter: MetricsFilter = MetricsFilter(config)
 
   def updateMetricsBackend(mb: MetricsBackend): Unit = {
     metricsBackend.shutdown()
@@ -15,19 +16,33 @@ class MetricsWriter(config: Config, mb: MetricsBackend) {
   }
 
   def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {
-    metricsBackend.gaugeIncrement(name, value, tags)
+    withFilterCheck(name) {
+      metricsBackend.gaugeIncrement(name, value, tags)
+    }
   }
 
   def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {
-    metricsBackend.gaugeDecrement(name, value, tags)
+    withFilterCheck(name) {
+      metricsBackend.gaugeDecrement(name, value, tags)
+    }
   }
 
   def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty): Unit = {
-    metricsBackend.gaugeUpdate(name, value, tags)
+    withFilterCheck(name) {
+      metricsBackend.gaugeUpdate(name, value, tags)
+    }
   }
 
   def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit = {
-    metricsBackend.histogramUpdate(name, unit, value, tags)
+    withFilterCheck(name) {
+      metricsBackend.histogramUpdate(name, unit, value, tags)
+    }
+  }
+
+  private def withFilterCheck(name: String)(f: => Unit): Unit = {
+    if (! metricsFilter.isExcluded(name)) {
+      f
+    }
   }
 
   def taggedSpan(name: String, start: Instant, tags: TagMap = Map.empty): Unit = {

@@ -8,6 +8,7 @@ import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, KeyValueMapperFetcher}
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.testkit.{BasicAsyncSpec, CancelGloballyAfterFailure}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
@@ -136,7 +137,7 @@ class BasicCacheSpec
     keyValueMapperFetcher -> keyValueFetcher)
 
   def buildCache(name: String = "TestCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers, metricsWriter)
+    new Cache(name, fetchers, new MetricsWriter(ConfigFactory.empty, testMetricsBackend))
   }
 
   implicit val timeout: Timeout = Timeout(Duration.create(5, TimeUnit.SECONDS))

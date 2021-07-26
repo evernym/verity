@@ -1,25 +1,45 @@
 package com.evernym.verity.metrics
 
+import com.typesafe.config.Config
+
 import java.time.Instant
 
-trait MetricsWriter {
+class MetricsWriter(config: Config, mb: MetricsBackend) {
 
-  type TagMap = Map[String, String]
+  private var metricsBackend: MetricsBackend = mb
 
-  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty)
+  def updateMetricsBackend(mb: MetricsBackend): Unit = {
+    metricsBackend.shutdown()
+    mb.setup()
+    metricsBackend = mb
+  }
 
-  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty)
+  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {
+    metricsBackend.gaugeIncrement(name, value, tags)
+  }
 
-  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty)
+  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {
+    metricsBackend.gaugeDecrement(name, value, tags)
+  }
 
-  def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit
+  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty): Unit = {
+    metricsBackend.gaugeUpdate(name, value, tags)
+  }
 
-  def taggedSpan(name: String, start: Instant, tags: TagMap = Map.empty)
+  def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit = {
+    metricsBackend.histogramUpdate(name, unit, value, tags)
+  }
 
-  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType = DefaultSpan)(fn: => T): T
+  def taggedSpan(name: String, start: Instant, tags: TagMap = Map.empty): Unit = {
+    metricsBackend.taggedSpan(name, start, tags)
+  }
 
-  def setup()
+  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType = DefaultSpan)(fn: => T): T = {
+    metricsBackend.runWithSpan(opName, componentName, spanType)(fn)
+  }
 
-  def shutdown()
+  def shutdown(): Unit = {
+    metricsBackend.shutdown()
+  }
 
 }

@@ -1,4 +1,4 @@
-package com.evernym.verity.metrics.writer
+package com.evernym.verity.metrics.backend
 
 import com.evernym.verity.metrics._
 import kamon.Kamon
@@ -6,7 +6,7 @@ import kamon.tag.TagSet
 
 import java.time.Instant
 
-class KamonMetricsWriter extends MetricsWriter {
+class KamonMetricsBackend extends MetricsBackend {
 
   override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = {
     Kamon.gauge(name).withTags(TagSet.from(tags)).increment(value)

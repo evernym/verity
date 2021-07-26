@@ -21,7 +21,7 @@ trait SnapshotSpecBase
   def checkStateSizeMetrics(actorClass: String, expectSize: Double): Unit = {
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
       val stateSizeMetrics =
-        testMetricsWriter.filterHistogramMetrics(AS_ACTOR_AGENT_STATE_SIZE)
+        testMetricsBackend.filterHistogramMetrics(AS_ACTOR_AGENT_STATE_SIZE)
           .filter(_._1.tags.exists( _ == ("actor_class",actorClass)))
 
       stateSizeMetrics.size shouldBe 1 //histogram metrics

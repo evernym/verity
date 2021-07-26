@@ -14,7 +14,7 @@ class AriesProtocolMetricSpec
     with AgentProvHelper {
 
   def agentProvisioningProtocolMetric(): Unit = {
-    CustomMetrics.initGaugeMetrics(testMetricsWriter)
+    CustomMetrics.initGaugeMetrics(platform.agentActorContext.metricsWriter)
     "when protocol created" - {
       "should record metric for provisioning" in {
         val protoRef = s"$MSG_FAMILY_AGENT_PROVISIONING[$MFV_0_7]"
@@ -33,7 +33,7 @@ class AriesProtocolMetricSpec
     }
 
     def getMetrics(key: String): MetricWithTags =
-      getMetricWithTags(Set(key), testMetricsWriter)(key)
+      getMetricWithTags(Set(key), testMetricsBackend)(key)
 
     def numberOfTags(baseMetric: MetricWithTags, tagMap: Map[String, String]): Double =
       baseMetric.tags.filter(x => x._1 == tagMap).getOrElse(tagMap, 0.0)

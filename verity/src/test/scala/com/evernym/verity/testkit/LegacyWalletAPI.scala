@@ -9,7 +9,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.MetricsBackend
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
@@ -22,7 +22,7 @@ import scala.concurrent.Future
 class LegacyWalletAPI(appConfig: AppConfig,
                       walletProvider: WalletProvider,
                       ledgerPoolManager: Option[LedgerPoolConnManager],
-                      val metricsWriter: MetricsWriter)
+                      val metricsWriter: MetricsBackend)
   extends WalletAPI
     with AwaitResult {
 

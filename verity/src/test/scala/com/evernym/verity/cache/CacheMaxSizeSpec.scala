@@ -5,7 +5,9 @@ import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, FetcherParam, G
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.testkit.BasicSpec
+import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -42,7 +44,7 @@ class CacheMaxSizeSpec
   lazy val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(mockFetcher -> mockMaxSizeFetcher)
 
   def buildCache(name: String = "MockCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers, metricsWriter)
+    new Cache(name, fetchers, new MetricsWriter(ConfigFactory.empty, testMetricsBackend))
   }
 }
 

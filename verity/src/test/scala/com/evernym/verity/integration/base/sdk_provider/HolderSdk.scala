@@ -16,8 +16,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTra
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.metrics.backend.NoOpMetricsBackend
+import com.evernym.verity.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
@@ -34,7 +33,6 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitatio
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
-import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 
 import java.util.UUID
@@ -279,7 +277,7 @@ case class HolderSdk(param: SdkParam,
       packedMsg,
       routingKeys,
       fwdMsgType
-    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam, new MetricsWriter(ConfigFactory.empty, new NoOpMetricsBackend))
+    )(new AgentMsgTransformer(testWalletAPI), walletAPIParam, NoOpMetricsWriter())
     awaitFut(future).msg
   }
 

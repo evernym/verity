@@ -31,7 +31,7 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
-import com.evernym.verity.metrics.backend.NoOpMetricsBackend
+import com.evernym.verity.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import org.json.JSONObject
@@ -294,7 +294,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
 
   protected lazy val testWalletAPI: LegacyWalletAPI = {
     val walletProvider = LibIndyWalletProvider
-    val walletAPI = new LegacyWalletAPI(new TestAppConfig(), walletProvider, None, new NoOpMetricsBackend()) // todo  could probably fail!
+    val walletAPI = new LegacyWalletAPI(new TestAppConfig(), walletProvider, None, NoOpMetricsWriter())
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
   }

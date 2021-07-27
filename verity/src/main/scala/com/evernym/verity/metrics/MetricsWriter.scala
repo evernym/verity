@@ -1,51 +1,50 @@
 package com.evernym.verity.metrics
 
-import com.typesafe.config.Config
-
 import java.time.Instant
+import scala.util.matching.Regex
 
-class MetricsWriter(config: Config, mb: MetricsBackend) {
 
-  def metricsBackend: MetricsBackend = _metricsBackend
+class MetricsWriter(_metricsBackend: MetricsBackend, _filters: Set[Regex]=Set.empty) {
 
-  private var _metricsBackend: MetricsBackend = {
-    mb.setup()
-    mb
+  private var filters: Set[Regex] = _filters
+
+  private var metricsBackend: MetricsBackend = {
+    _metricsBackend.setup()
+    _metricsBackend
   }
-  private val metricsFilter: MetricsFilter = MetricsFilter(config)
 
-  def updateMetricsBackend(mb: MetricsBackend): Unit = {
+  def updateMetricsBackend(newBackend: MetricsBackend): Unit = {
+    newBackend.setup()
     metricsBackend.shutdown()
-    mb.setup()
-    _metricsBackend = mb
+    metricsBackend = newBackend
   }
 
-  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {
+  def updateFilters(newFilters: Set[Regex]): Unit = {
+    filters = newFilters
+  }
+
+  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.gaugeIncrement(name, value, tags)
     }
-  }
 
-  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {
+  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.gaugeDecrement(name, value, tags)
     }
-  }
 
-  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty): Unit = {
+  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.gaugeUpdate(name, value, tags)
     }
-  }
 
-  def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit = {
+  def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.histogramUpdate(name, unit, value, tags)
     }
-  }
 
   private def withFilterCheck(name: String)(f: => Unit): Unit = {
-    if (! metricsFilter.isExcluded(name)) {
+    if (! filters.exists(_.pattern.matcher(name).matches())) {
       f
     }
   }
@@ -58,8 +57,5 @@ class MetricsWriter(config: Config, mb: MetricsBackend) {
     metricsBackend.runWithSpan(opName, componentName, spanType)(fn)
   }
 
-  def shutdown(): Unit = {
-    metricsBackend.shutdown()
-  }
-
+  def shutdown(): Unit = metricsBackend.shutdown()
 }

@@ -5,8 +5,7 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.{MockLedgerSvc, MockLedgerTxnExecutor}
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.ledger._
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.metrics.backend.NoOpMetricsBackend
+import com.evernym.verity.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -14,7 +13,6 @@ import com.evernym.verity.protocol.engine.asyncapi.LedgerReadAccess
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.testkit.MockableWalletAccess
 import com.evernym.verity.testkit.BasicSpec
-import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
 
@@ -22,7 +20,7 @@ class LedgerAccessControllerSpec
   extends BasicSpec
     with MockAsyncOpRunner {
 
-  lazy val generalCache: Cache = new Cache("GC", Map(), new MetricsWriter(ConfigFactory.empty, new NoOpMetricsBackend))
+  lazy val generalCache: Cache = new Cache("GC", Map(), NoOpMetricsWriter())
 
   implicit def asyncAPIContext: AsyncAPIContext =
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)

@@ -1,8 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.metrics.backend.NoOpMetricsBackend
+import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -11,7 +10,6 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
 import com.evernym.verity.testkit.BasicSpec
-import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
 
@@ -23,7 +21,7 @@ class ProtocolContainerSpec extends BasicSpec {
           extends ProtocolContainer[P,R,M,E,S,I] { // [TicTacToe, Role, Any, Any, State, String]
           override def pinstId: PinstId = "12345"
 
-          override def metricsWriter: MetricsWriter = new MetricsWriter(ConfigFactory.empty, new NoOpMetricsBackend)
+          override def metricsWriter: MetricsWriter = NoOpMetricsWriter()
 
           override def eventRecorder: RecordsEvents = new RecordsEvents {
             override def recoverState(pinstId: PinstId): (_, Vector[_]) = (Offered(), Vector(Accepted()))

@@ -13,9 +13,8 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.metrics.backend.NoOpMetricsBackend
-import com.typesafe.config.ConfigFactory
+import com.evernym.verity.metrics.NoOpMetricsWriter
+
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -205,7 +204,7 @@ object AgentPackMsgUtil {
                                   (implicit msgPackFormat: MsgPackFormat,
                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
     awaitResult(AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, agentMsgParam)(
-      agentMsgTransformer, wap, new MetricsWriter(ConfigFactory.empty, new NoOpMetricsBackend)))
+      agentMsgTransformer, wap, NoOpMetricsWriter()))
   }
 
   def preparePackedRequestForRoutes(fwdMsgTypeVersion: String,
@@ -214,7 +213,7 @@ object AgentPackMsgUtil {
                                    (implicit msgPackFormat: MsgPackFormat,
                                     agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
     awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)(
-      agentMsgTransformer, wap, new MetricsWriter(ConfigFactory.empty, new NoOpMetricsBackend)))
+      agentMsgTransformer, wap, NoOpMetricsWriter()))
   }
 
   def awaitResult(fut: Future[PackedMsg]): PackedMsg = {

@@ -26,7 +26,7 @@ class MsgStoreSpec
     with Eventually {
 
   private val testMetricsBackend = new TestMetricsBackend
-  val testMetricsWriter = new MetricsWriter(ConfigFactory.empty, testMetricsBackend)
+  val testMetricsWriter = new MetricsWriter(testMetricsBackend)
 
   override protected def beforeEach(): Unit = {
     testMetricsBackend.reset()

@@ -1,11 +1,14 @@
 package com.evernym.verity.metrics
 
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
-import com.evernym.verity.config.ConfigConstants.{METRICS_ENABLED, METRICS_BACKEND}
+import com.evernym.verity.config.ConfigConstants.{METRICS_BACKEND, METRICS_ENABLED}
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.backend.NoOpMetricsBackend
 import com.typesafe.config.Config
+
+import scala.util.matching.Regex
 
 class MetricsWriterExtensionImpl(config: Config) extends Extension {
 
@@ -25,7 +28,7 @@ class MetricsWriterExtensionImpl(config: Config) extends Extension {
           logger.warn(s"Error occurred during metric backend init: ${e.getMessage}. Using fallback NoOpMetrics writer.")
           new NoOpMetricsBackend
       }
-      new MetricsWriter(config, metricsBackend)
+      new MetricsWriter(metricsBackend, getExcludeFilters(config))
     } catch {
       case e: Throwable =>
         logger.warn(s"Error occurred during metric writer extension init: ${e.getMessage}")
@@ -40,6 +43,16 @@ class MetricsWriterExtensionImpl(config: Config) extends Extension {
     metricsWriter.updateMetricsBackend(mb)
   }
 
+  //allows to update metrics filters at run time
+  def updateFilters(config: Config): Unit = {
+    metricsWriter.updateFilters(getExcludeFilters(config))
+  }
+
+  private def getExcludeFilters(config: Config): Set[Regex] =
+    ConfigReadHelper(config)
+      .getStringSetOption("verity.metrics.writer.exclude")
+      .getOrElse(Set.empty)
+      .map(_.r)
 }
 
 object MetricsWriterExtension extends ExtensionId[MetricsWriterExtensionImpl] with ExtensionIdProvider {

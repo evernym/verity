@@ -11,7 +11,6 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.engine.util.{CryptoFunctions, SimpleLoggerLike}
-import com.typesafe.config.ConfigFactory
 
 import scala.util.Try
 
@@ -82,7 +81,7 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     }
 
     // todo assuming this class is used in tests only, we don't need to pass actual metricsWriter
-    override def metricsWriter: MetricsWriter = new MetricsWriter(ConfigFactory.empty, new NoOpMetricsBackend)
+    override def metricsWriter: MetricsWriter = new MetricsWriter(new NoOpMetricsBackend)
 
     override def segmentStore: SegmentStoreAccess = new SegmentStoreAccess {
       def storeSegment(segmentAddress: SegmentAddress,

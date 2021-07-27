@@ -49,7 +49,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
   }
 
   lazy val platform : Platform = {
-    val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider), executionContextProvider)
+    val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, executionContextProvider, mockAgentMsgRouterProvider), executionContextProvider)
     MetricsWriterExtension(plt.actorSystem).updateMetricsBackend(testMetricsBackend)
     plt
   }

@@ -8,7 +8,7 @@ class MetricsFilterSpec
   extends BasicSpec {
 
   "MetricsFilter" - {
-    "when tested for non matching string" - {
+    "when tested for non excluded metrics" - {
       "should return true" in {
         val mf = MetricsFilter(ConfigFactory.parseString(
           """
@@ -20,7 +20,7 @@ class MetricsFilterSpec
       }
     }
 
-    "when tested for matching string" - {
+    "when tested for excluded metrics" - {
       "should return true" in {
         val mf = MetricsFilter(ConfigFactory.parseString(
           """
@@ -32,7 +32,7 @@ class MetricsFilterSpec
       }
     }
 
-    "when tested for matching regex" - {
+    "when tested with excludes as regex (example 1)" - {
       "should return true" in {
         val mf = MetricsFilter(ConfigFactory.parseString(
           """
@@ -41,6 +41,28 @@ class MetricsFilterSpec
             ]
             """.stripMargin))
         mf.isExcluded("metric1") shouldBe true
+        mf.isExcluded("metric123") shouldBe true
+        mf.isExcluded("metricabc") shouldBe true
+      }
+    }
+
+    "when tested with excludes as regex (example 2)" - {
+      "should return true" in {
+        val mf = MetricsFilter(ConfigFactory.parseString(
+          """
+            verity.metrics.writer.exclude = [
+              ".*metric.*",
+              "another-metrics"
+            ]
+            """.stripMargin))
+        mf.isExcluded("metric") shouldBe true
+        mf.isExcluded("metric123") shouldBe true
+        mf.isExcluded("metricabc") shouldBe true
+        mf.isExcluded("123metric") shouldBe true
+        mf.isExcluded("abcmetric") shouldBe true
+        mf.isExcluded("123metric123") shouldBe true
+        mf.isExcluded("abcmetricabc") shouldBe true
+        mf.isExcluded("nonmatching") shouldBe false
       }
     }
   }

@@ -35,8 +35,8 @@ class KamonMetricsBackend extends MetricsBackend {
 
   override def runWithSpan[T](opName: String, componentName: String, spanType: SpanType)(fn: => T): T = {
     val spanBuilder = spanType match {
-      case DefaultSpan => Kamon.spanBuilder(opName)
-      case ClientSpan => Kamon.clientSpanBuilder(opName, componentName)
+      case DefaultSpan  => Kamon.spanBuilder(opName)
+      case ClientSpan   => Kamon.clientSpanBuilder(opName, componentName)
       case InternalSpan => Kamon.internalSpanBuilder(opName, componentName)
     }
     Kamon.runWithSpan(spanBuilder.start())(fn)

@@ -6,7 +6,10 @@ import java.time.Instant
 
 class MetricsWriter(config: Config, mb: MetricsBackend) {
 
-  private var metricsBackend: MetricsBackend = mb
+  private var metricsBackend: MetricsBackend = {
+    mb.setup()
+    mb
+  }
   private val metricsFilter: MetricsFilter = MetricsFilter(config)
 
   def updateMetricsBackend(mb: MetricsBackend): Unit = {

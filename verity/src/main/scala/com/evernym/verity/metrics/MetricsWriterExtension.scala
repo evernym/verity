@@ -9,24 +9,28 @@ import com.typesafe.config.Config
 
 class MetricsWriterExtensionImpl(config: Config) extends Extension {
 
-  //TODO: how to make sure this extension is thread safe?
-
   private val logger = getLoggerByName("MetricsWriterExtension")
 
   private val metricsWriter = {
-    val metricsBackend: MetricsBackend = try {
-      if (config.getString(METRICS_ENABLED) == YES) {
-        val className = config.getString(METRICS_BACKEND)
-        Class.forName(className).getConstructor().newInstance().asInstanceOf[MetricsBackend]
-      } else {
-        new NoOpMetricsBackend
+    try {
+      val metricsBackend: MetricsBackend = try {
+        if (config.getString(METRICS_ENABLED) == YES) {
+          val className = config.getString(METRICS_BACKEND)
+          Class.forName(className).getConstructor().newInstance().asInstanceOf[MetricsBackend]
+        } else {
+          new NoOpMetricsBackend
+        }
+      } catch {
+        case e: Throwable =>
+          logger.warn(s"Error occurred during metric backend init: ${e.getMessage}. Using fallback NoOpMetrics writer.")
+          new NoOpMetricsBackend
       }
+      new MetricsWriter(config, metricsBackend)
     } catch {
       case e: Throwable =>
-        logger.warn(s"Error occurred during metric writer extension init: ${e.getMessage}. Using fallback NoOpMetrics writer.")
-        new NoOpMetricsBackend
+        logger.warn(s"Error occurred during metric writer extension init: ${e.getMessage}")
+        throw e
     }
-    new MetricsWriter(config, metricsBackend)
   }
 
   def get(): MetricsWriter = metricsWriter

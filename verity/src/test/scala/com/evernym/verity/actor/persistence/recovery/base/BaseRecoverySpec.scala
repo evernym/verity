@@ -7,7 +7,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.PersistentActorDetail
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.metrics.CustomMetrics.AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT
-import com.evernym.verity.metrics.TestMetricsWriter
+import com.evernym.verity.metrics.TestMetricsBackend
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -49,15 +49,15 @@ trait BaseRecoverySpecLike
   extends BasePersistentStore
     with Eventually { this: BasicSpec =>
 
-  def testMetricsWriter : TestMetricsWriter
+  def testMetricsBackend : TestMetricsBackend
 
   //TODO: may wanna rework this?
   def getStableWalletAPISucceedCountMetric: Double = {
     var apiCallCount: Double =
-      testMetricsWriter.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT).headOption.map(_._2).getOrElse(0)
+      testMetricsBackend.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT).headOption.map(_._2).getOrElse(0)
     var timesFoundSameCount: Int = 0    //how many times the metrics count was found same (stable count)
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      val newCount: Double = testMetricsWriter.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
+      val newCount: Double = testMetricsBackend.filterGaugeMetrics(AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT)
         .headOption.map(_._2).getOrElse(0)
       if (apiCallCount == newCount) timesFoundSameCount = timesFoundSameCount + 1
       else timesFoundSameCount = 0

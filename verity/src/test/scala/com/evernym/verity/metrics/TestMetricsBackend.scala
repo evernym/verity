@@ -3,7 +3,7 @@ package com.evernym.verity.metrics
 import java.time.Instant
 import scala.collection.mutable
 
-class TestMetricsWriter extends MetricsWriter {
+class TestMetricsBackend extends MetricsBackend {
 
   val gaugesMap = new mutable.HashMap[TestMetricHead, Double]()
   val histogramsMap = new mutable.HashMap[TestMetricHead, HistogramEntry]

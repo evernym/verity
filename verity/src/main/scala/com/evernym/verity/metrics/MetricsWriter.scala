@@ -1,25 +1,61 @@
 package com.evernym.verity.metrics
 
 import java.time.Instant
+import scala.util.matching.Regex
 
-trait MetricsWriter {
 
-  type TagMap = Map[String, String]
+class MetricsWriter(_metricsBackend: MetricsBackend, _filters: Set[Regex]=Set.empty) {
 
-  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty)
+  private var filters: Set[Regex] = _filters
 
-  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty)
+  private var metricsBackend: MetricsBackend = {
+    _metricsBackend.setup()
+    _metricsBackend
+  }
 
-  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty)
+  def updateMetricsBackend(newBackend: MetricsBackend): Unit = {
+    newBackend.setup()
+    metricsBackend.shutdown()
+    metricsBackend = newBackend
+  }
 
-  def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit
+  def updateFilters(newFilters: Set[Regex]): Unit = {
+    filters = newFilters
+  }
 
-  def taggedSpan(name: String, start: Instant, tags: TagMap = Map.empty)
+  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =
+    withFilterCheck(name) {
+      metricsBackend.gaugeIncrement(name, value, tags)
+    }
 
-  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType = DefaultSpan)(fn: => T): T
+  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =
+    withFilterCheck(name) {
+      metricsBackend.gaugeDecrement(name, value, tags)
+    }
 
-  def setup()
+  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty): Unit =
+    withFilterCheck(name) {
+      metricsBackend.gaugeUpdate(name, value, tags)
+    }
 
-  def shutdown()
+  def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit =
+    withFilterCheck(name) {
+      metricsBackend.histogramUpdate(name, unit, value, tags)
+    }
 
+  private def withFilterCheck(name: String)(f: => Unit): Unit = {
+    if (! filters.exists(_.pattern.matcher(name).matches())) {
+      f
+    }
+  }
+
+  def taggedSpan(name: String, start: Instant, tags: TagMap = Map.empty): Unit = {
+    metricsBackend.taggedSpan(name, start, tags)
+  }
+
+  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType = DefaultSpan)(fn: => T): T = {
+    metricsBackend.runWithSpan(opName, componentName, spanType)(fn)
+  }
+
+  def shutdown(): Unit = metricsBackend.shutdown()
 }

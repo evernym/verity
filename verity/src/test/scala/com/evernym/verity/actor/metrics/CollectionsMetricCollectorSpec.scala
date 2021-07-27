@@ -59,13 +59,13 @@ class CollectionsMetricCollectorSpec extends TestKitBase
 
   private def awaitForMetrics(max: Double, sum: Double, cnt: Double): Unit = {
     awaitCond(
-      testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_MAX).exists(entry => {
+      testMetricsBackend.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_MAX).exists(entry => {
           entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(max)
       }) &&
-        testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_SUM).exists(entry => {
+        testMetricsBackend.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_SUM).exists(entry => {
           entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(sum)
         }) &&
-        testMetricsWriter.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_COUNT).exists(entry => {
+        testMetricsBackend.filterGaugeMetrics(CustomMetrics.AS_COLLECTIONS_COUNT).exists(entry => {
           entry._1.tags.values.exists(_.equals(tag)) && entry._2.equals(cnt)
         }),
       60.seconds

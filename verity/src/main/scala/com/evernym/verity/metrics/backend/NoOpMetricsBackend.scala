@@ -1,10 +1,10 @@
-package com.evernym.verity.metrics.writer
+package com.evernym.verity.metrics.backend
 
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter, SpanType}
+import com.evernym.verity.metrics.{MetricsBackend, MetricsUnit, SpanType, TagMap}
 
 import java.time.Instant
 
-class NoOpMetricsWriter extends MetricsWriter{
+class NoOpMetricsBackend extends MetricsBackend{
 
   override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = ()
 

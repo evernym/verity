@@ -29,7 +29,7 @@ class LibindyMetricsCollectorSpec
         libindyMetricsCollector ! CollectLibindyMetrics()
         expectMsgType[CollectLibindySuccess]
         awaitCond(
-          testMetricsWriter.filterGaugeMetrics("libindy_command_duration_ms_count").exists(entry =>
+          testMetricsBackend.filterGaugeMetrics("libindy_command_duration_ms_count").exists(entry =>
             entry._2.isValidInt &&
               entry._1.tags.contains("command") &&
               entry._1.tags.contains("stage")

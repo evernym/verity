@@ -9,7 +9,7 @@ import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.user.msgstore.{MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.TestMetricsWriter
+import com.evernym.verity.metrics.{MetricsWriter, TestMetricsBackend}
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.MsgIdProvider
@@ -25,11 +25,12 @@ class MsgStoreSpec
     with BeforeAndAfterEach
     with Eventually {
 
-  val testMetricsWriter = new TestMetricsWriter
+  private val testMetricsBackend = new TestMetricsBackend
+  val testMetricsWriter = new MetricsWriter(testMetricsBackend)
 
   override protected def beforeEach(): Unit = {
-    testMetricsWriter.reset()
-    testMetricsWriter.allHistogramMetrics().size shouldBe 0
+    testMetricsBackend.reset()
+    testMetricsBackend.allHistogramMetrics().size shouldBe 0
     super.beforeEach()
   }
 
@@ -192,9 +193,9 @@ class MsgStoreSpec
 
     eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
 
-      val retainedMsgsSumMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}")
-      val removedMsgsSumMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}")
-      val totalActorWithRemovedMsgMetrics = testMetricsWriter.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}")
+      val retainedMsgsSumMetrics = testMetricsBackend.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}")
+      val removedMsgsSumMetrics = testMetricsBackend.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}")
+      val totalActorWithRemovedMsgMetrics = testMetricsBackend.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}")
 
       if (expectedRemovedMsgsSum > 0) {
         retainedMsgsSumMetrics.size shouldBe 1

@@ -1,8 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.metrics.MetricsWriter
-import com.evernym.verity.metrics.writer.NoOpMetricsWriter
+import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -22,7 +21,7 @@ class ProtocolContainerSpec extends BasicSpec {
           extends ProtocolContainer[P,R,M,E,S,I] { // [TicTacToe, Role, Any, Any, State, String]
           override def pinstId: PinstId = "12345"
 
-          override def metricsWriter: MetricsWriter = new NoOpMetricsWriter
+          override def metricsWriter: MetricsWriter = NoOpMetricsWriter()
 
           override def eventRecorder: RecordsEvents = new RecordsEvents {
             override def recoverState(pinstId: PinstId): (_, Vector[_]) = (Offered(), Vector(Accepted()))

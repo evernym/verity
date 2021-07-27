@@ -5,7 +5,7 @@ import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.{SysServiceNotifier, SysShutdownProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.{MetricsWriterExtension, TestMetricsWriter}
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension, TestMetricsBackend}
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -47,12 +47,13 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   lazy val platform : Platform = {
     val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, mockAgentMsgRouterProvider))
-    MetricsWriterExtension(plt.actorSystem).set(testMetricsWriter)
+    MetricsWriterExtension(plt.actorSystem).updateMetricsBackend(testMetricsBackend)
     plt
   }
 
   lazy val agentActorContext: AgentActorContext = platform.agentActorContext
-  lazy val testMetricsWriter: TestMetricsWriter = new TestMetricsWriter
+  lazy val testMetricsBackend: TestMetricsBackend = new TestMetricsBackend
+  lazy val metricsWriter: MetricsWriter = platform.agentActorContext.metricsWriter
 
   lazy val walletAPI: WalletAPI = platform.agentActorContext.walletAPI
   lazy val singletonParentProxy: ActorRef = platform.singletonParentProxy

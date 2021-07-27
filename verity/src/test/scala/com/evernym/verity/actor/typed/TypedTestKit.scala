@@ -16,8 +16,8 @@ abstract class BehaviourSpecBase
     )
   ) {
 
-  val testMetricsWriter: TestMetricsBackend = new TestMetricsBackend
-  MetricsWriterExtension(system).updateMetricsBackend(testMetricsWriter)
+  val testMetricsBackend: TestMetricsBackend = new TestMetricsBackend
+  MetricsWriterExtension(system).updateMetricsBackend(testMetricsBackend)
 }
 
 abstract class EventSourcedBehaviourSpecBase

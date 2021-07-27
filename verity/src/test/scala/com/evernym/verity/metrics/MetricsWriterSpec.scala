@@ -69,13 +69,28 @@ class MetricsWriterSpec
           metricsTester.testMetricsBackend.filterGaugeMetrics("metrics-written-1").size shouldBe 0
         }
       }
+
+      "when changed metrics at runtime" - {
+        "should be successful" in {
+          val metricsTester = new MetricsTester(None)
+          metricsTester.metricsWriter.gaugeUpdate("metrics-written-1", 1)
+          metricsTester.testMetricsBackend.filterGaugeMetrics("metrics-written-1").size shouldBe 1
+
+          metricsTester.updateMetricsBackend()
+          metricsTester.testMetricsBackend.filterGaugeMetrics("metrics-written-1").size shouldBe 0
+        }
+      }
     }
   }
 }
 
 class MetricsTester(override val overrideConfig: Option[Config])
   extends HasBasicActorSystem {
-  val testMetricsBackend: TestMetricsBackend = new TestMetricsBackend
   val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
-  metricsWriter.updateMetricsBackend(testMetricsBackend)
+  metricsWriter.updateMetricsBackend(new TestMetricsBackend)
+  def testMetricsBackend: TestMetricsBackend = metricsWriter.metricsBackend.asInstanceOf[TestMetricsBackend]
+
+  def updateMetricsBackend(): Unit = {
+    metricsWriter.updateMetricsBackend(new TestMetricsBackend)
+  }
 }

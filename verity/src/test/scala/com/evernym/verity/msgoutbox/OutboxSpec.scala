@@ -206,7 +206,7 @@ class OutboxSpec
                               expectedFailed: Int,
                               expectedPending: Int): Unit = {
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      val outboxMsgDeliveryMetrics = testMetricsWriter.filterGaugeMetrics(AS_OUTBOX_MSG_DELIVERY)
+      val outboxMsgDeliveryMetrics = testMetricsBackend.filterGaugeMetrics(AS_OUTBOX_MSG_DELIVERY)
 
       val successfulCount: Double = outboxMsgDeliveryMetrics.filter(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT).values.sum
       val failedCount: Double = outboxMsgDeliveryMetrics.filter(m => m._1.name == AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT).values.sum

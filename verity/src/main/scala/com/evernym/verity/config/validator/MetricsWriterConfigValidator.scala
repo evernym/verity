@@ -19,15 +19,15 @@ class MetricsWriterConfigValidator(val config: Config) extends ConfigValidator {
 
     if (config.hasPath(ConfigConstants.METRICS_BACKEND)) {
       val className = config.getString(ConfigConstants.METRICS_BACKEND)
-      val mwClass = try {
+      val mbClass = try {
         Class.forName(className)
       } catch {
         case _: Throwable => throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode,
           Option(s"Class '$className' was not found"))
       }
-      if (!classOf[MetricsBackend].isAssignableFrom(mwClass)) {
+      if (!classOf[MetricsBackend].isAssignableFrom(mbClass)) {
         throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode,
-          Option(s"Class '$className' should implement 'MetricsWriter' trait"))
+          Option(s"Class '$className' should implement 'MetricsBackend' trait"))
       }
     }
   }

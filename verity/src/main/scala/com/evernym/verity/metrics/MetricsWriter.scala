@@ -6,7 +6,9 @@ import java.time.Instant
 
 class MetricsWriter(config: Config, mb: MetricsBackend) {
 
-  private var metricsBackend: MetricsBackend = {
+  def metricsBackend: MetricsBackend = _metricsBackend
+
+  private var _metricsBackend: MetricsBackend = {
     mb.setup()
     mb
   }
@@ -15,7 +17,7 @@ class MetricsWriter(config: Config, mb: MetricsBackend) {
   def updateMetricsBackend(mb: MetricsBackend): Unit = {
     metricsBackend.shutdown()
     mb.setup()
-    metricsBackend = mb
+    _metricsBackend = mb
   }
 
   def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit = {

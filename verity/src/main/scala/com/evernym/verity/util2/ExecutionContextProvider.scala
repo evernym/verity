@@ -24,11 +24,8 @@ trait HasExecutionContextProvider {
 class ExecutionContextProvider(val appConfig: AppConfig) {
   private lazy val defaultFutureThreadPoolSize: Option[Int] =
     AppConfigWrapper.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
-
-  lazy val executor: Option[ExecutorService] =
-    defaultFutureThreadPoolSize.map(size => Executors.newFixedThreadPool(size))
-  lazy val walletExecutor: Option[ExecutorService] =
-    walletFutureThreadPoolSize.map(size => Executors.newFixedThreadPool(size))
+  private lazy val walletFutureThreadPoolSize: Option[Int] =
+    appConfig.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
 
   /**
    * custom thread pool executor
@@ -36,21 +33,18 @@ class ExecutionContextProvider(val appConfig: AppConfig) {
   lazy val futureExecutionContext: ExecutionContext =
     {
       ExecutorInstrumentation.instrumentExecutionContext(
-        executor match {
-          case Some(ex) => ExecutionContext.fromExecutor(ex)
-          case _        => ExecutionContext.fromExecutor(null)
+        defaultFutureThreadPoolSize match {
+          case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
+          case _          => ExecutionContext.fromExecutor(null)
         },
         "future-thread-executor")
     }
 
-  private lazy val walletFutureThreadPoolSize: Option[Int] =
-    appConfig.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
-
   lazy val walletFutureExecutionContext: ExecutionContext =
     {
       ExecutorInstrumentation.instrumentExecutionContext(
-        walletExecutor match {
-          case Some(ec) => ExecutionContext.fromExecutor(ec)
+        walletFutureThreadPoolSize match {
+          case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
           case _          => futureExecutionContext
         },
         "wallet-thread-executor")

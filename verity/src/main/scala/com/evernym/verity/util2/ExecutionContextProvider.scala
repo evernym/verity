@@ -23,7 +23,7 @@ trait HasExecutionContextProvider {
 
 class ExecutionContextProvider(val appConfig: AppConfig) {
   private lazy val defaultFutureThreadPoolSize: Option[Int] =
-    AppConfigWrapper.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+    appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
   private lazy val walletFutureThreadPoolSize: Option[Int] =
     appConfig.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
 

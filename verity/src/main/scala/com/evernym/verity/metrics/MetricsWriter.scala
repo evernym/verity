@@ -21,6 +21,8 @@ class MetricsWriter(_metricsBackend: MetricsBackend, _filters: Set[Regex]=Set.em
 
   def updateFilters(newFilters: Set[Regex]): Unit = {
     filters = newFilters
+    metricsBackend.shutdown()
+    metricsBackend.setup()
   }
 
   def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =

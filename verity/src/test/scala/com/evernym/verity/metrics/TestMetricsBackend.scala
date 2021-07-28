@@ -39,7 +39,7 @@ class TestMetricsBackend extends MetricsBackend {
 
   override def setup(): Unit = ()
 
-  override def shutdown(): Unit = ()
+  override def shutdown(): Unit = reset()
 
   def filterGaugeMetrics(prefix: String): Map[TestMetricHead, Double] = this.synchronized {
     gaugesMap.filter(_._1.name.startsWith(prefix)).toMap

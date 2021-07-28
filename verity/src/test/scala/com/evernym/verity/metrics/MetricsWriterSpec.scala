@@ -75,9 +75,10 @@ class MetricsWriterSpec
           metricsWriter.gaugeUpdate("metrics-written-1", 1)
           testMetricsBackend.filterGaugeMetrics("metrics-written-1").size shouldBe 1
 
-          metricsWriter.updateFilters(Set("metrics-updated.*").map(_.r))
+          metricsWriter.updateFilters(Set("metrics-written.*", "metrics-updated.*").map(_.r))
           metricsWriter.gaugeUpdate("metrics-updated-1", 1)
           testMetricsBackend.filterGaugeMetrics("metrics-updated-1").size shouldBe 0
+          testMetricsBackend.filterGaugeMetrics("metrics-written-1").size shouldBe 0
         }
       }
     }

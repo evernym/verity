@@ -65,11 +65,7 @@ class ProtocolContainerSpec extends BasicSpec {
 
           override def runAsyncOp(op: => Any): Unit = ???
 
-          /**
-           * custom thread pool executor
-           */
           lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
-          override def futureExecutionContext: ExecutionContext = executionContext
         }
 
         val container = new TestProtocolContainer[TicTacToe, TicTacToeRole, Any, Any, State, String](TicTacToeProtoDef)

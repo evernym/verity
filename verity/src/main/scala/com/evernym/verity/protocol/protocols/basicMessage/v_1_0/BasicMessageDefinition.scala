@@ -8,8 +8,6 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.On
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 
-import scala.concurrent.ExecutionContext
-
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = BasicMessageMsgFamily
 
@@ -23,10 +21,7 @@ object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg
 
   override val requiredAccess: Set[AccessRight] = Set()
 
-  override def create(
-                       context: ProtocolContextApi[BasicMessage, Role, Msg, Event, State, String],
-                       executionContext: ExecutionContext
-                     ): BasicMessage = {
+  override def create(context: ProtocolContextApi[BasicMessage, Role, Msg, Event, State, String]): BasicMessage = {
     new BasicMessage(context)
   }
 

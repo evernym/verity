@@ -6,15 +6,10 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, UrlShorteningAc
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, Protocol, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.engine.Scope.RelProvisioning
 
-import scala.concurrent.ExecutionContext
-
 object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, RelationshipEvent, State, String] {
   override val msgFamily: MsgFamily = RelationshipMsgFamily
 
-  override def create(
-                       context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String],
-                       executionContext: ExecutionContext
-                     ): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
+  override def create(context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String]): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
     new Relationship(context)
   }
 

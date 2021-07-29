@@ -7,7 +7,6 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotEmpty
 
-import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 object CoinFlipMsgFamily extends MsgFamily {
@@ -50,7 +49,7 @@ trait CoinFlipDefTrait extends ProtocolDefinition[CoinFlip, Role, Msg, Event, Co
     case _: CoinFlipControl =>
   }
 
-  def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String], executionContext: ExecutionContext):
+  def create(context: ProtocolContextApi[CoinFlip, Role, Msg, Event, CoinFlipState, String]):
     Protocol[CoinFlip, Role, Msg, Event, CoinFlipState, String] =
       new CoinFlip(context)
 

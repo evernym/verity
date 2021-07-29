@@ -7,8 +7,6 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{Msg, Requester, Role, Tokenizer}
 
-import scala.concurrent.ExecutionContext
-
 object TokenizerDefinition
   extends ProtocolDefinition[Tokenizer,Role,Msg,Any,TokenizerState,String] {
 
@@ -22,11 +20,7 @@ object TokenizerDefinition
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(
-                       context: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String],
-                       executionContext: ExecutionContext
-                     ):
-  Protocol[Tokenizer, Role, Msg, Any, TokenizerState, String] = {
+  override def create(context: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String]): Protocol[Tokenizer, Role, Msg, Any, TokenizerState, String] = {
     new Tokenizer(context)
   }
 

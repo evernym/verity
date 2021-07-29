@@ -12,7 +12,6 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 
-import scala.concurrent.ExecutionContext
 
 object ConnectingMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -86,12 +85,9 @@ object ConnectingProtoDef
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(
-                       context: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String],
-                       executionContext: ExecutionContext
-                     ):
+  override def create(context: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String]):
   Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
-    new ConnectingProtocol(context, executionContext)
+    new ConnectingProtocol(context)
 
   override def initialState: ConnectingState = ConnectingState()
 }

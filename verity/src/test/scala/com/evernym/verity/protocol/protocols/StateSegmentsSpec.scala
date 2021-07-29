@@ -1,8 +1,6 @@
 package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
@@ -142,7 +140,7 @@ object TestObjects {
       case _: PhoneBookProtoMsg =>
     }
 
-    def create(ctx: ProtocolContextApi[PhoneBookProto, Role, PhoneBookProtoMsg, PhoneBookEvt, State, String], executionContext: ExecutionContext): PhoneBookProto = {
+    def create(ctx: ProtocolContextApi[PhoneBookProto, Role, PhoneBookProtoMsg, PhoneBookEvt, State, String]): PhoneBookProto = {
       new PhoneBookProto(ctx)
     }
 

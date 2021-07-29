@@ -5,8 +5,6 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify}
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 
-import scala.concurrent.ExecutionContext
-
 object ConnectionsDef extends ProtocolDefinition[Connections, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = ConnectionsMsgFamily
 
@@ -18,10 +16,7 @@ object ConnectionsDef extends ProtocolDefinition[Connections, Role, Msg, Event, 
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p)
 
-  override def create(
-                       context: ProtocolContextApi[Connections, Role, Msg, Event, State, String],
-                       executionContext: ExecutionContext
-                     ): Connections = {
+  override def create(context: ProtocolContextApi[Connections, Role, Msg, Event, State, String]): Connections = {
     new Connections(context)
   }
 

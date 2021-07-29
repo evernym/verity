@@ -9,8 +9,6 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.On
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Role.{Questioner, Responder}
 
-import scala.concurrent.ExecutionContext
-
 object QuestionAnswerDefinition extends ProtocolDefinition[QuestionAnswerProtocol, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = QuestionAnswerMsgFamily
 
@@ -24,10 +22,7 @@ object QuestionAnswerDefinition extends ProtocolDefinition[QuestionAnswerProtoco
 
   override val requiredAccess: Set[AccessRight] = Set(AccessSign, AccessVerify)
 
-  override def create(
-                       context: ProtocolContextApi[QuestionAnswerProtocol, Role, Msg, Event, State, String],
-                       executionContext: ExecutionContext
-                     ): QuestionAnswerProtocol = {
+  override def create(context: ProtocolContextApi[QuestionAnswerProtocol, Role, Msg, Event, State, String]): QuestionAnswerProtocol = {
     new QuestionAnswerProtocol(context)
   }
 

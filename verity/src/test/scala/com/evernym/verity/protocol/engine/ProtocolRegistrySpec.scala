@@ -7,8 +7,6 @@ import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.testkit.BasicSpec
 
-import scala.concurrent.ExecutionContext
-
 
 class ProtocolRegistrySpec extends BasicSpec {
 
@@ -83,7 +81,7 @@ class ProtocolRegistrySpec extends BasicSpec {
 
     val msgFamily: MsgFamily = TestMsgFamily1
 
-    def create(ctx: ProtocolContextApi[TestProto1, String, String, String, String, String], executionContext: ExecutionContext): TestProto1 = {
+    def create(ctx: ProtocolContextApi[TestProto1, String, String, String, String, String]): TestProto1 = {
       new TestProto1(ctx)
     }
 
@@ -122,7 +120,7 @@ class ProtocolRegistrySpec extends BasicSpec {
 
     override val msgFamily: MsgFamily = TestMsgFamily2
 
-    def create(ctx: ProtocolContextApi[TestProto2, String, String, String, String, String], executionContext: ExecutionContext): TestProto2 = {
+    def create(ctx: ProtocolContextApi[TestProto2, String, String, String, String, String]): TestProto2 = {
       new TestProto2(ctx)
     }
 

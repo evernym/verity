@@ -1,8 +1,6 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
@@ -105,7 +103,7 @@ object TestProtoDef2 extends ProtocolDefinition[TestProto2, Role, String, String
     case _ =>
   }
 
-  def create(ctx: ProtocolContextApi[TestProto2, Role, String, String, String, String], executionContext: ExecutionContext): TestProto2 = {
+  def create(ctx: ProtocolContextApi[TestProto2, Role, String, String, String, String]): TestProto2 = {
     new TestProto2(ctx)
   }
 

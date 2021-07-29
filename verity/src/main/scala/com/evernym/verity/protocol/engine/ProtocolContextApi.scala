@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import java.util.concurrent.TimeUnit
+
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
@@ -12,7 +13,7 @@ import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * A representation of the Container to the protocol it holds that embodies
@@ -44,6 +45,8 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   def serviceEndpoint: ServiceEndpoint
 
   def metricsWriter: MetricsWriter
+
+  def executionContext: ExecutionContext
 
   //TODO how a message is sent should probably be abstracted; would like to fold this into the general send method above
   //TODO we shouldn't be exposing general sms capabilities to protocol authors

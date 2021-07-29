@@ -15,8 +15,7 @@ trait ProtocolTypes[P,R,M,E,S,I] {
   */
 trait ProtocolContainer[P,R,M,E,S,I]
   extends ProtocolTypes[P,R,M,E,S,I]
-    with ProtocolContext[P,R,M,E,S,I]
-    with HasExecutionContextProvider {
+    with ProtocolContext[P,R,M,E,S,I] {
 
   def pinstId: PinstId
 
@@ -32,7 +31,7 @@ trait ProtocolContainer[P,R,M,E,S,I]
   //TODO: had to use lazy to get around some failures, we may wanna come back to it
   lazy val _services: Option[Services] = createServices
 
-  lazy val protocol: Protocol[P,R,M,E,S,I] = definition.create(this, futureExecutionContext)
+  lazy val protocol: Protocol[P,R,M,E,S,I] = definition.create(this)
 
   def protoRef: ProtoRef = definition.msgFamily.protoRef
 

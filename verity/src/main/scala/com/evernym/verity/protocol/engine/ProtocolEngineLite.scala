@@ -66,10 +66,10 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
                                            recordsEvents: RecordsEvents,
                                            msgSender: SendsMsgs,
                                            _driver: Driver,
-                                           executionContext: ExecutionContext
+                                           ec: ExecutionContext
                                           ) extends ProtocolContainer[P,R,M,E,S,I] {
 
-    override def futureExecutionContext: ExecutionContext = executionContext
+    override def executionContext: ExecutionContext = ec
     override def eventRecorder: RecordsEvents = recordsEvents
     override def sendsMsgs: SendsMsgs = msgSender
     override def driver: Option[Driver] = Option(_driver)

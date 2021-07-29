@@ -5,8 +5,6 @@ import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters,
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.InitMsg
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.State.Initial
 
-import scala.concurrent.ExecutionContext
-
 object UpdateConfigsDefinition extends UpdateConfigsDefTrait {
   override def initialState: State = Initial()
 }
@@ -25,7 +23,7 @@ trait UpdateConfigsDefTrait extends ProtocolDefinition[UpdateConfigs, Role, Prot
 
   override val roles: Set[Role] = Role.roles
 
-  override def create(context: ProtocolContextApi[UpdateConfigs, Role, ProtoMsg, Event, State, String], ec: ExecutionContext): UpdateConfigs = {
+  override def create(context: ProtocolContextApi[UpdateConfigs, Role, ProtoMsg, Event, State, String]): UpdateConfigs = {
     new UpdateConfigs(context)
   }
 

@@ -21,8 +21,7 @@ import scala.concurrent.ExecutionContext
 
 //noinspection ScalaDeprecation
 class ConnectingProtocol(
-                          val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String],
-                          executionContext: ExecutionContext
+                          val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String]
                         )
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
@@ -31,8 +30,7 @@ class ConnectingProtocol(
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
 
-  //TODO: FIX THIS
-  override def futureExecutionContext: ExecutionContext = executionContext
+  override def futureExecutionContext: ExecutionContext = ctx.executionContext
   lazy val myPairwiseDIDReq : DID = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID)
   lazy val myPairwiseVerKeyReq : VerKey = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID_VER_KEY)
 

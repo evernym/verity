@@ -6,8 +6,6 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.tictactoe.Board.CellValue
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily._
-
-import scala.concurrent.ExecutionContext
 /**
   * Roles used in this protocol
   */
@@ -47,7 +45,7 @@ object TicTacToeProtoDef extends ProtocolDefinition[TicTacToe, Role, Any, Any, S
   override val roles: Set[Role] = Set(PlayerA(), PlayerB())
 
   def initialState: State = State.Uninitialized() //TODO can this be generically implemented in the base class?
-  override def create(context: ProtocolContextApi[TicTacToe, Role, Any, Any, State, String], executionContext: ExecutionContext): Protocol[TicTacToe, Role, Any, Any, State, String] = {
+  override def create(context: ProtocolContextApi[TicTacToe, Role, Any, Any, State, String]): Protocol[TicTacToe, Role, Any, Any, State, String] = {
     new TicTacToe(context)
   }
 }

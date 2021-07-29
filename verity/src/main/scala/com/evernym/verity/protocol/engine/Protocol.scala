@@ -50,7 +50,7 @@ trait ProtocolDefinition[P,R,M,E,S,I] extends SegmentedStateProtoDef[S] {
 
   val requiredAccess: Set[AccessRight] = Set.empty
 
-  def create(context: ProtocolContextApi[P,R,M,E,S,I], executionContext: ExecutionContext): Protocol[P,R,M,E,S,I]
+  def create(context: ProtocolContextApi[P,R,M,E,S,I]): Protocol[P,R,M,E,S,I]
 
   def initialState: S
 

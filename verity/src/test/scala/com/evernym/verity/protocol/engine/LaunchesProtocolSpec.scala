@@ -45,7 +45,7 @@ class LaunchesProtocolSpec extends BasicSpec {
   class TestDef(familyName: String) extends ProtocolDefinition[String, String, String, String, String, String] {
     override def supportedMsgs: ProtoReceive = { case _ => }
 
-    override def create(context: ProtocolContextApi[String, String, String, String, String, String], executionContext: ExecutionContext):
+    override def create(context: ProtocolContextApi[String, String, String, String, String, String]):
       Protocol[String, String, String, String, String, String] = ???
 
     override def initialState: String = ???

@@ -6,8 +6,6 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, Acc
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Role.{Questioner, Responder}
 
-import scala.concurrent.ExecutionContext
-
 object CommittedAnswerDefinition extends ProtocolDefinition[CommittedAnswerProtocol, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = CommittedAnswerMsgFamily
 
@@ -19,10 +17,7 @@ object CommittedAnswerDefinition extends ProtocolDefinition[CommittedAnswerProto
 
   override val requiredAccess: Set[AccessRight] = Set(AccessSign, AccessVerify)
 
-  override def create(
-                       context: ProtocolContextApi[CommittedAnswerProtocol, Role, Msg, Event, State, String],
-                       executionContext: ExecutionContext
-                     ): CommittedAnswerProtocol = {
+  override def create(context: ProtocolContextApi[CommittedAnswerProtocol, Role, Msg, Event, State, String]): CommittedAnswerProtocol = {
     new CommittedAnswerProtocol(context)
   }
 

@@ -29,9 +29,7 @@ import scala.util.Left
 
 
 //noinspection ScalaDeprecation
-class ConnectingProtocol(
-                          val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String],
-                          executionContext: ExecutionContext)
+class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String])
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
       with HasAppConfig
@@ -39,7 +37,7 @@ class ConnectingProtocol(
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
 
-  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
+  implicit lazy val futureExecutionContext: ExecutionContext = ctx.executionContext
 
   lazy val myPairwiseDIDReq: DID = ctx.getState.myPairwiseDIDReq
   lazy val myPairwiseVerKeyReq: VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey

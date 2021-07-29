@@ -40,7 +40,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
   *
   * @tparam E Event type
   */
-class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], executionContext: ExecutionContext)(implicit tag: ClassTag[M])
+class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext)(implicit tag: ClassTag[M])
   extends {
     val pinstId = pce.pinstId
     val definition = pce.definition
@@ -118,10 +118,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     segmentKey
   }
 
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
+  override def executionContext: ExecutionContext = ec
 }
 
 trait Logs {

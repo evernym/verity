@@ -26,6 +26,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Sig => UpdateConfigsSig}
 import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
@@ -280,8 +281,13 @@ trait UserAgentCommon
     handleCoreSignalMsgs orElse handleLegacySignalMsgs
 
   def handleCoreSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
-    case SignalMsgParam(uc: UpdateConfigs, _)    => handleUpdateConfig(uc)
-    case SignalMsgParam(gc: GetConfigs, _)       =>
+    case SignalMsgParam(uc: UpdateConfigsSig.UpdateConfig, _)   =>
+      handleUpdateConfig(
+        UpdateConfigs(
+          uc.configs.map(c => ConfigDetail(c.name, c.value))
+        )
+      )
+    case SignalMsgParam(gc: UpdateConfigsSig.GetConfigs, _)     =>
       val cds = getFilteredConfigs(gc.names).map(cd => Config(cd.name, cd.value))
       Future.successful(Option(ControlMsg(SendConfig(cds))))
   }

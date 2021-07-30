@@ -1,6 +1,6 @@
 package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment
 
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}

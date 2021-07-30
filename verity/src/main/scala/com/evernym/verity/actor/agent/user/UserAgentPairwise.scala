@@ -22,6 +22,7 @@ import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryElig
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
+import com.evernym.verity.did.didcomm.v1.{Thread, ThreadBase}
 import com.evernym.verity.msgoutbox.{DestId, RoutePackaging}
 import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
@@ -453,8 +454,16 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.latestMsgSenderVerKeyReq)
 
       val payloadParam = StorePayloadParam(papsrm.sendRemoteMsg.`@msg`, None)
-      val msgStoredEvents = buildMsgStoredEventsV1(papsrm.sendRemoteMsg.id, papsrm.sendRemoteMsg.mtype,
-        state.myDid_!, senderDID, papsrm.sendRemoteMsg.sendMsg, papsrm.sendRemoteMsg.threadOpt, None, Option(payloadParam))
+      val msgStoredEvents = buildMsgStoredEventsV1(
+        papsrm.sendRemoteMsg.id,
+        papsrm.sendRemoteMsg.mtype,
+        state.myDid_!,
+        senderDID,
+        papsrm.sendRemoteMsg.sendMsg,
+        papsrm.sendRemoteMsg.threadOpt,
+        None,
+        Option(payloadParam)
+      )
 
       val msgDetailEvents = buildSendRemoteMsgDetailEvents(msgStoredEvents.msgCreatedEvent.uid, papsrm.sendRemoteMsg)
 
@@ -534,7 +543,15 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       val replyToMsgId = msgStore.getReplyToMsgId(uid)
       val mds = getMsgDetails(uid)
       val payloadWrapper = getMsgPayloadReq(uid)
-      buildLegacySendRemoteMsg_MFV_0_5(uid, msg.getType, payloadWrapper.msg, replyToMsgId, mds, msg.thread, fc)
+      buildLegacySendRemoteMsg_MFV_0_5(
+        uid,
+        msg.getType,
+        payloadWrapper.msg,
+        replyToMsgId,
+        mds,
+        ThreadBase.convertOpt(msg.thread),
+        fc
+      )
     }
   }
 
@@ -552,10 +569,22 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     val logoUrl = msgDetail.get(LOGO_URL_KEY) orElse configsWrapper.configs.find(_.name == LOGO_URL_KEY).map(_.value)
 
     List(
-      CreateMsgReqMsg_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0), msgType,
-        uid = Option(msgId), replyToMsgId = replyToMsgId, threadOpt, sendMsg=true),
-      GeneralCreateMsgDetail_MFV_0_5(TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
-        payload, title, detail, name, logoUrl)
+      CreateMsgReqMsg_MFV_0_5(
+        TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0),
+        msgType,
+        uid = Option(msgId),
+        replyToMsgId = replyToMsgId,
+        threadOpt,
+        sendMsg=true
+      ),
+      GeneralCreateMsgDetail_MFV_0_5(
+        TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
+        payload,
+        title,
+        detail,
+        name,
+        logoUrl
+      )
     )
   }
 
@@ -567,8 +596,17 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       val title = mds.get(TITLE)
       val detail = mds.get(DETAIL)
       val payloadMsg = getMsgPayloadReq(uid).msg
-      val nativeMsg = SendRemoteMsgReq_MFV_0_6(MSG_TYPE_DETAIL_SEND_REMOTE_MSG, uid,
-        msg.getType, new JSONObject(new String(payloadMsg)), sendMsg=msg.sendMsg, msg.thread, title, detail, replyToMsgId)
+      val nativeMsg = SendRemoteMsgReq_MFV_0_6(
+        MSG_TYPE_DETAIL_SEND_REMOTE_MSG,
+        uid,
+        msg.getType,
+        new JSONObject(new String(payloadMsg)),
+        sendMsg=msg.sendMsg,
+        ThreadBase.convertOpt(msg.thread),
+        title,
+        detail,
+        replyToMsgId
+      )
       List(nativeMsg)
     }
   }

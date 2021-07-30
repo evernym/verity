@@ -66,8 +66,15 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
       Option(connReqAnswerMsg.replyToMsgId).flatMap { replyToMsgId =>
         val reqMsg = ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId)
         if (reqMsg.isEmpty) {
-          Option (buildMsgCreatedEvt (connReqAnswerMsg.replyToMsgId, CREATE_MSG_TYPE_CONN_REQ,
-            connReqAnswerMsg.senderDetail.DID, sendMsg=false, connReqAnswerMsg.threadOpt))
+          Option (
+            buildMsgCreatedEvt(
+              connReqAnswerMsg.replyToMsgId,
+              CREATE_MSG_TYPE_CONN_REQ,
+              connReqAnswerMsg.senderDetail.DID,
+              sendMsg=false,
+              connReqAnswerMsg.threadOpt
+            )
+          )
         } else None
       }
     }

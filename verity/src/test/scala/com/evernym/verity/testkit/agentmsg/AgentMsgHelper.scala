@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg
 
 import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.util2.Version
-import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
+import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
@@ -13,6 +13,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker._
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.question_answer.AskQuestionMsg
 import com.evernym.verity.agentmsg.wallet_backup.WalletBackupMsg
 import com.evernym.verity.http.common.StatusDetailResp

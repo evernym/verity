@@ -1,10 +1,10 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
-import com.evernym.verity.protocol.didcomm.messages.{AdoptableProblemReport, ProblemDescription}
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
+import com.evernym.verity.did.didcomm.v1.messages.{AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine.MsgFamily.QUALIFIER_FORMAT_HTTP
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.{Base64Util, MsgIdProvider}

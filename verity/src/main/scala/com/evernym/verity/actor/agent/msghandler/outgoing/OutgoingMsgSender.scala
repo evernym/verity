@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.{Actor, Props}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.msghandler.{SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName}

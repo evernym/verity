@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Base64Util
-import com.evernym.verity.DID.Methods.DIDKey
+import com.evernym.verity.did.methods.DIDKey
 import org.json.JSONObject
 
 class RelationshipProtocolSpec

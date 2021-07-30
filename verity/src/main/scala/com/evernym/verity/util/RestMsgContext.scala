@@ -1,7 +1,7 @@
 package com.evernym.verity.util
 
 import com.evernym.verity.protocol.engine.{MsgType, VerKey}
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 
 case class RestAuthContext(verKey: VerKey, signature: String)
 case class RestMsgContext(msgType: MsgType,

@@ -8,7 +8,7 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.{AgencyPublicDid, agent}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
@@ -384,7 +384,7 @@ object ReceivedMsgParam {
   def apply[T: ClassTag](msg: String): ReceivedMsgParam[T] = {
     val message = new JSONObject(msg)
     val threadOpt = Try {
-      Option(DefaultMsgCodec.fromJson[agent.Thread](message.getJSONObject("~thread").toString))
+      Option(DefaultMsgCodec.fromJson[MsgThread](message.getJSONObject("~thread").toString))
     }.getOrElse(None)
     val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
     ReceivedMsgParam(expMsg, msg, None, threadOpt)
@@ -402,7 +402,7 @@ object ReceivedMsgParam {
 case class ReceivedMsgParam[T: ClassTag](msg: T,
                                          jsonMsgStr: String,
                                          msgIdOpt: Option[MsgId] = None,
-                                         threadOpt: Option[agent.Thread]=None) {
+                                         threadOpt: Option[MsgThread]=None) {
   def msgId: MsgId = msgIdOpt.getOrElse(throw new RuntimeException("msgId not available in received message"))
   def threadIdOpt: Option[ThreadId] = threadOpt.flatMap(_.thid)
 }

@@ -4,7 +4,8 @@ import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgReceivedOrdersDetail, MsgStatusUpdated, MsgThreadDetail}
-import com.evernym.verity.actor.agent.{AgentCommon, Msg, Thread}
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.actor.agent.{AgentCommon, Msg}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime

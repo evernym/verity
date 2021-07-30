@@ -12,7 +12,7 @@ import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.{DID, MsgFamilyVersion, ThreadId, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail}
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
@@ -258,9 +258,16 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
         pcd.theirPairwiseDidPair.DID, pcd.theirPairwiseDidPair.verKey, None)
       val redirectJsonObject = new JSONObject(DefaultMsgCodec.toJson(redirectDetail))
       val connReqRedirectMsg = RedirectConnReqMsg_MFV_0_6(
-        MSG_TYPE_DETAIL_REDIRECT_CONN_REQ, getNewMsgId,
-        sendMsg = true, redirectJsonObject, inviteDetail.connReqId, inviteDetail.senderDetail,
-        inviteDetail.senderAgencyDetail, keyDlgProof, Option(Thread()))
+        MSG_TYPE_DETAIL_REDIRECT_CONN_REQ,
+        getNewMsgId,
+        sendMsg = true,
+        redirectJsonObject,
+        inviteDetail.connReqId,
+        inviteDetail.senderDetail,
+        inviteDetail.senderAgencyDetail,
+        keyDlgProof,
+        Option(Thread())
+      )
       AgentPackMsgUtil(connReqRedirectMsg, encryptParamFromEdgeToCloudAgentPairwise(connId))
     }
 

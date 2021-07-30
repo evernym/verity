@@ -1,11 +1,12 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.engine.MsgFamily._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.protocolRegistry

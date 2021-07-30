@@ -1,7 +1,8 @@
 package com.evernym.verity.testkit.util
 
 import java.util.UUID
-import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
+import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail

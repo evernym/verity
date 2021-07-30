@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.issueCredential.v_1_0.expire_after
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.protocol.didcomm.decorators.PleaseAck
+import com.evernym.verity.did.didcomm.v1.decorators.PleaseAck
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0._

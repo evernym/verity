@@ -10,7 +10,8 @@ import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, MsgAndDelivery, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
+import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, MsgAndDelivery, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -227,12 +228,23 @@ trait UserAgentCommon
       .map(_ => None)
   }
 
-  override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
-                                senderDID: DID, threadOpt: Option[Thread]): Unit = {
+  override def storeOutgoingMsg(omp: OutgoingMsgParam,
+                                msgId:MsgId,
+                                msgName: MsgName,
+                                senderDID: DID,
+                                threadOpt: Option[Thread]): Unit = {
     logger.debug("storing outgoing msg")
     val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)
-    storeMsg(msgId, msgName, senderDID, MSG_STATUS_RECEIVED.statusCode,
-      sendMsg = true, threadOpt, None, Option(payloadParam))
+    storeMsg(
+      msgId,
+      msgName,
+      senderDID,
+      MSG_STATUS_RECEIVED.statusCode,
+      sendMsg = true,
+      threadOpt,
+      None,
+      Option(payloadParam)
+    )
     logger.debug("packed msg stored")
   }
 

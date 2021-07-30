@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.actor.wallet.GetVerKeyResp
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util

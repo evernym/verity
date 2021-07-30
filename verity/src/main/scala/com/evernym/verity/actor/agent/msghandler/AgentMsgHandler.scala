@@ -5,7 +5,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.incoming.AgentIncomingMsgHandler
 import com.evernym.verity.actor.agent.msghandler.outgoing.{AgentOutgoingMsgHandler, OutgoingMsgParam}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker

@@ -1,7 +1,7 @@
-package com.evernym.verity.DID.Methods
+package com.evernym.verity.did.methods
 
-import com.evernym.verity.DID.DID
-import com.evernym.verity.DID.DidException.InvalidDidKeyFormatException
+import com.evernym.verity.did.DID
+import com.evernym.verity.did.exception.InvalidDidKeyFormatException
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.Base58Util
 

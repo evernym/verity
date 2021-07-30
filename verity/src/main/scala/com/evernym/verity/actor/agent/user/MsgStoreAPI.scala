@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
@@ -179,8 +179,15 @@ trait MsgStoreAPI { this: UserAgentCommon =>
                                  threadOpt: Option[Thread],
                                  LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfMsgAlreadyNotExists(msgId)
-    MsgHelper.buildMsgCreatedEvt(msgId, mType, senderDID, sendMsg,
-      msgStatus, threadOpt, LEGACY_refMsgId)
+    MsgHelper.buildMsgCreatedEvt(
+      msgId,
+      mType,
+      senderDID,
+      sendMsg,
+      msgStatus,
+      threadOpt,
+      LEGACY_refMsgId
+    )
   }
 
   private def buildPayloadEvent(msgId: MsgId,

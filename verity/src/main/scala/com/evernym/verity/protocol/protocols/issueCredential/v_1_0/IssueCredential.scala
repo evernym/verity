@@ -6,9 +6,9 @@ import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
-import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
+import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor._
+import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite

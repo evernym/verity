@@ -1,4 +1,4 @@
-package com.evernym.verity.DID
+package com.evernym.verity.did
 
 trait DID {
   val scheme: String = "did"

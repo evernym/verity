@@ -6,7 +6,6 @@ import com.evernym.verity.config.ConfigConstants.PERSISTENCE_SNAPSHOT_MAX_ITEM_S
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
 import com.evernym.verity.logging.ThrottledLogger
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.transformations.transformers.<=>
 
 import scala.concurrent.duration._
@@ -69,13 +68,13 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
   private def snapshotCallbackHandler: Receive = {
 
     case SaveSnapshotSuccess(metadata) =>
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_SUCCEED_COUNT)
       snapshotCount = snapshotCount + 1
       logger.info(s"[$persistenceId] snapshot saved successfully, " +
         s"snapshot taken count (in current session): " + snapshotCount)
       if (keepNSnapshots.exists(snapshotCount > _)) {
         snapshotConfig.getDeleteSnapshotCriteria(metadata.sequenceNr).foreach { ssc =>
-          MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_ATTEMPT_COUNT)
+          metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_ATTEMPT_COUNT)
           deleteSnapshots(ssc)
         }
       }
@@ -84,26 +83,26 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
       }
 
     case SaveSnapshotFailure(metadata, reason) =>
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_FAILED_COUNT)
       logger.warn(s"[$persistenceId] could not save snapshot (sequenceNr: ${metadata.sequenceNr}): $reason")
 
     case dss: DeleteSnapshotsSuccess =>
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
       logger.debug("old snapshots deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dss.criteria))
 
     case dsf: DeleteSnapshotsFailure =>
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
       logger.info("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dsf.criteria), (LOG_KEY_ERR_MSG, dsf.cause))
 
     case dss: DeleteSnapshotSuccess =>
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
       logger.debug("old snapshot deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("sequenceNr", dss.metadata.sequenceNr))
 
     case dsf: DeleteSnapshotFailure =>
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
       logger.info("could not delete old snapshot", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("sequenceNr", dsf.metadata.sequenceNr), (LOG_KEY_ERR_MSG, dsf.cause))
   }
@@ -173,7 +172,7 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
    * in case of no auto snapshot configuration
    */
   final def saveSnapshotStateIfAvailable(): Unit = {
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_ATTEMPT_COUNT)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_ATTEMPT_COUNT)
     snapshotState.foreach { state =>
       transformAndSaveSnapshot(state)
     }
@@ -199,7 +198,7 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
           logger.info(s"[$persistenceId] save snapshot called (size: ${ts.serializedSize}), " +
             s"previous snapshot count (in current session): " + snapshotCount)
         } else {
-          MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_SNAPSHOT_MAX_SIZE_EXCEEDED_CURRENT_COUNT)
+          metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_MAX_SIZE_EXCEEDED_CURRENT_COUNT)
           throttledLogger.info(SnapshotSizeExceeded(persistenceId),
             s"[$persistenceId] could not save snapshot because state size '${s.serializedSize}' " +
             s"exceeded max allowed size '$maxItemSize'")

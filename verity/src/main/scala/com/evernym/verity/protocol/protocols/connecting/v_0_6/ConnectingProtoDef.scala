@@ -15,8 +15,6 @@ import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfu
 import com.evernym.verity.util.Util._
 
 
-trait ConnectingRole
-
 object ConnectingMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
   override val name: MsgFamilyName = MSG_FAMILY_CONNECTING

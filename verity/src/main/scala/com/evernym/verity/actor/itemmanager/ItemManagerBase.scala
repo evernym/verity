@@ -12,7 +12,6 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
 
 import scala.concurrent.Future
 
@@ -118,8 +117,8 @@ trait ItemManagerBase
 
   def recordMetrics(): Unit = {
     itemManagerState.foreach { ims =>
-      import CustomMetrics._
-      MetricsWriter.gaugeApi.updateWithTags(AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT,
+      import com.evernym.verity.metrics.CustomMetrics._
+      metricsWriter.gaugeUpdate(AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT,
         ims.totalEverAllocatedContainers, Map(TAG_KEY_ID -> entityId))
     }
   }

@@ -136,7 +136,7 @@ class BasicCacheSpec
     keyValueMapperFetcher -> keyValueFetcher)
 
   def buildCache(name: String = "TestCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers)
+    new Cache(name, fetchers, metricsWriter)
   }
 
   implicit val timeout: Timeout = Timeout(Duration.create(5, TimeUnit.SECONDS))

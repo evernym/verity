@@ -9,8 +9,7 @@ import com.evernym.verity.protocol.engine.Scope.RelProvisioning
 object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, RelationshipEvent, State, String] {
   override val msgFamily: MsgFamily = RelationshipMsgFamily
 
-  override def create(context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent,
-    State, String]): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
+  override def create(context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String]): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
     new Relationship(context)
   }
 

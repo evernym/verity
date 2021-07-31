@@ -41,7 +41,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.MetricsUnit
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -63,7 +63,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.ActorErrorResp
-import kamon.metric.MeasurementUnit
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -351,7 +350,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     implicit val reqMsgContext: ReqMsgContext = pd.reqMsgContext
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pd.agentDID, pd.agentDIDVerKey)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, keyCreatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
     sendRespMsg("CreateNewPairwiseKeyResp", rp, sndr)
   }
 
@@ -451,7 +450,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         }
       case MPF_INDY_PACK | MPF_MSG_PACK =>
         val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormatReq, param) (agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormatReq, param) (agentMsgTransformer, wap, metricsWriter)
         sendRespMsg("ComMethodUpdatedResp", rp)
       case Unrecognized(_) =>
         throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
@@ -631,7 +630,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       val msgStatusUpdatedByConnsRespMsg =
         UpdateMsgStatusByConnsMsgHelper.buildRespMsg(successResult, errorResult)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgStatusUpdatedByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg(respMsgType, rp, sndr)
     }
   }
@@ -690,7 +689,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(pairwiseResults)(reqMsgContext.agentMsgContext)
         val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
           getMsgsByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
         sendRespMsg("GetMsgsByConnsResp", rp, sndr)
       case Failure(e) =>
         handleException(e, sndr)
@@ -700,9 +699,9 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   def handleGetMsgsByConns(getMsgsByConnsReq: GetMsgsByConnsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val sndr = sender()
     val connectionSize = getMsgsByConnsReq.pairwiseDIDs.map(_.size).getOrElse(0)
-    MetricsWriter.histogramApi.record(
+    metricsWriter.histogramUpdate(
       AS_USER_AGENT_API_GET_MSGS_BY_CONNS_PCS_COUNT,
-      MeasurementUnit.none,
+      MetricsUnit.None,
       connectionSize)
     val givenPairwiseDIDs = getMsgsByConnsReq.pairwiseDIDs.getOrElse(List.empty)
     validatePairwiseFromDIDs(givenPairwiseDIDs)
@@ -734,7 +733,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
-    AgentActivityTracker.newAgent(sponsorRel)
+    AgentActivityTracker.newAgent(sponsorRel, metricsWriter)
     setRouteFut map {
       case _: RouteSet          => sndr ! resp
       case ras: RouteAlreadySet => sndr ! ras

@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 
+
 object ConnectingMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
   override val name: MsgFamilyName = MSG_FAMILY_CONNECTING

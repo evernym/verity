@@ -18,7 +18,7 @@ class MsgTracer(val appConfig: AppConfig)
   extends CoreActorExtended
     with DoNotRecordLifeCycleMetrics {
 
-  val msgTracingMetricsRecorder = new MsgRespTimeMetricsRecorder(appConfig)
+  val msgTracingMetricsRecorder = new MsgRespTimeMetricsRecorder(appConfig, metricsWriter)
 
   override def receiveCmd: Receive = {
     case mtm: MsgTracerActorMsg =>

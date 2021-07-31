@@ -142,18 +142,24 @@ object CustomMetrics {
   final val AS_CACHE_HIT_COUNT = s"$AS_CACHE.hit.count"
   final val AS_CACHE_MISS_COUNT = s"$AS_CACHE.miss.count"
 
+  final val AS_OUTBOX = s"$AS.outbox"
+  final val AS_OUTBOX_MSG_DELIVERY = s"$AS_OUTBOX.msgs.delivery"
+  final val AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT = s"$AS_OUTBOX_MSG_DELIVERY.pending.count"
+  final val AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT = s"$AS_OUTBOX_MSG_DELIVERY.successful.count"
+  final val AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT = s"$AS_OUTBOX_MSG_DELIVERY.failed.count"
+
   final val TAG_KEY_PATH = "path"
   final val TAG_KEY_TYPE = "type"
   final val TAG_KEY_ID = "id"
 
   //**NOTE**: We should not add any metrics in this below collection in general,
   // there should be very specific reason to add it to initialize it with value 0
-  def initGaugeMetrics(): Unit = {
+  def initGaugeMetrics(metricsWriter: MetricsWriter): Unit = {
     val metricsToBeInitialized = Set(
       AS_ACTIVE_USER_AGENT_COUNT,
       AS_USER_AGENT_ACTIVE_RELATIONSHIPS,
       AS_NEW_PROTOCOL_COUNT
     )
-    metricsToBeInitialized.foreach(MetricsWriter.gaugeApi.updateWithTags(_, value = 0))
+    metricsToBeInitialized.foreach(metricsWriter.gaugeUpdate(_, value = 0))
   }
 }

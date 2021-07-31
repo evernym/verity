@@ -25,9 +25,9 @@ trait HasAgentActivity extends ShardRegionCommon {
           )
     }
 
-    def newAgent(sponsorRel: Option[SponsorRel]): Unit = {
+    def newAgent(sponsorRel: Option[SponsorRel], metricsWriter: MetricsWriter): Unit = {
       val tags = sponsorRel.map(s => ConfigUtil.getSponsorRelTag(appConfig, s)).getOrElse(Map())
-      MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_USER_AGENT_COUNT, tags)
+      metricsWriter.gaugeIncrement(AS_NEW_USER_AGENT_COUNT, tags = tags)
     }
 
     def setWindows(domainId: DomainId, windows: ActivityWindow): Unit =

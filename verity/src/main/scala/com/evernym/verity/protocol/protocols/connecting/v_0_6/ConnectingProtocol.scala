@@ -182,7 +182,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       keyCreatedRespMsg.foreach(m => ctx.signal(m))
     }
 
-    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param))
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param)(agentMsgTransformer, wap, ctx.metricsWriter))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

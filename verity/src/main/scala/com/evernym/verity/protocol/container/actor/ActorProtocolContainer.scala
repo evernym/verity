@@ -14,7 +14,6 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
@@ -204,7 +203,7 @@ class ActorProtocolContainer[
   def handleSponsorRel(s: SponsorRel): Unit = {
     if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
     val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
-    MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
+    metricsWriter.gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
   }
 
   /**

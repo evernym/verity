@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
 import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
@@ -34,7 +34,7 @@ Aries Community Protocol Spec (for version 0.1):
 https://github.com/hyperledger/aries-rfcs/tree/4fae574c03f9f1013db30bf2c0c676b1122f7149/features/0037-present-proof
  */
 
-class PresentProof (implicit val ctx: PresentProofContext)
+class PresentProof(implicit val ctx: PresentProofContext)
   extends Protocol[PresentProof, Role, ProtoMsg, Event, State, String](PresentProofDef)
     with ProtocolHelpers[PresentProof, Role, ProtoMsg, Event, State, String]
     with PresentProofLegacy {
@@ -210,7 +210,7 @@ class PresentProof (implicit val ctx: PresentProofContext)
             val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
             retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
               case Success((schemaJson, credDefJson)) =>
-                runWithInternalSpan("processPresentation","PresentProof") {
+                ctx.metricsWriter.runWithSpan("processPresentation","PresentProof", InternalSpan) {
                   ctx.wallet.verifyProof(
                     proofRequestJson,
                     presentationJson,

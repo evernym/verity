@@ -10,6 +10,7 @@ object DefaultConfigValidatorCreator {
     ResourceUsageRuleConfigValidator,
     RequiredConfigValidator,
     OptionalConfigValidator,
-    LimitConfigValidator
+    LimitConfigValidator,
+    MetricsWriterConfigValidator
   )
 }

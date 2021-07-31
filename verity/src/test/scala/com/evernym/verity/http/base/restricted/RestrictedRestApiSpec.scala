@@ -10,8 +10,7 @@ trait RestrictedRestApiSpec
     with ConfigHealthCheckSpec
     with ActorStateCleanupHealthCheckSpec
     with ReloadConfigSpec
-    with ResourceUsageSpec
-    with MetricsSpec { this : EdgeEndpointBaseSpec =>
+    with ResourceUsageSpec { this : EdgeEndpointBaseSpec =>
 
   def testRestrictedRestApis(): Unit = {
 
@@ -22,8 +21,6 @@ trait RestrictedRestApiSpec
       testReloadConfig()
 
       testResourceUsage()
-
-      testMetrics()
 
       testAppStateHealthCheck()
 

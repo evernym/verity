@@ -15,7 +15,7 @@ import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.MetricsReader
+import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.config.ConfigFactory
 
@@ -43,6 +43,7 @@ class NodeSingleton(val appConfig: AppConfig)
       appConfig.reload()
       sender ! NodeConfigRefreshed
       logger.info(s"configuration refresh done !!")
+      MetricsWriterExtension(context.system).updateFilters(appConfig.config)
 
     case onc: OverrideNodeConfig =>
       logger.info(s"configuration override started...")
@@ -55,11 +56,6 @@ class NodeSingleton(val appConfig: AppConfig)
         case e: Throwable =>
         logger.error("configuration override failed: " + e.getMessage)
       }
-
-    case getNodeMetrics: GetNodeMetrics =>
-      logger.debug(s"fetching metrics data...")
-      sender ! MetricsReader.getNodeMetrics(getNodeMetrics.filters)
-      logger.debug(s"metrics data fetched !!")
 
     case uws: UpdateWarningStatus =>
       ResourceWarningStatusMngrCache(context.system).processEvent(uws)

@@ -4,7 +4,6 @@ import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT}
-import com.evernym.verity.metrics.MetricsWriter
 
 import scala.concurrent.duration.{SECONDS, _}
 import scala.util.Random
@@ -47,7 +46,7 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
         s"deleteTargetSeqNr: ${deleteMsgProgress.targetSeqNo}, " +
         s"deletedTillSeqNr: ${deleteMsgProgress.deletedTillSeqNo}, " +
         s"nextBatchSize: ${deleteMsgProgress.batchSize}")
-      MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT)
+      metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT)
       deleteMessages(deleteMsgProgress.candidateSeqNoForDeletion)
     } else {
       completeMsgsDeletion()
@@ -57,7 +56,7 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
   private def handleDeleteMsgSuccess(dms: DeleteMessagesSuccess): Unit = {
     log.debug(s"[$persistenceId] total events deleted: ${dms.toSequenceNr}")
     onDeleteMessageSuccess(dms)
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT)
     if (deleteMsgProgress.isBatchedDeletion) {
       handleBatchedDeleteMsgSuccess(dms)
     } else {
@@ -68,7 +67,7 @@ trait DeleteMsgHandler { this: BasePersistentActor =>
 
   private def handleDeleteMsgFailure(dmf: DeleteMessagesFailure): Unit = {
     onDeleteMessageFailure(dmf)
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT)
     if (deleteMsgProgress.isBatchedDeletion) {
       handleBatchedDeleteMsgFailure(dmf)
     } else {
